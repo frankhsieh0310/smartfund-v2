@@ -24,9 +24,12 @@ export default function HomeV3() {
       <a href="#">資產配置</a>
     </nav>
 
-    <button className="bg-yellow-500 hover:bg-yellow-400 text-black px-5 py-2 rounded-lg font-semibold">
-      開始測驗
-    </button>
+    <a
+  href="/quiz"
+  className="bg-yellow-500 text-black px-5 py-2 rounded-lg font-semibold"
+>
+  開始測驗
+</a>
 
   </div>
 </header>
@@ -63,9 +66,12 @@ export default function HomeV3() {
 
       <div className="flex gap-4 mt-10">
 
-        <button className="bg-yellow-500 text-black px-8 py-4 rounded-xl font-bold">
-          開始投資分析
-        </button>
+      <a
+  href="/quiz"
+  className="bg-yellow-500 text-black px-8 py-4 rounded-xl font-bold inline-block"
+>
+  開始投資分析
+</a>
 
         <button className="border border-slate-600 px-8 py-4 rounded-xl">
           瀏覽資料庫
