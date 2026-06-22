@@ -66,22 +66,22 @@ export default function Home() {
 
               {/* 主標玻璃卡片 */}
               <div className="inline-block py-6 px-10 rounded-[32px] backdrop-blur-md bg-white/[0.06] border border-white/10">
-                <h1 className="text-[72px] font-black leading-[1.1] text-white tracking-[0.01em] max-w-[900px]">
+                <h1 className="text-[72px] font-black leading-[1.1] text-white tracking-[0.01em]">
                   從投資人格
                   <br />
                   到資產配置
                 </h1>
               </div>
 
-              <p className="text-[24px] leading-[1.7] font-medium text-white/80 max-w-[580px]">
-                整合商品比較、客戶管理、
-                <br />
-                投資分析與配置工具。
-                <br />
-                <br />
-                打造更完整的投資決策流程。
-              </p>
+              {/* 副標：三行大字 */}
+              <div className="space-y-1">
+                <p className="text-[28px] font-semibold text-white/90">投資人格分析</p>
+                <p className="text-[28px] font-semibold text-white/90">商品比較分析</p>
+                <p className="text-[28px] font-semibold text-white/90">資產配置規劃</p>
+                <p className="text-[28px] font-bold text-[#F5B700] mt-2">一站完成。</p>
+              </div>
 
+              {/* CTA 按鈕 */}
               <div className="flex gap-5">
                 <Link
                   href="/quiz"
@@ -97,20 +97,31 @@ export default function Home() {
                 </Link>
               </div>
 
-              {/* 功能標籤 */}
-              <div className="grid grid-cols-2 gap-3 max-w-[420px]">
+              {/* 四個功能小卡 */}
+              <div className="grid grid-cols-4 gap-3">
                 {[
-                  "投資人格分析", "客戶管理",
-                  "商品比較", "資產配置",
-                  "PDF報告", "歷史回測",
-                  "ETF資料庫", "基金資料庫",
-                ].map((tag) => (
-                  <div key={tag} className="flex items-center gap-2 text-[15px] text-white/70">
-                    <span className="text-[#F5B700]">✓</span>
-                    {tag}
-                  </div>
+                  { icon: "🧠", title: "20題人格分析", href: "/quiz" },
+                  { icon: "⚖️", title: "商品比較中心", href: "/compare" },
+                  { icon: "📊", title: "資產配置分析", href: "/report" },
+                  { icon: "👥", title: "客戶管理中心", href: "/clients" },
+                ].map((item) => (
+                  <Link
+                    key={item.title}
+                    href={item.href}
+                    className="bg-white/[0.06] border border-white/10 rounded-2xl p-4 text-center hover:bg-white/[0.12] hover:border-[#F5B700]/40 transition-all group"
+                  >
+                    <div className="text-[24px] mb-2">{item.icon}</div>
+                    <div className="text-[13px] font-semibold text-white/80 group-hover:text-white leading-tight">
+                      {item.title}
+                    </div>
+                  </Link>
                 ))}
               </div>
+
+              {/* 適合客群 */}
+              <p className="text-[15px] text-white/45">
+                適合理財顧問、ETF投資人、基金投資人與自主投資者
+              </p>
 
             </div>
 
