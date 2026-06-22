@@ -23,6 +23,7 @@ export default function Home() {
             <Link href="/funds" className="hover:text-white transition-colors">基金篩選器</Link>
             <Link href="/compare" className="hover:text-white transition-colors">比較中心</Link>
             <Link href="/clients" className="hover:text-white transition-colors">客戶管理</Link>
+            <Link href="/pricing" className="hover:text-white transition-colors text-[#F5B700]">方案</Link>
           </nav>
 
           <div className="flex items-center gap-4">
@@ -122,6 +123,17 @@ export default function Home() {
               <p className="text-[15px] text-white/45">
                 適合理財顧問、ETF投資人、基金投資人與自主投資者
               </p>
+
+              {/* 方案入口 */}
+              <div className="flex items-center gap-4">
+                <Link
+                  href="/pricing"
+                  className="flex items-center gap-2 text-[15px] text-[#F5B700] border border-[#F5B700]/40 px-5 py-2.5 rounded-lg hover:bg-[#F5B700]/10 transition-colors font-semibold"
+                >
+                  查看收費方案 →
+                </Link>
+                <span className="text-[14px] text-white/30">免費版不需要信用卡</span>
+              </div>
 
             </div>
 
