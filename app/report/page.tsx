@@ -1,8 +1,19 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+
+// ---- print styles injected at runtime ----
+const PRINT_STYLE = `
+@media print {
+  @page { margin: 15mm 15mm 15mm 15mm; size: A4; }
+  body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .no-print { display: none !important; }
+  .print-break { page-break-before: always; }
+  nav, footer { display: none !important; }
+}
+`;
 
 type PersonalityKey = "conservative" | "balanced" | "growth" | "aggressive";
 
@@ -131,19 +142,57 @@ function StarRating({ stars }: { stars: number }) {
 function ReportContent() {
   const searchParams = useSearchParams();
   const typeParam = searchParams.get("type");
+  const clientName = searchParams.get("client") || "";
   const type: PersonalityKey = isPersonalityKey(typeParam) ? typeParam : "balanced";
   const data = REPORTS[type];
+
+  useEffect(() => {
+    const style = document.createElement("style");
+    style.innerHTML = PRINT_STYLE;
+    document.head.appendChild(style);
+    return () => { document.head.removeChild(style); };
+  }, []);
+
+  function handlePrint() {
+    window.print();
+  }
 
   return (
     <main className="min-h-screen bg-white px-6 py-24">
       <div className="max-w-[860px] mx-auto">
+
+        {/* 列印專用標頭（螢幕不顯示）*/}
+        <div className="hidden print:block mb-8 pb-6 border-b border-slate-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-[20px] font-black text-[#0B1220]">SmartMatch</div>
+              <div className="text-[12px] text-slate-500">ETF ＆ 基金資產配置分析平台</div>
+            </div>
+            <div className="text-right text-[12px] text-slate-400">
+              <div>投資人格分析報告</div>
+              <div>{new Date().toLocaleDateString("zh-TW")}</div>
+              {clientName && <div className="mt-1 font-semibold text-[#0B1220]">客戶：{clientName}</div>}
+            </div>
+          </div>
+        </div>
+
+        {/* PDF 下載按鈕（列印時隱藏）*/}
+        <div className="flex justify-end mb-6 no-print">
+          <button
+            onClick={handlePrint}
+            className="flex items-center gap-2 bg-[#0B1220] hover:bg-slate-800 text-white px-6 py-2.5 rounded-lg font-semibold text-[15px] transition-colors"
+          >
+            <span>⬇</span>
+            匯出 PDF 報告
+          </button>
+        </div>
 
         <div className="text-center mb-12">
           <div className="tracking-[10px] text-[#F5B700] text-[16px] font-semibold mb-6">
             SMARTMATCH
           </div>
           <div className="text-[18px] text-slate-500 mb-3">
-            你的投資人格分析報告
+            投資人格分析結果
           </div>
           <h1 className="text-[64px] font-black text-[#0B1220] leading-tight">
             {data.title}投資人
@@ -159,10 +208,10 @@ function ReportContent() {
           <StarRating stars={data.stars} />
         </div>
 
-        {/* 建議資產配置 */}
+        {/* 資產配置分析 */}
         <div className="bg-[#0B1220] rounded-[24px] p-10 mb-10">
           <div className="text-white text-[22px] font-bold mb-6">
-            建議資產配置
+            資產配置分析
           </div>
 
           <div className="flex h-4 rounded-full overflow-hidden mb-6">
@@ -192,10 +241,10 @@ function ReportContent() {
           </div>
         </div>
 
-        {/* ETF 推薦 */}
+        {/* ETF 篩選結果 */}
         <div className="mb-12">
           <div className="text-[24px] font-bold text-[#0B1220] mb-6">
-            ETF 推薦
+            ETF 篩選結果
           </div>
 
           <div className="flex flex-col gap-4">
@@ -220,10 +269,10 @@ function ReportContent() {
           </div>
         </div>
 
-        {/* 基金推薦 */}
+        {/* 符合條件基金 */}
         <div className="mb-12">
           <div className="text-[24px] font-bold text-[#0B1220] mb-6">
-            基金推薦
+            符合條件基金
           </div>
 
           <div className="flex flex-col gap-4">
@@ -248,10 +297,10 @@ function ReportContent() {
         </div>
 
         <p className="text-[13px] text-slate-400 text-center mb-12 leading-relaxed">
-          以上配置與推薦僅供參考，不構成投資建議。投資前請詳閱商品公開說明書，並評估自身風險承受能力。
+          本頁內容為資料分析結果，不構成投資建議。投資決策請自行評估，並詳閱各商品公開說明書。
         </p>
 
-        <div className="flex gap-4 justify-center">
+        <div className="flex gap-4 justify-center no-print">
           <Link
             href="/quiz"
             className="bg-[#F5B700] hover:bg-[#e0a800] text-[#0B1220] px-10 py-4 rounded-lg font-semibold text-[18px] transition-colors"

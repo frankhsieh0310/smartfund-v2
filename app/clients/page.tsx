@@ -500,12 +500,28 @@ export default function ClientsPage() {
                           </div>
                         </div>
                       )}
-                      <Link
-                        href={`/report?type=${selectedClient.personality}`}
-                        className="ml-auto text-[#F5B700] text-[14px] hover:underline"
-                      >
-                        查看分析結果 →
-                      </Link>
+                      <div className="ml-auto flex items-center gap-3">
+                        <Link
+                          href={`/report?type=${selectedClient.personality}&client=${encodeURIComponent(selectedClient.name)}`}
+                          className="text-[#F5B700] text-[14px] hover:underline"
+                        >
+                          查看分析結果 →
+                        </Link>
+                        <button
+                          onClick={() => {
+                            const url = `/report?type=${selectedClient.personality}&client=${encodeURIComponent(selectedClient.name)}`;
+                            const win = window.open(url, "_blank");
+                            if (win) {
+                              win.addEventListener("load", () => {
+                                setTimeout(() => win.print(), 800);
+                              });
+                            }
+                          }}
+                          className="bg-[#0B1220] hover:bg-slate-700 text-white text-[13px] px-3 py-1.5 rounded-lg font-semibold transition-colors"
+                        >
+                          ⬇ 匯出PDF
+                        </button>
+                      </div>
                     </div>
                   ) : (
                     <p className="text-slate-400 text-[15px]">
