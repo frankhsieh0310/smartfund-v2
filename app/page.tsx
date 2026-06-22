@@ -34,48 +34,49 @@ export default function Home() {
         </div>
       </header>
 
-      {/* HERO — 方案4 金融夜景版 */}
+      {/* HERO — V4.3 金融大樓背景 + 主標玻璃卡片 + 金色光暈 */}
       <section className="relative min-h-screen overflow-hidden">
 
         {/* 第一層：金融大樓背景 */}
-        <div className="absolute inset-0">
-          <img
-            src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2600"
-            alt=""
-            className="w-full h-full object-cover"
-          />
-        </div>
-
-        {/* 第二層：深藍遮罩 */}
-        <div className="absolute inset-0 bg-[#061427]/75" />
-
-        {/* 第四層：金色光暈 */}
         <div
-          className="absolute left-[10%] top-[30%] w-[500px] h-[500px] rounded-full bg-[#F5B700]/10 blur-[150px]"
+          className="absolute inset-0 bg-cover bg-center"
+          style={{
+            backgroundImage: "url('https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2600')",
+          }}
         />
 
-        {/* 第三層：左側玻璃區 + 右側 Dashboard */}
+        {/* 第二層：深藍遮罩 */}
+        <div className="absolute inset-0 bg-[#081120]/50" />
+
+        {/* 第三層：左側深藍漸層（不是整塊毛玻璃） */}
+        <div className="absolute inset-y-0 left-0 w-[55%] bg-gradient-to-r from-[#081120]/75 via-[#081120]/45 to-transparent" />
+
+        {/* 第四層：金色光暈 */}
+        <div className="absolute top-40 left-20 w-[500px] h-[500px] rounded-full bg-[#F5B700] opacity-[0.06] blur-[140px]" />
+
+        {/* Content */}
         <div className="relative z-10 max-w-[1700px] mx-auto px-10 flex items-center min-h-screen pt-20">
-          <div className="grid lg:grid-cols-[47%_53%] w-full items-center gap-0 min-h-[calc(100vh-80px)]">
+          <div className="grid lg:grid-cols-[50%_50%] w-full items-center gap-8 py-20">
 
-            {/* LEFT — Glassmorphism */}
-            <div className="backdrop-blur-xl bg-white/[0.08] border-r border-white/10 h-full flex flex-col justify-center px-16 py-24">
-
-              <div className="tracking-[14px] text-[#F5B700] text-[18px] font-semibold mb-6">
+            {/* LEFT — 只有主標區有玻璃卡片 */}
+            <div>
+              <div className="tracking-[14px] text-[#F5B700] text-[18px] font-semibold mb-4">
                 SMARTMATCH
               </div>
-
-              <div className="text-[24px] font-medium text-white/60 mb-6">
+              <div className="text-[22px] font-medium text-white/60 mb-6">
                 讓資產配置不再憑感覺
               </div>
 
-              <h1 className="text-[126px] font-black leading-[0.9] text-white mb-12">
-                找到適合你的
-                <br />
-                <span className="text-[#F5B700]">ETF</span>與基金
-              </h1>
+              {/* 主標玻璃卡片 */}
+              <div className="inline-block p-10 rounded-[32px] backdrop-blur-xl bg-white/[0.08] border border-white/10 mb-10">
+                <h1 className="text-[126px] font-black leading-[0.9] text-white">
+                  找到適合你的
+                  <br />
+                  <span className="text-[#F5B700]">ETF</span>與基金
+                </h1>
+              </div>
 
-              <p className="text-[36px] leading-[1.7] font-medium text-white/80 max-w-[680px] mb-14">
+              <p className="text-[36px] leading-[1.7] font-medium text-white/80 max-w-[680px] mb-12">
                 透過投資人格分析、ETF與基金資料庫、
                 <br />
                 以及資產配置模型，協助投資人建立長期可執行的投資策略。
@@ -95,11 +96,10 @@ export default function Home() {
                   瀏覽資料庫
                 </Link>
               </div>
-
             </div>
 
             {/* RIGHT — Dashboard 卡片 */}
-            <div className="grid grid-cols-2 gap-4 pl-12 py-24">
+            <div className="grid grid-cols-2 gap-4">
 
               {/* 市場概覽 */}
               <div className="bg-[#0B1220]/70 backdrop-blur-xl border border-white/10 rounded-[32px] p-8 text-white shadow-[0_40px_120px_rgba(0,0,0,0.45)]">
