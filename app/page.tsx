@@ -21,8 +21,8 @@ export default function Home() {
           <nav className="hidden lg:flex gap-8 text-[15px] font-semibold tracking-[0.3px] text-slate-700">
             <Link href="/quiz" className="hover:text-[#0B1220] transition-colors">投資人格分析</Link>
             <Link href="/etf" className="hover:text-[#0B1220] transition-colors">ETF篩選器</Link>
-            <a href="#" className="hover:text-[#0B1220] transition-colors">基金篩選器</a>
-            <a href="#" className="hover:text-[#0B1220] transition-colors">基金比較</a>
+            <Link href="/funds" className="hover:text-[#0B1220] transition-colors">基金篩選器</Link>
+            <Link href="/compare" className="hover:text-[#0B1220] transition-colors">比較中心</Link>
             <Link href="/clients" className="hover:text-[#0B1220] transition-colors">客戶管理</Link>
           </nav>
 
