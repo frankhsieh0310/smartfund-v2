@@ -229,12 +229,12 @@ export default function PricingPage() {
         </div>
 
         <div className="flex gap-4 justify-center pb-20">
-          <Link href="/" className="border border-white/20 text-white px-10 py-4 rounded-lg hover:bg-white/10 transition-colors font-semibold text-[16px]">
+          <a href="/" className="border border-white/20 text-white px-10 py-4 rounded-lg hover:bg-white/10 transition-colors font-semibold text-[16px]">
             回到首頁
-          </Link>
-          <Link href="/clients" className="bg-[#F5B700] hover:bg-[#e0a800] text-[#0B1220] px-10 py-4 rounded-lg font-bold text-[16px] transition-colors">
+          </a>
+          <a href="/clients" className="bg-[#F5B700] hover:bg-[#e0a800] text-[#0B1220] px-10 py-4 rounded-lg font-bold text-[16px] transition-colors">
             免費開始使用
-          </Link>
+          </a>
         </div>
 
       </div>
