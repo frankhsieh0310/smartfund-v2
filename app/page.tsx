@@ -25,10 +25,10 @@ export default function Home() {
             <Link href="/clients" className="hover:text-white transition-colors">客戶管理</Link>
           </nav>
 
-          <div className="flex items-center gap-6">
-            <a href="#" className="text-[15px] font-semibold text-slate-300 hover:text-white transition-colors">登入</a>
+          <div className="flex items-center gap-4">
+            <a href="#" className="text-[15px] font-semibold text-slate-300 border border-white/30 px-5 py-2.5 rounded-lg hover:bg-white/10 transition-colors">登入</a>
             <Link href="/quiz" className="bg-[#F5B700] hover:bg-[#e0a800] text-[#0B1220] px-6 py-2.5 rounded-lg font-bold text-[15px] transition-colors">
-              開始分析
+              免費註冊
             </Link>
           </div>
         </div>
@@ -68,21 +68,21 @@ export default function Home() {
               </div>
 
               {/* 主標玻璃卡片 */}
-              <div className="inline-block p-10 rounded-[32px] backdrop-blur-xl bg-white/[0.08] border border-white/10 mb-10">
-                <h1 className="text-[126px] font-black leading-[0.9] text-white">
+              <div className="inline-block py-6 px-10 rounded-[32px] backdrop-blur-xl bg-white/[0.08] border border-white/10 mb-10">
+                <h1 className="text-[96px] font-black leading-[0.9] text-white">
                   找到適合你的
                   <br />
                   <span className="text-[#F5B700]">ETF</span>與基金
                 </h1>
               </div>
 
-              <p className="text-[36px] leading-[1.7] font-medium text-white/80 max-w-[680px] mb-12">
-                透過投資人格分析、ETF與基金資料庫、
+              <p className="text-[28px] leading-[1.7] font-medium text-white/80 max-w-[640px] mb-8">
+                整合 ETF、基金、客戶管理與資產配置分析，
                 <br />
-                以及資產配置模型，協助投資人建立長期可執行的投資策略。
+                協助理專快速完成投資研究與客戶服務。
               </p>
 
-              <div className="flex gap-5">
+              <div className="flex gap-5 mb-10">
                 <Link
                   href="/quiz"
                   className="bg-[#F5B700] hover:bg-[#e0a800] text-black px-12 py-5 rounded-lg font-bold text-[22px] transition-colors"
@@ -96,6 +96,22 @@ export default function Home() {
                   瀏覽資料庫
                 </Link>
               </div>
+
+              {/* 可信度數字 */}
+              <div className="flex gap-8">
+                {[
+                  ["500+", "ETF 資料"],
+                  ["3,000+", "基金資料"],
+                  ["50+", "投信公司"],
+                  ["10年+", "歷史資料"],
+                ].map(([num, label]) => (
+                  <div key={label}>
+                    <div className="text-[28px] font-black text-[#F5B700] leading-none">{num}</div>
+                    <div className="text-[13px] text-white/50 mt-1">{label}</div>
+                  </div>
+                ))}
+              </div>
+
             </div>
 
             {/* RIGHT — Dashboard 卡片 */}
