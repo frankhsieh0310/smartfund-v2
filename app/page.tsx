@@ -518,7 +518,364 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ---- PRICING SECTION ---- */}
+      <section className="bg-white py-40" id="pricing">
+        <div className="max-w-[1400px] mx-auto px-10">
+
+          <div className="text-center mb-16">
+            <div className="text-[16px] tracking-[10px] text-[#F5B700] font-semibold mb-6">
+              PRICING
+            </div>
+            <h2 className="text-[64px] font-black text-[#0B1220] leading-tight">
+              選擇適合你的方案
+            </h2>
+            <p className="text-[18px] text-slate-500 mt-4">
+              從免費開始，隨時升級。所有方案均含核心分析功能。
+            </p>
+          </div>
+
+          {/* 五方案卡片 */}
+          <div className="grid grid-cols-5 gap-4 mb-16">
+
+            {/* FREE */}
+            <div className="border border-slate-200 rounded-2xl p-6 flex flex-col">
+              <div className="text-[12px] font-semibold text-slate-500 tracking-[2px] mb-3">免費版</div>
+              <div className="text-[40px] font-black text-[#0B1220] leading-none mb-1">$0</div>
+              <div className="text-[13px] text-slate-400 mb-6">永久免費</div>
+              <div className="flex flex-col gap-2.5 flex-1 mb-6 text-[14px]">
+                <PricingFeature text="人格分析（無限次）" />
+                <PricingFeature text="客戶管理（10 位）" />
+                <PricingFeature text="ETF / 基金資料庫" />
+                <PricingFeature text="5 檔走勢比較" />
+                <PricingFeature text="PDF（每月1份）" />
+                <PricingFeature text="歷史資料 3 年" />
+                <PricingFeatureNo text="客戶標籤" />
+                <PricingFeatureNo text="混合分析" />
+              </div>
+              <a href="/clients" className="block text-center border border-slate-300 text-[#0B1220] py-2.5 rounded-xl font-semibold text-[14px] hover:bg-slate-50 transition-colors">
+                免費開始
+              </a>
+            </div>
+
+            {/* LITE */}
+            <div className="border border-slate-200 rounded-2xl p-6 flex flex-col">
+              <div className="text-[12px] font-semibold text-slate-500 tracking-[2px] mb-3">Lite</div>
+              <div className="text-[40px] font-black text-[#0B1220] leading-none mb-1">NT$99</div>
+              <div className="text-[13px] text-slate-400 mb-6">每月</div>
+              <div className="flex flex-col gap-2.5 flex-1 mb-6 text-[14px]">
+                <PricingFeature text="人格分析（無限次）" />
+                <PricingFeature text="客戶管理（30 位）" />
+                <PricingFeature text="ETF / 基金資料庫" />
+                <PricingFeature text="10 檔走勢比較" />
+                <PricingFeature text="PDF（每月20份）" />
+                <PricingFeature text="歷史資料全期間" />
+                <PricingFeature text="客戶標籤" />
+                <PricingFeatureNo text="混合分析" />
+              </div>
+              <button onClick={() => alert("付款功能即將推出，請留下您的 Email 我們會通知您。")} className="block w-full text-center border border-slate-300 text-[#0B1220] py-2.5 rounded-xl font-semibold text-[14px] hover:bg-slate-50 transition-colors">
+                選擇 Lite
+              </button>
+            </div>
+
+            {/* PRO — highlighted */}
+            <div className="border-2 border-[#F5B700] rounded-2xl p-6 flex flex-col relative">
+              <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-[#F5B700] text-[#0B1220] text-[11px] font-bold px-3 py-1.5 rounded-full whitespace-nowrap">
+                主力方案
+              </div>
+              <div className="text-[12px] font-semibold text-[#F5B700] tracking-[2px] mb-3">Pro</div>
+              <div className="text-[40px] font-black text-[#0B1220] leading-none mb-1">NT$299</div>
+              <div className="text-[13px] text-slate-400 mb-6">每月</div>
+              <div className="flex flex-col gap-2.5 flex-1 mb-6 text-[14px]">
+                <PricingFeature text="人格分析（無限次）" />
+                <PricingFeature text="客戶管理（100 位）" />
+                <PricingFeature text="ETF / 基金資料庫" />
+                <PricingFeature text="20 檔走勢比較" />
+                <PricingFeature text="無限 PDF 匯出" />
+                <PricingFeature text="歷史資料全期間" />
+                <PricingFeature text="客戶標籤" />
+                <PricingFeature text="ETF＋基金混合分析" />
+              </div>
+              <button onClick={() => alert("付款功能即將推出，請留下您的 Email 我們會通知您。")} className="block w-full text-center bg-[#F5B700] hover:bg-[#e0a800] text-[#0B1220] py-2.5 rounded-xl font-bold text-[14px] transition-colors">
+                選擇 Pro
+              </button>
+            </div>
+
+            {/* ADVISOR */}
+            <div className="border border-slate-200 rounded-2xl p-6 flex flex-col">
+              <div className="text-[12px] font-semibold text-slate-500 tracking-[2px] mb-3">Advisor</div>
+              <div className="text-[40px] font-black text-[#0B1220] leading-none mb-1">NT$599</div>
+              <div className="text-[13px] text-slate-400 mb-6">每月</div>
+              <div className="flex flex-col gap-2.5 flex-1 mb-6 text-[14px]">
+                <PricingFeature text="Pro 全部功能" />
+                <PricingFeature text="客戶管理（500 位）" />
+                <PricingFeature text="無限走勢比較" />
+                <PricingFeature text="商品重疊度分析" />
+                <PricingFeature text="組合回測分析" />
+                <PricingFeature text="理專儀表板" />
+                <PricingFeatureNo text="多人帳號" />
+                <PricingFeatureNo text="客戶共享" />
+              </div>
+              <button onClick={() => alert("付款功能即將推出，請留下您的 Email 我們會通知您。")} className="block w-full text-center border border-slate-300 text-[#0B1220] py-2.5 rounded-xl font-semibold text-[14px] hover:bg-slate-50 transition-colors">
+                選擇 Advisor
+              </button>
+            </div>
+
+            {/* TEAM */}
+            <div className="border border-slate-200 rounded-2xl p-6 flex flex-col bg-[#0B1220]">
+              <div className="text-[12px] font-semibold text-[#F5B700] tracking-[2px] mb-3">Team</div>
+              <div className="text-[40px] font-black text-white leading-none mb-1">NT$1,499</div>
+              <div className="text-[13px] text-slate-400 mb-6">每月</div>
+              <div className="flex flex-col gap-2.5 flex-1 mb-6 text-[14px]">
+                <PricingFeatureWhite text="Advisor 全部功能" />
+                <PricingFeatureWhite text="客戶管理（無限）" />
+                <PricingFeatureWhite text="多人帳號（5人起）" />
+                <PricingFeatureWhite text="客戶共享" />
+                <PricingFeatureWhite text="理專主管儀表板" />
+                <PricingFeatureWhite text="團隊績效分析" />
+                <PricingFeatureWhite text="優先客服支援" />
+                <PricingFeatureWhite text="客製化報告模板" />
+              </div>
+              <button onClick={() => alert("請聯繫我們取得團隊版方案。")} className="block w-full text-center border border-white/30 text-white py-2.5 rounded-xl font-bold text-[14px] hover:bg-white/10 transition-colors">
+                聯繫我們
+              </button>
+            </div>
+
+          </div>
+
+          {/* 功能對比表 */}
+          <div className="border border-slate-200 rounded-2xl overflow-hidden mb-12">
+            <table className="w-full text-left text-[14px]">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-200">
+                  <th className="px-5 py-4 font-bold text-[#0B1220] w-[30%]">功能</th>
+                  <th className="px-4 py-4 font-bold text-slate-500 text-center">免費</th>
+                  <th className="px-4 py-4 font-bold text-slate-500 text-center">Lite</th>
+                  <th className="px-4 py-4 font-bold text-[#F5B700] text-center">Pro</th>
+                  <th className="px-4 py-4 font-bold text-slate-500 text-center">Advisor</th>
+                  <th className="px-4 py-4 font-bold text-[#0B1220] text-center">Team</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  ["客戶管理", "10位", "30位", "100位", "500位", "無限", true],
+                  ["投資人格分析", "無限", "無限", "無限", "無限", "無限"],
+                  ["ETF/基金資料庫", "✓", "✓", "✓", "✓", "✓", true],
+                  ["走勢比較", "5檔", "10檔", "20檔", "無限", "無限"],
+                  ["歷史資料", "3年", "全期間", "全期間", "全期間", "全期間", true],
+                  ["PDF報告", "1份/月", "20份/月", "無限", "無限", "無限"],
+                  ["客戶標籤", "✗", "✓", "✓", "✓", "✓", true],
+                  ["ETF+基金混合分析", "✗", "✗", "✓", "✓", "✓"],
+                  ["商品重疊分析", "✗", "✗", "✗", "✓", "✓", true],
+                  ["組合回測", "✗", "✗", "✗", "✓", "✓"],
+                  ["理專儀表板", "✗", "✗", "✗", "✓", "✓", true],
+                  ["多人帳號", "✗", "✗", "✗", "✗", "5人起"],
+                  ["客戶共享", "✗", "✗", "✗", "✗", "✓", true],
+                ].map(([label, free, lite, pro, advisor, team, highlight], i) => (
+                  <tr key={i} className={`border-b border-slate-100 ${highlight ? "bg-slate-50/60" : ""}`}>
+                    <td className="px-5 py-3 font-medium text-[#0B1220]">{label}</td>
+                    <td className={`px-4 py-3 text-center ${free === "✗" ? "text-slate-300" : "text-slate-500"}`}>{free}</td>
+                    <td className={`px-4 py-3 text-center ${lite === "✗" ? "text-slate-300" : "text-slate-500"}`}>{lite}</td>
+                    <td className={`px-4 py-3 text-center font-semibold ${pro === "✗" ? "text-slate-300" : "text-[#0B1220]"}`}>{pro}</td>
+                    <td className={`px-4 py-3 text-center ${advisor === "✗" ? "text-slate-300" : "text-slate-500"}`}>{advisor}</td>
+                    <td className={`px-4 py-3 text-center ${team === "✗" ? "text-slate-300" : "text-slate-500"}`}>{team}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="text-center">
+            <a href="/pricing" className="inline-block border border-slate-300 text-[#0B1220] px-10 py-4 rounded-lg hover:bg-slate-50 transition-colors font-semibold text-[16px]">
+              查看完整方案說明 →
+            </a>
+          </div>
+
+        </div>
+      </section>
+
     </main>
+  );
+}
+
+function PricingFeature({ text }: { text: string }) {
+  return (
+    <div className="flex items-start gap-2 text-[#0B1220]">
+      <span className="text-green-500 mt-0.5 shrink-0">✓</span>
+      {text}
+    </div>
+  );
+}
+
+function PricingFeatureNo({ text }: { text: string }) {
+  return (
+    <div className="flex items-start gap-2 text-slate-300">
+      <span className="mt-0.5 shrink-0">✗</span>
+      {text}
+    </div>
+  );
+}
+
+function PricingFeatureWhite({ text }: { text: string }) {
+  return (
+    <div className="flex items-start gap-2 text-white">
+      <span className="text-[#F5B700] mt-0.5 shrink-0">✓</span>
+      {text}
+    </div>
+  );
+}
+
+          {/* 三方案卡片 */}
+          <div className="grid grid-cols-3 gap-6 mb-16">
+
+            {/* FREE */}
+            <div className="border border-slate-200 rounded-2xl p-8 flex flex-col">
+              <div className="text-[13px] font-semibold text-slate-500 tracking-[2px] mb-3">免費版</div>
+              <div className="text-[52px] font-black text-[#0B1220] leading-none mb-1">$0</div>
+              <div className="text-[14px] text-slate-400 mb-8">永久免費</div>
+              <div className="flex flex-col gap-3 flex-1 mb-8">
+                <PricingFeature text="投資人格分析（無限次）" />
+                <PricingFeature text="客戶管理（最多 10 位）" />
+                <PricingFeature text="ETF / 基金資料庫" />
+                <PricingFeature text="5 檔商品走勢比較" />
+                <PricingFeature text="PDF報告（每月1份）" />
+                <PricingFeatureNo text="ETF＋基金混合分析" />
+                <PricingFeatureNo text="無限PDF匯出" />
+                <PricingFeatureNo text="商品重疊分析" />
+                <PricingFeatureNo text="組合回測" />
+              </div>
+              <a href="/clients" className="block text-center border border-slate-300 text-[#0B1220] py-3 rounded-xl font-semibold text-[15px] hover:bg-slate-50 transition-colors">
+                免費開始
+              </a>
+            </div>
+
+            {/* PRO — highlighted */}
+            <div className="border-2 border-[#F5B700] rounded-2xl p-8 flex flex-col relative">
+              <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-[#F5B700] text-[#0B1220] text-[12px] font-bold px-4 py-1.5 rounded-full whitespace-nowrap">
+                最多理專選擇
+              </div>
+              <div className="text-[13px] font-semibold text-[#F5B700] tracking-[2px] mb-3">專業版</div>
+              <div className="text-[52px] font-black text-[#0B1220] leading-none mb-1">NT$799</div>
+              <div className="text-[14px] text-slate-400 mb-8">每月 / 按月計費</div>
+              <div className="flex flex-col gap-3 flex-1 mb-8">
+                <PricingFeature text="投資人格分析（無限次）" />
+                <PricingFeature text="客戶管理（最多 50 位）" />
+                <PricingFeature text="ETF / 基金資料庫" />
+                <PricingFeature text="20 檔商品走勢比較" />
+                <PricingFeature text="無限PDF匯出" />
+                <PricingFeature text="ETF＋基金混合分析" />
+                <PricingFeature text="客戶標籤與分類" />
+                <PricingFeatureNo text="商品重疊分析" />
+                <PricingFeatureNo text="組合回測" />
+              </div>
+              <button
+                onClick={() => alert("付款功能即將推出，請聯繫我們了解更多。")}
+                className="block text-center bg-[#F5B700] hover:bg-[#e0a800] text-[#0B1220] py-3 rounded-xl font-bold text-[15px] transition-colors"
+              >
+                升級專業版
+              </button>
+            </div>
+
+            {/* TEAM */}
+            <div className="border border-slate-200 rounded-2xl p-8 flex flex-col bg-[#0B1220]">
+              <div className="text-[13px] font-semibold text-[#F5B700] tracking-[2px] mb-3">團隊版</div>
+              <div className="text-[52px] font-black text-white leading-none mb-1">NT$2,999</div>
+              <div className="text-[14px] text-slate-400 mb-8">每月 / 最多 5 位理專</div>
+              <div className="flex flex-col gap-3 flex-1 mb-8">
+                <PricingFeatureWhite text="專業版全部功能" />
+                <PricingFeatureWhite text="客戶管理（無限位）" />
+                <PricingFeatureWhite text="多人帳號（最多 5 位）" />
+                <PricingFeatureWhite text="無限走勢比較" />
+                <PricingFeatureWhite text="商品重疊度分析" />
+                <PricingFeatureWhite text="組合回測分析" />
+                <PricingFeatureWhite text="理專儀表板" />
+                <PricingFeatureWhite text="客戶共享" />
+              </div>
+              <button
+                onClick={() => alert("請聯繫我們取得團隊版方案。")}
+                className="block text-center border border-white/30 text-white py-3 rounded-xl font-bold text-[15px] hover:bg-white/10 transition-colors"
+              >
+                聯繫我們
+              </button>
+            </div>
+
+          </div>
+
+          {/* 功能對比表 */}
+          <div className="border border-slate-200 rounded-2xl overflow-hidden mb-12">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-200">
+                  <th className="px-6 py-4 text-[15px] font-bold text-[#0B1220] w-[40%]">功能</th>
+                  <th className="px-6 py-4 text-[15px] font-bold text-slate-500 text-center">免費版</th>
+                  <th className="px-6 py-4 text-[15px] font-bold text-[#F5B700] text-center">專業版</th>
+                  <th className="px-6 py-4 text-[15px] font-bold text-[#0B1220] text-center">團隊版</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  ["投資人格分析", "無限次", "無限次", "無限次"],
+                  ["客戶管理", "10 位", "50 位", "無限", true],
+                  ["ETF / 基金資料庫", "✓", "✓", "✓"],
+                  ["走勢比較", "5 檔", "20 檔", "無限", true],
+                  ["PDF 報告匯出", "每月1份", "無限", "無限"],
+                  ["ETF＋基金混合分析", "✗", "✓", "✓", true],
+                  ["客戶標籤與分類", "✗", "✓", "✓"],
+                  ["商品重疊度分析", "✗", "✗", "✓", true],
+                  ["組合回測", "✗", "✗", "✓"],
+                  ["多人帳號", "✗", "✗", "5 位", true],
+                  ["理專儀表板", "✗", "✗", "✓"],
+                ].map(([label, free, pro, team, highlight], i) => (
+                  <tr key={i} className={`border-b border-slate-100 text-[15px] ${highlight ? "bg-slate-50/60" : ""}`}>
+                    <td className="px-6 py-3.5 font-medium text-[#0B1220]">{label}</td>
+                    <td className={`px-6 py-3.5 text-center ${free === "✗" ? "text-slate-300" : "text-slate-600"}`}>{free}</td>
+                    <td className={`px-6 py-3.5 text-center font-semibold ${pro === "✗" ? "text-slate-300" : "text-[#0B1220]"}`}>{pro}</td>
+                    <td className={`px-6 py-3.5 text-center ${team === "✗" ? "text-slate-300" : "text-slate-600"}`}>{team}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="text-center">
+            <a
+              href="/pricing"
+              className="inline-block border border-slate-300 text-[#0B1220] px-10 py-4 rounded-lg hover:bg-slate-50 transition-colors font-semibold text-[16px]"
+            >
+              查看完整方案說明 →
+            </a>
+          </div>
+
+        </div>
+      </section>
+
+    </main>
+  );
+}
+
+function PricingFeature({ text }: { text: string }) {
+  return (
+    <div className="flex items-start gap-2 text-[15px] text-[#0B1220]">
+      <span className="text-green-500 mt-0.5 shrink-0">✓</span>
+      {text}
+    </div>
+  );
+}
+
+function PricingFeatureNo({ text }: { text: string }) {
+  return (
+    <div className="flex items-start gap-2 text-[15px] text-slate-300">
+      <span className="mt-0.5 shrink-0">✗</span>
+      {text}
+    </div>
+  );
+}
+
+function PricingFeatureWhite({ text }: { text: string }) {
+  return (
+    <div className="flex items-start gap-2 text-[15px] text-white">
+      <span className="text-[#F5B700] mt-0.5 shrink-0">✓</span>
+      {text}
+    </div>
   );
 }
 
