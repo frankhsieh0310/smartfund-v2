@@ -3,50 +3,14 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ETF_LIST } from "../etf/data";
-
+import { FUND_LIST, type Fund } from "../funds/data";
 import type { Etf } from "../etf/data";
-
-
-// ---- Fund type and data (inline) ----
-type Fund = {
-  code: string;
-  name: string;
-  type: "基金";
-  category: string;
-  region: string;
-  expenseRatio: number;
-  dividendYield: number;
-  aum: number;
-  return1y: number;
-  return3y: number;
-  return5y: number;
-  volatility: number;
-  sharpe: number;
-  currency: string;
-};
-
-const FUND_LIST: Fund[] = [
-  { code: "BARING-PAB", name: "霸菱優先順位資產抵押債券基金", type: "基金", category: "債券型", region: "全球", expenseRatio: 1.20, dividendYield: 5.8, aum: 45, return1y: 6.2, return3y: 4.1, return5y: 3.8, volatility: 4.2, sharpe: 0.92, currency: "USD" },
-  { code: "AB-INCOME", name: "聯博收益債券基金", type: "基金", category: "債券型", region: "全球", expenseRatio: 1.35, dividendYield: 6.1, aum: 180, return1y: 7.1, return3y: 4.8, return5y: 4.5, volatility: 5.1, sharpe: 0.88, currency: "USD" },
-  { code: "NOMURA-GLOBAL", name: "野村全球優質基金", type: "基金", category: "股票型", region: "全球", expenseRatio: 1.50, dividendYield: 1.2, aum: 38, return1y: 18.4, return3y: 12.1, return5y: 11.8, volatility: 12.8, sharpe: 1.12, currency: "USD" },
-  { code: "FRANKLIN-TECH", name: "富蘭克林科技基金", type: "基金", category: "股票型", region: "美國", expenseRatio: 1.45, dividendYield: 0.3, aum: 92, return1y: 28.6, return3y: 16.2, return5y: 18.4, volatility: 18.5, sharpe: 1.24, currency: "USD" },
-  { code: "PIMCO-INCOME", name: "PIMCO收益基金", type: "基金", category: "債券型", region: "全球", expenseRatio: 1.25, dividendYield: 7.2, aum: 320, return1y: 8.4, return3y: 5.2, return5y: 5.8, volatility: 6.2, sharpe: 0.95, currency: "USD" },
-  { code: "FIDELITY-GLOBAL", name: "富達全球股票基金", type: "基金", category: "股票型", region: "全球", expenseRatio: 1.40, dividendYield: 0.8, aum: 145, return1y: 22.1, return3y: 13.4, return5y: 12.9, volatility: 14.2, sharpe: 1.18, currency: "USD" },
-  { code: "JPMORGAN-ASIA", name: "摩根亞洲基金", type: "基金", category: "股票型", region: "亞洲", expenseRatio: 1.55, dividendYield: 1.8, aum: 78, return1y: 12.8, return3y: 7.2, return5y: 8.1, volatility: 16.4, sharpe: 0.82, currency: "USD" },
-  { code: "SCHRODERS-EMG", name: "施羅德新興市場基金", type: "基金", category: "股票型", region: "新興市場", expenseRatio: 1.60, dividendYield: 2.1, aum: 56, return1y: 10.4, return3y: 5.8, return5y: 6.2, volatility: 19.2, sharpe: 0.68, currency: "USD" },
-  { code: "AB-TECH", name: "聯博科技基金", type: "基金", category: "股票型", region: "美國", expenseRatio: 1.48, dividendYield: 0.2, aum: 68, return1y: 32.4, return3y: 18.6, return5y: 20.1, volatility: 22.4, sharpe: 1.31, currency: "USD" },
-  { code: "MORGAN-INCOME", name: "摩根收益基金", type: "基金", category: "平衡型", region: "全球", expenseRatio: 1.30, dividendYield: 5.4, aum: 112, return1y: 9.8, return3y: 6.4, return5y: 6.8, volatility: 8.2, sharpe: 0.98, currency: "USD" },
-  { code: "BARING-ASIA", name: "霸菱亞洲基金", type: "基金", category: "股票型", region: "亞洲", expenseRatio: 1.52, dividendYield: 2.4, aum: 32, return1y: 14.2, return3y: 8.6, return5y: 9.1, volatility: 17.8, sharpe: 0.85, currency: "USD" },
-  { code: "INVESCO-TECH", name: "景順科技基金", type: "基金", category: "股票型", region: "全球", expenseRatio: 1.42, dividendYield: 0.4, aum: 85, return1y: 26.8, return3y: 15.4, return5y: 16.2, volatility: 20.1, sharpe: 1.22, currency: "USD" },
-  { code: "BLACKROCK-WORLD", name: "貝萊德世界基金", type: "基金", category: "股票型", region: "全球", expenseRatio: 1.38, dividendYield: 1.1, aum: 210, return1y: 20.6, return3y: 12.8, return5y: 13.4, volatility: 13.6, sharpe: 1.15, currency: "USD" },
-  { code: "ALLIANZ-BOND", name: "安聯全球債券基金", type: "基金", category: "債券型", region: "全球", expenseRatio: 1.15, dividendYield: 4.8, aum: 88, return1y: 5.4, return3y: 3.2, return5y: 3.8, volatility: 5.8, sharpe: 0.72, currency: "USD" },
-  { code: "DWS-INDIA", name: "德銀印度基金", type: "基金", category: "股票型", region: "印度", expenseRatio: 1.65, dividendYield: 0.6, aum: 28, return1y: 18.9, return3y: 12.4, return5y: 14.2, volatility: 21.8, sharpe: 0.94, currency: "USD" },
-];
 
 // ---- unified item type ----
 type Item = {
   code: string;
   name: string;
+  company?: string;
   type: "ETF" | "基金";
   category: string;
   region: string;
@@ -78,8 +42,9 @@ function etfToItem(e: Etf): Item {
 
 function fundToItem(f: Fund): Item {
   return {
-    code: f.code,
+    code: f.id,
     name: f.name,
+    company: f.company,
     type: "基金",
     category: f.category,
     region: f.region,
@@ -151,9 +116,11 @@ export default function ComparePage() {
       .filter(
         (i) =>
           !selected.find((s) => s.code === i.code) &&
-          (i.code.toLowerCase().includes(kw) || i.name.toLowerCase().includes(kw))
+          (i.code.toLowerCase().includes(kw) ||
+           i.name.toLowerCase().includes(kw) ||
+           (i.company && i.company.toLowerCase().includes(kw)))
       )
-      .slice(0, 8);
+      .slice(0, 10);
   }, [keyword, selected]);
 
   function addItem(item: Item) {
@@ -209,8 +176,17 @@ export default function ComparePage() {
                       <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${item.type === "ETF" ? "bg-[#0B1220] text-white" : "bg-blue-100 text-blue-700"}`}>
                         {item.type}
                       </span>
-                      <span className="font-bold text-[#0B1220] text-[15px]">{item.code}</span>
-                      <span className="text-slate-500 text-[14px] truncate">{item.name}</span>
+                      {item.type === "ETF" ? (
+                        <>
+                          <span className="font-bold text-[#0B1220] text-[15px]">{item.code}</span>
+                          <span className="text-slate-500 text-[14px] truncate">{item.name}</span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="font-bold text-[#0B1220] text-[15px]">{item.company}</span>
+                          <span className="text-slate-500 text-[14px] truncate">{item.name}</span>
+                        </>
+                      )}
                     </button>
                   ))}
                 </div>
@@ -236,7 +212,10 @@ export default function ComparePage() {
                   className="w-2.5 h-2.5 rounded-full"
                   style={{ backgroundColor: LINE_COLORS[i] }}
                 />
-                {item.code}
+                {item.type === "ETF" ? item.code : (item.company || item.code)}
+                <span className="text-[12px] font-normal opacity-70 max-w-[120px] truncate">
+                  {item.type === "基金" ? item.name : ""}
+                </span>
                 <button
                   onClick={() => removeItem(item.code)}
                   className="ml-1 opacity-60 hover:opacity-100 transition-opacity"
