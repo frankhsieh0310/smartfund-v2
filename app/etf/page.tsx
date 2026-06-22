@@ -52,17 +52,40 @@ export default function EtfDatabasePage() {
   }
 
   return (
-    <main className="min-h-screen bg-white px-6 py-20">
+    <main className="min-h-screen bg-[#0a0f1e] px-6 pt-32 pb-20">
+
+      {/* DARK NAVBAR */}
+      <nav className="fixed top-0 left-0 w-full z-50 bg-[#0a0f1e]/90 backdrop-blur-xl border-b border-white/10">
+        <div className="max-w-[1700px] mx-auto h-20 px-10 flex items-center justify-between">
+          <a href="/">
+            <div className="text-[28px] font-black text-white leading-none">Smart<span className="text-[#F5B700]">Match</span></div>
+            <div className="text-[11px] text-slate-400 mt-0.5">ETF & 基金資產配置分析平台</div>
+          </a>
+          <div className="hidden lg:flex gap-7 text-[14px] font-semibold text-slate-300">
+            <a href="/quiz" className="hover:text-white transition-colors">投資人格分析</a>
+            <a href="/etf" className="hover:text-white transition-colors">ETF篩選器</a>
+            <a href="/funds" className="hover:text-white transition-colors">基金篩選器</a>
+            <a href="/compare" className="hover:text-white transition-colors">比較中心</a>
+            <a href="/clients" className="hover:text-white transition-colors">客戶管理</a>
+            <a href="/pricing" className="text-[#F5B700] hover:text-[#e0a800] transition-colors">方案</a>
+          </div>
+          <div className="flex items-center gap-3">
+            <a href="#" className="text-[14px] font-semibold text-slate-300 border border-white/30 px-4 py-2 rounded-lg hover:bg-white/10 transition-colors">登入</a>
+            <a href="/quiz" className="bg-[#F5B700] hover:bg-[#e0a800] text-[#0B1220] px-5 py-2 rounded-lg font-bold text-[14px] transition-colors">免費註冊</a>
+          </div>
+        </div>
+      </nav>
+
       <div className="max-w-[1280px] mx-auto">
 
         <div className="mb-10">
           <div className="tracking-[10px] text-[#F5B700] text-[16px] font-semibold mb-4">
             SMARTMATCH
           </div>
-          <h1 className="text-[44px] font-black text-[#0B1220]">
+          <h1 className="text-[44px] font-black text-white">
             ETF 資料庫
           </h1>
-          <p className="text-[16px] text-slate-500 mt-2">
+          <p className="text-[16px] text-slate-400 mt-2">
             共 {ETF_LIST.length} 檔 ETF，支援搜尋、篩選與排序
           </p>
         </div>
@@ -75,13 +98,13 @@ export default function EtfDatabasePage() {
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
             placeholder="搜尋代碼或名稱，例如 VOO"
-            className="flex-1 min-w-[240px] border border-slate-300 rounded-lg px-5 py-3 text-[16px] text-[#0B1220] placeholder:text-slate-400 focus:outline-none focus:border-[#F5B700]"
+            className="flex-1 min-w-[240px] border border-white/20 rounded-lg px-5 py-3 text-[16px] text-white placeholder:text-slate-500 focus:outline-none focus:border-[#F5B700]"
           />
 
           <select
             value={region}
             onChange={(e) => setRegion(e.target.value)}
-            className="border border-slate-300 rounded-lg px-4 py-3 text-[16px] text-[#0B1220] focus:outline-none focus:border-[#F5B700]"
+            className="border border-white/20 rounded-lg px-4 py-3 text-[16px] text-white focus:outline-none focus:border-[#F5B700]"
           >
             <option value="全部">全部地區</option>
             {REGIONS.map((r) => (
@@ -92,7 +115,7 @@ export default function EtfDatabasePage() {
           <select
             value={sector}
             onChange={(e) => setSector(e.target.value)}
-            className="border border-slate-300 rounded-lg px-4 py-3 text-[16px] text-[#0B1220] focus:outline-none focus:border-[#F5B700]"
+            className="border border-white/20 rounded-lg px-4 py-3 text-[16px] text-white focus:outline-none focus:border-[#F5B700]"
           >
             <option value="全部">全部產業</option>
             {SECTORS.map((s) => (
@@ -102,15 +125,15 @@ export default function EtfDatabasePage() {
 
         </div>
 
-        <div className="text-[14px] text-slate-500 mb-4">
+        <div className="text-[14px] text-slate-400 mb-4">
           符合條件：{filtered.length} 檔
         </div>
 
         {/* TABLE */}
-        <div className="border border-slate-200 rounded-2xl overflow-hidden">
+        <div className="border border-white/10 rounded-2xl overflow-hidden">
           <table className="w-full text-left">
             <thead>
-              <tr className="bg-[#0B1220] text-white text-[14px]">
+              <tr className="bg-white/[0.08] text-white text-[14px]">
                 <th className="px-5 py-4 font-semibold">代碼</th>
                 <th className="px-5 py-4 font-semibold">名稱</th>
                 <th className="px-5 py-4 font-semibold">地區</th>
@@ -145,14 +168,14 @@ export default function EtfDatabasePage() {
               {filtered.map((etf, i) => (
                 <tr
                   key={etf.code}
-                  className={`text-[15px] text-[#0B1220] ${
-                    i % 2 === 1 ? "bg-slate-50" : "bg-white"
+                  className={`text-[15px] text-white ${
+                    i % 2 === 1 ? "bg-white/[0.03]" : "bg-white"
                   } hover:bg-[#F5B700]/10 transition-colors`}
                 >
                   <td className="px-5 py-3 font-bold">{etf.code}</td>
-                  <td className="px-5 py-3 text-slate-600">{etf.name}</td>
-                  <td className="px-5 py-3 text-slate-600">{etf.region}</td>
-                  <td className="px-5 py-3 text-slate-600">{etf.sector}</td>
+                  <td className="px-5 py-3 text-slate-400">{etf.name}</td>
+                  <td className="px-5 py-3 text-slate-400">{etf.region}</td>
+                  <td className="px-5 py-3 text-slate-400">{etf.sector}</td>
                   <td className="px-5 py-3">{etf.expenseRatio.toFixed(2)}%</td>
                   <td className="px-5 py-3">{etf.dividendYield.toFixed(1)}%</td>
                   <td className="px-5 py-3">{etf.aum.toLocaleString()}</td>
@@ -185,7 +208,7 @@ export default function EtfDatabasePage() {
         <div className="flex justify-center mt-12">
           <Link
             href="/"
-            className="border border-slate-300 text-[#0B1220] px-10 py-4 rounded-lg hover:bg-slate-50 transition-colors font-semibold text-[18px]"
+            className="border border-white/20 text-white px-10 py-4 rounded-lg hover:bg-white/[0.03] transition-colors font-semibold text-[18px]"
           >
             回到首頁
           </Link>

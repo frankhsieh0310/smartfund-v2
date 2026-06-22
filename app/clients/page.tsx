@@ -202,7 +202,30 @@ export default function ClientsPage() {
   }
 
   return (
-    <main className="min-h-screen bg-white px-6 py-20">
+    <main className="min-h-screen bg-[#0a0f1e] px-6 pt-32 pb-20">
+
+      {/* DARK NAVBAR */}
+      <nav className="fixed top-0 left-0 w-full z-50 bg-[#0a0f1e]/90 backdrop-blur-xl border-b border-white/10">
+        <div className="max-w-[1700px] mx-auto h-20 px-10 flex items-center justify-between">
+          <a href="/">
+            <div className="text-[28px] font-black text-white leading-none">Smart<span className="text-[#F5B700]">Match</span></div>
+            <div className="text-[11px] text-slate-400 mt-0.5">ETF & 基金資產配置分析平台</div>
+          </a>
+          <div className="hidden lg:flex gap-7 text-[14px] font-semibold text-slate-300">
+            <a href="/quiz" className="hover:text-white transition-colors">投資人格分析</a>
+            <a href="/etf" className="hover:text-white transition-colors">ETF篩選器</a>
+            <a href="/funds" className="hover:text-white transition-colors">基金篩選器</a>
+            <a href="/compare" className="hover:text-white transition-colors">比較中心</a>
+            <a href="/clients" className="hover:text-white transition-colors">客戶管理</a>
+            <a href="/pricing" className="text-[#F5B700] hover:text-[#e0a800] transition-colors">方案</a>
+          </div>
+          <div className="flex items-center gap-3">
+            <a href="#" className="text-[14px] font-semibold text-slate-300 border border-white/30 px-4 py-2 rounded-lg hover:bg-white/10 transition-colors">登入</a>
+            <a href="/quiz" className="bg-[#F5B700] hover:bg-[#e0a800] text-[#0B1220] px-5 py-2 rounded-lg font-bold text-[14px] transition-colors">免費註冊</a>
+          </div>
+        </div>
+      </nav>
+
       <div className="max-w-[1280px] mx-auto">
 
         {/* HEADER */}
@@ -211,10 +234,10 @@ export default function ClientsPage() {
             <div className="tracking-[10px] text-[#F5B700] text-[16px] font-semibold mb-4">
               SMARTMATCH
             </div>
-            <h1 className="text-[44px] font-black text-[#0B1220]">
+            <h1 className="text-[44px] font-black text-white">
               客戶管理
             </h1>
-            <p className="text-[16px] text-slate-500 mt-2">
+            <p className="text-[16px] text-slate-400 mt-2">
               共 {clients.length} 位客戶
               {isAtLimit && (
                 <a href="/pricing" className="ml-3 text-[#F5B700] font-semibold hover:underline">
@@ -230,7 +253,7 @@ export default function ClientsPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="搜尋客戶姓名、電話、Email"
-              className="border border-slate-300 rounded-lg px-4 py-2.5 text-[15px] w-[280px] focus:outline-none focus:border-[#F5B700]"
+              className="border border-white/20 rounded-lg px-4 py-2.5 text-[15px] w-[280px] focus:outline-none focus:border-[#F5B700]"
             />
             <button
               onClick={() => {
@@ -242,7 +265,7 @@ export default function ClientsPage() {
                 setEditingId(null);
                 setShowForm(true);
               }}
-              className="bg-[#F5B700] hover:bg-[#e0a800] text-[#0B1220] px-6 py-2.5 rounded-lg font-bold text-[15px] transition-colors"
+              className="bg-[#F5B700] hover:bg-[#e0a800] text-white px-6 py-2.5 rounded-lg font-bold text-[15px] transition-colors"
             >
               ＋ 新增客戶
             </button>
@@ -252,8 +275,8 @@ export default function ClientsPage() {
         {/* MODAL FORM */}
         {showForm && (
           <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center px-4">
-            <div className="bg-white rounded-2xl p-8 w-full max-w-[560px] shadow-2xl">
-              <h2 className="text-[24px] font-bold text-[#0B1220] mb-6">
+            <div className="bg-white/[0.05] border border-white/10 rounded-2xl p-8 w-full max-w-[560px] shadow-2xl">
+              <h2 className="text-[24px] font-bold text-white mb-6">
                 {editingId ? "編輯客戶" : "新增客戶"}
               </h2>
 
@@ -341,13 +364,13 @@ export default function ClientsPage() {
               <div className="flex gap-3 mt-6">
                 <button
                   onClick={handleSubmit}
-                  className="flex-1 bg-[#F5B700] hover:bg-[#e0a800] text-[#0B1220] py-3 rounded-lg font-bold text-[16px] transition-colors"
+                  className="flex-1 bg-[#F5B700] hover:bg-[#e0a800] text-white py-3 rounded-lg font-bold text-[16px] transition-colors"
                 >
                   {editingId ? "儲存變更" : "建立客戶"}
                 </button>
                 <button
                   onClick={() => { setShowForm(false); setEditingId(null); }}
-                  className="border border-slate-300 text-slate-600 px-6 py-3 rounded-lg font-semibold text-[16px] hover:bg-slate-50 transition-colors"
+                  className="border border-white/20 text-slate-400 px-6 py-3 rounded-lg font-semibold text-[16px] hover:bg-white/[0.03] transition-colors"
                 >
                   取消
                 </button>
@@ -362,7 +385,7 @@ export default function ClientsPage() {
           {/* CLIENT LIST */}
           <div className="flex flex-col gap-3">
             {filtered.length === 0 && (
-              <div className="text-center text-slate-400 py-16 border border-slate-200 rounded-2xl">
+              <div className="text-center text-slate-400 py-16 border border-white/10 rounded-2xl">
                 {search ? "找不到符合的客戶" : "尚未建立任何客戶"}
               </div>
             )}
@@ -374,15 +397,15 @@ export default function ClientsPage() {
                 className={`border rounded-2xl p-5 cursor-pointer transition-all ${
                   selectedId === client.id
                     ? "border-[#F5B700] bg-[#F5B700]/5"
-                    : "border-slate-200 hover:border-slate-300"
+                    : "border-white/10 hover:border-white/20"
                 }`}
               >
                 <div className="flex items-start justify-between">
                   <div>
-                    <div className="text-[18px] font-bold text-[#0B1220]">
+                    <div className="text-[18px] font-bold text-white">
                       {client.name}
                     </div>
-                    <div className="text-[14px] text-slate-500 mt-1">
+                    <div className="text-[14px] text-slate-400 mt-1">
                       {client.age ? `${client.age}歲・` : ""}{client.investmentGoal}
                     </div>
                   </div>
@@ -395,7 +418,7 @@ export default function ClientsPage() {
                       {PERSONALITY_LABELS[client.personality]}
                     </span>
                   ) : (
-                    <span className="text-[12px] text-slate-400 border border-slate-200 px-2.5 py-1 rounded-full">
+                    <span className="text-[12px] text-slate-400 border border-white/10 px-2.5 py-1 rounded-full">
                       未測驗
                     </span>
                   )}
@@ -422,14 +445,14 @@ export default function ClientsPage() {
           {/* CLIENT DETAIL */}
           <div>
             {selectedClient ? (
-              <div className="border border-slate-200 rounded-2xl p-8">
+              <div className="border border-white/10 rounded-2xl p-8">
 
                 <div className="flex items-start justify-between mb-6">
                   <div>
-                    <h2 className="text-[32px] font-black text-[#0B1220]">
+                    <h2 className="text-[32px] font-black text-white">
                       {selectedClient.name}
                     </h2>
-                    <p className="text-[15px] text-slate-500 mt-1">
+                    <p className="text-[15px] text-slate-400 mt-1">
                       {selectedClient.age ? `${selectedClient.age}歲・` : ""}
                       {selectedClient.investmentGoal}・
                       風險承受度：{selectedClient.riskLevel}
@@ -439,7 +462,7 @@ export default function ClientsPage() {
                   <div className="flex gap-2">
                     <button
                       onClick={() => handleEdit(selectedClient)}
-                      className="border border-slate-300 text-slate-600 px-4 py-2 rounded-lg text-[14px] hover:bg-slate-50 transition-colors"
+                      className="border border-white/20 text-slate-400 px-4 py-2 rounded-lg text-[14px] hover:bg-white/[0.03] transition-colors"
                     >
                       編輯
                     </button>
@@ -454,17 +477,17 @@ export default function ClientsPage() {
 
                 {/* Contact */}
                 {(selectedClient.phone || selectedClient.email) && (
-                  <div className="bg-slate-50 rounded-xl p-4 mb-6 flex gap-6">
+                  <div className="bg-white/[0.03] rounded-xl p-4 mb-6 flex gap-6">
                     {selectedClient.phone && (
                       <div>
                         <div className="text-[12px] text-slate-400 mb-0.5">電話</div>
-                        <div className="text-[15px] text-[#0B1220]">{selectedClient.phone}</div>
+                        <div className="text-[15px] text-white">{selectedClient.phone}</div>
                       </div>
                     )}
                     {selectedClient.email && (
                       <div>
                         <div className="text-[12px] text-slate-400 mb-0.5">Email</div>
-                        <div className="text-[15px] text-[#0B1220]">{selectedClient.email}</div>
+                        <div className="text-[15px] text-white">{selectedClient.email}</div>
                       </div>
                     )}
                   </div>
@@ -478,7 +501,7 @@ export default function ClientsPage() {
                     </div>
                     <Link
                       href={`/quiz?clientId=${selectedClient.id}`}
-                      className="bg-[#F5B700] hover:bg-[#e0a800] text-[#0B1220] px-4 py-2 rounded-lg text-[14px] font-bold transition-colors"
+                      className="bg-[#F5B700] hover:bg-[#e0a800] text-white px-4 py-2 rounded-lg text-[14px] font-bold transition-colors"
                     >
                       {selectedClient.personality ? "重新測驗" : "開始測驗"}
                     </Link>
@@ -532,9 +555,9 @@ export default function ClientsPage() {
 
                 {/* Notes */}
                 {selectedClient.notes && (
-                  <div className="border border-slate-200 rounded-xl p-5 mb-6">
-                    <div className="text-[14px] font-semibold text-slate-500 mb-2">備註</div>
-                    <p className="text-[15px] text-[#0B1220] whitespace-pre-wrap">
+                  <div className="border border-white/10 rounded-xl p-5 mb-6">
+                    <div className="text-[14px] font-semibold text-slate-400 mb-2">備註</div>
+                    <p className="text-[15px] text-white whitespace-pre-wrap">
                       {selectedClient.notes}
                     </p>
                   </div>
@@ -542,7 +565,7 @@ export default function ClientsPage() {
 
                 {/* Meeting Records */}
                 <div>
-                  <div className="text-[18px] font-bold text-[#0B1220] mb-4">
+                  <div className="text-[18px] font-bold text-white mb-4">
                     會議紀錄
                     <span className="text-[14px] font-normal text-slate-400 ml-2">
                       （{selectedClient.meetings.length} 筆）
@@ -555,7 +578,7 @@ export default function ClientsPage() {
                       onChange={(e) => setMeetingInput(e.target.value)}
                       placeholder="記錄今日與客戶的討論重點、關切事項..."
                       rows={2}
-                      className="flex-1 border border-slate-300 rounded-lg px-4 py-3 text-[15px] focus:outline-none focus:border-[#F5B700] resize-none"
+                      className="flex-1 border border-white/20 rounded-lg px-4 py-3 text-[15px] focus:outline-none focus:border-[#F5B700] resize-none"
                     />
                     <button
                       onClick={handleAddMeeting}
@@ -569,11 +592,11 @@ export default function ClientsPage() {
                     {[...selectedClient.meetings].reverse().map((m) => (
                       <div
                         key={m.id}
-                        className="border border-slate-200 rounded-xl p-4 flex items-start justify-between gap-4"
+                        className="border border-white/10 rounded-xl p-4 flex items-start justify-between gap-4"
                       >
                         <div>
                           <div className="text-[13px] text-slate-400 mb-1">{m.date}</div>
-                          <p className="text-[15px] text-[#0B1220] whitespace-pre-wrap">
+                          <p className="text-[15px] text-white whitespace-pre-wrap">
                             {m.content}
                           </p>
                         </div>
@@ -596,7 +619,7 @@ export default function ClientsPage() {
 
               </div>
             ) : (
-              <div className="border border-slate-200 rounded-2xl flex items-center justify-center h-[400px] text-slate-400 text-[16px]">
+              <div className="border border-white/10 rounded-2xl flex items-center justify-center h-[400px] text-slate-400 text-[16px]">
                 ← 點選左側客戶查看詳細資料
               </div>
             )}
@@ -607,7 +630,7 @@ export default function ClientsPage() {
         <div className="flex justify-center mt-12">
           <Link
             href="/"
-            className="border border-slate-300 text-[#0B1220] px-10 py-4 rounded-lg hover:bg-slate-50 transition-colors font-semibold text-[18px]"
+            className="border border-white/20 text-white px-10 py-4 rounded-lg hover:bg-white/[0.03] transition-colors font-semibold text-[18px]"
           >
             回到首頁
           </Link>
@@ -619,12 +642,12 @@ export default function ClientsPage() {
 }
 
 const inputCls =
-  "w-full border border-slate-300 rounded-lg px-4 py-2.5 text-[15px] text-[#0B1220] focus:outline-none focus:border-[#F5B700]";
+  "w-full border border-white/20 rounded-lg px-4 py-2.5 text-[15px] text-white focus:outline-none focus:border-[#F5B700]";
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="block text-[13px] font-semibold text-slate-500 mb-1.5">
+      <label className="block text-[13px] font-semibold text-slate-400 mb-1.5">
         {label}
       </label>
       {children}

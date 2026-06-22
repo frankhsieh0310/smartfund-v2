@@ -114,13 +114,36 @@ export default function FundsPage() {
   }
 
   return (
-    <main className="min-h-screen bg-white px-6 py-20">
+    <main className="min-h-screen bg-[#0a0f1e] px-6 pt-32 pb-20">
+
+      {/* DARK NAVBAR */}
+      <nav className="fixed top-0 left-0 w-full z-50 bg-[#0a0f1e]/90 backdrop-blur-xl border-b border-white/10">
+        <div className="max-w-[1700px] mx-auto h-20 px-10 flex items-center justify-between">
+          <a href="/">
+            <div className="text-[28px] font-black text-white leading-none">Smart<span className="text-[#F5B700]">Match</span></div>
+            <div className="text-[11px] text-slate-400 mt-0.5">ETF & 基金資產配置分析平台</div>
+          </a>
+          <div className="hidden lg:flex gap-7 text-[14px] font-semibold text-slate-300">
+            <a href="/quiz" className="hover:text-white transition-colors">投資人格分析</a>
+            <a href="/etf" className="hover:text-white transition-colors">ETF篩選器</a>
+            <a href="/funds" className="hover:text-white transition-colors">基金篩選器</a>
+            <a href="/compare" className="hover:text-white transition-colors">比較中心</a>
+            <a href="/clients" className="hover:text-white transition-colors">客戶管理</a>
+            <a href="/pricing" className="text-[#F5B700] hover:text-[#e0a800] transition-colors">方案</a>
+          </div>
+          <div className="flex items-center gap-3">
+            <a href="#" className="text-[14px] font-semibold text-slate-300 border border-white/30 px-4 py-2 rounded-lg hover:bg-white/10 transition-colors">登入</a>
+            <a href="/quiz" className="bg-[#F5B700] hover:bg-[#e0a800] text-[#0B1220] px-5 py-2 rounded-lg font-bold text-[14px] transition-colors">免費註冊</a>
+          </div>
+        </div>
+      </nav>
+
       <div className="max-w-[1400px] mx-auto">
 
         <div className="mb-10">
           <div className="tracking-[10px] text-[#F5B700] text-[16px] font-semibold mb-4">SMARTMATCH</div>
-          <h1 className="text-[44px] font-black text-[#0B1220]">基金資料庫</h1>
-          <p className="text-[16px] text-slate-500 mt-2">
+          <h1 className="text-[44px] font-black text-white">基金資料庫</h1>
+          <p className="text-[16px] text-slate-400 mt-2">
             共 {FUND_LIST.length} 檔基金・前20大基金公司主力商品・支援搜尋、篩選、排序與走勢比較
           </p>
         </div>
@@ -132,21 +155,21 @@ export default function FundsPage() {
             value={keyword}
             onChange={e => setKeyword(e.target.value)}
             placeholder="搜尋基金名稱或公司"
-            className="flex-1 min-w-[200px] border border-slate-300 rounded-lg px-4 py-2.5 text-[15px] focus:outline-none focus:border-[#F5B700]"
+            className="flex-1 min-w-[200px] border border-white/20 rounded-lg px-4 py-2.5 text-[15px] focus:outline-none focus:border-[#F5B700]"
           />
-          <select value={company} onChange={e => setCompany(e.target.value)} className="border border-slate-300 rounded-lg px-3 py-2.5 text-[15px] focus:outline-none focus:border-[#F5B700]">
+          <select value={company} onChange={e => setCompany(e.target.value)} className="border border-white/20 rounded-lg px-3 py-2.5 text-[15px] focus:outline-none focus:border-[#F5B700]">
             <option value="全部">全部公司</option>
             {COMPANIES.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
-          <select value={category} onChange={e => setCategory(e.target.value)} className="border border-slate-300 rounded-lg px-3 py-2.5 text-[15px] focus:outline-none focus:border-[#F5B700]">
+          <select value={category} onChange={e => setCategory(e.target.value)} className="border border-white/20 rounded-lg px-3 py-2.5 text-[15px] focus:outline-none focus:border-[#F5B700]">
             <option value="全部">全部類型</option>
             {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
-          <select value={region} onChange={e => setRegion(e.target.value)} className="border border-slate-300 rounded-lg px-3 py-2.5 text-[15px] focus:outline-none focus:border-[#F5B700]">
+          <select value={region} onChange={e => setRegion(e.target.value)} className="border border-white/20 rounded-lg px-3 py-2.5 text-[15px] focus:outline-none focus:border-[#F5B700]">
             <option value="全部">全部地區</option>
             {REGIONS.map(r => <option key={r} value={r}>{r}</option>)}
           </select>
-          <select value={dividendType} onChange={e => setDividendType(e.target.value)} className="border border-slate-300 rounded-lg px-3 py-2.5 text-[15px] focus:outline-none focus:border-[#F5B700]">
+          <select value={dividendType} onChange={e => setDividendType(e.target.value)} className="border border-white/20 rounded-lg px-3 py-2.5 text-[15px] focus:outline-none focus:border-[#F5B700]">
             <option value="全部">配息/不配息</option>
             <option value="配息">配息</option>
             <option value="不配息">不配息</option>
@@ -154,7 +177,7 @@ export default function FundsPage() {
         </div>
 
         <div className="flex items-center justify-between mb-4">
-          <div className="text-[14px] text-slate-500">符合條件：{filtered.length} 檔</div>
+          <div className="text-[14px] text-slate-400">符合條件：{filtered.length} 檔</div>
           {chartFunds.length > 0 && (
             <div className="text-[14px] text-[#F5B700] font-semibold">
               已選 {chartFunds.length} 檔加入走勢比較
@@ -163,11 +186,11 @@ export default function FundsPage() {
         </div>
 
         {/* TABLE */}
-        <div className="border border-slate-200 rounded-2xl overflow-hidden mb-8">
+        <div className="border border-white/10 rounded-2xl overflow-hidden mb-8">
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
-                <tr className="bg-[#0B1220] text-white text-[13px]">
+                <tr className="bg-white/[0.08] text-white text-[13px]">
                   <th className="px-3 py-3 w-[32px]"></th>
                   <th className="px-4 py-3 font-semibold min-w-[80px]">公司</th>
                   <th className="px-4 py-3 font-semibold min-w-[220px]">基金名稱</th>
@@ -193,8 +216,8 @@ export default function FundsPage() {
                   return (
                     <tr
                       key={fund.id}
-                      className={`text-[13px] border-b border-slate-100 transition-colors ${
-                        i % 2 === 1 ? "bg-slate-50/60" : "bg-white"
+                      className={`text-[13px] border-b border-white/[0.06] transition-colors ${
+                        i % 2 === 1 ? "bg-white/[0.03]/60" : "bg-white"
                       } ${inChart ? "bg-[#F5B700]/8" : ""} hover:bg-[#F5B700]/5`}
                     >
                       <td className="px-3 py-2.5">
@@ -205,29 +228,29 @@ export default function FundsPage() {
                           className={`w-5 h-5 rounded-full border-2 transition-colors flex items-center justify-center text-[10px] font-bold ${
                             inChart
                               ? "border-transparent text-white"
-                              : "border-slate-300 hover:border-[#F5B700] disabled:opacity-30"
+                              : "border-white/20 hover:border-[#F5B700] disabled:opacity-30"
                           }`}
                           style={inChart ? { backgroundColor: LINE_COLORS[chartIdx] } : {}}
                         >
                           {inChart ? "✓" : ""}
                         </button>
                       </td>
-                      <td className="px-4 py-2.5 font-semibold text-[#0B1220]">{fund.company}</td>
-                      <td className="px-4 py-2.5 text-[#0B1220]">{fund.name}</td>
+                      <td className="px-4 py-2.5 font-semibold text-white">{fund.company}</td>
+                      <td className="px-4 py-2.5 text-white">{fund.name}</td>
                       <td className="px-4 py-2.5">
                         <span className={`text-[11px] px-1.5 py-0.5 rounded font-semibold ${
                           fund.category === "股票型" ? "bg-blue-100 text-blue-700" :
-                          fund.category === "債券型" ? "bg-slate-100 text-slate-600" :
+                          fund.category === "債券型" ? "bg-white/[0.06] text-slate-400" :
                           fund.category === "平衡型" ? "bg-purple-100 text-purple-700" :
                           "bg-green-100 text-green-700"
                         }`}>
                           {fund.category}
                         </span>
                       </td>
-                      <td className="px-4 py-2.5 text-slate-500">{fund.region}</td>
+                      <td className="px-4 py-2.5 text-slate-400">{fund.region}</td>
                       <td className="px-4 py-2.5">
                         <span className={`text-[11px] px-1.5 py-0.5 rounded font-semibold ${
-                          fund.dividendType === "配息" ? "bg-[#F5B700]/20 text-[#b38600]" : "bg-slate-100 text-slate-500"
+                          fund.dividendType === "配息" ? "bg-[#F5B700]/20 text-[#b38600]" : "bg-white/[0.06] text-slate-400"
                         }`}>
                           {fund.dividendType}
                         </span>
@@ -277,9 +300,9 @@ export default function FundsPage() {
 
         {/* TREND CHART */}
         {chartFunds.length > 0 && (
-          <div className="border border-slate-200 rounded-2xl p-8 mb-8">
+          <div className="border border-white/10 rounded-2xl p-8 mb-8">
             <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-              <div className="text-[22px] font-bold text-[#0B1220]">走勢比較（指數化，起點=100）</div>
+              <div className="text-[22px] font-bold text-white">走勢比較（指數化，起點=100）</div>
               <div className="flex gap-2">
                 {PERIODS.map(p => (
                   <button
@@ -287,8 +310,8 @@ export default function FundsPage() {
                     onClick={() => setChartPeriod(p.key)}
                     className={`px-4 py-2 rounded-lg text-[14px] font-semibold transition-colors ${
                       chartPeriod === p.key
-                        ? "bg-[#F5B700] text-[#0B1220]"
-                        : "bg-white border border-slate-300 text-slate-600 hover:border-[#F5B700]"
+                        ? "bg-[#F5B700] text-white"
+                        : "bg-white border border-white/20 text-slate-400 hover:border-[#F5B700]"
                     }`}
                   >
                     {p.label}
@@ -301,8 +324,8 @@ export default function FundsPage() {
               {chartFunds.map((fund, i) => (
                 <div key={fund.id} className="flex items-center gap-2">
                   <span className="w-3 h-3 rounded-full" style={{ backgroundColor: LINE_COLORS[i] }} />
-                  <span className="text-[14px] font-semibold text-[#0B1220]">{fund.company}</span>
-                  <span className="text-[13px] text-slate-500">{fund.name}</span>
+                  <span className="text-[14px] font-semibold text-white">{fund.company}</span>
+                  <span className="text-[13px] text-slate-400">{fund.name}</span>
                   <button onClick={() => toggleChart(fund)} className="text-slate-300 hover:text-red-400 text-[12px] ml-1">✕</button>
                 </div>
               ))}
@@ -318,7 +341,7 @@ export default function FundsPage() {
         )}
 
         {chartFunds.length === 0 && (
-          <div className="border border-dashed border-slate-300 rounded-2xl p-8 mb-8 text-center text-slate-400">
+          <div className="border border-dashed border-white/20 rounded-2xl p-8 mb-8 text-center text-slate-400">
             <div className="text-[20px] mb-2">📊</div>
             <div className="text-[15px]">點擊表格左側的圓圈，加入最多 {MAX_CHART} 檔基金進行走勢比較</div>
           </div>
@@ -329,10 +352,10 @@ export default function FundsPage() {
         </p>
 
         <div className="flex justify-center mt-10 gap-4">
-          <Link href="/compare" className="border border-slate-300 text-[#0B1220] px-8 py-3.5 rounded-lg hover:bg-slate-50 transition-colors font-semibold text-[16px]">
+          <Link href="/compare" className="border border-white/20 text-white px-8 py-3.5 rounded-lg hover:bg-white/[0.03] transition-colors font-semibold text-[16px]">
             ETF+基金比較中心
           </Link>
-          <Link href="/" className="border border-slate-300 text-[#0B1220] px-8 py-3.5 rounded-lg hover:bg-slate-50 transition-colors font-semibold text-[16px]">
+          <Link href="/" className="border border-white/20 text-white px-8 py-3.5 rounded-lg hover:bg-white/[0.03] transition-colors font-semibold text-[16px]">
             回到首頁
           </Link>
         </div>
@@ -371,7 +394,7 @@ function TrendChart({ funds, period }: { funds: Fund[]; period: Period }) {
   const toY = (v: number) => pad.top + chartH - ((v - minVal) / range) * chartH;
 
   return (
-    <div className="bg-white rounded-xl overflow-x-auto">
+    <div className="bg-white/[0.05] border border-white/10 rounded-xl overflow-x-auto">
       <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-[340px]">
         {[0, 0.25, 0.5, 0.75, 1].map(t => {
           const y = pad.top + chartH * t;

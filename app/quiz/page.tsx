@@ -1,604 +1,561 @@
-import Link from "next/link";
+"use client";
 
-export default function Home() {
-  return (
-    <main className="min-h-screen bg-white overflow-hidden">
+import { Suspense } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 
-      {/* NAVBAR */}
-      <header className="fixed top-0 left-0 w-full z-50 bg-white border-b border-slate-200">
-        <div className="max-w-[1700px] mx-auto h-24 px-10 flex items-center justify-between">
+type Answer = {
+  text: string;
+  score: number;
+};
 
-          <div>
-            <div className="text-[52px] font-black text-[#0B1220] leading-none">
-              Smart<span className="text-[#F5B700]">Match</span>
+type Question = {
+  id: number;
+  text: string;
+  answers: Answer[];
+};
+
+const QUESTIONS: Question[] = [
+  {
+    id: 1,
+    text: "如果你的投資組合在一個月內下跌 15%，你會怎麼做？",
+    answers: [
+      { text: "立即全部賣出，停損出場", score: 1 },
+      { text: "賣出一部分，降低風險", score: 2 },
+      { text: "維持不動，觀察情況", score: 3 },
+      { text: "加碼買進，逢低布局", score: 5 },
+    ],
+  },
+  {
+    id: 2,
+    text: "你的投資目標主要是？",
+    answers: [
+      { text: "保本，避免任何虧損", score: 1 },
+      { text: "穩定領息或小幅成長", score: 2 },
+      { text: "資產中長期成長", score: 4 },
+      { text: "追求最大化報酬", score: 5 },
+    ],
+  },
+  {
+    id: 3,
+    text: "這筆投資的資金，預計多久之後會需要動用？",
+    answers: [
+      { text: "1年內", score: 1 },
+      { text: "1~3年", score: 2 },
+      { text: "3~7年", score: 4 },
+      { text: "7年以上", score: 5 },
+    ],
+  },
+  {
+    id: 4,
+    text: "你過去的投資經驗大概是？",
+    answers: [
+      { text: "完全沒有投資經驗", score: 1 },
+      { text: "只買過定存、儲蓄險", score: 2 },
+      { text: "買過基金或ETF", score: 3 },
+      { text: "個股、期貨都操作過", score: 5 },
+    ],
+  },
+  {
+    id: 5,
+    text: "如果有兩個方案，你會選哪一個？",
+    answers: [
+      { text: "穩賺3%，零風險", score: 1 },
+      { text: "70%機會賺8%，30%機會賺0%", score: 3 },
+      { text: "50%機會賺20%，50%機會虧5%", score: 5 },
+    ],
+  },
+  {
+    id: 6,
+    text: "你的家庭財務狀況是？",
+    answers: [
+      { text: "收入不穩定，沒有緊急預備金", score: 1 },
+      { text: "收入穩定，有基本緊急預備金", score: 3 },
+      { text: "收入充裕，財務狀況寬裕", score: 5 },
+    ],
+  },
+  {
+    id: 7,
+    text: "看到新聞報導股市大跌，你的第一反應是？",
+    answers: [
+      { text: "緊張焦慮，想趕快出場", score: 1 },
+      { text: "有點擔心，但會先觀察", score: 2 },
+      { text: "覺得是正常波動", score: 4 },
+      { text: "覺得是進場好時機", score: 5 },
+    ],
+  },
+  {
+    id: 8,
+    text: "你比較能接受哪一種資產配置？",
+    answers: [
+      { text: "100% 定存或債券", score: 1 },
+      { text: "債券為主，股票為輔", score: 2 },
+      { text: "股債各半", score: 3 },
+      { text: "股票為主，少量債券", score: 5 },
+    ],
+  },
+  {
+    id: 9,
+    text: "你對「投資波動」的看法是？",
+    answers: [
+      { text: "波動讓我睡不著覺", score: 1 },
+      { text: "波動會讓我有些不安", score: 2 },
+      { text: "波動是投資必經過程", score: 4 },
+      { text: "波動代表機會", score: 5 },
+    ],
+  },
+  {
+    id: 10,
+    text: "你希望多久檢視一次投資組合？",
+    answers: [
+      { text: "每天都要看", score: 2 },
+      { text: "每週看一次", score: 3 },
+      { text: "每月看一次", score: 4 },
+      { text: "一季或更久看一次即可", score: 5 },
+    ],
+  },
+  {
+    id: 11,
+    text: "如果投資虧損 10%，你會？",
+    answers: [
+      { text: "完全無法接受，立刻處理", score: 1 },
+      { text: "會擔心，但能忍受一段時間", score: 3 },
+      { text: "可以接受，視為正常波動", score: 5 },
+    ],
+  },
+  {
+    id: 12,
+    text: "你的年齡階段大概是？",
+    answers: [
+      { text: "55歲以上，接近退休", score: 1 },
+      { text: "45~55歲", score: 2 },
+      { text: "35~45歲", score: 3 },
+      { text: "35歲以下", score: 5 },
+    ],
+  },
+  {
+    id: 13,
+    text: "比起穩定領息，你更在意？",
+    answers: [
+      { text: "穩定領息比較重要", score: 1 },
+      { text: "息收與成長都要兼顧", score: 3 },
+      { text: "資產長期成長比較重要", score: 5 },
+    ],
+  },
+  {
+    id: 14,
+    text: "如果朋友推薦一檔高波動的科技股，你會？",
+    answers: [
+      { text: "完全不考慮", score: 1 },
+      { text: "了解一下，但不會投入太多", score: 3 },
+      { text: "願意投入一部分資金嘗試", score: 5 },
+    ],
+  },
+  {
+    id: 15,
+    text: "你對「本金虧損」的容忍度是？",
+    answers: [
+      { text: "完全不能接受本金虧損", score: 1 },
+      { text: "可以接受小幅虧損(5%內)", score: 2 },
+      { text: "可以接受中度虧損(5~15%)", score: 4 },
+      { text: "可以接受較大虧損換取高報酬", score: 5 },
+    ],
+  },
+  {
+    id: 16,
+    text: "你投資的主要資金來源是？",
+    answers: [
+      { text: "退休金或養老金", score: 1 },
+      { text: "緊急預備金以外的儲蓄", score: 3 },
+      { text: "閒置資金，短期內不會用到", score: 5 },
+    ],
+  },
+  {
+    id: 17,
+    text: "對於投資相關知識，你願意花多少時間學習？",
+    answers: [
+      { text: "希望全部交給專家處理", score: 2 },
+      { text: "願意花一些時間了解基本概念", score: 3 },
+      { text: "願意持續研究市場與產業", score: 5 },
+    ],
+  },
+  {
+    id: 18,
+    text: "如果同一年內市場修正超過一次，你會？",
+    answers: [
+      { text: "考慮退出市場", score: 1 },
+      { text: "重新評估但傾向繼續持有", score: 3 },
+      { text: "視為加碼的機會", score: 5 },
+    ],
+  },
+  {
+    id: 19,
+    text: "你期待的年化報酬率大概是？",
+    answers: [
+      { text: "2~4%（接近定存）", score: 1 },
+      { text: "5~7%", score: 3 },
+      { text: "8~12%", score: 4 },
+      { text: "12%以上", score: 5 },
+    ],
+  },
+  {
+    id: 20,
+    text: "整體來說，你會如何形容自己的投資個性？",
+    answers: [
+      { text: "保守謹慎，安全第一", score: 1 },
+      { text: "穩健務實，平衡風險與報酬", score: 3 },
+      { text: "積極進取，願意承擔風險換取成長", score: 5 },
+    ],
+  },
+];
+
+type ResultType = {
+  key: "conservative" | "balanced" | "growth" | "aggressive";
+  title: string;
+  range: string;
+  desc: string;
+  allocation: { label: string; value: number; color: string }[];
+};
+
+const RESULTS: ResultType[] = [
+  {
+    key: "conservative",
+    title: "保守型",
+    range: "20 - 40 分",
+    desc: "你重視資產的安全與穩定，對虧損的容忍度較低，適合以保本與穩定收益為主的投資組合。",
+    allocation: [
+      { label: "債券", value: 60, color: "#64748b" },
+      { label: "現金", value: 25, color: "#334155" },
+      { label: "股票", value: 15, color: "#F5B700" },
+    ],
+  },
+  {
+    key: "balanced",
+    title: "穩健型",
+    range: "41 - 60 分",
+    desc: "你希望在風險與報酬之間取得平衡，能接受一定程度的波動，適合股債均衡配置的投資組合。",
+    allocation: [
+      { label: "股票", value: 45, color: "#F5B700" },
+      { label: "債券", value: 40, color: "#64748b" },
+      { label: "現金", value: 15, color: "#334155" },
+    ],
+  },
+  {
+    key: "growth",
+    title: "成長型",
+    range: "61 - 80 分",
+    desc: "你願意承擔較高波動以追求資產成長，投資期間較長，適合以股票為主、債券為輔的配置。",
+    allocation: [
+      { label: "股票", value: 70, color: "#F5B700" },
+      { label: "債券", value: 22, color: "#64748b" },
+      { label: "現金", value: 8, color: "#334155" },
+    ],
+  },
+  {
+    key: "aggressive",
+    title: "積極型",
+    range: "81 - 100 分",
+    desc: "你能承受高度波動，追求長期最大化報酬，適合以股票為核心、搭配高成長資產的投資組合。",
+    allocation: [
+      { label: "股票", value: 85, color: "#F5B700" },
+      { label: "債券", value: 10, color: "#64748b" },
+      { label: "現金", value: 5, color: "#334155" },
+    ],
+  },
+];
+
+function getResult(totalScore: number): ResultType {
+  if (totalScore <= 40) return RESULTS[0];
+  if (totalScore <= 60) return RESULTS[1];
+  if (totalScore <= 80) return RESULTS[2];
+  return RESULTS[3];
+}
+
+// ---- localStorage helpers (mirrors clients page) ----
+const STORAGE_KEY = "smartmatch_clients";
+
+function loadClients() {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+
+function saveClients(clients: unknown[]) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(clients));
+}
+
+function newId() {
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function QuizContent() {
+  const searchParams = useSearchParams();
+  const clientId = searchParams.get("clientId");
+
+  const [step, setStep] = useState(0);
+  const [answers, setAnswers] = useState<number[]>(
+    Array(QUESTIONS.length).fill(0)
+  );
+  const [showResult, setShowResult] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [saveForm, setSaveForm] = useState({ name: "", notes: "" });
+  const [showSaveForm, setShowSaveForm] = useState(false);
+  const [clientName, setClientName] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!clientId) return;
+    const clients = loadClients();
+    const found = clients.find((c: { id: string; name: string }) => c.id === clientId);
+    if (found) setClientName(found.name);
+  }, [clientId]);
+
+  const isLastQuestion = step === QUESTIONS.length - 1;
+  const currentQuestion = QUESTIONS[step];
+  const progress = ((step + 1) / QUESTIONS.length) * 100;
+  const totalScore = answers.reduce((sum, s) => sum + s, 0);
+  const result = getResult(totalScore);
+
+  function handleAnswer(score: number) {
+    const next = [...answers];
+    next[step] = score;
+    setAnswers(next);
+
+    if (isLastQuestion) {
+      const finalScore = next.reduce((sum, s) => sum + s, 0);
+      const finalResult = getResult(finalScore);
+      if (clientId) {
+        const clients = loadClients();
+        const updated = clients.map((c: { id: string }) =>
+          c.id === clientId
+            ? { ...c, personality: finalResult.key, personalityScore: finalScore, updatedAt: new Date().toISOString() }
+            : c
+        );
+        saveClients(updated);
+        setSaved(true);
+      }
+      setShowResult(true);
+    } else {
+      setStep(step + 1);
+    }
+  }
+
+  function handleBack() {
+    if (step > 0) setStep(step - 1);
+  }
+
+  function handleRestart() {
+    setStep(0);
+    setAnswers(Array(QUESTIONS.length).fill(0));
+    setShowResult(false);
+    setSaved(false);
+    setShowSaveForm(false);
+  }
+
+  function handleSaveNewClient() {
+    if (!saveForm.name.trim()) return;
+    const clients = loadClients();
+    if (clients.length >= 5) {
+      window.location.href = "/pricing";
+      return;
+    }
+    const now = new Date().toISOString();
+    const newClient = {
+      id: newId(),
+      name: saveForm.name.trim(),
+      age: 0, phone: "", email: "",
+      riskLevel: "中", investmentGoal: "資產增值",
+      personality: result.key,
+      personalityScore: totalScore,
+      notes: saveForm.notes.trim(),
+      createdAt: now, updatedAt: now, meetings: [],
+    };
+    saveClients([...clients, newClient]);
+    setSaved(true);
+    setShowSaveForm(false);
+  }
+
+  if (showResult) {
+    return (
+      <main className="min-h-screen bg-[#0a0f1e] flex items-center justify-center px-6 pt-32 pb-20">
+
+      {/* DARK NAVBAR */}
+      <nav className="fixed top-0 left-0 w-full z-50 bg-[#0a0f1e]/90 backdrop-blur-xl border-b border-white/10">
+        <div className="max-w-[1700px] mx-auto h-20 px-10 flex items-center justify-between">
+          <a href="/">
+            <div className="text-[28px] font-black text-white leading-none">Smart<span className="text-[#F5B700]">Match</span></div>
+            <div className="text-[11px] text-slate-400 mt-0.5">ETF & 基金資產配置分析平台</div>
+          </a>
+          <div className="hidden lg:flex gap-7 text-[14px] font-semibold text-slate-300">
+            <a href="/quiz" className="text-[#F5B700]">投資人格分析</a>
+            <a href="/etf" className="hover:text-white transition-colors">ETF篩選器</a>
+            <a href="/funds" className="hover:text-white transition-colors">基金篩選器</a>
+            <a href="/compare" className="hover:text-white transition-colors">比較中心</a>
+            <a href="/clients" className="hover:text-white transition-colors">客戶管理</a>
+            <a href="/pricing" className="hover:text-[#F5B700] transition-colors">方案</a>
+          </div>
+          <div className="flex items-center gap-3">
+            <a href="#" className="text-[14px] font-semibold text-slate-300 border border-white/30 px-4 py-2 rounded-lg hover:bg-white/10 transition-colors">登入</a>
+            <a href="/quiz" className="bg-[#F5B700] hover:bg-[#e0a800] text-white px-5 py-2 rounded-lg font-bold text-[14px] transition-colors">免費註冊</a>
+          </div>
+        </div>
+      </nav>
+
+        <div className="max-w-[760px] w-full">
+
+          <div className="text-center mb-12">
+            <div className="tracking-[10px] text-[#F5B700] text-[16px] font-semibold mb-6">SMARTMATCH</div>
+            {clientName && <div className="text-[15px] text-slate-400 mb-2">客戶：{clientName}</div>}
+            <div className="text-[18px] text-slate-400 mb-3">投資人格分析結果</div>
+            <h1 className="text-[64px] font-black text-white leading-tight">{result.title}</h1>
+            <div className="text-[16px] text-slate-400 mt-2">總分 {totalScore} 分（{result.range}）</div>
+          </div>
+
+          <p className="text-[20px] leading-[1.8] text-slate-400 text-center mb-12">{result.desc}</p>
+
+          <div className="bg-[#0B1220] rounded-[24px] p-10 mb-10">
+            <div className="text-white text-[22px] font-bold mb-6">資產配置分析</div>
+            <div className="flex h-4 rounded-full overflow-hidden mb-6">
+              {result.allocation.map((a) => (
+                <div key={a.label} style={{ width: `${a.value}%`, backgroundColor: a.color }} />
+              ))}
             </div>
-
-            <div className="text-[14px] text-slate-500 mt-1">
-              ETF & 基金資產配置分析平台
+            <div className="grid grid-cols-3 gap-4">
+              {result.allocation.map((a) => (
+                <div key={a.label}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: a.color }} />
+                    <span className="text-slate-300 text-[15px]">{a.label}</span>
+                  </div>
+                  <div className="text-white text-[28px] font-bold">{a.value}%</div>
+                </div>
+              ))}
             </div>
           </div>
 
-          <nav className="hidden lg:flex gap-8 text-[15px] font-semibold tracking-[0.3px] text-slate-700">
-            <Link href="/quiz" className="hover:text-[#0B1220] transition-colors">投資人格分析</Link>
-            <Link href="/etf" className="hover:text-[#0B1220] transition-colors">ETF篩選器</Link>
-            <Link href="/funds" className="hover:text-[#0B1220] transition-colors">基金篩選器</Link>
-            <Link href="/compare" className="hover:text-[#0B1220] transition-colors">比較中心</Link>
-            <Link href="/clients" className="hover:text-[#0B1220] transition-colors">客戶管理</Link>
-          </nav>
+          {!saved && !clientId && (
+            <div className="border border-[#F5B700]/40 rounded-2xl p-6 mb-8 bg-[#F5B700]/5">
+              {!showSaveForm ? (
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-[16px] font-bold text-white">儲存分析結果</div>
+                    <div className="text-[14px] text-slate-400 mt-1">將此分析結果儲存至客戶管理中心</div>
+                  </div>
+                  <button onClick={() => setShowSaveForm(true)} className="bg-[#F5B700] hover:bg-[#e0a800] text-white px-6 py-3 rounded-lg font-bold text-[15px] transition-colors">
+                    儲存為客戶
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <div className="text-[16px] font-bold text-white mb-4">建立客戶檔案</div>
+                  <div className="flex flex-col gap-3">
+                    <input type="text" value={saveForm.name} onChange={(e) => setSaveForm({ ...saveForm, name: e.target.value })} placeholder="客戶姓名 *" className="border border-white/20 rounded-lg px-4 py-3 text-[15px] focus:outline-none focus:border-[#F5B700]" />
+                    <textarea value={saveForm.notes} onChange={(e) => setSaveForm({ ...saveForm, notes: e.target.value })} placeholder="備註（選填）" rows={2} className="border border-white/20 rounded-lg px-4 py-3 text-[15px] focus:outline-none focus:border-[#F5B700] resize-none" />
+                    <div className="flex gap-3">
+                      <button onClick={handleSaveNewClient} className="flex-1 bg-[#F5B700] hover:bg-[#e0a800] text-white py-3 rounded-lg font-bold text-[15px] transition-colors">確認儲存</button>
+                      <button onClick={() => setShowSaveForm(false)} className="border border-white/20 px-5 py-3 rounded-lg text-slate-400 text-[15px] hover:bg-white/[0.03]">取消</button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
-          <div className="flex items-center gap-6">
-            <a href="#" className="text-[15px] font-semibold text-slate-600 hover:text-[#0B1220] transition-colors">
-              登入
+          {saved && (
+            <div className="border border-green-200 bg-green-50 rounded-2xl p-5 mb-8 text-center">
+              <div className="text-green-600 font-bold text-[16px]">✓ 已儲存至客戶管理中心</div>
+              <a href="/clients" className="text-[14px] text-green-600 hover:underline mt-1 block">前往查看 →</a>
+            </div>
+          )}
+
+          <div className="flex gap-4 justify-center">
+            <a href={`/report?type=${result.key}`} className="bg-[#F5B700] hover:bg-[#e0a800] text-white px-10 py-4 rounded-lg font-semibold text-[18px] transition-colors">
+              查看分析結果
             </a>
-            <Link href="/quiz" className="bg-[#F5B700] hover:bg-[#e0a800] text-[#0B1220] px-7 py-3 rounded-lg font-bold text-[15px]">
-              開始分析
-            </Link>
+            <button onClick={handleRestart} className="border border-white/20 text-white px-10 py-4 rounded-lg hover:bg-white/[0.03] transition-colors font-semibold text-[18px]">
+              重新測驗
+            </button>
+            <a href="/" className="text-slate-400 hover:text-white transition-colors text-[16px] self-center">
+              回到首頁
+            </a>
           </div>
 
         </div>
-      </header>
+      </main>
+    );
+  }
 
-      {/* HERO */}
-      <section className="pt-24">
+  return (
+    <main className="min-h-screen bg-[#0a0f1e] flex items-center justify-center px-6 pt-32 pb-20">
 
-        <div className="grid lg:grid-cols-[47%_53%] min-h-[1100px]">
-
-          {/* LEFT */}
-          <div className="flex flex-col items-start justify-center pt-32 bg-white relative z-20 px-12">
-
-            <div className="max-w-[860px]">
-
-              <div className="tracking-[14px] text-[#F5B700] text-[20px] font-semibold mb-6">
-                SMARTMATCH
-              </div>
-
-              <div className="text-[24px] font-medium text-slate-500 mb-6">
-                讓資產配置不再憑感覺
-              </div>
-
-              <h1 className="text-[126px] font-black leading-[0.88] tracking-[-1px] text-[#0B1220] mb-14">
-
-                找到適合你的
-
-                <br />
-
-                <span className="text-[#F5B700] text-[108px]">ETF</span>與基金
-
-              </h1>
-
-              <p className="text-[36px] leading-[1.7] font-medium text-slate-600 max-w-[680px] mb-16">
-                透過投資人格分析、ETF與基金資料庫、
-                <br />
-                以及資產配置模型，協助投資人建立長期可執行的投資策略。
-              </p>
-
-              <div className="flex gap-5">
-
-                <Link
-                  href="/quiz"
-                  className="bg-[#F5B700] hover:bg-[#e0a800] text-[#0B1220] px-12 py-5 rounded-lg font-semibold text-[22px] transition-colors"
-                >
-                  開始投資人格分析
-                </Link>
-
-                <button className="border border-slate-300 text-[#0B1220] px-12 py-5 rounded-lg hover:bg-slate-50 transition-colors font-semibold text-[22px]">
-                  瀏覽資料庫
-                </button>
-
-              </div>
-
-            </div>
-
+      {/* DARK NAVBAR */}
+      <nav className="fixed top-0 left-0 w-full z-50 bg-[#0a0f1e]/90 backdrop-blur-xl border-b border-white/10">
+        <div className="max-w-[1700px] mx-auto h-20 px-10 flex items-center justify-between">
+          <a href="/">
+            <div className="text-[28px] font-black text-white leading-none">Smart<span className="text-[#F5B700]">Match</span></div>
+            <div className="text-[11px] text-slate-400 mt-0.5">ETF & 基金資產配置分析平台</div>
+          </a>
+          <div className="hidden lg:flex gap-7 text-[14px] font-semibold text-slate-300">
+            <a href="/quiz" className="text-[#F5B700]">投資人格分析</a>
+            <a href="/etf" className="hover:text-white transition-colors">ETF篩選器</a>
+            <a href="/funds" className="hover:text-white transition-colors">基金篩選器</a>
+            <a href="/compare" className="hover:text-white transition-colors">比較中心</a>
+            <a href="/clients" className="hover:text-white transition-colors">客戶管理</a>
+            <a href="/pricing" className="hover:text-[#F5B700] transition-colors">方案</a>
           </div>
-
-          {/* RIGHT */}
-          <div className="relative overflow-hidden">
-
-            {/* BUILDING */}
-            <div
-              className="absolute inset-0"
-              style={{
-                backgroundImage:
-                  "url('https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2600')",
-                backgroundSize: "115%",
-                backgroundPosition: "20% center",
-                backgroundRepeat: "no-repeat",
-              }}
-            />
-
-            {/* OVERLAY */}
-            <div className="absolute inset-0 bg-black/25" />
-
-            {/* GOLD GLOW */}
-            <div
-              className="absolute inset-0 pointer-events-none"
-              style={{
-                background:
-                  "radial-gradient(ellipse 900px 600px at 75% 15%, rgba(245,183,0,0.18), transparent 60%)",
-              }}
-            />
-
-            {/* DATA LINES */}
-            <svg
-              className="absolute inset-0 w-full h-full opacity-[0.35] pointer-events-none"
-              viewBox="0 0 800 1000"
-              preserveAspectRatio="xMidYMid slice"
-            >
-              <polyline
-                points="0,820 80,790 160,830 240,760 320,780 400,700 480,730 560,650 640,680 720,600 800,560"
-                fill="none"
-                stroke="#F5B700"
-                strokeWidth="2"
-                strokeOpacity="0.5"
-              />
-              <polyline
-                points="0,900 90,880 180,905 270,860 360,875 450,820 540,840 630,790 720,810 800,770"
-                fill="none"
-                stroke="#F5B700"
-                strokeWidth="1.5"
-                strokeOpacity="0.3"
-              />
-            </svg>
-
-            {/* DIAGONAL CUT */}
-            <div
-              className="absolute left-[-380px] top-0 h-full w-[620px] bg-white z-10"
-              style={{
-                clipPath: "polygon(0 0,100% 0,0 100%)",
-              }}
-            />
-
-            {/* DASHBOARD */}
-            <div className="relative z-20 h-full flex items-start pt-12 justify-center pl-36">
-
-              <div className="grid grid-cols-2 gap-4 w-[920px]">
-
-                {/* MARKET — 玻璃卡 */}
-                <div className="bg-white/[0.18] backdrop-blur-2xl border border-white/20 rounded-[24px] p-8 h-auto text-white shadow-[0_40px_120px_rgba(0,0,0,0.45)]">
-
-                  <div className="flex justify-between mb-8">
-
-                    <div className="font-bold text-[30px]">
-                      市場概覽
-                    </div>
-
-                    <div className="text-[14px] text-slate-400">
-                      即時更新 15:30
-                    </div>
-
-                  </div>
-
-                  <div className="space-y-7 text-[18px]">
-
-                    <div className="flex justify-between">
-                      <span>S&P 500</span>
-                      <span className="text-green-400">+0.68%</span>
-                    </div>
-
-                    <div className="flex justify-between">
-                      <span>NASDAQ</span>
-                      <span className="text-green-400">+0.85%</span>
-                    </div>
-
-                    <div className="flex justify-between">
-                      <span>DOW JONES</span>
-                      <span className="text-green-400">+0.53%</span>
-                    </div>
-
-                    <div className="flex justify-between">
-                      <span>MSCI ACWI</span>
-                      <span className="text-green-400">+0.62%</span>
-                    </div>
-
-                    <div className="flex justify-between">
-                      <span>VIX</span>
-                      <span className="text-red-400">-1.19%</span>
-                    </div>
-
-                  </div>
-
-                </div>
-
-                {/* ASSET — 深藍卡 */}
-                <div className="bg-[#0B1220] border border-white/10 rounded-[24px] p-8 h-auto text-white shadow-[0_40px_120px_rgba(0,0,0,0.45)]">
-
-                  <div className="font-bold text-[30px] mb-8">
-                    資產配置分析
-                  </div>
-
-                  <div className="flex justify-center mb-8">
-
-                    <div className="relative w-48 h-48">
-
-                      <div className="absolute inset-0 rounded-full border-[22px] border-[#F5B700]" />
-
-                      <div className="absolute inset-[32px] rounded-full bg-black" />
-
-                    </div>
-
-                  </div>
-
-                  <div className="space-y-3 text-[18px]">
-
-                    <div className="flex justify-between">
-                      <span>股票</span>
-                      <span>65%</span>
-                    </div>
-
-                    <div className="flex justify-between">
-                      <span>債券</span>
-                      <span>20%</span>
-                    </div>
-
-                    <div className="flex justify-between">
-                      <span>現金</span>
-                      <span>15%</span>
-                    </div>
-
-                  </div>
-
-                </div>
-
-                {/* PERFORMANCE — 純黑卡 */}
-                <div className="bg-black border border-white/10 rounded-[24px] p-8 h-auto text-white shadow-[0_40px_120px_rgba(0,0,0,0.45)]">
-
-                  <div className="font-bold text-[30px]">
-                    投資組合績效
-                  </div>
-
-                  <div className="text-[14px] text-slate-400 mt-1">
-                    年化報酬率
-                  </div>
-
-                  <div className="text-[120px] font-bold text-lime-400 mt-4 leading-none">
-                    8.47%
-                  </div>
-
-                  <svg
-                    viewBox="0 0 300 90"
-                    className="w-full h-36 mt-8"
-                  >
-                    <polyline
-                      fill="none"
-                      stroke="#84cc16"
-                      strokeWidth="4"
-                      points="0,78 25,76 50,79 75,63 100,66 125,58 150,61 175,48 200,53 225,43 250,36 300,28"
-                    />
-                  </svg>
-
-                </div>
-
-                {/* ETF — 半透明卡 */}
-                <div className="bg-black/75 backdrop-blur-xl border border-white/10 rounded-[24px] p-8 h-auto text-white shadow-[0_40px_120px_rgba(0,0,0,0.45)]">
-
-                  <div className="font-bold text-[30px] mb-6">
-                    ETF 熱門排行
-                  </div>
-
-                  <div className="space-y-4 text-[18px]">
-
-                    <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-[#8B0000] flex items-center justify-center text-[11px] font-bold text-white shrink-0">
-                          VG
-                        </div>
-                        <div>
-                          <div className="font-semibold">VOO</div>
-                          <div className="text-[14px] text-slate-400 mt-0.5">
-                            AUM 4,200億・費用率 0.03%
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-green-400">+0.63%</div>
-                        <div className="text-[14px] text-slate-400">1Y +24.1%</div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-[#003DA5] flex items-center justify-center text-[11px] font-bold text-white shrink-0">
-                          IV
-                        </div>
-                        <div>
-                          <div className="font-semibold">QQQ</div>
-                          <div className="text-[14px] text-slate-400 mt-0.5">
-                            AUM 2,800億・費用率 0.20%
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-green-400">+0.85%</div>
-                        <div className="text-[14px] text-slate-400">1Y +29.4%</div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-[#8B0000] flex items-center justify-center text-[11px] font-bold text-white shrink-0">
-                          VG
-                        </div>
-                        <div>
-                          <div className="font-semibold">VTI</div>
-                          <div className="text-[14px] text-slate-400 mt-0.5">
-                            AUM 1,600億・費用率 0.03%
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-green-400">+0.59%</div>
-                        <div className="text-[14px] text-slate-400">1Y +23.5%</div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-[#8B0000] flex items-center justify-center text-[11px] font-bold text-white shrink-0">
-                          VG
-                        </div>
-                        <div>
-                          <div className="font-semibold">VXUS</div>
-                          <div className="text-[14px] text-slate-400 mt-0.5">
-                            AUM 980億・費用率 0.05%
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-green-400">+0.31%</div>
-                        <div className="text-[14px] text-slate-400">1Y +14.2%</div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-[#8B0000] flex items-center justify-center text-[11px] font-bold text-white shrink-0">
-                          VG
-                        </div>
-                        <div>
-                          <div className="font-semibold">BND</div>
-                          <div className="text-[14px] text-slate-400 mt-0.5">
-                            AUM 1,100億・費用率 0.03%
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-green-400">+0.21%</div>
-                        <div className="text-[14px] text-slate-400">1Y +3.8%</div>
-                      </div>
-                    </div>
-
-                  </div>
-
-                </div>
-
-              </div>
-
-            </div>
-
+          <div className="flex items-center gap-3">
+            <a href="#" className="text-[14px] font-semibold text-slate-300 border border-white/30 px-4 py-2 rounded-lg hover:bg-white/10 transition-colors">登入</a>
+            <a href="/quiz" className="bg-[#F5B700] hover:bg-[#e0a800] text-white px-5 py-2 rounded-lg font-bold text-[14px] transition-colors">免費註冊</a>
           </div>
+        </div>
+      </nav>
 
+      <div className="max-w-[760px] w-full">
+
+        <div className="text-center mb-12">
+          <div className="tracking-[10px] text-[#F5B700] text-[16px] font-semibold mb-4">SMARTMATCH</div>
+          {clientName && <div className="text-[14px] text-slate-400 mb-2">客戶：{clientName}</div>}
+          <h1 className="text-[36px] font-black text-white">投資人格分析</h1>
         </div>
 
-        {/* STAT BAND — full width, outside the 43/57 grid */}
-        <div className="w-full max-w-[1200px] mx-auto px-12 pb-32 pt-8">
-          <div className="grid grid-cols-4 gap-12">
-
-            <div>
-              <div className="text-[64px] font-black text-[#0B1220] leading-none">
-                2,000+
-              </div>
-              <div className="text-[20px] font-medium text-slate-500 mt-3">
-                基金資料
-              </div>
-            </div>
-
-            <div>
-              <div className="text-[64px] font-black text-[#0B1220] leading-none">
-                500+
-              </div>
-              <div className="text-[20px] font-medium text-slate-500 mt-3">
-                ETF資料
-              </div>
-            </div>
-
-            <div>
-              <div className="text-[64px] font-black text-[#0B1220] leading-none">
-                50+
-              </div>
-              <div className="text-[20px] font-medium text-slate-500 mt-3">
-                基金公司
-              </div>
-            </div>
-
-            <div>
-              <div className="text-[64px] font-black text-[#F5B700] leading-none">
-                AI
-              </div>
-              <div className="text-[20px] font-medium text-slate-500 mt-3">
-                資產配置
-              </div>
-            </div>
-
+        <div className="mb-10">
+          <div className="flex justify-between text-[14px] text-slate-400 mb-2">
+            <span>第 {step + 1} 題 / 共 {QUESTIONS.length} 題</span>
+            <span>{Math.round(progress)}%</span>
+          </div>
+          <div className="w-full h-2 bg-white/[0.06] rounded-full overflow-hidden">
+            <div className="h-full bg-[#F5B700] transition-all duration-300" style={{ width: `${progress}%` }} />
           </div>
         </div>
 
-      </section>
-
-      {/* PERSONALITY ENTRY */}
-      <section className="bg-[#0B1220] border-t border-white/10 py-40">
-        <div className="max-w-[1700px] mx-auto px-10">
-
-          <div className="text-center mb-16">
-            <div className="text-[22px] tracking-[10px] text-[#F5B700] mb-6 font-semibold">
-              STEP 1
-            </div>
-            <h2 className="text-[72px] font-black text-white leading-tight">
-              投資人格分析
-            </h2>
-            <p className="text-slate-400 text-[28px] mt-6">
-              3 分鐘問卷，了解你的投資屬性與風險承受度
-            </p>
-          </div>
-
-          <div className="grid grid-cols-4 gap-6">
-
-            <PersonalityCard
-              tag="保守型"
-              desc="追求穩定現金流"
-            />
-            <PersonalityCard
-              tag="穩健型"
-              desc="兼顧成長與防禦"
-            />
-            <PersonalityCard
-              tag="成長型"
-              desc="追求長期資本增值"
-            />
-            <PersonalityCard
-              tag="積極型"
-              desc="最大化長期報酬"
-            />
-
-          </div>
-
-          <div className="flex justify-center mt-14">
-            <Link
-              href="/quiz"
-              className="bg-[#F5B700] hover:bg-[#e0a800] text-[#0B1220] px-12 py-5 rounded-lg font-bold transition-colors"
-            >
-              開始投資人格分析
-            </Link>
-          </div>
-
+        <div className="mb-10">
+          <h2 className="text-[28px] font-bold text-white leading-snug">{currentQuestion.text}</h2>
         </div>
-      </section>
 
-      {/* INVESTMENT PROCESS */}
-      <section className="bg-[#111827] border-t border-white/10 py-40">
-        <div className="max-w-[1700px] mx-auto px-10">
-
-          <div className="text-center mb-20">
-            <div className="text-[22px] tracking-[10px] text-[#F5B700] mb-6 font-semibold">
-              HOW IT WORKS
-            </div>
-            <h2 className="text-[72px] font-black text-white leading-tight">
-              投資流程
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-4 gap-6 max-w-[1440px] mx-auto">
-
-            <ProcessCard
-              icon="quiz"
-              step="STEP 1"
-              title="投資人格分析"
-              desc="了解風險偏好與投資屬性"
-            />
-            <ProcessCard
-              icon="search"
-              step="STEP 2"
-              title="ETF / 基金篩選"
-              desc="依條件快速比較標的"
-            />
-            <ProcessCard
-              icon="chart"
-              step="STEP 3"
-              title="AI 資產配置"
-              desc="生成專屬投資組合"
-            />
-            <ProcessCard
-              icon="report"
-              step="STEP 4"
-              title="產生投資報告"
-              desc="可執行的長期策略"
-            />
-
-          </div>
-
+        <div className="flex flex-col gap-4 mb-10">
+          {currentQuestion.answers.map((a, i) => (
+            <button key={i} onClick={() => handleAnswer(a.score)} className="text-left px-7 py-5 rounded-xl border border-white/10 hover:border-[#F5B700] hover:bg-[#F5B700]/5 transition-colors text-[18px] text-white">
+              {a.text}
+            </button>
+          ))}
         </div>
-      </section>
 
+        {step > 0 && (
+          <button onClick={handleBack} className="text-slate-400 hover:text-white transition-colors text-[15px]">
+            ← 上一題
+          </button>
+        )}
+
+      </div>
     </main>
   );
 }
 
-function PersonalityCard({ tag, desc }: { tag: string; desc: string }) {
+export default function QuizPage() {
   return (
-    <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-8 h-[220px] flex flex-col justify-center hover:border-[#F5B700]/50 transition-colors cursor-pointer group">
-      <div className="text-[42px] font-bold text-white group-hover:text-[#F5B700] transition-colors">
-        {tag}
-      </div>
-      <div className="text-slate-400 text-[24px] mt-3">
-        {desc}
-      </div>
-    </div>
+    <Suspense fallback={null}>
+      <QuizContent />
+    </Suspense>
   );
-}
-
-function ProcessCard({
-  icon,
-  step,
-  title,
-  desc,
-}: {
-  icon: "quiz" | "search" | "chart" | "report";
-  step: string;
-  title: string;
-  desc: string;
-}) {
-  return (
-    <div className="w-full h-[220px] bg-white/[0.03] border border-white/10 rounded-2xl p-8 flex flex-col hover:border-[#F5B700]/50 transition-colors">
-      <div className="flex items-center justify-between mb-4">
-        <div className="w-12 h-12 rounded-xl bg-[#F5B700]/10 flex items-center justify-center text-[#F5B700]">
-          <ProcessIcon name={icon} />
-        </div>
-        <span className="text-[13px] tracking-[2px] text-slate-500 font-semibold">
-          {step}
-        </span>
-      </div>
-      <div className="text-white text-[24px] font-bold mb-2">
-        {title}
-      </div>
-      <div className="text-slate-400 text-[16px] leading-snug">
-        {desc}
-      </div>
-    </div>
-  );
-}
-
-function ProcessIcon({ name }: { name: "quiz" | "search" | "chart" | "report" }) {
-  const common = { width: 24, height: 24, viewBox: "0 0 24 24", fill: "none" } as const;
-  switch (name) {
-    case "quiz":
-      return (
-        <svg {...common}>
-          <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6" />
-          <path d="M9.5 9.5a2.5 2.5 0 1 1 3.2 2.4c-.7.25-1.2.85-1.2 1.6V14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-          <circle cx="12" cy="17" r="0.9" fill="currentColor" />
-        </svg>
-      );
-    case "search":
-      return (
-        <svg {...common}>
-          <circle cx="10.5" cy="10.5" r="6.5" stroke="currentColor" strokeWidth="1.6" />
-          <path d="M19 19l-4-4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-        </svg>
-      );
-    case "chart":
-      return (
-        <svg {...common}>
-          <path d="M4 19h16" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-          <rect x="6" y="12" width="3" height="6" rx="0.5" fill="currentColor" />
-          <rect x="11" y="8" width="3" height="10" rx="0.5" fill="currentColor" />
-          <rect x="16" y="5" width="3" height="13" rx="0.5" fill="currentColor" />
-        </svg>
-      );
-    case "report":
-      return (
-        <svg {...common}>
-          <rect x="5" y="3" width="14" height="18" rx="1.5" stroke="currentColor" strokeWidth="1.6" />
-          <path d="M8.5 8h7M8.5 12h7M8.5 16h4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-        </svg>
-      );
-  }
 }

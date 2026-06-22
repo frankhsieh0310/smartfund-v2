@@ -158,20 +158,43 @@ function ReportContent() {
   }
 
   return (
-    <main className="min-h-screen bg-white px-6 py-24">
+    <main className="min-h-screen bg-[#0a0f1e] px-6 pt-32 pb-20">
+
+      {/* DARK NAVBAR */}
+      <nav className="fixed top-0 left-0 w-full z-50 bg-[#0a0f1e]/90 backdrop-blur-xl border-b border-white/10">
+        <div className="max-w-[1700px] mx-auto h-20 px-10 flex items-center justify-between">
+          <a href="/">
+            <div className="text-[28px] font-black text-white leading-none">Smart<span className="text-[#F5B700]">Match</span></div>
+            <div className="text-[11px] text-slate-400 mt-0.5">ETF & 基金資產配置分析平台</div>
+          </a>
+          <div className="hidden lg:flex gap-7 text-[14px] font-semibold text-slate-300">
+            <a href="/quiz" className="hover:text-white transition-colors">投資人格分析</a>
+            <a href="/etf" className="hover:text-white transition-colors">ETF篩選器</a>
+            <a href="/funds" className="hover:text-white transition-colors">基金篩選器</a>
+            <a href="/compare" className="hover:text-white transition-colors">比較中心</a>
+            <a href="/clients" className="hover:text-white transition-colors">客戶管理</a>
+            <a href="/pricing" className="text-[#F5B700] hover:text-[#e0a800] transition-colors">方案</a>
+          </div>
+          <div className="flex items-center gap-3">
+            <a href="#" className="text-[14px] font-semibold text-slate-300 border border-white/30 px-4 py-2 rounded-lg hover:bg-white/10 transition-colors">登入</a>
+            <a href="/quiz" className="bg-[#F5B700] hover:bg-[#e0a800] text-[#0B1220] px-5 py-2 rounded-lg font-bold text-[14px] transition-colors">免費註冊</a>
+          </div>
+        </div>
+      </nav>
+
       <div className="max-w-[860px] mx-auto">
 
         {/* 列印專用標頭（螢幕不顯示）*/}
-        <div className="hidden print:block mb-8 pb-6 border-b border-slate-200">
+        <div className="hidden print:block mb-8 pb-6 border-b border-white/10">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-[20px] font-black text-[#0B1220]">SmartMatch</div>
-              <div className="text-[12px] text-slate-500">ETF ＆ 基金資產配置分析平台</div>
+              <div className="text-[20px] font-black text-white">SmartMatch</div>
+              <div className="text-[12px] text-slate-400">ETF ＆ 基金資產配置分析平台</div>
             </div>
             <div className="text-right text-[12px] text-slate-400">
               <div>投資人格分析報告</div>
               <div>{new Date().toLocaleDateString("zh-TW")}</div>
-              {clientName && <div className="mt-1 font-semibold text-[#0B1220]">客戶：{clientName}</div>}
+              {clientName && <div className="mt-1 font-semibold text-white">客戶：{clientName}</div>}
             </div>
           </div>
         </div>
@@ -191,20 +214,20 @@ function ReportContent() {
           <div className="tracking-[10px] text-[#F5B700] text-[16px] font-semibold mb-6">
             SMARTMATCH
           </div>
-          <div className="text-[18px] text-slate-500 mb-3">
+          <div className="text-[18px] text-slate-400 mb-3">
             投資人格分析結果
           </div>
-          <h1 className="text-[64px] font-black text-[#0B1220] leading-tight">
+          <h1 className="text-[64px] font-black text-white leading-tight">
             {data.title}投資人
           </h1>
         </div>
 
-        <p className="text-[20px] leading-[1.8] text-slate-600 text-center mb-10">
+        <p className="text-[20px] leading-[1.8] text-slate-400 text-center mb-10">
           {data.summary}
         </p>
 
         <div className="flex items-center justify-center gap-3 mb-14">
-          <span className="text-[16px] text-slate-500">{data.riskLabel}</span>
+          <span className="text-[16px] text-slate-400">{data.riskLabel}</span>
           <StarRating stars={data.stars} />
         </div>
 
@@ -243,7 +266,7 @@ function ReportContent() {
 
         {/* ETF 篩選結果 */}
         <div className="mb-12">
-          <div className="text-[24px] font-bold text-[#0B1220] mb-6">
+          <div className="text-[24px] font-bold text-white mb-6">
             ETF 篩選結果
           </div>
 
@@ -251,17 +274,17 @@ function ReportContent() {
             {data.etfs.map((etf) => (
               <div
                 key={etf.code}
-                className="border border-slate-200 rounded-xl p-6"
+                className="border border-white/10 rounded-xl p-6"
               >
                 <div className="flex items-baseline gap-3">
-                  <span className="text-[22px] font-bold text-[#0B1220]">
+                  <span className="text-[22px] font-bold text-white">
                     {etf.code}
                   </span>
-                  <span className="text-[15px] text-slate-500">
+                  <span className="text-[15px] text-slate-400">
                     {etf.name}
                   </span>
                 </div>
-                <div className="text-[15px] text-slate-500 mt-1">
+                <div className="text-[15px] text-slate-400 mt-1">
                   {etf.desc}
                 </div>
               </div>
@@ -271,7 +294,7 @@ function ReportContent() {
 
         {/* 符合條件基金 */}
         <div className="mb-12">
-          <div className="text-[24px] font-bold text-[#0B1220] mb-6">
+          <div className="text-[24px] font-bold text-white mb-6">
             符合條件基金
           </div>
 
@@ -279,12 +302,12 @@ function ReportContent() {
             {data.funds.map((fund) => (
               <div
                 key={fund.category}
-                className="border border-slate-200 rounded-xl p-6"
+                className="border border-white/10 rounded-xl p-6"
               >
-                <div className="text-[18px] font-bold text-[#0B1220]">
+                <div className="text-[18px] font-bold text-white">
                   {fund.category}
                 </div>
-                <div className="text-[15px] text-slate-500 mt-1">
+                <div className="text-[15px] text-slate-400 mt-1">
                   {fund.desc}
                 </div>
               </div>
@@ -303,13 +326,13 @@ function ReportContent() {
         <div className="flex gap-4 justify-center no-print">
           <Link
             href="/quiz"
-            className="bg-[#F5B700] hover:bg-[#e0a800] text-[#0B1220] px-10 py-4 rounded-lg font-semibold text-[18px] transition-colors"
+            className="bg-[#F5B700] hover:bg-[#e0a800] text-white px-10 py-4 rounded-lg font-semibold text-[18px] transition-colors"
           >
             重新測驗
           </Link>
           <Link
             href="/"
-            className="border border-slate-300 text-[#0B1220] px-10 py-4 rounded-lg hover:bg-slate-50 transition-colors font-semibold text-[18px]"
+            className="border border-white/20 text-white px-10 py-4 rounded-lg hover:bg-white/[0.03] transition-colors font-semibold text-[18px]"
           >
             回到首頁
           </Link>

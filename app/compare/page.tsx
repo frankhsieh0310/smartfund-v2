@@ -135,7 +135,30 @@ export default function ComparePage() {
   }
 
   return (
-    <main className="min-h-screen bg-white px-6 py-20">
+    <main className="min-h-screen bg-[#0a0f1e] px-6 pt-32 pb-20">
+
+      {/* DARK NAVBAR */}
+      <nav className="fixed top-0 left-0 w-full z-50 bg-[#0a0f1e]/90 backdrop-blur-xl border-b border-white/10">
+        <div className="max-w-[1700px] mx-auto h-20 px-10 flex items-center justify-between">
+          <a href="/">
+            <div className="text-[28px] font-black text-white leading-none">Smart<span className="text-[#F5B700]">Match</span></div>
+            <div className="text-[11px] text-slate-400 mt-0.5">ETF & 基金資產配置分析平台</div>
+          </a>
+          <div className="hidden lg:flex gap-7 text-[14px] font-semibold text-slate-300">
+            <a href="/quiz" className="hover:text-white transition-colors">投資人格分析</a>
+            <a href="/etf" className="hover:text-white transition-colors">ETF篩選器</a>
+            <a href="/funds" className="hover:text-white transition-colors">基金篩選器</a>
+            <a href="/compare" className="hover:text-white transition-colors">比較中心</a>
+            <a href="/clients" className="hover:text-white transition-colors">客戶管理</a>
+            <a href="/pricing" className="text-[#F5B700] hover:text-[#e0a800] transition-colors">方案</a>
+          </div>
+          <div className="flex items-center gap-3">
+            <a href="#" className="text-[14px] font-semibold text-slate-300 border border-white/30 px-4 py-2 rounded-lg hover:bg-white/10 transition-colors">登入</a>
+            <a href="/quiz" className="bg-[#F5B700] hover:bg-[#e0a800] text-[#0B1220] px-5 py-2 rounded-lg font-bold text-[14px] transition-colors">免費註冊</a>
+          </div>
+        </div>
+      </nav>
+
       <div className="max-w-[1280px] mx-auto">
 
         {/* HEADER */}
@@ -143,10 +166,10 @@ export default function ComparePage() {
           <div className="tracking-[10px] text-[#F5B700] text-[16px] font-semibold mb-4">
             SMARTMATCH
           </div>
-          <h1 className="text-[44px] font-black text-[#0B1220]">
+          <h1 className="text-[44px] font-black text-white">
             ETF ＋ 基金比較中心
           </h1>
-          <p className="text-[16px] text-slate-500 mt-2">
+          <p className="text-[16px] text-slate-400 mt-2">
             同時比較 ETF 與基金，最多 {MAX} 檔
           </p>
         </div>
@@ -162,29 +185,29 @@ export default function ComparePage() {
                 onFocus={() => setShowDropdown(true)}
                 onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
                 placeholder="搜尋代碼或名稱，例如 QQQ、霸菱、聯博…"
-                className="w-full border border-slate-300 rounded-xl px-5 py-3.5 text-[16px] text-[#0B1220] placeholder:text-slate-400 focus:outline-none focus:border-[#F5B700]"
+                className="w-full border border-white/20 rounded-xl px-5 py-3.5 text-[16px] text-white placeholder:text-slate-500 focus:outline-none focus:border-[#F5B700]"
                 disabled={selected.length >= MAX}
               />
               {showDropdown && suggestions.length > 0 && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden">
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-white/10 rounded-xl shadow-xl z-50 overflow-hidden">
                   {suggestions.map((item) => (
                     <button
                       key={item.code}
                       onMouseDown={() => addItem(item)}
                       className="w-full text-left px-5 py-3 hover:bg-[#F5B700]/10 transition-colors flex items-center gap-3"
                     >
-                      <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${item.type === "ETF" ? "bg-[#0B1220] text-white" : "bg-blue-100 text-blue-700"}`}>
+                      <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${item.type === "ETF" ? "bg-white/[0.08] text-white" : "bg-blue-100 text-blue-700"}`}>
                         {item.type}
                       </span>
                       {item.type === "ETF" ? (
                         <>
-                          <span className="font-bold text-[#0B1220] text-[15px]">{item.code}</span>
-                          <span className="text-slate-500 text-[14px] truncate">{item.name}</span>
+                          <span className="font-bold text-white text-[15px]">{item.code}</span>
+                          <span className="text-slate-400 text-[14px] truncate">{item.name}</span>
                         </>
                       ) : (
                         <>
-                          <span className="font-bold text-[#0B1220] text-[15px]">{item.company}</span>
-                          <span className="text-slate-500 text-[14px] truncate">{item.name}</span>
+                          <span className="font-bold text-white text-[15px]">{item.company}</span>
+                          <span className="text-slate-400 text-[14px] truncate">{item.name}</span>
                         </>
                       )}
                     </button>
@@ -226,7 +249,7 @@ export default function ComparePage() {
             ))}
             <button
               onClick={() => setSelected([])}
-              className="px-3 py-1.5 rounded-full border border-slate-300 text-slate-400 text-[14px] hover:border-red-300 hover:text-red-400 transition-colors"
+              className="px-3 py-1.5 rounded-full border border-white/20 text-slate-400 text-[14px] hover:border-red-300 hover:text-red-400 transition-colors"
             >
               清除全部
             </button>
@@ -234,7 +257,7 @@ export default function ComparePage() {
         )}
 
         {selected.length === 0 ? (
-          <div className="border border-slate-200 rounded-2xl flex items-center justify-center h-[320px] text-slate-400 text-[16px] flex-col gap-3">
+          <div className="border border-white/10 rounded-2xl flex items-center justify-center h-[320px] text-slate-400 text-[16px] flex-col gap-3">
             <div className="text-[40px]">↑</div>
             <div>在上方搜尋框輸入代碼或名稱，加入要比較的商品</div>
             <div className="text-[14px] text-slate-300">可同時比較 ETF 與基金</div>
@@ -242,11 +265,11 @@ export default function ComparePage() {
         ) : (
           <>
             {/* COMPARISON TABLE */}
-            <div className="border border-slate-200 rounded-2xl overflow-hidden mb-8">
+            <div className="border border-white/10 rounded-2xl overflow-hidden mb-8">
               <div className="overflow-x-auto">
                 <table className="w-full text-left">
                   <thead>
-                    <tr className="bg-[#0B1220] text-white text-[14px]">
+                    <tr className="bg-white/[0.08] text-white text-[14px]">
                       <th className="px-5 py-4 font-semibold sticky left-0 bg-[#0B1220] z-10 min-w-[140px]">項目</th>
                       {selected.map((item, i) => (
                         <th key={item.code} className="px-5 py-4 font-semibold min-w-[160px]">
@@ -263,7 +286,7 @@ export default function ComparePage() {
                   </thead>
                   <tbody>
                     <CompareRow label="類型" values={selected.map((i) => (
-                      <span className={`text-[12px] font-bold px-2 py-0.5 rounded-full ${i.type === "ETF" ? "bg-[#0B1220] text-white" : "bg-blue-100 text-blue-700"}`}>
+                      <span className={`text-[12px] font-bold px-2 py-0.5 rounded-full ${i.type === "ETF" ? "bg-white/[0.08] text-white" : "bg-blue-100 text-blue-700"}`}>
                         {i.type}
                       </span>
                     ))} />
@@ -329,9 +352,9 @@ export default function ComparePage() {
             </div>
 
             {/* TREND CHART */}
-            <div className="border border-slate-200 rounded-2xl p-8">
+            <div className="border border-white/10 rounded-2xl p-8">
               <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-                <div className="text-[22px] font-bold text-[#0B1220]">
+                <div className="text-[22px] font-bold text-white">
                   走勢比較（指數化，起點=100）
                 </div>
                 <div className="flex gap-2">
@@ -339,7 +362,7 @@ export default function ComparePage() {
                     <button
                       key={p}
                       onClick={() => setPeriod(p)}
-                      className={`px-4 py-2 rounded-lg text-[14px] font-semibold transition-colors ${period === p ? "bg-[#F5B700] text-[#0B1220]" : "bg-white border border-slate-300 text-slate-600 hover:border-[#F5B700]"}`}
+                      className={`px-4 py-2 rounded-lg text-[14px] font-semibold transition-colors ${period === p ? "bg-[#F5B700] text-white" : "bg-white border border-white/20 text-slate-400 hover:border-[#F5B700]"}`}
                     >
                       {p === "1Y" ? "1年" : p === "3Y" ? "3年" : "5年"}
                     </button>
@@ -351,7 +374,7 @@ export default function ComparePage() {
                 {selected.map((item, i) => (
                   <div key={item.code} className="flex items-center gap-2">
                     <span className="w-3 h-3 rounded-full" style={{ backgroundColor: LINE_COLORS[i] }} />
-                    <span className="text-[14px] font-semibold text-[#0B1220]">{item.code}</span>
+                    <span className="text-[14px] font-semibold text-white">{item.code}</span>
                     <span className="text-[13px] text-slate-400">{item.type}</span>
                   </div>
                 ))}
@@ -371,10 +394,10 @@ export default function ComparePage() {
         </p>
 
         <div className="flex justify-center mt-10 gap-4">
-          <Link href="/etf" className="border border-slate-300 text-[#0B1220] px-8 py-3.5 rounded-lg hover:bg-slate-50 transition-colors font-semibold text-[16px]">
+          <Link href="/etf" className="border border-white/20 text-white px-8 py-3.5 rounded-lg hover:bg-white/[0.03] transition-colors font-semibold text-[16px]">
             ETF 資料庫
           </Link>
-          <Link href="/" className="border border-slate-300 text-[#0B1220] px-8 py-3.5 rounded-lg hover:bg-slate-50 transition-colors font-semibold text-[16px]">
+          <Link href="/" className="border border-white/20 text-white px-8 py-3.5 rounded-lg hover:bg-white/[0.03] transition-colors font-semibold text-[16px]">
             回到首頁
           </Link>
         </div>
@@ -405,12 +428,12 @@ function CompareRow({
   best?: number;
 }) {
   return (
-    <tr className={`border-b border-slate-100 text-[15px] ${highlight ? "bg-slate-50/60" : "bg-white"}`}>
-      <td className="px-5 py-3 font-semibold text-slate-500 sticky left-0 bg-inherit z-10">{label}</td>
+    <tr className={`border-b border-white/[0.06] text-[15px] ${highlight ? "bg-white/[0.03]/60" : "bg-white"}`}>
+      <td className="px-5 py-3 font-semibold text-slate-400 sticky left-0 bg-inherit z-10">{label}</td>
       {values.map((v, i) => (
         <td
           key={i}
-          className={`px-5 py-3 text-[#0B1220] ${best === i ? "bg-[#F5B700]/10" : ""}`}
+          className={`px-5 py-3 text-white ${best === i ? "bg-[#F5B700]/10" : ""}`}
         >
           <div className="flex items-center gap-1.5">
             {v}
@@ -446,7 +469,7 @@ function TrendChart({ items, period }: { items: Item[]; period: Period }) {
   }
 
   return (
-    <div className="bg-white rounded-xl overflow-x-auto">
+    <div className="bg-white/[0.05] border border-white/10 rounded-xl overflow-x-auto">
       <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-[340px]">
         {[0, 0.25, 0.5, 0.75, 1].map((t) => {
           const y = pad.top + chartH * t;
