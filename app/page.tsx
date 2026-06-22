@@ -59,32 +59,28 @@ export default function Home() {
           <div className="grid lg:grid-cols-[50%_50%] w-full items-center gap-8 py-20">
 
             {/* LEFT — 只有主標區有玻璃卡片 */}
-            <div>
-              <div className="tracking-[14px] text-[#F5B700] text-[18px] font-semibold mb-4">
+            <div className="space-y-8">
+              <div className="tracking-[14px] text-[#F5B700] text-[18px] font-semibold">
                 SMARTMATCH
-              </div>
-              <div className="text-[22px] font-medium text-white/60 mb-6">
-                讓資產配置不再憑感覺
               </div>
 
               {/* 主標玻璃卡片 */}
-              <div className="inline-block py-6 px-10 rounded-[32px] backdrop-blur-md bg-white/[0.06] border border-white/10 mb-10">
-                <h1 className="text-[96px] font-black leading-[0.9] text-white tracking-[0.01em]">
-                  找到適合你的
-                  <br />
-                  <span className="text-[#F5B700]">ETF</span>與基金
+              <div className="inline-block py-6 px-10 rounded-[32px] backdrop-blur-md bg-white/[0.06] border border-white/10">
+                <h1 className="text-[72px] font-black leading-[1.1] text-white tracking-[0.01em] max-w-[900px]">
+                  讓投資決策更有系統
                 </h1>
               </div>
 
-              <p className="text-[28px] leading-[1.7] font-medium text-white/80 max-w-[640px] mb-8">
-                整合 ETF、基金、客戶管理與資產配置分析，
+              <p className="text-[28px] leading-[1.7] font-medium text-white/80 max-w-[640px]">
+                整合投資人格分析、
                 <br />
-                讓理專用更少時間，
+                商品比較、客戶管理與資產配置工具，
                 <br />
-                完成更多客戶服務與投資研究。
+                <br />
+                協助投資人建立更清晰的投資流程。
               </p>
 
-              <div className="flex gap-5 mb-10">
+              <div className="flex gap-5">
                 <Link
                   href="/quiz"
                   className="bg-[#F5B700] hover:bg-[#e0a800] text-black px-12 py-5 rounded-lg font-bold text-[22px] transition-colors"
@@ -92,10 +88,10 @@ export default function Home() {
                   開始投資人格分析
                 </Link>
                 <Link
-                  href="/quiz"
+                  href="/etf"
                   className="bg-white/10 backdrop-blur-md border border-white/10 text-white px-12 py-5 rounded-lg hover:bg-white/20 transition-colors font-semibold text-[22px]"
                 >
-                  立即免費註冊
+                  瀏覽資料庫
                 </Link>
               </div>
 
