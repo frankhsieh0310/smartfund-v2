@@ -68,8 +68,8 @@ export default function Home() {
               </div>
 
               {/* 主標玻璃卡片 */}
-              <div className="inline-block py-6 px-10 rounded-[32px] backdrop-blur-xl bg-white/[0.08] border border-white/10 mb-10">
-                <h1 className="text-[96px] font-black leading-[0.9] text-white">
+              <div className="inline-block py-6 px-10 rounded-[32px] backdrop-blur-md bg-white/[0.06] border border-white/10 mb-10">
+                <h1 className="text-[96px] font-black leading-[0.9] text-white tracking-[0.01em]">
                   找到適合你的
                   <br />
                   <span className="text-[#F5B700]">ETF</span>與基金
@@ -79,7 +79,9 @@ export default function Home() {
               <p className="text-[28px] leading-[1.7] font-medium text-white/80 max-w-[640px] mb-8">
                 整合 ETF、基金、客戶管理與資產配置分析，
                 <br />
-                協助理專快速完成投資研究與客戶服務。
+                讓理專用更少時間，
+                <br />
+                完成更多客戶服務與投資研究。
               </p>
 
               <div className="flex gap-5 mb-10">
@@ -90,15 +92,15 @@ export default function Home() {
                   開始投資人格分析
                 </Link>
                 <Link
-                  href="/etf"
+                  href="/quiz"
                   className="bg-white/10 backdrop-blur-md border border-white/10 text-white px-12 py-5 rounded-lg hover:bg-white/20 transition-colors font-semibold text-[22px]"
                 >
-                  瀏覽資料庫
+                  立即免費註冊
                 </Link>
               </div>
 
               {/* 可信度數字 */}
-              <div className="flex gap-8">
+              <div className="flex gap-10">
                 {[
                   ["500+", "ETF 資料"],
                   ["3,000+", "基金資料"],
@@ -106,7 +108,7 @@ export default function Home() {
                   ["10年+", "歷史資料"],
                 ].map(([num, label]) => (
                   <div key={label}>
-                    <div className="text-[28px] font-black text-[#F5B700] leading-none">{num}</div>
+                    <div className="text-[36px] font-bold text-[#F5B700] leading-none">{num}</div>
                     <div className="text-[13px] text-white/50 mt-1">{label}</div>
                   </div>
                 ))}
