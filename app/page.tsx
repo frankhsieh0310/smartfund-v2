@@ -67,17 +67,19 @@ export default function Home() {
               {/* 主標玻璃卡片 */}
               <div className="inline-block py-6 px-10 rounded-[32px] backdrop-blur-md bg-white/[0.06] border border-white/10">
                 <h1 className="text-[72px] font-black leading-[1.1] text-white tracking-[0.01em] max-w-[900px]">
-                  讓投資決策更有系統
+                  從投資人格
+                  <br />
+                  到資產配置
                 </h1>
               </div>
 
-              <p className="text-[28px] leading-[1.7] font-medium text-white/80 max-w-[640px]">
-                整合投資人格分析、
+              <p className="text-[24px] leading-[1.7] font-medium text-white/80 max-w-[580px]">
+                整合商品比較、客戶管理、
                 <br />
-                商品比較、客戶管理與資產配置工具，
+                投資分析與配置工具。
                 <br />
                 <br />
-                協助投資人建立更清晰的投資流程。
+                打造更完整的投資決策流程。
               </p>
 
               <div className="flex gap-5">
@@ -95,17 +97,17 @@ export default function Home() {
                 </Link>
               </div>
 
-              {/* 可信度數字 */}
-              <div className="flex gap-10">
+              {/* 功能標籤 */}
+              <div className="grid grid-cols-2 gap-3 max-w-[420px]">
                 {[
-                  ["500+", "ETF 資料"],
-                  ["3,000+", "基金資料"],
-                  ["50+", "投信公司"],
-                  ["10年+", "歷史資料"],
-                ].map(([num, label]) => (
-                  <div key={label}>
-                    <div className="text-[36px] font-bold text-[#F5B700] leading-none">{num}</div>
-                    <div className="text-[13px] text-white/50 mt-1">{label}</div>
+                  "投資人格分析", "客戶管理",
+                  "商品比較", "資產配置",
+                  "PDF報告", "歷史回測",
+                  "ETF資料庫", "基金資料庫",
+                ].map((tag) => (
+                  <div key={tag} className="flex items-center gap-2 text-[15px] text-white/70">
+                    <span className="text-[#F5B700]">✓</span>
+                    {tag}
                   </div>
                 ))}
               </div>
