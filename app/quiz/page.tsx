@@ -380,26 +380,18 @@ function QuizContent() {
     return (
       <main className="min-h-screen bg-[#020817] flex items-center justify-center px-6 pt-32 pb-20 relative overflow-hidden">
 
-      {/* 背景層：金色光暈（左上）+ 藍色光暈（右下）+ 網格 */}
+      {/* 品牌背景：金融商辦大樓 + 深藍遮罩 */}
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, #020817 0%, #041126 100%)" }} />
-        <div className="absolute inset-0" style={{ background: "radial-gradient(circle at 15% 20%, rgba(245,183,0,0.10) 0%, transparent 40%)" }} />
-        <div className="absolute inset-0" style={{ background: "radial-gradient(circle at 85% 80%, rgba(59,130,246,0.08) 0%, transparent 40%)" }} />
-        <svg className="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <pattern id="quiz-grid" width="80" height="80" patternUnits="userSpaceOnUse">
-              <path d="M 80 0 L 0 0 0 80" fill="none" stroke="rgba(255,255,255,0.03)" strokeWidth="1"/>
-            </pattern>
-          </defs>
-          <rect width="100%" height="100%" fill="url(#quiz-grid)" />
-        </svg>
-        <svg className="absolute inset-0 w-full h-full opacity-[0.02]" xmlns="http://www.w3.org/2000/svg">
-          <line x1="0" y1="0" x2="40%" y2="100%" stroke="rgba(245,183,0,1)" strokeWidth="1"/>
-          <line x1="100%" y1="0" x2="60%" y2="100%" stroke="rgba(59,130,246,1)" strokeWidth="1"/>
-        </svg>
+        <div className="absolute inset-0" style={{
+          backgroundImage: "url('https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2600')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          filter: "brightness(0.15)",
+        }} />
+        <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, rgba(2,8,23,0.88) 0%, rgba(2,8,23,0.96) 100%)" }} />
       </div>
       {/* DARK NAVBAR */}
-      <nav className="fixed top-0 left-0 w-full z-50 bg-[#0a0f1e]/90 backdrop-blur-xl border-b border-white/10">
+      <nav className="fixed top-0 left-0 w-full z-50 bg-[#020817]/90 backdrop-blur-xl border-b border-white/10">
         <div className="max-w-[1700px] mx-auto h-20 px-10 flex items-center justify-between">
           <a href="/">
             <div className="text-[28px] font-black text-white leading-none">Smart<span className="text-[#F5B700]">Match</span></div>
@@ -508,7 +500,7 @@ function QuizContent() {
     <main className="min-h-screen bg-[#020817] flex items-center justify-center px-6 pt-32 pb-20 relative overflow-hidden">
 
       {/* DARK NAVBAR */}
-      <nav className="fixed top-0 left-0 w-full z-50 bg-[#0a0f1e]/90 backdrop-blur-xl border-b border-white/10">
+      <nav className="fixed top-0 left-0 w-full z-50 bg-[#020817]/90 backdrop-blur-xl border-b border-white/10">
         <div className="max-w-[1700px] mx-auto h-20 px-10 flex items-center justify-between">
           <a href="/">
             <div className="text-[28px] font-black text-white leading-none">Smart<span className="text-[#F5B700]">Match</span></div>
