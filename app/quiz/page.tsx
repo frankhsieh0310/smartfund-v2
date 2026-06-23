@@ -520,30 +520,54 @@ function QuizContent() {
         </div>
 
         <div className="mb-10">
-          <div className="flex justify-between text-[14px] text-slate-400 mb-2">
-            <span>第 {step + 1} 題 / 共 {QUESTIONS.length} 題</span>
-            <span>{Math.round(progress)}%</span>
+          <div className="flex justify-between text-[13px] mb-3">
+            <span className="text-slate-400">完成進度</span>
+            <span className="text-[#F5B700] font-semibold">{Math.round(progress)}%</span>
           </div>
-          <div className="w-full h-2 bg-white/[0.06] rounded-full overflow-hidden">
-            <div className="h-full bg-[#F5B700] transition-all duration-300" style={{ width: `${progress}%` }} />
+          <div className="w-full h-1.5 bg-white/[0.08] rounded-full overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all duration-500"
+              style={{
+                width: `${progress}%`,
+                background: "linear-gradient(90deg, #F5B700, #e0a800)"
+              }}
+            />
           </div>
         </div>
 
-        <div className="mb-10">
-          <h2 className="text-[28px] font-bold text-white leading-snug">{currentQuestion.text}</h2>
+        <div className="mb-6">
+          <div className="text-[13px] tracking-[4px] text-[#F5B700] font-semibold mb-4">
+            問題 {step + 1} / {QUESTIONS.length}
+          </div>
+          <h2 className="text-[32px] font-bold text-white leading-snug">{currentQuestion.text}</h2>
         </div>
 
         <div className="flex flex-col gap-4 mb-10">
           {currentQuestion.answers.map((a, i) => (
-            <button key={i} onClick={() => handleAnswer(a.score)} className="text-left px-7 py-5 rounded-xl border border-white/10 hover:border-[#F5B700] hover:bg-[#F5B700]/5 transition-colors text-[18px] text-white">
-              {a.text}
+            <button
+              key={i}
+              onClick={() => handleAnswer(a.score)}
+              className="group relative text-left px-8 py-6 rounded-2xl border border-white/10 bg-white/[0.04] transition-all duration-200 hover:border-[#F5B700]/60 hover:bg-[#F5B700]/[0.06] hover:shadow-[0_0_30px_rgba(245,183,0,0.15)] hover:scale-[1.01]"
+            >
+              {/* 左側編號 */}
+              <div className="flex items-center gap-5">
+                <span className="w-9 h-9 rounded-full border border-white/20 flex items-center justify-center text-[14px] font-bold text-slate-400 group-hover:border-[#F5B700] group-hover:text-[#F5B700] transition-colors shrink-0">
+                  {String.fromCharCode(65 + i)}
+                </span>
+                <span className="text-[18px] text-white/90 font-medium group-hover:text-white transition-colors leading-snug">
+                  {a.text}
+                </span>
+              </div>
+              {/* 右側箭頭 */}
+              <span className="absolute right-6 top-1/2 -translate-y-1/2 text-white/20 group-hover:text-[#F5B700] transition-colors text-[20px]">→</span>
             </button>
           ))}
         </div>
 
         {step > 0 && (
-          <button onClick={handleBack} className="text-slate-400 hover:text-white transition-colors text-[15px]">
-            ← 上一題
+          <button onClick={handleBack} className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-[15px] group">
+            <span className="group-hover:text-[#F5B700] transition-colors">←</span>
+            上一題
           </button>
         )}
 
