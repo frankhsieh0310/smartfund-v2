@@ -271,7 +271,6 @@ function getResult(totalScore: number): ResultType {
   return RESULTS[3];
 }
 
-// ---- localStorage helpers (mirrors clients page) ----
 const STORAGE_KEY = "smartmatch_clients";
 
 function loadClients() {
@@ -290,14 +289,61 @@ function newId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+// ── 共用：品牌背景層（大樓 + 深藍遮罩）──────────────────────────────
+function BrandBg() {
+  return (
+    <div className="absolute inset-0 pointer-events-none">
+      <div
+        className="absolute inset-0"
+        style={{
+          backgroundImage: "url('https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2600')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          filter: "brightness(0.15)",
+        }}
+      />
+      <div
+        className="absolute inset-0"
+        style={{ background: "linear-gradient(180deg, rgba(2,8,23,0.88) 0%, rgba(2,8,23,0.96) 100%)" }}
+      />
+    </div>
+  );
+}
+
+// ── 共用：Navbar ──────────────────────────────────────────────────────
+function Navbar() {
+  return (
+    <nav className="fixed top-0 left-0 w-full z-50 bg-[#020817]/90 backdrop-blur-xl border-b border-white/10">
+      <div className="max-w-[1700px] mx-auto h-20 px-10 flex items-center justify-between">
+        <a href="/">
+          <div className="text-[28px] font-black text-white leading-none">
+            Smart<span className="text-[#F5B700]">Match</span>
+          </div>
+          <div className="text-[11px] text-slate-400 mt-0.5">ETF & 基金資產配置分析平台</div>
+        </a>
+        <div className="hidden lg:flex gap-7 text-[14px] font-semibold text-slate-300">
+          <a href="/quiz" className="text-[#F5B700]">投資人格分析</a>
+          <a href="/etf" className="hover:text-white transition-colors">ETF篩選器</a>
+          <a href="/funds" className="hover:text-white transition-colors">基金篩選器</a>
+          <a href="/compare" className="hover:text-white transition-colors">比較中心</a>
+          <a href="/clients" className="hover:text-white transition-colors">客戶管理</a>
+          <a href="/pricing" className="hover:text-[#F5B700] transition-colors">方案</a>
+        </div>
+        <div className="flex items-center gap-3">
+          <a href="#" className="text-[14px] font-semibold text-slate-300 border border-white/30 px-4 py-2 rounded-lg hover:bg-white/10 transition-colors">登入</a>
+          <a href="/quiz" className="bg-[#F5B700] hover:bg-[#e0a800] text-white px-5 py-2 rounded-lg font-bold text-[14px] transition-colors">免費註冊</a>
+        </div>
+      </div>
+    </nav>
+  );
+}
+
 function QuizContent() {
   const searchParams = useSearchParams();
   const clientId = searchParams.get("clientId");
 
   const [step, setStep] = useState(0);
-  const [answers, setAnswers] = useState<number[]>(
-    Array(QUESTIONS.length).fill(0)
-  );
+  const [answers, setAnswers] = useState<number[]>(Array(QUESTIONS.length).fill(0));
   const [showResult, setShowResult] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saveForm, setSaveForm] = useState({ name: "", notes: "" });
@@ -376,41 +422,12 @@ function QuizContent() {
     setShowSaveForm(false);
   }
 
+  // ── 結果頁面 ──────────────────────────────────────────────────────
   if (showResult) {
     return (
       <main className="min-h-screen bg-[#020817] flex items-center justify-center px-6 pt-32 pb-20 relative overflow-hidden">
-
-      {/* 品牌背景：金融商辦大樓 + 深藍遮罩 */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute inset-0" style={{
-          backgroundImage: "url('https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2600')",
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          filter: "brightness(0.15)",
-        }} />
-        <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, rgba(2,8,23,0.88) 0%, rgba(2,8,23,0.96) 100%)" }} />
-      </div>
-      {/* DARK NAVBAR */}
-      <nav className="fixed top-0 left-0 w-full z-50 bg-[#020817]/90 backdrop-blur-xl border-b border-white/10">
-        <div className="max-w-[1700px] mx-auto h-20 px-10 flex items-center justify-between">
-          <a href="/">
-            <div className="text-[28px] font-black text-white leading-none">Smart<span className="text-[#F5B700]">Match</span></div>
-            <div className="text-[11px] text-slate-400 mt-0.5">ETF & 基金資產配置分析平台</div>
-          </a>
-          <div className="hidden lg:flex gap-7 text-[14px] font-semibold text-slate-300">
-            <a href="/quiz" className="text-[#F5B700]">投資人格分析</a>
-            <a href="/etf" className="hover:text-white transition-colors">ETF篩選器</a>
-            <a href="/funds" className="hover:text-white transition-colors">基金篩選器</a>
-            <a href="/compare" className="hover:text-white transition-colors">比較中心</a>
-            <a href="/clients" className="hover:text-white transition-colors">客戶管理</a>
-            <a href="/pricing" className="hover:text-[#F5B700] transition-colors">方案</a>
-          </div>
-          <div className="flex items-center gap-3">
-            <a href="#" className="text-[14px] font-semibold text-slate-300 border border-white/30 px-4 py-2 rounded-lg hover:bg-white/10 transition-colors">登入</a>
-            <a href="/quiz" className="bg-[#F5B700] hover:bg-[#e0a800] text-white px-5 py-2 rounded-lg font-bold text-[14px] transition-colors">免費註冊</a>
-          </div>
-        </div>
-      </nav>
+        <BrandBg />
+        <Navbar />
 
         <div className="max-w-[760px] w-full relative z-10">
 
@@ -424,7 +441,7 @@ function QuizContent() {
 
           <p className="text-[20px] leading-[1.8] text-slate-400 text-center mb-12">{result.desc}</p>
 
-          <div className="bg-[#0B1220] rounded-[24px] p-10 mb-10">
+          <div className="bg-[#0B1220]/80 backdrop-blur-sm rounded-[24px] p-10 mb-10 border border-white/10">
             <div className="text-white text-[22px] font-bold mb-6">資產配置分析</div>
             <div className="flex h-4 rounded-full overflow-hidden mb-6">
               {result.allocation.map((a) => (
@@ -460,8 +477,8 @@ function QuizContent() {
                 <div>
                   <div className="text-[16px] font-bold text-white mb-4">建立客戶檔案</div>
                   <div className="flex flex-col gap-3">
-                    <input type="text" value={saveForm.name} onChange={(e) => setSaveForm({ ...saveForm, name: e.target.value })} placeholder="客戶姓名 *" className="border border-white/20 rounded-lg px-4 py-3 text-[15px] focus:outline-none focus:border-[#F5B700]" />
-                    <textarea value={saveForm.notes} onChange={(e) => setSaveForm({ ...saveForm, notes: e.target.value })} placeholder="備註（選填）" rows={2} className="border border-white/20 rounded-lg px-4 py-3 text-[15px] focus:outline-none focus:border-[#F5B700] resize-none" />
+                    <input type="text" value={saveForm.name} onChange={(e) => setSaveForm({ ...saveForm, name: e.target.value })} placeholder="客戶姓名 *" className="bg-transparent border border-white/20 rounded-lg px-4 py-3 text-white text-[15px] focus:outline-none focus:border-[#F5B700] placeholder:text-slate-500" />
+                    <textarea value={saveForm.notes} onChange={(e) => setSaveForm({ ...saveForm, notes: e.target.value })} placeholder="備註（選填）" rows={2} className="bg-transparent border border-white/20 rounded-lg px-4 py-3 text-white text-[15px] focus:outline-none focus:border-[#F5B700] resize-none placeholder:text-slate-500" />
                     <div className="flex gap-3">
                       <button onClick={handleSaveNewClient} className="flex-1 bg-[#F5B700] hover:bg-[#e0a800] text-white py-3 rounded-lg font-bold text-[15px] transition-colors">確認儲存</button>
                       <button onClick={() => setShowSaveForm(false)} className="border border-white/20 px-5 py-3 rounded-lg text-slate-400 text-[15px] hover:bg-white/[0.03]">取消</button>
@@ -473,9 +490,9 @@ function QuizContent() {
           )}
 
           {saved && (
-            <div className="border border-green-200 bg-green-50 rounded-2xl p-5 mb-8 text-center">
-              <div className="text-green-600 font-bold text-[16px]">✓ 已儲存至客戶管理中心</div>
-              <a href="/clients" className="text-[14px] text-green-600 hover:underline mt-1 block">前往查看 →</a>
+            <div className="border border-green-500/30 bg-green-500/10 rounded-2xl p-5 mb-8 text-center">
+              <div className="text-green-400 font-bold text-[16px]">✓ 已儲存至客戶管理中心</div>
+              <a href="/clients" className="text-[14px] text-green-400 hover:underline mt-1 block">前往查看 →</a>
             </div>
           )}
 
@@ -496,30 +513,11 @@ function QuizContent() {
     );
   }
 
+  // ── 問卷進行中 ────────────────────────────────────────────────────
   return (
     <main className="min-h-screen bg-[#020817] flex items-center justify-center px-6 pt-32 pb-20 relative overflow-hidden">
-
-      {/* DARK NAVBAR */}
-      <nav className="fixed top-0 left-0 w-full z-50 bg-[#020817]/90 backdrop-blur-xl border-b border-white/10">
-        <div className="max-w-[1700px] mx-auto h-20 px-10 flex items-center justify-between">
-          <a href="/">
-            <div className="text-[28px] font-black text-white leading-none">Smart<span className="text-[#F5B700]">Match</span></div>
-            <div className="text-[11px] text-slate-400 mt-0.5">ETF & 基金資產配置分析平台</div>
-          </a>
-          <div className="hidden lg:flex gap-7 text-[14px] font-semibold text-slate-300">
-            <a href="/quiz" className="text-[#F5B700]">投資人格分析</a>
-            <a href="/etf" className="hover:text-white transition-colors">ETF篩選器</a>
-            <a href="/funds" className="hover:text-white transition-colors">基金篩選器</a>
-            <a href="/compare" className="hover:text-white transition-colors">比較中心</a>
-            <a href="/clients" className="hover:text-white transition-colors">客戶管理</a>
-            <a href="/pricing" className="hover:text-[#F5B700] transition-colors">方案</a>
-          </div>
-          <div className="flex items-center gap-3">
-            <a href="#" className="text-[14px] font-semibold text-slate-300 border border-white/30 px-4 py-2 rounded-lg hover:bg-white/10 transition-colors">登入</a>
-            <a href="/quiz" className="bg-[#F5B700] hover:bg-[#e0a800] text-white px-5 py-2 rounded-lg font-bold text-[14px] transition-colors">免費註冊</a>
-          </div>
-        </div>
-      </nav>
+      <BrandBg />
+      <Navbar />
 
       <div className="max-w-[760px] w-full relative z-10">
 
@@ -537,10 +535,7 @@ function QuizContent() {
           <div className="w-full h-1.5 bg-white/[0.08] rounded-full overflow-hidden">
             <div
               className="h-full rounded-full transition-all duration-500"
-              style={{
-                width: `${progress}%`,
-                background: "linear-gradient(90deg, #F5B700, #e0a800)"
-              }}
+              style={{ width: `${progress}%`, background: "linear-gradient(90deg, #F5B700, #e0a800)" }}
             />
           </div>
         </div>
@@ -557,9 +552,8 @@ function QuizContent() {
             <button
               key={i}
               onClick={() => handleAnswer(a.score)}
-              className="group relative text-left px-8 py-6 rounded-2xl border border-white/10 bg-white/[0.04] transition-all duration-200 hover:border-[#F5B700]/60 hover:bg-[#F5B700]/[0.06] hover:shadow-[0_0_30px_rgba(245,183,0,0.15)] hover:scale-[1.01]"
+              className="group relative text-left px-8 py-6 rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-sm transition-all duration-200 hover:border-[#F5B700]/60 hover:bg-[#F5B700]/[0.06] hover:shadow-[0_0_30px_rgba(245,183,0,0.15)] hover:scale-[1.01]"
             >
-              {/* 左側編號 */}
               <div className="flex items-center gap-5">
                 <span className="w-9 h-9 rounded-full border border-white/20 flex items-center justify-center text-[14px] font-bold text-slate-400 group-hover:border-[#F5B700] group-hover:text-[#F5B700] transition-colors shrink-0">
                   {String.fromCharCode(65 + i)}
@@ -568,7 +562,6 @@ function QuizContent() {
                   {a.text}
                 </span>
               </div>
-              {/* 右側箭頭 */}
               <span className="absolute right-6 top-1/2 -translate-y-1/2 text-white/20 group-hover:text-[#F5B700] transition-colors text-[20px]">→</span>
             </button>
           ))}

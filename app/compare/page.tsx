@@ -135,40 +135,7 @@ export default function ComparePage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#020817] px-6 pt-32 pb-20 relative overflow-hidden">
-
-
-      {/* 品牌背景：金融商辦大樓 + 深藍遮罩 */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute inset-0" style={{
-          backgroundImage: "url('https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2600')",
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          filter: "brightness(0.15)",
-        }} />
-        <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, rgba(2,8,23,0.88) 0%, rgba(2,8,23,0.96) 100%)" }} />
-      </div>
-      {/* DARK NAVBAR */}
-      <nav className="fixed top-0 left-0 w-full z-50 bg-[#020817]/90 backdrop-blur-xl border-b border-white/10">
-        <div className="max-w-[1700px] mx-auto h-20 px-10 flex items-center justify-between">
-          <a href="/">
-            <div className="text-[28px] font-black text-white leading-none">Smart<span className="text-[#F5B700]">Match</span></div>
-            <div className="text-[11px] text-slate-400 mt-0.5">ETF & 基金資產配置分析平台</div>
-          </a>
-          <div className="hidden lg:flex gap-7 text-[14px] font-semibold text-slate-300">
-            <a href="/quiz" className="hover:text-white transition-colors">投資人格分析</a>
-            <a href="/etf" className="hover:text-white transition-colors">ETF篩選器</a>
-            <a href="/funds" className="hover:text-white transition-colors">基金篩選器</a>
-            <a href="/compare" className="hover:text-white transition-colors">比較中心</a>
-            <a href="/clients" className="hover:text-white transition-colors">客戶管理</a>
-            <a href="/pricing" className="text-[#F5B700] hover:text-[#e0a800] transition-colors">方案</a>
-          </div>
-          <div className="flex items-center gap-3">
-            <a href="#" className="text-[14px] font-semibold text-slate-300 border border-white/30 px-4 py-2 rounded-lg hover:bg-white/10 transition-colors">登入</a>
-            <a href="/quiz" className="bg-[#F5B700] hover:bg-[#e0a800] text-[#0B1220] px-5 py-2 rounded-lg font-bold text-[14px] transition-colors">免費註冊</a>
-          </div>
-        </div>
-      </nav>
+    <main className="min-h-screen bg-[#020817] px-6 pt-32 pb-20">
 
       <div className="max-w-[1280px] mx-auto">
 
@@ -439,7 +406,7 @@ function CompareRow({
   best?: number;
 }) {
   return (
-    <tr className={`border-b border-white/[0.06] text-[15px] ${highlight ? "bg-white/[0.03]/60" : "bg-white"}`}>
+    <tr className={`border-b border-white/[0.06] text-[15px] ${highlight ? "bg-white/[0.03]" : ""}`}>
       <td className="px-5 py-3 font-semibold text-slate-400 sticky left-0 bg-inherit z-10">{label}</td>
       {values.map((v, i) => (
         <td

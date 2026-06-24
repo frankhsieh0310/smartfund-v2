@@ -4,7 +4,7 @@ import Link from "next/link";
 
 export default function PricingPage() {
   return (
-    <main className="min-h-screen bg-[#020817] px-6 py-20 relative overflow-hidden">
+    <main className="min-h-screen bg-[#020817] px-6 py-20">
 
       {/* NAVBAR */}
       <header className="fixed top-0 left-0 w-full z-50 bg-[#020817]/90 backdrop-blur-xl border-b border-white/10">
