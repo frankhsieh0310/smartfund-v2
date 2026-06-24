@@ -5,204 +5,165 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ETF_LIST, REGIONS, SECTORS, type Etf } from "./data";
 
-// ── localStorage keys ─────────────────────────────────────────────────
-const KEY_FAV  = "sm_favorites";
-const KEY_WATCH = "sm_watchlist";
-const KEY_CMP  = "sm_compare";
-const MAX_CMP  = 10;
+// ── localStorage 規格書定義 ───────────────────────────────────────────
+const KEY_FAV     = "favorites";
+const KEY_WATCH   = "watchlist";
+const KEY_COMPARE = "compareList";
+const MAX_COMPARE = 5;
 
-type FavStore   = { etfs: string[]; funds: string[] };
-type WatchStore = { etfs: string[]; funds: string[] };
+type ListItem = { id: string; type: "etf" | "fund"; name: string };
 
-function loadFav(): FavStore {
-  try { return JSON.parse(localStorage.getItem(KEY_FAV) || '{"etfs":[],"funds":[]}'); } catch { return { etfs: [], funds: [] }; }
+function loadList(key: string): ListItem[] {
+  try { return JSON.parse(localStorage.getItem(key) || "[]"); } catch { return []; }
 }
-function saveFav(s: FavStore) { localStorage.setItem(KEY_FAV, JSON.stringify(s)); }
-
-function loadWatch(): WatchStore {
-  try { return JSON.parse(localStorage.getItem(KEY_WATCH) || '{"etfs":[],"funds":[]}'); } catch { return { etfs: [], funds: [] }; }
+function saveList(key: string, list: ListItem[]) {
+  localStorage.setItem(key, JSON.stringify(list));
 }
-function saveWatch(s: WatchStore) { localStorage.setItem(KEY_WATCH, JSON.stringify(s)); }
-
-function loadCmp(): string[] {
-  try { return JSON.parse(localStorage.getItem(KEY_CMP) || '[]'); } catch { return []; }
+function hasItem(list: ListItem[], id: string) {
+  return list.some(i => i.id === id);
 }
-function saveCmp(s: string[]) { localStorage.setItem(KEY_CMP, JSON.stringify(s)); }
+function toggleItem(list: ListItem[], item: ListItem): ListItem[] {
+  return hasItem(list, item.id)
+    ? list.filter(i => i.id !== item.id)
+    : [...list, item];
+}
 
-// ── sort / filter types ────────────────────────────────────────────────
+// ── Types ─────────────────────────────────────────────────────────────
 type SortKey = "dividendYield" | "dividendPerUnit" | "returnYTD" | "return1m" | "return3m" | "return6m" | "return1y" | "return3y" | "volatility";
 type SortDir = "asc" | "desc";
+type FilterMode = "all" | "fav" | "watch";
 
-// ── Toast notification ─────────────────────────────────────────────────
+// ── Toast ─────────────────────────────────────────────────────────────
 function Toast({ msg, onClose }: { msg: string; onClose: () => void }) {
   useEffect(() => {
     const t = setTimeout(onClose, 2000);
     return () => clearTimeout(t);
   }, [onClose]);
   return (
-    <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[999] bg-[#1a2540] border border-white/20 text-white text-[14px] font-semibold px-6 py-3 rounded-full shadow-xl animate-fade-in">
+    <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[999] bg-[#1a2540] border border-white/20 text-white text-[14px] font-semibold px-6 py-3 rounded-full shadow-xl">
       {msg}
     </div>
   );
 }
 
-// ── Action buttons for each row ────────────────────────────────────────
+// ── Action buttons ────────────────────────────────────────────────────
 function ActionBtns({
-  code,
-  favList, watchList, cmpList,
+  etf, favList, watchList, compareList,
   onFav, onWatch, onCompare,
 }: {
-  code: string;
-  favList: string[]; watchList: string[]; cmpList: string[];
-  onFav: (code: string) => void;
-  onWatch: (code: string) => void;
-  onCompare: (code: string) => void;
+  etf: Etf;
+  favList: ListItem[]; watchList: ListItem[]; compareList: ListItem[];
+  onFav: (etf: Etf) => void;
+  onWatch: (etf: Etf) => void;
+  onCompare: (etf: Etf) => void;
 }) {
-  const isFav   = favList.includes(code);
-  const isWatch = watchList.includes(code);
-  const isCmp   = cmpList.includes(code);
-
+  const isFav     = hasItem(favList, etf.code);
+  const isWatch   = hasItem(watchList, etf.code);
+  const isCompare = hasItem(compareList, etf.code);
   return (
     <div className="flex items-center gap-1.5">
-      {/* ⭐ 收藏 */}
-      <button
-        onClick={() => onFav(code)}
-        title={isFav ? "取消收藏" : "加入收藏"}
-        className={`w-8 h-8 rounded-lg flex items-center justify-center text-[15px] transition-all ${
-          isFav
-            ? "bg-[#F5B700]/20 text-[#F5B700]"
-            : "bg-white/[0.04] text-slate-500 hover:bg-[#F5B700]/10 hover:text-[#F5B700]"
-        }`}
-      >
+      <button onClick={() => onFav(etf)} title={isFav ? "取消收藏" : "加入收藏"}
+        className={`w-8 h-8 rounded-lg flex items-center justify-center text-[14px] transition-all ${isFav ? "bg-[#F5B700]/20 text-[#F5B700]" : "bg-white/[0.04] text-slate-500 hover:bg-[#F5B700]/10 hover:text-[#F5B700]"}`}>
         ⭐
       </button>
-
-      {/* 👀 觀察名單 */}
-      <button
-        onClick={() => onWatch(code)}
-        title={isWatch ? "從觀察名單移除" : "加入觀察名單"}
-        className={`w-8 h-8 rounded-lg flex items-center justify-center text-[15px] transition-all ${
-          isWatch
-            ? "bg-blue-500/20 text-blue-400"
-            : "bg-white/[0.04] text-slate-500 hover:bg-blue-500/10 hover:text-blue-400"
-        }`}
-      >
+      <button onClick={() => onWatch(etf)} title={isWatch ? "從觀察移除" : "加入觀察名單"}
+        className={`w-8 h-8 rounded-lg flex items-center justify-center text-[14px] transition-all ${isWatch ? "bg-blue-500/20 text-blue-400" : "bg-white/[0.04] text-slate-500 hover:bg-blue-500/10 hover:text-blue-400"}`}>
         👀
       </button>
-
-      {/* 📊 加入比較 */}
-      <button
-        onClick={() => onCompare(code)}
-        title={isCmp ? "從比較清單移除" : "加入比較"}
-        className={`w-8 h-8 rounded-lg flex items-center justify-center text-[15px] transition-all ${
-          isCmp
-            ? "bg-emerald-500/20 text-emerald-400"
-            : "bg-white/[0.04] text-slate-500 hover:bg-emerald-500/10 hover:text-emerald-400"
-        }`}
-      >
+      <button onClick={() => onCompare(etf)} title={isCompare ? "從比較移除" : "加入比較"}
+        className={`w-8 h-8 rounded-lg flex items-center justify-center text-[14px] transition-all ${isCompare ? "bg-emerald-500/20 text-emerald-400" : "bg-white/[0.04] text-slate-500 hover:bg-emerald-500/10 hover:text-emerald-400"}`}>
         📊
       </button>
     </div>
   );
 }
 
-// ── Main Page ──────────────────────────────────────────────────────────
+// ── Pct ──────────────────────────────────────────────────────────────
+function Pct({ v }: { v: number }) {
+  return (
+    <span className={`font-semibold ${v >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+      {v >= 0 ? "+" : ""}{v.toFixed(1)}%
+    </span>
+  );
+}
+
+// ── Main ──────────────────────────────────────────────────────────────
 export default function EtfDatabasePage() {
   const router = useRouter();
 
-  // filters
-  const [keyword, setKeyword] = useState("");
-  const [region,  setRegion]  = useState("全部");
-  const [sector,  setSector]  = useState("全部");
-  const [sortKey, setSortKey] = useState<SortKey>("return1y");
-  const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [keyword,     setKeyword]    = useState("");
+  const [region,      setRegion]     = useState("全部");
+  const [sector,      setSector]     = useState("全部");
+  const [sortKey,     setSortKey]    = useState<SortKey>("return1y");
+  const [sortDir,     setSortDir]    = useState<SortDir>("desc");
+  const [filterMode,  setFilterMode] = useState<FilterMode>("all");
 
-  // localStorage state
-  const [favList,   setFavList]   = useState<string[]>([]);
-  const [watchList, setWatchList] = useState<string[]>([]);
-  const [cmpList,   setCmpList]   = useState<string[]>([]);
+  const [favList,     setFavList]     = useState<ListItem[]>([]);
+  const [watchList,   setWatchList]   = useState<ListItem[]>([]);
+  const [compareList, setCompareList] = useState<ListItem[]>([]);
+  const [toast,       setToast]       = useState<string | null>(null);
 
-  // UI
-  const [toast, setToast] = useState<string | null>(null);
-  const [filterMode, setFilterMode] = useState<"all" | "fav" | "watch">("all");
-
-  // load from localStorage on mount
   useEffect(() => {
-    setFavList(loadFav().etfs);
-    setWatchList(loadWatch().etfs);
-    setCmpList(loadCmp());
+    setFavList(loadList(KEY_FAV).filter(i => i.type === "etf"));
+    setWatchList(loadList(KEY_WATCH).filter(i => i.type === "etf"));
+    setCompareList(loadList(KEY_COMPARE));
   }, []);
 
-  const showToast = useCallback((msg: string) => {
-    setToast(msg);
-  }, []);
+  const showToast = useCallback((msg: string) => setToast(msg), []);
 
-  // handlers
-  function handleFav(code: string) {
-    const store = loadFav();
-    const next = store.etfs.includes(code)
-      ? store.etfs.filter(c => c !== code)
-      : [...store.etfs, code];
-    saveFav({ ...store, etfs: next });
-    setFavList(next);
-    showToast(store.etfs.includes(code) ? "已從收藏移除" : "⭐ 已加入收藏");
+  function handleFav(etf: Etf) {
+    const all   = loadList(KEY_FAV);
+    const item: ListItem = { id: etf.code, type: "etf", name: etf.name };
+    const next  = toggleItem(all, item);
+    saveList(KEY_FAV, next);
+    setFavList(next.filter(i => i.type === "etf"));
+    showToast(hasItem(all, etf.code) ? "已從收藏移除" : "⭐ 已加入收藏");
   }
 
-  function handleWatch(code: string) {
-    const store = loadWatch();
-    const next = store.etfs.includes(code)
-      ? store.etfs.filter(c => c !== code)
-      : [...store.etfs, code];
-    saveWatch({ ...store, etfs: next });
-    setWatchList(next);
-    showToast(store.etfs.includes(code) ? "已從觀察名單移除" : "👀 已加入觀察名單");
+  function handleWatch(etf: Etf) {
+    const all  = loadList(KEY_WATCH);
+    const item: ListItem = { id: etf.code, type: "etf", name: etf.name };
+    const next = toggleItem(all, item);
+    saveList(KEY_WATCH, next);
+    setWatchList(next.filter(i => i.type === "etf"));
+    showToast(hasItem(all, etf.code) ? "已從觀察名單移除" : "👀 已加入觀察名單");
   }
 
-  function handleCompare(code: string) {
-    const store = loadCmp();
-    if (store.includes(code)) {
-      const next = store.filter(c => c !== code);
-      saveCmp(next);
-      setCmpList(next);
+  function handleCompare(etf: Etf) {
+    const all  = loadList(KEY_COMPARE);
+    const item: ListItem = { id: etf.code, type: "etf", name: etf.name };
+    if (hasItem(all, etf.code)) {
+      const next = all.filter(i => i.id !== etf.code);
+      saveList(KEY_COMPARE, next);
+      setCompareList(next);
       showToast("已從比較清單移除");
     } else {
-      if (store.length >= MAX_CMP) {
-        showToast(`比較清單最多 ${MAX_CMP} 檔`);
+      if (all.length >= MAX_COMPARE) {
+        showToast(`比較清單最多 ${MAX_COMPARE} 檔`);
         return;
       }
-      const next = [...store, code];
-      saveCmp(next);
-      setCmpList(next);
+      const next = [...all, item];
+      saveList(KEY_COMPARE, next);
+      setCompareList(next);
       showToast("📊 已加入比較清單");
     }
   }
 
-  function goCompare() {
-    router.push("/compare");
-  }
-
-  // sort
   function handleSort(key: SortKey) {
     if (sortKey === key) setSortDir(sortDir === "asc" ? "desc" : "asc");
     else { setSortKey(key); setSortDir("desc"); }
   }
 
-  // filtered list
   const filtered = useMemo(() => {
     let list: Etf[] = ETF_LIST;
-
-    if (filterMode === "fav")   list = list.filter(e => favList.includes(e.code));
-    if (filterMode === "watch") list = list.filter(e => watchList.includes(e.code));
-
+    if (filterMode === "fav")   list = list.filter(e => hasItem(favList, e.code));
+    if (filterMode === "watch") list = list.filter(e => hasItem(watchList, e.code));
     if (keyword.trim()) {
       const kw = keyword.trim().toLowerCase();
-      list = list.filter(e =>
-        e.code.toLowerCase().includes(kw) || e.name.toLowerCase().includes(kw)
-      );
+      list = list.filter(e => e.code.toLowerCase().includes(kw) || e.name.toLowerCase().includes(kw));
     }
     if (region !== "全部") list = list.filter(e => e.region === region);
     if (sector !== "全部") list = list.filter(e => e.sector === sector);
-
     return [...list].sort((a, b) => {
       const diff = a[sortKey] - b[sortKey];
       return sortDir === "asc" ? diff : -diff;
@@ -221,13 +182,8 @@ export default function EtfDatabasePage() {
     );
   }
 
-  function Pct({ v }: { v: number }) {
-    return (
-      <span className={`font-semibold ${v >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-        {v >= 0 ? "+" : ""}{v.toFixed(1)}%
-      </span>
-    );
-  }
+  const etfFavCount  = favList.length;
+  const etfWatchCount = watchList.length;
 
   return (
     <main className="min-h-screen px-6 pt-32 pb-20">
@@ -236,9 +192,7 @@ export default function EtfDatabasePage() {
       <header className="fixed top-0 left-0 w-full z-50 bg-[#040a18]/85 backdrop-blur-xl border-b border-white/[0.08]">
         <div className="max-w-[1700px] mx-auto h-20 px-10 flex items-center justify-between">
           <Link href="/">
-            <div className="text-[28px] font-black text-white leading-none">
-              Smart<span className="text-[#F5B700]">Match</span>
-            </div>
+            <div className="text-[28px] font-black text-white leading-none">Smart<span className="text-[#F5B700]">Match</span></div>
             <div className="text-[11px] text-slate-400 mt-0.5">ETF & 基金資產配置分析平台</div>
           </Link>
           <nav className="hidden lg:flex gap-7 text-[14px] font-semibold text-slate-300">
@@ -258,52 +212,53 @@ export default function EtfDatabasePage() {
 
       <div className="max-w-[1600px] mx-auto">
 
-        {/* PAGE HEADER */}
         <div className="mb-8">
           <div className="tracking-[10px] text-[#F5B700] text-[14px] font-semibold mb-3">ETF DATABASE</div>
           <h1 className="text-[42px] font-black text-white">ETF 篩選器</h1>
           <p className="text-[15px] text-slate-400 mt-1">共 {ETF_LIST.length} 檔 ETF，支援搜尋、篩選、排序與收藏</p>
         </div>
 
-        {/* 比較清單 floating bar */}
-        {cmpList.length > 0 && (
-          <div className="flex items-center justify-between bg-emerald-900/40 border border-emerald-500/30 rounded-xl px-5 py-3 mb-5">
-            <div className="text-[14px] text-emerald-300 font-semibold">
-              📊 比較清單：已加入 {cmpList.length} 檔
-              <span className="text-emerald-500 ml-2 text-[13px]">{cmpList.slice(0, 5).join("、")}{cmpList.length > 5 ? "…" : ""}</span>
+        {/* Compare bar */}
+        {compareList.length > 0 && (
+          <div className="flex items-center justify-between bg-emerald-900/30 border border-emerald-500/30 rounded-xl px-5 py-3 mb-5">
+            <div className="text-[13px] text-emerald-300 font-semibold">
+              📊 比較清單：{compareList.length} 檔
+              <span className="text-emerald-600 ml-2 font-normal">
+                {compareList.slice(0,3).map(i=>i.name.slice(0,6)).join("、")}{compareList.length > 3 ? "…" : ""}
+              </span>
             </div>
-            <div className="flex gap-2">
-              <button onClick={() => { saveCmp([]); setCmpList([]); }} className="text-[13px] text-slate-400 hover:text-red-400 transition-colors">清除</button>
-              <button onClick={goCompare} className="bg-emerald-600 hover:bg-emerald-500 text-white text-[13px] font-bold px-4 py-1.5 rounded-lg transition-colors">前往比較 →</button>
+            <div className="flex gap-3">
+              <button onClick={() => { saveList(KEY_COMPARE, []); setCompareList([]); }}
+                className="text-[12px] text-slate-500 hover:text-red-400 transition-colors">清除</button>
+              <button onClick={() => router.push("/compare")}
+                className="bg-emerald-700 hover:bg-emerald-600 text-white text-[12px] font-bold px-4 py-1.5 rounded-lg transition-colors">
+                前往比較中心 →
+              </button>
             </div>
           </div>
         )}
 
-        {/* FILTER TABS */}
+        {/* Filter tabs */}
         <div className="flex gap-2 mb-5">
           {([
-            { key: "all",   label: `全部 (${ETF_LIST.length})` },
-            { key: "fav",   label: `⭐ 收藏 (${favList.length})` },
-            { key: "watch", label: `👀 觀察名單 (${watchList.length})` },
-          ] as const).map(tab => (
+            { key: "all"   as FilterMode, label: `全部 (${ETF_LIST.length})` },
+            { key: "fav"   as FilterMode, label: `⭐ 收藏 (${etfFavCount})` },
+            { key: "watch" as FilterMode, label: `👀 觀察名單 (${etfWatchCount})` },
+          ]).map(tab => (
             <button key={tab.key} onClick={() => setFilterMode(tab.key)}
               className={`px-4 py-2 rounded-lg text-[13px] font-semibold transition-colors ${
-                filterMode === tab.key
-                  ? "bg-[#F5B700] text-[#0B1220]"
-                  : "border border-white/15 text-slate-400 hover:border-white/30"
+                filterMode === tab.key ? "bg-[#F5B700] text-[#0B1220]" : "border border-white/15 text-slate-400 hover:border-white/30"
               }`}>
               {tab.label}
             </button>
           ))}
         </div>
 
-        {/* FILTERS */}
+        {/* Filters */}
         <div className="flex flex-wrap gap-3 mb-4">
-          <input type="text" value={keyword}
-            onChange={e => setKeyword(e.target.value)}
+          <input type="text" value={keyword} onChange={e => setKeyword(e.target.value)}
             placeholder="搜尋代碼或名稱，例如 VOO、高股息"
-            className="flex-1 min-w-[220px] bg-transparent border border-white/20 rounded-lg px-4 py-2.5 text-[14px] text-white placeholder:text-slate-500 focus:outline-none focus:border-[#F5B700]"
-          />
+            className="flex-1 min-w-[220px] bg-transparent border border-white/20 rounded-lg px-4 py-2.5 text-[14px] text-white placeholder:text-slate-500 focus:outline-none focus:border-[#F5B700]" />
           <select value={region} onChange={e => setRegion(e.target.value)}
             className="bg-[#040a18] border border-white/20 rounded-lg px-4 py-2.5 text-[14px] text-white focus:outline-none focus:border-[#F5B700]">
             <option value="全部">全部地區</option>
@@ -318,12 +273,12 @@ export default function EtfDatabasePage() {
 
         <div className="text-[12px] text-slate-600 mb-3">符合條件：{filtered.length} 檔</div>
 
-        {/* TABLE */}
+        {/* Table */}
         <div className="border border-white/10 rounded-2xl overflow-hidden overflow-x-auto">
           <table className="w-full text-left min-w-[1300px]">
             <thead>
               <tr className="bg-white/[0.06] text-slate-400 text-[12px]">
-                <th className="px-4 py-3 font-semibold w-[100px]">操作</th>
+                <th className="px-4 py-3 font-semibold w-[108px]">操作</th>
                 <th className="px-3 py-3 font-semibold w-[80px]">代碼</th>
                 <th className="px-3 py-3 font-semibold">商品名稱</th>
                 <th className="px-3 py-3 font-semibold">類型</th>
@@ -344,13 +299,11 @@ export default function EtfDatabasePage() {
                 <tr key={etf.code}
                   className={`text-[13px] text-white border-t border-white/[0.04] hover:bg-[#F5B700]/[0.04] transition-colors ${i % 2 === 1 ? "bg-white/[0.015]" : ""}`}>
                   <td className="px-4 py-2.5">
-                    <ActionBtns
-                      code={etf.code}
-                      favList={favList} watchList={watchList} cmpList={cmpList}
-                      onFav={handleFav} onWatch={handleWatch} onCompare={handleCompare}
-                    />
+                    <ActionBtns etf={etf}
+                      favList={favList} watchList={watchList} compareList={compareList}
+                      onFav={handleFav} onWatch={handleWatch} onCompare={handleCompare} />
                   </td>
-                  <td className="px-3 py-2.5 font-bold text-[#F5B700] text-[13px]">{etf.code}</td>
+                  <td className="px-3 py-2.5 font-bold text-[#F5B700] text-[12px]">{etf.code}</td>
                   <td className="px-3 py-2.5 text-slate-200 max-w-[200px] truncate text-[12px]">{etf.name}</td>
                   <td className="px-3 py-2.5 text-slate-500 text-[11px]">{etf.sector}</td>
                   <td className="px-3 py-2.5 text-slate-500 text-[11px]">{etf.dividendFreq}</td>
@@ -367,8 +320,8 @@ export default function EtfDatabasePage() {
               ))}
               {filtered.length === 0 && (
                 <tr><td colSpan={14} className="px-5 py-12 text-center text-slate-600">
-                  {filterMode === "fav" ? "尚未收藏任何 ETF，點擊 ⭐ 加入收藏" :
-                   filterMode === "watch" ? "觀察名單是空的，點擊 👀 加入觀察名單" :
+                  {filterMode === "fav"   ? "尚未收藏任何 ETF，點擊 ⭐ 加入收藏" :
+                   filterMode === "watch" ? "觀察名單是空的，點擊 👀 加入" :
                    "找不到符合條件的 ETF"}
                 </td></tr>
               )}
@@ -376,9 +329,7 @@ export default function EtfDatabasePage() {
           </table>
         </div>
 
-        <p className="text-[11px] text-slate-700 mt-4">
-          以上資料為示意範例，非即時市場數據，不構成投資建議。
-        </p>
+        <p className="text-[11px] text-slate-700 mt-4">以上資料為示意範例，非即時市場數據，不構成投資建議。</p>
 
         <div className="flex justify-center mt-8">
           <Link href="/" className="border border-white/20 text-white px-10 py-3 rounded-lg hover:bg-white/[0.03] transition-colors font-semibold text-[15px]">

@@ -5,70 +5,65 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FUND_LIST, COMPANIES, CATEGORIES, REGIONS, type Fund } from "./data";
 
-// ── localStorage keys ─────────────────────────────────────────────────
-const KEY_FAV  = "sm_favorites";
-const KEY_WATCH = "sm_watchlist";
-const KEY_CMP  = "sm_compare";
-const MAX_CMP  = 10;
+// ── localStorage 規格書定義 ───────────────────────────────────────────
+const KEY_FAV     = "favorites";
+const KEY_WATCH   = "watchlist";
+const KEY_COMPARE = "compareList";
+const MAX_COMPARE = 5;
 
-type FavStore   = { etfs: string[]; funds: string[] };
-type WatchStore = { etfs: string[]; funds: string[] };
+type ListItem = { id: string; type: "etf" | "fund"; name: string };
 
-function loadFav(): FavStore {
-  try { return JSON.parse(localStorage.getItem(KEY_FAV) || '{"etfs":[],"funds":[]}'); } catch { return { etfs: [], funds: [] }; }
+function loadList(key: string): ListItem[] {
+  try { return JSON.parse(localStorage.getItem(key) || "[]"); } catch { return []; }
 }
-function saveFav(s: FavStore) { localStorage.setItem(KEY_FAV, JSON.stringify(s)); }
-
-function loadWatch(): WatchStore {
-  try { return JSON.parse(localStorage.getItem(KEY_WATCH) || '{"etfs":[],"funds":[]}'); } catch { return { etfs: [], funds: [] }; }
+function saveList(key: string, list: ListItem[]) {
+  localStorage.setItem(key, JSON.stringify(list));
 }
-function saveWatch(s: WatchStore) { localStorage.setItem(KEY_WATCH, JSON.stringify(s)); }
-
-function loadCmp(): string[] {
-  try { return JSON.parse(localStorage.getItem(KEY_CMP) || '[]'); } catch { return []; }
+function hasItem(list: ListItem[], id: string) {
+  return list.some(i => i.id === id);
 }
-function saveCmp(s: string[]) { localStorage.setItem(KEY_CMP, JSON.stringify(s)); }
+function toggleItem(list: ListItem[], item: ListItem): ListItem[] {
+  return hasItem(list, item.id)
+    ? list.filter(i => i.id !== item.id)
+    : [...list, item];
+}
 
-// ── types ──────────────────────────────────────────────────────────────
+// ── Types ─────────────────────────────────────────────────────────────
 type SortKey = "returnYTD" | "return1m" | "return3m" | "return6m" | "return1y" | "return3y" | "dividendYieldA" | "dividendYieldM" | "dividendPerUnit" | "volatility";
 type SortDir = "asc" | "desc";
+type FilterMode = "all" | "fav" | "watch";
 type Period = "1M" | "3M" | "6M" | "1Y" | "3Y";
 
 const PERIODS: { key: Period; label: string }[] = [
-  { key: "1M", label: "1月" },
-  { key: "3M", label: "3月" },
-  { key: "6M", label: "6月" },
-  { key: "1Y", label: "1年" },
+  { key: "1M", label: "1月" }, { key: "3M", label: "3月" },
+  { key: "6M", label: "6月" }, { key: "1Y", label: "1年" },
   { key: "3Y", label: "3年" },
 ];
-
 const LINE_COLORS = ["#F5B700", "#3b82f6", "#22c55e", "#ef4444", "#9333ea"];
 const MAX_CHART = 5;
 
-// ── Sparkline helpers ──────────────────────────────────────────────────
+// ── Trend helpers ─────────────────────────────────────────────────────
 function seededRandom(seed: string, index: number): number {
   let hash = 0;
   const str = `${seed}-${index}`;
   for (let i = 0; i < str.length; i++) { hash = (hash << 5) - hash + str.charCodeAt(i); hash |= 0; }
   return (Math.abs(hash) % 1000) / 1000;
 }
-
 function generateTrend(fund: Fund, period: Period): number[] {
-  const points = { "1M": 22, "3M": 13, "6M": 12, "1Y": 12, "3Y": 18 }[period];
+  const pts = { "1M": 22, "3M": 13, "6M": 12, "1Y": 12, "3Y": 18 }[period];
   const ret = { "1M": fund.return1m, "3M": fund.return3m, "6M": fund.return6m, "1Y": fund.return1y, "3Y": fund.return3y }[period] / 100;
   const end = 100 * (1 + ret);
   const result: number[] = [];
-  for (let i = 0; i < points; i++) {
-    const prog = i / (points - 1);
-    const base = 100 + (end - 100) * prog;
-    result.push(Math.round((base + (seededRandom(fund.id, i) - 0.5) * Math.abs(end - 100) * 0.2) * 100) / 100);
+  for (let i = 0; i < pts; i++) {
+    const p = i / (pts - 1);
+    result.push(Math.round((100 + (end - 100) * p + (seededRandom(fund.id, i) - 0.5) * Math.abs(end - 100) * 0.2) * 100) / 100);
   }
   result[0] = 100;
   result[result.length - 1] = Math.round(end * 100) / 100;
   return result;
 }
 
-// ── Toast ──────────────────────────────────────────────────────────────
+// ── Toast ─────────────────────────────────────────────────────────────
 function Toast({ msg, onClose }: { msg: string; onClose: () => void }) {
   useEffect(() => { const t = setTimeout(onClose, 2000); return () => clearTimeout(t); }, [onClose]);
   return (
@@ -78,46 +73,44 @@ function Toast({ msg, onClose }: { msg: string; onClose: () => void }) {
   );
 }
 
-// ── Morningstar ────────────────────────────────────────────────────────
+// ── Morningstar ───────────────────────────────────────────────────────
 function Stars({ n }: { n: number }) {
   return <span className="text-[#F5B700] text-[13px] tracking-tight">{"★".repeat(n)}</span>;
 }
 
-// ── Action buttons ─────────────────────────────────────────────────────
-function ActionBtns({ id, favList, watchList, cmpList, onFav, onWatch, onCompare }: {
-  id: string;
-  favList: string[]; watchList: string[]; cmpList: string[];
-  onFav: (id: string) => void;
-  onWatch: (id: string) => void;
-  onCompare: (id: string) => void;
+// ── Action buttons ────────────────────────────────────────────────────
+function ActionBtns({ fund, favList, watchList, compareList, onFav, onWatch, onCompare }: {
+  fund: Fund;
+  favList: ListItem[]; watchList: ListItem[]; compareList: ListItem[];
+  onFav: (f: Fund) => void; onWatch: (f: Fund) => void; onCompare: (f: Fund) => void;
 }) {
-  const isFav   = favList.includes(id);
-  const isWatch = watchList.includes(id);
-  const isCmp   = cmpList.includes(id);
+  const isFav     = hasItem(favList, fund.id);
+  const isWatch   = hasItem(watchList, fund.id);
+  const isCompare = hasItem(compareList, fund.id);
   return (
     <div className="flex items-center gap-1">
-      <button onClick={() => onFav(id)} title={isFav ? "取消收藏" : "加入收藏"}
+      <button onClick={() => onFav(fund)} title={isFav ? "取消收藏" : "加入收藏"}
         className={`w-7 h-7 rounded-lg flex items-center justify-center text-[13px] transition-all ${isFav ? "bg-[#F5B700]/20 text-[#F5B700]" : "bg-white/[0.04] text-slate-500 hover:bg-[#F5B700]/10 hover:text-[#F5B700]"}`}>
         ⭐
       </button>
-      <button onClick={() => onWatch(id)} title={isWatch ? "從觀察名單移除" : "加入觀察名單"}
+      <button onClick={() => onWatch(fund)} title={isWatch ? "從觀察移除" : "加入觀察名單"}
         className={`w-7 h-7 rounded-lg flex items-center justify-center text-[13px] transition-all ${isWatch ? "bg-blue-500/20 text-blue-400" : "bg-white/[0.04] text-slate-500 hover:bg-blue-500/10 hover:text-blue-400"}`}>
         👀
       </button>
-      <button onClick={() => onCompare(id)} title={isCmp ? "從比較清單移除" : "加入比較"}
-        className={`w-7 h-7 rounded-lg flex items-center justify-center text-[13px] transition-all ${isCmp ? "bg-emerald-500/20 text-emerald-400" : "bg-white/[0.04] text-slate-500 hover:bg-emerald-500/10 hover:text-emerald-400"}`}>
+      <button onClick={() => onCompare(fund)} title={isCompare ? "從比較移除" : "加入比較"}
+        className={`w-7 h-7 rounded-lg flex items-center justify-center text-[13px] transition-all ${isCompare ? "bg-emerald-500/20 text-emerald-400" : "bg-white/[0.04] text-slate-500 hover:bg-emerald-500/10 hover:text-emerald-400"}`}>
         📊
       </button>
     </div>
   );
 }
 
-// ── Pct ────────────────────────────────────────────────────────────────
+// ── Pct ──────────────────────────────────────────────────────────────
 function Pct({ v }: { v: number }) {
   return <span className={`font-semibold ${v >= 0 ? "text-emerald-400" : "text-red-400"}`}>{v >= 0 ? "+" : ""}{v.toFixed(1)}%</span>;
 }
 
-// ── Main Page ──────────────────────────────────────────────────────────
+// ── Main ──────────────────────────────────────────────────────────────
 export default function FundsPage() {
   const router = useRouter();
 
@@ -127,59 +120,62 @@ export default function FundsPage() {
   const [region,      setRegion]      = useState("全部");
   const [sortKey,     setSortKey]     = useState<SortKey>("return1y");
   const [sortDir,     setSortDir]     = useState<SortDir>("desc");
+  const [filterMode,  setFilterMode]  = useState<FilterMode>("all");
   const [chartFunds,  setChartFunds]  = useState<Fund[]>([]);
   const [chartPeriod, setChartPeriod] = useState<Period>("1Y");
-  const [filterMode,  setFilterMode]  = useState<"all" | "fav" | "watch">("all");
 
-  const [favList,   setFavList]   = useState<string[]>([]);
-  const [watchList, setWatchList] = useState<string[]>([]);
-  const [cmpList,   setCmpList]   = useState<string[]>([]);
-  const [toast,     setToast]     = useState<string | null>(null);
+  const [favList,     setFavList]     = useState<ListItem[]>([]);
+  const [watchList,   setWatchList]   = useState<ListItem[]>([]);
+  const [compareList, setCompareList] = useState<ListItem[]>([]);
+  const [toast,       setToast]       = useState<string | null>(null);
 
   useEffect(() => {
-    setFavList(loadFav().funds);
-    setWatchList(loadWatch().funds);
-    setCmpList(loadCmp());
+    setFavList(loadList(KEY_FAV).filter(i => i.type === "fund"));
+    setWatchList(loadList(KEY_WATCH).filter(i => i.type === "fund"));
+    setCompareList(loadList(KEY_COMPARE));
   }, []);
 
   const showToast = useCallback((msg: string) => setToast(msg), []);
 
-  function handleFav(id: string) {
-    const store = loadFav();
-    const next = store.funds.includes(id) ? store.funds.filter(x => x !== id) : [...store.funds, id];
-    saveFav({ ...store, funds: next });
-    setFavList(next);
-    showToast(store.funds.includes(id) ? "已從收藏移除" : "⭐ 已加入收藏");
+  function handleFav(fund: Fund) {
+    const all  = loadList(KEY_FAV);
+    const item: ListItem = { id: fund.id, type: "fund", name: fund.name };
+    const next = toggleItem(all, item);
+    saveList(KEY_FAV, next);
+    setFavList(next.filter(i => i.type === "fund"));
+    showToast(hasItem(all, fund.id) ? "已從收藏移除" : "⭐ 已加入收藏");
   }
 
-  function handleWatch(id: string) {
-    const store = loadWatch();
-    const next = store.funds.includes(id) ? store.funds.filter(x => x !== id) : [...store.funds, id];
-    saveWatch({ ...store, funds: next });
-    setWatchList(next);
-    showToast(store.funds.includes(id) ? "已從觀察名單移除" : "👀 已加入觀察名單");
+  function handleWatch(fund: Fund) {
+    const all  = loadList(KEY_WATCH);
+    const item: ListItem = { id: fund.id, type: "fund", name: fund.name };
+    const next = toggleItem(all, item);
+    saveList(KEY_WATCH, next);
+    setWatchList(next.filter(i => i.type === "fund"));
+    showToast(hasItem(all, fund.id) ? "已從觀察名單移除" : "👀 已加入觀察名單");
   }
 
-  function handleCompare(id: string) {
-    const store = loadCmp();
-    if (store.includes(id)) {
-      const next = store.filter(x => x !== id);
-      saveCmp(next); setCmpList(next);
+  function handleCompare(fund: Fund) {
+    const all  = loadList(KEY_COMPARE);
+    const item: ListItem = { id: fund.id, type: "fund", name: fund.name };
+    if (hasItem(all, fund.id)) {
+      const next = all.filter(i => i.id !== fund.id);
+      saveList(KEY_COMPARE, next); setCompareList(next);
       showToast("已從比較清單移除");
     } else {
-      if (store.length >= MAX_CMP) { showToast(`比較清單最多 ${MAX_CMP} 檔`); return; }
-      const next = [...store, id];
-      saveCmp(next); setCmpList(next);
+      if (all.length >= MAX_COMPARE) { showToast(`比較清單最多 ${MAX_COMPARE} 檔`); return; }
+      const next = [...all, item];
+      saveList(KEY_COMPARE, next); setCompareList(next);
       showToast("📊 已加入比較清單");
     }
   }
 
   function toggleChart(fund: Fund) {
-    setChartFunds(prev => {
-      if (prev.find(f => f.id === fund.id)) return prev.filter(f => f.id !== fund.id);
-      if (prev.length >= MAX_CHART) return prev;
-      return [...prev, fund];
-    });
+    setChartFunds(prev =>
+      prev.find(f => f.id === fund.id)
+        ? prev.filter(f => f.id !== fund.id)
+        : prev.length >= MAX_CHART ? prev : [...prev, fund]
+    );
   }
 
   function handleSort(key: SortKey) {
@@ -189,11 +185,11 @@ export default function FundsPage() {
 
   const filtered = useMemo(() => {
     let list = FUND_LIST;
-    if (filterMode === "fav")   list = list.filter(f => favList.includes(f.id));
-    if (filterMode === "watch") list = list.filter(f => watchList.includes(f.id));
+    if (filterMode === "fav")   list = list.filter(f => hasItem(favList, f.id));
+    if (filterMode === "watch") list = list.filter(f => hasItem(watchList, f.id));
     if (keyword.trim()) {
       const kw = keyword.trim().toLowerCase();
-      list = list.filter(f => f.name.toLowerCase().includes(kw) || f.company.toLowerCase().includes(kw) || f.id.toLowerCase().includes(kw));
+      list = list.filter(f => f.name.toLowerCase().includes(kw) || f.company.toLowerCase().includes(kw));
     }
     if (company  !== "全部") list = list.filter(f => f.company  === company);
     if (category !== "全部") list = list.filter(f => f.category === category);
@@ -216,20 +212,19 @@ export default function FundsPage() {
     );
   }
 
-  // ── TrendChart ──────────────────────────────────────────────────────
+  // TrendChart
   function TrendChart({ funds, period }: { funds: Fund[]; period: Period }) {
-    const W = 1100, H = 280;
+    const W = 1100, H = 260;
     const pad = { top: 16, right: 16, bottom: 28, left: 48 };
     const series = funds.map(f => generateTrend(f, period));
     const all = series.flat();
-    const minV = Math.min(...all), maxV = Math.max(...all);
-    const range = maxV - minV || 1;
+    const minV = Math.min(...all), maxV = Math.max(...all), range = maxV - minV || 1;
     const cW = W - pad.left - pad.right, cH = H - pad.top - pad.bottom;
     const toX = (i: number, n: number) => pad.left + (i / (n - 1)) * cW;
     const toY = (v: number) => pad.top + cH - ((v - minV) / range) * cH;
     return (
       <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl overflow-x-auto">
-        <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-[280px]">
+        <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-[260px]">
           {[0, 0.25, 0.5, 0.75, 1].map(t => {
             const y = pad.top + cH * t;
             return (
@@ -248,6 +243,9 @@ export default function FundsPage() {
       </div>
     );
   }
+
+  const fundFavCount   = favList.length;
+  const fundWatchCount = watchList.length;
 
   return (
     <main className="min-h-screen px-6 pt-32 pb-20">
@@ -282,26 +280,30 @@ export default function FundsPage() {
           <p className="text-[15px] text-slate-400 mt-1">共 {FUND_LIST.length} 檔基金・前20大基金公司・支援收藏、觀察名單與比較</p>
         </div>
 
-        {/* 比較清單 bar */}
-        {cmpList.length > 0 && (
-          <div className="flex items-center justify-between bg-emerald-900/40 border border-emerald-500/30 rounded-xl px-5 py-3 mb-5">
+        {/* Compare bar */}
+        {compareList.length > 0 && (
+          <div className="flex items-center justify-between bg-emerald-900/30 border border-emerald-500/30 rounded-xl px-5 py-3 mb-5">
             <div className="text-[13px] text-emerald-300 font-semibold">
-              📊 比較清單：已加入 {cmpList.length} 檔
+              📊 比較清單：{compareList.length} 檔
             </div>
-            <div className="flex gap-2">
-              <button onClick={() => { saveCmp([]); setCmpList([]); }} className="text-[12px] text-slate-400 hover:text-red-400 transition-colors">清除</button>
-              <button onClick={() => router.push("/compare")} className="bg-emerald-600 hover:bg-emerald-500 text-white text-[12px] font-bold px-4 py-1.5 rounded-lg transition-colors">前往比較 →</button>
+            <div className="flex gap-3">
+              <button onClick={() => { saveList(KEY_COMPARE, []); setCompareList([]); }}
+                className="text-[12px] text-slate-500 hover:text-red-400 transition-colors">清除</button>
+              <button onClick={() => router.push("/compare")}
+                className="bg-emerald-700 hover:bg-emerald-600 text-white text-[12px] font-bold px-4 py-1.5 rounded-lg transition-colors">
+                前往比較中心 →
+              </button>
             </div>
           </div>
         )}
 
-        {/* FILTER TABS */}
+        {/* Filter tabs */}
         <div className="flex gap-2 mb-5">
           {([
-            { key: "all",   label: `全部 (${FUND_LIST.length})` },
-            { key: "fav",   label: `⭐ 收藏 (${favList.length})` },
-            { key: "watch", label: `👀 觀察名單 (${watchList.length})` },
-          ] as const).map(tab => (
+            { key: "all"   as FilterMode, label: `全部 (${FUND_LIST.length})` },
+            { key: "fav"   as FilterMode, label: `⭐ 收藏 (${fundFavCount})` },
+            { key: "watch" as FilterMode, label: `👀 觀察名單 (${fundWatchCount})` },
+          ]).map(tab => (
             <button key={tab.key} onClick={() => setFilterMode(tab.key)}
               className={`px-4 py-2 rounded-lg text-[13px] font-semibold transition-colors ${
                 filterMode === tab.key ? "bg-[#F5B700] text-[#0B1220]" : "border border-white/15 text-slate-400 hover:border-white/30"
@@ -311,7 +313,7 @@ export default function FundsPage() {
           ))}
         </div>
 
-        {/* FILTERS */}
+        {/* Filters */}
         <div className="flex flex-wrap gap-3 mb-4">
           <input type="text" value={keyword} onChange={e => setKeyword(e.target.value)}
             placeholder="搜尋基金名稱或公司"
@@ -335,19 +337,19 @@ export default function FundsPage() {
 
         <div className="flex items-center justify-between mb-3">
           <div className="text-[12px] text-slate-600">符合條件：{filtered.length} 檔</div>
-          {chartFunds.length > 0 && <div className="text-[12px] text-[#F5B700]">已選 {chartFunds.length} 檔加入走勢比較</div>}
+          {chartFunds.length > 0 && <div className="text-[12px] text-[#F5B700]">已選 {chartFunds.length} 檔走勢比較</div>}
         </div>
 
-        {/* TABLE */}
+        {/* Table */}
         <div className="border border-white/10 rounded-2xl overflow-hidden mb-8">
           <div className="overflow-x-auto">
             <table className="w-full text-left min-w-[1400px]">
               <thead>
                 <tr className="bg-white/[0.06] text-slate-400 text-[12px]">
-                  <th className="px-3 py-3 font-semibold w-[90px]">操作</th>
-                  <th className="px-3 py-3 font-semibold w-[28px]">圖</th>
+                  <th className="px-3 py-3 font-semibold w-[88px]">操作</th>
+                  <th className="px-3 py-3 font-semibold w-[26px]">圖</th>
                   <th className="px-3 py-3 font-semibold min-w-[60px]">公司</th>
-                  <th className="px-4 py-3 font-semibold min-w-[190px]">基金名稱</th>
+                  <th className="px-4 py-3 font-semibold min-w-[180px]">基金名稱</th>
                   <th className="px-3 py-3 font-semibold">類別</th>
                   <th className="px-3 py-3 font-semibold">地區</th>
                   <th className="px-3 py-3 font-semibold">晨星</th>
@@ -372,23 +374,22 @@ export default function FundsPage() {
                     <tr key={fund.id}
                       className={`text-[12px] text-white border-t border-white/[0.04] hover:bg-[#F5B700]/[0.04] transition-colors ${i % 2 === 1 ? "bg-white/[0.015]" : ""}`}>
                       <td className="px-3 py-2.5">
-                        <ActionBtns id={fund.id} favList={favList} watchList={watchList} cmpList={cmpList}
+                        <ActionBtns fund={fund} favList={favList} watchList={watchList} compareList={compareList}
                           onFav={handleFav} onWatch={handleWatch} onCompare={handleCompare} />
                       </td>
-                      {/* 走勢比較 */}
                       <td className="px-2 py-2.5">
                         <button onClick={() => toggleChart(fund)}
                           disabled={!inChart && chartFunds.length >= MAX_CHART}
                           title={inChart ? "移除走勢" : "加入走勢比較"}
-                          className={`w-6 h-6 rounded-full border-2 flex items-center justify-center text-[9px] font-bold transition-all ${
+                          className={`w-5 h-5 rounded-full border-2 flex items-center justify-center text-[9px] font-bold transition-all ${
                             inChart ? "border-transparent text-white" : "border-white/20 hover:border-[#F5B700] disabled:opacity-20"
                           }`}
                           style={inChart ? { backgroundColor: LINE_COLORS[chartIdx] } : {}}>
                           {inChart ? "✓" : ""}
                         </button>
                       </td>
-                      <td className="px-3 py-2.5 font-bold text-white text-[12px]">{fund.company}</td>
-                      <td className="px-4 py-2.5 text-slate-300 max-w-[190px] truncate">{fund.name}</td>
+                      <td className="px-3 py-2.5 font-bold text-white">{fund.company}</td>
+                      <td className="px-4 py-2.5 text-slate-300 max-w-[180px] truncate">{fund.name}</td>
                       <td className="px-3 py-2.5">
                         <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold ${
                           fund.category === "股票型" ? "bg-blue-900/60 text-blue-300" :
@@ -415,7 +416,7 @@ export default function FundsPage() {
                 })}
                 {filtered.length === 0 && (
                   <tr><td colSpan={18} className="px-5 py-12 text-center text-slate-600">
-                    {filterMode === "fav" ? "尚未收藏任何基金，點擊 ⭐ 加入收藏" :
+                    {filterMode === "fav"   ? "尚未收藏任何基金，點擊 ⭐ 加入收藏" :
                      filterMode === "watch" ? "觀察名單是空的，點擊 👀 加入" :
                      "找不到符合條件的基金"}
                   </td></tr>
@@ -444,7 +445,7 @@ export default function FundsPage() {
                 <div key={fund.id} className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: LINE_COLORS[i] }} />
                   <span className="text-[12px] font-semibold text-white">{fund.company}</span>
-                  <span className="text-[11px] text-slate-500 truncate max-w-[120px]">{fund.name}</span>
+                  <span className="text-[11px] text-slate-500 truncate max-w-[110px]">{fund.name}</span>
                   <button onClick={() => toggleChart(fund)} className="text-slate-600 hover:text-red-400 text-[10px] ml-1">✕</button>
                 </div>
               ))}
@@ -454,14 +455,12 @@ export default function FundsPage() {
             <p className="text-[11px] text-slate-700 mt-2">走勢為示意模擬，非真實歷史淨值。</p>
           </div>
         ) : (
-          <div className="border border-dashed border-white/[0.06] rounded-2xl p-5 mb-8 text-center text-slate-700 text-[13px]">
+          <div className="border border-dashed border-white/[0.06] rounded-2xl p-5 mb-8 text-center text-slate-700 text-[12px]">
             點擊表格「圖」欄圓圈，加入最多 {MAX_CHART} 檔基金進行走勢比較
           </div>
         )}
 
-        <p className="text-[11px] text-slate-700 mt-4 text-center">
-          以上資料為示意範例，不構成投資建議。實際投資請參考各基金公開說明書。
-        </p>
+        <p className="text-[11px] text-slate-700 mt-4 text-center">以上資料為示意範例，不構成投資建議。</p>
 
         <div className="flex justify-center mt-8 gap-4">
           <Link href="/compare" className="border border-white/20 text-white px-7 py-3 rounded-lg hover:bg-white/[0.03] transition-colors font-semibold text-[14px]">ETF+基金比較中心</Link>
