@@ -3,148 +3,228 @@
 import { Suspense, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { ETF_LIST } from "../etf/data";
+import { FUND_LIST } from "../funds/data";
 
-// ---- print styles injected at runtime ----
+// ── 列印樣式 ──────────────────────────────────────────────────────────
 const PRINT_STYLE = `
 @media print {
-  @page { margin: 15mm 15mm 15mm 15mm; size: A4; }
+  @page { margin: 15mm; size: A4; }
   body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .no-print { display: none !important; }
-  .print-break { page-break-before: always; }
   nav, footer { display: none !important; }
 }
 `;
 
+// ── 人格 type ─────────────────────────────────────────────────────────
 type PersonalityKey = "conservative" | "balanced" | "growth" | "aggressive";
 
-type EtfItem = {
-  code: string;
-  name: string;
-  desc: string;
-};
+function isPersonalityKey(v: string | null): v is PersonalityKey {
+  return v === "conservative" || v === "balanced" || v === "growth" || v === "aggressive";
+}
 
-type FundItem = {
-  category: string;
-  desc: string;
-};
-
-type ReportData = {
+// ── 配置規則（規則引擎，寫死）────────────────────────────────────────
+type Allocation = {
   title: string;
-  stars: number;
   riskLabel: string;
   summary: string;
-  allocation: { label: string; value: number; color: string }[];
-  etfs: EtfItem[];
-  funds: FundItem[];
+  stock: number;
+  bond: number;
+  cash: number;
+  colors: { stock: string; bond: string; cash: string };
 };
 
-const REPORTS: Record<PersonalityKey, ReportData> = {
+const ALLOCATION_RULES: Record<PersonalityKey, Allocation> = {
   conservative: {
     title: "保守型",
-    stars: 2,
     riskLabel: "風險承受度：中低",
-    summary: "你重視資產的安全與穩定，對虧損的容忍度較低，適合以保本與穩定收益為主的投資組合。",
-    allocation: [
-      { label: "債券", value: 60, color: "#64748b" },
-      { label: "現金", value: 25, color: "#334155" },
-      { label: "股票", value: 15, color: "#F5B700" },
-    ],
-    etfs: [
-      { code: "BND", name: "Vanguard Total Bond Market ETF", desc: "美國綜合債券市場，分散信用與利率風險" },
-      { code: "AGG", name: "iShares Core U.S. Aggregate Bond ETF", desc: "追蹤美國投資級債券指數，流動性高" },
-      { code: "00679B", name: "元大美債20年", desc: "台股掛牌美國長天期公債ETF，免換匯" },
-    ],
-    funds: [
-      { category: "投資等級債券型基金", desc: "聚焦已開發市場政府與投資級公司債，波動度較低" },
-      { category: "貨幣市場基金", desc: "短期票券與存款工具為主，流動性與穩定性優先" },
-    ],
+    summary: "你重視資產的安全與穩定，對虧損的容忍度較低。配置以債券與現金為核心，少量股票資產提供基本成長動能。",
+    stock: 15, bond: 60, cash: 25,
+    colors: { stock: "#F5B700", bond: "#64748b", cash: "#334155" },
   },
   balanced: {
     title: "穩健型",
-    stars: 3,
     riskLabel: "風險承受度：中等",
-    summary: "你希望在風險與報酬之間取得平衡，能接受一定程度的波動，適合股債均衡配置的投資組合。",
-    allocation: [
-      { label: "股票", value: 45, color: "#F5B700" },
-      { label: "債券", value: 40, color: "#64748b" },
-      { label: "現金", value: 15, color: "#334155" },
-    ],
-    etfs: [
-      { code: "VTI", name: "Vanguard Total Stock Market ETF", desc: "涵蓋美國全市場股票，分散個股風險" },
-      { code: "VT", name: "Vanguard Total World Stock ETF", desc: "全球股市曝險，含已開發與新興市場" },
-      { code: "0050", name: "元大台灣50", desc: "追蹤台灣市值前50大企業，台股核心配置" },
-    ],
-    funds: [
-      { category: "平衡型基金", desc: "股債混合配置，依市場狀況動態調整比重" },
-      { category: "全球股票型基金", desc: "跨區域、跨產業分散，降低單一市場集中風險" },
-    ],
+    summary: "你希望在風險與報酬之間取得平衡，能接受一定程度的波動。股票與債券均衡配置，兼顧成長與穩定。",
+    stock: 50, bond: 30, cash: 20,
+    colors: { stock: "#F5B700", bond: "#64748b", cash: "#334155" },
   },
   growth: {
     title: "成長型",
-    stars: 4,
     riskLabel: "風險承受度：中高",
-    summary: "你願意承擔較高波動以追求資產成長，投資期間較長，適合以股票為主、債券為輔的配置。",
-    allocation: [
-      { label: "股票", value: 70, color: "#F5B700" },
-      { label: "債券", value: 22, color: "#64748b" },
-      { label: "現金", value: 8, color: "#334155" },
-    ],
-    etfs: [
-      { code: "QQQ", name: "Invesco QQQ Trust", desc: "追蹤那斯達克100指數，科技成長股集中" },
-      { code: "VUG", name: "Vanguard Growth ETF", desc: "美國大型成長股，著重獲利成長動能" },
-      { code: "00878", name: "國泰永續高股息", desc: "結合ESG篩選與高股息策略的台股ETF" },
-    ],
-    funds: [
-      { category: "科技產業型基金", desc: "聚焦科技與創新產業，成長動能較強但波動較大" },
-      { category: "新興市場股票型基金", desc: "佈局高成長潛力市場，承擔較高政經與匯率風險" },
-    ],
+    summary: "你願意承擔較高波動以追求資產成長，投資期間較長。以股票資產為主力，債券配置提供緩衝。",
+    stock: 70, bond: 22, cash: 8,
+    colors: { stock: "#F5B700", bond: "#64748b", cash: "#334155" },
   },
   aggressive: {
     title: "積極型",
-    stars: 5,
     riskLabel: "風險承受度：高",
-    summary: "你能承受高度波動，追求長期最大化報酬，適合以股票為核心、搭配高成長資產的投資組合。",
-    allocation: [
-      { label: "股票", value: 85, color: "#F5B700" },
-      { label: "債券", value: 10, color: "#64748b" },
-      { label: "現金", value: 5, color: "#334155" },
-    ],
-    etfs: [
-      { code: "SOXX", name: "iShares Semiconductor ETF", desc: "半導體產業集中曝險，波動較高" },
-      { code: "QQQ", name: "Invesco QQQ Trust", desc: "那斯達克100指數，科技成長股核心部位" },
-      { code: "SMH", name: "VanEck Semiconductor ETF", desc: "全球半導體龍頭企業，產業週期波動大" },
-    ],
-    funds: [
-      { category: "產業主題型基金", desc: "集中佈局單一高成長產業，報酬與風險同步放大" },
-      { category: "槓桿型/單一國家股票基金", desc: "高波動高彈性，適合能承受大幅回檔的投資人" },
-    ],
+    summary: "你能承受高度波動，追求長期最大化報酬。以高成長股票資產為核心，少量債券提供基本穩定性。",
+    stock: 85, bond: 10, cash: 5,
+    colors: { stock: "#F5B700", bond: "#64748b", cash: "#334155" },
   },
 };
 
-function isPersonalityKey(value: string | null): value is PersonalityKey {
-  return (
-    value === "conservative" ||
-    value === "balanced" ||
-    value === "growth" ||
-    value === "aggressive"
-  );
+// ── 商品篩選引擎 ──────────────────────────────────────────────────────
+type EtfGroup  = { label: string; items: typeof ETF_LIST };
+type FundGroup = { label: string; items: typeof FUND_LIST };
+
+function getEtfGroups(key: PersonalityKey): EtfGroup[] {
+  const rule = ALLOCATION_RULES[key];
+  const TOP = 4; // 每組最多顯示筆數
+  const byReturn = (a: typeof ETF_LIST[0], b: typeof ETF_LIST[0]) => b.return1y - a.return1y;
+
+  if (key === "conservative") {
+    return [
+      {
+        label: "債券 ETF",
+        items: ETF_LIST.filter(e => e.sector === "債券").sort(byReturn).slice(0, TOP),
+      },
+      {
+        label: "高股息 ETF（收益來源）",
+        items: ETF_LIST.filter(e => e.sector === "高股息" && e.region === "台灣").sort(byReturn).slice(0, TOP),
+      },
+    ];
+  }
+  if (key === "balanced") {
+    return [
+      {
+        label: "市值型 ETF（股票部位）",
+        items: ETF_LIST.filter(e => e.sector === "市值型").sort(byReturn).slice(0, TOP),
+      },
+      {
+        label: "高股息 ETF（收益部位）",
+        items: ETF_LIST.filter(e => e.sector === "高股息").sort(byReturn).slice(0, TOP),
+      },
+      {
+        label: "債券 ETF（穩定部位）",
+        items: ETF_LIST.filter(e => e.sector === "債券").sort(byReturn).slice(0, TOP),
+      },
+    ];
+  }
+  if (key === "growth") {
+    return [
+      {
+        label: "市值型 ETF（核心部位）",
+        items: ETF_LIST.filter(e => e.sector === "市值型").sort(byReturn).slice(0, TOP),
+      },
+      {
+        label: "科技產業 ETF（成長部位）",
+        items: ETF_LIST.filter(e => e.sector === "科技" || e.sector === "半導體").sort(byReturn).slice(0, TOP),
+      },
+      {
+        label: "債券 ETF（緩衝部位）",
+        items: ETF_LIST.filter(e => e.sector === "債券").sort(byReturn).slice(0, 3),
+      },
+    ];
+  }
+  // aggressive
+  return [
+    {
+      label: "科技 / 半導體 ETF（核心部位）",
+      items: ETF_LIST.filter(e => e.sector === "科技" || e.sector === "半導體" || e.sector === "創新科技").sort(byReturn).slice(0, TOP),
+    },
+    {
+      label: "市值型 ETF（分散部位）",
+      items: ETF_LIST.filter(e => e.sector === "市值型" && e.region === "美國").sort(byReturn).slice(0, TOP),
+    },
+    {
+      label: "主動式 / 成長型 ETF",
+      items: ETF_LIST.filter(e => e.sector === "主動式" || e.sector === "成長型").sort(byReturn).slice(0, 3),
+    },
+  ];
 }
 
-function StarRating({ stars }: { stars: number }) {
+function getFundGroups(key: PersonalityKey): FundGroup[] {
+  const TOP = 4;
+  const byReturn = (a: typeof FUND_LIST[0], b: typeof FUND_LIST[0]) => b.return1y - a.return1y;
+
+  if (key === "conservative") {
+    return [
+      {
+        label: "債券型基金（核心部位）",
+        items: FUND_LIST.filter(f => f.category === "債券型").sort(byReturn).slice(0, TOP),
+      },
+      {
+        label: "貨幣型基金（現金部位）",
+        items: FUND_LIST.filter(f => f.category === "貨幣型").sort(byReturn).slice(0, TOP),
+      },
+    ];
+  }
+  if (key === "balanced") {
+    return [
+      {
+        label: "平衡型基金（股債兼顧）",
+        items: FUND_LIST.filter(f => f.category === "平衡型").sort(byReturn).slice(0, TOP),
+      },
+      {
+        label: "債券型基金（穩定部位）",
+        items: FUND_LIST.filter(f => f.category === "債券型" && f.dividendYieldA > 4).sort(byReturn).slice(0, TOP),
+      },
+      {
+        label: "全球股票型基金（成長部位）",
+        items: FUND_LIST.filter(f => f.category === "股票型" && f.region === "全球").sort(byReturn).slice(0, TOP),
+      },
+    ];
+  }
+  if (key === "growth") {
+    return [
+      {
+        label: "股票型基金（核心部位）",
+        items: FUND_LIST.filter(f => f.category === "股票型" && (f.region === "全球" || f.region === "美國")).sort(byReturn).slice(0, TOP),
+      },
+      {
+        label: "科技主題基金（成長部位）",
+        items: FUND_LIST.filter(f => f.category === "股票型" && f.name.includes("科技")).sort(byReturn).slice(0, TOP),
+      },
+      {
+        label: "平衡型基金（緩衝部位）",
+        items: FUND_LIST.filter(f => f.category === "平衡型").sort(byReturn).slice(0, 3),
+      },
+    ];
+  }
+  // aggressive
+  return [
+    {
+      label: "高成長股票型基金（核心部位）",
+      items: FUND_LIST.filter(f => f.category === "股票型" && f.volatility > 18).sort(byReturn).slice(0, TOP),
+    },
+    {
+      label: "科技 / AI 主題基金",
+      items: FUND_LIST.filter(f => f.name.includes("科技") || f.name.includes("AI") || f.name.includes("人工智能")).sort(byReturn).slice(0, TOP),
+    },
+    {
+      label: "新興市場股票型基金",
+      items: FUND_LIST.filter(f => f.category === "股票型" && (f.region === "新興市場" || f.region === "印度")).sort(byReturn).slice(0, 3),
+    },
+  ];
+}
+
+// ── 晨星星星（只顯示金色）────────────────────────────────────────────
+function Stars({ n }: { n: number }) {
+  return <span className="text-[#F5B700] text-[13px]">{"★".repeat(n)}</span>;
+}
+
+// ── Pct ──────────────────────────────────────────────────────────────
+function Pct({ v }: { v: number }) {
   return (
-    <span className="text-[#F5B700] text-[24px] tracking-wider">
-      {"★".repeat(stars)}
-      <span className="text-slate-300">{"★".repeat(5 - stars)}</span>
+    <span className={v >= 0 ? "text-emerald-400 font-semibold" : "text-red-400 font-semibold"}>
+      {v >= 0 ? "+" : ""}{v.toFixed(1)}%
     </span>
   );
 }
 
+// ── Report Content ────────────────────────────────────────────────────
 function ReportContent() {
   const searchParams = useSearchParams();
-  const typeParam = searchParams.get("type");
-  const clientName = searchParams.get("client") || "";
+  const typeParam   = searchParams.get("type");
+  const clientName  = searchParams.get("client") || "";
+  const scoreParam  = searchParams.get("score") || "";
+
   const type: PersonalityKey = isPersonalityKey(typeParam) ? typeParam : "balanced";
-  const data = REPORTS[type];
+  const rule     = ALLOCATION_RULES[type];
+  const etfGroups  = getEtfGroups(type);
+  const fundGroups = getFundGroups(type);
 
   useEffect(() => {
     const style = document.createElement("style");
@@ -153,165 +233,224 @@ function ReportContent() {
     return () => { document.head.removeChild(style); };
   }, []);
 
-  function handlePrint() {
-    window.print();
-  }
+  const alloc = [
+    { label: "股票資產", value: rule.stock,  color: rule.colors.stock },
+    { label: "債券資產", value: rule.bond,   color: rule.colors.bond  },
+    { label: "現金部位", value: rule.cash,   color: rule.colors.cash  },
+  ];
 
   return (
-    <main className="min-h-screen  px-6 pt-32 pb-20">
+    <main className="min-h-screen px-6 pt-28 pb-20">
+
+      {/* NAVBAR */}
+      <header className="fixed top-0 left-0 w-full z-50 bg-[#040a18]/85 backdrop-blur-xl border-b border-white/[0.08] no-print">
+        <div className="max-w-[1700px] mx-auto h-20 px-10 flex items-center justify-between">
+          <Link href="/">
+            <div className="text-[28px] font-black text-white leading-none">Smart<span className="text-[#F5B700]">Match</span></div>
+            <div className="text-[11px] text-slate-400 mt-0.5">ETF & 基金資產配置分析平台</div>
+          </Link>
+          <nav className="hidden lg:flex gap-7 text-[14px] font-semibold text-slate-300">
+            <Link href="/quiz"    className="hover:text-white transition-colors">投資人格分析</Link>
+            <Link href="/etf"     className="hover:text-white transition-colors">ETF篩選器</Link>
+            <Link href="/funds"   className="hover:text-white transition-colors">基金篩選器</Link>
+            <Link href="/compare" className="hover:text-white transition-colors">比較中心</Link>
+            <Link href="/clients" className="hover:text-white transition-colors">客戶管理</Link>
+            <Link href="/pricing" className="hover:text-white transition-colors">方案</Link>
+          </nav>
+          <div className="flex items-center gap-3">
+            <button onClick={() => window.print()}
+              className="flex items-center gap-2 bg-white/[0.08] hover:bg-white/[0.15] text-white px-5 py-2 rounded-lg font-semibold text-[14px] transition-colors">
+              ⬇ 匯出 PDF
+            </button>
+          </div>
+        </div>
+      </header>
 
       <div className="max-w-[860px] mx-auto">
 
-        {/* 列印專用標頭（螢幕不顯示）*/}
-        <div className="hidden print:block mb-8 pb-6 border-b border-white/10">
+        {/* 列印標頭 */}
+        <div className="hidden print:block mb-8 pb-4 border-b border-white/10">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-[20px] font-black text-white">SmartMatch</div>
-              <div className="text-[12px] text-slate-400">ETF ＆ 基金資產配置分析平台</div>
+              <div className="text-[18px] font-black text-white">SmartMatch</div>
+              <div className="text-[11px] text-slate-400">ETF & 基金資產配置分析平台</div>
             </div>
-            <div className="text-right text-[12px] text-slate-400">
+            <div className="text-right text-[11px] text-slate-400">
               <div>投資人格分析報告</div>
               <div>{new Date().toLocaleDateString("zh-TW")}</div>
-              {clientName && <div className="mt-1 font-semibold text-white">客戶：{clientName}</div>}
+              {clientName && <div className="font-semibold text-white mt-1">客戶：{clientName}</div>}
             </div>
           </div>
         </div>
 
-        {/* PDF 下載按鈕（列印時隱藏）*/}
-        <div className="flex justify-end mb-6 no-print">
-          <button
-            onClick={handlePrint}
-            className="flex items-center gap-2 bg-[#0B1220] hover:bg-slate-800 text-white px-6 py-2.5 rounded-lg font-semibold text-[15px] transition-colors"
-          >
-            <span>⬇</span>
-            匯出 PDF 報告
-          </button>
-        </div>
-
+        {/* 報告標頭 */}
         <div className="text-center mb-12">
-          <div className="tracking-[10px] text-[#F5B700] text-[16px] font-semibold mb-6">
-            SMARTMATCH
-          </div>
-          <div className="text-[18px] text-slate-400 mb-3">
-            投資人格分析結果
-          </div>
-          <h1 className="text-[64px] font-black text-white leading-tight">
-            {data.title}投資人
-          </h1>
+          <div className="tracking-[10px] text-[#F5B700] text-[13px] font-semibold mb-5">SMARTMATCH 分析報告</div>
+          {clientName && <div className="text-[14px] text-slate-400 mb-2">客戶：{clientName}</div>}
+          {scoreParam  && <div className="text-[13px] text-slate-500 mb-2">總分 {scoreParam} 分</div>}
+          <div className="text-[16px] text-slate-400 mb-3">投資人格分析結果</div>
+          <h1 className="text-[60px] font-black text-white leading-tight">{rule.title}</h1>
+          <div className="text-[14px] text-slate-500 mt-2">{rule.riskLabel}</div>
         </div>
 
-        <p className="text-[20px] leading-[1.8] text-slate-400 text-center mb-10">
-          {data.summary}
-        </p>
+        <p className="text-[17px] leading-[1.9] text-slate-400 text-center mb-14">{rule.summary}</p>
 
-        <div className="flex items-center justify-center gap-3 mb-14">
-          <span className="text-[16px] text-slate-400">{data.riskLabel}</span>
-          <StarRating stars={data.stars} />
-        </div>
+        {/* ── 第一階段：配置分析 ────────────────────────────────── */}
+        <section className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-8 mb-10">
+          <div className="text-[11px] tracking-[6px] text-[#F5B700] font-semibold mb-5">PHASE 1 · 配置分析</div>
+          <h2 className="text-[22px] font-bold text-white mb-6">資產配置分析</h2>
 
-        {/* 資產配置分析 */}
-        <div className="bg-[#0B1220] rounded-[24px] p-10 mb-10">
-          <div className="text-white text-[22px] font-bold mb-6">
-            資產配置分析
-          </div>
-
-          <div className="flex h-4 rounded-full overflow-hidden mb-6">
-            {data.allocation.map((a) => (
-              <div
-                key={a.label}
-                style={{ width: `${a.value}%`, backgroundColor: a.color }}
-              />
+          {/* 長條圖 */}
+          <div className="flex h-5 rounded-full overflow-hidden mb-6">
+            {alloc.map(a => (
+              <div key={a.label} style={{ width: `${a.value}%`, backgroundColor: a.color }} />
             ))}
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
-            {data.allocation.map((a) => (
-              <div key={a.label}>
-                <div className="flex items-center gap-2 mb-1">
-                  <span
-                    className="w-2.5 h-2.5 rounded-sm"
-                    style={{ backgroundColor: a.color }}
-                  />
-                  <span className="text-slate-300 text-[15px]">{a.label}</span>
+          {/* 數值 */}
+          <div className="grid grid-cols-3 gap-5 mb-6">
+            {alloc.map(a => (
+              <div key={a.label} className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: a.color }} />
+                  <span className="text-[13px] text-slate-400">{a.label}</span>
                 </div>
-                <div className="text-white text-[28px] font-bold">
-                  {a.value}%
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* ETF 篩選結果 */}
-        <div className="mb-12">
-          <div className="text-[24px] font-bold text-white mb-6">
-            ETF 篩選結果
-          </div>
-
-          <div className="flex flex-col gap-4">
-            {data.etfs.map((etf) => (
-              <div
-                key={etf.code}
-                className="border border-white/10 rounded-xl p-6"
-              >
-                <div className="flex items-baseline gap-3">
-                  <span className="text-[22px] font-bold text-white">
-                    {etf.code}
-                  </span>
-                  <span className="text-[15px] text-slate-400">
-                    {etf.name}
-                  </span>
-                </div>
-                <div className="text-[15px] text-slate-400 mt-1">
-                  {etf.desc}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* 符合條件基金 */}
-        <div className="mb-12">
-          <div className="text-[24px] font-bold text-white mb-6">
-            符合條件基金
-          </div>
-
-          <div className="flex flex-col gap-4">
-            {data.funds.map((fund) => (
-              <div
-                key={fund.category}
-                className="border border-white/10 rounded-xl p-6"
-              >
-                <div className="text-[18px] font-bold text-white">
-                  {fund.category}
-                </div>
-                <div className="text-[15px] text-slate-400 mt-1">
-                  {fund.desc}
-                </div>
+                <div className="text-[36px] font-black text-white">{a.value}%</div>
               </div>
             ))}
           </div>
 
-          <p className="text-[13px] text-slate-400 mt-4 leading-relaxed">
-            以上為基金類型範例，實際商品請洽詢理財顧問或基金公司公開說明書。
+          <p className="text-[12px] text-slate-600 leading-relaxed">
+            以上為依據投資人格分析結果產生之資產配置參考比例。實際配置應依個人財務狀況、投資期間與市場情況調整。
+          </p>
+        </section>
+
+        {/* ── 第二階段：ETF 篩選結果 ───────────────────────────── */}
+        <section className="mb-10">
+          <div className="text-[11px] tracking-[6px] text-[#F5B700] font-semibold mb-5">PHASE 2 · ETF 篩選結果</div>
+          <h2 className="text-[22px] font-bold text-white mb-2">ETF 篩選結果</h2>
+          <p className="text-[13px] text-slate-500 mb-6">
+            以下為依據本次配置分析條件，從 ETF 資料庫篩選出的商品，依近一年績效排序。
+          </p>
+
+          {etfGroups.map(group => (
+            <div key={group.label} className="mb-6">
+              <div className="text-[13px] font-semibold text-slate-300 mb-3 flex items-center gap-2">
+                <span className="w-1 h-4 bg-[#F5B700] rounded-full inline-block" />
+                {group.label}
+              </div>
+              <div className="border border-white/[0.08] rounded-xl overflow-hidden">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="bg-white/[0.04] text-slate-500 text-[11px]">
+                      <th className="px-4 py-2.5 font-semibold w-[80px]">代碼</th>
+                      <th className="px-4 py-2.5 font-semibold">商品名稱</th>
+                      <th className="px-4 py-2.5 font-semibold text-right">殖利率</th>
+                      <th className="px-4 py-2.5 font-semibold text-right">近1年</th>
+                      <th className="px-4 py-2.5 font-semibold text-right">波動度</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {group.items.map((etf, i) => (
+                      <tr key={etf.code}
+                        className={`text-[13px] border-t border-white/[0.05] ${i % 2 === 1 ? "bg-white/[0.02]" : ""}`}>
+                        <td className="px-4 py-2.5 font-bold text-[#F5B700]">{etf.code}</td>
+                        <td className="px-4 py-2.5 text-slate-300 max-w-[240px] truncate">{etf.name}</td>
+                        <td className="px-4 py-2.5 text-right text-slate-400">
+                          {etf.dividendYield > 0 ? `${etf.dividendYield.toFixed(1)}%` : "—"}
+                        </td>
+                        <td className="px-4 py-2.5 text-right"><Pct v={etf.return1y} /></td>
+                        <td className="px-4 py-2.5 text-right text-slate-400">{etf.volatility.toFixed(1)}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ))}
+
+          <p className="text-[11px] text-slate-600 mt-2">
+            以上為 SmartMatch ETF 資料庫篩選結果，非投資建議。數值為示意資料。
+          </p>
+        </section>
+
+        {/* ── 第二階段：基金篩選結果 ───────────────────────────── */}
+        <section className="mb-12">
+          <div className="text-[11px] tracking-[6px] text-[#F5B700] font-semibold mb-5">PHASE 2 · 基金篩選結果</div>
+          <h2 className="text-[22px] font-bold text-white mb-2">基金篩選結果</h2>
+          <p className="text-[13px] text-slate-500 mb-6">
+            以下為依據本次配置分析條件，從基金資料庫篩選出的商品，依近一年績效排序。
+          </p>
+
+          {fundGroups.map(group => (
+            <div key={group.label} className="mb-6">
+              <div className="text-[13px] font-semibold text-slate-300 mb-3 flex items-center gap-2">
+                <span className="w-1 h-4 bg-[#F5B700] rounded-full inline-block" />
+                {group.label}
+              </div>
+              <div className="border border-white/[0.08] rounded-xl overflow-hidden">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="bg-white/[0.04] text-slate-500 text-[11px]">
+                      <th className="px-4 py-2.5 font-semibold w-[64px]">公司</th>
+                      <th className="px-4 py-2.5 font-semibold">基金名稱</th>
+                      <th className="px-4 py-2.5 font-semibold text-center">晨星</th>
+                      <th className="px-4 py-2.5 font-semibold text-right">年化配息</th>
+                      <th className="px-4 py-2.5 font-semibold text-right">近1年</th>
+                      <th className="px-4 py-2.5 font-semibold text-right">波動度</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {group.items.map((fund, i) => (
+                      <tr key={fund.id}
+                        className={`text-[13px] border-t border-white/[0.05] ${i % 2 === 1 ? "bg-white/[0.02]" : ""}`}>
+                        <td className="px-4 py-2.5 font-bold text-white text-[12px]">{fund.company}</td>
+                        <td className="px-4 py-2.5 text-slate-300 max-w-[220px] truncate">{fund.name}</td>
+                        <td className="px-4 py-2.5 text-center"><Stars n={fund.morningstar} /></td>
+                        <td className="px-4 py-2.5 text-right text-[#F5B700] font-semibold">
+                          {fund.dividendYieldA > 0 ? `${fund.dividendYieldA.toFixed(1)}%` : "—"}
+                        </td>
+                        <td className="px-4 py-2.5 text-right"><Pct v={fund.return1y} /></td>
+                        <td className="px-4 py-2.5 text-right text-slate-400">{fund.volatility.toFixed(1)}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ))}
+
+          <p className="text-[11px] text-slate-600 mt-2">
+            以上為 SmartMatch 基金資料庫篩選結果，非投資建議。數值為示意資料。
+          </p>
+        </section>
+
+        {/* 免責聲明 */}
+        <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-6 mb-10">
+          <div className="text-[12px] font-bold text-slate-400 mb-2">免責聲明</div>
+          <p className="text-[12px] text-slate-600 leading-[1.9]">
+            本平台提供之資料、分析結果、篩選結果與研究工具，僅供資訊參考與研究用途，
+            不構成任何投資建議、招攬或保證獲利。投資人應自行評估風險，並詳閱各商品公開說明書後謹慎決策。
+            過去績效不代表未來表現。本平台不對任何投資損益負責。
           </p>
         </div>
 
-        <p className="text-[13px] text-slate-400 text-center mb-12 leading-relaxed">
-          本頁內容為資料分析結果，不構成投資建議。投資決策請自行評估，並詳閱各商品公開說明書。
-        </p>
-
+        {/* 操作按鈕 */}
         <div className="flex gap-4 justify-center no-print">
-          <Link
-            href="/quiz"
-            className="bg-[#F5B700] hover:bg-[#e0a800] text-white px-10 py-4 rounded-lg font-semibold text-[18px] transition-colors"
-          >
-            重新測驗
+          <button onClick={() => window.print()}
+            className="bg-white/[0.08] hover:bg-white/[0.15] text-white px-8 py-3.5 rounded-lg font-semibold text-[15px] transition-colors">
+            ⬇ 匯出 PDF
+          </button>
+          <Link href="/quiz"
+            className="bg-[#F5B700] hover:bg-[#e0a800] text-[#0B1220] px-8 py-3.5 rounded-lg font-bold text-[15px] transition-colors">
+            重新分析
           </Link>
-          <Link
-            href="/"
-            className="border border-white/20 text-white px-10 py-4 rounded-lg hover:bg-white/[0.03] transition-colors font-semibold text-[18px]"
-          >
+          <Link href="/clients"
+            className="border border-white/20 text-white px-8 py-3.5 rounded-lg hover:bg-white/[0.03] transition-colors font-semibold text-[15px]">
+            客戶管理
+          </Link>
+          <Link href="/"
+            className="border border-white/20 text-white px-8 py-3.5 rounded-lg hover:bg-white/[0.03] transition-colors font-semibold text-[15px]">
             回到首頁
           </Link>
         </div>
