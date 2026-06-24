@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { ETF_LIST } from "./etf/data";
+import { FUND_LIST } from "./funds/data";
 
 // ── 全球市場資料 ──────────────────────────────────────────────────────
 type MktItem  = { name: string; value: string; pts: string; pct: string; up: boolean };
@@ -184,6 +186,281 @@ function MktRow({ group }: { group: MktGroup }) {
 }
 
 // ── Main ──────────────────────────────────────────────────────────────
+
+// ── 智能篩選引擎 ──────────────────────────────────────────────────────
+
+type SmartResult = {
+  id: string;
+  code: string;
+  name: string;
+  type: "ETF" | "基金";
+  company?: string;
+  category?: string;
+  region: string;
+  dividendYield: number;  // ETF: dividendYield, Fund: dividendYieldA
+  return1y: number;
+  return3y: number;
+  volatility: number;
+  morningstar?: number;
+};
+
+// 解析自然語言查詢
+function parseQuery(raw: string): {
+  minYield?: number; maxYield?: number;
+  minReturn1y?: number; minReturn3y?: number;
+  region?: string; category?: string;
+  assetType?: "ETF" | "基金" | "all";
+  keyword?: string;
+} {
+  const q = raw.toLowerCase();
+  const result: ReturnType<typeof parseQuery> = { assetType: "all" };
+
+  // 殖利率/配息率
+  const yieldMatch = q.match(/配息\s*(\d+(?:\.\d+)?)\s*%?\s*以上/) ||
+                     q.match(/殖利率\s*(\d+(?:\.\d+)?)\s*%?\s*以上/) ||
+                     q.match(/(\d+(?:\.\d+)?)\s*%?\s*以上\s*配息/) ||
+                     q.match(/配息\s*(\d+(?:\.\d+)?)/);
+  if (yieldMatch) result.minYield = parseFloat(yieldMatch[1]);
+
+  // 近一年績效
+  const r1yMatch = q.match(/近一年\s*(\d+(?:\.\d+)?)\s*%?\s*以上/) ||
+                   q.match(/一年.*績效\s*(\d+(?:\.\d+)?)\s*%?\s*以上/) ||
+                   q.match(/績效\s*(\d+(?:\.\d+)?)\s*%?\s*以上/) ||
+                   q.match(/漲幅\s*(\d+(?:\.\d+)?)\s*%?\s*以上/);
+  if (r1yMatch) result.minReturn1y = parseFloat(r1yMatch[1]);
+
+  // 近三年績效
+  const r3yMatch = q.match(/近三年\s*(\d+(?:\.\d+)?)\s*%?\s*以上/);
+  if (r3yMatch) result.minReturn3y = parseFloat(r3yMatch[1]);
+
+  // 地區關鍵字
+  if (q.includes("台灣") || q.includes("台股"))        result.region = "台灣";
+  else if (q.includes("美國") || q.includes("美股"))   result.region = "美國";
+  else if (q.includes("全球") || q.includes("全球型")) result.region = "全球";
+  else if (q.includes("亞洲") || q.includes("亞太"))   result.region = "亞洲";
+  else if (q.includes("日本"))                          result.region = "日本";
+  else if (q.includes("中國") || q.includes("大陸"))   result.region = "中國";
+  else if (q.includes("印度"))                          result.region = "印度";
+  else if (q.includes("歐洲") || q.includes("歐股"))   result.region = "歐洲";
+  else if (q.includes("新興市場") || q.includes("新興")) result.region = "新興市場";
+
+  // 資產類別
+  if (q.includes("股票型") || q.includes("股票"))      result.category = "股票型";
+  else if (q.includes("債券型") || q.includes("債券")) result.category = "債券型";
+  else if (q.includes("平衡型") || q.includes("平衡")) result.category = "平衡型";
+  else if (q.includes("貨幣型") || q.includes("貨幣")) result.category = "貨幣型";
+
+  // ETF 類別 (sector)
+  if (q.includes("高股息"))        result.keyword = "高股息";
+  else if (q.includes("科技"))     result.keyword = "科技";
+  else if (q.includes("半導體"))   result.keyword = "半導體";
+  else if (q.includes("市值型"))   result.keyword = "市值型";
+  else if (q.includes("月配息") || q.includes("月配")) result.keyword = "月配";
+
+  // 資產類型
+  if (q.includes("etf"))              result.assetType = "ETF";
+  else if (q.includes("基金") && !q.includes("etf")) result.assetType = "基金";
+
+  return result;
+}
+
+function runSearch(raw: string): SmartResult[] {
+  if (!raw.trim()) return [];
+  const p = parseQuery(raw);
+  const results: SmartResult[] = [];
+
+  // 搜尋 ETF
+  if (p.assetType === "all" || p.assetType === "ETF") {
+    ETF_LIST.forEach(e => {
+      if (p.minYield    !== undefined && e.dividendYield < p.minYield)    return;
+      if (p.minReturn1y !== undefined && e.return1y      < p.minReturn1y) return;
+      if (p.minReturn3y !== undefined && e.return3y      < p.minReturn3y) return;
+      if (p.region && !e.region.includes(p.region))                       return;
+      if (p.keyword && !e.sector.includes(p.keyword) && !e.name.includes(p.keyword) && !e.dividendFreq.includes(p.keyword)) return;
+      results.push({
+        id: e.code, code: e.code, name: e.name,
+        type: "ETF", region: e.region,
+        dividendYield: e.dividendYield,
+        return1y: e.return1y, return3y: e.return3y,
+        volatility: e.volatility,
+      });
+    });
+  }
+
+  // 搜尋基金
+  if (p.assetType === "all" || p.assetType === "基金") {
+    FUND_LIST.forEach(f => {
+      if (p.minYield    !== undefined && f.dividendYieldA < p.minYield)   return;
+      if (p.minReturn1y !== undefined && f.return1y       < p.minReturn1y) return;
+      if (p.minReturn3y !== undefined && f.return3y       < p.minReturn3y) return;
+      if (p.region && !f.region.includes(p.region))                        return;
+      if (p.category && f.category !== p.category)                         return;
+      if (p.keyword && !f.name.includes(p.keyword) && !f.dividendFreq.includes(p.keyword)) return;
+      results.push({
+        id: f.id, code: f.id, name: f.name,
+        type: "基金", company: f.company,
+        category: f.category, region: f.region,
+        dividendYield: f.dividendYieldA,
+        return1y: f.return1y, return3y: f.return3y,
+        volatility: f.volatility, morningstar: f.morningstar,
+      });
+    });
+  }
+
+  return results.sort((a,b) => b.return1y - a.return1y).slice(0, 20);
+}
+
+const EXAMPLE_QUERIES = [
+  "配息 9% 以上",
+  "亞洲股票型基金",
+  "近一年績效 15% 以上",
+  "月配息基金",
+  "高股息 ETF",
+  "科技產業 ETF",
+  "美國債券型",
+  "近一年 20% 以上",
+];
+
+function SmartSearch() {
+  const [query,   setQuery]   = useState("");
+  const [results, setResults] = useState<SmartResult[]>([]);
+  const [searched, setSearched] = useState(false);
+
+  function handleSearch(q?: string) {
+    const s = q ?? query;
+    if (!s.trim()) return;
+    setQuery(s);
+    const r = runSearch(s);
+    setResults(r);
+    setSearched(true);
+  }
+
+  function handleKey(e: React.KeyboardEvent) {
+    if (e.key === "Enter") handleSearch();
+  }
+
+  return (
+    <section className="relative z-10 py-20" style={{ backgroundColor:"#0a1628" }}>
+      <div className="max-w-[1600px] mx-auto px-10">
+
+        {/* 標題 */}
+        <div className="text-center mb-10">
+          <div className="text-[14px] tracking-[10px] text-[#F5B700] font-semibold mb-4">SMART SEARCH</div>
+          <h2 className="text-[40px] font-black text-white">智能投資篩選</h2>
+          <p className="text-[18px] text-white/60 mt-3">
+            用投資人的語言搜尋。不需要理解篩選器。
+          </p>
+        </div>
+
+        {/* 搜尋框 */}
+        <div className="max-w-[820px] mx-auto mb-8">
+          <div className="flex gap-3">
+            <div className="flex-1 relative">
+              <input
+                type="text"
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+                onKeyDown={handleKey}
+                placeholder="例如：配息 9% 以上、亞洲股票型基金、科技 ETF..."
+                className="w-full rounded-2xl px-6 py-4 text-[18px] text-white bg-white/[0.08] border border-white/[0.15] placeholder:text-white/30 focus:outline-none focus:border-[#F5B700] transition-colors"
+              />
+            </div>
+            <button
+              onClick={() => handleSearch()}
+              className="bg-[#F5B700] hover:bg-[#e0a800] text-[#020817] px-8 py-4 rounded-2xl font-black text-[18px] transition-colors shrink-0">
+              搜尋
+            </button>
+          </div>
+
+          {/* 範例標籤 */}
+          <div className="flex flex-wrap gap-2 mt-4">
+            {EXAMPLE_QUERIES.map(q => (
+              <button key={q} onClick={() => handleSearch(q)}
+                className="text-[14px] text-white/50 border border-white/[0.12] px-4 py-1.5 rounded-full hover:border-[#F5B700]/60 hover:text-[#F5B700] transition-colors">
+                {q}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* 搜尋結果 */}
+        {searched && (
+          <div className="max-w-[1200px] mx-auto">
+            <div className="flex items-center justify-between mb-5">
+              <div className="text-[16px] text-white/60">
+                {results.length > 0
+                  ? <>找到 <span className="text-[#F5B700] font-bold text-[20px]">{results.length}</span> 檔符合條件商品</>
+                  : <span className="text-white/40">找不到符合「{query}」的商品，請嘗試其他關鍵字</span>
+                }
+              </div>
+              {results.length > 0 && (
+                <div className="text-[13px] text-white/30">依近一年績效排序</div>
+              )}
+            </div>
+
+            {results.length > 0 && (
+              <div className="border border-white/[0.08] rounded-2xl overflow-hidden">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="bg-white/[0.06] text-white/50 text-[13px]">
+                      <th className="px-5 py-3 font-semibold w-[60px]">類型</th>
+                      <th className="px-5 py-3 font-semibold w-[90px]">代碼/公司</th>
+                      <th className="px-5 py-3 font-semibold">商品名稱</th>
+                      <th className="px-5 py-3 font-semibold w-[80px]">地區</th>
+                      <th className="px-5 py-3 font-semibold text-right w-[100px]">配息/殖利率</th>
+                      <th className="px-5 py-3 font-semibold text-right w-[100px]">近1年</th>
+                      <th className="px-5 py-3 font-semibold text-right w-[100px]">近3年</th>
+                      <th className="px-5 py-3 font-semibold text-right w-[80px]">波動度</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {results.map((r, i) => (
+                      <tr key={r.id}
+                        className={`text-[14px] border-t border-white/[0.05] hover:bg-white/[0.04] transition-colors ${i%2===1?"bg-white/[0.02]":""}`}>
+                        <td className="px-5 py-3">
+                          <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                            r.type === "ETF"
+                              ? "bg-white/[0.08] text-white/70"
+                              : "bg-blue-900/60 text-blue-300"
+                          }`}>{r.type}</span>
+                        </td>
+                        <td className="px-5 py-3 font-bold text-[#F5B700] text-[13px]">
+                          {r.type === "ETF" ? r.code : (r.company ?? r.code)}
+                        </td>
+                        <td className="px-5 py-3 text-white/80 max-w-[240px] truncate">{r.name}</td>
+                        <td className="px-5 py-3 text-white/40 text-[13px]">{r.region}</td>
+                        <td className="px-5 py-3 text-right font-semibold text-[#F5B700]">
+                          {r.dividendYield > 0 ? `${r.dividendYield.toFixed(1)}%` : "—"}
+                        </td>
+                        <td className={`px-5 py-3 text-right font-bold ${r.return1y >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                          {r.return1y >= 0 ? "+" : ""}{r.return1y.toFixed(1)}%
+                        </td>
+                        <td className={`px-5 py-3 text-right font-semibold ${r.return3y >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                          {r.return3y >= 0 ? "+" : ""}{r.return3y.toFixed(1)}%
+                        </td>
+                        <td className="px-5 py-3 text-right text-white/40">{r.volatility.toFixed(1)}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {results.length > 0 && (
+              <div className="flex gap-3 mt-5 justify-center">
+                <a href="/etf"     className="border border-white/20 text-white/60 px-6 py-2.5 rounded-xl text-[15px] hover:border-[#F5B700]/50 hover:text-[#F5B700] transition-colors">查看完整 ETF 資料庫 →</a>
+                <a href="/funds"   className="border border-white/20 text-white/60 px-6 py-2.5 rounded-xl text-[15px] hover:border-[#F5B700]/50 hover:text-[#F5B700] transition-colors">查看完整基金資料庫 →</a>
+                <a href="/compare" className="border border-white/20 text-white/60 px-6 py-2.5 rounded-xl text-[15px] hover:border-[#F5B700]/50 hover:text-[#F5B700] transition-colors">前往比較中心 →</a>
+              </div>
+            )}
+          </div>
+        )}
+
+      </div>
+    </section>
+  );
+}
+
 export default function Home() {
   return (
     <main className="min-h-screen">
@@ -504,7 +781,11 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ══ ZONE 3：為什麼使用 SmartMatch（#F5F7FA）══════════════ */}
+
+      {/* ══ 智能投資篩選（#F5F7FA）══════════════════════════════════ */}
+      <SmartSearch />
+
+            {/* ══ ZONE 3：為什麼使用 SmartMatch（#F5F7FA）══════════════ */}
       <section id="features" className="relative z-10 py-24" style={{ backgroundColor:"#F5F7FA" }}>
         <div className="max-w-[1600px] mx-auto px-10">
           <div className="text-center mb-14">
