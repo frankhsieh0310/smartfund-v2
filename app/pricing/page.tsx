@@ -4,10 +4,10 @@ import Link from "next/link";
 
 export default function PricingPage() {
   return (
-    <main className="min-h-screen  px-6 py-20">
+    <main className="min-h-screen bg-[#020817] px-6 py-20">
 
       {/* NAVBAR */}
-      <header className="fixed top-0 left-0 w-full z-50 bg-[#020817]/90 backdrop-blur-xl border-b border-white/10">
+      <header className="fixed top-0 left-0 w-full z-50 bg-[#040a18]/85 backdrop-blur-xl border-b border-white/10">
         <div className="max-w-[1700px] mx-auto h-20 px-10 flex items-center justify-between">
           <Link href="/">
             <div className="text-[36px] font-black text-white leading-none">
@@ -22,6 +22,7 @@ export default function PricingPage() {
             <Link href="/compare" className="hover:text-white transition-colors">比較中心</Link>
             <Link href="/clients" className="hover:text-white transition-colors">客戶管理</Link>
             <Link href="/pricing" className="text-[#F5B700]">方案</Link>
+          </nav>
           <div className="flex items-center gap-4">
             <a href="#" className="text-[15px] font-semibold text-slate-300 border border-white/30 px-5 py-2.5 rounded-lg hover:bg-white/10 transition-colors">登入</a>
             <Link href="/quiz" className="bg-[#F5B700] hover:bg-[#e0a800] text-[#0B1220] px-6 py-2.5 rounded-lg font-bold text-[15px] transition-colors">
