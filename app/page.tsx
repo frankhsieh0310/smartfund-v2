@@ -246,126 +246,150 @@ export default function Home() {
 
       {/* HERO */}
       <section className="relative z-10 min-h-screen">
-        <div className="absolute inset-0 bg-gradient-to-r from-[#040a18]/90 via-[#040a18]/60 to-transparent z-[1]" />
-        <div className="absolute top-40 left-20 w-[500px] h-[500px] rounded-full bg-[#F5B700] opacity-[0.07] blur-[140px] z-[1]" />
-        <div className="relative z-10 max-w-[1700px] mx-auto px-10 flex items-center min-h-screen pt-20">
-          <div className="grid lg:grid-cols-[50%_50%] w-full items-center gap-8 py-20">
+        {/* 左側漸層讓文字更清晰 */}
+        <div className="absolute inset-0 bg-gradient-to-r from-[#020817]/80 via-[#020817]/40 to-transparent z-[1]" />
+
+        <div className="relative z-10 max-w-[1600px] mx-auto px-10 flex items-center min-h-screen pt-20">
+          <div className="grid lg:grid-cols-[55%_45%] w-full items-center gap-12 py-20">
+
+            {/* LEFT */}
             <div className="space-y-8">
-              <div className="tracking-[14px] text-[#F5B700] text-[18px] font-semibold">SMARTMATCH</div>
-              <div className="inline-block py-6 px-10 rounded-[32px] backdrop-blur-md bg-white/[0.06] border border-white/10">
-                <h1 className="text-[72px] font-black leading-[1.1] text-white tracking-[0.01em]">
-                  從投資人格<br />到資產配置
+              <div className="tracking-[10px] text-[#F5B700] text-[16px] font-semibold">SMARTMATCH</div>
+
+              {/* 主標題 */}
+              <div>
+                <h1 className="text-[64px] font-black leading-[1.1] text-white tracking-tight mb-4">
+                  3分鐘了解你的<br />
+                  <span className="text-[#F5B700]">投資風格</span>
                 </h1>
+                <p className="text-[22px] text-white/70 leading-[1.7] max-w-[540px]">
+                  透過投資人格分析、ETF 與基金資料庫，以及全球市場資訊，
+                  快速建立屬於自己的投資決策流程。
+                </p>
               </div>
-              <div className="space-y-1">
-                <p className="text-[28px] font-semibold text-white/90">投資人格分析</p>
-                <p className="text-[28px] font-semibold text-white/90">商品比較分析</p>
-                <p className="text-[28px] font-semibold text-white/90">資產配置規劃</p>
-                <p className="text-[28px] font-bold text-[#F5B700] mt-2">一站完成。</p>
+
+              {/* 按鈕 */}
+              <div className="flex gap-4 flex-wrap">
+                <a href="/quiz"
+                  className="bg-[#F5B700] hover:bg-[#e0a800] text-[#020817] px-10 py-4 rounded-xl font-black text-[20px] transition-colors shadow-[0_0_40px_rgba(245,183,0,0.3)]">
+                  免費開始分析 →
+                </a>
+                <a href="/etf"
+                  className="bg-white/[0.08] backdrop-blur-md border border-white/[0.15] text-white px-10 py-4 rounded-xl font-semibold text-[20px] hover:bg-white/[0.15] transition-colors">
+                  瀏覽 ETF 與基金資料庫
+                </a>
               </div>
-              <div className="flex gap-5">
-                <Link href="/quiz" className="bg-[#F5B700] hover:bg-[#e0a800] text-black px-12 py-5 rounded-lg font-bold text-[22px] transition-colors">開始投資人格分析</Link>
-                <Link href="/etf" className="bg-white/10 backdrop-blur-md border border-white/10 text-white px-12 py-5 rounded-lg hover:bg-white/20 transition-colors font-semibold text-[22px]">瀏覽資料庫</Link>
-              </div>
-              <div className="grid grid-cols-4 gap-3">
+
+              {/* 四個統計卡 */}
+              <div className="grid grid-cols-4 gap-4 pt-4">
                 {[
-                  { icon: "🧠", title: "20題人格分析", href: "/quiz" },
-                  { icon: "⚖️", title: "商品比較中心", href: "/compare" },
-                  { icon: "📊", title: "資產配置分析", href: "/report" },
-                  { icon: "👥", title: "客戶管理中心", href: "/clients" },
-                ].map((item) => (
-                  <Link key={item.title} href={item.href} className="bg-white/[0.06] border border-white/10 rounded-2xl p-4 text-center hover:bg-white/[0.12] hover:border-[#F5B700]/40 transition-all group">
-                    <div className="text-[24px] mb-2">{item.icon}</div>
-                    <div className="text-[13px] font-semibold text-white/80 group-hover:text-white leading-tight">{item.title}</div>
-                  </Link>
+                  { num: "95+",  label: "ETF 資料" },
+                  { num: "269+", label: "基金資料" },
+                  { num: "34+",  label: "全球市場指標" },
+                  { num: "20題", label: "投資人格分析" },
+                ].map((s) => (
+                  <div key={s.label}
+                    className="bg-white/[0.06] backdrop-blur-sm border border-white/[0.1] rounded-2xl p-5 text-center">
+                    <div className="text-[42px] font-black text-[#F5B700] leading-none mb-2">{s.num}</div>
+                    <div className="text-[14px] text-white/60 leading-tight">{s.label}</div>
+                  </div>
                 ))}
               </div>
-              <p className="text-[15px] text-white/45">適合理財顧問、ETF投資人、基金投資人與自主投資者</p>
-              <div className="flex items-center gap-4">
-                <Link href="/pricing" className="flex items-center gap-2 text-[15px] text-[#F5B700] border border-[#F5B700]/40 px-5 py-2.5 rounded-lg hover:bg-[#F5B700]/10 transition-colors font-semibold">查看收費方案 →</Link>
-                <span className="text-[14px] text-white/30">免費版不需要信用卡</span>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-[#0B1220]/70 backdrop-blur-xl border border-white/10 rounded-[32px] p-8 text-white shadow-[0_40px_120px_rgba(0,0,0,0.45)]">
-                <div className="flex justify-between items-center mb-6">
-                  <div className="font-bold text-[22px]">市場概覽</div>
-                  <div className="text-[13px] text-slate-400">即時更新 15:30</div>
-                </div>
-                <div className="space-y-5 text-[17px]">
-                  {[["S&P 500","+0.68%",true],["NASDAQ","+0.85%",true],["DOW JONES","+0.53%",true],["MSCI ACWI","+0.62%",true],["VIX","-1.19%",false]].map(([name,val,up])=>(
-                    <div key={name as string} className="flex justify-between">
-                      <span className="text-slate-300">{name as string}</span>
-                      <span className={up ? "text-green-400 font-semibold" : "text-red-400 font-semibold"}>{val as string}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="bg-[#0B1220]/70 backdrop-blur-xl border border-white/10 rounded-[32px] p-8 text-white shadow-[0_40px_120px_rgba(0,0,0,0.45)]">
-                <div className="font-bold text-[22px] mb-6">資產配置分析</div>
-                <div className="flex items-center justify-center mb-5">
-                  <svg viewBox="0 0 120 120" className="w-28 h-28">
-                    <circle cx="60" cy="60" r="44" fill="none" stroke="#1e2a3a" strokeWidth="20" />
-                    <circle cx="60" cy="60" r="44" fill="none" stroke="#F5B700" strokeWidth="20" strokeDasharray="179 277" strokeDashoffset="69" />
-                    <circle cx="60" cy="60" r="44" fill="none" stroke="#94a3b8" strokeWidth="20" strokeDasharray="55 401" strokeDashoffset="-110" />
-                    <circle cx="60" cy="60" r="44" fill="none" stroke="#334155" strokeWidth="20" strokeDasharray="41 415" strokeDashoffset="-165" />
-                  </svg>
-                </div>
-                <div className="space-y-2.5 text-[15px]">
-                  {[["#F5B700","股票","65%"],["#94a3b8","債券","20%"],["#334155","現金","15%"]].map(([c,l,p])=>(
-                    <div key={l} className="flex items-center justify-between">
-                      <div className="flex items-center gap-2.5"><span className="w-3 h-3 rounded-full" style={{backgroundColor:c}}/><span className="text-slate-300">{l}</span></div>
-                      <span className="font-bold">{p}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="bg-[#0B1220]/70 backdrop-blur-xl border border-white/10 rounded-[32px] p-8 text-white shadow-[0_40px_120px_rgba(0,0,0,0.45)]">
-                <div className="font-bold text-[22px] mb-1">投資組合績效</div>
-                <div className="text-[13px] text-slate-400 mb-5">年化報酬率</div>
-                <div className="text-[56px] font-black text-[#F5B700] leading-none mb-5">8.47%</div>
-                <svg viewBox="0 0 200 60" className="w-full h-12">
-                  <defs><linearGradient id="perfGlow" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#F5B700" stopOpacity="0.35"/><stop offset="100%" stopColor="#F5B700" stopOpacity="0"/></linearGradient></defs>
-                  <polygon points="0,60 0,50 25,42 50,46 75,35 100,38 125,28 150,32 175,18 200,12 200,60" fill="url(#perfGlow)"/>
-                  <polyline points="0,50 25,42 50,46 75,35 100,38 125,28 150,32 175,18 200,12" fill="none" stroke="#F5B700" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </div>
-              <div className="bg-[#0B1220]/70 backdrop-blur-xl border border-white/10 rounded-[32px] p-8 text-white shadow-[0_40px_120px_rgba(0,0,0,0.45)]">
-                <div className="font-bold text-[22px] mb-6">ETF 熱門排行</div>
-                <div className="space-y-4 text-[15px]">
-                  {[["VG","VOO","+0.63%","#e67e22"],["IN","QQQ","+0.85%","#2980b9"],["VG","VTI","+0.59%","#e67e22"],["VG","VXUS","+0.31%","#e67e22"],["VG","BND","+0.21%","#27ae60"]].map(([abbr,code,val,color])=>(
-                    <div key={code as string} className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <span className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold text-white" style={{backgroundColor:color as string}}>{abbr}</span>
-                        <span className="font-semibold">{code as string}</span>
-                      </div>
-                      <span className="text-green-400 font-semibold">{val as string}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
 
-      {/* 全球市場概況 */}
-      <section className="relative z-10 py-16 border-t border-white/[0.06]">
-        <div className="max-w-[1600px] mx-auto px-10">
-          <div className="flex items-start justify-between mb-6">
-            <div>
-              <div className="text-[13px] tracking-[10px] text-[#F5B700] font-semibold mb-2">GLOBAL MARKETS</div>
-              <h2 className="text-[40px] font-black text-white leading-tight">全球市場概覽</h2>
-              <p className="text-[15px] text-white/40 mt-1">掌握全球主要市場動態</p>
+              <p className="text-[16px] text-white/35">適合理財顧問、ETF 投資人、基金投資人與自主投資者</p>
             </div>
-            <div className="flex items-center gap-4 mt-2">
-              <span className="text-[12px] text-white/30">⊙ 即時更新 15:30</span>
-              <a href="/markets" className="text-[13px] font-semibold text-[#F5B700] border border-[#F5B700]/40 px-4 py-2 rounded-lg hover:bg-[#F5B700]/10 transition-colors">
-                完整市場數據 →
-              </a>
+
+            {/* RIGHT — 大型 Dashboard Mockup */}
+            <div
+              className="rounded-3xl border border-white/[0.12] overflow-hidden shadow-[0_40px_120px_rgba(0,0,0,0.6)]"
+              style={{ background: "rgba(10,17,35,0.85)", backdropFilter: "blur(24px)" }}
+            >
+              {/* 頂部 bar */}
+              <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.08]">
+                <div className="text-[13px] font-bold text-white/60 tracking-[4px]">SMARTMATCH REPORT</div>
+                <div className="flex gap-1.5">
+                  <div className="w-3 h-3 rounded-full bg-red-500/60" />
+                  <div className="w-3 h-3 rounded-full bg-yellow-500/60" />
+                  <div className="w-3 h-3 rounded-full bg-green-500/60" />
+                </div>
+              </div>
+
+              <div className="p-6 space-y-5">
+
+                {/* 人格分析 */}
+                <div className="bg-white/[0.04] border border-white/[0.06] rounded-xl p-4">
+                  <div className="text-[11px] tracking-[4px] text-[#F5B700] mb-2">投資人格分析結果</div>
+                  <div className="flex items-center justify-between">
+                    <div className="text-[28px] font-black text-white">穩健型</div>
+                    <div className="text-[#F5B700] text-[18px]">★★★☆☆</div>
+                  </div>
+                  <div className="text-[13px] text-white/50 mt-1">風險承受度：中等｜總分 58 分</div>
+                </div>
+
+                {/* 配置分析 */}
+                <div className="bg-white/[0.04] border border-white/[0.06] rounded-xl p-4">
+                  <div className="text-[11px] tracking-[4px] text-[#F5B700] mb-3">配置分析</div>
+                  <div className="flex h-3 rounded-full overflow-hidden mb-3">
+                    <div style={{ width:"50%", backgroundColor:"#F5B700" }} />
+                    <div style={{ width:"30%", backgroundColor:"#64748b" }} />
+                    <div style={{ width:"20%", backgroundColor:"#334155" }} />
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[["股票資產","50%","#F5B700"],["債券資產","30%","#64748b"],["現金部位","20%","#334155"]].map(([l,v,c])=>(
+                      <div key={l} className="text-center">
+                        <div className="text-[20px] font-black text-white">{v}</div>
+                        <div className="text-[11px] mt-0.5" style={{ color: c as string }}>{l}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* ETF 篩選結果 */}
+                <div className="bg-white/[0.04] border border-white/[0.06] rounded-xl p-4">
+                  <div className="text-[11px] tracking-[4px] text-[#F5B700] mb-3">ETF 篩選結果</div>
+                  <div className="space-y-2">
+                    {[["0050","元大台灣50","+21.6%"],["00919","群益台灣精選高息","+14.2%"],["BND","Vanguard Bond ETF","+3.8%"]].map(([code,name,ret])=>(
+                      <div key={code} className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[13px] font-bold text-[#F5B700] w-14">{code}</span>
+                          <span className="text-[12px] text-white/50 truncate max-w-[140px]">{name}</span>
+                        </div>
+                        <span className="text-[13px] font-semibold text-emerald-400">{ret}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 基金篩選結果 */}
+                <div className="bg-white/[0.04] border border-white/[0.06] rounded-xl p-4">
+                  <div className="text-[11px] tracking-[4px] text-[#F5B700] mb-3">基金篩選結果</div>
+                  <div className="space-y-2">
+                    {[["霸菱","霸菱優先順位資產基金","★★★★","6.2%"],["聯博","聯博收益債券基金","★★★★","6.1%"],["貝萊德","貝萊德全球多元收益","★★★★","5.8%"]].map(([co,name,stars,div])=>(
+                      <div key={name} className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[11px] font-bold text-white/60 w-10">{co}</span>
+                          <span className="text-[12px] text-white/50 truncate max-w-[120px]">{name}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[11px] text-[#F5B700]">{stars}</span>
+                          <span className="text-[12px] font-semibold text-[#F5B700]">{div}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 快速操作列 */}
+                <div className="flex gap-2">
+                  <div className="flex-1 bg-[#F5B700]/15 border border-[#F5B700]/30 rounded-lg py-2 text-center text-[12px] font-bold text-[#F5B700]">⭐ 收藏商品</div>
+                  <div className="flex-1 bg-white/[0.04] border border-white/[0.08] rounded-lg py-2 text-center text-[12px] font-bold text-white/60">📊 加入比較</div>
+                  <div className="flex-1 bg-white/[0.04] border border-white/[0.08] rounded-lg py-2 text-center text-[12px] font-bold text-white/60">⬇ 匯出 PDF</div>
+                </div>
+
+              </div>
             </div>
+
           </div>
-          <MarketDashboard />
         </div>
       </section>
 
