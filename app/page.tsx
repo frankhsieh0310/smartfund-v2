@@ -211,7 +211,7 @@ export default function Home() {
         <div className="max-w-[1600px] mx-auto h-20 px-10 flex items-center justify-between">
           <div>
             <div className="text-[32px] font-black text-white leading-none">Smart<span className="text-[#F5B700]">Match</span></div>
-            <div className="text-[13px] text-slate-400 mt-0.5">ETF & 基金資產配置分析平台</div>
+            <div className="text-[12px] text-slate-400 mt-0.5">Investment Intelligence Platform</div>
           </div>
           <nav className="hidden lg:flex gap-8 text-[18px] font-semibold text-slate-300">
             <Link href="/quiz"    className="hover:text-white transition-colors">投資人格分析</Link>
@@ -230,119 +230,157 @@ export default function Home() {
 
       {/* ══ ZONE 1：HERO（深藍 + 金融大樓）══════════════════════════ */}
       <section className="relative z-10 min-h-screen">
-        <div className="absolute inset-0 bg-gradient-to-r from-[#020817]/85 via-[#020817]/50 to-transparent z-[1]" />
+        {/* 問題三修正：Overlay 降至 35~40% */}
+        <div className="absolute inset-0 bg-gradient-to-r from-[#020817]/75 via-[#020817]/40 to-transparent z-[1]" />
         <div className="relative z-10 max-w-[1600px] mx-auto px-10 flex items-center min-h-screen pt-20">
-          <div className="grid lg:grid-cols-[52%_48%] w-full items-center gap-12 py-20">
+          <div className="grid lg:grid-cols-[50%_50%] w-full items-center gap-12 py-20">
 
             {/* LEFT */}
-            <div className="space-y-8">
+            <div className="space-y-7">
               <div className="text-[15px] tracking-[10px] text-[#F5B700] font-semibold">SMARTMATCH</div>
+
+              {/* 問題一：主標題縮小至 52~56px */}
               <div>
-                <h1 className="text-[60px] font-black leading-[1.1] text-white mb-5">
+                <h1 className="text-[54px] font-black leading-[1.15] text-white mb-4">
                   3分鐘完成投資分析<br />
                   <span className="text-[#F5B700]">建立更有系統的</span><br />
                   資產配置
                 </h1>
-                <p className="text-[22px] text-white/70 leading-[1.8] max-w-[520px]">
+                <p className="text-[20px] text-white/70 leading-[1.8] max-w-[500px]">
                   透過投資人格分析、ETF 與基金資料庫，以及全球市場資訊，快速建立投資決策流程。
                 </p>
               </div>
+
+              {/* 問題五：CTA 改為具體 */}
               <div className="flex gap-4 flex-wrap">
                 <Link href="/quiz"
-                  className="bg-[#F5B700] hover:bg-[#e0a800] text-[#020817] px-10 py-4 rounded-xl font-black text-[20px] transition-colors shadow-[0_0_40px_rgba(245,183,0,0.25)]">
-                  免費開始分析 →
+                  className="bg-[#F5B700] hover:bg-[#e0a800] text-[#020817] px-9 py-4 rounded-xl font-black text-[19px] transition-colors shadow-[0_0_40px_rgba(245,183,0,0.25)]">
+                  3分鐘取得分析結果 →
                 </Link>
                 <Link href="/etf"
-                  className="bg-white/[0.08] backdrop-blur-md border border-white/[0.15] text-white px-8 py-4 rounded-xl font-semibold text-[18px] hover:bg-white/[0.15] transition-colors">
+                  className="bg-white/[0.08] backdrop-blur-md border border-white/[0.15] text-white px-7 py-4 rounded-xl font-semibold text-[17px] hover:bg-white/[0.15] transition-colors">
                   瀏覽 ETF 與基金資料庫
                 </Link>
               </div>
+
               {/* 四統計卡 */}
-              <div className="grid grid-cols-4 gap-4 pt-2">
+              <div className="grid grid-cols-4 gap-3 pt-1">
                 {[
                   { num:"95+",  label:"ETF 資料" },
                   { num:"269+", label:"基金資料" },
                   { num:"34+",  label:"全球市場指標" },
                   { num:"20題", label:"投資人格分析" },
                 ].map(s => (
-                  <div key={s.label} className="bg-white/[0.07] backdrop-blur-sm border border-white/[0.1] rounded-2xl p-5 text-center">
-                    <div className="text-[48px] font-black text-[#F5B700] leading-none mb-2">{s.num}</div>
-                    <div className="text-[16px] text-white/55 leading-tight">{s.label}</div>
+                  <div key={s.label} className="bg-white/[0.07] backdrop-blur-sm border border-white/[0.1] rounded-2xl p-4 text-center">
+                    <div className="text-[44px] font-black text-[#F5B700] leading-none mb-1">{s.num}</div>
+                    <div className="text-[15px] text-white/55 leading-tight">{s.label}</div>
                   </div>
                 ))}
               </div>
-            </div>
 
-            {/* RIGHT — Dashboard Mockup */}
-            <div className="rounded-3xl border border-white/[0.12] overflow-hidden shadow-[0_40px_120px_rgba(0,0,0,0.6)]"
-              style={{ background:"rgba(8,15,32,0.88)", backdropFilter:"blur(28px)", height:"560px", overflowY:"auto" }}>
-              <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.08] sticky top-0" style={{ background:"rgba(8,15,32,0.95)" }}>
-                <div className="text-[12px] font-bold text-[#F5B700] tracking-[6px]">ANALYSIS REPORT</div>
-                <div className="flex items-center gap-3">
-                  <span className="text-[12px] text-white/40">王小明・穩健型</span>
-                  <div className="flex gap-1.5">
-                    <div className="w-3 h-3 rounded-full bg-red-500/50" />
-                    <div className="w-3 h-3 rounded-full bg-yellow-500/50" />
-                    <div className="w-3 h-3 rounded-full bg-green-500/50" />
-                  </div>
+              {/* 問題四：資料來源信任背書 */}
+              <div className="pt-1">
+                <div className="text-[13px] text-white/30 mb-2">資料來源參考</div>
+                <div className="flex flex-wrap gap-3">
+                  {["Morningstar","公開資訊觀測站","投信投顧公會","基金公司公開資料"].map(src => (
+                    <span key={src} className="text-[13px] text-white/40 border border-white/[0.1] px-3 py-1 rounded-full">{src}</span>
+                  ))}
                 </div>
               </div>
-              <div className="p-5 space-y-4">
-                {/* 人格 */}
-                <div className="bg-white/[0.04] border border-white/[0.06] rounded-xl p-4">
-                  <div className="text-[10px] tracking-[4px] text-[#F5B700] mb-2">SECTION 1 · 投資人格分析結果</div>
-                  <div className="flex items-end justify-between">
+            </div>
+
+            {/* RIGHT — 問題二：真實分析報告預覽 */}
+            <div className="rounded-3xl border border-white/[0.12] overflow-hidden shadow-[0_40px_120px_rgba(0,0,0,0.5)]"
+              style={{ background:"rgba(8,15,32,0.88)", backdropFilter:"blur(28px)", maxHeight:"580px", overflowY:"auto" }}>
+
+              {/* 頂部標題列 */}
+              <div className="flex items-center justify-between px-6 py-3.5 border-b border-white/[0.08] sticky top-0 z-10"
+                style={{ background:"rgba(8,15,32,0.96)" }}>
+                <div className="flex items-center gap-3">
+                  <div className="flex gap-1.5">
+                    <div className="w-2.5 h-2.5 rounded-full bg-red-500/50" />
+                    <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/50" />
+                    <div className="w-2.5 h-2.5 rounded-full bg-green-500/50" />
+                  </div>
+                  <div className="text-[12px] font-bold text-white/50 tracking-[4px]">SMARTMATCH REPORT</div>
+                </div>
+                <div className="text-[12px] text-white/35">2026/06/24</div>
+              </div>
+
+              <div className="p-5 space-y-3">
+
+                {/* 客戶資訊列 */}
+                <div className="flex items-center justify-between px-4 py-3 bg-white/[0.03] border border-white/[0.05] rounded-xl">
+                  <div className="flex items-center gap-4">
+                    <div className="w-9 h-9 rounded-full bg-[#F5B700]/20 flex items-center justify-center text-[16px] font-black text-[#F5B700]">王</div>
                     <div>
-                      <div className="text-[28px] font-black text-white">穩健型</div>
-                      <div className="text-[13px] text-white/40 mt-1">風險承受度：中等｜總分 58 分</div>
+                      <div className="text-[16px] font-bold text-white">王小明</div>
+                      <div className="text-[12px] text-white/40">客戶編號 #2024-0042</div>
                     </div>
-                    <div className="text-[#F5B700] text-[18px]">★★★☆☆</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-[13px] text-[#F5B700] font-semibold">穩健型投資人</div>
+                    <div className="text-[12px] text-white/35">風險承受度：中等</div>
                   </div>
                 </div>
-                {/* 配置 */}
+
+                {/* 配置分析 */}
                 <div className="bg-white/[0.04] border border-white/[0.06] rounded-xl p-4">
-                  <div className="text-[10px] tracking-[4px] text-[#F5B700] mb-3">SECTION 2 · 配置分析</div>
-                  <div className="flex h-3 rounded-full overflow-hidden mb-3">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="text-[13px] font-semibold text-white/70">配置分析</div>
+                    <div className="text-[12px] text-white/35">總分 58 分</div>
+                  </div>
+                  <div className="flex h-2.5 rounded-full overflow-hidden mb-3">
                     <div style={{ width:"50%", backgroundColor:"#F5B700" }} />
                     <div style={{ width:"30%", backgroundColor:"#64748b" }} />
                     <div style={{ width:"20%", backgroundColor:"#334155" }} />
                   </div>
                   <div className="grid grid-cols-3 gap-2">
                     {[["股票","50%","#F5B700"],["債券","30%","#64748b"],["現金","20%","#475569"]].map(([l,v,c])=>(
-                      <div key={l} className="text-center">
-                        <div className="text-[22px] font-black text-white">{v}</div>
-                        <div className="text-[11px] mt-0.5" style={{ color:c as string }}>{l}資產</div>
+                      <div key={l} className="text-center bg-white/[0.03] rounded-lg py-2">
+                        <div className="text-[20px] font-black text-white">{v}</div>
+                        <div className="text-[11px] mt-0.5" style={{ color:c as string }}>{l}</div>
                       </div>
                     ))}
                   </div>
                 </div>
-                {/* ETF */}
+
+                {/* ETF 篩選結果 */}
                 <div className="bg-white/[0.04] border border-white/[0.06] rounded-xl p-4">
-                  <div className="text-[10px] tracking-[4px] text-[#F5B700] mb-3">SECTION 3 · ETF 篩選結果</div>
-                  <div className="space-y-2.5">
-                    {[["0050","元大台灣50","市值型","+21.6%"],["00919","群益台灣精選高息","收益型","+14.2%"],["BND","Vanguard Bond ETF","債券","+3.8%"]].map(([code,name,type,ret])=>(
-                      <div key={code} className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
+                  <div className="text-[13px] font-semibold text-white/70 mb-3">ETF 篩選結果</div>
+                  <div className="space-y-2">
+                    {[
+                      ["0050",  "元大台灣50",     "市值型", "+21.6%", true ],
+                      ["006208","富邦台灣50",     "市值型", "+20.8%", true ],
+                      ["00919", "群益台灣精選高息","收益型", "+14.2%", true ],
+                    ].map(([code,name,type,ret,up])=>(
+                      <div key={code as string} className="flex items-center justify-between py-1.5 border-b border-white/[0.04] last:border-0">
+                        <div className="flex items-center gap-2.5">
                           <span className="text-[13px] font-bold text-[#F5B700] w-14">{code}</span>
-                          <span className="text-[12px] text-white/50 truncate max-w-[100px]">{name}</span>
-                          <span className="text-[10px] text-white/25">{type}</span>
+                          <span className="text-[12px] text-white/55 truncate max-w-[90px]">{name}</span>
+                          <span className="text-[10px] text-white/25 hidden xl:block">{type}</span>
                         </div>
-                        <span className="text-[13px] font-semibold text-emerald-400">{ret}</span>
+                        <span className={`text-[13px] font-semibold ${up ? "text-emerald-400" : "text-red-400"}`}>{ret}</span>
                       </div>
                     ))}
                   </div>
                 </div>
-                {/* 基金 */}
+
+                {/* 基金篩選結果 */}
                 <div className="bg-white/[0.04] border border-white/[0.06] rounded-xl p-4">
-                  <div className="text-[10px] tracking-[4px] text-[#F5B700] mb-3">SECTION 4 · 基金篩選結果</div>
-                  <div className="space-y-2.5">
-                    {[["霸菱","霸菱優先順位","★★★★","6.2%"],["聯博","聯博收益債券","★★★★","6.1%"],["貝萊德","貝萊德多元收益","★★★","5.8%"]].map(([co,name,stars,div])=>(
-                      <div key={name} className="flex items-center justify-between">
+                  <div className="text-[13px] font-semibold text-white/70 mb-3">基金篩選結果</div>
+                  <div className="space-y-2">
+                    {[
+                      ["霸菱","霸菱優先順位資產基金","★★★★","6.2%"],
+                      ["聯博","聯博美國收益基金",    "★★★★","6.1%"],
+                      ["貝萊德","貝萊德全球多元收益","★★★★","5.8%"],
+                    ].map(([co,name,stars,div])=>(
+                      <div key={name as string} className="flex items-center justify-between py-1.5 border-b border-white/[0.04] last:border-0">
                         <div className="flex items-center gap-2">
-                          <span className="text-[11px] font-bold text-white/50 w-9">{co}</span>
-                          <span className="text-[12px] text-white/50 truncate max-w-[100px]">{name}</span>
+                          <span className="text-[11px] font-bold text-white/50 w-10 shrink-0">{co}</span>
+                          <span className="text-[12px] text-white/55 truncate max-w-[100px]">{name}</span>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 shrink-0">
                           <span className="text-[11px] text-[#F5B700]">{stars}</span>
                           <span className="text-[13px] font-semibold text-[#F5B700]">{div}</span>
                         </div>
@@ -350,18 +388,88 @@ export default function Home() {
                     ))}
                   </div>
                 </div>
+
+                {/* 市場概況 */}
+                <div className="bg-white/[0.04] border border-white/[0.06] rounded-xl p-4">
+                  <div className="text-[13px] font-semibold text-white/70 mb-3">今日市場概況</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      ["台股加權","22,184","▲ +0.84%",true],
+                      ["NASDAQ","19,271","▲ +1.24%",true],
+                      ["黃金 XAU","3,342","▲ +0.91%",true],
+                      ["WTI 原油","71.28","▼ -0.83%",false],
+                    ].map(([name,val,chg,up])=>(
+                      <div key={name as string} className="flex items-center justify-between bg-white/[0.03] rounded-lg px-3 py-2">
+                        <div>
+                          <div className="text-[11px] text-white/40">{name}</div>
+                          <div className="text-[15px] font-bold text-white">{val}</div>
+                        </div>
+                        <div className={`text-[12px] font-semibold ${up ? "text-emerald-400" : "text-red-400"}`}>{chg}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
                 {/* 快速操作 */}
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-3 gap-2 pt-1">
                   {[["⭐","收藏商品"],["📊","加入比較"],["⬇","匯出 PDF"]].map(([icon,label])=>(
-                    <div key={label} className="bg-[#F5B700]/[0.08] border border-[#F5B700]/20 rounded-xl py-2.5 text-center">
+                    <div key={label as string} className="bg-[#F5B700]/[0.07] border border-[#F5B700]/20 rounded-xl py-2.5 text-center">
                       <div className="text-[15px] mb-0.5">{icon}</div>
                       <div className="text-[12px] font-semibold text-[#F5B700]/70">{label}</div>
                     </div>
                   ))}
                 </div>
+
               </div>
             </div>
 
+          </div>
+        </div>
+      </section>
+
+      {/* ══ 問題六：理專痛點 → SmartMatch 解決方案（窄區塊）══════ */}
+      <section className="relative z-10 py-16" style={{ backgroundColor:"rgba(2,8,23,0.92)" }}>
+        <div className="max-w-[1600px] mx-auto px-10">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            {/* 左：痛點 */}
+            <div>
+              <div className="text-[14px] tracking-[8px] text-[#F5B700] font-semibold mb-5">PAIN POINTS</div>
+              <h3 className="text-[28px] font-black text-white mb-6">理專常見痛點</h3>
+              <div className="space-y-4">
+                {[
+                  "客戶不知道自己適合什麼商品",
+                  "ETF 與基金選擇過多，難以聚焦",
+                  "不知道如何建立有系統的資產配置",
+                  "缺乏一致的分析流程與報告工具",
+                ].map((pain, i) => (
+                  <div key={i} className="flex items-start gap-3">
+                    <span className="text-red-400 text-[18px] shrink-0 mt-0.5">✗</span>
+                    <span className="text-[18px] text-white/70">{pain}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            {/* 右：解決方案 */}
+            <div>
+              <div className="text-[14px] tracking-[8px] text-[#F5B700] font-semibold mb-5">SOLUTION</div>
+              <h3 className="text-[28px] font-black text-white mb-6">SmartMatch 如何解決</h3>
+              <div className="space-y-4">
+                {[
+                  ["投資人格分析",   "20題問卷，精準評估風險屬性與投資目標"],
+                  ["配置分析",       "自動產生股票、債券、現金配置比例"],
+                  ["商品篩選",       "從 ETF 與基金資料庫篩選符合條件商品"],
+                  ["報告輸出",       "一鍵匯出 PDF，儲存客戶分析結果"],
+                ].map(([title, desc]) => (
+                  <div key={title} className="flex items-start gap-3">
+                    <span className="text-emerald-400 text-[18px] shrink-0 mt-0.5">✓</span>
+                    <div>
+                      <span className="text-[18px] font-bold text-white">{title}</span>
+                      <span className="text-[16px] text-white/50 ml-2">{desc}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </section>
