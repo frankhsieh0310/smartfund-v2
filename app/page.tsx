@@ -205,7 +205,7 @@ export default function Home() {
           </nav>
           <div className="flex items-center gap-4">
             <a href="#" className="text-[16px] font-semibold text-slate-300 border border-white/30 px-5 py-2.5 rounded-lg hover:bg-white/10 transition-colors">登入</a>
-            <Link href="/quiz" className="bg-[#F5B700] hover:bg-[#e0a800] text-[#0B1220] px-6 py-2.5 rounded-lg font-bold text-[16px] transition-colors">免費建立</Link>
+            <Link href="/quiz" className="bg-[#F5B700] hover:bg-[#e0a800] text-[#0B1220] px-6 py-2.5 rounded-lg font-bold text-[16px] transition-colors">開始建立</Link>
           </div>
         </div>
       </header>
@@ -235,12 +235,13 @@ export default function Home() {
               <div className="flex gap-4 flex-wrap">
                 <Link href="/quiz"
                   className="bg-[#F5B700] hover:bg-[#e0a800] text-[#020817] px-9 py-4 rounded-xl font-black text-[19px] transition-colors shadow-[0_0_40px_rgba(245,183,0,0.25)]">
-                  免費建立我的首頁 →
+                  開始打造我的投資首頁 →
                 </Link>
-                <Link href="/etf"
+                <button
+                  onClick={() => document.getElementById("features")?.scrollIntoView({ behavior:"smooth" })}
                   className="bg-white/[0.08] backdrop-blur-md border border-white/[0.15] text-white px-7 py-4 rounded-xl font-semibold text-[17px] hover:bg-white/[0.15] transition-colors">
                   先看看有哪些功能
-                </Link>
+                </button>
               </div>
 
               {/* 四統計卡 */}
@@ -249,7 +250,7 @@ export default function Home() {
                   { num:"95+",  label:"ETF 資料" },
                   { num:"269+", label:"基金資料" },
                   { num:"34+",  label:"全球市場指標" },
-                  { num:"免費", label:"永久免費使用" },
+                  { num:"5min", label:"快速上手" },
                 ].map(s => (
                   <div key={s.label} className="bg-white/[0.07] backdrop-blur-sm border border-white/[0.1] rounded-2xl p-4 text-center">
                     <div className="text-[44px] font-black text-[#F5B700] leading-none mb-1">{s.num}</div>
@@ -497,35 +498,103 @@ export default function Home() {
           <div className="text-center mt-10">
             <Link href="/quiz"
               className="inline-block bg-[#F5B700] hover:bg-[#e0a800] text-[#020817] px-12 py-4 rounded-xl font-black text-[20px] transition-colors">
-              免費建立我的首頁 →
+              開始打造我的投資首頁 →
             </Link>
-            <div className="text-[16px] text-slate-400 mt-3">無需信用卡，永久免費</div>
           </div>
         </div>
       </section>
 
-      {/* ══ ZONE 3：五大特色（#F5F7FA）════════════════════════════ */}
-      <section className="relative z-10 py-24" style={{ backgroundColor:"#F5F7FA" }}>
+      {/* ══ ZONE 3：為什麼使用 SmartMatch（#F5F7FA）══════════════ */}
+      <section id="features" className="relative z-10 py-24" style={{ backgroundColor:"#F5F7FA" }}>
         <div className="max-w-[1600px] mx-auto px-10">
           <div className="text-center mb-14">
-            <div className="text-[14px] tracking-[10px] text-[#F5B700] font-semibold mb-4">FEATURES</div>
-            <h2 className="text-[40px] font-black text-[#0a1628]">SmartMatch 五大特色</h2>
+            <div className="text-[14px] tracking-[10px] text-[#F5B700] font-semibold mb-4">WHY SMARTMATCH</div>
+            <h2 className="text-[40px] font-black text-[#0a1628]">為什麼使用 SmartMatch</h2>
+            <p className="text-[18px] text-slate-500 mt-3 max-w-[600px] mx-auto">
+              不只是資料查詢。SmartMatch 是你的投資決策夥伴。
+            </p>
           </div>
           <div className="grid grid-cols-5 gap-5">
             {[
-              { num:"01", icon:"🏠", title:"個人化投資首頁",   desc:"自由選擇想追蹤的市場、ETF、基金與觀察名單。" },
-              { num:"02", icon:"📊", title:"ETF與基金整合分析", desc:"不用切換不同網站。一次完成查詢與比較。" },
-              { num:"03", icon:"🧠", title:"投資人格分析",     desc:"透過問卷了解自己的投資風格，建立個人配置參考。" },
-              { num:"04", icon:"🌐", title:"全球市場資訊中心", desc:"追蹤重要市場與產業變化，掌握即時動態。" },
-              { num:"05", icon:"💾", title:"投資資料庫",       desc:"收藏、觀察、比較，分析結果永久保存。" },
+              {
+                num:"01", icon:"🏠", badge:"個人化",
+                title:"打造專屬投資首頁",
+                desc:"自由配置首頁模組：市場資訊、ETF、基金、觀察名單、收藏商品。登入後建立屬於自己的投資儀表板，不再被別人決定你看到什麼。",
+              },
+              {
+                num:"02", icon:"💾", badge:"資料整合",
+                title:"建立自己的投資資料庫",
+                desc:"收藏、觀察、比較、分析結果全部集中一處。不再散落於不同網站與 Excel，所有決策紀錄隨時查閱。",
+              },
+              {
+                num:"03", icon:"📊", badge:"效率提升",
+                title:"ETF 與基金整合分析",
+                desc:"同一平台完成 ETF 查詢、基金查詢與商品比較。大幅減少切換網站的時間，把精力放在決策本身。",
+              },
+              {
+                num:"04", icon:"🎯", badge:"個人需求",
+                title:"個人化商品篩選",
+                desc:"不是熱門排行，不是大家都買什麼。依照你的風險偏好與投資目標篩選符合條件的商品。",
+              },
+              {
+                num:"05", icon:"🔄", badge:"完整流程",
+                title:"從市場到商品一次完成",
+                desc:"全球市場資訊 → 商品研究 → 商品比較 → 建立觀察名單。完整投資流程整合在同一個平台。",
+              },
             ].map(f => (
-              <div key={f.num} className="bg-white border border-slate-100 rounded-2xl p-7 hover:shadow-lg hover:border-[#F5B700]/30 transition-all">
-                <div className="text-[11px] tracking-[4px] text-[#F5B700] font-semibold mb-3">{f.num}</div>
+              <div key={f.num} className="bg-white border border-slate-100 rounded-2xl p-7 hover:shadow-lg hover:border-[#F5B700]/30 transition-all flex flex-col">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="text-[11px] tracking-[4px] text-[#F5B700] font-semibold">{f.num}</div>
+                  <span className="text-[11px] font-bold text-[#b38600] bg-[#F5B700]/10 px-2 py-0.5 rounded-full">{f.badge}</span>
+                </div>
                 <div className="text-[36px] mb-4">{f.icon}</div>
                 <div className="text-[18px] font-bold text-[#0a1628] mb-3">{f.title}</div>
-                <div className="text-[16px] text-slate-500 leading-relaxed">{f.desc}</div>
+                <div className="text-[15px] text-slate-500 leading-relaxed flex-1">{f.desc}</div>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ══ 會員價值：註冊後可以做什麼（白底）══════════════════ */}
+      <section className="relative z-10 py-24" style={{ backgroundColor:"#ffffff" }}>
+        <div className="max-w-[1600px] mx-auto px-10">
+          <div className="text-center mb-14">
+            <div className="text-[14px] tracking-[10px] text-[#F5B700] font-semibold mb-4">MEMBER VALUE</div>
+            <h2 className="text-[40px] font-black text-[#0a1628]">註冊後可以做什麼？</h2>
+            <p className="text-[18px] text-slate-500 mt-3 max-w-[560px] mx-auto">
+              建立帳號後，你的投資資料庫就開始運作。
+            </p>
+          </div>
+          <div className="grid grid-cols-5 gap-6">
+            {[
+              { icon:"🏠", title:"個人化首頁",   desc:"自由配置首頁模組，選擇你關心的市場、商品與工具。",                     cta:"設定首頁",      href:"/" },
+              { icon:"⭐", title:"收藏商品",     desc:"將 ETF 與基金加入收藏清單，建立自己的投資商品庫。",                    cta:"前往ETF篩選器", href:"/etf" },
+              { icon:"👀", title:"觀察名單",     desc:"長期追蹤關注商品，隨時掌握動態，等待合適時機。",                       cta:"前往基金篩選器",href:"/funds" },
+              { icon:"📋", title:"分析結果保存", desc:"人格分析與商品篩選結果永久保存，隨時回顧每次決策過程。",                cta:"開始人格分析",  href:"/quiz" },
+              { icon:"📊", title:"比較中心",     desc:"建立自己的比較清單，ETF 與基金混合比較，找出最符合需求的商品。",       cta:"前往比較中心",  href:"/compare" },
+            ].map(m => (
+              <div key={m.title} className="flex flex-col border border-slate-100 rounded-2xl overflow-hidden hover:shadow-lg transition-all">
+                <div className="bg-[#0a1628] p-6">
+                  <div className="text-[40px] mb-3">{m.icon}</div>
+                  <div className="text-[20px] font-black text-white">{m.title}</div>
+                </div>
+                <div className="p-6 flex flex-col flex-1">
+                  <div className="text-[16px] text-slate-500 leading-relaxed flex-1">{m.desc}</div>
+                  <a href={m.href}
+                    className="mt-5 block text-center border border-[#F5B700]/50 text-[#b38600] py-2.5 rounded-xl text-[15px] font-semibold hover:bg-[#F5B700]/10 transition-colors">
+                    {m.cta} →
+                  </a>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="text-center mt-12">
+            <Link href="/quiz"
+              className="inline-block bg-[#0a1628] hover:bg-[#0d1f3c] text-white px-12 py-4 rounded-xl font-black text-[20px] transition-colors">
+              立即建立我的帳號 →
+            </Link>
+            <div className="text-[15px] text-slate-400 mt-3">建立帳號後，所有資料保存在你的裝置上</div>
           </div>
         </div>
       </section>
@@ -562,7 +631,7 @@ export default function Home() {
           <div className="text-center mt-10">
             <Link href="/quiz"
               className="inline-block bg-[#F5B700] hover:bg-[#e0a800] text-[#020817] px-12 py-4 rounded-xl font-black text-[20px] transition-colors">
-              立即建立我的首頁 →
+              立即打造我的首頁 →
             </Link>
           </div>
         </div>
@@ -707,7 +776,7 @@ export default function Home() {
               { num:"95+",  label:"ETF 商品",   sub:"台股＋美股" },
               { num:"269+", label:"基金商品",     sub:"前20大基金公司" },
               { num:"34+",  label:"市場指標",     sub:"台灣、美歐、亞洲、商品" },
-              { num:"免費", label:"永久免費使用", sub:"核心功能全免費" },
+              { num:"NT$99起", label:"多元方案", sub:"依需求升級" },
             ].map(s => (
               <div key={s.label} className="bg-white/[0.04] border border-white/[0.08] rounded-xl p-5 text-center">
                 <div className="text-[36px] font-black text-[#F5B700] leading-none mb-1">{s.num}</div>
