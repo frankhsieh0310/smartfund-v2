@@ -24,7 +24,7 @@ export default function RootLayout({
             pointerEvents: "none",
           }}
         >
-          {/* 底圖：brightness(0.28) → 大樓可見度約 25% */}
+          {/* 底圖：brightness(0.55) → 大樓清楚可辨識 */}
           <div
             style={{
               position: "absolute",
@@ -33,16 +33,16 @@ export default function RootLayout({
                 "url('https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2600')",
               backgroundSize: "cover",
               backgroundPosition: "center",
-              filter: "brightness(0.28)",
+              filter: "brightness(0.55)",
             }}
           />
-          {/* 深藍漸層遮罩 rgba(2,8,23,0.68~0.78) */}
+          {/* 深藍遮罩：從 0.68 降到 0.45，讓大樓透出來 */}
           <div
             style={{
               position: "absolute",
               inset: 0,
               background:
-                "linear-gradient(180deg, rgba(2,8,23,0.68) 0%, rgba(2,8,23,0.78) 100%)",
+                "linear-gradient(180deg, rgba(2,8,23,0.45) 0%, rgba(2,8,23,0.55) 100%)",
             }}
           />
         </div>
