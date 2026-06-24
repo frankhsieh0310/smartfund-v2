@@ -52,7 +52,7 @@ export default function EtfDatabasePage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#020817] px-6 pt-32 pb-20">
+    <main className="min-h-screen  px-6 pt-32 pb-20">
 
       <div className="max-w-[1280px] mx-auto">
 
@@ -76,13 +76,13 @@ export default function EtfDatabasePage() {
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
             placeholder="搜尋代碼或名稱，例如 VOO"
-            className="flex-1 min-w-[240px] border border-white/20 rounded-lg px-5 py-3 text-[16px] text-white bg-transparent placeholder:text-slate-500 focus:outline-none focus:border-[#F5B700]"
+            className="flex-1 min-w-[240px] bg-transparent border border-white/20 rounded-lg px-5 py-3 text-[16px] text-white placeholder:text-slate-500 focus:outline-none focus:border-[#F5B700]"
           />
 
           <select
             value={region}
             onChange={(e) => setRegion(e.target.value)}
-            className="border border-white/20 rounded-lg px-4 py-3 text-[16px] text-white bg-[#020817] focus:outline-none focus:border-[#F5B700]"
+            className="bg-transparent border border-white/20 rounded-lg px-4 py-3 text-[16px] text-white focus:outline-none focus:border-[#F5B700]"
           >
             <option value="全部">全部地區</option>
             {REGIONS.map((r) => (
@@ -93,7 +93,7 @@ export default function EtfDatabasePage() {
           <select
             value={sector}
             onChange={(e) => setSector(e.target.value)}
-            className="border border-white/20 rounded-lg px-4 py-3 text-[16px] text-white bg-[#020817] focus:outline-none focus:border-[#F5B700]"
+            className="bg-transparent border border-white/20 rounded-lg px-4 py-3 text-[16px] text-white focus:outline-none focus:border-[#F5B700]"
           >
             <option value="全部">全部產業</option>
             {SECTORS.map((s) => (

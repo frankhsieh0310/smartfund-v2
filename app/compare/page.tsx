@@ -135,7 +135,7 @@ export default function ComparePage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#020817] px-6 pt-32 pb-20">
+    <main className="min-h-screen  px-6 pt-32 pb-20">
 
       <div className="max-w-[1280px] mx-auto">
 
@@ -167,7 +167,7 @@ export default function ComparePage() {
                 disabled={selected.length >= MAX}
               />
               {showDropdown && suggestions.length > 0 && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-white/10 rounded-xl shadow-xl z-50 overflow-hidden">
+                <div className="absolute top-full left-0 right-0 mt-1  border border-white/10 rounded-xl shadow-xl z-50 overflow-hidden">
                   {suggestions.map((item) => (
                     <button
                       key={item.code}
@@ -340,7 +340,7 @@ export default function ComparePage() {
                     <button
                       key={p}
                       onClick={() => setPeriod(p)}
-                      className={`px-4 py-2 rounded-lg text-[14px] font-semibold transition-colors ${period === p ? "bg-[#F5B700] text-white" : "bg-white border border-white/20 text-slate-400 hover:border-[#F5B700]"}`}
+                      className={`px-4 py-2 rounded-lg text-[14px] font-semibold transition-colors ${period === p ? "bg-[#F5B700] text-white" : " border border-white/20 text-slate-400 hover:border-[#F5B700]"}`}
                     >
                       {p === "1Y" ? "1年" : p === "3Y" ? "3年" : "5年"}
                     </button>

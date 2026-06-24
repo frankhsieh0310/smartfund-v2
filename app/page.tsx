@@ -230,17 +230,8 @@ function MarketDashboard() {
 
 export default function Home() {
   return (
-    <main className="min-h-screen relative" style={{
-        backgroundImage: "url('https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2600')",
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        backgroundAttachment: "fixed",
-      }}>
-      {/* 全站遮罩：深藍漸層，讓大樓可見度 15~25% */}
-      <div className="fixed inset-0 z-0 pointer-events-none" style={{
-        backgroundColor: "rgba(4,10,24,0.45)",
-        backgroundImage: "linear-gradient(180deg, rgba(4,10,24,0.20) 0%, rgba(4,10,24,0.40) 50%, rgba(4,10,24,0.55) 100%)",
-      }} />
+    <main className="min-h-screen relative">
+      {/* 背景由 layout.tsx GlobalBackground 統一處理 */}
 
       {/* NAVBAR */}
       <header className="fixed top-0 left-0 w-full z-50 bg-[#040a18]/85 backdrop-blur-xl border-b border-white/[0.08]">

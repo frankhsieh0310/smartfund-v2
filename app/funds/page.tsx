@@ -114,7 +114,7 @@ export default function FundsPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#020817] px-6 pt-32 pb-20">
+    <main className="min-h-screen  px-6 pt-32 pb-20">
 
       <div className="max-w-[1400px] mx-auto">
 
@@ -289,7 +289,7 @@ export default function FundsPage() {
                     className={`px-4 py-2 rounded-lg text-[14px] font-semibold transition-colors ${
                       chartPeriod === p.key
                         ? "bg-[#F5B700] text-white"
-                        : "bg-white border border-white/20 text-slate-400 hover:border-[#F5B700]"
+                        : " border border-white/20 text-slate-400 hover:border-[#F5B700]"
                     }`}
                   >
                     {p.label}

@@ -202,7 +202,7 @@ export default function ClientsPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#020817] px-6 pt-32 pb-20">
+    <main className="min-h-screen  px-6 pt-32 pb-20">
 
       <div className="max-w-[1280px] mx-auto">
 
