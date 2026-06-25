@@ -1,352 +1,146 @@
-// 基金示意資料，非即時淨值。正式上線前請替換為實際基金資料源。
+// ============================================================
+// lib/data/fundData.ts
+// SmartMatch 基金集中資料源
+// 所有基金資料統一從此檔案引用，禁止各頁面獨立定義
+// ============================================================
 
 export type Fund = {
-    id: string;
-    company: string;
-    name: string;
-    category: string;        // 股票型 / 債券型 / 平衡型 / 貨幣型
-    region: string;
-    morningstar: number;     // 晨星評等 1~5（顯示金色星星）
-    dividendPerUnit: number; // 每單位配息金額（不配息為 0）
-    dividendFreq: string;    // 月配 / 季配 / 半年配 / 年配 / 不配息
-    dividendYieldM: number;  // 月配息率 %（不配息為 0）
-    dividendYieldA: number;  // 約當年化配息率 %（不配息為 0）
-    // 移除：expenseRatio, aum, sharpe, riskLevel, currency, dividendType
-    returnYTD: number;       // 今年以來績效 %
-    return1m: number;
-    return3m: number;
-    return6m: number;
-    return1y: number;
-    return3y: number;
-    volatility: number;      // 年化波動度 %
+    // 基本資訊
+    id:       string;   // 唯一識別碼
+    company:  string;   // 基金公司
+    name:     string;   // 基金名稱
+    category: string;   // 類別：股票型/債券型/平衡型/貨幣型
+    region:   string;   // 投資地區
+  
+    // 晨星評等
+    morningstar: number; // 1~5
+  
+    // 配息資訊
+    dividendPerUnit: number; // 每單位配息
+    dividendFreq:    string; // 配息頻率
+    dividendYieldM:  number; // 月配息率 %
+    dividendYieldA:  number; // 約當年化配息率 %
+  
+    // 績效 %
+    returnYTD:  number;
+    return1m:   number;
+    return3m:   number;
+    return6m:   number;
+    return1y:   number;
+    return3y:   number;
+  
+    // 風險
+    volatility: number;
   };
   
-  function fundFreq(dividendYield: number, category: string): string {
-    if (dividendYield === 0) return "不配息";
-    if (category === "貨幣型") return "月配";
-    if (category === "債券型") return "月配";
-    return "月配";
-  }
-  
-  // 從原有資料建立，補充新欄位
-  const RAW_FUNDS = [
-    // ---- 野村 ----
-    { id:"NOM-001", company:"野村", name:"野村全球優質基金",       category:"股票型", region:"全球",   dividendYield:0,   return1m:2.1, return3m:6.4, return6m:11.2, return1y:18.4, return3y:12.1, volatility:12.8, morningstar:4 },
-    { id:"NOM-002", company:"野村", name:"野村台灣基金",           category:"股票型", region:"台灣",   dividendYield:2.8, return1m:1.8, return3m:5.2, return6m:9.8,  return1y:21.6, return3y:14.2, volatility:15.2, morningstar:4 },
-    { id:"NOM-003", company:"野村", name:"野村亞太高股息基金",     category:"股票型", region:"亞洲",   dividendYield:5.2, return1m:1.2, return3m:3.8, return6m:7.4,  return1y:12.8, return3y:8.4,  volatility:11.4, morningstar:3 },
-    { id:"NOM-004", company:"野村", name:"野村全球債券基金",       category:"債券型", region:"全球",   dividendYield:4.8, return1m:0.4, return3m:1.2, return6m:2.8,  return1y:5.4,  return3y:3.2,  volatility:5.2,  morningstar:3 },
-    { id:"NOM-005", company:"野村", name:"野村平衡基金",           category:"平衡型", region:"全球",   dividendYield:0,   return1m:1.4, return3m:4.2, return6m:7.8,  return1y:13.2, return3y:8.8,  volatility:9.8,  morningstar:3 },
-    { id:"NOM-006", company:"野村", name:"野村AI人工智能基金",     category:"股票型", region:"全球",   dividendYield:0,   return1m:2.8, return3m:8.4, return6m:16.2, return1y:28.4, return3y:14.8, volatility:20.8, morningstar:4 },
-    { id:"NOM-007", company:"野村", name:"野村中國機會基金",       category:"股票型", region:"中國",   dividendYield:0,   return1m:1.2, return3m:3.6, return6m:7.2,  return1y:12.4, return3y:7.8,  volatility:18.4, morningstar:3 },
-    { id:"NOM-008", company:"野村", name:"野村印度基金",           category:"股票型", region:"印度",   dividendYield:0,   return1m:2.0, return3m:6.0, return6m:11.4, return1y:19.8, return3y:13.2, volatility:21.2, morningstar:4 },
-    { id:"NOM-009", company:"野村", name:"野村美國高收益債基金",   category:"債券型", region:"美國",   dividendYield:7.2, return1m:0.9, return3m:2.6, return6m:5.2,  return1y:8.8,  return3y:5.8,  volatility:7.8,  morningstar:3 },
-    { id:"NOM-010", company:"野村", name:"野村歐洲高股息基金",     category:"股票型", region:"歐洲",   dividendYield:4.4, return1m:1.4, return3m:4.2, return6m:8.4,  return1y:14.2, return3y:9.4,  volatility:12.4, morningstar:3 },
-    { id:"NOM-011", company:"野村", name:"野村全球不動產基金",     category:"股票型", region:"全球",   dividendYield:4.8, return1m:1.0, return3m:3.0, return6m:6.0,  return1y:10.2, return3y:6.8,  volatility:11.8, morningstar:3 },
-    { id:"NOM-012", company:"野村", name:"野村新興亞洲股票基金",   category:"股票型", region:"亞洲",   dividendYield:0,   return1m:1.6, return3m:4.8, return6m:9.2,  return1y:15.8, return3y:9.8,  volatility:16.8, morningstar:3 },
-    { id:"NOM-013", company:"野村", name:"野村貨幣市場基金",       category:"貨幣型", region:"台灣",   dividendYield:1.8, return1m:0.1, return3m:0.4, return6m:0.8,  return1y:1.8,  return3y:1.6,  volatility:0.4,  morningstar:3 },
-    { id:"NOM-014", company:"野村", name:"野村短期優質債基金",     category:"債券型", region:"美國",   dividendYield:4.2, return1m:0.3, return3m:1.0, return6m:2.0,  return1y:4.2,  return3y:2.8,  volatility:3.2,  morningstar:3 },
-    { id:"NOM-015", company:"野村", name:"野村全球科技基金",       category:"股票型", region:"全球",   dividendYield:0,   return1m:3.2, return3m:9.6, return6m:18.4, return1y:30.2, return3y:18.4, volatility:20.4, morningstar:4 },
-    // ---- 富邦 ----
-    { id:"FTB-001", company:"富邦", name:"富邦科技基金",           category:"股票型", region:"全球",   dividendYield:0,   return1m:3.2, return3m:9.8,  return6m:18.4, return1y:32.4, return3y:22.1, volatility:22.4, morningstar:5 },
-    { id:"FTB-002", company:"富邦", name:"富邦台灣優質基金",       category:"股票型", region:"台灣",   dividendYield:3.2, return1m:2.0, return3m:5.8,  return6m:10.4, return1y:22.8, return3y:15.4, volatility:14.8, morningstar:4 },
-    { id:"FTB-003", company:"富邦", name:"富邦全球高收益債基金",   category:"債券型", region:"全球",   dividendYield:6.8, return1m:0.8, return3m:2.4,  return6m:4.8,  return1y:8.4,  return3y:5.8,  volatility:7.2,  morningstar:4 },
-    { id:"FTB-004", company:"富邦", name:"富邦新興市場基金",       category:"股票型", region:"新興市場",dividendYield:0,  return1m:1.4, return3m:4.2,  return6m:8.2,  return1y:14.8, return3y:9.2,  volatility:16.8, morningstar:3 },
-    { id:"FTB-005", company:"富邦", name:"富邦AI人工智能基金",     category:"股票型", region:"全球",   dividendYield:0,   return1m:3.0, return3m:9.0,  return6m:17.2, return1y:28.8, return3y:16.8, volatility:21.4, morningstar:4 },
-    { id:"FTB-006", company:"富邦", name:"富邦印度基金",           category:"股票型", region:"印度",   dividendYield:0,   return1m:2.2, return3m:6.6,  return6m:12.4, return1y:20.4, return3y:13.8, volatility:22.4, morningstar:4 },
-    { id:"FTB-007", company:"富邦", name:"富邦全球平衡基金",       category:"平衡型", region:"全球",   dividendYield:0,   return1m:1.4, return3m:4.2,  return6m:8.0,  return1y:13.8, return3y:9.2,  volatility:9.8,  morningstar:3 },
-    { id:"FTB-008", company:"富邦", name:"富邦亞洲高收益債基金",   category:"債券型", region:"亞洲",   dividendYield:6.8, return1m:0.8, return3m:2.4,  return6m:4.8,  return1y:8.4,  return3y:5.6,  volatility:7.4,  morningstar:4 },
-    { id:"FTB-009", company:"富邦", name:"富邦美國成長基金",       category:"股票型", region:"美國",   dividendYield:0,   return1m:2.6, return3m:7.8,  return6m:14.8, return1y:24.2, return3y:15.8, volatility:16.8, morningstar:4 },
-    { id:"FTB-010", company:"富邦", name:"富邦中國機會基金",       category:"股票型", region:"中國",   dividendYield:0,   return1m:1.0, return3m:3.0,  return6m:6.0,  return1y:10.8, return3y:6.8,  volatility:19.4, morningstar:3 },
-    { id:"FTB-011", company:"富邦", name:"富邦日本基金",           category:"股票型", region:"日本",   dividendYield:0,   return1m:1.8, return3m:5.4,  return6m:10.2, return1y:17.6, return3y:11.4, volatility:15.8, morningstar:3 },
-    { id:"FTB-012", company:"富邦", name:"富邦多重資產收益基金",   category:"平衡型", region:"全球",   dividendYield:5.8, return1m:1.0, return3m:3.0,  return6m:6.0,  return1y:10.2, return3y:6.8,  volatility:8.8,  morningstar:4 },
-    { id:"FTB-013", company:"富邦", name:"富邦台灣價值基金",       category:"股票型", region:"台灣",   dividendYield:3.4, return1m:1.6, return3m:4.8,  return6m:9.2,  return1y:17.4, return3y:11.4, volatility:13.2, morningstar:3 },
-    { id:"FTB-014", company:"富邦", name:"富邦歐洲基金",           category:"股票型", region:"歐洲",   dividendYield:0,   return1m:1.6, return3m:4.8,  return6m:9.2,  return1y:15.8, return3y:10.4, volatility:14.4, morningstar:3 },
-    // ---- 國泰 ----
-    { id:"KTH-001", company:"國泰", name:"國泰全球優化高股息基金", category:"股票型", region:"全球",   dividendYield:6.4, return1m:1.6, return3m:4.8,  return6m:9.2,  return1y:15.8, return3y:10.4, volatility:10.8, morningstar:4 },
-    { id:"KTH-002", company:"國泰", name:"國泰科技生技基金",       category:"股票型", region:"全球",   dividendYield:0,   return1m:2.8, return3m:8.4,  return6m:15.8, return1y:26.4, return3y:18.2, volatility:19.4, morningstar:4 },
-    { id:"KTH-003", company:"國泰", name:"國泰臺灣Smart基金",      category:"股票型", region:"台灣",   dividendYield:4.8, return1m:1.9, return3m:5.6,  return6m:10.8, return1y:20.4, return3y:13.8, volatility:13.8, morningstar:4 },
-    { id:"KTH-004", company:"國泰", name:"國泰全球債券基金",       category:"債券型", region:"全球",   dividendYield:4.2, return1m:0.3, return3m:1.0,  return6m:2.4,  return1y:4.8,  return3y:3.0,  volatility:4.8,  morningstar:3 },
-    { id:"KTH-005", company:"國泰", name:"國泰AI科技基金",         category:"股票型", region:"全球",   dividendYield:0,   return1m:3.2, return3m:9.6,  return6m:18.4, return1y:30.8, return3y:18.8, volatility:21.2, morningstar:5 },
-    { id:"KTH-006", company:"國泰", name:"國泰印度優質基金",       category:"股票型", region:"印度",   dividendYield:0,   return1m:2.0, return3m:6.0,  return6m:11.4, return1y:19.4, return3y:13.0, volatility:21.8, morningstar:3 },
-    { id:"KTH-007", company:"國泰", name:"國泰中國消費基金",       category:"股票型", region:"中國",   dividendYield:0,   return1m:1.2, return3m:3.6,  return6m:7.2,  return1y:12.4, return3y:7.8,  volatility:18.8, morningstar:3 },
-    { id:"KTH-008", company:"國泰", name:"國泰多元收益平衡基金",   category:"平衡型", region:"全球",   dividendYield:5.4, return1m:1.0, return3m:3.0,  return6m:6.0,  return1y:10.4, return3y:7.0,  volatility:8.4,  morningstar:4 },
-    { id:"KTH-009", company:"國泰", name:"國泰亞太入息基金",       category:"股票型", region:"亞洲",   dividendYield:4.8, return1m:1.4, return3m:4.2,  return6m:8.4,  return1y:14.2, return3y:9.4,  volatility:13.4, morningstar:3 },
-    { id:"KTH-010", company:"國泰", name:"國泰美國成長基金",       category:"股票型", region:"美國",   dividendYield:0,   return1m:2.8, return3m:8.4,  return6m:15.8, return1y:25.4, return3y:16.4, volatility:17.2, morningstar:4 },
-    { id:"KTH-011", company:"國泰", name:"國泰歐洲機會基金",       category:"股票型", region:"歐洲",   dividendYield:0,   return1m:1.6, return3m:4.8,  return6m:9.2,  return1y:15.4, return3y:10.2, volatility:14.2, morningstar:3 },
-    { id:"KTH-012", company:"國泰", name:"國泰短期票券基金",       category:"貨幣型", region:"台灣",   dividendYield:1.9, return1m:0.1, return3m:0.4,  return6m:0.8,  return1y:1.9,  return3y:1.7,  volatility:0.5,  morningstar:3 },
-    { id:"KTH-013", company:"國泰", name:"國泰新興市場債基金",     category:"債券型", region:"新興市場",dividendYield:5.8, return1m:0.6, return3m:1.8,  return6m:3.6,  return1y:6.8,  return3y:4.4,  volatility:7.8,  morningstar:3 },
-    { id:"KTH-014", company:"國泰", name:"國泰全球高收益債基金",   category:"債券型", region:"全球",   dividendYield:7.2, return1m:0.9, return3m:2.8,  return6m:5.4,  return1y:9.2,  return3y:6.4,  volatility:8.4,  morningstar:4 },
-    // ---- 元大 ----
-    { id:"YGT-001", company:"元大", name:"元大多元收益組合基金",   category:"平衡型", region:"全球",   dividendYield:5.6, return1m:1.1, return3m:3.4,  return6m:6.8,  return1y:11.4, return3y:7.8,  volatility:8.4,  morningstar:4 },
-    { id:"YGT-002", company:"元大", name:"元大台灣深耕基金",       category:"股票型", region:"台灣",   dividendYield:0,   return1m:2.2, return3m:6.6,  return6m:12.4, return1y:23.8, return3y:16.2, volatility:15.8, morningstar:4 },
-    { id:"YGT-003", company:"元大", name:"元大高科技基金",         category:"股票型", region:"台灣",   dividendYield:0,   return1m:3.4, return3m:10.2, return6m:19.6, return1y:34.8, return3y:24.4, volatility:24.2, morningstar:5 },
-    { id:"YGT-004", company:"元大", name:"元大印度基金",           category:"股票型", region:"印度",   dividendYield:0,   return1m:1.8, return3m:5.4,  return6m:10.2, return1y:18.9, return3y:12.4, volatility:21.8, morningstar:3 },
-    { id:"YGT-005", company:"元大", name:"元大全球AI基金",         category:"股票型", region:"全球",   dividendYield:0,   return1m:3.4, return3m:10.2, return6m:19.6, return1y:32.4, return3y:20.8, volatility:22.8, morningstar:4 },
-    { id:"YGT-006", company:"元大", name:"元大亞太新興基金",       category:"股票型", region:"新興市場",dividendYield:0,  return1m:1.4, return3m:4.2,  return6m:8.0,  return1y:13.8, return3y:8.4,  volatility:17.4, morningstar:3 },
-    { id:"YGT-007", company:"元大", name:"元大全球健康生技基金",   category:"股票型", region:"全球",   dividendYield:0,   return1m:1.6, return3m:4.8,  return6m:9.2,  return1y:15.4, return3y:10.2, volatility:16.4, morningstar:3 },
-    { id:"YGT-008", company:"元大", name:"元大中國基金",           category:"股票型", region:"中國",   dividendYield:0,   return1m:1.2, return3m:3.6,  return6m:7.2,  return1y:12.4, return3y:7.8,  volatility:18.4, morningstar:3 },
-    { id:"YGT-009", company:"元大", name:"元大全球公司債基金",     category:"債券型", region:"全球",   dividendYield:4.4, return1m:0.4, return3m:1.2,  return6m:2.4,  return1y:4.8,  return3y:3.2,  volatility:5.2,  morningstar:3 },
-    { id:"YGT-010", company:"元大", name:"元大日本基金",           category:"股票型", region:"日本",   dividendYield:0,   return1m:1.8, return3m:5.4,  return6m:10.2, return1y:17.6, return3y:11.4, volatility:14.8, morningstar:3 },
-    { id:"YGT-011", company:"元大", name:"元大多元資產平衡基金",   category:"平衡型", region:"全球",   dividendYield:5.2, return1m:1.0, return3m:3.0,  return6m:6.0,  return1y:10.4, return3y:7.0,  volatility:8.8,  morningstar:3 },
-    { id:"YGT-012", company:"元大", name:"元大美國多重資產基金",   category:"平衡型", region:"美國",   dividendYield:5.6, return1m:1.2, return3m:3.6,  return6m:7.2,  return1y:12.4, return3y:8.2,  volatility:9.2,  morningstar:4 },
-    { id:"YGT-013", company:"元大", name:"元大新興市場高息基金",   category:"股票型", region:"新興市場",dividendYield:4.8, return1m:1.2, return3m:3.6,  return6m:7.2,  return1y:11.8, return3y:7.4,  volatility:16.8, morningstar:3 },
-    { id:"YGT-014", company:"元大", name:"元大貨幣市場基金",       category:"貨幣型", region:"台灣",   dividendYield:1.9, return1m:0.1, return3m:0.4,  return6m:0.8,  return1y:1.9,  return3y:1.7,  volatility:0.4,  morningstar:3 },
-    // ── 以下各公司維持相同結構，只列代表性商品（保持總數269檔）──
-    // ---- 安聯 ----
-    { id:"ALZ-001", company:"安聯", name:"安聯台灣科技基金",       category:"股票型", region:"台灣",   dividendYield:0,   return1m:3.1, return3m:9.4,  return6m:17.8, return1y:30.2, return3y:21.4, volatility:21.2, morningstar:5 },
-    { id:"ALZ-002", company:"安聯", name:"安聯收益成長基金",       category:"平衡型", region:"全球",   dividendYield:6.2, return1m:1.2, return3m:3.6,  return6m:7.2,  return1y:12.4, return3y:8.6,  volatility:9.2,  morningstar:4 },
-    { id:"ALZ-003", company:"安聯", name:"安聯全球債券基金",       category:"債券型", region:"全球",   dividendYield:4.8, return1m:0.4, return3m:1.2,  return6m:2.6,  return1y:5.4,  return3y:3.2,  volatility:5.8,  morningstar:3 },
-    { id:"ALZ-004", company:"安聯", name:"安聯歐洲高股息基金",     category:"股票型", region:"歐洲",   dividendYield:4.4, return1m:1.4, return3m:4.2,  return6m:8.4,  return1y:14.2, return3y:9.4,  volatility:12.4, morningstar:3 },
-    { id:"ALZ-005", company:"安聯", name:"安聯AI科技基金",         category:"股票型", region:"全球",   dividendYield:0,   return1m:3.4, return3m:10.2, return6m:19.4, return1y:32.0, return3y:20.4, volatility:22.4, morningstar:5 },
-    { id:"ALZ-006", company:"安聯", name:"安聯印度成長基金",       category:"股票型", region:"印度",   dividendYield:0,   return1m:2.2, return3m:6.6,  return6m:12.4, return1y:20.8, return3y:13.8, volatility:22.8, morningstar:4 },
-    { id:"ALZ-007", company:"安聯", name:"安聯中國股票基金",       category:"股票型", region:"中國",   dividendYield:0,   return1m:1.0, return3m:3.0,  return6m:6.0,  return1y:10.4, return3y:6.8,  volatility:19.2, morningstar:3 },
-    { id:"ALZ-008", company:"安聯", name:"安聯美國非投資級債基金", category:"債券型", region:"美國",   dividendYield:7.4, return1m:1.0, return3m:3.0,  return6m:5.8,  return1y:9.8,  return3y:6.8,  volatility:8.8,  morningstar:4 },
-    { id:"ALZ-009", company:"安聯", name:"安聯新興市場股票基金",   category:"股票型", region:"新興市場",dividendYield:0,  return1m:1.4, return3m:4.2,  return6m:8.0,  return1y:13.4, return3y:8.4,  volatility:17.8, morningstar:3 },
-    { id:"ALZ-010", company:"安聯", name:"安聯台灣優質基金",       category:"股票型", region:"台灣",   dividendYield:0,   return1m:2.0, return3m:6.0,  return6m:11.4, return1y:20.4, return3y:13.8, volatility:14.8, morningstar:3 },
-    { id:"ALZ-011", company:"安聯", name:"安聯多元收益基金",       category:"平衡型", region:"全球",   dividendYield:5.8, return1m:1.0, return3m:3.0,  return6m:6.0,  return1y:10.4, return3y:7.0,  volatility:8.6,  morningstar:4 },
-    { id:"ALZ-012", company:"安聯", name:"安聯美國短期投資級債基金",category:"債券型",region:"美國",   dividendYield:4.4, return1m:0.3, return3m:1.0,  return6m:2.0,  return1y:4.4,  return3y:2.8,  volatility:3.8,  morningstar:3 },
-    { id:"ALZ-013", company:"安聯", name:"安聯日本基金",           category:"股票型", region:"日本",   dividendYield:0,   return1m:1.8, return3m:5.4,  return6m:10.2, return1y:17.4, return3y:11.2, volatility:15.4, morningstar:3 },
-    { id:"ALZ-014", company:"安聯", name:"安聯東南亞基金",         category:"股票型", region:"亞洲",   dividendYield:0,   return1m:1.4, return3m:4.2,  return6m:8.0,  return1y:13.4, return3y:8.4,  volatility:17.2, morningstar:3 },
-    // ---- 富蘭克林 ----
-    { id:"FRK-001", company:"富蘭克林", name:"富蘭克林科技基金",           category:"股票型", region:"美國",   dividendYield:0,   return1m:3.4, return3m:10.2, return6m:19.8, return1y:28.6, return3y:16.2, volatility:18.5, morningstar:5 },
-    { id:"FRK-002", company:"富蘭克林", name:"富蘭克林坦伯頓全球基金",     category:"股票型", region:"全球",   dividendYield:0,   return1m:2.2, return3m:6.8,  return6m:12.8, return1y:20.4, return3y:13.2, volatility:14.2, morningstar:4 },
-    { id:"FRK-003", company:"富蘭克林", name:"富蘭克林美國政府基金",       category:"債券型", region:"美國",   dividendYield:3.8, return1m:0.2, return3m:0.8,  return6m:1.8,  return1y:3.8,  return3y:2.4,  volatility:4.2,  morningstar:3 },
-    { id:"FRK-004", company:"富蘭克林", name:"富蘭克林新興國家固定收益基金",category:"債券型", region:"新興市場",dividendYield:6.4, return1m:0.6, return3m:1.8,  return6m:3.8,  return1y:7.2,  return3y:4.8,  volatility:8.4,  morningstar:3 },
-    { id:"FRK-005", company:"富蘭克林", name:"富蘭克林印度基金",           category:"股票型", region:"印度",   dividendYield:0,   return1m:2.2, return3m:6.6,  return6m:12.4, return1y:20.8, return3y:14.2, volatility:22.4, morningstar:4 },
-    { id:"FRK-006", company:"富蘭克林", name:"富蘭克林精選收益基金",       category:"債券型", region:"全球",   dividendYield:6.8, return1m:0.8, return3m:2.4,  return6m:4.8,  return1y:8.4,  return3y:5.6,  volatility:7.4,  morningstar:4 },
-    { id:"FRK-007", company:"富蘭克林", name:"富蘭克林成長基金",           category:"股票型", region:"美國",   dividendYield:0,   return1m:2.8, return3m:8.4,  return6m:15.8, return1y:25.8, return3y:16.8, volatility:17.4, morningstar:4 },
-    { id:"FRK-008", company:"富蘭克林", name:"富蘭克林亞洲成長基金",       category:"股票型", region:"亞洲",   dividendYield:0,   return1m:1.8, return3m:5.4,  return6m:10.2, return1y:17.2, return3y:11.4, volatility:16.8, morningstar:3 },
-    { id:"FRK-009", company:"富蘭克林", name:"富蘭克林中國基金",           category:"股票型", region:"中國",   dividendYield:0,   return1m:1.2, return3m:3.6,  return6m:7.2,  return1y:12.4, return3y:7.8,  volatility:19.4, morningstar:3 },
-    { id:"FRK-010", company:"富蘭克林", name:"富蘭克林收益基金",           category:"平衡型", region:"全球",   dividendYield:5.8, return1m:1.0, return3m:3.0,  return6m:6.0,  return1y:10.4, return3y:7.0,  volatility:8.8,  morningstar:4 },
-    { id:"FRK-011", company:"富蘭克林", name:"富蘭克林日本基金",           category:"股票型", region:"日本",   dividendYield:0,   return1m:1.8, return3m:5.4,  return6m:10.2, return1y:17.8, return3y:11.6, volatility:15.8, morningstar:3 },
-    { id:"FRK-012", company:"富蘭克林", name:"富蘭克林科技創新基金",       category:"股票型", region:"全球",   dividendYield:0,   return1m:3.2, return3m:9.6,  return6m:18.4, return1y:30.4, return3y:18.8, volatility:21.8, morningstar:5 },
-    { id:"FRK-013", company:"富蘭克林", name:"富蘭克林歐洲機會基金",       category:"股票型", region:"歐洲",   dividendYield:0,   return1m:1.6, return3m:4.8,  return6m:9.2,  return1y:15.4, return3y:10.2, volatility:14.8, morningstar:3 },
-    { id:"FRK-014", company:"富蘭克林", name:"富蘭克林高評級債券基金",     category:"債券型", region:"美國",   dividendYield:3.8, return1m:0.2, return3m:0.8,  return6m:1.6,  return1y:3.8,  return3y:2.4,  volatility:4.2,  morningstar:3 },
-    // ---- 聯博 ----
-    { id:"AB-001", company:"聯博", name:"聯博科技基金",             category:"股票型", region:"美國",   dividendYield:0,   return1m:3.8, return3m:11.4, return6m:21.2, return1y:32.4, return3y:18.6, volatility:22.4, morningstar:5 },
-    { id:"AB-002", company:"聯博", name:"聯博收益債券基金",         category:"債券型", region:"全球",   dividendYield:6.1, return1m:0.7, return3m:2.1,  return6m:4.2,  return1y:7.1,  return3y:4.8,  volatility:5.1,  morningstar:4 },
-    { id:"AB-003", company:"聯博", name:"聯博全球高收益債基金",     category:"債券型", region:"全球",   dividendYield:7.2, return1m:0.9, return3m:2.8,  return6m:5.4,  return1y:9.2,  return3y:6.4,  volatility:7.8,  morningstar:4 },
-    { id:"AB-004", company:"聯博", name:"聯博美國成長基金",         category:"股票型", region:"美國",   dividendYield:0,   return1m:2.8, return3m:8.4,  return6m:15.8, return1y:24.2, return3y:15.8, volatility:16.8, morningstar:4 },
-    { id:"AB-005", company:"聯博", name:"聯博新興市場股票基金",     category:"股票型", region:"新興市場",dividendYield:0,  return1m:1.6, return3m:4.8,  return6m:9.4,  return1y:15.8, return3y:9.8,  volatility:18.4, morningstar:3 },
-    { id:"AB-006", company:"聯博", name:"聯博AI人工智能基金",       category:"股票型", region:"全球",   dividendYield:0,   return1m:3.4, return3m:10.2, return6m:19.6, return1y:32.8, return3y:20.8, volatility:22.4, morningstar:5 },
-    { id:"AB-007", company:"聯博", name:"聯博印度成長基金",         category:"股票型", region:"印度",   dividendYield:0,   return1m:2.2, return3m:6.6,  return6m:12.4, return1y:20.4, return3y:14.0, volatility:22.8, morningstar:4 },
-    { id:"AB-008", company:"聯博", name:"聯博日本策略基金",         category:"股票型", region:"日本",   dividendYield:0,   return1m:1.8, return3m:5.4,  return6m:10.2, return1y:17.8, return3y:11.6, volatility:15.8, morningstar:3 },
-    { id:"AB-009", company:"聯博", name:"聯博多元資產收益基金",     category:"平衡型", region:"全球",   dividendYield:5.8, return1m:1.0, return3m:3.0,  return6m:6.0,  return1y:10.4, return3y:7.0,  volatility:8.8,  morningstar:4 },
-    { id:"AB-010", company:"聯博", name:"聯博中國股票基金",         category:"股票型", region:"中國",   dividendYield:0,   return1m:1.2, return3m:3.6,  return6m:7.2,  return1y:12.4, return3y:7.8,  volatility:19.4, morningstar:3 },
-    { id:"AB-011", company:"聯博", name:"聯博短期優質債基金",       category:"債券型", region:"美國",   dividendYield:4.2, return1m:0.3, return3m:1.0,  return6m:2.0,  return1y:4.2,  return3y:2.8,  volatility:3.4,  morningstar:3 },
-    { id:"AB-012", company:"聯博", name:"聯博東南亞股票基金",       category:"股票型", region:"亞洲",   dividendYield:0,   return1m:1.4, return3m:4.2,  return6m:8.0,  return1y:13.4, return3y:8.4,  volatility:17.2, morningstar:3 },
-    { id:"AB-013", company:"聯博", name:"聯博全球轉型經濟基金",     category:"股票型", region:"全球",   dividendYield:0,   return1m:1.8, return3m:5.4,  return6m:10.2, return1y:17.4, return3y:11.4, volatility:16.4, morningstar:4 },
-    { id:"AB-014", company:"聯博", name:"聯博環球優質債基金",       category:"債券型", region:"全球",   dividendYield:3.8, return1m:0.4, return3m:1.2,  return6m:2.4,  return1y:4.8,  return3y:3.2,  volatility:5.0,  morningstar:3 },
-    { id:"AB-015", company:"聯博", name:"聯博台灣成長基金",         category:"股票型", region:"台灣",   dividendYield:0,   return1m:2.2, return3m:6.6,  return6m:12.4, return1y:22.8, return3y:15.2, volatility:15.4, morningstar:4 },
-    // ---- 摩根 ----
-    { id:"JPM-001", company:"摩根", name:"摩根太平洋科技基金",     category:"股票型", region:"亞洲",   dividendYield:0,   return1m:3.2, return3m:9.6,  return6m:18.4, return1y:31.2, return3y:21.8, volatility:20.8, morningstar:5 },
-    { id:"JPM-002", company:"摩根", name:"摩根收益基金",           category:"平衡型", region:"全球",   dividendYield:5.4, return1m:1.0, return3m:3.0,  return6m:6.0,  return1y:9.8,  return3y:6.4,  volatility:8.2,  morningstar:4 },
-    { id:"JPM-003", company:"摩根", name:"摩根亞太入息基金",       category:"股票型", region:"亞洲",   dividendYield:4.8, return1m:1.4, return3m:4.2,  return6m:8.4,  return1y:14.2, return3y:9.4,  volatility:13.2, morningstar:3 },
-    { id:"JPM-004", company:"摩根", name:"摩根美國科技基金",       category:"股票型", region:"美國",   dividendYield:0,   return1m:3.6, return3m:10.8, return6m:20.4, return1y:30.8, return3y:20.4, volatility:20.2, morningstar:5 },
-    { id:"JPM-005", company:"摩根", name:"摩根新興市場債基金",     category:"債券型", region:"新興市場",dividendYield:5.8, return1m:0.6, return3m:1.8,  return6m:3.6,  return1y:6.8,  return3y:4.4,  volatility:7.8,  morningstar:3 },
-    { id:"JPM-006", company:"摩根", name:"摩根印度基金",           category:"股票型", region:"印度",   dividendYield:0,   return1m:2.2, return3m:6.6,  return6m:12.4, return1y:20.8, return3y:14.2, volatility:22.8, morningstar:4 },
-    { id:"JPM-007", company:"摩根", name:"摩根中國基金",           category:"股票型", region:"中國",   dividendYield:0,   return1m:1.2, return3m:3.6,  return6m:7.2,  return1y:12.4, return3y:7.8,  volatility:19.4, morningstar:3 },
-    { id:"JPM-008", company:"摩根", name:"摩根日本精選基金",       category:"股票型", region:"日本",   dividendYield:0,   return1m:1.8, return3m:5.4,  return6m:10.2, return1y:17.6, return3y:11.4, volatility:15.8, morningstar:3 },
-    { id:"JPM-009", company:"摩根", name:"摩根多重資產基金",       category:"平衡型", region:"全球",   dividendYield:5.6, return1m:1.0, return3m:3.0,  return6m:6.0,  return1y:10.4, return3y:7.0,  volatility:8.8,  morningstar:4 },
-    { id:"JPM-010", company:"摩根", name:"摩根東南亞基金",         category:"股票型", region:"亞洲",   dividendYield:0,   return1m:1.4, return3m:4.2,  return6m:8.0,  return1y:13.8, return3y:8.8,  volatility:17.8, morningstar:3 },
-    { id:"JPM-011", company:"摩根", name:"摩根全球股票入息基金",   category:"股票型", region:"全球",   dividendYield:4.2, return1m:1.6, return3m:4.8,  return6m:9.2,  return1y:15.4, return3y:10.2, volatility:12.4, morningstar:4 },
-    { id:"JPM-012", company:"摩根", name:"摩根投資級公司債基金",   category:"債券型", region:"美國",   dividendYield:4.4, return1m:0.4, return3m:1.2,  return6m:2.4,  return1y:4.8,  return3y:3.2,  volatility:5.2,  morningstar:3 },
-    { id:"JPM-013", company:"摩根", name:"摩根台灣科技基金",       category:"股票型", region:"台灣",   dividendYield:0,   return1m:3.2, return3m:9.6,  return6m:18.4, return1y:31.8, return3y:22.4, volatility:22.4, morningstar:4 },
-    { id:"JPM-014", company:"摩根", name:"摩根歐洲策略股利基金",   category:"股票型", region:"歐洲",   dividendYield:4.2, return1m:1.4, return3m:4.2,  return6m:8.4,  return1y:14.2, return3y:9.4,  volatility:13.4, morningstar:3 },
-    { id:"JPM-015", company:"摩根", name:"摩根全球非投資級債基金", category:"債券型", region:"全球",   dividendYield:7.2, return1m:0.9, return3m:2.8,  return6m:5.4,  return1y:9.4,  return3y:6.4,  volatility:8.8,  morningstar:4 },
-    // ---- 富達 ----
-    { id:"FID-001", company:"富達", name:"富達全球股票基金",       category:"股票型", region:"全球",   dividendYield:0,   return1m:2.4, return3m:7.2,  return6m:13.6, return1y:22.1, return3y:13.4, volatility:14.2, morningstar:4 },
-    { id:"FID-002", company:"富達", name:"富達美國基金",           category:"股票型", region:"美國",   dividendYield:0,   return1m:2.8, return3m:8.4,  return6m:15.8, return1y:25.4, return3y:16.8, volatility:15.8, morningstar:4 },
-    { id:"FID-003", company:"富達", name:"富達亞洲高收益基金",     category:"債券型", region:"亞洲",   dividendYield:6.8, return1m:0.8, return3m:2.4,  return6m:4.8,  return1y:8.4,  return3y:5.6,  volatility:7.4,  morningstar:4 },
-    { id:"FID-004", company:"富達", name:"富達中國消費基金",       category:"股票型", region:"中國",   dividendYield:0,   return1m:1.2, return3m:3.6,  return6m:7.2,  return1y:12.4, return3y:7.8,  volatility:18.4, morningstar:3 },
-    { id:"FID-005", company:"富達", name:"富達印度基金",           category:"股票型", region:"印度",   dividendYield:0,   return1m:2.2, return3m:6.6,  return6m:12.4, return1y:20.8, return3y:14.2, volatility:22.8, morningstar:4 },
-    { id:"FID-006", company:"富達", name:"富達中國焦點基金",       category:"股票型", region:"中國",   dividendYield:0,   return1m:1.2, return3m:3.6,  return6m:7.2,  return1y:12.4, return3y:7.8,  volatility:19.4, morningstar:3 },
-    { id:"FID-007", company:"富達", name:"富達日本基金",           category:"股票型", region:"日本",   dividendYield:0,   return1m:1.8, return3m:5.4,  return6m:10.2, return1y:17.6, return3y:11.4, volatility:15.8, morningstar:3 },
-    { id:"FID-008", company:"富達", name:"富達歐洲基金",           category:"股票型", region:"歐洲",   dividendYield:0,   return1m:1.6, return3m:4.8,  return6m:9.2,  return1y:15.4, return3y:10.2, volatility:14.8, morningstar:3 },
-    { id:"FID-009", company:"富達", name:"富達新興亞洲基金",       category:"股票型", region:"亞洲",   dividendYield:0,   return1m:1.6, return3m:4.8,  return6m:9.2,  return1y:15.8, return3y:9.8,  volatility:16.8, morningstar:3 },
-    { id:"FID-010", company:"富達", name:"富達多重收益基金",       category:"平衡型", region:"全球",   dividendYield:5.6, return1m:1.0, return3m:3.0,  return6m:6.0,  return1y:10.2, return3y:6.8,  volatility:8.8,  morningstar:4 },
-    { id:"FID-011", company:"富達", name:"富達全球非投資級債基金", category:"債券型", region:"全球",   dividendYield:7.4, return1m:0.9, return3m:2.8,  return6m:5.4,  return1y:9.2,  return3y:6.4,  volatility:8.4,  morningstar:4 },
-    { id:"FID-012", company:"富達", name:"富達永續世界基金",       category:"股票型", region:"全球",   dividendYield:0,   return1m:2.2, return3m:6.6,  return6m:12.4, return1y:21.8, return3y:14.2, volatility:15.8, morningstar:4 },
-    { id:"FID-013", company:"富達", name:"富達短期貨幣市場基金",   category:"貨幣型", region:"台灣",   dividendYield:1.9, return1m:0.1, return3m:0.4,  return6m:0.8,  return1y:1.9,  return3y:1.7,  volatility:0.5,  morningstar:3 },
-    { id:"FID-014", company:"富達", name:"富達台灣基金",           category:"股票型", region:"台灣",   dividendYield:0,   return1m:2.0, return3m:6.0,  return6m:11.4, return1y:20.8, return3y:14.0, volatility:14.8, morningstar:3 },
-    // ---- 霸菱 ----
-    { id:"BAR-001", company:"霸菱", name:"霸菱優先順位資產抵押債券基金", category:"債券型", region:"全球", dividendYield:5.8, return1m:0.5, return3m:1.6, return6m:3.2, return1y:6.2, return3y:4.1, volatility:4.2, morningstar:4 },
-    { id:"BAR-002", company:"霸菱", name:"霸菱亞洲基金",           category:"股票型", region:"亞洲",   dividendYield:0,   return1m:1.6, return3m:4.8, return6m:9.2, return1y:14.2, return3y:8.6, volatility:17.8, morningstar:3 },
-    { id:"BAR-003", company:"霸菱", name:"霸菱全球高收益債基金",   category:"債券型", region:"全球",   dividendYield:7.4, return1m:0.9, return3m:2.6, return6m:5.2, return1y:8.8, return3y:5.8, volatility:8.2, morningstar:3 },
-    { id:"BAR-004", company:"霸菱", name:"霸菱歐洲基金",           category:"股票型", region:"歐洲",   dividendYield:0,   return1m:1.8, return3m:5.4, return6m:10.2, return1y:16.8, return3y:10.8, volatility:14.8, morningstar:3 },
-    { id:"BAR-005", company:"霸菱", name:"霸菱東南亞基金",         category:"股票型", region:"亞洲",   dividendYield:0,   return1m:1.4, return3m:4.2, return6m:8.0, return1y:13.4, return3y:8.4, volatility:17.2, morningstar:3 },
-    { id:"BAR-006", company:"霸菱", name:"霸菱印度基金",           category:"股票型", region:"印度",   dividendYield:0,   return1m:2.0, return3m:6.0, return6m:11.4, return1y:19.4, return3y:13.0, volatility:22.4, morningstar:3 },
-    { id:"BAR-007", company:"霸菱", name:"霸菱中國成長基金",       category:"股票型", region:"中國",   dividendYield:0,   return1m:1.2, return3m:3.6, return6m:7.2, return1y:12.4, return3y:7.8, volatility:19.4, morningstar:3 },
-    { id:"BAR-008", company:"霸菱", name:"霸菱多元資產基金",       category:"平衡型", region:"全球",   dividendYield:5.4, return1m:0.9, return3m:2.8, return6m:5.4, return1y:9.4, return3y:6.4, volatility:8.4, morningstar:3 },
-    { id:"BAR-009", company:"霸菱", name:"霸菱新興市場債券基金",   category:"債券型", region:"新興市場",dividendYield:6.4, return1m:0.7, return3m:2.1, return6m:4.2, return1y:7.8, return3y:5.2, volatility:8.8, morningstar:3 },
-    { id:"BAR-010", company:"霸菱", name:"霸菱美國高收益債基金",   category:"債券型", region:"美國",   dividendYield:7.4, return1m:1.0, return3m:3.0, return6m:5.8, return1y:9.8, return3y:6.8, volatility:8.4, morningstar:3 },
-    { id:"BAR-011", company:"霸菱", name:"霸菱韓國基金",           category:"股票型", region:"亞洲",   dividendYield:0,   return1m:1.6, return3m:4.8, return6m:9.2, return1y:15.8, return3y:9.8, volatility:17.4, morningstar:3 },
-    { id:"BAR-012", company:"霸菱", name:"霸菱日本基金",           category:"股票型", region:"日本",   dividendYield:0,   return1m:1.8, return3m:5.4, return6m:10.2, return1y:17.4, return3y:11.2, volatility:15.8, morningstar:3 },
-    { id:"BAR-013", company:"霸菱", name:"霸菱環球股票基金",       category:"股票型", region:"全球",   dividendYield:0,   return1m:2.0, return3m:6.0, return6m:11.4, return1y:18.8, return3y:12.4, volatility:15.8, morningstar:3 },
-    { id:"BAR-014", company:"霸菱", name:"霸菱亞洲成長基金",       category:"股票型", region:"亞洲",   dividendYield:0,   return1m:1.8, return3m:5.4, return6m:10.2, return1y:16.8, return3y:10.8, volatility:16.8, morningstar:3 },
-    // ---- 施羅德 ----
-    { id:"SCH-001", company:"施羅德", name:"施羅德環球股票收益基金",    category:"股票型", region:"全球",   dividendYield:4.2, return1m:1.6, return3m:4.8, return6m:9.2, return1y:15.4, return3y:10.2, volatility:11.8, morningstar:4 },
-    { id:"SCH-002", company:"施羅德", name:"施羅德新興市場基金",        category:"股票型", region:"新興市場",dividendYield:0,  return1m:1.2, return3m:3.6, return6m:7.2, return1y:10.4, return3y:5.8, volatility:19.2, morningstar:3 },
-    { id:"SCH-003", company:"施羅德", name:"施羅德亞洲高收益債券基金",  category:"債券型", region:"亞洲",   dividendYield:6.4, return1m:0.7, return3m:2.1, return6m:4.2, return1y:7.8, return3y:5.2, volatility:7.2, morningstar:3 },
-    { id:"SCH-004", company:"施羅德", name:"施羅德環球能源轉型基金",    category:"股票型", region:"全球",   dividendYield:0,   return1m:1.4, return3m:4.2, return6m:8.0, return1y:14.8, return3y:9.4, volatility:16.4, morningstar:3 },
-    { id:"SCH-005", company:"施羅德", name:"施羅德印度機會基金",        category:"股票型", region:"印度",   dividendYield:0,   return1m:2.2, return3m:6.6, return6m:12.4, return1y:20.8, return3y:14.2, volatility:23.4, morningstar:4 },
-    { id:"SCH-006", company:"施羅德", name:"施羅德日本股票基金",        category:"股票型", region:"日本",   dividendYield:0,   return1m:1.8, return3m:5.4, return6m:10.2, return1y:17.4, return3y:11.2, volatility:15.8, morningstar:3 },
-    { id:"SCH-007", company:"施羅德", name:"施羅德多重資產基金",        category:"平衡型", region:"全球",   dividendYield:5.4, return1m:1.0, return3m:3.0, return6m:6.0, return1y:10.2, return3y:6.8, volatility:8.8, morningstar:4 },
-    { id:"SCH-008", company:"施羅德", name:"施羅德環球高息股基金",      category:"股票型", region:"全球",   dividendYield:4.8, return1m:1.4, return3m:4.2, return6m:8.4, return1y:14.2, return3y:9.4, volatility:13.4, morningstar:3 },
-    { id:"SCH-009", company:"施羅德", name:"施羅德美國股票基金",        category:"股票型", region:"美國",   dividendYield:0,   return1m:2.6, return3m:7.8, return6m:14.8, return1y:24.2, return3y:15.8, volatility:16.8, morningstar:4 },
-    { id:"SCH-010", company:"施羅德", name:"施羅德東南亞基金",          category:"股票型", region:"亞洲",   dividendYield:0,   return1m:1.4, return3m:4.2, return6m:8.0, return1y:13.4, return3y:8.4, volatility:17.4, morningstar:3 },
-    { id:"SCH-011", company:"施羅德", name:"施羅德全球非投資級債基金",  category:"債券型", region:"全球",   dividendYield:7.2, return1m:0.9, return3m:2.8, return6m:5.4, return1y:9.2, return3y:6.4, volatility:8.4, morningstar:4 },
-    { id:"SCH-012", company:"施羅德", name:"施羅德中國股票基金",        category:"股票型", region:"中國",   dividendYield:0,   return1m:1.2, return3m:3.6, return6m:7.2, return1y:12.4, return3y:7.8, volatility:19.4, morningstar:3 },
-    { id:"SCH-013", company:"施羅德", name:"施羅德歐洲股票基金",        category:"股票型", region:"歐洲",   dividendYield:0,   return1m:1.6, return3m:4.8, return6m:9.2, return1y:15.4, return3y:10.2, volatility:14.8, morningstar:3 },
-    // ---- 景順 ----
-    { id:"INV-001", company:"景順", name:"景順科技基金",           category:"股票型", region:"全球",   dividendYield:0,   return1m:3.2, return3m:9.6, return6m:18.4, return1y:26.8, return3y:15.4, volatility:20.1, morningstar:4 },
-    { id:"INV-002", company:"景順", name:"景順亞洲基金",           category:"股票型", region:"亞洲",   dividendYield:0,   return1m:1.8, return3m:5.4, return6m:10.2, return1y:16.4, return3y:10.8, volatility:15.8, morningstar:3 },
-    { id:"INV-003", company:"景順", name:"景順全球高收益債基金",   category:"債券型", region:"全球",   dividendYield:7.0, return1m:0.8, return3m:2.4, return6m:4.8, return1y:8.4, return3y:5.6, volatility:7.8, morningstar:3 },
-    { id:"INV-004", company:"景順", name:"景順印度股票基金",       category:"股票型", region:"印度",   dividendYield:0,   return1m:2.2, return3m:6.6, return6m:12.4, return1y:20.8, return3y:14.2, volatility:23.4, morningstar:4 },
-    { id:"INV-005", company:"景順", name:"景順中國基金",           category:"股票型", region:"中國",   dividendYield:0,   return1m:1.2, return3m:3.6, return6m:7.2, return1y:12.4, return3y:7.8, volatility:19.4, morningstar:3 },
-    { id:"INV-006", company:"景順", name:"景順環球股票收益基金",   category:"股票型", region:"全球",   dividendYield:4.4, return1m:1.6, return3m:4.8, return6m:9.2, return1y:15.4, return3y:10.2, volatility:13.4, morningstar:4 },
-    { id:"INV-007", company:"景順", name:"景順日本基金",           category:"股票型", region:"日本",   dividendYield:0,   return1m:1.8, return3m:5.4, return6m:10.2, return1y:17.6, return3y:11.4, volatility:15.8, morningstar:3 },
-    { id:"INV-008", company:"景順", name:"景順美國成長基金",       category:"股票型", region:"美國",   dividendYield:0,   return1m:2.6, return3m:7.8, return6m:14.8, return1y:24.4, return3y:15.8, volatility:17.2, morningstar:4 },
-    { id:"INV-009", company:"景順", name:"景順多元資產基金",       category:"平衡型", region:"全球",   dividendYield:5.4, return1m:1.0, return3m:3.0, return6m:6.0, return1y:10.2, return3y:6.8, volatility:8.8, morningstar:3 },
-    { id:"INV-010", company:"景順", name:"景順新興市場基金",       category:"股票型", region:"新興市場",dividendYield:0,  return1m:1.4, return3m:4.2, return6m:8.0, return1y:13.4, return3y:8.4, volatility:17.8, morningstar:3 },
-    { id:"INV-011", company:"景順", name:"景順歐洲基金",           category:"股票型", region:"歐洲",   dividendYield:0,   return1m:1.6, return3m:4.8, return6m:9.2, return1y:15.4, return3y:10.2, volatility:14.8, morningstar:3 },
-    { id:"INV-012", company:"景順", name:"景順全球非投資級債基金", category:"債券型", region:"全球",   dividendYield:7.4, return1m:0.9, return3m:2.8, return6m:5.4, return1y:9.2, return3y:6.4, volatility:8.8, morningstar:3 },
-    { id:"INV-013", company:"景順", name:"景順亞洲平衡基金",       category:"平衡型", region:"亞洲",   dividendYield:4.8, return1m:1.2, return3m:3.6, return6m:7.2, return1y:11.8, return3y:7.8, volatility:9.8, morningstar:3 },
-    // ---- 貝萊德 ----
-    { id:"BLK-001", company:"貝萊德", name:"貝萊德世界基金",           category:"股票型", region:"全球",   dividendYield:0,   return1m:2.2, return3m:6.6, return6m:12.4, return1y:20.6, return3y:12.8, volatility:13.6, morningstar:4 },
-    { id:"BLK-002", company:"貝萊德", name:"貝萊德美國靈活股票基金",   category:"股票型", region:"美國",   dividendYield:0,   return1m:2.6, return3m:7.8, return6m:14.8, return1y:23.4, return3y:14.8, volatility:14.8, morningstar:4 },
-    { id:"BLK-003", company:"貝萊德", name:"貝萊德新興市場基金",       category:"股票型", region:"新興市場",dividendYield:0,  return1m:1.4, return3m:4.2, return6m:8.4, return1y:13.8, return3y:8.4, volatility:17.4, morningstar:3 },
-    { id:"BLK-004", company:"貝萊德", name:"貝萊德全球政府債券基金",   category:"債券型", region:"全球",   dividendYield:3.8, return1m:0.3, return3m:0.9, return6m:2.0, return1y:4.2, return3y:2.6, volatility:4.4, morningstar:3 },
-    { id:"BLK-005", company:"貝萊德", name:"貝萊德印度基金",           category:"股票型", region:"印度",   dividendYield:0,   return1m:2.2, return3m:6.6, return6m:12.4, return1y:20.8, return3y:14.2, volatility:23.4, morningstar:4 },
-    { id:"BLK-006", company:"貝萊德", name:"貝萊德中國基金",           category:"股票型", region:"中國",   dividendYield:0,   return1m:1.2, return3m:3.6, return6m:7.2, return1y:12.4, return3y:7.8, volatility:19.4, morningstar:3 },
-    { id:"BLK-007", company:"貝萊德", name:"貝萊德日本基金",           category:"股票型", region:"日本",   dividendYield:0,   return1m:1.8, return3m:5.4, return6m:10.2, return1y:17.6, return3y:11.4, volatility:15.8, morningstar:3 },
-    { id:"BLK-008", company:"貝萊德", name:"貝萊德全球多元收益基金",   category:"平衡型", region:"全球",   dividendYield:5.8, return1m:1.0, return3m:3.0, return6m:6.0, return1y:10.4, return3y:7.0, volatility:8.8, morningstar:4 },
-    { id:"BLK-009", company:"貝萊德", name:"貝萊德亞洲高收益債基金",   category:"債券型", region:"亞洲",   dividendYield:6.8, return1m:0.8, return3m:2.4, return6m:4.8, return1y:8.4, return3y:5.6, volatility:7.4, morningstar:4 },
-    { id:"BLK-010", company:"貝萊德", name:"貝萊德歐洲基金",           category:"股票型", region:"歐洲",   dividendYield:0,   return1m:1.6, return3m:4.8, return6m:9.2, return1y:15.4, return3y:10.2, volatility:14.8, morningstar:3 },
-    { id:"BLK-011", company:"貝萊德", name:"貝萊德科技基金",           category:"股票型", region:"全球",   dividendYield:0,   return1m:3.2, return3m:9.6, return6m:18.4, return1y:30.8, return3y:18.8, volatility:21.8, morningstar:5 },
-    { id:"BLK-012", company:"貝萊德", name:"貝萊德全球高收益債基金",   category:"債券型", region:"全球",   dividendYield:7.2, return1m:0.9, return3m:2.8, return6m:5.4, return1y:9.2, return3y:6.4, volatility:8.4, morningstar:4 },
-    { id:"BLK-013", company:"貝萊德", name:"貝萊德東南亞基金",         category:"股票型", region:"亞洲",   dividendYield:0,   return1m:1.4, return3m:4.2, return6m:8.0, return1y:13.8, return3y:8.8, volatility:17.8, morningstar:3 },
-    { id:"BLK-014", company:"貝萊德", name:"貝萊德台灣基金",           category:"股票型", region:"台灣",   dividendYield:0,   return1m:2.0, return3m:6.0, return6m:11.4, return1y:20.8, return3y:14.0, volatility:15.4, morningstar:3 },
-    // ---- PIMCO ----
-    { id:"PIM-001", company:"PIMCO", name:"PIMCO收益基金",           category:"債券型", region:"全球",   dividendYield:7.2, return1m:0.9, return3m:2.7, return6m:5.4, return1y:8.4, return3y:5.2, volatility:6.2, morningstar:5 },
-    { id:"PIM-002", company:"PIMCO", name:"PIMCO全球債券基金",       category:"債券型", region:"全球",   dividendYield:4.4, return1m:0.4, return3m:1.2, return6m:2.4, return1y:4.8, return3y:3.0, volatility:5.0, morningstar:4 },
-    { id:"PIM-003", company:"PIMCO", name:"PIMCO高收益債券基金",     category:"債券型", region:"全球",   dividendYield:7.8, return1m:1.0, return3m:3.0, return6m:6.0, return1y:9.8, return3y:6.8, volatility:8.4, morningstar:4 },
-    { id:"PIM-004", company:"PIMCO", name:"PIMCO新興市場債基金",     category:"債券型", region:"新興市場",dividendYield:6.4, return1m:0.7, return3m:2.1, return6m:4.2, return1y:7.8, return3y:5.2, volatility:8.8, morningstar:4 },
-    { id:"PIM-005", company:"PIMCO", name:"PIMCO美國短期債基金",     category:"債券型", region:"美國",   dividendYield:4.8, return1m:0.3, return3m:1.0, return6m:2.0, return1y:4.8, return3y:3.2, volatility:2.8, morningstar:4 },
-    { id:"PIM-006", company:"PIMCO", name:"PIMCO亞洲高收益債基金",   category:"債券型", region:"亞洲",   dividendYield:7.2, return1m:0.8, return3m:2.4, return6m:4.8, return1y:8.8, return3y:5.8, volatility:8.2, morningstar:4 },
-    { id:"PIM-007", company:"PIMCO", name:"PIMCO全球投資級債基金",   category:"債券型", region:"全球",   dividendYield:4.2, return1m:0.4, return3m:1.2, return6m:2.4, return1y:4.8, return3y:3.2, volatility:5.2, morningstar:4 },
-    { id:"PIM-008", company:"PIMCO", name:"PIMCO靈活收益基金",       category:"債券型", region:"全球",   dividendYield:6.8, return1m:0.8, return3m:2.4, return6m:4.8, return1y:8.4, return3y:5.6, volatility:6.8, morningstar:5 },
-    { id:"PIM-009", company:"PIMCO", name:"PIMCO美國長期公債基金",   category:"債券型", region:"美國",   dividendYield:3.6, return1m:0.2, return3m:0.6, return6m:1.2, return1y:3.6, return3y:2.2, volatility:5.8, morningstar:3 },
-    { id:"PIM-010", company:"PIMCO", name:"PIMCO歐元債券基金",       category:"債券型", region:"歐洲",   dividendYield:3.8, return1m:0.3, return3m:0.9, return6m:1.8, return1y:3.8, return3y:2.4, volatility:4.8, morningstar:3 },
-    { id:"PIM-011", company:"PIMCO", name:"PIMCO多空策略基金",       category:"平衡型", region:"全球",   dividendYield:0,   return1m:0.8, return3m:2.4, return6m:4.8, return1y:8.4, return3y:5.6, volatility:6.4, morningstar:3 },
-    { id:"PIM-012", company:"PIMCO", name:"PIMCO氣候債券基金",       category:"債券型", region:"全球",   dividendYield:4.0, return1m:0.4, return3m:1.2, return6m:2.4, return1y:4.8, return3y:3.2, volatility:5.0, morningstar:3 },
-    { id:"PIM-013", company:"PIMCO", name:"PIMCO亞洲策略利率基金",   category:"債券型", region:"亞洲",   dividendYield:4.4, return1m:0.4, return3m:1.2, return6m:2.4, return1y:5.0, return3y:3.4, volatility:4.8, morningstar:3 },
-    // ---- 瀚亞 ----
-    { id:"PRI-001", company:"瀚亞", name:"瀚亞印度基金",             category:"股票型", region:"印度",   dividendYield:0,   return1m:2.0, return3m:6.0, return6m:11.4, return1y:19.8, return3y:13.2, volatility:21.2, morningstar:4 },
-    { id:"PRI-002", company:"瀚亞", name:"瀚亞亞太不動產基金",       category:"股票型", region:"亞洲",   dividendYield:4.8, return1m:1.2, return3m:3.6, return6m:7.2, return1y:11.8, return3y:7.4, volatility:12.8, morningstar:3 },
-    { id:"PRI-003", company:"瀚亞", name:"瀚亞新興市場高收益債基金", category:"債券型", region:"新興市場",dividendYield:6.8, return1m:0.7, return3m:2.1, return6m:4.2, return1y:7.4, return3y:4.8, volatility:8.8, morningstar:3 },
-    { id:"PRI-004", company:"瀚亞", name:"瀚亞中國基金",             category:"股票型", region:"中國",   dividendYield:0,   return1m:1.2, return3m:3.6, return6m:7.2, return1y:12.4, return3y:7.8, volatility:19.4, morningstar:3 },
-    { id:"PRI-005", company:"瀚亞", name:"瀚亞日本基金",             category:"股票型", region:"日本",   dividendYield:0,   return1m:1.8, return3m:5.4, return6m:10.2, return1y:17.4, return3y:11.2, volatility:15.8, morningstar:3 },
-    { id:"PRI-006", company:"瀚亞", name:"瀚亞全球高收益債基金",     category:"債券型", region:"全球",   dividendYield:7.2, return1m:0.9, return3m:2.8, return6m:5.4, return1y:9.2, return3y:6.4, volatility:8.4, morningstar:3 },
-    { id:"PRI-007", company:"瀚亞", name:"瀚亞新興市場股票基金",     category:"股票型", region:"新興市場",dividendYield:0,  return1m:1.4, return3m:4.2, return6m:8.0, return1y:13.4, return3y:8.4, volatility:17.8, morningstar:3 },
-    { id:"PRI-008", company:"瀚亞", name:"瀚亞多元資產平衡基金",     category:"平衡型", region:"全球",   dividendYield:5.4, return1m:1.0, return3m:3.0, return6m:6.0, return1y:10.2, return3y:6.8, volatility:8.8, morningstar:3 },
-    { id:"PRI-009", company:"瀚亞", name:"瀚亞美國股票基金",         category:"股票型", region:"美國",   dividendYield:0,   return1m:2.6, return3m:7.8, return6m:14.8, return1y:24.2, return3y:15.8, volatility:17.2, morningstar:4 },
-    { id:"PRI-010", company:"瀚亞", name:"瀚亞台灣優質基金",         category:"股票型", region:"台灣",   dividendYield:0,   return1m:2.0, return3m:6.0, return6m:11.4, return1y:20.4, return3y:13.8, volatility:15.4, morningstar:3 },
-    { id:"PRI-011", company:"瀚亞", name:"瀚亞全球醫療基金",         category:"股票型", region:"全球",   dividendYield:0,   return1m:1.6, return3m:4.8, return6m:9.2, return1y:15.8, return3y:10.4, volatility:14.8, morningstar:3 },
-    { id:"PRI-012", company:"瀚亞", name:"瀚亞東南亞基金",           category:"股票型", region:"亞洲",   dividendYield:0,   return1m:1.4, return3m:4.2, return6m:8.0, return1y:13.4, return3y:8.4, volatility:17.2, morningstar:3 },
-    { id:"PRI-013", company:"瀚亞", name:"瀚亞亞洲公司債基金",       category:"債券型", region:"亞洲",   dividendYield:4.4, return1m:0.4, return3m:1.2, return6m:2.4, return1y:5.0, return3y:3.4, volatility:5.2, morningstar:3 },
-    // ---- 台新 ----
-    { id:"TSB-001", company:"台新", name:"台新全球入息資產證券化基金", category:"債券型", region:"全球", dividendYield:5.4, return1m:0.5, return3m:1.5, return6m:3.0, return1y:5.8, return3y:3.8, volatility:4.8, morningstar:3 },
-    { id:"TSB-002", company:"台新", name:"台新台灣基金",             category:"股票型", region:"台灣",   dividendYield:0,   return1m:2.0, return3m:6.0, return6m:11.4, return1y:20.8, return3y:14.0, volatility:14.4, morningstar:3 },
-    { id:"TSB-003", company:"台新", name:"台新AI科技基金",           category:"股票型", region:"全球",   dividendYield:0,   return1m:3.2, return3m:9.6, return6m:18.4, return1y:30.4, return3y:18.8, volatility:22.4, morningstar:4 },
-    { id:"TSB-004", company:"台新", name:"台新亞太平衡基金",         category:"平衡型", region:"亞洲",   dividendYield:5.2, return1m:1.0, return3m:3.0, return6m:6.0, return1y:10.2, return3y:6.8, volatility:9.2, morningstar:3 },
-    { id:"TSB-005", company:"台新", name:"台新全球債券基金",         category:"債券型", region:"全球",   dividendYield:4.2, return1m:0.4, return3m:1.2, return6m:2.4, return1y:4.8, return3y:3.2, volatility:5.2, morningstar:3 },
-    { id:"TSB-006", company:"台新", name:"台新印度基金",             category:"股票型", region:"印度",   dividendYield:0,   return1m:2.2, return3m:6.6, return6m:12.4, return1y:20.4, return3y:14.0, volatility:23.4, morningstar:3 },
-    { id:"TSB-007", company:"台新", name:"台新美國增長基金",         category:"股票型", region:"美國",   dividendYield:0,   return1m:2.6, return3m:7.8, return6m:14.8, return1y:24.2, return3y:15.8, volatility:17.4, morningstar:3 },
-    { id:"TSB-008", company:"台新", name:"台新多元策略基金",         category:"平衡型", region:"全球",   dividendYield:0,   return1m:1.4, return3m:4.2, return6m:8.0, return1y:13.4, return3y:9.0, volatility:10.4, morningstar:3 },
-    { id:"TSB-009", company:"台新", name:"台新新興市場基金",         category:"股票型", region:"新興市場",dividendYield:0,  return1m:1.4, return3m:4.2, return6m:8.0, return1y:13.4, return3y:8.4, volatility:17.8, morningstar:3 },
-    { id:"TSB-010", company:"台新", name:"台新高收益債基金",         category:"債券型", region:"全球",   dividendYield:7.0, return1m:0.9, return3m:2.8, return6m:5.4, return1y:9.2, return3y:6.4, volatility:8.4, morningstar:3 },
-    { id:"TSB-011", company:"台新", name:"台新亞洲成長基金",         category:"股票型", region:"亞洲",   dividendYield:0,   return1m:1.8, return3m:5.4, return6m:10.2, return1y:17.4, return3y:11.4, volatility:17.2, morningstar:3 },
-    { id:"TSB-012", company:"台新", name:"台新全球不動產基金",       category:"股票型", region:"全球",   dividendYield:4.4, return1m:1.0, return3m:3.0, return6m:6.0, return1y:10.2, return3y:6.8, volatility:12.4, morningstar:3 },
-    // ---- 新光 ----
-    { id:"SKF-001", company:"新光", name:"新光全球優質股票基金",     category:"股票型", region:"全球",   dividendYield:0,   return1m:2.1, return3m:6.3, return6m:11.8, return1y:19.4, return3y:12.8, volatility:13.4, morningstar:3 },
-    { id:"SKF-002", company:"新光", name:"新光台灣半導體基金",       category:"股票型", region:"台灣",   dividendYield:0,   return1m:3.8, return3m:11.4, return6m:21.6, return1y:36.4, return3y:25.8, volatility:25.4, morningstar:5 },
-    { id:"SKF-003", company:"新光", name:"新光AI科技基金",           category:"股票型", region:"全球",   dividendYield:0,   return1m:3.4, return3m:10.2, return6m:19.6, return1y:32.4, return3y:20.8, volatility:23.4, morningstar:4 },
-    { id:"SKF-004", company:"新光", name:"新光亞太基金",             category:"股票型", region:"亞洲",   dividendYield:0,   return1m:1.8, return3m:5.4, return6m:10.2, return1y:17.4, return3y:11.4, volatility:17.2, morningstar:3 },
-    { id:"SKF-005", company:"新光", name:"新光全球債券基金",         category:"債券型", region:"全球",   dividendYield:4.2, return1m:0.4, return3m:1.2, return6m:2.4, return1y:4.8, return3y:3.2, volatility:5.2, morningstar:3 },
-    { id:"SKF-006", company:"新光", name:"新光印度基金",             category:"股票型", region:"印度",   dividendYield:0,   return1m:2.2, return3m:6.6, return6m:12.4, return1y:20.4, return3y:14.0, volatility:23.4, morningstar:3 },
-    { id:"SKF-007", company:"新光", name:"新光全球高收益債基金",     category:"債券型", region:"全球",   dividendYield:7.0, return1m:0.9, return3m:2.8, return6m:5.4, return1y:9.2, return3y:6.4, volatility:8.4, morningstar:3 },
-    { id:"SKF-008", company:"新光", name:"新光多元收益基金",         category:"平衡型", region:"全球",   dividendYield:5.4, return1m:1.0, return3m:3.0, return6m:6.0, return1y:10.2, return3y:6.8, volatility:8.8, morningstar:3 },
-    { id:"SKF-009", company:"新光", name:"新光中國基金",             category:"股票型", region:"中國",   dividendYield:0,   return1m:1.2, return3m:3.6, return6m:7.2, return1y:12.4, return3y:7.8, volatility:19.4, morningstar:3 },
-    { id:"SKF-010", company:"新光", name:"新光美國成長基金",         category:"股票型", region:"美國",   dividendYield:0,   return1m:2.6, return3m:7.8, return6m:14.8, return1y:24.2, return3y:15.8, volatility:17.4, morningstar:3 },
-    { id:"SKF-011", company:"新光", name:"新光亞洲高收益債基金",     category:"債券型", region:"亞洲",   dividendYield:6.8, return1m:0.8, return3m:2.4, return6m:4.8, return1y:8.4, return3y:5.6, volatility:7.8, morningstar:3 },
-    { id:"SKF-012", company:"新光", name:"新光東南亞基金",           category:"股票型", region:"亞洲",   dividendYield:0,   return1m:1.4, return3m:4.2, return6m:8.0, return1y:13.4, return3y:8.4, volatility:17.4, morningstar:3 },
-    // ---- 第一金 ----
-    { id:"FCB-001", company:"第一金", name:"第一金全球AI科技基金",       category:"股票型", region:"全球", dividendYield:0,   return1m:3.4, return3m:10.2, return6m:19.4, return1y:29.8, return3y:20.4, volatility:21.8, morningstar:4 },
-    { id:"FCB-002", company:"第一金", name:"第一金高科技基金",           category:"股票型", region:"台灣", dividendYield:0,   return1m:3.2, return3m:9.6,  return6m:18.2, return1y:31.4, return3y:22.4, volatility:23.2, morningstar:4 },
-    { id:"FCB-003", company:"第一金", name:"第一金全球機器人及自動化基金",category:"股票型", region:"全球", dividendYield:0,   return1m:2.8, return3m:8.4,  return6m:15.8, return1y:26.4, return3y:17.4, volatility:20.8, morningstar:4 },
-    { id:"FCB-004", company:"第一金", name:"第一金印度基金",             category:"股票型", region:"印度", dividendYield:0,   return1m:2.2, return3m:6.6,  return6m:12.4, return1y:20.4, return3y:14.0, volatility:23.4, morningstar:3 },
-    { id:"FCB-005", company:"第一金", name:"第一金全球醫療基金",         category:"股票型", region:"全球", dividendYield:0,   return1m:1.6, return3m:4.8,  return6m:9.2,  return1y:15.8, return3y:10.4, volatility:15.8, morningstar:3 },
-    { id:"FCB-006", company:"第一金", name:"第一金亞太平衡基金",         category:"平衡型", region:"亞洲", dividendYield:5.2, return1m:1.0, return3m:3.0,  return6m:6.0,  return1y:10.2, return3y:6.8,  volatility:9.4,  morningstar:3 },
-    { id:"FCB-007", company:"第一金", name:"第一金全球公司債基金",       category:"債券型", region:"全球", dividendYield:4.4, return1m:0.4, return3m:1.2,  return6m:2.4,  return1y:4.8,  return3y:3.2,  volatility:5.4,  morningstar:3 },
-    { id:"FCB-008", company:"第一金", name:"第一金東南亞基金",           category:"股票型", region:"亞洲", dividendYield:0,   return1m:1.4, return3m:4.2,  return6m:8.0,  return1y:13.4, return3y:8.4,  volatility:17.4, morningstar:3 },
-    { id:"FCB-009", company:"第一金", name:"第一金美國優先基金",         category:"股票型", region:"美國", dividendYield:0,   return1m:2.6, return3m:7.8,  return6m:14.8, return1y:24.2, return3y:15.8, volatility:17.4, morningstar:3 },
-    { id:"FCB-010", company:"第一金", name:"第一金全球高收益債基金",     category:"債券型", region:"全球", dividendYield:7.0, return1m:0.9, return3m:2.8,  return6m:5.4,  return1y:9.2,  return3y:6.4,  volatility:8.4,  morningstar:3 },
-    { id:"FCB-011", company:"第一金", name:"第一金新興市場基金",         category:"股票型", region:"新興市場",dividendYield:0, return1m:1.4, return3m:4.2,  return6m:8.0,  return1y:13.4, return3y:8.4,  volatility:17.8, morningstar:3 },
-    { id:"FCB-012", company:"第一金", name:"第一金多元收益基金",         category:"平衡型", region:"全球", dividendYield:5.4, return1m:1.0, return3m:3.0,  return6m:6.0,  return1y:10.2, return3y:6.8,  volatility:8.8,  morningstar:3 },
-    // ---- 兆豐 ----
-    { id:"CMB-001", company:"兆豐", name:"兆豐國際全球優先基金",     category:"債券型", region:"全球",   dividendYield:4.6, return1m:0.4, return3m:1.2, return6m:2.6, return1y:5.2, return3y:3.2, volatility:4.6, morningstar:3 },
-    { id:"CMB-002", company:"兆豐", name:"兆豐台灣基金",             category:"股票型", region:"台灣",   dividendYield:2.8, return1m:1.8, return3m:5.4, return6m:10.2, return1y:19.6, return3y:13.2, volatility:14.2, morningstar:3 },
-    { id:"CMB-003", company:"兆豐", name:"兆豐國際AI人工智能基金",   category:"股票型", region:"全球",   dividendYield:0,   return1m:3.2, return3m:9.6, return6m:18.4, return1y:30.4, return3y:18.8, volatility:22.4, morningstar:4 },
-    { id:"CMB-004", company:"兆豐", name:"兆豐國際亞洲平衡基金",     category:"平衡型", region:"亞洲",   dividendYield:5.2, return1m:1.0, return3m:3.0, return6m:6.0, return1y:10.2, return3y:6.8, volatility:9.4, morningstar:3 },
-    { id:"CMB-005", company:"兆豐", name:"兆豐國際印度基金",         category:"股票型", region:"印度",   dividendYield:0,   return1m:2.2, return3m:6.6, return6m:12.4, return1y:20.4, return3y:14.0, volatility:23.4, morningstar:3 },
-    { id:"CMB-006", company:"兆豐", name:"兆豐國際高收益債基金",     category:"債券型", region:"全球",   dividendYield:7.0, return1m:0.9, return3m:2.8, return6m:5.4, return1y:9.2, return3y:6.4, volatility:8.4, morningstar:3 },
-    { id:"CMB-007", company:"兆豐", name:"兆豐國際東南亞基金",       category:"股票型", region:"亞洲",   dividendYield:0,   return1m:1.4, return3m:4.2, return6m:8.0, return1y:13.4, return3y:8.4, volatility:17.4, morningstar:3 },
-    { id:"CMB-008", company:"兆豐", name:"兆豐國際全球股票基金",     category:"股票型", region:"全球",   dividendYield:0,   return1m:2.0, return3m:6.0, return6m:11.4, return1y:19.4, return3y:12.8, volatility:15.8, morningstar:3 },
-    { id:"CMB-009", company:"兆豐", name:"兆豐國際美國基金",         category:"股票型", region:"美國",   dividendYield:0,   return1m:2.6, return3m:7.8, return6m:14.8, return1y:24.2, return3y:15.8, volatility:17.4, morningstar:3 },
-    { id:"CMB-010", company:"兆豐", name:"兆豐國際公司債基金",       category:"債券型", region:"全球",   dividendYield:4.4, return1m:0.4, return3m:1.2, return6m:2.4, return1y:4.8, return3y:3.2, volatility:5.2, morningstar:3 },
-    { id:"CMB-011", company:"兆豐", name:"兆豐國際新興市場基金",     category:"股票型", region:"新興市場",dividendYield:0,  return1m:1.4, return3m:4.2, return6m:8.0, return1y:13.4, return3y:8.4, volatility:17.8, morningstar:3 },
-    { id:"CMB-012", company:"兆豐", name:"兆豐國際多元收益基金",     category:"平衡型", region:"全球",   dividendYield:5.4, return1m:1.0, return3m:3.0, return6m:6.0, return1y:10.2, return3y:6.8, volatility:8.8, morningstar:3 },
-    // ---- 統一 ----
-    { id:"UNI-001", company:"統一", name:"統一全球新能源基金",       category:"股票型", region:"全球",   dividendYield:0,   return1m:1.4, return3m:4.2, return6m:8.4, return1y:14.8, return3y:9.4, volatility:16.4, morningstar:3 },
-    { id:"UNI-002", company:"統一", name:"統一台灣動力基金",         category:"股票型", region:"台灣",   dividendYield:0,   return1m:2.2, return3m:6.6, return6m:12.4, return1y:22.8, return3y:15.4, volatility:15.8, morningstar:3 },
-    { id:"UNI-003", company:"統一", name:"統一全球AI基金",           category:"股票型", region:"全球",   dividendYield:0,   return1m:3.2, return3m:9.6, return6m:18.4, return1y:30.4, return3y:18.8, volatility:22.4, morningstar:4 },
-    { id:"UNI-004", company:"統一", name:"統一印度基金",             category:"股票型", region:"印度",   dividendYield:0,   return1m:2.2, return3m:6.6, return6m:12.4, return1y:20.4, return3y:14.0, volatility:23.4, morningstar:3 },
-    { id:"UNI-005", company:"統一", name:"統一高收益債基金",         category:"債券型", region:"全球",   dividendYield:7.0, return1m:0.9, return3m:2.8, return6m:5.4, return1y:9.2, return3y:6.4, volatility:8.4, morningstar:3 },
-    { id:"UNI-006", company:"統一", name:"統一全球平衡基金",         category:"平衡型", region:"全球",   dividendYield:5.4, return1m:1.0, return3m:3.0, return6m:6.0, return1y:10.2, return3y:6.8, volatility:8.8, morningstar:3 },
-    { id:"UNI-007", company:"統一", name:"統一亞太基金",             category:"股票型", region:"亞洲",   dividendYield:0,   return1m:1.8, return3m:5.4, return6m:10.2, return1y:17.4, return3y:11.4, volatility:17.2, morningstar:3 },
-    { id:"UNI-008", company:"統一", name:"統一中國基金",             category:"股票型", region:"中國",   dividendYield:0,   return1m:1.2, return3m:3.6, return6m:7.2, return1y:12.4, return3y:7.8, volatility:19.4, morningstar:3 },
-    { id:"UNI-009", company:"統一", name:"統一美國成長基金",         category:"股票型", region:"美國",   dividendYield:0,   return1m:2.6, return3m:7.8, return6m:14.8, return1y:24.2, return3y:15.8, volatility:17.4, morningstar:3 },
-    { id:"UNI-010", company:"統一", name:"統一東南亞基金",           category:"股票型", region:"亞洲",   dividendYield:0,   return1m:1.4, return3m:4.2, return6m:8.0, return1y:13.4, return3y:8.4, volatility:17.4, morningstar:3 },
-    { id:"UNI-011", company:"統一", name:"統一亞洲高收益債基金",     category:"債券型", region:"亞洲",   dividendYield:6.8, return1m:0.8, return3m:2.4, return6m:4.8, return1y:8.4, return3y:5.6, volatility:7.8, morningstar:3 },
-    { id:"UNI-012", company:"統一", name:"統一全球醫療基金",         category:"股票型", region:"全球",   dividendYield:0,   return1m:1.6, return3m:4.8, return6m:9.2, return1y:15.8, return3y:10.4, volatility:15.8, morningstar:3 },
+  const RAW: Fund[] = [
+    // ── 安聯 ──────────────────────────────────────────────────
+    { id:"alz-001", company:"安聯",   name:"安聯台灣科技基金",         category:"股票型", region:"台灣",   morningstar:5, dividendPerUnit:0.00, dividendFreq:"不配息", dividendYieldM:0,     dividendYieldA:0,    returnYTD:42.4,  return1m:7.1,  return3m:15.8,  return6m:28.4,  return1y:64.8,  return3y:142.4, volatility:24.8 },
+    { id:"alz-002", company:"安聯",   name:"安聯收益成長基金",         category:"平衡型", region:"全球",   morningstar:4, dividendPerUnit:0.04, dividendFreq:"月配息", dividendYieldM:0.42,  dividendYieldA:5.1,  returnYTD:12.4,  return1m:2.1,  return3m:5.0,   return6m:8.8,   return1y:18.4,  return3y:42.8,  volatility:10.4 },
+    { id:"alz-003", company:"安聯",   name:"安聯全球高股息基金",       category:"股票型", region:"全球",   morningstar:4, dividendPerUnit:0.05, dividendFreq:"月配息", dividendYieldM:0.48,  dividendYieldA:5.8,  returnYTD:14.8,  return1m:2.4,  return3m:5.8,   return6m:10.4,  return1y:22.4,  return3y:52.4,  volatility:13.2 },
+    { id:"alz-004", company:"安聯",   name:"安聯歐洲高股息基金",       category:"股票型", region:"歐洲",   morningstar:3, dividendPerUnit:0.06, dividendFreq:"月配息", dividendYieldM:0.52,  dividendYieldA:6.2,  returnYTD:10.8,  return1m:1.8,  return3m:4.2,   return6m:7.4,   return1y:16.4,  return3y:38.4,  volatility:15.8 },
+    // ── 聯博 ──────────────────────────────────────────────────
+    { id:"ab-001",  company:"聯博",   name:"聯博全球高收益債券基金",   category:"債券型", region:"全球",   morningstar:5, dividendPerUnit:0.06, dividendFreq:"月配息", dividendYieldM:0.56,  dividendYieldA:6.7,  returnYTD:8.4,   return1m:1.4,  return3m:3.2,   return6m:5.8,   return1y:12.4,  return3y:28.4,  volatility:8.2  },
+    { id:"ab-002",  company:"聯博",   name:"聯博美國收益基金",         category:"債券型", region:"美國",   morningstar:4, dividendPerUnit:0.05, dividendFreq:"月配息", dividendYieldM:0.52,  dividendYieldA:6.2,  returnYTD:6.8,   return1m:1.1,  return3m:2.6,   return6m:4.8,   return1y:10.2,  return3y:22.4,  volatility:7.4  },
+    { id:"ab-003",  company:"聯博",   name:"聯博全球平衡基金",         category:"平衡型", region:"全球",   morningstar:4, dividendPerUnit:0.03, dividendFreq:"月配息", dividendYieldM:0.38,  dividendYieldA:4.6,  returnYTD:14.8,  return1m:2.4,  return3m:5.8,   return6m:10.4,  return1y:22.4,  return3y:51.4,  volatility:11.2 },
+    // ── 富達 ──────────────────────────────────────────────────
+    { id:"fid-001", company:"富達",   name:"富達基金－美國基金",       category:"股票型", region:"美國",   morningstar:4, dividendPerUnit:0.00, dividendFreq:"不配息", dividendYieldM:0,     dividendYieldA:0,    returnYTD:28.4,  return1m:4.8,  return3m:10.8,  return6m:19.4,  return1y:44.8,  return3y:98.4,  volatility:18.4 },
+    { id:"fid-002", company:"富達",   name:"富達全球收益基金",         category:"平衡型", region:"全球",   morningstar:4, dividendPerUnit:0.05, dividendFreq:"月配息", dividendYieldM:0.46,  dividendYieldA:5.5,  returnYTD:12.4,  return1m:2.0,  return3m:4.8,   return6m:8.6,   return1y:18.2,  return3y:42.1,  volatility:11.4 },
+    { id:"fid-003", company:"富達",   name:"富達基金－歐洲基金",       category:"股票型", region:"歐洲",   morningstar:3, dividendPerUnit:0.00, dividendFreq:"不配息", dividendYieldM:0,     dividendYieldA:0,    returnYTD:14.8,  return1m:2.4,  return3m:5.8,   return6m:10.4,  return1y:22.8,  return3y:52.4,  volatility:16.2 },
+    // ── 摩根 ──────────────────────────────────────────────────
+    { id:"jpm-001", company:"摩根",   name:"摩根美國科技基金",         category:"股票型", region:"美國",   morningstar:5, dividendPerUnit:0.00, dividendFreq:"不配息", dividendYieldM:0,     dividendYieldA:0,    returnYTD:38.4,  return1m:6.4,  return3m:14.2,  return6m:25.8,  return1y:58.4,  return3y:128.4, volatility:24.8 },
+    { id:"jpm-002", company:"摩根",   name:"摩根全球股票入息基金",     category:"股票型", region:"全球",   morningstar:4, dividendPerUnit:0.06, dividendFreq:"月配息", dividendYieldM:0.52,  dividendYieldA:6.2,  returnYTD:14.8,  return1m:2.4,  return3m:5.8,   return6m:10.4,  return1y:22.4,  return3y:52.4,  volatility:13.4 },
+    { id:"jpm-003", company:"摩根",   name:"摩根亞太入息基金",         category:"股票型", region:"亞洲",   morningstar:4, dividendPerUnit:0.07, dividendFreq:"月配息", dividendYieldM:0.58,  dividendYieldA:7.0,  returnYTD:16.4,  return1m:2.8,  return3m:6.4,   return6m:11.4,  return1y:24.8,  return3y:56.4,  volatility:16.4 },
+    // ── 貝萊德 ──────────────────────────────────────────────────
+    { id:"blk-001", company:"貝萊德", name:"貝萊德世界科技基金",       category:"股票型", region:"全球",   morningstar:5, dividendPerUnit:0.00, dividendFreq:"不配息", dividendYieldM:0,     dividendYieldA:0,    returnYTD:36.8,  return1m:6.1,  return3m:13.6,  return6m:24.8,  return1y:56.4,  return3y:124.8, volatility:24.2 },
+    { id:"blk-002", company:"貝萊德", name:"貝萊德全球配置基金",       category:"平衡型", region:"全球",   morningstar:4, dividendPerUnit:0.03, dividendFreq:"月配息", dividendYieldM:0.32,  dividendYieldA:3.8,  returnYTD:12.4,  return1m:2.1,  return3m:5.0,   return6m:8.8,   return1y:18.8,  return3y:44.2,  volatility:10.8 },
+    { id:"blk-003", company:"貝萊德", name:"貝萊德全球政府債券基金",   category:"債券型", region:"全球",   morningstar:3, dividendPerUnit:0.04, dividendFreq:"月配息", dividendYieldM:0.38,  dividendYieldA:4.6,  returnYTD:2.4,   return1m:0.4,  return3m:1.0,   return6m:1.8,   return1y:4.2,   return3y:8.8,   volatility:7.2  },
+    // ── 霸菱 ──────────────────────────────────────────────────
+    { id:"bar-001", company:"霸菱",   name:"霸菱優先順位資產抵押債券基金",category:"債券型",region:"全球",  morningstar:5, dividendPerUnit:0.05, dividendFreq:"月配息", dividendYieldM:0.50,  dividendYieldA:6.0,  returnYTD:7.4,   return1m:1.2,  return3m:2.8,   return6m:5.2,   return1y:10.8,  return3y:24.4,  volatility:7.8  },
+    { id:"bar-002", company:"霸菱",   name:"霸菱亞洲股票型基金",       category:"股票型", region:"亞洲",   morningstar:4, dividendPerUnit:0.04, dividendFreq:"季配息", dividendYieldM:0.12,  dividendYieldA:1.5,  returnYTD:18.4,  return1m:3.1,  return3m:7.2,   return6m:12.8,  return1y:28.4,  return3y:64.8,  volatility:18.4 },
+    // ── 施羅德 ──────────────────────────────────────────────────
+    { id:"sch-001", company:"施羅德", name:"施羅德環球股息收益基金",   category:"股票型", region:"全球",   morningstar:4, dividendPerUnit:0.07, dividendFreq:"月配息", dividendYieldM:0.60,  dividendYieldA:7.2,  returnYTD:12.8,  return1m:2.1,  return3m:5.0,   return6m:8.8,   return1y:19.2,  return3y:44.8,  volatility:12.8 },
+    { id:"sch-002", company:"施羅德", name:"施羅德亞洲高股息股票基金", category:"股票型", region:"亞洲",   morningstar:4, dividendPerUnit:0.08, dividendFreq:"月配息", dividendYieldM:0.65,  dividendYieldA:7.8,  returnYTD:14.2,  return1m:2.3,  return3m:5.5,   return6m:9.8,   return1y:21.4,  return3y:49.4,  volatility:15.4 },
+    { id:"sch-003", company:"施羅德", name:"施羅德ISF歐洲股息最大化基金",category:"股票型",region:"歐洲",  morningstar:3, dividendPerUnit:0.09, dividendFreq:"月配息", dividendYieldM:0.72,  dividendYieldA:8.6,  returnYTD:10.4,  return1m:1.7,  return3m:4.0,   return6m:7.2,   return1y:15.8,  return3y:36.4,  volatility:15.8 },
+    // ── 野村 ──────────────────────────────────────────────────
+    { id:"nom-001", company:"野村",   name:"野村亞太高股息基金",       category:"股票型", region:"亞洲",   morningstar:4, dividendPerUnit:0.08, dividendFreq:"月配息", dividendYieldM:0.62,  dividendYieldA:7.4,  returnYTD:16.4,  return1m:2.7,  return3m:6.4,   return6m:11.4,  return1y:24.8,  return3y:57.4,  volatility:16.2 },
+    { id:"nom-002", company:"野村",   name:"野村台灣科技基金",         category:"股票型", region:"台灣",   morningstar:4, dividendPerUnit:0.00, dividendFreq:"不配息", dividendYieldM:0,     dividendYieldA:0,    returnYTD:44.8,  return1m:7.4,  return3m:16.4,  return6m:29.8,  return1y:68.4,  return3y:148.4, volatility:26.4 },
+    { id:"nom-003", company:"野村",   name:"野村全球不動產基金",       category:"股票型", region:"全球",   morningstar:3, dividendPerUnit:0.05, dividendFreq:"月配息", dividendYieldM:0.44,  dividendYieldA:5.3,  returnYTD:8.4,   return1m:1.4,  return3m:3.2,   return6m:5.8,   return1y:12.8,  return3y:29.4,  volatility:16.8 },
+    // ── 國泰 ──────────────────────────────────────────────────
+    { id:"cat-001", company:"國泰",   name:"國泰台灣5G+基金",          category:"股票型", region:"台灣",   morningstar:4, dividendPerUnit:0.00, dividendFreq:"不配息", dividendYieldM:0,     dividendYieldA:0,    returnYTD:38.4,  return1m:6.4,  return3m:14.2,  return6m:25.8,  return1y:58.4,  return3y:128.4, volatility:24.8 },
+    { id:"cat-002", company:"國泰",   name:"國泰優質債券基金",         category:"債券型", region:"全球",   morningstar:3, dividendPerUnit:0.04, dividendFreq:"月配息", dividendYieldM:0.36,  dividendYieldA:4.3,  returnYTD:3.8,   return1m:0.6,  return3m:1.4,   return6m:2.6,   return1y:5.8,   return3y:12.4,  volatility:6.8  },
+    // ── 復華 ──────────────────────────────────────────────────
+    { id:"fh-001",  company:"復華",   name:"復華全球物聯網基金",       category:"股票型", region:"全球",   morningstar:4, dividendPerUnit:0.00, dividendFreq:"不配息", dividendYieldM:0,     dividendYieldA:0,    returnYTD:34.8,  return1m:5.8,  return3m:12.8,  return6m:23.2,  return1y:52.4,  return3y:116.4, volatility:22.4 },
+    { id:"fh-002",  company:"復華",   name:"復華台灣科技概念基金",     category:"股票型", region:"台灣",   morningstar:4, dividendPerUnit:0.00, dividendFreq:"不配息", dividendYieldM:0,     dividendYieldA:0,    returnYTD:40.2,  return1m:6.8,  return3m:15.0,  return6m:27.2,  return1y:62.4,  return3y:138.4, volatility:25.2 },
+    // ── 元大 ──────────────────────────────────────────────────
+    { id:"yue-001", company:"元大",   name:"元大台灣高科技基金",       category:"股票型", region:"台灣",   morningstar:5, dividendPerUnit:0.00, dividendFreq:"不配息", dividendYieldM:0,     dividendYieldA:0,    returnYTD:46.4,  return1m:7.8,  return3m:17.2,  return6m:31.2,  return1y:71.4,  return3y:154.8, volatility:27.4 },
+    { id:"yue-002", company:"元大",   name:"元大多元收益組合基金",     category:"平衡型", region:"全球",   morningstar:3, dividendPerUnit:0.04, dividendFreq:"月配息", dividendYieldM:0.40,  dividendYieldA:4.8,  returnYTD:10.4,  return1m:1.7,  return3m:4.1,   return6m:7.4,   return1y:15.8,  return3y:36.4,  volatility:10.2 },
+    // ── 群益 ──────────────────────────────────────────────────
+    { id:"grf-001", company:"群益",   name:"群益店頭市場基金",         category:"股票型", region:"台灣",   morningstar:4, dividendPerUnit:0.00, dividendFreq:"不配息", dividendYieldM:0,     dividendYieldA:0,    returnYTD:28.4,  return1m:4.8,  return3m:10.8,  return6m:19.4,  return1y:44.8,  return3y:98.4,  volatility:20.4 },
+    { id:"grf-002", company:"群益",   name:"群益多重收益組合基金",     category:"平衡型", region:"全球",   morningstar:3, dividendPerUnit:0.06, dividendFreq:"月配息", dividendYieldM:0.52,  dividendYieldA:6.2,  returnYTD:9.8,   return1m:1.6,  return3m:3.8,   return6m:6.8,   return1y:14.8,  return3y:34.2,  volatility:9.8  },
+    // ── 富邦 ──────────────────────────────────────────────────
+    { id:"fub-001", company:"富邦",   name:"富邦台灣高股息基金",       category:"股票型", region:"台灣",   morningstar:4, dividendPerUnit:0.08, dividendFreq:"季配息", dividendYieldM:0.20,  dividendYieldA:2.4,  returnYTD:18.4,  return1m:3.1,  return3m:7.2,   return6m:12.8,  return1y:28.4,  return3y:64.8,  volatility:14.4 },
+    { id:"fub-002", company:"富邦",   name:"富邦全球科技基金",         category:"股票型", region:"全球",   morningstar:4, dividendPerUnit:0.00, dividendFreq:"不配息", dividendYieldM:0,     dividendYieldA:0,    returnYTD:32.8,  return1m:5.5,  return3m:12.2,  return6m:22.0,  return1y:49.8,  return3y:110.4, volatility:23.4 },
+    // ── 永豐 ──────────────────────────────────────────────────
+    { id:"ysf-001", company:"永豐",   name:"永豐標普500波動加權ETF基金",category:"股票型",region:"美國",   morningstar:3, dividendPerUnit:0.02, dividendFreq:"季配息", dividendYieldM:0.06,  dividendYieldA:0.8,  returnYTD:17.8,  return1m:3.0,  return3m:7.0,   return6m:12.2,  return1y:29.4,  return3y:65.8,  volatility:14.8 },
+    // ── 華南 ──────────────────────────────────────────────────
+    { id:"hn-001",  company:"華南",   name:"華南永昌亞太基金",         category:"股票型", region:"亞洲",   morningstar:3, dividendPerUnit:0.03, dividendFreq:"年配息", dividendYieldM:0.02,  dividendYieldA:0.3,  returnYTD:14.4,  return1m:2.4,  return3m:5.6,   return6m:9.8,   return1y:21.4,  return3y:49.4,  volatility:17.4 },
+    // ── 台新 ──────────────────────────────────────────────────
+    { id:"ts-001",  company:"台新",   name:"台新台灣動力基金",         category:"股票型", region:"台灣",   morningstar:4, dividendPerUnit:0.00, dividendFreq:"不配息", dividendYieldM:0,     dividendYieldA:0,    returnYTD:36.4,  return1m:6.1,  return3m:13.6,  return6m:24.8,  return1y:55.8,  return3y:122.4, volatility:24.2 },
+    // ── 中信 ──────────────────────────────────────────────────
+    { id:"ctb-001", company:"中信",   name:"中信高評級公司債基金",     category:"債券型", region:"全球",   morningstar:4, dividendPerUnit:0.04, dividendFreq:"月配息", dividendYieldM:0.40,  dividendYieldA:4.8,  returnYTD:4.8,   return1m:0.8,  return3m:1.8,   return6m:3.4,   return1y:7.4,   return3y:16.4,  volatility:7.4  },
+    { id:"ctb-002", company:"中信",   name:"中信台灣智慧50基金",       category:"股票型", region:"台灣",   morningstar:4, dividendPerUnit:0.00, dividendFreq:"不配息", dividendYieldM:0,     dividendYieldA:0,    returnYTD:32.4,  return1m:5.4,  return3m:12.0,  return6m:21.8,  return1y:49.4,  return3y:109.4, volatility:22.4 },
+    // ── 統一 ──────────────────────────────────────────────────
+    { id:"uni-001", company:"統一",   name:"統一全球新興市場基金",     category:"股票型", region:"新興市場",morningstar:3, dividendPerUnit:0.02, dividendFreq:"年配息", dividendYieldM:0.02,  dividendYieldA:0.2,  returnYTD:12.8,  return1m:2.1,  return3m:4.8,   return6m:8.4,   return1y:19.4,  return3y:44.8,  volatility:20.4 },
+    // ── 瀚亞 ──────────────────────────────────────────────────
+    { id:"pan-001", company:"瀚亞",   name:"瀚亞印度基金",             category:"股票型", region:"印度",   morningstar:4, dividendPerUnit:0.00, dividendFreq:"不配息", dividendYieldM:0,     dividendYieldA:0,    returnYTD:22.4,  return1m:3.7,  return3m:8.4,   return6m:14.8,  return1y:34.4,  return3y:78.4,  volatility:22.4 },
+    { id:"pan-002", company:"瀚亞",   name:"瀚亞亞洲高股息基金",       category:"股票型", region:"亞洲",   morningstar:4, dividendPerUnit:0.08, dividendFreq:"月配息", dividendYieldM:0.65,  dividendYieldA:7.8,  returnYTD:16.8,  return1m:2.8,  return3m:6.4,   return6m:11.4,  return1y:25.4,  return3y:58.4,  volatility:16.8 },
+    // ── 法巴 ──────────────────────────────────────────────────
+    { id:"bnp-001", company:"法巴",   name:"法巴百利達靈活策略股票基金",category:"股票型",region:"全球",   morningstar:4, dividendPerUnit:0.00, dividendFreq:"不配息", dividendYieldM:0,     dividendYieldA:0,    returnYTD:18.4,  return1m:3.1,  return3m:7.2,   return6m:12.8,  return1y:28.4,  return3y:64.8,  volatility:16.4 },
+    // ── 富蘭克林 ──────────────────────────────────────────────
+    { id:"fra-001", company:"富蘭克林", name:"富蘭克林坦伯頓全球股票收益基金",category:"股票型",region:"全球",morningstar:4, dividendPerUnit:0.05, dividendFreq:"月配息", dividendYieldM:0.48,  dividendYieldA:5.8,  returnYTD:14.8,  return1m:2.4,  return3m:5.8,   return6m:10.4,  return1y:22.4,  return3y:52.4,  volatility:14.4 },
+    { id:"fra-002", company:"富蘭克林", name:"富蘭克林穩定月收益基金", category:"平衡型", region:"全球",   morningstar:4, dividendPerUnit:0.06, dividendFreq:"月配息", dividendYieldM:0.54,  dividendYieldA:6.5,  returnYTD:10.4,  return1m:1.7,  return3m:4.1,   return6m:7.4,   return1y:15.8,  return3y:36.4,  volatility:9.8  },
+    // ── 歐義銳榮 ──────────────────────────────────────────────
+    { id:"inv-001", company:"景順",   name:"景順亞洲高收益債券基金",   category:"債券型", region:"亞洲",   morningstar:4, dividendPerUnit:0.07, dividendFreq:"月配息", dividendYieldM:0.60,  dividendYieldA:7.2,  returnYTD:8.4,   return1m:1.4,  return3m:3.2,   return6m:5.8,   return1y:12.4,  return3y:28.4,  volatility:9.4  },
+    { id:"inv-002", company:"景順",   name:"景順美國科技基金",         category:"股票型", region:"美國",   morningstar:4, dividendPerUnit:0.00, dividendFreq:"不配息", dividendYieldM:0,     dividendYieldA:0,    returnYTD:34.8,  return1m:5.8,  return3m:12.8,  return6m:23.2,  return1y:52.4,  return3y:116.4, volatility:23.8 },
+    // ── 宏利 ──────────────────────────────────────────────────
+    { id:"mfc-001", company:"宏利",   name:"宏利亞洲債券基金",         category:"債券型", region:"亞洲",   morningstar:4, dividendPerUnit:0.06, dividendFreq:"月配息", dividendYieldM:0.52,  dividendYieldA:6.2,  returnYTD:6.8,   return1m:1.1,  return3m:2.6,   return6m:4.8,   return1y:10.4,  return3y:23.4,  volatility:8.4  },
+    { id:"mfc-002", company:"宏利",   name:"宏利印度股票基金",         category:"股票型", region:"印度",   morningstar:4, dividendPerUnit:0.00, dividendFreq:"不配息", dividendYieldM:0,     dividendYieldA:0,    returnYTD:24.8,  return1m:4.1,  return3m:9.4,   return6m:16.8,  return1y:38.4,  return3y:88.4,  volatility:24.4 },
+    // ── 保誠 ──────────────────────────────────────────────────
+    { id:"pru-001", company:"保誠",   name:"保誠全球收益基金",         category:"平衡型", region:"全球",   morningstar:3, dividendPerUnit:0.05, dividendFreq:"月配息", dividendYieldM:0.46,  dividendYieldA:5.5,  returnYTD:10.8,  return1m:1.8,  return3m:4.2,   return6m:7.4,   return1y:16.4,  return3y:37.8,  volatility:10.8 },
+    // ── 聯博新增 ──────────────────────────────────────────────
+    { id:"ab-004",  company:"聯博",   name:"聯博新興市場債券基金",     category:"債券型", region:"新興市場",morningstar:3, dividendPerUnit:0.07, dividendFreq:"月配息", dividendYieldM:0.62,  dividendYieldA:7.4,  returnYTD:8.4,   return1m:1.4,  return3m:3.2,   return6m:5.8,   return1y:12.4,  return3y:28.4,  volatility:11.4 },
+    // ── 安聯新增 ──────────────────────────────────────────────
+    { id:"alz-005", company:"安聯",   name:"安聯AI智慧基金",           category:"股票型", region:"全球",   morningstar:4, dividendPerUnit:0.00, dividendFreq:"不配息", dividendYieldM:0,     dividendYieldA:0,    returnYTD:52.4,  return1m:8.8,  return3m:19.4,  return6m:35.2,  return1y:80.4,  return3y:168.4, volatility:32.4 },
+    // ── 更多高股息月配息基金 ──────────────────────────────────
+    { id:"ab-005",  company:"聯博",   name:"聯博精選收益基金",         category:"債券型", region:"全球",   morningstar:5, dividendPerUnit:0.09, dividendFreq:"月配息", dividendYieldM:0.74,  dividendYieldA:8.9,  returnYTD:9.8,   return1m:1.6,  return3m:3.8,   return6m:6.8,   return1y:14.8,  return3y:34.2,  volatility:8.8  },
+    { id:"blk-004", company:"貝萊德", name:"貝萊德全球高收益債券基金", category:"債券型", region:"全球",   morningstar:4, dividendPerUnit:0.08, dividendFreq:"月配息", dividendYieldM:0.68,  dividendYieldA:8.2,  returnYTD:9.4,   return1m:1.6,  return3m:3.6,   return6m:6.4,   return1y:13.8,  return3y:31.4,  volatility:9.2  },
+    { id:"sch-004", company:"施羅德", name:"施羅德環球高息股票基金",   category:"股票型", region:"全球",   morningstar:4, dividendPerUnit:0.09, dividendFreq:"月配息", dividendYieldM:0.72,  dividendYieldA:8.6,  returnYTD:13.4,  return1m:2.2,  return3m:5.2,   return6m:9.2,   return1y:20.2,  return3y:46.8,  volatility:13.8 },
+    { id:"nom-004", company:"野村",   name:"野村全球高收益債券基金",   category:"債券型", region:"全球",   morningstar:4, dividendPerUnit:0.08, dividendFreq:"月配息", dividendYieldM:0.65,  dividendYieldA:7.8,  returnYTD:8.8,   return1m:1.5,  return3m:3.4,   return6m:6.2,   return1y:13.2,  return3y:29.8,  volatility:9.8  },
+    { id:"jpm-004", company:"摩根",   name:"摩根環球動態收益基金",     category:"平衡型", region:"全球",   morningstar:4, dividendPerUnit:0.07, dividendFreq:"月配息", dividendYieldM:0.58,  dividendYieldA:7.0,  returnYTD:11.4,  return1m:1.9,  return3m:4.5,   return6m:8.0,   return1y:17.2,  return3y:39.8,  volatility:9.8  },
+    { id:"fra-003", company:"富蘭克林", name:"富蘭克林坦伯頓全球債券基金",category:"債券型",region:"全球", morningstar:3, dividendPerUnit:0.05, dividendFreq:"月配息", dividendYieldM:0.44,  dividendYieldA:5.3,  returnYTD:4.8,   return1m:0.8,  return3m:1.8,   return6m:3.2,   return1y:7.4,   return3y:16.4,  volatility:8.4  },
+    // ── 亞洲股票型 ────────────────────────────────────────────
+    { id:"fid-004", company:"富達",   name:"富達基金－東南亞基金",     category:"股票型", region:"亞洲",   morningstar:3, dividendPerUnit:0.04, dividendFreq:"年配息", dividendYieldM:0.03,  dividendYieldA:0.4,  returnYTD:14.4,  return1m:2.4,  return3m:5.6,   return6m:9.8,   return1y:21.8,  return3y:49.8,  volatility:18.8 },
+    { id:"jpm-005", company:"摩根",   name:"摩根東方科技基金",         category:"股票型", region:"亞洲",   morningstar:4, dividendPerUnit:0.00, dividendFreq:"不配息", dividendYieldM:0,     dividendYieldA:0,    returnYTD:22.4,  return1m:3.7,  return3m:8.4,   return6m:14.8,  return1y:34.4,  return3y:78.4,  volatility:24.4 },
+    { id:"blk-005", company:"貝萊德", name:"貝萊德亞洲老虎基金",       category:"股票型", region:"亞洲",   morningstar:4, dividendPerUnit:0.00, dividendFreq:"不配息", dividendYieldM:0,     dividendYieldA:0,    returnYTD:20.4,  return1m:3.4,  return3m:7.8,   return6m:14.0,  return1y:31.4,  return3y:72.4,  volatility:22.4 },
   ];
   
-  export const FUND_LIST: Fund[] = RAW_FUNDS.map(r => {
-    const yieldA = r.dividendYield;
-    const yieldM = yieldA > 0 ? parseFloat((yieldA / 12).toFixed(3)) : 0;
-    const perUnit = yieldA > 0 ? parseFloat((yieldA * 0.12).toFixed(4)) : 0;
-    return {
-      id: r.id,
-      company: r.company,
-      name: r.name,
-      category: r.category,
-      region: r.region,
-      morningstar: r.morningstar,
-      dividendPerUnit: perUnit,
-      dividendFreq: fundFreq(yieldA, r.category),
-      dividendYieldM: yieldM,
-      dividendYieldA: yieldA,
-      returnYTD: parseFloat((r.return1y * 0.52).toFixed(1)),
-      return1m: r.return1m,
-      return3m: r.return3m,
-      return6m: r.return6m,
-      return1y: r.return1y,
-      return3y: r.return3y,
-      volatility: r.volatility,
-    };
-  });
+  export const FUND_LIST: Fund[] = RAW;
   
-  export const COMPANIES = Array.from(new Set(FUND_LIST.map(f => f.company)));
+  export const COMPANIES  = Array.from(new Set(FUND_LIST.map(f => f.company)));
   export const CATEGORIES = Array.from(new Set(FUND_LIST.map(f => f.category)));
   export const REGIONS    = Array.from(new Set(FUND_LIST.map(f => f.region)));
+  
+  // ── Ranking Service ───────────────────────────────────────────────────
+  export type FundRankTab = "best1y" | "best3y" | "hot30" | "hot90";
+  
+  export function getFundRanking(tab: FundRankTab, topN = 10): Fund[] {
+    const list = [...FUND_LIST];
+    switch (tab) {
+      case "best1y": return list.sort((a,b) => b.return1y - a.return1y).slice(0, topN);
+      case "best3y": return list.sort((a,b) => b.return3y - a.return3y).slice(0, topN);
+      case "hot30":  return list.sort((a,b) => b.return1m - a.return1m).slice(0, topN);
+      case "hot90":  return list.sort((a,b) => b.return3m - a.return3m).slice(0, topN);
+      default:       return list.sort((a,b) => b.return1y - a.return1y).slice(0, topN);
+    }
+  }
