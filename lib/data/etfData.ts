@@ -32,7 +32,7 @@ export type Etf = {
 // 共 95 檔，涵蓋台股、美股、全球、亞洲、債券、商品等類型
 // 資料為示意數值，正式版將接入即時 API
 // ── 台灣市值型 ETF ────────────────────────────────────────────────────
-const RAW: Omit<Etf, "return3y" | "volatility"> & { return3y: number; volatility: number }[] = [
+const RAW: Etf[] = [
   // 台灣市值型
   { code:"0050",   name:"元大台灣50",             region:"台灣", sector:"市值型",   dividendPerUnit:3.40, dividendYield:1.7, dividendFreq:"季配", returnYTD:21.6, return1m:3.8, return3m:8.2, return6m:14.1, return1y:38.4, return3y:89.2, volatility:16.8 },
   { code:"006208", name:"富邦台灣50",             region:"台灣", sector:"市值型",   dividendPerUnit:2.80, dividendYield:1.4, dividendFreq:"季配", returnYTD:21.2, return1m:3.7, return3m:8.0, return6m:13.8, return1y:37.9, return3y:88.1, volatility:16.7 },
@@ -135,8 +135,7 @@ const RAW: Omit<Etf, "return3y" | "volatility"> & { return3y: number; volatility
 // 去除重複代碼
 const seen = new Set<string>();
 export const ETF_LIST: Etf[] = RAW
-  .filter(r => { if (seen.has(r.code)) return false; seen.add(r.code); return true; })
-  .map(r => ({ ...r }));
+  .filter(r => { if (seen.has(r.code)) return false; seen.add(r.code); return true; });
 
 export const REGIONS  = Array.from(new Set(ETF_LIST.map(e => e.region)));
 export const SECTORS  = Array.from(new Set(ETF_LIST.map(e => e.sector)));
