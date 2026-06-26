@@ -1,9 +1,11 @@
 "use client";
+import React from "react";
 
 import { useMemo, useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FUND_LIST, COMPANIES, CATEGORIES, REGIONS, type Fund } from "./data";
+import { getTopFunds, type FundRankType } from "@/lib/services/rankingService";
 
 // ── localStorage 規格書定義 ───────────────────────────────────────────
 const KEY_FAV     = "favorites";
@@ -111,6 +113,168 @@ function Pct({ v }: { v: number }) {
 }
 
 // ── Main ──────────────────────────────────────────────────────────────
+// ── 基金熱門排行榜元件 ──────────────────────────────────────────────
+type FundRankTab = "hot30" | "hot90" | "best1y";
+
+function FundRanking() {
+  const [tab, setTab] = useState<FundRankTab>("best1y");
+
+  const ranked = useMemo(() => {
+    const list = [...FUND_LIST];
+    if (tab === "hot30")  return list.sort((a,b) => b.return1m - a.return1m).slice(0,10);
+    if (tab === "hot90")  return list.sort((a,b) => b.return3m - a.return3m).slice(0,10);
+    return               list.sort((a,b) => b.return1y - a.return1y).slice(0,10);
+  }, [tab]);
+
+  const tabs: { key: FundRankTab; label: string }[] = [
+    { key:"best1y", label:"近1年績效最佳" },
+    { key:"hot30",  label:"近30日熱門"   },
+    { key:"hot90",  label:"近3個月熱門"  },
+  ];
+
+  return (
+    <div className="mb-10 border border-white/[0.08] rounded-2xl overflow-hidden">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.08]" style={{ background:"rgba(15,22,42,0.9)" }}>
+        <div className="text-[18px] font-bold text-white">🏆 熱門基金排行榜</div>
+        <div className="flex gap-2">
+          {tabs.map(t => (
+            <button key={t.key} onClick={() => setTab(t.key)}
+              className={`px-4 py-1.5 rounded-lg text-[13px] font-semibold transition-colors ${tab===t.key?"bg-[#F5B700] text-[#0B1220]":"border border-white/15 text-slate-400 hover:border-[#F5B700]/50"}`}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <table className="w-full text-left">
+        <thead>
+          <tr className="bg-white/[0.04] text-slate-500 text-[12px]">
+            <th className="px-4 py-3 font-semibold w-[40px]">排名</th>
+            <th className="px-4 py-3 font-semibold w-[60px]">公司</th>
+            <th className="px-4 py-3 font-semibold">基金名稱</th>
+            <th className="px-4 py-3 font-semibold text-center w-[70px]">晨星</th>
+            <th className="px-4 py-3 font-semibold text-right w-[90px]">月配息率</th>
+            <th className="px-4 py-3 font-semibold text-right w-[100px]">年化配息率</th>
+            <th className="px-4 py-3 font-semibold text-right w-[90px]">近1年績效</th>
+            <th className="px-4 py-3 font-semibold text-right w-[80px]">波動度</th>
+          </tr>
+        </thead>
+        <tbody>
+          {ranked.map((fund, i) => (
+            <tr key={fund.id}
+              className={`text-[13px] border-t border-white/[0.05] hover:bg-[#F5B700]/[0.04] transition-colors ${i%2===1?"bg-white/[0.015]":""}`}>
+              <td className="px-4 py-2.5">
+                <span className={`text-[15px] font-black ${i===0?"text-[#FFD700]":i===1?"text-[#C0C0C0]":i===2?"text-[#CD7F32]":"text-slate-600"}`}>
+                  {i+1}
+                </span>
+              </td>
+              <td className="px-4 py-2.5 font-bold text-white text-[12px]">{fund.company}</td>
+              <td className="px-4 py-2.5 text-slate-200 truncate max-w-[220px]">{fund.name}</td>
+              <td className="px-4 py-2.5 text-center text-[#F5B700] text-[13px]">{"★".repeat(fund.morningstar)}</td>
+              <td className="px-4 py-2.5 text-right text-slate-300">{fund.dividendYieldM>0?`${fund.dividendYieldM.toFixed(2)}%`:"—"}</td>
+              <td className="px-4 py-2.5 text-right font-semibold text-[#F5B700]">{fund.dividendYieldA>0?`${fund.dividendYieldA.toFixed(1)}%`:"—"}</td>
+              <td className={`px-4 py-2.5 text-right font-bold ${fund.return1y>=0?"text-emerald-400":"text-red-400"}`}>
+                {fund.return1y>=0?"+":""}{fund.return1y.toFixed(1)}%
+              </td>
+              <td className="px-4 py-2.5 text-right text-slate-500">{fund.volatility.toFixed(1)}%</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div className="px-6 py-3 border-t border-white/[0.06] text-[12px] text-slate-600">
+        排行依選定期間績效排序，示意資料，非即時行情
+      </div>
+    </div>
+  );
+}
+
+
+// ── 基金排行榜元件（使用 Ranking Service）──────────────────────
+const FUND_RANK_TABS: { key: FundRankType; label: string }[] = [
+  { key: "best1y", label: "近1年績效" },
+  { key: "hot30",  label: "近30日熱門" },
+  { key: "hot90",  label: "近3個月熱門" },
+  { key: "yieldM", label: "月配息率" },
+  { key: "yieldA", label: "年化配息率" },
+  { key: "lowvol", label: "低波動" },
+];
+
+function FundRankingTable() {
+  const [tab, setTab] = React.useState<FundRankType>("best1y");
+  const ranked = React.useMemo(() => getTopFunds(tab, 10), [tab]);
+
+  return (
+    <div className="mb-10 border border-white/[0.08] rounded-2xl overflow-hidden">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.08]"
+        style={{ background: "rgba(15,22,42,0.95)" }}>
+        <div className="text-[17px] font-bold text-white">🏆 熱門基金排行榜</div>
+        <div className="flex gap-2 flex-wrap justify-end">
+          {FUND_RANK_TABS.map(t => (
+            <button key={t.key} onClick={() => setTab(t.key)}
+              className={`px-4 py-1.5 rounded-lg text-[13px] font-semibold transition-colors ${
+                tab === t.key
+                  ? "bg-[#F5B700] text-[#0B1220]"
+                  : "border border-white/[0.15] text-slate-400 hover:border-[#F5B700]/50 hover:text-[#F5B700]"
+              }`}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <table className="w-full text-left">
+        <thead>
+          <tr className="bg-white/[0.04] text-slate-500 text-[12px]">
+            <th className="px-4 py-3 font-semibold w-[44px]">排名</th>
+            <th className="px-4 py-3 font-semibold w-[56px]">公司</th>
+            <th className="px-4 py-3 font-semibold">基金名稱</th>
+            <th className="px-4 py-3 font-semibold w-[72px] text-center">晨星</th>
+            <th className="px-4 py-3 font-semibold w-[88px] text-right">月配息率</th>
+            <th className="px-4 py-3 font-semibold w-[90px] text-right">年化配息</th>
+            <th className="px-4 py-3 font-semibold w-[88px] text-right">近1月</th>
+            <th className="px-4 py-3 font-semibold w-[88px] text-right">近1年</th>
+            <th className="px-4 py-3 font-semibold w-[72px] text-right">波動度</th>
+          </tr>
+        </thead>
+        <tbody>
+          {ranked.map((fund, i) => (
+            <tr key={fund.id}
+              className={`text-[13px] border-t border-white/[0.05] hover:bg-[#F5B700]/[0.04] transition-colors ${i % 2 === 1 ? "bg-white/[0.015]" : ""}`}>
+              <td className="px-4 py-2.5">
+                <span className={`text-[15px] font-black ${
+                  i === 0 ? "text-[#FFD700]" : i === 1 ? "text-[#C0C0C0]" : i === 2 ? "text-[#CD7F32]" : "text-slate-600"
+                }`}>{i + 1}</span>
+              </td>
+              <td className="px-4 py-2.5 font-bold text-white text-[12px]">{fund.company}</td>
+              <td className="px-4 py-2.5 text-slate-200 max-w-[200px] truncate">{fund.name}</td>
+              <td className="px-4 py-2.5 text-center text-[#F5B700] text-[13px]">
+                {"★".repeat(fund.morningstar)}
+              </td>
+              <td className="px-4 py-2.5 text-right text-slate-300">
+                {fund.dividendYieldM > 0 ? `${fund.dividendYieldM.toFixed(2)}%` : "—"}
+              </td>
+              <td className="px-4 py-2.5 text-right font-semibold text-[#F5B700]">
+                {fund.dividendYieldA > 0 ? `${fund.dividendYieldA.toFixed(1)}%` : "—"}
+              </td>
+              <td className={`px-4 py-2.5 text-right font-semibold ${fund.return1m >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                {fund.return1m >= 0 ? "+" : ""}{fund.return1m.toFixed(1)}%
+              </td>
+              <td className={`px-4 py-2.5 text-right font-bold ${fund.return1y >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                {fund.return1y >= 0 ? "+" : ""}{fund.return1y.toFixed(1)}%
+              </td>
+              <td className="px-4 py-2.5 text-right text-slate-500">{fund.volatility.toFixed(1)}%</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div className="px-6 py-3 border-t border-white/[0.06] text-[12px] text-slate-600">
+        排行依選定指標排序・示意資料・非即時行情
+      </div>
+    </div>
+  );
+}
+
+
 export default function FundsPage() {
   const router = useRouter();
 
@@ -279,6 +443,12 @@ export default function FundsPage() {
           <h1 className="text-[42px] font-black text-white">基金篩選器</h1>
           <p className="text-[15px] text-slate-400 mt-1">共 {FUND_LIST.length} 檔基金・前20大基金公司・支援收藏、觀察名單與比較</p>
         </div>
+
+        {/* ══ 熱門基金排行榜 ══════════════════════════════════════ */}
+        <FundRanking />
+
+                {/* ══ 基金排行榜 ══ */}
+        <FundRankingTable />
 
         {/* Compare bar */}
         {compareList.length > 0 && (

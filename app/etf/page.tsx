@@ -1,9 +1,11 @@
 "use client";
+import React from "react";
 
 import { useMemo, useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ETF_LIST, REGIONS, SECTORS, type Etf } from "./data";
+import { getTopEtfs, type EtfRankType } from "@/lib/services/rankingService";
 
 // ── localStorage 規格書定義 ───────────────────────────────────────────
 const KEY_FAV     = "favorites";
@@ -88,6 +90,165 @@ function Pct({ v }: { v: number }) {
 }
 
 // ── Main ──────────────────────────────────────────────────────────────
+// ── ETF 熱門排行榜元件 ───────────────────────────────────────────────
+type RankTab = "hot30" | "hot90" | "best1y";
+
+function EtfRanking() {
+  const [tab, setTab] = useState<RankTab>("best1y");
+
+  const ranked = useMemo(() => {
+    const list = [...ETF_LIST];
+    if (tab === "hot30")  return list.sort((a,b) => b.return1m  - a.return1m).slice(0,10);
+    if (tab === "hot90")  return list.sort((a,b) => b.return3m  - a.return3m).slice(0,10);
+    return               list.sort((a,b) => b.return1y  - a.return1y).slice(0,10);
+  }, [tab]);
+
+  const tabs: { key: RankTab; label: string }[] = [
+    { key:"best1y", label:"近1年績效最佳" },
+    { key:"hot30",  label:"近30日熱門"   },
+    { key:"hot90",  label:"近3個月熱門"  },
+  ];
+
+  return (
+    <div className="mb-10 border border-white/[0.08] rounded-2xl overflow-hidden">
+      {/* 標題列 */}
+      <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.08]" style={{ background:"rgba(15,22,42,0.9)" }}>
+        <div className="text-[18px] font-bold text-white">🏆 熱門 ETF 排行榜</div>
+        <div className="flex gap-2">
+          {tabs.map(t => (
+            <button key={t.key} onClick={() => setTab(t.key)}
+              className={`px-4 py-1.5 rounded-lg text-[13px] font-semibold transition-colors ${tab===t.key?"bg-[#F5B700] text-[#0B1220]":"border border-white/15 text-slate-400 hover:border-[#F5B700]/50"}`}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* 表格 */}
+      <table className="w-full text-left">
+        <thead>
+          <tr className="bg-white/[0.04] text-slate-500 text-[12px]">
+            <th className="px-5 py-3 font-semibold w-[40px]">排名</th>
+            <th className="px-5 py-3 font-semibold w-[80px]">代碼</th>
+            <th className="px-5 py-3 font-semibold">商品名稱</th>
+            <th className="px-5 py-3 font-semibold text-right">殖利率</th>
+            <th className="px-5 py-3 font-semibold text-right">近1年績效</th>
+            <th className="px-5 py-3 font-semibold text-right">近3年績效</th>
+            <th className="px-5 py-3 font-semibold text-right">波動度</th>
+          </tr>
+        </thead>
+        <tbody>
+          {ranked.map((etf, i) => (
+            <tr key={etf.code}
+              className={`text-[14px] border-t border-white/[0.05] hover:bg-[#F5B700]/[0.04] transition-colors ${i%2===1?"bg-white/[0.015]":""}`}>
+              <td className="px-5 py-3">
+                <span className={`text-[15px] font-black ${i===0?"text-[#FFD700]":i===1?"text-[#C0C0C0]":i===2?"text-[#CD7F32]":"text-slate-600"}`}>
+                  {i+1}
+                </span>
+              </td>
+              <td className="px-5 py-3 font-bold text-[#F5B700]">{etf.code}</td>
+              <td className="px-5 py-3 text-slate-200 truncate max-w-[240px]">{etf.name}</td>
+              <td className="px-5 py-3 text-right text-slate-300">{etf.dividendYield>0?`${etf.dividendYield.toFixed(1)}%`:"—"}</td>
+              <td className={`px-5 py-3 text-right font-bold ${etf.return1y>=0?"text-emerald-400":"text-red-400"}`}>
+                {etf.return1y>=0?"+":""}{etf.return1y.toFixed(1)}%
+              </td>
+              <td className={`px-5 py-3 text-right font-semibold ${etf.return3y>=0?"text-emerald-400":"text-red-400"}`}>
+                {etf.return3y>=0?"+":""}{etf.return3y.toFixed(1)}%
+              </td>
+              <td className="px-5 py-3 text-right text-slate-500">{etf.volatility.toFixed(1)}%</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div className="px-6 py-3 border-t border-white/[0.06] text-[12px] text-slate-600">
+        排行依選定期間績效排序，示意資料，非即時行情
+      </div>
+    </div>
+  );
+}
+
+
+// ── ETF 排行榜元件（使用 Ranking Service）──────────────────────
+const ETF_RANK_TABS: { key: EtfRankType; label: string }[] = [
+  { key: "best1y", label: "近1年績效" },
+  { key: "hot30",  label: "近30日熱門" },
+  { key: "hot90",  label: "近3個月熱門" },
+  { key: "yield",  label: "殖利率最高" },
+  { key: "lowvol", label: "低波動" },
+];
+
+function EtfRankingTable() {
+  const [tab, setTab] = React.useState<EtfRankType>("best1y");
+  const ranked = React.useMemo(() => getTopEtfs(tab, 10), [tab]);
+
+  return (
+    <div className="mb-10 border border-white/[0.08] rounded-2xl overflow-hidden">
+      {/* 標題列 */}
+      <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.08]"
+        style={{ background: "rgba(15,22,42,0.95)" }}>
+        <div className="text-[17px] font-bold text-white">🏆 熱門 ETF 排行榜</div>
+        <div className="flex gap-2 flex-wrap justify-end">
+          {ETF_RANK_TABS.map(t => (
+            <button key={t.key} onClick={() => setTab(t.key)}
+              className={`px-4 py-1.5 rounded-lg text-[13px] font-semibold transition-colors ${
+                tab === t.key
+                  ? "bg-[#F5B700] text-[#0B1220]"
+                  : "border border-white/[0.15] text-slate-400 hover:border-[#F5B700]/50 hover:text-[#F5B700]"
+              }`}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* 表格 */}
+      <table className="w-full text-left">
+        <thead>
+          <tr className="bg-white/[0.04] text-slate-500 text-[12px]">
+            <th className="px-5 py-3 font-semibold w-[44px]">排名</th>
+            <th className="px-5 py-3 font-semibold w-[80px]">代碼</th>
+            <th className="px-5 py-3 font-semibold">商品名稱</th>
+            <th className="px-5 py-3 font-semibold w-[70px] text-right">類型</th>
+            <th className="px-5 py-3 font-semibold w-[90px] text-right">殖利率</th>
+            <th className="px-5 py-3 font-semibold w-[90px] text-right">近1月</th>
+            <th className="px-5 py-3 font-semibold w-[90px] text-right">近1年</th>
+            <th className="px-5 py-3 font-semibold w-[80px] text-right">波動度</th>
+          </tr>
+        </thead>
+        <tbody>
+          {ranked.map((etf, i) => (
+            <tr key={etf.code}
+              className={`text-[14px] border-t border-white/[0.05] hover:bg-[#F5B700]/[0.04] transition-colors ${i % 2 === 1 ? "bg-white/[0.015]" : ""}`}>
+              <td className="px-5 py-3">
+                <span className={`text-[15px] font-black ${
+                  i === 0 ? "text-[#FFD700]" : i === 1 ? "text-[#C0C0C0]" : i === 2 ? "text-[#CD7F32]" : "text-slate-600"
+                }`}>{i + 1}</span>
+              </td>
+              <td className="px-5 py-3 font-bold text-[#F5B700]">{etf.code}</td>
+              <td className="px-5 py-3 text-slate-200 max-w-[220px] truncate">{etf.name}</td>
+              <td className="px-5 py-3 text-right text-slate-500 text-[12px]">{etf.sector}</td>
+              <td className="px-5 py-3 text-right text-slate-300">
+                {etf.dividendYield > 0 ? `${etf.dividendYield.toFixed(1)}%` : "—"}
+              </td>
+              <td className={`px-5 py-3 text-right font-semibold ${etf.return1m >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                {etf.return1m >= 0 ? "+" : ""}{etf.return1m.toFixed(1)}%
+              </td>
+              <td className={`px-5 py-3 text-right font-bold ${etf.return1y >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                {etf.return1y >= 0 ? "+" : ""}{etf.return1y.toFixed(1)}%
+              </td>
+              <td className="px-5 py-3 text-right text-slate-500">{etf.volatility.toFixed(1)}%</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div className="px-6 py-3 border-t border-white/[0.06] text-[12px] text-slate-600">
+        排行依選定指標排序・示意資料・非即時行情
+      </div>
+    </div>
+  );
+}
+
+
 export default function EtfDatabasePage() {
   const router = useRouter();
 
@@ -217,6 +378,12 @@ export default function EtfDatabasePage() {
           <h1 className="text-[42px] font-black text-white">ETF 篩選器</h1>
           <p className="text-[15px] text-slate-400 mt-1">共 {ETF_LIST.length} 檔 ETF，支援搜尋、篩選、排序與收藏</p>
         </div>
+
+        {/* ══ 熱門 ETF 排行榜 ══════════════════════════════════════ */}
+        <EtfRanking />
+
+                {/* ══ ETF 排行榜 ══ */}
+        <EtfRankingTable />
 
         {/* Compare bar */}
         {compareList.length > 0 && (
