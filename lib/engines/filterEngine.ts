@@ -197,8 +197,8 @@ export function searchAll(req: SearchRequest): SearchResultItem[] {
   const dir = req.sortDir ?? "desc";
   const by  = req.sortBy ?? "return1y";
   results.sort((a, b) => {
-    const va = (a as Record<string, number>)[by] ?? 0;
-    const vb = (b as Record<string, number>)[by] ?? 0;
+    const va = (a[by as keyof SearchResultItem] as number) ?? 0;
+    const vb = (b[by as keyof SearchResultItem] as number) ?? 0;
     return dir === "desc" ? vb - va : va - vb;
   });
 
@@ -206,12 +206,12 @@ export function searchAll(req: SearchRequest): SearchResultItem[] {
 }
 
 // ── 內部排序 ─────────────────────────────────────────────────
-function sortResults<T>(list: T[], req: SearchRequest): T[] {
+function sortResults<T extends Record<string, unknown>>(list: T[], req: SearchRequest): T[] {
   const by  = req.sortBy ?? "return1y";
   const dir = req.sortDir ?? "desc";
   return list.sort((a, b) => {
-    const va = (a as Record<string, number>)[by] ?? 0;
-    const vb = (b as Record<string, number>)[by] ?? 0;
+    const va = (a[by] as number) ?? 0;
+    const vb = (b[by] as number) ?? 0;
     return dir === "desc" ? vb - va : va - vb;
   });
 }
