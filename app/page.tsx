@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useState } from "react";
 import { getHomeTopEtfs, getHomeTopFunds } from "@/lib/services/rankingService";
+import { ETF_LIST } from "./etf/data";
+import { FUND_LIST } from "./funds/data";
 
 // ── 全球市場資料 ──────────────────────────────────────────────────────
 type MktItem  = { name: string; value: string; pts: string; pct: string; up: boolean };
@@ -278,7 +280,7 @@ function runSearch(raw: string): SmartResult[] {
 
   // 搜尋 ETF（每個條件獨立 AND）
   if (p.assetType === "all" || p.assetType === "ETF") {
-    ETF_LIST.forEach(e => {
+    ETF_LIST.forEach((e: import("./etf/data").Etf) => {
       if (p.minYield    !== undefined && e.dividendYield < p.minYield)    return;
       if (p.minReturn1y !== undefined && e.return1y      < p.minReturn1y) return;
       if (p.minReturn3y !== undefined && e.return3y      < p.minReturn3y) return;
@@ -296,7 +298,7 @@ function runSearch(raw: string): SmartResult[] {
 
   // 搜尋基金（每個條件獨立 AND）
   if (p.assetType === "all" || p.assetType === "基金") {
-    FUND_LIST.forEach(f => {
+    FUND_LIST.forEach((f: import("./funds/data").Fund) => {
       if (p.minYield    !== undefined && f.dividendYieldA < p.minYield)   return;
       if (p.minReturn1y !== undefined && f.return1y       < p.minReturn1y) return;
       if (p.minReturn3y !== undefined && f.return3y       < p.minReturn3y) return;
