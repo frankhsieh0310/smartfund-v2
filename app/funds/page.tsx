@@ -285,52 +285,11 @@ export default function FundsPage() {
   const toggleFav     = useCallback((f: Fund) => _tFav({ id: f.id, type: "fund", name: f.name }), [_tFav]);
   const toggleWatch   = useCallback((f: Fund) => _tWatch({ id: f.id, type: "fund", name: f.name }), [_tWatch]);
   const toggleCompare = useCallback((f: Fund) => _tCompare({ id: f.id, type: "fund", name: f.name }), [_tCompare]);
-  const [toast,       setToast]       = useState<string | null>(null);
 
 
 
-  const showToast = useCallback((msg: string) => setToast(msg), []);
+  const showToast = useCallback((msg: string) => showToast(msg), []);
 
-  function handleFav(fund: Fund) {
-    const all  = loadList(KEY_FAV);
-    const item: ListItem = { id: fund.id, type: "fund", name: fund.name };
-    const next = toggleItem(all, item);
-    saveList(KEY_FAV, next);
-    setFavList(next.filter(i => i.type === "fund"));
-    showToast(hasItem(all, fund.id) ? "已從收藏移除" : "⭐ 已加入收藏");
-  }
-
-  function handleWatch(fund: Fund) {
-    const all  = loadList(KEY_WATCH);
-    const item: ListItem = { id: fund.id, type: "fund", name: fund.name };
-    const next = toggleItem(all, item);
-    saveList(KEY_WATCH, next);
-    setWatchList(next.filter(i => i.type === "fund"));
-    showToast(hasItem(all, fund.id) ? "已從觀察名單移除" : "👀 已加入觀察名單");
-  }
-
-  function handleCompare(fund: Fund) {
-    const all  = loadList(KEY_COMPARE);
-    const item: ListItem = { id: fund.id, type: "fund", name: fund.name };
-    if (hasItem(all, fund.id)) {
-      const next = all.filter(i => i.id !== fund.id);
-      saveList(KEY_COMPARE, next); setCompareList(next);
-      showToast("已從比較清單移除");
-    } else {
-      if (all.length >= MAX_COMPARE) { showToast(`比較清單最多 ${MAX_COMPARE} 檔`); return; }
-      const next = [...all, item];
-      saveList(KEY_COMPARE, next); setCompareList(next);
-      showToast("📊 已加入比較清單");
-    }
-  }
-
-  function toggleChart(fund: Fund) {
-    setChartFunds(prev =>
-      prev.find(f => f.id === fund.id)
-        ? prev.filter(f => f.id !== fund.id)
-        : prev.length >= MAX_CHART ? prev : [...prev, fund]
-    );
-  }
 
   function handleSort(key: SortKey) {
     if (sortKey === key) setSortDir(sortDir === "asc" ? "desc" : "asc");
@@ -535,7 +494,7 @@ export default function FundsPage() {
                       className={`text-[12px] text-white border-t border-white/[0.04] hover:bg-[#F5B700]/[0.04] transition-colors ${i % 2 === 1 ? "bg-white/[0.015]" : ""}`}>
                       <td className="px-3 py-2.5">
                         <ActionBtns fund={fund} favList={favList} watchList={watchList} compareList={compareList}
-                          onFav={handleFav} onWatch={handleWatch} onCompare={handleCompare} />
+                          onFav={toggleFav} onWatch={toggleWatch} onCompare={toggleCompare} />
                       </td>
                       <td className="px-2 py-2.5">
                         <button onClick={() => toggleChart(fund)}
@@ -628,7 +587,7 @@ export default function FundsPage() {
         </div>
       </div>
 
-      {toast && <Toast msg={toast} onClose={() => setToast(null)} />}
+      {toast && <Toast msg={toast} onClose={() => {}} />}
     </main>
   );
 }

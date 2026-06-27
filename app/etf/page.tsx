@@ -250,45 +250,7 @@ export default function EtfDatabasePage() {
   const toggleWatch   = useCallback((etf: Etf) => _toggleWatch({ id: etf.code, type: "etf", name: etf.name }), [_toggleWatch]);
   const toggleCompare = useCallback((etf: Etf) => _toggleCompare({ id: etf.code, type: "etf", name: etf.name }), [_toggleCompare]);
 
-  const showToast = useCallback((msg: string) => setToast(msg), []);
 
-  function handleFav(etf: Etf) {
-    const all   = loadList(KEY_FAV);
-    const item: ListItem = { id: etf.code, type: "etf", name: etf.name };
-    const next  = toggleItem(all, item);
-    saveList(KEY_FAV, next);
-    setFavList(next.filter(i => i.type === "etf"));
-    showToast(hasItem(all, etf.code) ? "已從收藏移除" : "⭐ 已加入收藏");
-  }
-
-  function handleWatch(etf: Etf) {
-    const all  = loadList(KEY_WATCH);
-    const item: ListItem = { id: etf.code, type: "etf", name: etf.name };
-    const next = toggleItem(all, item);
-    saveList(KEY_WATCH, next);
-    setWatchList(next.filter(i => i.type === "etf"));
-    showToast(hasItem(all, etf.code) ? "已從觀察名單移除" : "👀 已加入觀察名單");
-  }
-
-  function handleCompare(etf: Etf) {
-    const all  = loadList(KEY_COMPARE);
-    const item: ListItem = { id: etf.code, type: "etf", name: etf.name };
-    if (hasItem(all, etf.code)) {
-      const next = all.filter(i => i.id !== etf.code);
-      saveList(KEY_COMPARE, next);
-      setCompareList(next);
-      showToast("已從比較清單移除");
-    } else {
-      if (all.length >= MAX_COMPARE) {
-        showToast(`比較清單最多 ${MAX_COMPARE} 檔`);
-        return;
-      }
-      const next = [...all, item];
-      saveList(KEY_COMPARE, next);
-      setCompareList(next);
-      showToast("📊 已加入比較清單");
-    }
-  }
 
   function handleSort(key: SortKey) {
     if (sortKey === key) setSortDir(sortDir === "asc" ? "desc" : "asc");
@@ -375,7 +337,7 @@ export default function EtfDatabasePage() {
               </span>
             </div>
             <div className="flex gap-3">
-              <button onClick={() => { saveList(KEY_COMPARE, []); setCompareList([]); }}
+              <button onClick={() => clearCompare()}
                 className="text-[12px] text-slate-500 hover:text-red-400 transition-colors">清除</button>
               <button onClick={() => router.push("/compare")}
                 className="bg-emerald-700 hover:bg-emerald-600 text-white text-[12px] font-bold px-4 py-1.5 rounded-lg transition-colors">
@@ -448,7 +410,7 @@ export default function EtfDatabasePage() {
                   <td className="px-4 py-2.5">
                     <ActionBtns etf={etf}
                       favList={favList} watchList={watchList} compareList={compareList}
-                      onFav={handleFav} onWatch={handleWatch} onCompare={handleCompare} />
+                      onFav={toggleFav} onWatch={toggleWatch} onCompare={toggleCompare} />
                   </td>
                   <td className="px-3 py-2.5 font-bold text-[#F5B700] text-[12px]">{etf.code}</td>
                   <td className="px-3 py-2.5 text-slate-200 max-w-[200px] truncate text-[12px]">{etf.name}</td>
@@ -485,7 +447,7 @@ export default function EtfDatabasePage() {
         </div>
       </div>
 
-      {toast && <Toast msg={toast} onClose={() => // toast managed by hook} />}
+      {toast && <Toast msg={toast} onClose={() => { /* hook manages timeout */ }} />}
     </main>
   );
 }
