@@ -6,6 +6,8 @@ import { useState } from "react";
 import { getHomeTopEtfs, getHomeTopFunds } from "@/lib/services/rankingService";
 import { ETF_LIST } from "./etf/data";
 import { FUND_LIST } from "./funds/data";
+import { searchAll, type FilterCondition, type SearchResultItem } from "@/lib/engines/filterEngine";
+import { getSuggestions, conditionToLabel, type Suggestion } from "@/lib/engines/recommendationEngine";
 
 // ── 全球市場資料 ──────────────────────────────────────────────────────
 type MktItem  = { name: string; value: string; pts: string; pct: string; up: boolean };
@@ -194,9 +196,6 @@ function MktRow({ group }: { group: MktGroup }) {
 // Investment Criteria Builder
 // 使用 filterEngine + recommendationEngine
 // ══════════════════════════════════════════════════════════════
-import { searchAll, type FilterCondition, type SearchResultItem } from "@/lib/engines/filterEngine";
-import { getSuggestions, conditionToLabel } from "@/lib/engines/recommendationEngine";
-import type { Suggestion } from "@/lib/engines/recommendationEngine";
 
 // ── 條件選單定義 ──────────────────────────────────────────────
 const CONDITION_MENU: {
