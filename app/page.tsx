@@ -224,29 +224,29 @@ function conditionToLabel(c: FilterCondition): string {
 
 function getSuggestions(conditions: FilterCondition[], max = 4): Suggestion[] {
   const usedTypes = new Set(conditions.map(c => c.type));
-  if (conditions.length === 0) return [
-    { label: "高股息",  condition: { type: "sector",       operator: "==", value: "高股息" }, popular: true },
-    { label: "月配息",  condition: { type: "distribution", operator: "==", value: "月配"  }, popular: true },
-    { label: "台灣",    condition: { type: "region",       operator: "==", value: "台灣"  } },
-    { label: "科技ETF", condition: { type: "sector",       operator: "==", value: "科技"  } },
-  ].slice(0, max);
-  const map: Record<string, Suggestion[]> = {
-    "region:亞洲":       [{ label:"股票型",   condition:{type:"category",     operator:"==",value:"股票型"}, popular:true },
-                          { label:"高股息",   condition:{type:"sector",       operator:"==",value:"高股息"}, popular:true },
-                          { label:"月配息",   condition:{type:"distribution", operator:"==",value:"月配"} }],
-    "region:台灣":       [{ label:"高股息",   condition:{type:"sector",       operator:"==",value:"高股息"}, popular:true },
-                          { label:"月配息",   condition:{type:"distribution", operator:"==",value:"月配"},  popular:true },
-                          { label:"半導體",   condition:{type:"sector",       operator:"==",value:"半導體"} }],
-    "region:美國":       [{ label:"科技",     condition:{type:"sector",       operator:"==",value:"科技"},  popular:true },
-                          { label:"近1年>15%",condition:{type:"return",       operator:">=",value:15,period:"1y"} }],
-    "sector:高股息":     [{ label:"月配息",   condition:{type:"distribution", operator:"==",value:"月配"},  popular:true },
-                          { label:"殖利率>6%",condition:{type:"yield",        operator:">=",value:6} }],
-    "sector:科技":       [{ label:"近1年>20%",condition:{type:"return",       operator:">=",value:20,period:"1y"},popular:true },
-                          { label:"全球",     condition:{type:"region",       operator:"==",value:"全球"} }],
-    "distribution:月配": [{ label:"殖利率>6%",condition:{type:"yield",        operator:">=",value:6},       popular:true },
-                          { label:"低波動",   condition:{type:"volatility",   operator:"<=",value:15} }],
-    "category:股票型":   [{ label:"近1年>15%",condition:{type:"return",       operator:">=",value:15,period:"1y"},popular:true },
-                          { label:"月配息",   condition:{type:"distribution", operator:"==",value:"月配"} }],
+  if (conditions.length === 0) return ([
+    { label: "高股息",  condition: { type: "sector"       as const, operator: "==" as const, value: "高股息" }, popular: true },
+    { label: "月配息",  condition: { type: "distribution" as const, operator: "==" as const, value: "月配"  }, popular: true },
+    { label: "台灣",    condition: { type: "region"       as const, operator: "==" as const, value: "台灣"  } },
+    { label: "科技ETF", condition: { type: "sector"       as const, operator: "==" as const, value: "科技"  } },
+  ] as Suggestion[]).slice(0, max);
+  const map: Record<string, {label:string;condition:FilterCondition;popular?:boolean}[]> = {
+    "region:亞洲":       [{ label:"股票型",   condition:{type:"category"     as const, operator:"==",value:"股票型"}, popular:true },
+                          { label:"高股息",   condition:{type:"sector"       as const, operator:"==",value:"高股息"}, popular:true },
+                          { label:"月配息",   condition:{type:"distribution" as const, operator:"==",value:"月配"} }],
+    "region:台灣":       [{ label:"高股息",   condition:{type:"sector"       as const, operator:"==",value:"高股息"}, popular:true },
+                          { label:"月配息",   condition:{type:"distribution" as const, operator:"==",value:"月配"},  popular:true },
+                          { label:"半導體",   condition:{type:"sector"       as const, operator:"==",value:"半導體"} }],
+    "region:美國":       [{ label:"科技",     condition:{type:"sector"       as const, operator:"==",value:"科技"},  popular:true },
+                          { label:"近1年>15%",condition:{type:"return"       as const, operator:">=",value:15,period:"1y" as const} }],
+    "sector:高股息":     [{ label:"月配息",   condition:{type:"distribution" as const, operator:"==",value:"月配"},  popular:true },
+                          { label:"殖利率>6%",condition:{type:"yield"        as const, operator:">=",value:6} }],
+    "sector:科技":       [{ label:"近1年>20%",condition:{type:"return"       as const, operator:">=",value:20,period:"1y" as const},popular:true },
+                          { label:"全球",     condition:{type:"region"       as const, operator:"==",value:"全球"} }],
+    "distribution:月配": [{ label:"殖利率>6%",condition:{type:"yield"        as const, operator:">=",value:6},       popular:true },
+                          { label:"低波動",   condition:{type:"volatility"   as const, operator:"<=",value:15} }],
+    "category:股票型":   [{ label:"近1年>15%",condition:{type:"return"       as const, operator:">=",value:15,period:"1y" as const},popular:true },
+                          { label:"月配息",   condition:{type:"distribution" as const, operator:"==",value:"月配"} }],
   };
   const seen = new Set<string>();
   const out: Suggestion[] = [];
@@ -259,7 +259,7 @@ function getSuggestions(conditions: FilterCondition[], max = 4): Suggestion[] {
       }
     }
   }
-  return out.sort((a,b) => (b.popular?1:0)-(a.popular?1:0)).slice(0, max);
+  return (out as Suggestion[]).sort((a,b) => (b.popular?1:0)-(a.popular?1:0)).slice(0, max);
 }
 
 // ── 條件選單定義 ──────────────────────────────────────────────
