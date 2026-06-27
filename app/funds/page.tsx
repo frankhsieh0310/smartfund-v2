@@ -10,7 +10,6 @@ import { getTopFunds, type FundRankType } from "@/lib/services/rankingService";
 
 // ── localStorage 規格書定義 ───────────────────────────────────────────
 // Keys from shared hook
-const MAX_COMPARE = 5;
 
 
 
@@ -275,6 +274,14 @@ export default function FundsPage() {
   const [sortDir,     setSortDir]     = useState<SortDir>("desc");
   const [filterMode,  setFilterMode]  = useState<FilterMode>("all");
   const [chartFunds,  setChartFunds]  = useState<Fund[]>([]);
+
+  const toggleChart = (fund: Fund) => {
+    setChartFunds(prev =>
+      prev.find(f => f.id === fund.id)
+        ? prev.filter(f => f.id !== fund.id)
+        : prev.length < MAX_CHART ? [...prev, fund] : prev
+    );
+  };
   const [chartPeriod, setChartPeriod] = useState<Period>("1Y");
 
   const {
@@ -288,7 +295,6 @@ export default function FundsPage() {
 
 
 
-  const showToast = useCallback((msg: string) => showToast(msg), []);
 
 
   function handleSort(key: SortKey) {
