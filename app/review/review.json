@@ -1,0 +1,130 @@
+{
+    "version": "3.4",
+    "updated": "2026-06-27",
+    "project": "SmartMatch",
+    "repo": "frankhsieh0310/smartfund-v2",
+    "deploy": "smartfund-v2.vercel.app",
+  
+    "home": {
+      "path": "/",
+      "sections": ["Hero", "InvestmentCriteriaBuilder", "MockDashboard", "Comparison", "WhyCriteria", "Zone2", "Zone3", "Zone4", "MarketOverview", "Ranking", "About", "Footer"],
+      "hero": {
+        "title": "打造屬於你的投資儀表板",
+        "subtitle": "掌握市場資訊、追蹤關注商品、建立自己的投資資料庫。用一個平台，管理你的投資決策流程。",
+        "cta_primary": "開始打造我的投資首頁 →",
+        "cta_secondary": "先看看有哪些功能",
+        "background": "金融商辦大樓 brightness(0.55) + overlay rgba(#020817, 0.50/0.20)",
+        "stats": ["95+ ETF資料", "269+ 基金資料", "34+ 全球市場指標", "5min 快速上手"]
+      },
+      "criteriaBuilder": {
+        "title": "建立你的投資條件",
+        "subtitle": "依照自己的需求，建立一組搜尋條件，快速找出符合條件的 ETF 與基金",
+        "engine": "lib/query/queryBuilder.ts → lib/engines/filterEngine.ts",
+        "logic": "同一分類 OR，跨分類 AND",
+        "free_limit": 3,
+        "premium_limit": 20,
+        "live_count": true,
+        "categories": [
+          { "name": "資產類型", "options": ["ETF", "基金"], "multi": true },
+          { "name": "投資區域", "options": ["台灣", "美國", "全球", "亞洲", "中國", "新興市場"], "multi": true },
+          { "name": "商品類型", "options": ["股票型", "債券型", "平衡型", "高股息", "科技"], "multi": true },
+          { "name": "配息頻率", "options": ["月配息", "季配息", "年配"], "multi": true },
+          { "name": "殖利率", "options": [">3%", ">5%", ">7%", ">9%"], "multi": false },
+          { "name": "近一年績效", "options": [">5%", ">10%", ">15%", ">20%"], "multi": false },
+          { "name": "近三年績效", "options": [">20%", ">30%", ">50%"], "multi": false },
+          { "name": "年化波動度", "options": ["<10%", "<15%", "<20%"], "multi": false }
+        ],
+        "examples": [
+          { "name": "退休現金流", "tags": ["月配息", "配息率>6%", "波動度<15%"] },
+          { "name": "亞洲股票基金", "tags": ["亞洲", "股票型", "月配息"] },
+          { "name": "科技成長", "tags": ["科技", "近1年>20%", "全球"] },
+          { "name": "低波動收益", "tags": ["債券型", "波動度<10%", "月配息"] },
+          { "name": "高股息ETF", "tags": ["ETF", "高股息", "配息率>6%"] }
+        ],
+        "disclaimer": "以上僅為條件設定範例，非投資建議"
+      },
+      "mockDashboard": {
+        "title": "登入後，你的首頁會長這樣",
+        "criteria": [
+          { "name": "退休現金流", "etf": 8, "fund": 17 },
+          { "name": "亞洲收益", "etf": 5, "fund": 12 },
+          { "name": "科技成長", "etf": 11, "fund": 6 },
+          { "name": "美元收益", "etf": 3, "fund": 18 }
+        ]
+      },
+      "comparison": {
+        "title": "傳統做法 vs SmartMatch",
+        "left": ["找ETF", "找基金", "比較商品", "收藏商品", "下次還是要重新找"],
+        "right": ["建立投資條件", "一次搜尋ETF+基金", "保存自己的投資條件", "一鍵重新執行", "隨時查看符合最新條件商品"]
+      },
+      "whyCriteria": {
+        "cards": [
+          "不用每次重新設定",
+          "建立自己的投資邏輯",
+          "ETF+基金同時搜尋",
+          "條件不變，市場天天變"
+        ]
+      },
+      "ranking": {
+        "etf_tabs": ["近1年績效", "近30日熱門", "近3個月熱門", "殖利率最高", "低波動"],
+        "fund_tabs": ["近1年績效", "近30日熱門", "近3個月熱門", "月配息率", "年化配息率", "低波動"],
+        "top_n": 10,
+        "style": "Card Layout with 🥇🥈🥉 badges",
+        "engine": "lib/engines/rankingEngine.ts"
+      }
+    },
+  
+    "etf": {
+      "path": "/etf",
+      "data": { "count": 94, "source": "lib/data/etfData.ts" },
+      "sections": ["Navbar", "RankingTable", "FilterBar", "ETFTable", "CompareBar"],
+      "ranking": {
+        "tabs": ["近1年績效", "近30日熱門", "近3個月熱門", "殖利率最高", "低波動"],
+        "style": "Card with medal badges"
+      },
+      "filters": ["關鍵字", "地區", "類型", "排序"],
+      "sortable_columns": ["每單位配息", "殖利率", "今年以來", "近1月", "近3月", "近6月", "近1年", "近3年", "波動度"],
+      "sort_style": "3-state (desc → asc → reset) with ▲▼↕",
+      "action_buttons": ["⭐收藏", "👀觀察", "📊比較"],
+      "storage": "useWatchlist hook → localStorage (shared with /funds and /)"
+    },
+  
+    "funds": {
+      "path": "/funds",
+      "data": { "count": 138, "source": "lib/data/fundData.ts" },
+      "sections": ["Navbar", "RankingTable", "FilterBar", "FundTable", "TrendChart", "CompareBar"],
+      "ranking": {
+        "tabs": ["近1年績效", "近30日熱門", "近3個月熱門", "月配息率", "年化配息率", "低波動"],
+        "style": "Card with medal badges"
+      },
+      "filters": ["關鍵字", "公司", "類別", "地區", "排序"],
+      "sortable_columns": ["月配息率", "年化配息率", "今年以來", "近1月", "近3月", "近6月", "近1年", "近3年", "波動度"],
+      "morningstar": "★★★★★ display",
+      "action_buttons": ["⭐收藏", "👀觀察", "📊比較"],
+      "storage": "useWatchlist hook → localStorage (shared)"
+    },
+  
+    "markets": { "path": "/markets", "description": "全球市場概況" },
+    "compare": { "path": "/compare", "description": "ETF/基金橫向比較" },
+    "quiz": { "path": "/quiz", "description": "投資人格分析問卷" },
+    "report": { "path": "/report", "description": "投資報告" },
+    "pricing": { "path": "/pricing", "tiers": ["Free", "NT$99", "NT$299", "NT$599", "NT$1,499"] },
+  
+    "architecture": {
+      "lib/data": ["etfData.ts (94筆)", "fundData.ts (138筆)", "marketData.ts"],
+      "lib/engines": ["rankingEngine.ts", "filterEngine.ts", "holdingsEngine.ts", "strategyEngine.ts", "recommendationEngine.ts", "index.ts"],
+      "lib/query": ["queryBuilder.ts (OR/AND logic)"],
+      "lib/services": ["rankingService.ts"],
+      "lib/hooks": ["useWatchlist.ts (shared favorites/watchlist/compareList)"]
+    },
+  
+    "shared_state": {
+      "localStorage_keys": ["favorites", "watchlist", "compareList"],
+      "hook": "lib/hooks/useWatchlist.ts",
+      "sync": "storage event listener (cross-tab sync)",
+      "pages": ["/", "/etf", "/funds"]
+    },
+  
+    "forbidden_words": ["推薦", "建議", "最適合", "最佳", "永久免費", "無需信用卡"],
+    "required_disclaimers": ["非投資建議", "示意資料・非即時行情"]
+  }

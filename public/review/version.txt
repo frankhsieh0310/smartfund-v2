@@ -1,0 +1,15 @@
+SmartMatch v3.4
+Build Date: 2026-06-27
+Repo: frankhsieh0310/smartfund-v2
+Deploy: https://smartfund-v2.vercel.app
+
+Phases Complete:
+- Phase 1: Data Foundation (ETF 94筆, Fund 138筆, Market 5大)
+- Phase 2: Ranking Engine (5-tab ETF, 6-tab Fund)
+- Phase 3: Engine Layer (5 engines + QueryBuilder)
+- Phase 3A: Homepage Experience (Criteria Builder + Mock Dashboard)
+- Phase 3B: UX Refinement (Multi-select, Live count, Card ranking)
+
+Next:
+- Phase 4: Auth + Save Criteria
+- Phase 5: Holdings Engine UI
