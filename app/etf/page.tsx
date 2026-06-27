@@ -2,33 +2,13 @@
 import React from "react";
 
 import { useMemo, useState, useEffect, useCallback } from "react";
+import { useWatchlist, KEY_FAV, KEY_WATCH, KEY_COMPARE, MAX_COMPARE, loadList, saveList, hasItem, toggleItem, type ListItem } from "@/lib/hooks/useWatchlist";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ETF_LIST, REGIONS, SECTORS, type Etf } from "./data";
 import { getTopEtfs, type EtfRankType } from "@/lib/services/rankingService";
 
-// ── localStorage 規格書定義 ───────────────────────────────────────────
-const KEY_FAV     = "favorites";
-const KEY_WATCH   = "watchlist";
-const KEY_COMPARE = "compareList";
-const MAX_COMPARE = 5;
-
-type ListItem = { id: string; type: "etf" | "fund"; name: string };
-
-function loadList(key: string): ListItem[] {
-  try { return JSON.parse(localStorage.getItem(key) || "[]"); } catch { return []; }
-}
-function saveList(key: string, list: ListItem[]) {
-  localStorage.setItem(key, JSON.stringify(list));
-}
-function hasItem(list: ListItem[], id: string) {
-  return list.some(i => i.id === id);
-}
-function toggleItem(list: ListItem[], item: ListItem): ListItem[] {
-  return hasItem(list, item.id)
-    ? list.filter(i => i.id !== item.id)
-    : [...list, item];
-}
+// ── localStorage 共用 Hook（lib/hooks/useWatchlist）────────────────
 
 // ── Types ─────────────────────────────────────────────────────────────
 type SortKey = "dividendYield" | "dividendPerUnit" | "returnYTD" | "return1m" | "return3m" | "return6m" | "return1y" | "return3y" | "volatility";
@@ -259,16 +239,16 @@ export default function EtfDatabasePage() {
   const [sortDir,     setSortDir]    = useState<SortDir>("desc");
   const [filterMode,  setFilterMode] = useState<FilterMode>("all");
 
-  const [favList,     setFavList]     = useState<ListItem[]>([]);
-  const [watchList,   setWatchList]   = useState<ListItem[]>([]);
-  const [compareList, setCompareList] = useState<ListItem[]>([]);
-  const [toast,       setToast]       = useState<string | null>(null);
-
-  useEffect(() => {
-    setFavList(loadList(KEY_FAV).filter(i => i.type === "etf"));
-    setWatchList(loadList(KEY_WATCH).filter(i => i.type === "etf"));
-    setCompareList(loadList(KEY_COMPARE));
-  }, []);
+  const {
+    favList, watchList, compareList,
+    toggleFav: _toggleFav, toggleWatch: _toggleWatch, toggleCompare: _toggleCompare,
+    clearCompare, toast,
+    showToast,
+  } = useWatchlist("etf");
+  // wrapper handlers
+  const toggleFav     = useCallback((etf: Etf) => _toggleFav({ id: etf.code, type: "etf", name: etf.name }), [_toggleFav]);
+  const toggleWatch   = useCallback((etf: Etf) => _toggleWatch({ id: etf.code, type: "etf", name: etf.name }), [_toggleWatch]);
+  const toggleCompare = useCallback((etf: Etf) => _toggleCompare({ id: etf.code, type: "etf", name: etf.name }), [_toggleCompare]);
 
   const showToast = useCallback((msg: string) => setToast(msg), []);
 
@@ -505,7 +485,7 @@ export default function EtfDatabasePage() {
         </div>
       </div>
 
-      {toast && <Toast msg={toast} onClose={() => setToast(null)} />}
+      {toast && <Toast msg={toast} onClose={() => // toast managed by hook} />}
     </main>
   );
 }

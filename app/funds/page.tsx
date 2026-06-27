@@ -2,33 +2,22 @@
 import React from "react";
 
 import { useMemo, useState, useEffect, useCallback } from "react";
+import { useWatchlist, KEY_FAV, KEY_WATCH, KEY_COMPARE, MAX_COMPARE, loadList, saveList, hasItem, toggleItem, type ListItem } from "@/lib/hooks/useWatchlist";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FUND_LIST, COMPANIES, CATEGORIES, REGIONS, type Fund } from "./data";
 import { getTopFunds, type FundRankType } from "@/lib/services/rankingService";
 
 // ── localStorage 規格書定義 ───────────────────────────────────────────
-const KEY_FAV     = "favorites";
-const KEY_WATCH   = "watchlist";
-const KEY_COMPARE = "compareList";
+// Keys from shared hook
 const MAX_COMPARE = 5;
 
-type ListItem = { id: string; type: "etf" | "fund"; name: string };
 
-function loadList(key: string): ListItem[] {
-  try { return JSON.parse(localStorage.getItem(key) || "[]"); } catch { return []; }
-}
-function saveList(key: string, list: ListItem[]) {
-  localStorage.setItem(key, JSON.stringify(list));
-}
-function hasItem(list: ListItem[], id: string) {
-  return list.some(i => i.id === id);
-}
-function toggleItem(list: ListItem[], item: ListItem): ListItem[] {
-  return hasItem(list, item.id)
-    ? list.filter(i => i.id !== item.id)
-    : [...list, item];
-}
+
+
+
+
+
 
 // ── Types ─────────────────────────────────────────────────────────────
 type SortKey = "returnYTD" | "return1m" | "return3m" | "return6m" | "return1y" | "return3y" | "dividendYieldA" | "dividendYieldM" | "dividendPerUnit" | "volatility";
@@ -288,16 +277,17 @@ export default function FundsPage() {
   const [chartFunds,  setChartFunds]  = useState<Fund[]>([]);
   const [chartPeriod, setChartPeriod] = useState<Period>("1Y");
 
-  const [favList,     setFavList]     = useState<ListItem[]>([]);
-  const [watchList,   setWatchList]   = useState<ListItem[]>([]);
-  const [compareList, setCompareList] = useState<ListItem[]>([]);
+  const {
+    favList, watchList, compareList,
+    toggleFav: _tFav, toggleWatch: _tWatch, toggleCompare: _tCompare,
+    clearCompare, toast, showToast,
+  } = useWatchlist("fund");
+  const toggleFav     = useCallback((f: Fund) => _tFav({ id: f.id, type: "fund", name: f.name }), [_tFav]);
+  const toggleWatch   = useCallback((f: Fund) => _tWatch({ id: f.id, type: "fund", name: f.name }), [_tWatch]);
+  const toggleCompare = useCallback((f: Fund) => _tCompare({ id: f.id, type: "fund", name: f.name }), [_tCompare]);
   const [toast,       setToast]       = useState<string | null>(null);
 
-  useEffect(() => {
-    setFavList(loadList(KEY_FAV).filter(i => i.type === "fund"));
-    setWatchList(loadList(KEY_WATCH).filter(i => i.type === "fund"));
-    setCompareList(loadList(KEY_COMPARE));
-  }, []);
+
 
   const showToast = useCallback((msg: string) => setToast(msg), []);
 
@@ -457,7 +447,7 @@ export default function FundsPage() {
               📊 比較清單：{compareList.length} 檔
             </div>
             <div className="flex gap-3">
-              <button onClick={() => { saveList(KEY_COMPARE, []); setCompareList([]); }}
+              <button onClick={() => clearCompare()}
                 className="text-[12px] text-slate-500 hover:text-red-400 transition-colors">清除</button>
               <button onClick={() => router.push("/compare")}
                 className="bg-emerald-700 hover:bg-emerald-600 text-white text-[12px] font-bold px-4 py-1.5 rounded-lg transition-colors">

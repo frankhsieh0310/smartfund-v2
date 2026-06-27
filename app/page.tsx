@@ -7,6 +7,7 @@ import { getHomeTopEtfs, getHomeTopFunds } from "@/lib/services/rankingService";
 import { ETF_LIST } from "./etf/data";
 import { FUND_LIST } from "./funds/data";
 import { searchAll, type FilterCondition, type SearchResultItem } from "@/lib/engines/filterEngine";
+import { useWatchlist, type ListItem } from "@/lib/hooks/useWatchlist";
 // getSuggestions and conditionToLabel defined below
 
 // ── 全球市場資料 ──────────────────────────────────────────────────────
@@ -388,14 +389,23 @@ const EXAMPLE_SETS: { name: string; desc: string; conditions: FilterCondition[] 
 const FREE_LIMIT = 3;
 
 // ── Result Card ────────────────────────────────────────────────
-function ResultCard({ item }: { item: SearchResultItem }) {
-  const isEtf = item.type === "ETF";
+function ResultCard({ item, favList, watchList, compareList, onFav, onWatch, onCompare }: {
+  item: SearchResultItem;
+  favList: ListItem[]; watchList: ListItem[]; compareList: ListItem[];
+  onFav: (item: SearchResultItem) => void;
+  onWatch: (item: SearchResultItem) => void;
+  onCompare: (item: SearchResultItem) => void;
+}) {
+  const isEtf   = item.type === "ETF";
+  const isFav   = favList.some(i => i.id === (isEtf ? item.code : item.id));
+  const isWatch = watchList.some(i => i.id === (isEtf ? item.code : item.id));
+  const isCmp   = compareList.some(i => i.id === (isEtf ? item.code : item.id));
   return (
     <div className="bg-white border border-slate-100 rounded-2xl p-5 hover:shadow-md hover:border-[#F5B700]/30 transition-all">
       <div className="flex items-start justify-between mb-3">
-        <div>
+        <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${isEtf ? "bg-blue-50 text-blue-600" : "bg-amber-50 text-amber-700"}`}>
+            <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full shrink-0 ${isEtf ? "bg-blue-50 text-blue-600" : "bg-amber-50 text-amber-700"}`}>
               {item.type}
             </span>
             {item.morningstar && (
@@ -414,7 +424,7 @@ function ResultCard({ item }: { item: SearchResultItem }) {
           <div className="text-[11px] text-slate-400">近1年</div>
         </div>
       </div>
-      <div className="grid grid-cols-3 gap-2 pt-3 border-t border-slate-50">
+      <div className="grid grid-cols-3 gap-2 pt-3 border-t border-slate-50 mb-3">
         <div className="text-center">
           <div className="text-[14px] font-semibold text-[#b38600]">
             {item.dividendYield > 0 ? `${item.dividendYield.toFixed(1)}%` : "—"}
@@ -432,12 +442,28 @@ function ResultCard({ item }: { item: SearchResultItem }) {
           <div className="text-[11px] text-slate-400">波動度</div>
         </div>
       </div>
+      {/* Action Buttons — 共用 localStorage */}
+      <div className="flex items-center gap-1.5 pt-2 border-t border-slate-50">
+        <button onClick={() => onFav(item)} title={isFav ? "取消收藏" : "加入收藏"}
+          className={`flex-1 py-1.5 rounded-lg text-[12px] font-semibold transition-all flex items-center justify-center gap-1 ${isFav ? "bg-[#F5B700]/10 text-[#b38600]" : "bg-slate-50 text-slate-400 hover:bg-[#F5B700]/10 hover:text-[#b38600]"}`}>
+          ⭐ {isFav ? "已收藏" : "收藏"}
+        </button>
+        <button onClick={() => onWatch(item)} title={isWatch ? "移除觀察" : "加入觀察"}
+          className={`flex-1 py-1.5 rounded-lg text-[12px] font-semibold transition-all flex items-center justify-center gap-1 ${isWatch ? "bg-blue-50 text-blue-600" : "bg-slate-50 text-slate-400 hover:bg-blue-50 hover:text-blue-600"}`}>
+          👀 {isWatch ? "觀察中" : "觀察"}
+        </button>
+        <button onClick={() => onCompare(item)} title={isCmp ? "移除比較" : "加入比較"}
+          className={`flex-1 py-1.5 rounded-lg text-[12px] font-semibold transition-all flex items-center justify-center gap-1 ${isCmp ? "bg-emerald-50 text-emerald-600" : "bg-slate-50 text-slate-400 hover:bg-emerald-50 hover:text-emerald-600"}`}>
+          📊 {isCmp ? "比較中" : "比較"}
+        </button>
+      </div>
     </div>
   );
 }
 
 // ── Main Criteria Builder ──────────────────────────────────────
 function InvestmentCriteriaBuilder() {
+  const { favList, watchList, compareList, toggleFav, toggleWatch, toggleCompare, toast: wlToast, showToast: wlShowToast } = useWatchlist();
   const [conditions, setConditions] = useState<FilterCondition[]>([]);
   const [results, setResults]       = useState<SearchResultItem[] | null>(null);
   const [showMenu, setShowMenu]     = useState(false);
@@ -679,7 +705,12 @@ function InvestmentCriteriaBuilder() {
                   <div className="text-[14px] text-slate-400">{etfResults.length} 檔</div>
                 </div>
                 <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                  {etfResults.slice(0, 8).map(item => <ResultCard key={item.id} item={item} />)}
+                  {etfResults.slice(0, 8).map(item => <ResultCard key={item.id} item={item}
+                    favList={favList} watchList={watchList} compareList={compareList}
+                    onFav={i => toggleFav({ id: i.code || i.id, type: i.type === "ETF" ? "etf" : "fund", name: i.name })}
+                    onWatch={i => toggleWatch({ id: i.code || i.id, type: i.type === "ETF" ? "etf" : "fund", name: i.name })}
+                    onCompare={i => toggleCompare({ id: i.code || i.id, type: i.type === "ETF" ? "etf" : "fund", name: i.name })}
+                  />)}
                 </div>
                 {etfResults.length > 8 && (
                   <div className="mt-4 text-center">
@@ -698,7 +729,12 @@ function InvestmentCriteriaBuilder() {
                   <div className="text-[14px] text-slate-400">{fundResults.length} 檔</div>
                 </div>
                 <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                  {fundResults.slice(0, 8).map(item => <ResultCard key={item.id} item={item} />)}
+                  {fundResults.slice(0, 8).map(item => <ResultCard key={item.id} item={item}
+                    favList={favList} watchList={watchList} compareList={compareList}
+                    onFav={i => toggleFav({ id: i.code || i.id, type: i.type === "ETF" ? "etf" : "fund", name: i.name })}
+                    onWatch={i => toggleWatch({ id: i.code || i.id, type: i.type === "ETF" ? "etf" : "fund", name: i.name })}
+                    onCompare={i => toggleCompare({ id: i.code || i.id, type: i.type === "ETF" ? "etf" : "fund", name: i.name })}
+                  />)}
                 </div>
                 {fundResults.length > 8 && (
                   <div className="mt-4 text-center">
@@ -716,6 +752,11 @@ function InvestmentCriteriaBuilder() {
           </div>
         )}
       </div>
+      {wlToast && (
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[999] bg-[#1a2540] text-white text-[14px] font-semibold px-6 py-3 rounded-full shadow-xl">
+          {wlToast}
+        </div>
+      )}
     </section>
   );
 }
