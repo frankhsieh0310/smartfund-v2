@@ -194,9 +194,9 @@ function MktRow({ group }: { group: MktGroup }) {
 // Investment Criteria Builder
 // 使用 filterEngine + recommendationEngine
 // ══════════════════════════════════════════════════════════════
-import { searchAll, parseNaturalQuery, type FilterCondition, type SearchResultItem } from "@/lib/engines/filterEngine";
-import { getSuggestions, conditionToLabel, type Suggestion } from "@/lib/engines/recommendationEngine";
-import { PRESET_STRATEGIES } from "@/lib/engines/strategyEngine";
+import { searchAll, type FilterCondition, type SearchResultItem } from "@/lib/engines/filterEngine";
+import { getSuggestions, conditionToLabel } from "@/lib/engines/recommendationEngine";
+import type { Suggestion } from "@/lib/engines/recommendationEngine";
 
 // ── 條件選單定義 ──────────────────────────────────────────────
 const CONDITION_MENU: {
@@ -513,7 +513,7 @@ function InvestmentCriteriaBuilder() {
               {suggestions.length > 0 && conditions.length > 0 && conditions.length < FREE_LIMIT && (
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-[13px] text-slate-400">推薦加入：</span>
-                  {suggestions.map((s, i) => (
+                  {suggestions.map((s: Suggestion, i: number) => (
                     <button key={i}
                       onClick={() => addCondition(s.condition)}
                       className="text-[13px] border border-slate-200 text-slate-600 px-3 py-1.5 rounded-lg hover:border-[#F5B700] hover:text-[#b38600] transition-colors">
@@ -563,7 +563,7 @@ function InvestmentCriteriaBuilder() {
                 常用條件範例 <span className="text-[12px] font-normal text-slate-400 ml-1">（點擊套用）</span>
               </div>
               <div className="flex flex-wrap gap-2">
-                {EXAMPLE_SETS.map((ex, i) => (
+                {EXAMPLE_SETS.map((ex: typeof EXAMPLE_SETS[0], i: number) => (
                   <button key={i}
                     onClick={() => applyExample(ex)}
                     className="group flex items-center gap-2 bg-white border border-slate-200 text-[14px] px-4 py-2 rounded-xl hover:border-[#F5B700] hover:shadow-sm transition-all">
@@ -591,7 +591,7 @@ function InvestmentCriteriaBuilder() {
                   <span className="ml-1 text-[16px] text-slate-500">筆符合條件商品</span>
                 </div>
                 <div className="text-[13px] text-slate-400 mt-1">
-                  條件：{conditions.map(c => conditionToLabel(c)).join(" ＋ ")}
+                  條件：{conditions.map((c: FilterCondition) => conditionToLabel(c)).join(" ＋ ")}
                 </div>
               </div>
               <button onClick={clearAll}
