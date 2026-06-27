@@ -192,14 +192,13 @@ function FundRankingTable() {
   const ranked = React.useMemo(() => getTopFunds(tab, 10), [tab]);
 
   return (
-    <div className="mb-10 border border-white/[0.08] rounded-2xl overflow-hidden">
-      <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.08]"
-        style={{ background: "rgba(15,22,42,0.95)" }}>
+    <div className="mb-10">
+      <div className="flex items-center justify-between mb-4">
         <div className="text-[17px] font-bold text-white">🏆 熱門基金排行榜</div>
         <div className="flex gap-2 flex-wrap justify-end">
           {FUND_RANK_TABS.map(t => (
             <button key={t.key} onClick={() => setTab(t.key)}
-              className={`px-4 py-1.5 rounded-lg text-[13px] font-semibold transition-colors ${
+              className={`px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-colors ${
                 tab === t.key
                   ? "bg-[#F5B700] text-[#0B1220]"
                   : "border border-white/[0.15] text-slate-400 hover:border-[#F5B700]/50 hover:text-[#F5B700]"
@@ -210,52 +209,44 @@ function FundRankingTable() {
         </div>
       </div>
 
-      <table className="w-full text-left">
-        <thead>
-          <tr className="bg-white/[0.04] text-slate-500 text-[12px]">
-            <th className="px-4 py-3 font-semibold w-[44px]">排名</th>
-            <th className="px-4 py-3 font-semibold w-[56px]">公司</th>
-            <th className="px-4 py-3 font-semibold">基金名稱</th>
-            <th className="px-4 py-3 font-semibold w-[72px] text-center">晨星</th>
-            <th className="px-4 py-3 font-semibold w-[88px] text-right">月配息率</th>
-            <th className="px-4 py-3 font-semibold w-[90px] text-right">年化配息</th>
-            <th className="px-4 py-3 font-semibold w-[88px] text-right">近1月</th>
-            <th className="px-4 py-3 font-semibold w-[88px] text-right">近1年</th>
-            <th className="px-4 py-3 font-semibold w-[72px] text-right">波動度</th>
-          </tr>
-        </thead>
-        <tbody>
-          {ranked.map((fund, i) => (
-            <tr key={fund.id}
-              className={`text-[13px] border-t border-white/[0.05] hover:bg-[#F5B700]/[0.04] transition-colors ${i % 2 === 1 ? "bg-white/[0.015]" : ""}`}>
-              <td className="px-4 py-2.5">
-                <span className={`text-[15px] font-black ${
-                  i === 0 ? "text-[#FFD700]" : i === 1 ? "text-[#C0C0C0]" : i === 2 ? "text-[#CD7F32]" : "text-slate-600"
-                }`}>{i + 1}</span>
-              </td>
-              <td className="px-4 py-2.5 font-bold text-white text-[12px]">{fund.company}</td>
-              <td className="px-4 py-2.5 text-slate-200 max-w-[200px] truncate">{fund.name}</td>
-              <td className="px-4 py-2.5 text-center text-[#F5B700] text-[13px]">
-                {"★".repeat(fund.morningstar)}
-              </td>
-              <td className="px-4 py-2.5 text-right text-slate-300">
+      <div className="space-y-2">
+        {ranked.map((fund, i) => (
+          <div key={fund.id}
+            className={`flex items-center gap-4 px-4 py-3 rounded-xl border transition-colors hover:border-[#F5B700]/20 ${
+              i === 0 ? "bg-yellow-500/5 border-yellow-500/20" :
+              i === 1 ? "bg-slate-400/5 border-slate-400/15" :
+              i === 2 ? "bg-orange-500/5 border-orange-500/20" :
+              "bg-white/[0.02] border-white/[0.06]"
+            }`}>
+            <div className="flex items-center justify-center w-8 shrink-0">
+              {i === 0 ? <span className="text-[20px]">🥇</span> :
+               i === 1 ? <span className="text-[20px]">🥈</span> :
+               i === 2 ? <span className="text-[20px]">🥉</span> :
+               <span className="w-7 h-7 rounded-full bg-white/[0.06] border border-white/[0.1] flex items-center justify-center text-[13px] font-bold text-slate-500">{i + 1}</span>}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-[13px] font-bold text-white">{fund.company}</span>
+                <span className="text-[#F5B700] text-[12px]">{"★".repeat(fund.morningstar)}</span>
+              </div>
+              <div className="text-[12px] text-slate-400 truncate">{fund.name}</div>
+            </div>
+            <div className="text-right shrink-0">
+              <div className="text-[11px] text-slate-500 mb-0.5">月配息率</div>
+              <div className="text-[13px] font-semibold text-[#F5B700]">
                 {fund.dividendYieldM > 0 ? `${fund.dividendYieldM.toFixed(2)}%` : "—"}
-              </td>
-              <td className="px-4 py-2.5 text-right font-semibold text-[#F5B700]">
-                {fund.dividendYieldA > 0 ? `${fund.dividendYieldA.toFixed(1)}%` : "—"}
-              </td>
-              <td className={`px-4 py-2.5 text-right font-semibold ${fund.return1m >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-                {fund.return1m >= 0 ? "+" : ""}{fund.return1m.toFixed(1)}%
-              </td>
-              <td className={`px-4 py-2.5 text-right font-bold ${fund.return1y >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+              </div>
+            </div>
+            <div className="text-right shrink-0 w-[72px]">
+              <div className="text-[11px] text-slate-500 mb-0.5">近1年</div>
+              <div className={`text-[15px] font-black ${fund.return1y >= 0 ? "text-emerald-400" : "text-red-400"}`}>
                 {fund.return1y >= 0 ? "+" : ""}{fund.return1y.toFixed(1)}%
-              </td>
-              <td className="px-4 py-2.5 text-right text-slate-500">{fund.volatility.toFixed(1)}%</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <div className="px-6 py-3 border-t border-white/[0.06] text-[12px] text-slate-600">
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="mt-2 text-[11px] text-slate-600 text-right">
         排行依選定指標排序・示意資料・非即時行情
       </div>
     </div>

@@ -6,7 +6,8 @@ import { useState } from "react";
 import { getHomeTopEtfs, getHomeTopFunds } from "@/lib/services/rankingService";
 import { ETF_LIST } from "./etf/data";
 import { FUND_LIST } from "./funds/data";
-import { searchAll, type FilterCondition, type SearchResultItem } from "@/lib/engines/filterEngine";
+import { type FilterCondition, type SearchResultItem } from "@/lib/engines/filterEngine";
+import { searchFromTags, type QueryResult } from "@/lib/query/queryBuilder";
 import { useWatchlist, type ListItem } from "@/lib/hooks/useWatchlist";
 // getSuggestions and conditionToLabel defined below
 
@@ -341,10 +342,15 @@ const CONDITION_MENU: {
 ];
 
 // 常用條件範例
-const EXAMPLE_SETS: { name: string; desc: string; conditions: FilterCondition[] }[] = [
+interface ExampleSet {
+  name: string;
+  tags: string[];
+  conditions: FilterCondition[];
+}
+const EXAMPLE_SETS: ExampleSet[] = [
   {
     name: "退休現金流",
-    desc: "月配息＋高配息率",
+    tags: ["月配息", "配息率 > 6%", "波動度 < 15%"],
     conditions: [
       { type: "distribution", operator: "==", value: "月配" },
       { type: "yield",        operator: ">=", value: 6 },
@@ -353,31 +359,34 @@ const EXAMPLE_SETS: { name: string; desc: string; conditions: FilterCondition[] 
   },
   {
     name: "亞洲股票基金",
-    desc: "亞洲＋股票型",
+    tags: ["亞洲", "股票型", "月配息"],
     conditions: [
-      { type: "region",   operator: "==", value: "亞洲" },
-      { type: "category", operator: "==", value: "股票型" },
+      { type: "region",       operator: "==", value: "亞洲" },
+      { type: "category",     operator: "==", value: "股票型" },
+      { type: "distribution", operator: "==", value: "月配" },
     ],
   },
   {
     name: "科技成長",
-    desc: "科技＋近一年績效",
+    tags: ["科技", "近1年 > 20%", "全球"],
     conditions: [
       { type: "sector", operator: "==", value: "科技" },
       { type: "return", operator: ">=", value: 20, period: "1y" },
+      { type: "region", operator: "==", value: "全球" },
     ],
   },
   {
     name: "低波動收益",
-    desc: "債券＋低波動",
+    tags: ["債券型", "波動度 < 10%", "月配息"],
     conditions: [
-      { type: "category",  operator: "==", value: "債券型" },
-      { type: "volatility",operator: "<=", value: 10 },
+      { type: "category",     operator: "==", value: "債券型" },
+      { type: "volatility",   operator: "<=", value: 10 },
+      { type: "distribution", operator: "==", value: "月配" },
     ],
   },
   {
     name: "高股息 ETF",
-    desc: "高股息＋月配息",
+    tags: ["ETF", "高股息", "配息率 > 6%"],
     conditions: [
       { type: "assetType", operator: "==", value: "ETF" },
       { type: "sector",    operator: "==", value: "高股息" },
@@ -473,23 +482,28 @@ function InvestmentCriteriaBuilder() {
 
   const suggestions = React.useMemo(() => getSuggestions(conditions, 4), [conditions]);
 
-  // 即時計算符合商品數量（每次條件變更立即執行）
-  const liveCount = React.useMemo(() => {
+  // 即時計算符合商品數量（QueryBuilder: 同類型 OR，跨類型 AND）
+  const liveCount = React.useMemo((): { etf: number; fund: number; total: number } => {
     if (conditions.length === 0) return { etf: 0, fund: 0, total: 0 };
-    const all = searchAll({ conditions, topN: 200 });
-    const etf  = all.filter(r => r.type === "ETF").length;
-    const fund = all.filter(r => r.type === "基金").length;
-    return { etf, fund, total: etf + fund };
+    const r = searchFromTags(conditions, 300);
+    return { etf: r.etfCount, fund: r.fundCount, total: r.total };
   }, [conditions]);
 
   function addCondition(cond: FilterCondition) {
+    // Check if already selected (toggle off)
+    const isSelected = conditions.some(c => c.type === cond.type && c.value === cond.value);
+    if (isSelected) {
+      setConditions(conditions.filter(c => !(c.type === cond.type && c.value === cond.value)));
+      setResults(null);
+      setSearched(false);
+      return;
+    }
     if (conditions.length >= FREE_LIMIT) {
       setShowPremium(true);
       return;
     }
-    // 同類型只保留最後一個
-    const filtered = conditions.filter(c => c.type !== cond.type);
-    setConditions([...filtered, cond]);
+    // Multi-select: allow multiple conditions of same type (OR within type)
+    setConditions([...conditions, cond]);
     setShowMenu(false);
     setResults(null);
     setSearched(false);
@@ -501,7 +515,7 @@ function InvestmentCriteriaBuilder() {
     setSearched(false);
   }
 
-  function applyExample(example: typeof EXAMPLE_SETS[0]) {
+  function applyExample(example: ExampleSet) {
     setConditions(example.conditions.slice(0, FREE_LIMIT));
     setResults(null);
     setSearched(false);
@@ -510,8 +524,8 @@ function InvestmentCriteriaBuilder() {
 
   function doSearch() {
     if (conditions.length === 0) return;
-    const r = searchAll({ conditions, topN: 20 });
-    setResults(r);
+    const qr = searchFromTags(conditions, 40);
+    setResults(qr.items);
     setSearched(true);
     setShowResults(true);
   }
@@ -550,12 +564,13 @@ function InvestmentCriteriaBuilder() {
               {conditions.length === 0 && (
                 <span className="text-[15px] text-slate-400">點擊「＋ 新增條件」開始建立...</span>
               )}
-              {conditions.map((c, i) => (
+              {conditions.map((c: FilterCondition, i: number) => (
                 <span key={i}
-                  className="inline-flex items-center gap-1.5 bg-[#0a1628] text-white text-[14px] font-semibold px-4 py-2 rounded-full">
-                  {conditionToLabel(c)}
+                  className="inline-flex items-center gap-2 bg-[#0a1628] text-white text-[13px] font-semibold px-3.5 py-1.5 rounded-full border border-white/10 hover:border-[#F5B700]/40 transition-all">
+                  <span className="text-[10px] text-white/40 uppercase tracking-wider">{c.type === "assetType" ? "類型" : c.type === "region" ? "區域" : c.type === "sector" ? "類型" : c.type === "category" ? "商品" : c.type === "distribution" ? "配息" : c.type === "yield" ? "殖利率" : c.type === "return" ? "績效" : c.type === "volatility" ? "波動" : ""}</span>
+                  <span>{conditionToLabel(c)}</span>
                   <button onClick={() => removeCondition(i)}
-                    className="text-white/60 hover:text-white text-[16px] leading-none ml-1">×</button>
+                    className="w-4 h-4 rounded-full bg-white/10 hover:bg-red-500/30 hover:text-red-300 flex items-center justify-center text-[11px] leading-none transition-all ml-0.5">×</button>
                 </span>
               ))}
               {/* 免費限制提示 */}
@@ -634,13 +649,23 @@ function InvestmentCriteriaBuilder() {
                 </button>
               )}
 
-              {/* 即時符合數量 */}
+              {/* 即時符合數量 — 大字顯示 */}
               {conditions.length > 0 && (
-                <div className="flex items-center gap-3 bg-slate-100 rounded-xl px-4 py-2">
-                  <span className="text-[13px] text-slate-500">符合條件：</span>
-                  <span className="text-[13px] font-bold text-blue-600">ETF {liveCount.etf} 檔</span>
-                  <span className="text-slate-300">|</span>
-                  <span className="text-[13px] font-bold text-amber-600">基金 {liveCount.fund} 檔</span>
+                <div className="flex items-center gap-4 bg-gradient-to-r from-slate-50 to-white border border-slate-200 rounded-2xl px-5 py-3">
+                  <div className="text-center">
+                    <div className="text-[28px] font-black text-blue-600 leading-none">{liveCount.etf}</div>
+                    <div className="text-[11px] text-slate-400 mt-0.5">檔 ETF</div>
+                  </div>
+                  <div className="text-slate-300 text-[20px]">+</div>
+                  <div className="text-center">
+                    <div className="text-[28px] font-black text-amber-600 leading-none">{liveCount.fund}</div>
+                    <div className="text-[11px] text-slate-400 mt-0.5">檔基金</div>
+                  </div>
+                  <div className="text-slate-300 text-[20px]">=</div>
+                  <div className="text-center">
+                    <div className="text-[28px] font-black text-[#0a1628] leading-none">{liveCount.total}</div>
+                    <div className="text-[11px] text-slate-400 mt-0.5">符合條件</div>
+                  </div>
                 </div>
               )}
 
@@ -675,13 +700,22 @@ function InvestmentCriteriaBuilder() {
                 常用條件範例 <span className="text-[12px] font-normal text-slate-400 ml-1">（點擊套用）</span>
               </div>
               <div className="flex flex-wrap gap-2">
-                {EXAMPLE_SETS.map((ex: typeof EXAMPLE_SETS[0], i: number) => (
+                {EXAMPLE_SETS.map((ex: ExampleSet, i: number) => (
                   <button key={i}
                     onClick={() => applyExample(ex)}
-                    className="group flex items-center gap-2 bg-white border border-slate-200 text-[14px] px-4 py-2 rounded-xl hover:border-[#F5B700] hover:shadow-sm transition-all">
-                    <span className="text-[11px] font-bold text-[#b38600] bg-amber-50 px-1.5 py-0.5 rounded">範例</span>
-                    <span className="font-semibold text-[#0a1628]">{ex.name}</span>
-                    <span className="text-slate-400 text-[12px]">{ex.desc}</span>
+                    className="group bg-white border border-slate-200 text-left px-4 py-3 rounded-xl hover:border-[#F5B700] hover:shadow-md transition-all flex-shrink-0">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-[10px] font-bold text-[#b38600] bg-amber-50 px-1.5 py-0.5 rounded tracking-wider">範例</span>
+                      <span className="text-[14px] font-bold text-[#0a1628]">{ex.name}</span>
+                    </div>
+                    <div className="space-y-1">
+                      {ex.tags.map((tag: string) => (
+                        <div key={tag} className="flex items-center gap-1.5 text-[12px] text-slate-500">
+                          <span className="text-emerald-500 font-bold">✓</span>
+                          <span>{tag}</span>
+                        </div>
+                      ))}
+                    </div>
                   </button>
                 ))}
               </div>
@@ -969,7 +1003,7 @@ export default function Home() {
       {/* ══ ZONE 1：HERO ════════════════════════════════════════════ */}
       <section className="relative z-10 min-h-screen">
         {/* Overlay 35~40% */}
-        <div className="absolute inset-0 bg-gradient-to-r from-[#020817]/70 via-[#020817]/35 to-transparent z-[1]" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#020817]/50 via-[#020817]/20 to-transparent z-[1]" />
         <div className="relative z-10 max-w-[1600px] mx-auto px-10 flex items-center min-h-screen pt-20">
           <div className="grid lg:grid-cols-[50%_50%] w-full items-center gap-12 py-16">
 
