@@ -7,7 +7,7 @@ import { getHomeTopEtfs, getHomeTopFunds } from "@/lib/services/rankingService";
 import { ETF_LIST } from "./etf/data";
 import { FUND_LIST } from "./funds/data";
 import { searchAll, type FilterCondition, type SearchResultItem } from "@/lib/engines/filterEngine";
-import { getSuggestions, conditionToLabel, type Suggestion } from "@/lib/engines/recommendationEngine";
+// getSuggestions and conditionToLabel defined below
 
 // ── 全球市場資料 ──────────────────────────────────────────────────────
 type MktItem  = { name: string; value: string; pts: string; pct: string; up: boolean };
@@ -196,6 +196,71 @@ function MktRow({ group }: { group: MktGroup }) {
 // Investment Criteria Builder
 // 使用 filterEngine + recommendationEngine
 // ══════════════════════════════════════════════════════════════
+
+
+// ── Inline helpers (avoids import issues) ────────────────────
+interface Suggestion {
+  label: string;
+  condition: FilterCondition;
+  reason?: string;
+  popular?: boolean;
+}
+
+function conditionToLabel(c: FilterCondition): string {
+  switch (c.type) {
+    case "assetType":    return String(c.value);
+    case "region":       return String(c.value);
+    case "sector":       return String(c.value);
+    case "category":     return String(c.value);
+    case "distribution": return String(c.value);
+    case "yield":        return `殖利率${c.operator}${c.value}%`;
+    case "return":       return `近${(c as {period?:string}).period ?? "1y"}績效${c.operator}${c.value}%`;
+    case "volatility":   return `波動${c.operator}${c.value}%`;
+    case "morningstar":  return `晨星${c.operator}${c.value}星`;
+    case "keyword":      return `含「${c.value}」`;
+    default:             return String(c.value);
+  }
+}
+
+function getSuggestions(conditions: FilterCondition[], max = 4): Suggestion[] {
+  const usedTypes = new Set(conditions.map(c => c.type));
+  if (conditions.length === 0) return [
+    { label: "高股息",  condition: { type: "sector",       operator: "==", value: "高股息" }, popular: true },
+    { label: "月配息",  condition: { type: "distribution", operator: "==", value: "月配"  }, popular: true },
+    { label: "台灣",    condition: { type: "region",       operator: "==", value: "台灣"  } },
+    { label: "科技ETF", condition: { type: "sector",       operator: "==", value: "科技"  } },
+  ].slice(0, max);
+  const map: Record<string, Suggestion[]> = {
+    "region:亞洲":       [{ label:"股票型",   condition:{type:"category",     operator:"==",value:"股票型"}, popular:true },
+                          { label:"高股息",   condition:{type:"sector",       operator:"==",value:"高股息"}, popular:true },
+                          { label:"月配息",   condition:{type:"distribution", operator:"==",value:"月配"} }],
+    "region:台灣":       [{ label:"高股息",   condition:{type:"sector",       operator:"==",value:"高股息"}, popular:true },
+                          { label:"月配息",   condition:{type:"distribution", operator:"==",value:"月配"},  popular:true },
+                          { label:"半導體",   condition:{type:"sector",       operator:"==",value:"半導體"} }],
+    "region:美國":       [{ label:"科技",     condition:{type:"sector",       operator:"==",value:"科技"},  popular:true },
+                          { label:"近1年>15%",condition:{type:"return",       operator:">=",value:15,period:"1y"} }],
+    "sector:高股息":     [{ label:"月配息",   condition:{type:"distribution", operator:"==",value:"月配"},  popular:true },
+                          { label:"殖利率>6%",condition:{type:"yield",        operator:">=",value:6} }],
+    "sector:科技":       [{ label:"近1年>20%",condition:{type:"return",       operator:">=",value:20,period:"1y"},popular:true },
+                          { label:"全球",     condition:{type:"region",       operator:"==",value:"全球"} }],
+    "distribution:月配": [{ label:"殖利率>6%",condition:{type:"yield",        operator:">=",value:6},       popular:true },
+                          { label:"低波動",   condition:{type:"volatility",   operator:"<=",value:15} }],
+    "category:股票型":   [{ label:"近1年>15%",condition:{type:"return",       operator:">=",value:15,period:"1y"},popular:true },
+                          { label:"月配息",   condition:{type:"distribution", operator:"==",value:"月配"} }],
+  };
+  const seen = new Set<string>();
+  const out: Suggestion[] = [];
+  for (const c of conditions) {
+    const key = `${c.type}:${c.value}`;
+    for (const s of (map[key] ?? [])) {
+      const sk = `${s.condition.type}:${s.condition.value}`;
+      if (!usedTypes.has(s.condition.type) && !seen.has(sk)) {
+        seen.add(sk); out.push(s);
+      }
+    }
+  }
+  return out.sort((a,b) => (b.popular?1:0)-(a.popular?1:0)).slice(0, max);
+}
 
 // ── 條件選單定義 ──────────────────────────────────────────────
 const CONDITION_MENU: {
