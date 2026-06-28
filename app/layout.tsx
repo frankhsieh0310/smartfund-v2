@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "SmartMatch｜ETF & 基金資產配置分析平台",
-  description: "投資人格分析、ETF篩選、基金篩選、資產配置規劃，一站完成。",
+  title: "SmartMatch｜建立你的投資條件，找出符合的 ETF 與基金",
+  description: "建立、保存、管理、重複使用你自己的投資條件。SmartMatch 是投資條件管理平台，不是 ETF 網站，不是基金網站。",
 };
 
 export default function RootLayout({
@@ -24,7 +24,7 @@ export default function RootLayout({
             pointerEvents: "none",
           }}
         >
-          {/* 底圖：brightness(0.55) → 大樓清楚可辨識 */}
+          {/* 底圖：brightness(0.72) → 大樓清楚可辨識，Task 1 */}
           <div
             style={{
               position: "absolute",
@@ -33,16 +33,16 @@ export default function RootLayout({
                 "url('https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2600')",
               backgroundSize: "cover",
               backgroundPosition: "center",
-              filter: "brightness(0.55)",
+              filter: "brightness(0.72)",
             }}
           />
-          {/* 深藍遮罩：從 0.68 降到 0.45，讓大樓透出來 */}
+          {/* 深藍遮罩：降低至 0.30，讓大樓更清晰透出 */}
           <div
             style={{
               position: "absolute",
               inset: 0,
               background:
-                "linear-gradient(180deg, rgba(2,8,23,0.45) 0%, rgba(2,8,23,0.55) 100%)",
+                "linear-gradient(180deg, rgba(2,8,23,0.30) 0%, rgba(2,8,23,0.40) 100%)",
             }}
           />
         </div>
