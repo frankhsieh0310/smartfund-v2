@@ -286,7 +286,7 @@ export function CriteriaBuilderSection() {
   const fundResults = results?.filter(r => r.type === "基金") ?? [];
 
   return (
-    <section className="relative z-10 py-24" style={{ backgroundColor: "#ffffff" }}>
+    <section id="criteria-builder" className="relative z-10 py-24" style={{ backgroundColor: "#ffffff" }}>
       <div className="max-w-[1400px] mx-auto px-10">
 
         {/* ── Task 8+9：Section Header — 定位清楚 ── */}
@@ -324,7 +324,7 @@ export function CriteriaBuilderSection() {
 
           {/* ── Task 7：常用條件範例（上方，先給範例降低門檻）── */}
           {!showResults && (
-            <div className="mb-8">
+            <div id="examples" className="mb-8">
               <div className="text-[13px] text-slate-400 font-semibold tracking-wider mb-4 uppercase">
                 條件範例 <span className="text-[11px] font-normal normal-case ml-1">點擊套用，再自行調整</span>
               </div>
