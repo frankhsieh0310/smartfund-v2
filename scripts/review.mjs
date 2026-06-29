@@ -1,9 +1,11 @@
+﻿// scripts/review.mjs
 import { chromium } from "playwright";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
-
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 const OUTPUT_DIR = path.join(__dirname, "..", "review-output");
 const BASE_URL = "http://localhost:3000";
 
@@ -18,19 +20,11 @@ const PAGES = [
 ];
 
 async function run() {
-  if (!fs.existsSync(OUTPUT_DIR)) {
-    fs.mkdirSync(OUTPUT_DIR, { recursive: true });
-  }
-
+  if (!fs.existsSync(OUTPUT_DIR)) fs.mkdirSync(OUTPUT_DIR, { recursive: true });
   console.log("SmartMatch Review Mode");
   console.log("Output:", OUTPUT_DIR);
-
   const browser = await chromium.launch({ headless: true });
-  const context = await browser.newContext({
-    viewport: { width: 1440, height: 900 },
-    deviceScaleFactor: 1,
-  });
-
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
   for (const page_def of PAGES) {
     const url = `${BASE_URL}${page_def.path}`;
     const outputPath = path.join(OUTPUT_DIR, `${page_def.name}.png`);
@@ -38,21 +32,17 @@ async function run() {
     try {
       const page = await context.newPage();
       await page.goto(url, { waitUntil: "networkidle", timeout: 30000 });
-      await page.waitForSelector(page_def.waitFor, { timeout: 10000 }).catch(() => {});
-      await page.waitForTimeout(1500);
+      await page.waitForSelector(page_def.waitFor, { timeout: 30000 });
+      await page.waitForTimeout(1000);
       await page.screenshot({ path: outputPath, fullPage: true });
-      await page.close();
       console.log("完成");
+      await page.close();
     } catch (err) {
-      console.log("失敗:", err.message.split("\n")[0]);
+      console.log(`失敗: ${err.message}`);
     }
   }
-
   await browser.close();
   console.log("全部完成，截圖在 review-output/ 資料夾");
 }
 
-run().catch(err => {
-  console.error("錯誤:", err.message);
-  process.exit(1);
-});
+run().catch(console.error);
