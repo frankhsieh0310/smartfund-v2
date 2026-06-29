@@ -1,14 +1,13 @@
 "use client";
 // ============================================================
 // app/etf/page.tsx
-// SmartMatch ETF 篩選器
-// Phase A2：排行榜、Investment Criteria 條件搜尋、欄位 Highlight、閱讀體驗
+// PRD-A2-V3.0: ETF Product Differentiation
 // ============================================================
 
 import React, { useMemo, useState, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ETF_LIST, REGIONS, SECTORS, type Etf } from "./data";
+import { ETF_LIST, type Etf } from "./data";
 import { getTopEtfs, type EtfRankType } from "@/lib/services/rankingService";
 import { useWatchlist, hasItem, type ListItem } from "@/lib/hooks/useWatchlist";
 import { Toast, Pct } from "@/components/shared";
@@ -18,40 +17,56 @@ type SortKey = "dividendYield" | "dividendPerUnit" | "returnYTD" | "return1m" | 
 type SortDir = "asc" | "desc";
 type FilterMode = "all" | "fav" | "watch";
 
-// ── Criteria Chip ─────────────────────────────────────────────
-interface Criterion {
-  id: string;
-  label: string;
-  filter: (e: Etf) => boolean;
+// ── Task 1: SmartMatch Score（假資料）────────────────────────
+const SM_SCORES: Record<string, number> = {};
+[...ETF_LIST].sort((a, b) => b.return1y - a.return1y).forEach((etf, i) => {
+  SM_SCORES[etf.code] = Math.max(60, 98 - i * 0.42);
+});
+
+function StarScore({ score }: { score: number }) {
+  const stars = score >= 95 ? 5 : score >= 88 ? 4 : score >= 78 ? 3 : score >= 68 ? 2 : 1;
+  return (
+    <div className="flex flex-col items-center gap-0.5">
+      <span className="text-[14px] font-black text-[#F5C542] leading-none">{Math.round(score)}</span>
+      <span className="text-[#F5C542] leading-none text-[10px] tracking-[-1px]">{"★".repeat(stars)}{"☆".repeat(5 - stars)}</span>
+    </div>
+  );
 }
 
+// ── Task 2: Why Matched Tags（假資料，依 ETF 真實欄位）────────
+function getWhyMatched(etf: Etf): string[] {
+  const tags: string[] = [];
+  if (etf.dividendFreq === "月配") tags.push("月配息");
+  else if (etf.dividendFreq === "季配") tags.push("季配息");
+  if (etf.region && etf.region !== "全球") tags.push(etf.region);
+  if (etf.sector) tags.push(etf.sector);
+  return tags.slice(0, 3);
+}
+
+// ── Investment Criteria Options ───────────────────────────────
+interface Criterion { id: string; label: string; filter: (e: Etf) => boolean; }
+
 const CRITERIA_OPTIONS: Criterion[] = [
-  // 配息頻率
-  { id: "freq_monthly",  label: "月配息",     filter: e => e.dividendFreq === "月配" },
-  { id: "freq_quarterly",label: "季配息",     filter: e => e.dividendFreq === "季配" },
-  // 殖利率
-  { id: "yield_3",  label: "殖利率 > 3%",  filter: e => e.dividendYield > 3  },
-  { id: "yield_5",  label: "殖利率 > 5%",  filter: e => e.dividendYield > 5  },
-  { id: "yield_7",  label: "殖利率 > 7%",  filter: e => e.dividendYield > 7  },
-  { id: "yield_9",  label: "殖利率 > 9%",  filter: e => e.dividendYield > 9  },
-  // 類型
-  { id: "sector_high_div", label: "高股息",   filter: e => e.sector === "高股息" },
-  { id: "sector_tech",     label: "科技",     filter: e => e.sector === "科技" },
-  { id: "sector_semi",     label: "半導體",   filter: e => e.sector === "半導體" },
-  { id: "sector_bond",     label: "債券",     filter: e => e.sector === "債券" },
-  { id: "sector_esg",      label: "ESG",      filter: e => e.sector === "ESG" },
-  // 地區
-  { id: "region_tw",   label: "台灣",      filter: e => e.region === "台灣" },
-  { id: "region_us",   label: "美國",      filter: e => e.region === "美國" },
-  { id: "region_asia", label: "亞洲",      filter: e => e.region === "亞洲" },
-  { id: "region_global",label: "全球",     filter: e => e.region === "全球" },
-  // 績效
-  { id: "ret1y_10",  label: "近1年 > 10%", filter: e => e.return1y > 10 },
-  { id: "ret1y_20",  label: "近1年 > 20%", filter: e => e.return1y > 20 },
-  { id: "ret1y_30",  label: "近1年 > 30%", filter: e => e.return1y > 30 },
-  // 波動度
-  { id: "vol_low",   label: "低波動 < 15%", filter: e => e.volatility < 15 },
-  { id: "vol_mid",   label: "波動 < 20%",   filter: e => e.volatility < 20 },
+  { id: "freq_monthly",   label: "月配息",      filter: e => e.dividendFreq === "月配" },
+  { id: "freq_quarterly", label: "季配息",      filter: e => e.dividendFreq === "季配" },
+  { id: "yield_3",        label: "殖利率 > 3%", filter: e => e.dividendYield > 3 },
+  { id: "yield_5",        label: "殖利率 > 5%", filter: e => e.dividendYield > 5 },
+  { id: "yield_7",        label: "殖利率 > 7%", filter: e => e.dividendYield > 7 },
+  { id: "yield_9",        label: "殖利率 > 9%", filter: e => e.dividendYield > 9 },
+  { id: "sector_high_div",label: "高股息",       filter: e => e.sector === "高股息" },
+  { id: "sector_tech",    label: "科技",         filter: e => e.sector === "科技" },
+  { id: "sector_semi",    label: "半導體",       filter: e => e.sector === "半導體" },
+  { id: "sector_bond",    label: "債券",         filter: e => e.sector === "債券" },
+  { id: "sector_esg",     label: "ESG",          filter: e => e.sector === "ESG" },
+  { id: "region_tw",      label: "台灣",         filter: e => e.region === "台灣" },
+  { id: "region_us",      label: "美國",         filter: e => e.region === "美國" },
+  { id: "region_asia",    label: "亞洲",         filter: e => e.region === "亞洲" },
+  { id: "region_global",  label: "全球",         filter: e => e.region === "全球" },
+  { id: "ret1y_10",       label: "近1年 > 10%",  filter: e => e.return1y > 10 },
+  { id: "ret1y_20",       label: "近1年 > 20%",  filter: e => e.return1y > 20 },
+  { id: "ret1y_30",       label: "近1年 > 30%",  filter: e => e.return1y > 30 },
+  { id: "vol_low",        label: "低波動 < 15%", filter: e => e.volatility < 15 },
+  { id: "vol_mid",        label: "波動 < 20%",   filter: e => e.volatility < 20 },
 ];
 
 const CRITERIA_GROUPS = [
@@ -63,51 +78,20 @@ const CRITERIA_GROUPS = [
   { label: "波動度",   ids: ["vol_low", "vol_mid"] },
 ];
 
-// ── ActionBtns ────────────────────────────────────────────────
-function ActionBtns({ etf, favList, watchList, compareList, onFav, onWatch, onCompare }: {
-  etf: Etf;
-  favList: ListItem[]; watchList: ListItem[]; compareList: ListItem[];
-  onFav: (e: Etf) => void; onWatch: (e: Etf) => void; onCompare: (e: Etf) => void;
-}) {
-  const isFav     = hasItem(favList, etf.code);
-  const isWatch   = hasItem(watchList, etf.code);
-  const isCompare = hasItem(compareList, etf.code);
-  return (
-    <div className="flex items-center gap-1.5">
-      <button onClick={() => onFav(etf)} title={isFav ? "取消收藏" : "加入收藏"}
-        className={`w-8 h-8 rounded-lg flex items-center justify-center text-[14px] transition-all ${
-          isFav ? "bg-[#F5B700]/20 text-[#F5B700]" : "bg-white/[0.04] text-slate-500 hover:bg-[#F5B700]/10 hover:text-[#F5B700]"
-        }`}>⭐</button>
-      <button onClick={() => onWatch(etf)} title={isWatch ? "移除觀察" : "加入觀察"}
-        className={`w-8 h-8 rounded-lg flex items-center justify-center text-[14px] transition-all ${
-          isWatch ? "bg-blue-500/20 text-blue-400" : "bg-white/[0.04] text-slate-500 hover:bg-blue-500/10 hover:text-blue-400"
-        }`}>👀</button>
-      <button onClick={() => onCompare(etf)} title={isCompare ? "移除比較" : "加入比較"}
-        className={`w-8 h-8 rounded-lg flex items-center justify-center text-[14px] transition-all ${
-          isCompare ? "bg-emerald-500/20 text-emerald-400" : "bg-white/[0.04] text-slate-500 hover:bg-emerald-500/10 hover:text-emerald-400"
-        }`}>📊</button>
-    </div>
-  );
-}
-
 // ── RankBadge ─────────────────────────────────────────────────
 function RankBadge({ rank }: { rank: number }) {
-  if (rank === 0) return <span className="text-[22px]">🥇</span>;
-  if (rank === 1) return <span className="text-[22px]">🥈</span>;
-  if (rank === 2) return <span className="text-[22px]">🥉</span>;
-  return (
-    <span className="w-7 h-7 rounded-full bg-white/[0.06] border border-white/[0.1] flex items-center justify-center text-[12px] font-bold text-slate-500">
-      {rank + 1}
-    </span>
-  );
+  if (rank === 0) return <span className="text-[18px]">🥇</span>;
+  if (rank === 1) return <span className="text-[18px]">🥈</span>;
+  if (rank === 2) return <span className="text-[18px]">🥉</span>;
+  return <span className="w-6 h-6 rounded-full bg-white/[0.06] border border-white/[0.1] flex items-center justify-center text-[11px] font-bold text-slate-500">{rank + 1}</span>;
 }
 
-// ── 排行榜 ────────────────────────────────────────────────────
+// ── ETF Ranking ───────────────────────────────────────────────
 const ETF_RANK_TABS: { key: EtfRankType; label: string }[] = [
   { key: "best1y", label: "近1年績效" },
   { key: "hot30",  label: "近30日" },
   { key: "hot90",  label: "近3個月" },
-  { key: "yield",  label: "殖利率最高" },
+  { key: "yield",  label: "殖利率" },
   { key: "lowvol", label: "低波動" },
 ];
 
@@ -115,7 +99,7 @@ function EtfRankingSection() {
   const [tab, setTab] = React.useState<EtfRankType>("best1y");
   const ranked = React.useMemo(() => getTopEtfs(tab, 10), [tab]);
 
-  function getMetricValue(etf: Etf): string {
+  function getValue(etf: Etf): string {
     switch (tab) {
       case "best1y": return `${etf.return1y >= 0 ? "+" : ""}${etf.return1y.toFixed(1)}%`;
       case "hot30":  return `${etf.return1m >= 0 ? "+" : ""}${etf.return1m.toFixed(1)}%`;
@@ -125,67 +109,61 @@ function EtfRankingSection() {
     }
   }
 
-  function getMetricLabel(): string {
+  function getLabel(): string {
     switch (tab) {
-      case "best1y": return "近1年績效";
-      case "hot30":  return "近30日";
-      case "hot90":  return "近3月";
-      case "yield":  return "殖利率";
+      case "best1y": return "近1年"; case "hot30": return "近30日";
+      case "hot90":  return "近3月"; case "yield": return "殖利率";
       case "lowvol": return "波動度";
     }
   }
 
-  function getMetricColor(etf: Etf): string {
+  function getColor(etf: Etf): string {
     if (tab === "lowvol") return "text-blue-400";
-    if (tab === "yield")  return "text-[#F5B700]";
+    if (tab === "yield")  return "text-[#F5C542]";
     const v = tab === "hot30" ? etf.return1m : tab === "hot90" ? etf.return3m : etf.return1y;
     return v >= 0 ? "text-emerald-400" : "text-red-400";
   }
 
   return (
-    <div className="mb-14">
-      <div className="flex items-center justify-between mb-5">
-        <h2 className="text-[20px] font-bold text-white">🏆 ETF 排行榜</h2>
-        <div className="flex gap-2 flex-wrap justify-end">
+    <div className="mb-10">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-[16px] font-bold text-white">ETF 排行榜 <span className="text-[12px] text-slate-600 font-normal ml-1">Top 10</span></h2>
+        <div className="flex gap-1.5 flex-wrap justify-end">
           {ETF_RANK_TABS.map(t => (
             <button key={t.key} onClick={() => setTab(t.key)}
-              className={`px-4 py-1.5 rounded-lg text-[13px] font-semibold transition-colors ${
-                tab === t.key
-                  ? "bg-[#F5B700] text-[#0B1220]"
-                  : "border border-white/[0.15] text-slate-400 hover:border-[#F5B700]/50 hover:text-[#F5B700]"
+              className={`px-3 py-1 rounded text-[11px] font-semibold transition-colors ${
+                tab === t.key ? "bg-[#F5C542] text-[#0B1220]" : "border border-white/[0.1] text-slate-500 hover:border-[#F5C542]/30 hover:text-[#F5C542]"
               }`}>
               {t.label}
             </button>
           ))}
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-2">
         {ranked.map((etf, i) => (
           <div key={etf.code}
-            className={`flex items-center gap-4 px-5 py-4 rounded-xl border transition-all hover:border-[#F5B700]/30 ${
-              i === 0 ? "bg-yellow-500/[0.06] border-yellow-500/25" :
-              i === 1 ? "bg-slate-400/[0.04] border-slate-400/20" :
-              i === 2 ? "bg-orange-500/[0.04] border-orange-500/20" :
-              "bg-white/[0.02] border-white/[0.07]"
+            className={`flex items-center gap-3 px-4 py-2.5 rounded-lg border ${
+              i === 0 ? "bg-yellow-500/[0.05] border-yellow-500/20" :
+              i === 1 ? "bg-slate-400/[0.03] border-slate-400/12" :
+              i === 2 ? "bg-orange-500/[0.03] border-orange-500/12" :
+              "bg-white/[0.015] border-white/[0.05]"
             }`}>
-            <div className="w-9 shrink-0 flex items-center justify-center">
-              <RankBadge rank={i} />
-            </div>
+            <div className="w-6 shrink-0 flex items-center justify-center"><RankBadge rank={i} /></div>
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-0.5">
-                <span className="text-[15px] font-bold text-[#F5B700]">{etf.code}</span>
-                <span className="text-[11px] text-slate-500 bg-white/[0.05] px-1.5 py-0.5 rounded">{etf.sector}</span>
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <span className="text-[12px] font-bold text-[#F5C542]">{etf.code}</span>
+                <span className="text-[10px] text-slate-600 bg-white/[0.04] px-1 py-0.5 rounded">{etf.sector}</span>
               </div>
-              <div className="text-[12px] text-slate-400 truncate">{etf.name}</div>
+              <div className="text-[11px] text-slate-600 truncate">{etf.name}</div>
             </div>
             <div className="text-right shrink-0">
-              <div className="text-[11px] text-slate-500 mb-0.5">{getMetricLabel()}</div>
-              <div className={`text-[17px] font-black ${getMetricColor(etf)}`}>{getMetricValue(etf)}</div>
+              <div className="text-[10px] text-slate-600 mb-0.5">{getLabel()}</div>
+              <div className={`text-[13px] font-black ${getColor(etf)}`}>{getValue(etf)}</div>
             </div>
           </div>
         ))}
       </div>
-      <div className="mt-3 text-[11px] text-slate-600 text-right">示意資料・非即時行情</div>
+      <div className="mt-2 text-[10px] text-slate-700 text-right">示意資料・非即時行情</div>
     </div>
   );
 }
@@ -201,58 +179,43 @@ function CriteriaBuilder({
   resultCount: number;
 }) {
   return (
-    <div className="mb-8 border border-white/[0.08] rounded-2xl overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.06]"
-        style={{ background: "rgba(15,22,42,0.95)" }}>
-        <div>
-          <div className="text-[15px] font-bold text-white">投資條件篩選</div>
-          <div className="text-[12px] text-slate-500 mt-0.5">選擇多個條件，交集搜尋符合的 ETF</div>
-        </div>
-        <div className="flex items-center gap-3">
-          {selected.size > 0 && (
-            <div className="flex items-center gap-3">
-              <div className="text-[24px] font-black text-[#F5B700] leading-none">{resultCount}</div>
-              <div className="text-[12px] text-slate-400 leading-tight">檔符合<br />條件</div>
-            </div>
-          )}
+    <div className="mb-0 border border-white/[0.08] rounded-xl overflow-hidden">
+      <div className="px-5 py-4 border-b border-white/[0.06]" style={{ background: "rgba(12,18,36,0.95)" }}>
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="text-[15px] font-bold text-white mb-0.5">Investment Criteria</div>
+            <div className="text-[12px] text-slate-500">建立你的投資條件。符合所有條件的 ETF 才會出現在搜尋結果中。</div>
+          </div>
           {selected.size > 0 && (
             <button onClick={() => Array.from(selected).forEach(onToggle)}
-              className="text-[12px] text-slate-500 hover:text-red-400 transition-colors border border-white/[0.1] px-3 py-1.5 rounded-lg">
-              清除全部
-            </button>
+              className="text-[11px] text-slate-600 hover:text-red-400 transition-colors shrink-0 ml-4 mt-1">清除全部</button>
           )}
         </div>
       </div>
 
-      {/* 關鍵字搜尋 */}
-      <div className="px-6 pt-5 pb-3">
+      <div className="px-5 pt-4 pb-3">
         <input type="text" value={keyword} onChange={e => onKeyword(e.target.value)}
-          placeholder="搜尋代碼或名稱，例如 VOO、00878、高股息"
-          className="w-full bg-white/[0.04] border border-white/[0.1] rounded-xl px-4 py-3 text-[14px] text-white placeholder:text-slate-600 focus:outline-none focus:border-[#F5B700]/50 transition-colors" />
+          placeholder="代碼或名稱，例如 0050、00878"
+          className="w-full bg-white/[0.03] border border-white/[0.08] rounded-lg px-3.5 py-2.5 text-[13px] text-white placeholder:text-slate-600 focus:outline-none focus:border-[#F5C542]/40 transition-colors" />
       </div>
 
-      {/* 條件群組 */}
-      <div className="px-6 pb-5 space-y-4">
+      <div className="px-5 pb-4 space-y-3">
         {CRITERIA_GROUPS.map(group => {
           const options = CRITERIA_OPTIONS.filter(o => group.ids.includes(o.id));
           return (
-            <div key={group.label}>
-              <div className="text-[11px] font-semibold text-slate-500 tracking-[2px] uppercase mb-2">
-                {group.label}
-              </div>
-              <div className="flex flex-wrap gap-2">
+            <div key={group.label} className="flex items-start gap-3">
+              <div className="text-[11px] font-semibold text-slate-600 w-[60px] shrink-0 pt-1.5">{group.label}</div>
+              <div className="flex flex-wrap gap-1.5">
                 {options.map(opt => {
                   const active = selected.has(opt.id);
                   return (
                     <button key={opt.id} onClick={() => onToggle(opt.id)}
-                      className={`px-3.5 py-1.5 rounded-full text-[13px] font-semibold transition-all border ${
+                      className={`px-3 py-1 rounded text-[12px] font-semibold transition-all border ${
                         active
-                          ? "bg-[#F5B700] text-[#0B1220] border-[#F5B700]"
-                          : "bg-white/[0.03] text-slate-400 border-white/[0.1] hover:border-[#F5B700]/40 hover:text-[#F5B700]"
+                          ? "bg-[#F5C542] text-[#0B1220] border-[#F5C542]"
+                          : "bg-transparent text-slate-400 border-white/[0.1] hover:border-[#F5C542]/40 hover:text-[#F5C542]"
                       }`}>
-                      {active && <span className="mr-1 text-[11px]">✓</span>}
-                      {opt.label}
+                      {active && "✓ "}{opt.label}
                     </button>
                   );
                 })}
@@ -262,22 +225,26 @@ function CriteriaBuilder({
         })}
       </div>
 
-      {/* 已選條件摘要 */}
       {selected.size > 0 && (
-        <div className="px-6 py-3 border-t border-white/[0.06] flex items-center gap-2 flex-wrap"
-          style={{ background: "rgba(245,183,0,0.04)" }}>
-          <span className="text-[11px] text-slate-500">已選條件：</span>
+        <div className="px-5 py-2 border-t border-white/[0.06] flex items-center gap-2 flex-wrap" style={{ background: "rgba(245,197,66,0.03)" }}>
           {Array.from(selected).map(id => {
             const opt = CRITERIA_OPTIONS.find(o => o.id === id);
             return opt ? (
-              <span key={id} className="text-[12px] text-[#F5B700] bg-[#F5B700]/10 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+              <span key={id} className="text-[11px] text-[#F5C542] bg-[#F5C542]/[0.08] border border-[#F5C542]/20 px-2 py-0.5 rounded flex items-center gap-1">
                 {opt.label}
-                <button onClick={() => onToggle(id)} className="text-[10px] opacity-60 hover:opacity-100">✕</button>
+                <button onClick={() => onToggle(id)} className="opacity-50 hover:opacity-100 ml-0.5">✕</button>
               </span>
             ) : null;
           })}
         </div>
       )}
+
+      {/* Task 5: Criteria Match Banner */}
+      <div className="flex items-center justify-between px-5 py-2.5 border-t border-[#F5C542]/20"
+        style={{ background: "rgba(245,197,66,0.07)", minHeight: "40px" }}>
+        <span className="text-[12px] text-[#F5C542] font-semibold">Your Investment Criteria currently matches</span>
+        <span className="text-[16px] font-black text-[#F5C542] ml-3">{resultCount} ETFs</span>
+      </div>
     </div>
   );
 }
@@ -285,12 +252,13 @@ function CriteriaBuilder({
 // ── Main Page ─────────────────────────────────────────────────
 export default function EtfDatabasePage() {
   const router = useRouter();
-
-  const [keyword,     setKeyword]    = useState("");
-  const [selected,    setSelected]   = useState<Set<string>>(new Set());
-  const [sortKey,     setSortKey]    = useState<SortKey>("return1y");
-  const [sortDir,     setSortDir]    = useState<SortDir>("desc");
-  const [filterMode,  setFilterMode] = useState<FilterMode>("all");
+  const [keyword,    setKeyword]   = useState("");
+  const [selected,   setSelected]  = useState<Set<string>>(new Set());
+  const [sortKey,    setSortKey]   = useState<SortKey>("return1y");
+  const [sortDir,    setSortDir]   = useState<SortDir>("desc");
+  const [filterMode, setFilterMode] = useState<FilterMode>("all");
+  // Task 4: Quick Preview expanded row
+  const [expandedRow, setExpandedRow] = useState<string | null>(null);
 
   const {
     favList, watchList, compareList,
@@ -303,75 +271,61 @@ export default function EtfDatabasePage() {
   const toggleCompare = useCallback((etf: Etf) => _toggleCompare({ id: etf.code, type: "etf", name: etf.name }), [_toggleCompare]);
 
   function toggleCriterion(id: string) {
-    setSelected(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+    setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
   }
 
   function handleSort(key: SortKey) {
-    if (sortKey === key) setSortDir(sortDir === "asc" ? "desc" : "asc");
+    if (sortKey === key) setSortDir(d => d === "asc" ? "desc" : "asc");
     else { setSortKey(key); setSortDir("desc"); }
   }
 
   const filtered = useMemo(() => {
     let list: Etf[] = ETF_LIST;
-
-    // filterMode
     if (filterMode === "fav")   list = list.filter(e => hasItem(favList, e.code));
     if (filterMode === "watch") list = list.filter(e => hasItem(watchList, e.code));
-
-    // 關鍵字
     if (keyword.trim()) {
       const kw = keyword.trim().toLowerCase();
       list = list.filter(e => e.code.toLowerCase().includes(kw) || e.name.toLowerCase().includes(kw));
     }
-
-    // Investment Criteria（交集）
     if (selected.size > 0) {
       const criteria = CRITERIA_OPTIONS.filter(o => selected.has(o.id));
       list = list.filter(e => criteria.every(c => c.filter(e)));
     }
-
     return [...list].sort((a, b) => {
       const diff = a[sortKey] - b[sortKey];
       return sortDir === "asc" ? diff : -diff;
     });
   }, [keyword, selected, sortKey, sortDir, filterMode, favList, watchList]);
 
-  // Task 2：排序欄位 Highlight
-  function Th({ label, k }: { label: string; k: SortKey }) {
+  // Task 6: Table header helper
+  function Th({ label, k, bold }: { label: string; k: SortKey; bold?: boolean }) {
     const active = sortKey === k;
     return (
       <th onClick={() => handleSort(k)}
-        className={`px-3 py-3.5 font-semibold cursor-pointer select-none transition-colors whitespace-nowrap text-[12px] ${
-          active
-            ? "text-[#F5B700] bg-[#F5B700]/[0.06]"
-            : "text-slate-400 hover:text-[#F5B700]"
-        }`}>
-        <span className="flex items-center gap-1">
-          {label}
-          <span className="text-[10px]">{active ? (sortDir === "asc" ? "▲" : "▼") : "↕"}</span>
+        className={`px-3 py-3 cursor-pointer select-none whitespace-nowrap text-[11px] transition-colors ${
+          active ? "text-[#F5C542] bg-[#F5C542]/[0.05]" : "text-slate-500 hover:text-[#F5C542]"
+        }`}
+        style={{ fontWeight: bold ? 700 : 500 }}>
+        <span className="flex items-center gap-0.5">
+          {label}<span className="text-[9px] ml-0.5">{active ? (sortDir === "asc" ? "▲" : "▼") : "↕"}</span>
         </span>
       </th>
     );
   }
 
   return (
-    <main className="min-h-screen px-6 pt-32 pb-24">
+    <main className="min-h-screen pb-24" style={{ paddingTop: "80px" }}>
 
-      {/* NAVBAR */}
+      {/* NAVBAR（禁止修改）*/}
       <header className="fixed top-0 left-0 w-full z-50 bg-[#040a18]/90 backdrop-blur-xl border-b border-white/[0.08]">
         <div className="max-w-[1700px] mx-auto h-20 px-10 flex items-center justify-between">
           <Link href="/">
-            <div className="text-[28px] font-black text-white leading-none">Smart<span className="text-[#F5B700]">Match</span></div>
+            <div className="text-[28px] font-black text-white leading-none">Smart<span className="text-[#F5C542]">Match</span></div>
             <div className="text-[11px] text-slate-400 mt-0.5">Investment Intelligence Platform</div>
           </Link>
           <nav className="hidden lg:flex gap-7 text-[14px] font-semibold text-slate-300">
             <Link href="/quiz"    className="hover:text-white transition-colors">投資人格分析</Link>
-            <Link href="/etf"     className="text-[#F5B700]">ETF篩選器</Link>
+            <Link href="/etf"     className="text-[#F5C542]">ETF篩選器</Link>
             <Link href="/funds"   className="hover:text-white transition-colors">基金篩選器</Link>
             <Link href="/compare" className="hover:text-white transition-colors">比較中心</Link>
             <Link href="/clients" className="hover:text-white transition-colors">客戶管理</Link>
@@ -379,155 +333,233 @@ export default function EtfDatabasePage() {
           </nav>
           <div className="flex items-center gap-3">
             <a href="#" className="text-[14px] font-semibold text-slate-300 border border-white/30 px-4 py-2 rounded-lg hover:bg-white/10 transition-colors">登入</a>
-            <Link href="/quiz" className="bg-[#F5B700] hover:bg-[#e0a800] text-[#0B1220] px-5 py-2 rounded-lg font-bold text-[14px] transition-colors">免費註冊</Link>
+            <Link href="/quiz" className="bg-[#F5C542] hover:bg-[#e0a800] text-[#0B1220] px-5 py-2 rounded-lg font-bold text-[14px] transition-colors">免費註冊</Link>
           </div>
         </div>
       </header>
 
-      <div className="max-w-[1600px] mx-auto">
-
-        {/* Page Header（Task 7：產品定位放在 Page Header）*/}
-        <div className="mb-12">
-          <div className="tracking-[10px] text-[#F5B700] text-[13px] font-semibold mb-3">ETF DATABASE</div>
-          <h1 className="text-[40px] font-black text-white mb-2">ETF 篩選器</h1>
-          <p className="text-[16px] text-slate-400 max-w-[600px] leading-relaxed">
-            建立你的投資條件，快速找出符合需求的 ETF。
-            條件可以自由組合，所有結果即時更新。
-          </p>
-          <div className="flex items-center gap-6 mt-4 text-[14px] text-slate-500">
-            <span>共 <span className="text-white font-semibold">{ETF_LIST.length}</span> 檔 ETF</span>
-            <span>·</span>
-            <span>示意資料・非即時行情</span>
+      {/* Hero */}
+      <section className="relative flex items-end" style={{
+        height: "350px",
+        backgroundImage: "url('https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2600')",
+        backgroundSize: "cover", backgroundPosition: "center top",
+      }}>
+        <div className="absolute inset-0" style={{ background: "linear-gradient(rgba(6,10,20,.75), rgba(6,10,20,.88))" }} />
+        <div className="relative z-10 w-full max-w-[1600px] mx-auto px-10 pb-8">
+          <div className="text-[11px] text-slate-600 mb-3">
+            <Link href="/" className="hover:text-slate-400 transition-colors">SmartMatch</Link>
+            <span className="mx-2">/</span>
+            <span className="text-slate-500">ETF Database</span>
           </div>
+          <h1 className="text-[34px] font-black text-white leading-tight mb-2">
+            Find ETFs That Match<br />
+            <span className="text-[#F5C542]">Your Investment Criteria</span>
+          </h1>
+          <p className="text-[14px] text-slate-400">建立投資條件，快速找出真正符合策略的 ETF。</p>
         </div>
+      </section>
 
-        {/* 排行榜 */}
+      {/* Main */}
+      <div className="max-w-[1600px] mx-auto px-10 pt-8">
+
         <EtfRankingSection />
 
         {/* Compare bar */}
         {compareList.length > 0 && (
-          <div className="flex items-center justify-between bg-emerald-900/30 border border-emerald-500/30 rounded-xl px-5 py-3 mb-8">
-            <div className="text-[13px] text-emerald-300 font-semibold">
+          <div className="flex items-center justify-between bg-emerald-900/20 border border-emerald-500/20 rounded-lg px-4 py-2.5 mb-6">
+            <div className="text-[12px] text-emerald-400 font-semibold">
               📊 比較清單：{compareList.length} 檔
-              <span className="text-emerald-600 ml-2 font-normal">
-                {compareList.slice(0, 3).map(i => i.name.slice(0, 6)).join("、")}{compareList.length > 3 ? "…" : ""}
+              <span className="text-emerald-700 ml-2 font-normal">
+                {compareList.slice(0, 3).map((i: ListItem) => i.name.slice(0, 6)).join("、")}{compareList.length > 3 ? "…" : ""}
               </span>
             </div>
             <div className="flex gap-3">
-              <button onClick={() => clearCompare()}
-                className="text-[12px] text-slate-500 hover:text-red-400 transition-colors">清除</button>
+              <button onClick={() => clearCompare()} className="text-[11px] text-slate-600 hover:text-red-400 transition-colors">清除</button>
               <button onClick={() => router.push("/compare")}
-                className="bg-emerald-700 hover:bg-emerald-600 text-white text-[12px] font-bold px-4 py-1.5 rounded-lg transition-colors">
+                className="bg-emerald-800 hover:bg-emerald-700 text-white text-[11px] font-bold px-3 py-1 rounded-md transition-colors">
                 前往比較中心 →
               </button>
             </div>
           </div>
         )}
 
-        {/* Investment Criteria Builder（Task 3）*/}
-        <CriteriaBuilder
-          selected={selected}
-          onToggle={toggleCriterion}
-          keyword={keyword}
-          onKeyword={setKeyword}
-          resultCount={filtered.length}
-        />
+        {/* Investment Criteria + Task 5 Banner */}
+        <CriteriaBuilder selected={selected} onToggle={toggleCriterion} keyword={keyword} onKeyword={setKeyword} resultCount={filtered.length} />
 
-        {/* Filter tabs（收藏 / 觀察）*/}
-        <div className="flex items-center justify-between mb-5">
-          <div className="flex gap-2">
+        {/* Result bar */}
+        <div className="flex items-center justify-between py-3 mb-2 border-b border-white/[0.05]">
+          <div className="flex gap-1.5">
             {([
-              { key: "all"   as FilterMode, label: `全部 (${ETF_LIST.length})` },
-              { key: "fav"   as FilterMode, label: `⭐ 收藏 (${favList.length})` },
-              { key: "watch" as FilterMode, label: `👀 觀察 (${watchList.length})` },
+              { key: "all"   as FilterMode, label: `全部` },
+              { key: "fav"   as FilterMode, label: `⭐ ${favList.length}` },
+              { key: "watch" as FilterMode, label: `👀 ${watchList.length}` },
             ]).map(tab => (
               <button key={tab.key} onClick={() => setFilterMode(tab.key)}
-                className={`px-4 py-2 rounded-lg text-[13px] font-semibold transition-colors ${
-                  filterMode === tab.key
-                    ? "bg-[#F5B700] text-[#0B1220]"
-                    : "border border-white/[0.12] text-slate-400 hover:border-white/30 hover:text-white"
+                className={`px-3 py-1 rounded text-[11px] font-semibold transition-colors ${
+                  filterMode === tab.key ? "bg-[#F5C542] text-[#0B1220]" : "border border-white/[0.08] text-slate-500 hover:border-white/15 hover:text-white"
                 }`}>
                 {tab.label}
               </button>
             ))}
           </div>
-          <div className="text-[13px] text-slate-500">
-            符合條件：<span className="text-white font-semibold">{filtered.length}</span> 檔
-          </div>
+          <button disabled className="text-[11px] font-semibold text-slate-700 border border-white/[0.05] px-4 py-1 rounded cursor-not-allowed">
+            Export ↗
+          </button>
         </div>
 
-        {/* Table（Task 2：Highlight 整欄）*/}
-        <div className="border border-white/[0.08] rounded-2xl overflow-hidden overflow-x-auto">
-          <table className="w-full text-left min-w-[1300px]">
+        {/* Table */}
+        <div className="border border-white/[0.07] rounded-xl overflow-hidden overflow-x-auto">
+          <table className="w-full text-left" style={{ minWidth: "1380px" }}>
             <thead>
-              <tr className="border-b border-white/[0.06]" style={{ background: "rgba(15,22,42,0.9)" }}>
-                <th className="px-4 py-3.5 text-[12px] font-semibold text-slate-400 w-[108px]">操作</th>
-                <th className="px-3 py-3.5 text-[12px] font-semibold text-slate-400 w-[80px]">代碼</th>
-                <th className="px-3 py-3.5 text-[12px] font-semibold text-slate-400">名稱</th>
-                <th className="px-3 py-3.5 text-[12px] font-semibold text-slate-500">類型</th>
-                <th className="px-3 py-3.5 text-[12px] font-semibold text-slate-500">配息</th>
-                <Th label="每單位配息" k="dividendPerUnit" />
-                <Th label="殖利率%" k="dividendYield" />
-                <Th label="今年%" k="returnYTD" />
+              <tr className="border-b border-white/[0.06]" style={{ background: "rgba(10,16,32,0.97)" }}>
+                {/* Task 1: Score header（bold, Task 6: 最高優先）*/}
+                <th className="px-3 py-3 text-[11px] w-[68px]" style={{ fontWeight: 700, color: "#F5C542" }}>Score</th>
+                {/* Task 6: ETF 代碼 */}
+                <th className="px-3 py-3 text-[11px] text-slate-400 w-[68px]" style={{ fontWeight: 600 }}>代碼</th>
+                <th className="px-3 py-3 text-[11px] text-slate-400" style={{ fontWeight: 500 }}>名稱</th>
+                {/* Task 2: Why Matched */}
+                <th className="px-3 py-3 text-[11px] text-slate-400 w-[140px]" style={{ fontWeight: 600 }}>Why Matched</th>
+                {/* Task 9(V2): 配息率 bold */}
+                <th onClick={() => handleSort("dividendYield")}
+                  className={`px-3 py-3 cursor-pointer select-none text-[11px] whitespace-nowrap transition-colors ${sortKey === "dividendYield" ? "text-[#F5C542] bg-[#F5C542]/[0.05]" : "text-slate-300 hover:text-[#F5C542]"}`}
+                  style={{ fontWeight: 700 }}>
+                  <span className="flex items-center gap-0.5">配息率% <span className="text-[9px]">{sortKey === "dividendYield" ? (sortDir === "asc" ? "▲" : "▼") : "↕"}</span></span>
+                </th>
+                <th className="px-3 py-3 text-[11px] text-slate-500 w-[44px]" style={{ fontWeight: 500 }}>配息</th>
                 <Th label="近1月%" k="return1m" />
                 <Th label="近3月%" k="return3m" />
-                <Th label="近6月%" k="return6m" />
-                <Th label="近1年%" k="return1y" />
+                <Th label="近1年%" k="return1y" bold />
                 <Th label="近3年%" k="return3y" />
                 <Th label="波動度%" k="volatility" />
+                {/* Task 4: Quick View header */}
+                <th className="px-3 py-3 text-[11px] text-slate-600 w-[64px]" style={{ fontWeight: 500 }}>Quick View</th>
+                {/* Actions */}
+                <th className="px-3 py-3 text-[11px] text-slate-600 w-[90px]" style={{ fontWeight: 500 }}>操作</th>
               </tr>
             </thead>
             <tbody>
-              {filtered.map((etf, i) => (
-                <tr key={etf.code}
-                  className={`text-[13px] text-white border-t border-white/[0.04] hover:bg-[#F5B700]/[0.03] transition-colors ${
-                    i % 2 === 1 ? "bg-white/[0.015]" : ""
-                  }`}>
-                  <td className="px-4 py-3">
-                    <ActionBtns etf={etf}
-                      favList={favList} watchList={watchList} compareList={compareList}
-                      onFav={toggleFav} onWatch={toggleWatch} onCompare={toggleCompare} />
-                  </td>
-                  <td className="px-3 py-3 font-bold text-[#F5B700]">{etf.code}</td>
-                  <td className="px-3 py-3 text-slate-200 max-w-[200px] truncate">{etf.name}</td>
-                  <td className="px-3 py-3 text-slate-500 text-[11px]">{etf.sector}</td>
-                  <td className="px-3 py-3 text-slate-500 text-[11px]">{etf.dividendFreq}</td>
-                  {/* Highlight 整欄（排序中的欄位背景略亮）*/}
-                  <td className={`px-3 py-3 text-slate-300 ${sortKey === "dividendPerUnit" ? "bg-[#F5B700]/[0.04]" : ""}`}>
-                    {etf.dividendPerUnit > 0 ? etf.dividendPerUnit.toFixed(2) : "—"}
-                  </td>
-                  <td className={`px-3 py-3 text-slate-300 ${sortKey === "dividendYield" ? "bg-[#F5B700]/[0.04]" : ""}`}>
-                    {etf.dividendYield > 0 ? `${etf.dividendYield.toFixed(1)}%` : "—"}
-                  </td>
-                  <td className={`px-3 py-3 ${sortKey === "returnYTD"  ? "bg-[#F5B700]/[0.04]" : ""}`}><Pct v={etf.returnYTD} /></td>
-                  <td className={`px-3 py-3 ${sortKey === "return1m"   ? "bg-[#F5B700]/[0.04]" : ""}`}><Pct v={etf.return1m} /></td>
-                  <td className={`px-3 py-3 ${sortKey === "return3m"   ? "bg-[#F5B700]/[0.04]" : ""}`}><Pct v={etf.return3m} /></td>
-                  <td className={`px-3 py-3 ${sortKey === "return6m"   ? "bg-[#F5B700]/[0.04]" : ""}`}><Pct v={etf.return6m} /></td>
-                  <td className={`px-3 py-3 ${sortKey === "return1y"   ? "bg-[#F5B700]/[0.04]" : ""}`}><Pct v={etf.return1y} /></td>
-                  <td className={`px-3 py-3 ${sortKey === "return3y"   ? "bg-[#F5B700]/[0.04]" : ""}`}><Pct v={etf.return3y} /></td>
-                  <td className={`px-3 py-3 text-slate-400 ${sortKey === "volatility" ? "bg-[#F5B700]/[0.04]" : ""}`}>
-                    {etf.volatility.toFixed(1)}%
-                  </td>
-                </tr>
-              ))}
+              {filtered.map((etf, i) => {
+                const score = SM_SCORES[etf.code] ?? 70;
+                const isTop3 = i < 3;
+                const isCompared = hasItem(compareList, etf.code);
+                const isExpanded = expandedRow === etf.code;
+                const whyTags = getWhyMatched(etf);
+
+                return (
+                  <React.Fragment key={etf.code}>
+                    {/* Task 7: Transition 150ms, Task 3: 比較後淡黃色背景 */}
+                    <tr
+                      style={{
+                        borderLeft: isTop3 ? "3px solid #F5C542" : "3px solid transparent",
+                        background: isCompared ? "rgba(245,197,66,0.04)" : undefined,
+                        transition: "background-color 150ms ease",
+                      }}
+                      className={`text-[12px] text-white border-t border-white/[0.04] hover:bg-[#F5C542]/[0.03] ${
+                        i % 2 === 1 && !isCompared ? "bg-white/[0.012]" : ""
+                      }`}>
+                      {/* Task 1: SmartMatch Score */}
+                      <td className="px-3 py-2.5">
+                        <StarScore score={score} />
+                      </td>
+                      {/* ETF Code */}
+                      <td className="px-3 py-2.5 font-bold text-[#F5C542] text-[12px]">{etf.code}</td>
+                      {/* Name */}
+                      <td className="px-3 py-2.5 text-slate-300 max-w-[160px] truncate text-[12px]">{etf.name}</td>
+                      {/* Task 2: Why Matched */}
+                      <td className="px-3 py-2.5">
+                        <div className="flex flex-wrap gap-1">
+                          {whyTags.map(tag => (
+                            <span key={tag} className="text-[10px] text-emerald-400 border border-emerald-500/30 bg-emerald-500/[0.07] px-1.5 py-0.5 rounded">
+                              ✓ {tag}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+                      {/* 配息率（Task 9 bold）*/}
+                      <td className={`px-3 py-2.5 text-slate-200 font-semibold ${sortKey === "dividendYield" ? "bg-[#F5C542]/[0.04]" : ""}`}>
+                        {etf.dividendYield > 0 ? `${etf.dividendYield.toFixed(1)}%` : "—"}
+                      </td>
+                      <td className="px-3 py-2.5 text-slate-600 text-[11px]">{etf.dividendFreq}</td>
+                      <td className={`px-3 py-2.5 ${sortKey === "return1m"  ? "bg-[#F5C542]/[0.04]" : ""}`}><Pct v={etf.return1m} /></td>
+                      <td className={`px-3 py-2.5 ${sortKey === "return3m"  ? "bg-[#F5C542]/[0.04]" : ""}`}><Pct v={etf.return3m} /></td>
+                      <td className={`px-3 py-2.5 ${sortKey === "return1y"  ? "bg-[#F5C542]/[0.04]" : ""}`}><Pct v={etf.return1y} /></td>
+                      <td className={`px-3 py-2.5 ${sortKey === "return3y"  ? "bg-[#F5C542]/[0.04]" : ""}`}><Pct v={etf.return3y} /></td>
+                      <td className={`px-3 py-2.5 text-slate-400 ${sortKey === "volatility" ? "bg-[#F5C542]/[0.04]" : ""}`}>{etf.volatility.toFixed(1)}%</td>
+                      {/* Task 4: Quick View toggle */}
+                      <td className="px-3 py-2.5">
+                        <button
+                          onClick={() => setExpandedRow(isExpanded ? null : etf.code)}
+                          className={`text-[11px] px-2 py-1 rounded border transition-colors ${
+                            isExpanded ? "border-[#F5C542]/40 text-[#F5C542]" : "border-white/[0.1] text-slate-600 hover:border-white/20 hover:text-white"
+                          }`}>
+                          {isExpanded ? "收起" : "展開"}
+                        </button>
+                      </td>
+                      {/* Task 7: Hover Actions (♡ ⇄ 👁) */}
+                      <td className="px-2 py-2.5">
+                        <div className="flex items-center gap-0.5">
+                          <button onClick={() => toggleFav(etf)}
+                            className={`w-7 h-7 rounded flex items-center justify-center text-[13px] transition-all ${hasItem(favList, etf.code) ? "text-[#F5C542]" : "text-slate-600 hover:text-[#F5C542]"}`}>♡</button>
+                          {/* Task 3: 比較 icon 改黃色 */}
+                          <button onClick={() => toggleCompare(etf)}
+                            className={`w-7 h-7 rounded flex items-center justify-center text-[12px] transition-all ${isCompared ? "text-[#F5C542]" : "text-slate-600 hover:text-[#F5C542]"}`}>⇄</button>
+                          <button onClick={() => toggleWatch(etf)}
+                            className={`w-7 h-7 rounded flex items-center justify-center text-[12px] transition-all ${hasItem(watchList, etf.code) ? "text-blue-400" : "text-slate-600 hover:text-blue-400"}`}>👁</button>
+                        </div>
+                      </td>
+                    </tr>
+                    {/* Task 4: Quick Preview Accordion */}
+                    {isExpanded && (
+                      <tr className="border-t border-[#F5C542]/10" style={{ background: "rgba(245,197,66,0.04)" }}>
+                        <td colSpan={13} className="px-6 py-3">
+                          <div className="flex gap-8 text-[12px]">
+                            <div>
+                              <div className="text-[10px] text-slate-600 mb-0.5">配息率</div>
+                              <div className="text-[#F5C542] font-semibold">{etf.dividendYield > 0 ? `${etf.dividendYield.toFixed(1)}%` : "—"}</div>
+                            </div>
+                            <div>
+                              <div className="text-[10px] text-slate-600 mb-0.5">Region</div>
+                              <div className="text-slate-300">{etf.region}</div>
+                            </div>
+                            <div>
+                              <div className="text-[10px] text-slate-600 mb-0.5">Asset Class</div>
+                              <div className="text-slate-300">{etf.sector}</div>
+                            </div>
+                            <div>
+                              <div className="text-[10px] text-slate-600 mb-0.5">配息頻率</div>
+                              <div className="text-slate-300">{etf.dividendFreq || "—"}</div>
+                            </div>
+                            <div>
+                              <div className="text-[10px] text-slate-600 mb-0.5">近1年績效</div>
+                              <div className={etf.return1y >= 0 ? "text-emerald-400" : "text-red-400"}>
+                                {etf.return1y >= 0 ? "+" : ""}{etf.return1y.toFixed(1)}%
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-[10px] text-slate-600 mb-0.5">SmartMatch Score</div>
+                              <div className="text-[#F5C542] font-bold">{Math.round(SM_SCORES[etf.code] ?? 70)}</div>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                );
+              })}
               {filtered.length === 0 && (
-                <tr><td colSpan={14} className="px-5 py-16 text-center text-slate-600">
-                  {filterMode === "fav"   ? "尚未收藏任何 ETF，點擊 ⭐ 加入收藏" :
-                   filterMode === "watch" ? "觀察名單是空的，點擊 👀 加入" :
-                   "找不到符合條件的 ETF，請嘗試放寬條件"}
+                <tr><td colSpan={13} className="px-5 py-12 text-center text-slate-600 text-[13px]">
+                  {filterMode === "fav" ? "尚未收藏任何 ETF" : filterMode === "watch" ? "觀察名單是空的" : "無符合條件的 ETF，請調整條件"}
                 </td></tr>
               )}
             </tbody>
           </table>
         </div>
 
-        <p className="text-[11px] text-slate-700 mt-5">
-          以上資料為示意範例，非即時市場數據，不構成投資建議。
-        </p>
+        <p className="text-[10px] text-slate-700 mt-4">示意資料，非即時市場數據，不構成投資建議。</p>
 
-        <div className="flex justify-center mt-10">
-          <Link href="/" className="border border-white/20 text-white px-10 py-3 rounded-lg hover:bg-white/[0.03] transition-colors font-semibold text-[15px]">
-            回到首頁
+        <div className="flex justify-center mt-8">
+          <Link href="/" className="border border-white/10 text-slate-500 px-8 py-2.5 rounded-lg hover:border-white/20 hover:text-white transition-colors text-[13px]">
+            ← 回到首頁
           </Link>
         </div>
       </div>
