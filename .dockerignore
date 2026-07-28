@@ -1,0 +1,9 @@
+.git
+.next
+node_modules
+.env
+.env.*
+debug
+review-output
+SmartFund-V2.zip
+*.log
