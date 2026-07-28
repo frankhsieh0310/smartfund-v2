@@ -7,3 +7,1583 @@ datasource db {
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
+
+model User {
+  id                    String                 @id @default(uuid())
+  supabaseId            String                 @unique @map("supabase_id")
+  email                 String                 @unique
+  displayName           String?                @map("display_name")
+  avatarUrl             String?                @map("avatar_url")
+  plan                  Plan                   @default(FREE)
+  createdAt             DateTime               @default(now()) @map("created_at")
+  updatedAt             DateTime               @updatedAt @map("updated_at")
+  alerts                Alert[]
+  auditLogs             AuditLog[]
+  compareSessions       CompareSession[]
+  favorites             Favorite[]
+  investorQuestionnaire InvestorQuestionnaire?
+  notifications         Notification[]
+  portfolios            Portfolio[]
+  savedFilters          SavedFilter[]
+  searchLogs            SearchLog[]
+  strategies            Strategy[]
+  strategyFavorites     StrategyFavorite[]
+  criteria              UserCriteria[]
+  workspace             Workspace?
+
+  @@map("users")
+}
+
+model InvestorQuestionnaire {
+  id                   String   @id @default(uuid())
+  userId               String   @unique @map("user_id")
+  answers              Json
+  investorProfile      Json     @map("profile")
+  questionnaireVersion Int      @default(1) @map("questionnaire_version")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("investor_questionnaires")
+}
+
+model UserCriteria {
+  id            String              @id @default(uuid())
+  userId        String              @map("user_id")
+  name          String
+  description   String?
+  isActive      Boolean             @default(true) @map("is_active")
+  version       Int                 @default(1)
+  lastRunAt     DateTime?           @map("last_run_at")
+  createdAt     DateTime            @default(now()) @map("created_at")
+  updatedAt     DateTime            @updatedAt @map("updated_at")
+  conditions    CriteriaCondition[]
+  matches       CriteriaMatch[]
+  results       CriteriaResult[]
+  versions      CriteriaVersion[]
+  notifications Notification[]
+  user          User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isActive])
+  @@map("user_criteria")
+}
+
+model CriteriaCondition {
+  id         String       @id @default(uuid())
+  criteriaId String       @map("criteria_id")
+  groupId    Int          @map("group_id")
+  logic      Logic        @default(OR)
+  field      String
+  operator   String
+  value      String
+  valueType  String       @default("string") @map("value_type")
+  period     String?
+  priority   Int          @default(0)
+  sortOrder  Int          @default(0) @map("sort_order")
+  createdAt  DateTime     @default(now()) @map("created_at")
+  criteria   UserCriteria @relation(fields: [criteriaId], references: [id], onDelete: Cascade)
+
+  @@index([criteriaId])
+  @@map("criteria_conditions")
+}
+
+model CriteriaResult {
+  id          String          @id @default(uuid())
+  criteriaId  String          @map("criteria_id")
+  runAt       DateTime        @default(now()) @map("run_at")
+  etfCount    Int             @default(0) @map("etf_count")
+  fundCount   Int             @default(0) @map("fund_count")
+  totalCount  Int             @default(0) @map("total_count")
+  prevTotal   Int             @default(0) @map("prev_total")
+  triggeredBy String          @default("user") @map("triggered_by")
+  createdAt   DateTime        @default(now()) @map("created_at")
+  matches     CriteriaMatch[]
+  criteria    UserCriteria    @relation(fields: [criteriaId], references: [id], onDelete: Cascade)
+
+  @@index([criteriaId, runAt])
+  @@map("criteria_results")
+}
+
+model CriteriaMatch {
+  id               String         @id @default(uuid())
+  criteriaResultId String         @map("criteria_result_id")
+  criteriaId       String         @map("criteria_id")
+  assetType        AssetType      @map("asset_type")
+  assetId          String         @map("asset_id")
+  assetName        String         @map("asset_name")
+  status           MatchStatus    @default(ACTIVE)
+  matchedReason    Json?          @map("matched_reason")
+  removedReason    Json?          @map("removed_reason")
+  firstMatchedAt   DateTime       @default(now()) @map("first_matched_at")
+  lastMatchedAt    DateTime       @default(now()) @map("last_matched_at")
+  createdAt        DateTime       @default(now()) @map("created_at")
+  criteria         UserCriteria   @relation(fields: [criteriaId], references: [id], onDelete: Cascade)
+  result           CriteriaResult @relation(fields: [criteriaResultId], references: [id], onDelete: Cascade)
+
+  @@index([criteriaId, status])
+  @@index([assetType, assetId])
+  @@map("criteria_matches")
+}
+
+model CriteriaVersion {
+  id         String       @id @default(uuid())
+  criteriaId String       @map("criteria_id")
+  version    Int
+  name       String
+  conditions Json
+  changedBy  String       @map("changed_by")
+  createdAt  DateTime     @default(now()) @map("created_at")
+  isCurrent  Boolean      @default(true) @map("is_current")
+  criteria   UserCriteria @relation(fields: [criteriaId], references: [id], onDelete: Cascade)
+
+  @@map("criteria_versions")
+}
+
+model Asset {
+  id               String             @id @default(uuid())
+  assetType        AssetType          @map("asset_type")
+  code             String?
+  isin             String?
+  name             String
+  nameEn           String?            @map("name_en")
+  provider         String?
+  currency         String             @default("TWD")
+  region           String?
+  category         String?
+  distributionFreq String?            @map("distribution_freq")
+  riskLevel        Int?               @map("risk_level")
+  inceptionDate    DateTime?          @map("inception_date")
+  platform         String?
+  sourceUrl        String?            @map("source_url")
+  lastCrawledAt    DateTime?          @map("last_crawled_at")
+  isActive         Boolean            @default(true) @map("is_active")
+  createdAt        DateTime           @default(now()) @map("created_at")
+  updatedAt        DateTime           @updatedAt @map("updated_at")
+  aum              Decimal?           @db.Decimal(18, 2)
+  expenseRatio     Decimal?           @map("expense_ratio") @db.Decimal(6, 4)
+  benchmark        String?
+  performances     AssetPerformance[]
+  distributions    Distribution[]
+  etf              Etf?
+  favorites        Favorite[]
+  fund             Fund?
+  holdings         Holding[]
+  searchIndex      SearchIndex?
+
+  @@index([assetType])
+  @@index([code])
+  @@index([isin])
+  @@map("assets")
+}
+
+model AssetPerformance {
+  id            String   @id @default(uuid())
+  assetId       String   @map("asset_id")
+  date          DateTime @db.Date
+  nav           Decimal? @db.Decimal(14, 4)
+  return1d      Decimal? @map("return_1d") @db.Decimal(8, 4)
+  return1m      Decimal? @map("return_1m") @db.Decimal(8, 4)
+  return3m      Decimal? @map("return_3m") @db.Decimal(8, 4)
+  return6m      Decimal? @map("return_6m") @db.Decimal(8, 4)
+  returnYtd     Decimal? @map("return_ytd") @db.Decimal(8, 4)
+  return1y      Decimal? @map("return_1y") @db.Decimal(8, 4)
+  return3y      Decimal? @map("return_3y") @db.Decimal(8, 4)
+  return5y      Decimal? @map("return_5y") @db.Decimal(8, 4)
+  volatility    Decimal? @db.Decimal(8, 4)
+  sharpe        Decimal? @db.Decimal(8, 4)
+  beta          Decimal? @db.Decimal(8, 4)
+  alpha         Decimal? @db.Decimal(8, 4)
+  maxDrawdown   Decimal? @map("max_drawdown") @db.Decimal(8, 4)
+  dividendYield Decimal? @map("dividend_yield") @db.Decimal(8, 4)
+  aum           Decimal? @db.Decimal(18, 2)
+  createdAt     DateTime @default(now()) @map("created_at")
+  asset         Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@unique([assetId, date])
+  @@index([assetId, date])
+  @@map("asset_performances")
+}
+
+model Etf {
+  id               String              @id @default(uuid())
+  code             String              @unique
+  name             String
+  nameEn           String?             @map("name_en")
+  isin             String?             @unique
+  provider         String
+  exchange         String?
+  currency         String              @default("TWD")
+  category         String?
+  region           String?
+  sector           String?
+  benchmark        String?
+  distributionFreq String?             @map("distribution_freq")
+  inceptionDate    DateTime?           @map("inception_date")
+  isActive         Boolean             @default(true) @map("is_active")
+  createdAt        DateTime            @default(now()) @map("created_at")
+  updatedAt        DateTime            @updatedAt @map("updated_at")
+  latestNav        Decimal?            @map("latest_nav") @db.Decimal(14, 4)
+  latestPrice      Decimal?            @map("latest_price") @db.Decimal(14, 4)
+  premium          Decimal?            @db.Decimal(8, 4)
+  aum              Decimal?            @db.Decimal(18, 2)
+  expenseRatio     Decimal?            @map("expense_ratio") @db.Decimal(6, 4)
+  dividendYield    Decimal?            @map("dividend_yield") @db.Decimal(8, 4)
+  volume           Decimal?            @db.Decimal(20, 0)
+  returnYtd        Decimal?            @map("return_ytd") @db.Decimal(8, 4)
+  return1m         Decimal?            @map("return_1m") @db.Decimal(8, 4)
+  return3m         Decimal?            @map("return_3m") @db.Decimal(8, 4)
+  return6m         Decimal?            @map("return_6m") @db.Decimal(8, 4)
+  return1y         Decimal?            @map("return_1y") @db.Decimal(8, 4)
+  return3y         Decimal?            @map("return_3y") @db.Decimal(8, 4)
+  return5y         Decimal?            @map("return_5y") @db.Decimal(8, 4)
+  return10y        Decimal?            @map("return_10y") @db.Decimal(8, 4)
+  volatility1y     Decimal?            @map("volatility_1y") @db.Decimal(8, 4)
+  sharpe1y         Decimal?            @map("sharpe_1y") @db.Decimal(8, 4)
+  beta             Decimal?            @db.Decimal(8, 4)
+  alpha            Decimal?            @db.Decimal(8, 4)
+  stdDev           Decimal?            @map("std_dev") @db.Decimal(8, 4)
+  maxDrawdown      Decimal?            @map("max_drawdown") @db.Decimal(8, 4)
+  priceUpdatedAt   DateTime?           @map("price_updated_at")
+  assetId          String?             @unique @map("asset_id")
+  dataProvider     String?             @map("data_provider")
+  dataSource       String?             @map("data_source")
+  knowledgeTags    AssetKnowledgeTag[]
+  distributions    Distribution[]
+  history          EtfHistory[]
+  performances     EtfPerformance[]
+  asset            Asset?              @relation(fields: [assetId], references: [id])
+  holdings         Holding[]
+
+  @@index([code])
+  @@index([region, sector])
+  @@index([distributionFreq])
+  @@index([dividendYield])
+  @@index([return1y])
+  @@map("etfs")
+}
+
+model EtfPerformance {
+  id            String   @id @default(uuid())
+  etfId         String   @map("etf_id")
+  date          DateTime @db.Date
+  nav           Decimal? @db.Decimal(14, 4)
+  price         Decimal? @db.Decimal(14, 4)
+  premium       Decimal? @db.Decimal(8, 4)
+  return1d      Decimal? @map("return_1d") @db.Decimal(8, 4)
+  return1m      Decimal? @map("return_1m") @db.Decimal(8, 4)
+  return3m      Decimal? @map("return_3m") @db.Decimal(8, 4)
+  return6m      Decimal? @map("return_6m") @db.Decimal(8, 4)
+  returnYtd     Decimal? @map("return_ytd") @db.Decimal(8, 4)
+  return1y      Decimal? @map("return_1y") @db.Decimal(8, 4)
+  return3y      Decimal? @map("return_3y") @db.Decimal(8, 4)
+  return5y      Decimal? @map("return_5y") @db.Decimal(8, 4)
+  volatility    Decimal? @db.Decimal(8, 4)
+  sharpe        Decimal? @db.Decimal(8, 4)
+  beta          Decimal? @db.Decimal(8, 4)
+  alpha         Decimal? @db.Decimal(8, 4)
+  maxDrawdown   Decimal? @map("max_drawdown") @db.Decimal(8, 4)
+  dividendYield Decimal? @map("dividend_yield") @db.Decimal(8, 4)
+  aum           Decimal? @db.Decimal(18, 2)
+  createdAt     DateTime @default(now()) @map("created_at")
+  etf           Etf      @relation(fields: [etfId], references: [id], onDelete: Cascade)
+
+  @@unique([etfId, date])
+  @@index([etfId, date])
+  @@map("etf_performances")
+}
+
+model EtfHistory {
+  id            String   @id @default(uuid())
+  etfId         String   @map("etf_id")
+  date          DateTime @db.Date
+  nav           Decimal? @db.Decimal(14, 4)
+  price         Decimal? @db.Decimal(14, 4)
+  premium       Decimal? @db.Decimal(8, 4)
+  volume        Decimal? @db.Decimal(20, 0)
+  aum           Decimal? @db.Decimal(18, 2)
+  dividendYield Decimal? @map("dividend_yield") @db.Decimal(8, 4)
+  return1m      Decimal? @map("return_1m") @db.Decimal(8, 4)
+  return3m      Decimal? @map("return_3m") @db.Decimal(8, 4)
+  return6m      Decimal? @map("return_6m") @db.Decimal(8, 4)
+  returnYtd     Decimal? @map("return_ytd") @db.Decimal(8, 4)
+  return1y      Decimal? @map("return_1y") @db.Decimal(8, 4)
+  return3y      Decimal? @map("return_3y") @db.Decimal(8, 4)
+  return5y      Decimal? @map("return_5y") @db.Decimal(8, 4)
+  return10y     Decimal? @map("return_10y") @db.Decimal(8, 4)
+  sharpe        Decimal? @db.Decimal(8, 4)
+  beta          Decimal? @db.Decimal(8, 4)
+  alpha         Decimal? @db.Decimal(8, 4)
+  stdDev        Decimal? @map("std_dev") @db.Decimal(8, 4)
+  maxDrawdown   Decimal? @map("max_drawdown") @db.Decimal(8, 4)
+  volatility    Decimal? @db.Decimal(8, 4)
+  createdAt     DateTime @default(now()) @map("created_at")
+  etf           Etf      @relation(fields: [etfId], references: [id], onDelete: Cascade)
+
+  @@unique([etfId, date])
+  @@index([etfId, date])
+  @@map("etf_history")
+}
+
+model Fund {
+  id               String                @id @default(uuid())
+  isin             String?               @unique
+  code             String?               @unique
+  name             String
+  nameEn           String?               @map("name_en")
+  company          String
+  custodian        String?
+  currency         String                @default("TWD")
+  category         String?
+  region           String?
+  sector           String?
+  distributionFreq String?               @map("distribution_freq")
+  riskLevel        Int?                  @map("risk_level")
+  inceptionDate    DateTime?             @map("inception_date")
+  isActive         Boolean               @default(true) @map("is_active")
+  createdAt        DateTime              @default(now()) @map("created_at")
+  updatedAt        DateTime              @updatedAt @map("updated_at")
+  latestNav        Decimal?              @map("latest_nav") @db.Decimal(14, 4)
+  aum              Decimal?              @db.Decimal(18, 2)
+  expenseRatio     Decimal?              @map("expense_ratio") @db.Decimal(6, 4)
+  dividendYieldA   Decimal?              @map("dividend_yield_a") @db.Decimal(8, 4)
+  dividendYieldM   Decimal?              @map("dividend_yield_m") @db.Decimal(8, 4)
+  morningstar      Int?
+  return1y         Decimal?              @map("return_1y") @db.Decimal(8, 4)
+  return3y         Decimal?              @map("return_3y") @db.Decimal(8, 4)
+  return5y         Decimal?              @map("return_5y") @db.Decimal(8, 4)
+  return10y        Decimal?              @map("return_10y") @db.Decimal(8, 4)
+  volatility1y     Decimal?              @map("volatility_1y") @db.Decimal(8, 4)
+  sharpe1y         Decimal?              @map("sharpe_1y") @db.Decimal(8, 4)
+  beta             Decimal?              @db.Decimal(8, 4)
+  alpha            Decimal?              @db.Decimal(8, 4)
+  stdDev           Decimal?              @map("std_dev") @db.Decimal(8, 4)
+  maxDrawdown      Decimal?              @map("max_drawdown") @db.Decimal(8, 4)
+  navUpdatedAt     DateTime?             @map("nav_updated_at")
+  assetId          String?               @unique @map("asset_id")
+  dataProvider     String?               @map("data_provider")
+  dataSource       String?               @map("data_source")
+  latestNavDate    DateTime?             @map("latest_nav_date") @db.Date
+  lastNavSource    String?               @map("last_nav_source")
+  knowledgeTags    AssetKnowledgeTag[]
+  distributions    Distribution[]
+  history          FundHistory[]
+  mapping          FundMapping?
+  performances     FundPerformance[]
+  providerMappings FundProviderMapping[]
+  asset            Asset?                @relation(fields: [assetId], references: [id])
+  holdings         Holding[]
+
+  @@index([company])
+  @@index([region, category])
+  @@index([distributionFreq])
+  @@index([morningstar])
+  @@index([return1y])
+  @@map("funds")
+}
+
+model FundPerformance {
+  id            String   @id @default(uuid())
+  fundId        String   @map("fund_id")
+  date          DateTime @db.Date
+  nav           Decimal? @db.Decimal(14, 4)
+  return1d      Decimal? @map("return_1d") @db.Decimal(8, 4)
+  return1m      Decimal? @map("return_1m") @db.Decimal(8, 4)
+  return3m      Decimal? @map("return_3m") @db.Decimal(8, 4)
+  return6m      Decimal? @map("return_6m") @db.Decimal(8, 4)
+  returnYtd     Decimal? @map("return_ytd") @db.Decimal(8, 4)
+  return1y      Decimal? @map("return_1y") @db.Decimal(8, 4)
+  return3y      Decimal? @map("return_3y") @db.Decimal(8, 4)
+  return5y      Decimal? @map("return_5y") @db.Decimal(8, 4)
+  return10y     Decimal? @map("return_10y") @db.Decimal(8, 4)
+  volatility    Decimal? @db.Decimal(8, 4)
+  sharpe        Decimal? @db.Decimal(8, 4)
+  beta          Decimal? @db.Decimal(8, 4)
+  alpha         Decimal? @db.Decimal(8, 4)
+  stdDev        Decimal? @map("std_dev") @db.Decimal(8, 4)
+  maxDrawdown   Decimal? @map("max_drawdown") @db.Decimal(8, 4)
+  dividendYield Decimal? @map("dividend_yield") @db.Decimal(8, 4)
+  aum           Decimal? @db.Decimal(18, 2)
+  createdAt     DateTime @default(now()) @map("created_at")
+  fund          Fund     @relation(fields: [fundId], references: [id], onDelete: Cascade)
+
+  @@unique([fundId, date])
+  @@index([fundId, date])
+  @@map("fund_performances")
+}
+
+model FundHistory {
+  id            String   @id @default(uuid())
+  fundId        String   @map("fund_id")
+  date          DateTime @db.Date
+  nav           Decimal? @db.Decimal(14, 4)
+  aum           Decimal? @db.Decimal(18, 2)
+  dividendYield Decimal? @map("dividend_yield") @db.Decimal(8, 4)
+  return1m      Decimal? @map("return_1m") @db.Decimal(8, 4)
+  return3m      Decimal? @map("return_3m") @db.Decimal(8, 4)
+  return6m      Decimal? @map("return_6m") @db.Decimal(8, 4)
+  returnYtd     Decimal? @map("return_ytd") @db.Decimal(8, 4)
+  return1y      Decimal? @map("return_1y") @db.Decimal(8, 4)
+  return3y      Decimal? @map("return_3y") @db.Decimal(8, 4)
+  return5y      Decimal? @map("return_5y") @db.Decimal(8, 4)
+  return10y     Decimal? @map("return_10y") @db.Decimal(8, 4)
+  sharpe        Decimal? @db.Decimal(8, 4)
+  beta          Decimal? @db.Decimal(8, 4)
+  alpha         Decimal? @db.Decimal(8, 4)
+  stdDev        Decimal? @map("std_dev") @db.Decimal(8, 4)
+  maxDrawdown   Decimal? @map("max_drawdown") @db.Decimal(8, 4)
+  volatility    Decimal? @db.Decimal(8, 4)
+  morningstar   Int?
+  createdAt     DateTime @default(now()) @map("created_at")
+  fund          Fund     @relation(fields: [fundId], references: [id], onDelete: Cascade)
+
+  @@unique([fundId, date])
+  @@index([fundId, date])
+  @@map("fund_history")
+}
+
+model FundMapping {
+  id             String   @id @default(uuid())
+  fundId         String   @unique @map("fund_id")
+  moneydjCode    String?  @map("moneydj_code")
+  status         String
+  candidateCount Int?     @map("candidate_count")
+  lastCheckedAt  DateTime @default(now()) @map("last_checked_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  fund           Fund     @relation(fields: [fundId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@map("fund_mappings")
+}
+
+model FundProviderMapping {
+  id             String   @id @default(uuid())
+  fundId         String   @map("fund_id")
+  provider       String
+  providerCode   String   @map("provider_code")
+  status         String
+  candidateCount Int?     @map("candidate_count")
+  lastCheckedAt  DateTime @default(now()) @map("last_checked_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  fund           Fund     @relation(fields: [fundId], references: [id], onDelete: Cascade)
+
+  @@unique([fundId, provider])
+  @@index([provider, status])
+  @@index([providerCode])
+  @@map("fund_provider_mappings")
+}
+
+model HistoryJob {
+  id               String               @id @default(uuid())
+  provider         String
+  status           String
+  totalCount       Int                  @map("total_count")
+  processedCount   Int                  @default(0) @map("processed_count")
+  successCount     Int                  @default(0) @map("success_count")
+  failedCount      Int                  @default(0) @map("failed_count")
+  lastProviderCode String?              @map("last_provider_code")
+  startedAt        DateTime             @default(now()) @map("started_at")
+  finishedAt       DateTime?            @map("finished_at")
+  createdAt        DateTime             @default(now()) @map("created_at")
+  updatedAt        DateTime             @updatedAt @map("updated_at")
+  failedJobs       HistoryFailedQueue[]
+
+  @@index([provider, status])
+  @@map("history_jobs")
+}
+
+model HistoryFailedQueue {
+  id            String     @id @default(uuid())
+  jobId         String     @map("job_id")
+  fundId        String     @map("fund_id")
+  providerCode  String     @map("provider_code")
+  errorCategory String     @map("error_category")
+  errorMessage  String?    @map("error_message")
+  attempts      Int        @default(0)
+  resolvedAt    DateTime?  @map("resolved_at")
+  createdAt     DateTime   @default(now()) @map("created_at")
+  job           HistoryJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId, resolvedAt])
+  @@index([providerCode])
+  @@map("history_failed_queue")
+}
+
+model Security {
+  id                String             @id @default(uuid())
+  ticker            String?
+  isin              String?
+  cusip             String?
+  sedol             String?
+  name              String
+  nameEn            String?            @map("name_en")
+  exchange          String?
+  country           String?
+  sector            String?
+  industry          String?
+  currency          String?
+  createdAt         DateTime           @default(now()) @map("created_at")
+  updatedAt         DateTime           @updatedAt @map("updated_at")
+  holdings          Holding[]
+  insuranceHoldings InsuranceHolding[]
+
+  @@index([ticker])
+  @@index([isin])
+  @@index([sector])
+  @@index([industry])
+  @@map("securities")
+}
+
+model Distribution {
+  id        String    @id @default(uuid())
+  assetType AssetType @map("asset_type")
+  etfId     String?   @map("etf_id")
+  fundId    String?   @map("fund_id")
+  exDate    DateTime  @map("ex_date") @db.Date
+  payDate   DateTime? @map("pay_date") @db.Date
+  amount    Decimal   @db.Decimal(10, 6)
+  frequency String?
+  yieldRate Decimal?  @map("yield_rate") @db.Decimal(8, 4)
+  currency  String    @default("TWD")
+  createdAt DateTime  @default(now()) @map("created_at")
+  assetId   String?   @map("asset_id")
+  asset     Asset?    @relation(fields: [assetId], references: [id])
+  etf       Etf?      @relation(fields: [etfId], references: [id])
+  fund      Fund?     @relation(fields: [fundId], references: [id])
+
+  @@index([assetType, etfId])
+  @@index([assetType, fundId])
+  @@index([assetId])
+  @@map("distributions")
+}
+
+model Holding {
+  id          String    @id @default(uuid())
+  assetType   AssetType @map("asset_type")
+  etfId       String?   @map("etf_id")
+  fundId      String?   @map("fund_id")
+  asOfDate    DateTime  @map("as_of_date") @db.Date
+  rank        Int
+  /// @deprecated 改用 securityId + Security 關聯，保留供過渡期相容
+  holdingName String    @map("holding_name")
+  /// @deprecated 改用 securityId + Security 關聯，保留供過渡期相容
+  holdingCode String?   @map("holding_code")
+  weight      Decimal   @db.Decimal(8, 4)
+  sector      String?
+  country     String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+  assetId     String?   @map("asset_id")
+  securityId  String?   @map("security_id")
+  asset       Asset?    @relation(fields: [assetId], references: [id])
+  etf         Etf?      @relation(fields: [etfId], references: [id])
+  fund        Fund?     @relation(fields: [fundId], references: [id])
+  security    Security? @relation(fields: [securityId], references: [id])
+
+  @@index([etfId, asOfDate])
+  @@index([fundId, asOfDate])
+  @@index([securityId])
+  @@index([assetId])
+  @@map("holdings")
+}
+
+model MarketMaster {
+  id              String     @id @default(uuid())
+  symbol          String     @unique
+  name            String
+  nameZh          String?    @map("name_zh")
+  assetType       MarketType @map("asset_type")
+  region          String?
+  country         String?
+  exchange        String?
+  currency        String?
+  category        String?
+  provider        String?
+  isActive        Boolean    @default(true) @map("is_active")
+  latestClose     Decimal?   @map("latest_close") @db.Decimal(16, 4)
+  latestDate      DateTime?  @map("latest_date") @db.Date
+  latestChangePct Decimal?   @map("latest_change_pct") @db.Decimal(8, 4)
+  createdAt       DateTime   @default(now()) @map("created_at")
+  updatedAt       DateTime   @updatedAt @map("updated_at")
+  latestChange    Decimal?   @map("latest_change") @db.Decimal(16, 4)
+  sector          String?
+
+  @@index([assetType])
+  @@map("market_master")
+}
+
+model MarketData {
+  id        String     @id @default(uuid())
+  symbol    String
+  name      String
+  nameZh    String?    @map("name_zh")
+  type      MarketType
+  date      DateTime   @db.Date
+  close     Decimal    @db.Decimal(16, 4)
+  open      Decimal?   @db.Decimal(16, 4)
+  high      Decimal?   @db.Decimal(16, 4)
+  low       Decimal?   @db.Decimal(16, 4)
+  volume    Decimal?   @db.Decimal(20, 0)
+  changePts Decimal?   @map("change_pts") @db.Decimal(16, 4)
+  changePct Decimal?   @map("change_pct") @db.Decimal(8, 4)
+  region    String?
+  currency  String?
+  source    String?
+  createdAt DateTime   @default(now()) @map("created_at")
+
+  @@unique([symbol, date])
+  @@index([symbol, date])
+  @@index([type, date])
+  @@map("market_data")
+}
+
+model MarketHistory {
+  id        String   @id @default(uuid())
+  symbol    String
+  date      DateTime @db.Date
+  open      Decimal? @db.Decimal(16, 4)
+  high      Decimal? @db.Decimal(16, 4)
+  low       Decimal? @db.Decimal(16, 4)
+  close     Decimal  @db.Decimal(16, 4)
+  volume    Decimal? @db.Decimal(20, 0)
+  changePts Decimal? @map("change_pts") @db.Decimal(16, 4)
+  changePct Decimal? @map("change_pct") @db.Decimal(8, 4)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([symbol, date])
+  @@index([symbol, date])
+  @@map("market_history")
+}
+
+model EconomicIndicator {
+  id          String             @id @default(uuid())
+  indicator   String
+  country     String
+  category    String
+  frequency   EconomicFrequency
+  importance  EconomicImportance @default(MEDIUM)
+  releaseTime DateTime           @map("release_time")
+  actual      Decimal?           @db.Decimal(24, 6)
+  forecast    Decimal?           @db.Decimal(24, 6)
+  previous    Decimal?           @db.Decimal(24, 6)
+  revised     Decimal?           @db.Decimal(24, 6)
+  unit        String?
+  provider    String
+  source      String
+  createdAt   DateTime           @default(now()) @map("created_at")
+  updatedAt   DateTime           @updatedAt @map("updated_at")
+
+  @@unique([indicator, country, releaseTime])
+  @@index([country, category])
+  @@index([indicator, releaseTime])
+  @@map("economic_indicators")
+}
+
+model EconomicSeries {
+  id          String             @id @default(uuid())
+  provider    String
+  seriesId    String             @map("series_id")
+  code        String?
+  name        String
+  description String?
+  country     String
+  category    String
+  frequency   EconomicFrequency
+  importance  EconomicImportance @default(MEDIUM)
+  unit        String?
+  source      String
+  apiUrl      String?            @map("api_url")
+  enabled     Boolean            @default(true)
+  lastUpdate  DateTime?          @map("last_update")
+  nextUpdate  DateTime?          @map("next_update")
+  createdAt   DateTime           @default(now()) @map("created_at")
+  updatedAt   DateTime           @updatedAt @map("updated_at")
+  values      EconomicValue[]
+
+  @@unique([provider, seriesId])
+  @@index([country, category])
+  @@index([enabled])
+  @@map("economic_series")
+}
+
+model EconomicValue {
+  id            String         @id @default(uuid())
+  seriesId      String         @map("series_id")
+  date          DateTime
+  value         Decimal?       @db.Decimal(24, 6)
+  forecast      Decimal?       @db.Decimal(24, 6)
+  previous      Decimal?       @db.Decimal(24, 6)
+  revised       Decimal?       @db.Decimal(24, 6)
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+  sourceUrl     String?        @map("source_url")
+  sourceVersion String?        @map("source_version")
+  rawChecksum   String?        @map("raw_checksum")
+  importedAt    DateTime?      @map("imported_at")
+  series        EconomicSeries @relation(fields: [seriesId], references: [id])
+
+  @@unique([seriesId, date])
+  @@index([seriesId, date])
+  @@map("economic_values")
+}
+
+model Provider {
+  id                 String        @id @default(uuid())
+  name               String        @unique
+  type               String
+  priority           Int           @default(1)
+  fallbackProviderId String?       @map("fallback_provider_id")
+  sourceUrl          String?       @map("source_url")
+  updateFreq         String?       @map("update_freq")
+  authType           String        @default("none") @map("auth_type")
+  healthStatus       String        @default("healthy") @map("health_status")
+  lastSuccessAt      DateTime?     @map("last_success_at")
+  lastFailureAt      DateTime?     @map("last_failure_at")
+  failureCount       Int           @default(0) @map("failure_count")
+  isActive           Boolean       @default(true) @map("is_active")
+  createdAt          DateTime      @default(now()) @map("created_at")
+  updatedAt          DateTime      @updatedAt @map("updated_at")
+  logs               ProviderLog[]
+
+  @@map("providers")
+}
+
+model ProviderLog {
+  id             String    @id @default(uuid())
+  providerId     String    @map("provider_id")
+  runAt          DateTime  @default(now()) @map("run_at")
+  status         String
+  durationMs     Int?      @map("duration_ms")
+  recordsFetched Int?      @map("records_fetched")
+  errorMessage   String?   @map("error_message")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  startedAt      DateTime? @map("started_at")
+  successCount   Int?      @map("success_count")
+  failedCount    Int?      @map("failed_count")
+  skippedCount   Int?      @map("skipped_count")
+  apiVersion     String?   @map("api_version")
+  provider       Provider  @relation(fields: [providerId], references: [id])
+
+  @@index([providerId, runAt])
+  @@map("provider_logs")
+}
+
+model KnowledgeTag {
+  id          String              @id @default(uuid())
+  tagType     String              @map("tag_type")
+  tagKey      String              @unique @map("tag_key")
+  labelZh     String              @map("label_zh")
+  labelEn     String?             @map("label_en")
+  parentId    String?             @map("parent_id")
+  sortOrder   Int                 @default(0) @map("sort_order")
+  description String?
+  assets      AssetKnowledgeTag[]
+
+  @@map("knowledge_tags")
+}
+
+model AssetKnowledgeTag {
+  id         String       @id @default(uuid())
+  assetType  AssetType    @map("asset_type")
+  etfId      String?      @map("etf_id")
+  fundId     String?      @map("fund_id")
+  tagId      String       @map("tag_id")
+  confidence Decimal?     @db.Decimal(4, 2)
+  taggedBy   String       @default("manual") @map("tagged_by")
+  createdAt  DateTime     @default(now()) @map("created_at")
+  etf        Etf?         @relation(fields: [etfId], references: [id])
+  fund       Fund?        @relation(fields: [fundId], references: [id])
+  tag        KnowledgeTag @relation(fields: [tagId], references: [id])
+
+  @@index([assetType, etfId])
+  @@index([assetType, fundId])
+  @@index([tagId])
+  @@map("asset_knowledge_tags")
+}
+
+model InsuranceCompany {
+  id        String             @id @default(uuid())
+  code      String?            @unique
+  name      String
+  nameEn    String?            @map("name_en")
+  isActive  Boolean            @default(true) @map("is_active")
+  createdAt DateTime           @default(now()) @map("created_at")
+  updatedAt DateTime           @updatedAt @map("updated_at")
+  products  InsuranceProduct[]
+
+  @@map("insurance_companies")
+}
+
+model InsuranceProduct {
+  id               String                  @id @default(uuid())
+  companyId        String                  @map("company_id")
+  code             String?                 @unique
+  name             String
+  nameEn           String?                 @map("name_en")
+  productType      String?                 @map("product_type")
+  currency         String                  @default("TWD")
+  category         String?
+  region           String?
+  distributionFreq String?                 @map("distribution_freq")
+  riskLevel        Int?                    @map("risk_level")
+  inceptionDate    DateTime?               @map("inception_date")
+  isActive         Boolean                 @default(true) @map("is_active")
+  createdAt        DateTime                @default(now()) @map("created_at")
+  updatedAt        DateTime                @updatedAt @map("updated_at")
+  distributions    InsuranceDistribution[]
+  history          InsuranceHistory[]
+  holdings         InsuranceHolding[]
+  performances     InsurancePerformance[]
+  company          InsuranceCompany        @relation(fields: [companyId], references: [id])
+
+  @@index([companyId])
+  @@index([region, category])
+  @@index([distributionFreq])
+  @@map("insurance_products")
+}
+
+model InsurancePerformance {
+  id         String           @id @default(uuid())
+  productId  String           @map("product_id")
+  date       DateTime         @db.Date
+  nav        Decimal?         @db.Decimal(14, 4)
+  return1d   Decimal?         @map("return_1d") @db.Decimal(8, 4)
+  return1m   Decimal?         @map("return_1m") @db.Decimal(8, 4)
+  return3m   Decimal?         @map("return_3m") @db.Decimal(8, 4)
+  return6m   Decimal?         @map("return_6m") @db.Decimal(8, 4)
+  returnYtd  Decimal?         @map("return_ytd") @db.Decimal(8, 4)
+  return1y   Decimal?         @map("return_1y") @db.Decimal(8, 4)
+  return3y   Decimal?         @map("return_3y") @db.Decimal(8, 4)
+  return5y   Decimal?         @map("return_5y") @db.Decimal(8, 4)
+  volatility Decimal?         @db.Decimal(8, 4)
+  sharpe     Decimal?         @db.Decimal(8, 4)
+  createdAt  DateTime         @default(now()) @map("created_at")
+  product    InsuranceProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, date])
+  @@index([productId, date])
+  @@map("insurance_performances")
+}
+
+model InsuranceHistory {
+  id         String           @id @default(uuid())
+  productId  String           @map("product_id")
+  date       DateTime         @db.Date
+  nav        Decimal?         @db.Decimal(14, 4)
+  return1m   Decimal?         @map("return_1m") @db.Decimal(8, 4)
+  return3m   Decimal?         @map("return_3m") @db.Decimal(8, 4)
+  return6m   Decimal?         @map("return_6m") @db.Decimal(8, 4)
+  returnYtd  Decimal?         @map("return_ytd") @db.Decimal(8, 4)
+  return1y   Decimal?         @map("return_1y") @db.Decimal(8, 4)
+  return3y   Decimal?         @map("return_3y") @db.Decimal(8, 4)
+  volatility Decimal?         @db.Decimal(8, 4)
+  createdAt  DateTime         @default(now()) @map("created_at")
+  product    InsuranceProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, date])
+  @@index([productId, date])
+  @@map("insurance_history")
+}
+
+model InsuranceHolding {
+  id         String           @id @default(uuid())
+  productId  String           @map("product_id")
+  securityId String?          @map("security_id")
+  asOfDate   DateTime         @map("as_of_date") @db.Date
+  rank       Int
+  weight     Decimal          @db.Decimal(8, 4)
+  createdAt  DateTime         @default(now()) @map("created_at")
+  product    InsuranceProduct @relation(fields: [productId], references: [id])
+  security   Security?        @relation(fields: [securityId], references: [id])
+
+  @@index([productId, asOfDate])
+  @@index([securityId])
+  @@map("insurance_holdings")
+}
+
+model InsuranceDistribution {
+  id        String           @id @default(uuid())
+  productId String           @map("product_id")
+  exDate    DateTime         @map("ex_date") @db.Date
+  payDate   DateTime?        @map("pay_date") @db.Date
+  amount    Decimal          @db.Decimal(10, 6)
+  frequency String?
+  yieldRate Decimal?         @map("yield_rate") @db.Decimal(8, 4)
+  currency  String           @default("TWD")
+  createdAt DateTime         @default(now()) @map("created_at")
+  product   InsuranceProduct @relation(fields: [productId], references: [id])
+
+  @@index([productId])
+  @@map("insurance_distributions")
+}
+
+model SearchIndex {
+  id         String   @id @default(uuid())
+  assetId    String   @unique @map("asset_id")
+  searchText String   @map("search_text")
+  aliases    Json?
+  keywords   Json?
+  embedding  String?
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  asset      Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+  @@map("search_index")
+}
+
+model MarketIndex {
+  id          String         @id @default(uuid())
+  code        String?        @unique
+  yahooSymbol String?        @unique @map("yahoo_symbol")
+  name        String
+  exchange    String?
+  country     String?
+  currency    String?
+  timezone    String?
+  provider    String         @default("YAHOO_HTML")
+  firstTradeDate DateTime?   @map("first_trade_date") @db.Date
+  isActive    Boolean        @default(true) @map("is_active")
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+  history     IndexHistory[]
+
+  @@index([provider, isActive])
+  @@map("market_indexes")
+}
+
+model IndexHistory {
+  id                  String      @id @default(uuid())
+  indexId             String      @map("index_id")
+  date                DateTime    @db.Date
+  open                Decimal?    @db.Decimal(24, 6)
+  high                Decimal?    @db.Decimal(24, 6)
+  low                 Decimal?    @db.Decimal(24, 6)
+  close               Decimal?    @db.Decimal(24, 6)
+  adjustedClose       Decimal?    @map("adjusted_close") @db.Decimal(24, 6)
+  volume              BigInt?
+  currency            String?
+  provider            String
+  providerSymbol      String      @map("provider_symbol")
+  rawPayloadReference String?     @map("raw_payload_reference")
+  importedAt          DateTime?   @map("imported_at")
+  createdAt           DateTime    @default(now()) @map("created_at")
+  updatedAt           DateTime    @updatedAt @map("updated_at")
+  index               MarketIndex @relation(fields: [indexId], references: [id], onDelete: Cascade)
+
+  @@unique([indexId, date, provider])
+  @@index([indexId, date])
+  @@map("index_history")
+}
+
+model SearchLog {
+  id           String   @id @default(uuid())
+  userId       String?  @map("user_id")
+  query        String
+  parsedQuery  Json?    @map("parsed_query")
+  resultCount  Int?     @map("result_count")
+  searchTimeMs Int?     @map("search_time_ms")
+  createdAt    DateTime @default(now()) @map("created_at")
+  user         User?    @relation(fields: [userId], references: [id])
+
+  @@index([userId, createdAt])
+  @@map("search_logs")
+}
+
+model CompareSession {
+  id        String        @id @default(uuid())
+  userId    String?       @map("user_id")
+  name      String?
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+  items     CompareItem[]
+  user      User?         @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("compare_sessions")
+}
+
+model CompareItem {
+  id        String         @id @default(uuid())
+  sessionId String         @map("session_id")
+  assetType AssetType      @map("asset_type")
+  assetId   String         @map("asset_id")
+  position  Int            @default(0)
+  addedAt   DateTime       @default(now()) @map("added_at")
+  session   CompareSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([assetType, assetId])
+  @@map("compare_items")
+}
+
+model Strategy {
+  id          String             @id @default(uuid())
+  userId      String             @map("user_id")
+  name        String
+  description String?
+  isPublic    Boolean            @default(false) @map("is_public")
+  createdAt   DateTime           @default(now()) @map("created_at")
+  updatedAt   DateTime           @updatedAt @map("updated_at")
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  favorites   StrategyFavorite[]
+  history     StrategyHistory[]
+  items       StrategyItem[]
+  shares      StrategyShare[]
+
+  @@index([userId])
+  @@map("strategies")
+}
+
+model StrategyItem {
+  id         String    @id @default(uuid())
+  strategyId String    @map("strategy_id")
+  assetType  AssetType @map("asset_type")
+  assetId    String    @map("asset_id")
+  weight     Decimal?  @db.Decimal(6, 4)
+  note       String?
+  addedAt    DateTime  @default(now()) @map("added_at")
+  strategy   Strategy  @relation(fields: [strategyId], references: [id], onDelete: Cascade)
+
+  @@index([strategyId])
+  @@index([assetType, assetId])
+  @@map("strategy_items")
+}
+
+model StrategyShare {
+  id           String    @id @default(uuid())
+  strategyId   String    @map("strategy_id")
+  sharedById   String    @map("shared_by_id")
+  sharedWithId String?   @map("shared_with_id")
+  shareToken   String?   @unique @map("share_token")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  expiresAt    DateTime? @map("expires_at")
+  strategy     Strategy  @relation(fields: [strategyId], references: [id], onDelete: Cascade)
+
+  @@index([strategyId])
+  @@map("strategy_shares")
+}
+
+model StrategyFavorite {
+  id         String   @id @default(uuid())
+  strategyId String   @map("strategy_id")
+  userId     String   @map("user_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+  strategy   Strategy @relation(fields: [strategyId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([strategyId, userId])
+  @@index([userId])
+  @@map("strategy_favorites")
+}
+
+model Favorite {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  assetId   String   @map("asset_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  asset     Asset    @relation(fields: [assetId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, assetId])
+  @@index([userId])
+  @@index([assetId])
+  @@index([createdAt])
+  @@map("favorites")
+}
+
+model StrategyHistory {
+  id         String   @id @default(uuid())
+  strategyId String   @map("strategy_id")
+  version    Int
+  snapshot   Json
+  changedBy  String   @map("changed_by")
+  createdAt  DateTime @default(now()) @map("created_at")
+  strategy   Strategy @relation(fields: [strategyId], references: [id], onDelete: Cascade)
+
+  @@index([strategyId, version])
+  @@map("strategy_history")
+}
+
+model Workspace {
+  id        String             @id @default(uuid())
+  userId    String             @unique @map("user_id")
+  version   Int                @default(1)
+  createdAt DateTime           @default(now()) @map("created_at")
+  updatedAt DateTime           @updatedAt @map("updated_at")
+  modules   WorkspaceModule[]
+  versions  WorkspaceVersion[]
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("workspaces")
+}
+
+model WorkspaceModule {
+  id             String      @id @default(uuid())
+  workspaceId    String      @map("workspace_id")
+  moduleType     String      @map("module_type")
+  refCriteriaId  String?     @map("ref_criteria_id")
+  positionX      Int         @default(0) @map("position_x")
+  positionY      Int         @default(0) @map("position_y")
+  width          Int         @default(1)
+  height         Int         @default(1)
+  isVisible      Boolean     @default(true) @map("is_visible")
+  config         Json?
+  createdAt      DateTime    @default(now()) @map("created_at")
+  updatedAt      DateTime    @updatedAt @map("updated_at")
+  /// @deprecated-pending
+  moduleTypeEnum ModuleType? @map("module_type_enum")
+  workspace      Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@map("workspace_modules")
+}
+
+model WorkspaceVersion {
+  id              String    @id @default(uuid())
+  workspaceId     String    @map("workspace_id")
+  version         Int
+  modulesSnapshot Json      @map("modules_snapshot")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  isCurrent       Boolean   @default(true) @map("is_current")
+  workspace       Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@map("workspace_versions")
+}
+
+model Notification {
+  id           String       @id @default(uuid())
+  userId       String       @map("user_id")
+  criteriaId   String       @map("criteria_id")
+  type         String
+  title        String
+  body         String
+  reasonType   String?      @map("reason_type")
+  reasonDetail Json?        @map("reason_detail")
+  addedCount   Int?         @map("added_count")
+  removedCount Int?         @map("removed_count")
+  prevCount    Int          @default(0) @map("prev_count")
+  currCount    Int          @default(0) @map("curr_count")
+  isRead       Boolean      @default(false) @map("is_read")
+  readAt       DateTime?    @map("read_at")
+  createdAt    DateTime     @default(now()) @map("created_at")
+  assetId      String?      @map("asset_id")
+  assetType    AssetType?   @map("asset_type")
+  criteria     UserCriteria @relation(fields: [criteriaId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([assetType, assetId])
+  @@map("notifications")
+}
+
+model NotificationSetting {
+  id           String   @id @default(uuid())
+  userId       String   @map("user_id")
+  criteriaId   String   @map("criteria_id")
+  isSubscribed Boolean  @default(true) @map("is_subscribed")
+  channels     Json     @default("{\"push\": false, \"email\": true, \"in_app\": true}")
+  version      Int      @default(1)
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@unique([userId, criteriaId])
+  @@map("notification_settings")
+}
+
+model AuditLog {
+  id           String   @id @default(uuid())
+  userId       String   @map("user_id")
+  action       String
+  resourceType String   @map("resource_type")
+  resourceId   String?  @map("resource_id")
+  before       Json?
+  after        Json?
+  ipAddress    String?  @map("ip_address")
+  createdAt    DateTime @default(now()) @map("created_at")
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("audit_logs")
+}
+
+model MatchingLog {
+  id             String   @id @default(uuid())
+  criteriaId     String   @map("criteria_id")
+  runAt          DateTime @default(now()) @map("run_at")
+  durationMs     Int?     @map("duration_ms")
+  conditionsUsed Int?     @map("conditions_used")
+  etfScanned     Int?     @map("etf_scanned")
+  fundScanned    Int?     @map("fund_scanned")
+  etfMatched     Int?     @map("etf_matched")
+  fundMatched    Int?     @map("fund_matched")
+  triggeredBy    String   @default("user") @map("triggered_by")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@index([criteriaId, runAt])
+  @@map("matching_logs")
+}
+
+model UpdateLog {
+  id             String    @id @default(uuid())
+  type           String
+  status         String
+  recordsUpdated Int?      @map("records_updated")
+  errorMessage   String?   @map("error_message")
+  startedAt      DateTime  @map("started_at")
+  finishedAt     DateTime? @map("finished_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  @@index([type, startedAt])
+  @@map("update_logs")
+}
+
+model SavedFilter {
+  id          String     @id @default(uuid())
+  userId      String     @map("user_id")
+  name        String
+  description String?
+  filters     Json
+  assetType   AssetType? @map("asset_type")
+  isPublic    Boolean    @default(false) @map("is_public")
+  isPinned    Boolean    @default(false) @map("is_pinned")
+  lastRunAt   DateTime?  @map("last_run_at")
+  runCount    Int        @default(0) @map("run_count")
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isPublic])
+  @@map("saved_filters")
+}
+
+model Portfolio {
+  id          String          @id @default(uuid())
+  userId      String          @map("user_id")
+  name        String
+  description String?
+  currency    String          @default("TWD")
+  isDefault   Boolean         @default(false) @map("is_default")
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+  items       PortfolioItem[]
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("portfolios")
+}
+
+model PortfolioItem {
+  id          String    @id @default(uuid())
+  portfolioId String    @map("portfolio_id")
+  assetType   AssetType @map("asset_type")
+  assetId     String    @map("asset_id")
+  assetCode   String    @map("asset_code")
+  assetName   String    @map("asset_name")
+  weight      Decimal   @db.Decimal(6, 4)
+  shares      Decimal?  @db.Decimal(14, 4)
+  avgCost     Decimal?  @map("avg_cost") @db.Decimal(14, 4)
+  currency    String    @default("TWD")
+  note        String?
+  addedAt     DateTime  @default(now()) @map("added_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  portfolio   Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+
+  @@index([portfolioId])
+  @@index([assetType, assetId])
+  @@map("portfolio_items")
+}
+
+model Alert {
+  id            String     @id @default(uuid())
+  userId        String     @map("user_id")
+  assetType     AssetType? @map("asset_type")
+  assetId       String?    @map("asset_id")
+  alertType     AlertType  @map("alert_type")
+  field         String
+  operator      String
+  threshold     Decimal    @db.Decimal(14, 4)
+  isActive      Boolean    @default(true) @map("is_active")
+  triggeredAt   DateTime?  @map("triggered_at")
+  lastCheckedAt DateTime?  @map("last_checked_at")
+  createdAt     DateTime   @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @map("updated_at")
+  user          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isActive])
+  @@index([assetType, assetId])
+  @@map("alerts")
+}
+
+model SeriesTag {
+  id         String   @id @default(uuid())
+  seriesType String   @map("series_type")
+  seriesId   String   @map("series_id")
+  tag        String
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@unique([seriesType, seriesId, tag])
+  @@index([tag])
+  @@map("series_tags")
+}
+
+model Stock {
+  id                  String           @id @default(uuid())
+  ticker              String
+  yahooSymbol         String           @unique @map("yahoo_symbol")
+  exchange            String
+  country             String
+  currency            String
+  companyName         String           @map("company_name")
+  companyNameZh       String?          @map("company_name_zh")
+  sector              String?
+  industry            String?
+  status              StockStatus      @default(ACTIVE)
+  latestClose         Decimal?         @map("latest_close") @db.Decimal(16, 4)
+  latestDate          DateTime?        @map("latest_date") @db.Date
+  isActive            Boolean          @default(true) @map("is_active")
+  createdAt           DateTime         @default(now()) @map("created_at")
+  updatedAt           DateTime         @updatedAt @map("updated_at")
+  historyBackfilledAt DateTime?        @map("history_backfilled_at")
+  history             StockHistory[]
+  technical           StockTechnical[]
+
+  @@unique([ticker, exchange])
+  @@index([exchange])
+  @@index([country])
+  @@index([historyBackfilledAt])
+  @@map("stocks")
+}
+
+model StockHistory {
+  id            String   @id @default(uuid())
+  stockId       String   @map("stock_id")
+  date          DateTime @db.Date
+  open          Decimal? @db.Decimal(16, 4)
+  high          Decimal? @db.Decimal(16, 4)
+  low           Decimal? @db.Decimal(16, 4)
+  close         Decimal  @db.Decimal(16, 4)
+  adjustedClose Decimal? @map("adjusted_close") @db.Decimal(16, 4)
+  volume        Decimal? @db.Decimal(20, 0)
+  source        String?  @map("source")
+  sourceSymbol  String?  @map("source_symbol")
+  providerMethod String? @map("provider_method")
+  importedAt    DateTime? @map("imported_at")
+  updatedAt     DateTime? @map("updated_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+  stock         Stock    @relation(fields: [stockId], references: [id])
+
+  @@unique([stockId, date])
+  @@index([stockId, date])
+  @@map("stock_history")
+}
+
+model ProductionSchedulerRun {
+  id          String    @id
+  jobId       String    @map("job_id")
+  exchange    String
+  runType     String    @map("run_type")
+  status      String
+  startedAt   DateTime  @default(now()) @map("started_at")
+  completedAt DateTime? @map("completed_at")
+  attempted   Int       @default(0)
+  completed   Int       @default(0)
+  inserted    Int       @default(0)
+  updated     Int       @default(0)
+  failed      Int       @default(0)
+  details     Json?
+  error       String?
+
+  @@index([jobId, startedAt])
+  @@map("production_scheduler_runs")
+}
+
+model ProductionSchedulerLock {
+  jobId     String   @id @map("job_id")
+  owner     String
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("production_scheduler_locks")
+}
+
+model ProductionSchedulerFailure {
+  jobId           String   @map("job_id")
+  stockId         String   @map("stock_id")
+  symbol          String
+  attempts        Int      @default(1)
+  lastError       String   @map("last_error")
+  lastAttemptedAt DateTime @default(now()) @map("last_attempted_at")
+
+  @@id([jobId, stockId])
+  @@index([jobId])
+  @@map("production_scheduler_failures")
+}
+
+model ProductCoverageSnapshot {
+  id               String   @id @default(uuid())
+  productType      String   @map("product_type")
+  productId        String   @map("product_id")
+  historyRows      BigInt   @default(0) @map("history_rows")
+  firstDate        DateTime? @map("first_date") @db.Date
+  latestDate       DateTime? @map("latest_date") @db.Date
+  coveragePercent  Decimal? @map("coverage_percent") @db.Decimal(7, 4)
+  lastCalculatedAt DateTime @default(now()) @map("last_calculated_at")
+  version          Int      @default(1)
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@unique([productType, productId])
+  @@index([productType, latestDate])
+  @@map("product_coverage_snapshot")
+}
+
+model StockTechnical {
+  id              String   @id @default(uuid())
+  stockId         String   @map("stock_id")
+  date            DateTime @db.Date
+  ma5             Decimal? @db.Decimal(16, 4)
+  ma20            Decimal? @db.Decimal(16, 4)
+  ma60            Decimal? @db.Decimal(16, 4)
+  ma120           Decimal? @db.Decimal(16, 4)
+  ma240           Decimal? @db.Decimal(16, 4)
+  ema12           Decimal? @db.Decimal(16, 4)
+  ema26           Decimal? @db.Decimal(16, 4)
+  macd            Decimal? @map("macd") @db.Decimal(16, 4)
+  macdSignal      Decimal? @map("macd_signal") @db.Decimal(16, 4)
+  macdHistogram   Decimal? @map("macd_histogram") @db.Decimal(16, 4)
+  kdK             Decimal? @map("kd_k") @db.Decimal(8, 4)
+  kdD             Decimal? @map("kd_d") @db.Decimal(8, 4)
+  rsi14           Decimal? @db.Decimal(8, 4)
+  atr14           Decimal? @db.Decimal(16, 4)
+  bollingerUpper  Decimal? @map("bollinger_upper") @db.Decimal(16, 4)
+  bollingerMiddle Decimal? @map("bollinger_middle") @db.Decimal(16, 4)
+  bollingerLower  Decimal? @map("bollinger_lower") @db.Decimal(16, 4)
+  createdAt       DateTime @default(now()) @map("created_at")
+  stock           Stock    @relation(fields: [stockId], references: [id], onDelete: Cascade)
+
+  @@unique([stockId, date])
+  @@index([stockId, date])
+  @@map("stock_technical")
+}
+
+model DataSource {
+  id              String             @id @default(uuid())
+  name            String
+  category        DataSourceCategory
+  country         String?
+  website         String?
+  coverage        String?
+  historySupport  Boolean            @default(false) @map("history_support")
+  apiSupport      Boolean            @default(false) @map("api_support")
+  parserAvailable Boolean            @default(false) @map("parser_available")
+  license         String?
+  status          DataSourceStatus
+  reliability     Int?               @db.SmallInt
+  rejectionReason String?            @map("rejection_reason")
+  lastVerifiedAt  DateTime?          @map("last_verified_at")
+  lastSuccessAt   DateTime?          @map("last_success_at")
+  owner           String?
+  notes           String?
+  createdAt       DateTime           @default(now()) @map("created_at")
+  updatedAt       DateTime           @updatedAt @map("updated_at")
+
+  @@unique([name, category])
+  @@index([category, status])
+  @@map("data_sources")
+}
+
+enum Plan {
+  FREE
+  PREMIUM
+  TEAM
+}
+
+enum AssetType {
+  ETF
+  FUND
+  INSURANCE
+  DISCRETIONARY
+  RETIREMENT
+  REIT
+}
+
+enum Logic {
+  AND
+  OR
+}
+
+enum MatchStatus {
+  ACTIVE
+  REMOVED
+}
+
+enum MarketType {
+  INDEX
+  COMMODITY
+  FOREX
+  BOND
+  VOLATILITY
+  CRYPTO
+}
+
+enum EconomicFrequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+  ANNUAL
+}
+
+enum EconomicImportance {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum ModuleType {
+  ETF_SCREENER
+  FUND_SCREENER
+  CRITERIA_BUILDER
+  COMPARE
+  WATCHLIST
+  PORTFOLIO
+  ALERT
+  CHART
+  NOTE
+}
+
+enum AlertType {
+  PRICE_ABOVE
+  PRICE_BELOW
+  YIELD_ABOVE
+  YIELD_BELOW
+  RETURN_ABOVE
+  RETURN_BELOW
+  CRITERIA_MATCH_CHANGE
+}
+
+enum StockStatus {
+  ACTIVE
+  DELISTED
+  SUSPENDED
+  UNKNOWN
+}
+
+enum DataSourceStatus {
+  PRODUCTION
+  VERIFIED
+  CANDIDATE
+  REJECTED
+}
+
+enum DataSourceCategory {
+  STOCK
+  ETF
+  FUND
+  INSURANCE_LINKED
+  MACRO
+  FX
+  COMMODITY
+  CRYPTO
+  BOND
+}
