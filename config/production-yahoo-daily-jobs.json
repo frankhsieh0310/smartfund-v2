@@ -1,0 +1,29 @@
+{
+  "pollIntervalMinutes": 5,
+  "jobs": [
+    {
+      "id": "twse-yahoo-daily",
+      "exchange": "TWSE",
+      "timezone": "Asia/Taipei",
+      "primaryTime": "18:30",
+      "retryTime": "22:30",
+      "weekdays": [1, 2, 3, 4, 5]
+    },
+    {
+      "id": "tpex-yahoo-daily",
+      "exchange": "TPEx",
+      "timezone": "Asia/Taipei",
+      "primaryTime": "18:30",
+      "retryTime": "22:30",
+      "weekdays": [1, 2, 3, 4, 5]
+    },
+    {
+      "id": "nasdaq-yahoo-daily",
+      "exchange": "NASDAQ",
+      "timezone": "America/New_York",
+      "primaryTime": "18:30",
+      "retryTime": "22:30",
+      "weekdays": [1, 2, 3, 4, 5]
+    }
+  ]
+}
