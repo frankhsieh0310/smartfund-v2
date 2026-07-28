@@ -1,4 +1,3 @@
-route.ts
 // app/api/review/route.ts
 // Serves review.json at /api/review
 
