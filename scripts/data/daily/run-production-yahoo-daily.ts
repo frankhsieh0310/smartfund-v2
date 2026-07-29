@@ -8,7 +8,14 @@ type YahooCandle = { date: Date; open: number | null; high: number | null; low: 
 async function fetchYahooChartPeriod(symbol: string, period1: number, period2: number): Promise<{ candles: YahooCandle[] } | null> {
   await new Promise((resolve) => setTimeout(resolve, 300));
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?period1=${period1}&period2=${period2}&interval=1d&events=history`;
-  const response = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0 (SmartFund Production Daily)" } });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30_000);
+  let response: Response;
+  try {
+    response = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0 (SmartFund Production Daily)" }, signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+  }
   if (!response.ok) throw new Error(`YAHOO_CHART_HTTP_${response.status}`);
   const result = (await response.json() as { chart?: { result?: Array<{ timestamp?: number[]; indicators?: { quote?: Array<Record<string, Array<number | null>>>; adjclose?: Array<{ adjclose?: Array<number | null> }> } }> } }).chart?.result?.[0];
   if (!result) return null;
@@ -57,7 +64,7 @@ async function lastSuccessDay(jobId: string, timezone: string, runType: RunType)
 
 async function acquire(jobId: string, owner: string): Promise<boolean> {
   const rows = await prisma.$queryRawUnsafe<{ job_id: string }[]>(
-    'INSERT INTO production_scheduler_locks (job_id, owner, expires_at, updated_at) VALUES ($1, $2, NOW() + INTERVAL \'45 minutes\', NOW()) ON CONFLICT (job_id) DO UPDATE SET owner = EXCLUDED.owner, expires_at = EXCLUDED.expires_at, updated_at = NOW() WHERE production_scheduler_locks.expires_at < NOW() RETURNING job_id',
+    'INSERT INTO production_scheduler_locks (job_id, owner, expires_at, updated_at) VALUES ($1, $2, NOW() + INTERVAL \'8 hours\', NOW()) ON CONFLICT (job_id) DO UPDATE SET owner = EXCLUDED.owner, expires_at = EXCLUDED.expires_at, updated_at = NOW() WHERE production_scheduler_locks.expires_at < NOW() RETURNING job_id',
     jobId, owner,
   );
   return rows.length === 1;
