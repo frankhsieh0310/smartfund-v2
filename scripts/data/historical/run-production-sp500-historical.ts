@@ -73,6 +73,15 @@ async function persistFailure(stock: Stock, error: unknown): Promise<"PERMANENT_
   return kind;
 }
 
+type Quality = { duplicate_rows: number; invalid_ohlcv_rows: number; yahoo_covered_stocks: number; earliest_date: Date | null; latest_date: Date | null };
+async function validateHistoricalRows(stockIds: string[]): Promise<Quality> {
+  const rows = await prisma.$queryRawUnsafe<Quality[]>(
+    "WITH scoped AS (SELECT stock_id, date, open, high, low, close, source FROM stock_history WHERE stock_id = ANY($1::uuid[])) SELECT (SELECT COUNT(*)::int FROM (SELECT stock_id, date FROM scoped GROUP BY stock_id, date HAVING COUNT(*) > 1) duplicates) AS duplicate_rows, (SELECT COUNT(*)::int FROM scoped WHERE close IS NULL OR (high IS NOT NULL AND low IS NOT NULL AND high < low) OR (high IS NOT NULL AND open IS NOT NULL AND high < open) OR (high IS NOT NULL AND close IS NOT NULL AND high < close) OR (low IS NOT NULL AND open IS NOT NULL AND low > open) OR (low IS NOT NULL AND close IS NOT NULL AND low > close)) AS invalid_ohlcv_rows, (SELECT COUNT(DISTINCT stock_id)::int FROM scoped WHERE source = 'YAHOO') AS yahoo_covered_stocks, (SELECT MIN(date) FROM scoped) AS earliest_date, (SELECT MAX(date) FROM scoped) AS latest_date",
+    stockIds,
+  );
+  return rows[0] ?? { duplicate_rows: 0, invalid_ohlcv_rows: 0, yahoo_covered_stocks: 0, earliest_date: null, latest_date: null };
+}
+
 async function resolveUniverse(): Promise<Member[]> {
   const csv = await readFile(join(process.cwd(), "scripts", "sp500.csv"), "utf8");
   const tickers = csvTickers(csv);
@@ -159,9 +168,9 @@ async function main(): Promise<void> {
       return;
     }
     const retryable = await prisma.$queryRawUnsafe<{ count: number }[]>("SELECT COUNT(*)::int AS count FROM production_scheduler_failures WHERE job_id = $1 AND classification = 'RETRYABLE_FAILURE' AND resolved = FALSE", JOB_ID);
-    const latest = await prisma.stock.findFirst({ where: { id: { in: stocks.map((stock) => stock.id) } }, orderBy: { latestDate: "desc" }, select: { latestDate: true } });
+    const quality = await validateHistoricalRows(stocks.map((stock) => stock.id));
     const validation = {
-      status: summary.attempted === members.length && retryable[0]?.count === 0 ? "PASS" : "FAIL",
+      status: summary.attempted === members.length && retryable[0]?.count === 0 && quality.duplicate_rows === 0 && quality.invalid_ohlcv_rows === 0 && quality.yahoo_covered_stocks === stocks.length ? "PASS" : "FAIL",
       market: EXCHANGE,
       universe: members.length,
       resolvedStocks: stocks.length,
@@ -171,9 +180,15 @@ async function main(): Promise<void> {
       failed: summary.failed,
       retryableFailures: retryable[0]?.count ?? 0,
       source: "YAHOO",
+      duplicateRows: quality.duplicate_rows,
+      invalidOhlcvRows: quality.invalid_ohlcv_rows,
+      yahooCoveredStocks: quality.yahoo_covered_stocks,
+      earliestTradingDate: quality.earliest_date,
+      latestTradingDate: quality.latest_date,
+      latestCompletedSymbol: stocks.at(-1)?.yahooSymbol ?? null,
       summaryType: "HISTORICAL_SUMMARY",
     };
-    await completeLifecycleRun(prisma, runId, summary, latest?.latestDate ?? null, validation);
+    await completeLifecycleRun(prisma, runId, summary, quality.latest_date, validation);
     await prisma.$executeRawUnsafe(
       "INSERT INTO production_market_lifecycles (market_id, exchange, historical_job_id, historical_status, historical_run_id, historical_completed_at, historical_summary, updated_at) VALUES ($1, $2, $3, $4, $5, CASE WHEN $4 = 'MARKET_COMPLETE' THEN NOW() ELSE NULL END, $6::jsonb, NOW()) ON CONFLICT (market_id) DO UPDATE SET historical_status = EXCLUDED.historical_status, historical_run_id = EXCLUDED.historical_run_id, historical_completed_at = EXCLUDED.historical_completed_at, historical_summary = EXCLUDED.historical_summary, updated_at = NOW()",
       "SP500",
