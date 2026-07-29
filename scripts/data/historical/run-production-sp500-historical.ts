@@ -22,8 +22,11 @@ type Mapping = { canonical_symbol: string; provider_symbol: string; availability
 type Member = { canonicalSymbol: string; stock: Stock | null; mapping: Mapping | null };
 
 const prisma = new PrismaClient();
-const JOB_ID = "sp500-yahoo-historical";
-const EXCHANGE = "SP500";
+const marketArg = process.argv.find((value) => value.startsWith("--market="))?.slice("--market=".length) ?? "SP500";
+if (!["SP500", "NYSE"].includes(marketArg)) throw new Error(`UNSUPPORTED_HISTORICAL_MARKET:${marketArg}`);
+const MARKET = marketArg as "SP500" | "NYSE";
+const JOB_ID = MARKET === "SP500" ? "sp500-yahoo-historical" : "nyse-yahoo-historical";
+const EXCHANGE = MARKET;
 const CHECKPOINT_EVERY = 25;
 const CONCURRENCY = 4;
 const maxSymbolsArg = process.argv.find((value) => value.startsWith("--max-symbols="))?.slice("--max-symbols=".length);
@@ -125,6 +128,13 @@ async function validateHistoricalRows(stockIds: string[]): Promise<Quality> {
 }
 
 async function resolveUniverse(): Promise<Member[]> {
+  if (MARKET === "NYSE") {
+    const rows = await prisma.stock.findMany({
+      where: { country: "US", exchange: "NYSE", isActive: true, yahooSymbol: { not: "" } },
+      select: { id: true, ticker: true, yahooSymbol: true, latestDate: true, historyBackfilledAt: true },
+    });
+    return rows.map((stock) => ({ canonicalSymbol: stock.ticker, stock, mapping: null }));
+  }
   const csv = await readFile(join(process.cwd(), "scripts", "sp500.csv"), "utf8");
   const tickers = csvTickers(csv);
   const mappings = await prisma.$queryRawUnsafe<Mapping[]>("SELECT canonical_symbol, provider_symbol, availability, rule, reason, evidence FROM provider_symbol_mappings WHERE market = 'SP500' AND provider = 'YAHOO'");
@@ -150,7 +160,7 @@ async function main(): Promise<void> {
   const unresolved = members.filter((member) => !member.stock && !unavailable.includes(member));
   if (unresolved.length) throw new Error(`UNRESOLVED_SP500_MAPPING:${unresolved.map((member) => member.canonicalSymbol).join(",")}`);
   const stocks = members.flatMap((member) => member.stock ? [member.stock] : []).sort((a, b) => a.yahooSymbol.localeCompare(b.yahooSymbol));
-  const lifecycle = await prisma.$queryRawUnsafe<Array<{ historical_status: string }>>("SELECT historical_status FROM production_market_lifecycles WHERE market_id = $1", "SP500");
+  const lifecycle = await prisma.$queryRawUnsafe<Array<{ historical_status: string }>>("SELECT historical_status FROM production_market_lifecycles WHERE market_id = $1", MARKET);
   if (lifecycle[0]?.historical_status === "MARKET_COMPLETE") {
     console.log(JSON.stringify({ jobId: JOB_ID, status: "SKIPPED_COMPLETED" }));
     return;
@@ -229,7 +239,7 @@ async function main(): Promise<void> {
     await completeLifecycleRun(prisma, runId, summary, quality.latest_date, validation);
     await prisma.$executeRawUnsafe(
       "INSERT INTO production_market_lifecycles (market_id, exchange, historical_job_id, historical_status, historical_run_id, historical_completed_at, historical_summary, updated_at) VALUES ($1, $2, $3, $4, $5, CASE WHEN $4 = 'MARKET_COMPLETE' THEN NOW() ELSE NULL END, $6::jsonb, NOW()) ON CONFLICT (market_id) DO UPDATE SET historical_status = EXCLUDED.historical_status, historical_run_id = EXCLUDED.historical_run_id, historical_completed_at = EXCLUDED.historical_completed_at, historical_summary = EXCLUDED.historical_summary, updated_at = NOW()",
-      "SP500",
+      MARKET,
       EXCHANGE,
       JOB_ID,
       validation.status === "PASS" ? "MARKET_COMPLETE" : "RETRY_REQUIRED",
