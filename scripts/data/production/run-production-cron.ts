@@ -11,6 +11,7 @@ function run(script: string, args: string[]): Promise<void> {
 async function main(): Promise<void> {
   await run("scripts/data/daily/run-production-yahoo-daily.ts", ["--all-due"]);
   await run("scripts/data/historical/run-production-sp500-historical.ts", ["--max-symbols=25"]);
+  await run("scripts/data/historical/run-production-sp500-historical.ts", ["--market=NYSE", "--max-symbols=25"]);
 }
 
 main().catch((error: unknown) => {
