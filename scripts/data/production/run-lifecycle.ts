@@ -100,7 +100,7 @@ export async function persistLifecycleCheckpoint(prisma: PrismaClient, runId: st
 
 export async function loadLifecycleResumeCheckpoint(prisma: PrismaClient, jobId: string): Promise<ResumeCheckpoint | null> {
   const rows = await prisma.$queryRawUnsafe<Array<Omit<ResumeCheckpoint, "details"> & { details: unknown }>>(
-    "SELECT c.last_symbol, c.processed, c.succeeded, c.failed, r.details FROM production_scheduler_checkpoints c JOIN production_scheduler_runs r ON r.id = c.run_id WHERE c.job_id = $1 AND r.status <> 'COMPLETED' ORDER BY c.updated_at DESC LIMIT 1",
+    "SELECT c.last_symbol, c.processed, c.succeeded, c.failed, r.details FROM production_scheduler_checkpoints c JOIN production_scheduler_runs r ON r.id = c.run_id WHERE c.job_id = $1 AND r.status IN ('IN_PROGRESS', 'PAUSED') ORDER BY c.updated_at DESC LIMIT 1",
     jobId,
   );
   const row = rows[0];
