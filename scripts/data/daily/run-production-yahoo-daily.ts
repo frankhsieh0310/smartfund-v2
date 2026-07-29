@@ -10,14 +10,15 @@ async function fetchYahooChartPeriod(symbol: string, period1: number, period2: n
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?period1=${period1}&period2=${period2}&interval=1d&events=history`;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 30_000);
-  let response: Response;
+  let payload: { chart?: { result?: Array<{ timestamp?: number[]; indicators?: { quote?: Array<Record<string, Array<number | null>>>; adjclose?: Array<{ adjclose?: Array<number | null> }> } }> } };
   try {
-    response = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0 (SmartFund Production Daily)" }, signal: controller.signal });
+    const response = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0 (SmartFund Production Daily)" }, signal: controller.signal });
+    if (!response.ok) throw new Error(`YAHOO_CHART_HTTP_${response.status}`);
+    payload = await response.json() as typeof payload;
   } finally {
     clearTimeout(timeout);
   }
-  if (!response.ok) throw new Error(`YAHOO_CHART_HTTP_${response.status}`);
-  const result = (await response.json() as { chart?: { result?: Array<{ timestamp?: number[]; indicators?: { quote?: Array<Record<string, Array<number | null>>>; adjclose?: Array<{ adjclose?: Array<number | null> }> } }> } }).chart?.result?.[0];
+  const result = payload.chart?.result?.[0];
   if (!result) return null;
   const quote = result.indicators?.quote?.[0] ?? {};
   const adjusted = result.indicators?.adjclose?.[0]?.adjclose ?? [];
