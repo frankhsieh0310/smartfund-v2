@@ -1,4 +1,5 @@
 import type { ProviderAdapter } from "./ProviderAdapter.ts";
+import { EcbProviderAdapter } from "./ecb/EcbProviderAdapter.ts";
 import { FredProviderAdapter } from "./fred/FredProviderAdapter.ts";
 import { YahooChartProviderAdapter } from "./yahoo/YahooChartProviderAdapter.ts";
 
@@ -20,4 +21,5 @@ export class ProviderRegistry {
 
 export const productionProviderRegistry = new ProviderRegistry()
   .register(new YahooChartProviderAdapter())
+  .register(new EcbProviderAdapter())
   .register(new FredProviderAdapter());
