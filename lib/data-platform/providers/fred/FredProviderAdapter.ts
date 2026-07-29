@@ -6,8 +6,11 @@ type FredPayload = { observations?: Array<{ date: string; value: string; realtim
 export class FredProviderAdapter implements ProviderAdapter {
   readonly id = "FRED";
   readonly supportedAssetClasses = ["MACRO", "BOND_YIELD"] as const;
+  private readonly apiKey: string | undefined;
 
-  constructor(private readonly apiKey = process.env.FRED_API_KEY) {}
+  constructor(apiKey = process.env.FRED_API_KEY) {
+    this.apiKey = apiKey;
+  }
 
   source() { return { provider: "FRED", method: "FRED_SERIES_OBSERVATIONS_API" }; }
 
