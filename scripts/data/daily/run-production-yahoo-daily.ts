@@ -40,6 +40,8 @@ const args = process.argv.slice(2);
 const selectedJob = args.find((value) => value.startsWith("--job="))?.slice(6);
 const runAllDue = args.includes("--all-due");
 const root = process.cwd();
+const CONCURRENCY = 4;
+const CHECKPOINT_EVERY = 25;
 
 function clock(timezone: string, now = new Date()): { day: string; time: string; weekday: number } {
   const parts = new Intl.DateTimeFormat("en-CA", { timeZone: timezone, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23", weekday: "short" }).formatToParts(now);
@@ -74,6 +76,14 @@ async function release(jobId: string, owner: string): Promise<void> {
   await prisma.$executeRawUnsafe('DELETE FROM production_scheduler_locks WHERE job_id = $1 AND owner = $2', jobId, owner);
 }
 
+async function checkpoint(runId: string, summary: Record<string, number>, currentSymbol: string): Promise<void> {
+  await prisma.$executeRawUnsafe(
+    "UPDATE production_scheduler_runs SET attempted = $2, completed = $3, inserted = $4, updated = $5, failed = $6, details = $7::jsonb WHERE id = $1",
+    runId, summary.attempted, summary.completed, summary.inserted, summary.updated, summary.failed,
+    JSON.stringify({ ...summary, currentSymbol, checkpointAt: new Date().toISOString() }),
+  );
+}
+
 async function execute(job: Job, runType: RunType): Promise<Record<string, unknown>> {
   const runId = randomUUID();
   const owner = `${process.env.RAILWAY_DEPLOYMENT_ID ?? process.env.HOSTNAME ?? "worker"}:${process.pid}:${runId}`;
@@ -89,13 +99,16 @@ async function execute(job: Job, runType: RunType): Promise<Record<string, unkno
       orderBy: { yahooSymbol: "asc" },
       select: { id: true, yahooSymbol: true, latestDate: true },
     });
-    for (const stock of stocks) {
-      summary.attempted += 1;
-      try {
-        const period1 = Math.floor(stock.latestDate!.getTime() / 1000);
-        const period2 = Math.floor((Date.now() + 86_400_000) / 1000);
-        const candles = (await fetchYahooChartPeriod(stock.yahooSymbol, period1, period2))?.candles ?? [];
-        for (const candle of candles.filter((row) => row.close !== null && row.date >= stock.latestDate!)) {
+    for (let offset = 0; offset < stocks.length; offset += CONCURRENCY) {
+      const batch = stocks.slice(offset, offset + CONCURRENCY);
+      const outcomes = await Promise.all(batch.map(async (stock) => {
+        try {
+          const period1 = Math.floor(stock.latestDate!.getTime() / 1000);
+          const period2 = Math.floor((Date.now() + 86_400_000) / 1000);
+          const candles = (await fetchYahooChartPeriod(stock.yahooSymbol, period1, period2))?.candles ?? [];
+          let inserted = 0;
+          let updated = 0;
+          for (const candle of candles.filter((row) => row.close !== null && row.date >= stock.latestDate!)) {
           const date = candle.date;
           const existing = await prisma.stockHistory.findUnique({ where: { stockId_date: { stockId: stock.id, date } }, select: { id: true } });
           await prisma.stockHistory.upsert({
@@ -103,15 +116,26 @@ async function execute(job: Job, runType: RunType): Promise<Record<string, unkno
             create: { stockId: stock.id, date, open: candle.open, high: candle.high, low: candle.low, close: candle.close!, adjustedClose: candle.adjClose, volume: candle.volume, source: "YAHOO", sourceSymbol: stock.yahooSymbol, providerMethod: "YAHOO_CHART_API", importedAt: new Date(), updatedAt: new Date() },
             update: { open: candle.open, high: candle.high, low: candle.low, close: candle.close!, adjustedClose: candle.adjClose, volume: candle.volume, source: "YAHOO", sourceSymbol: stock.yahooSymbol, providerMethod: "YAHOO_CHART_API", updatedAt: new Date() },
           });
-          if (existing) summary.updated += 1; else summary.inserted += 1;
-        }
-        const latest = candles.filter((row) => row.close !== null).at(-1);
-        if (latest) await prisma.stock.update({ where: { id: stock.id }, data: { latestDate: latest.date, latestClose: latest.close! } });
-        await prisma.$executeRawUnsafe('DELETE FROM production_scheduler_failures WHERE job_id = $1 AND stock_id = $2', job.id, stock.id);
-        summary.completed += 1;
-      } catch (error) {
-        summary.failed += 1;
+            if (existing) updated += 1; else inserted += 1;
+          }
+          const latest = candles.filter((row) => row.close !== null).at(-1);
+          if (latest) await prisma.stock.update({ where: { id: stock.id }, data: { latestDate: latest.date, latestClose: latest.close! } });
+          await prisma.$executeRawUnsafe('DELETE FROM production_scheduler_failures WHERE job_id = $1 AND stock_id = $2', job.id, stock.id);
+          return { completed: 1, inserted, updated, failed: 0 };
+        } catch (error) {
         await prisma.$executeRawUnsafe('INSERT INTO production_scheduler_failures (job_id, stock_id, symbol, attempts, last_error, last_attempted_at) VALUES ($1, $2, $3, 1, $4, NOW()) ON CONFLICT (job_id, stock_id) DO UPDATE SET attempts = production_scheduler_failures.attempts + 1, last_error = EXCLUDED.last_error, last_attempted_at = NOW()', job.id, stock.id, stock.yahooSymbol, error instanceof Error ? error.message : String(error));
+          return { completed: 0, inserted: 0, updated: 0, failed: 1 };
+        }
+      }));
+      for (const outcome of outcomes) {
+        summary.attempted += 1;
+        summary.completed += outcome.completed;
+        summary.inserted += outcome.inserted;
+        summary.updated += outcome.updated;
+        summary.failed += outcome.failed;
+      }
+      if ((offset + batch.length) % CHECKPOINT_EVERY === 0 || offset + batch.length === stocks.length) {
+        await checkpoint(runId, summary, batch.at(-1)!.yahooSymbol);
       }
     }
     await prisma.$executeRawUnsafe('UPDATE production_scheduler_runs SET status = \'COMPLETED\', completed_at = NOW(), attempted = $2, completed = $3, inserted = $4, updated = $5, failed = $6, details = $7::jsonb WHERE id = $1', runId, summary.attempted, summary.completed, summary.inserted, summary.updated, summary.failed, JSON.stringify(summary));
