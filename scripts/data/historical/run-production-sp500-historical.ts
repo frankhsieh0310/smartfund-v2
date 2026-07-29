@@ -11,7 +11,7 @@ import {
   loadLifecycleResumeCheckpoint,
   persistLifecycleCheckpoint,
   releaseLifecycleLock,
-} from "../production/run-lifecycle";
+} from "../production/run-lifecycle.ts";
 
 type Stock = { id: string; ticker: string; yahooSymbol: string; latestDate: Date | null };
 type Candle = { date: Date; open: number | null; high: number | null; low: number | null; close: number | null; volume: number | null; adjClose: number | null };
