@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "assets": {
+    "STOCK": { "providerAdapter": "YAHOO_CHART" },
+    "ETF": { "providerAdapter": "YAHOO_CHART" },
+    "MARKET_INDEX": { "providerAdapter": "YAHOO_CHART" },
+    "BOND_YIELD": { "providerAdapter": "FRED" },
+    "VOLATILITY": { "providerAdapter": "YAHOO_CHART" },
+    "COMMODITY": { "providerAdapter": "YAHOO_CHART" },
+    "FX": { "providerAdapter": "YAHOO_CHART" },
+    "CRYPTO": { "providerAdapter": "YAHOO_CHART" },
+    "MACRO": { "providerAdapters": ["FRED", "ECB", "IMF", "OECD", "WORLD_BANK"] }
+  }
+}

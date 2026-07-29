@@ -1,5 +1,9 @@
 import { randomUUID } from "node:crypto";
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { PrismaClient } from "@prisma/client";
+import { productionProviderRegistry } from "../../../lib/data-platform/providers/ProviderRegistry.ts";
+import type { ProviderAssetClass, ProviderPoint } from "../../../lib/data-platform/providers/ProviderAdapter.ts";
 import {
   acquireLifecycleLock,
   completeLifecycleRun,
@@ -14,14 +18,13 @@ import {
 
 type AssetKind = "GLOBAL_ETF" | "BOND_YIELD" | "MARKET_INDEX" | "VOLATILITY";
 type Item = { id: string; symbol: string; latestDate: Date | null };
-type Candle = { date: Date; open: number | null; high: number | null; low: number | null; close: number | null; volume: number | null };
 
 const prisma = new PrismaClient();
 const CONCURRENCY = 4;
 const CHECKPOINT_EVERY = 25;
 const MAX_PER_CRON = 100;
 const requested = process.argv.find((value) => value.startsWith("--job="))?.slice(6) as AssetKind | undefined;
-const kinds: AssetKind[] = requested ? [requested] : ["GLOBAL_ETF", "BOND_YIELD", "MARKET_INDEX", "VOLATILITY"];
+const kinds: AssetKind[] = requested ? [requested] : ["GLOBAL_ETF", "MARKET_INDEX", "VOLATILITY"];
 
 function jobId(kind: AssetKind): string { return `${kind.toLowerCase()}-production-daily`; }
 function exchange(kind: AssetKind): string { return kind; }
@@ -37,20 +40,15 @@ async function completedToday(job: string): Promise<boolean> {
   return Boolean(rows[0] && newYorkDay(rows[0].started_at) === newYorkDay());
 }
 
-async function fetchIncremental(symbol: string, latestDate: Date | null): Promise<Candle[]> {
-  const period1 = Math.floor((latestDate?.getTime() ?? Date.now() - 7 * 86_400_000) / 1000);
-  const period2 = Math.floor((Date.now() + 86_400_000) / 1000);
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 30_000);
-  try {
-    const response = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?period1=${period1}&period2=${period2}&interval=1d&events=history`, { headers: { "User-Agent": "Mozilla/5.0 (SmartFund Production Asset Daily)" }, signal: controller.signal });
-    if (!response.ok) throw new Error(`YAHOO_HTTP_${response.status}`);
-    const payload = await response.json() as { chart?: { result?: Array<{ timestamp?: number[]; indicators?: { quote?: Array<Record<string, Array<number | null>>> } }> } };
-    const result = payload.chart?.result?.[0];
-    if (!result) throw new Error("YAHOO_NO_DATA");
-    const quote = result.indicators?.quote?.[0] ?? {};
-    return (result.timestamp ?? []).map((timestamp, index) => ({ date: new Date(timestamp * 1000), open: quote.open?.[index] ?? null, high: quote.high?.[index] ?? null, low: quote.low?.[index] ?? null, close: quote.close?.[index] ?? null, volume: quote.volume?.[index] ?? null })).filter((row) => row.close !== null);
-  } finally { clearTimeout(timeout); }
+function providerAssetClass(kind: AssetKind): ProviderAssetClass {
+  return kind === "GLOBAL_ETF" ? "ETF" : kind === "MARKET_INDEX" ? "MARKET_INDEX" : kind;
+}
+
+async function configuredProvider(assetClass: ProviderAssetClass): Promise<string> {
+  const config = JSON.parse(await readFile(join(process.cwd(), "config", "asset-provider-registry.json"), "utf8")) as { assets: Record<string, { providerAdapter?: string }> };
+  const provider = config.assets[assetClass]?.providerAdapter;
+  if (!provider) throw new Error(`PROVIDER_MAPPING_NOT_CONFIGURED:${assetClass}`);
+  return provider;
 }
 
 async function universe(kind: AssetKind): Promise<Item[]> {
@@ -61,7 +59,7 @@ async function universe(kind: AssetKind): Promise<Item[]> {
   return prisma.$queryRawUnsafe<Item[]>("SELECT m.id, m.symbol, MAX(h.date) AS \"latestDate\" FROM market_master m JOIN market_history h ON h.symbol = m.symbol WHERE m.is_active = TRUE AND m.asset_type::text = $1 GROUP BY m.id, m.symbol ORDER BY m.symbol", type);
 }
 
-async function upsert(kind: AssetKind, item: Item, candle: Candle): Promise<boolean> {
+async function upsert(kind: AssetKind, item: Item, candle: ProviderPoint): Promise<boolean> {
   if (kind === "GLOBAL_ETF") {
     const existing = await prisma.$queryRawUnsafe<{ exists: boolean }[]>("SELECT EXISTS(SELECT 1 FROM etf_history WHERE etf_id = $1 AND date = $2::date) AS exists", item.id, candle.date.toISOString().slice(0, 10));
     await prisma.$executeRawUnsafe("INSERT INTO etf_history (id, etf_id, date, price, volume) VALUES ($1, $2, $3::date, $4, $5) ON CONFLICT (etf_id, date) DO UPDATE SET price = EXCLUDED.price, volume = EXCLUDED.volume", randomUUID(), item.id, candle.date.toISOString().slice(0, 10), candle.close, candle.volume);
@@ -93,6 +91,8 @@ async function run(kind: AssetKind): Promise<Record<string, unknown>> {
   if (!await acquireLifecycleLock(prisma, job, owner)) return { job, status: "SKIPPED_LOCKED" };
   let runId = "";
   try {
+    const adapter = productionProviderRegistry.get(await configuredProvider(providerAssetClass(kind)));
+    if (!adapter.supportedAssetClasses.includes(providerAssetClass(kind))) throw new Error(`PROVIDER_UNSUPPORTED_ASSET_CLASS:${kind}`);
     runId = await createLifecycleRun(prisma, job, exchange(kind), "PRIMARY");
     const all = await universe(kind);
     const summary = createSummary();
@@ -105,9 +105,9 @@ async function run(kind: AssetKind): Promise<Record<string, unknown>> {
       const batch = selected.slice(offset, offset + CONCURRENCY);
       const outcomes = await Promise.all(batch.map(async (item) => {
         try {
-          const candles = await fetchIncremental(item.symbol, item.latestDate);
+          const candles = await adapter.fetchLatest({ assetClass: providerAssetClass(kind), instrument: { id: item.id, symbol: item.symbol, latestDate: item.latestDate } });
           const newest = candles.at(-1);
-          if (!newest) throw new Error("YAHOO_NO_DATA");
+          if (!newest || newest.close === null || newest.close === undefined) throw new Error("YAHOO_NO_DATA");
           const existed = await upsert(kind, item, newest);
           await prisma.$executeRawUnsafe("DELETE FROM production_scheduler_failures WHERE job_id = $1 AND stock_id = $2", job, item.id);
           return { attempted: 1, completed: 1, success: existed ? 0 : 1, noUpdate: existed ? 1 : 0, inserted: existed ? 0 : 1, updated: existed ? 1 : 0 };
@@ -127,7 +127,7 @@ async function run(kind: AssetKind): Promise<Record<string, unknown>> {
       await prisma.$executeRawUnsafe("UPDATE production_scheduler_runs SET status = 'PAUSED', completed_at = NOW(), exit_code = 0 WHERE id = $1", runId);
       return { job, status: "PAUSED", processed: summary.attempted, remaining, lastSymbol: selected.at(-1)?.symbol ?? null };
     }
-    const validation = { status: summary.attempted === all.length && summary.attempted === summary.completed + summary.failed ? "PASS" : "FAIL", assetClass: kind, universe: all.length, processed: summary.attempted, source: "YAHOO", summaryType: "DAILY_SUMMARY" };
+    const validation = { status: summary.attempted === all.length && summary.attempted === summary.completed + summary.failed ? "PASS" : "FAIL", assetClass: kind, universe: all.length, processed: summary.attempted, source: adapter.source(), summaryType: "DAILY_SUMMARY" };
     await completeLifecycleRun(prisma, runId, summary, null, validation);
     return { job, status: validation.status, ...summary };
   } catch (error) { if (runId) await failLifecycleRun(prisma, runId, error); throw error; }
