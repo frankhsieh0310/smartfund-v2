@@ -13,6 +13,7 @@ import {
   loadLifecycleResumeCheckpoint,
   persistLifecycleCheckpoint,
   pauseLifecycleRun,
+  recoverOrphanedLifecycleRun,
   releaseLifecycleLock,
 } from "../production/run-lifecycle.ts";
 
@@ -172,6 +173,7 @@ async function main(): Promise<void> {
   }
   let runId = "";
   try {
+    await recoverOrphanedLifecycleRun(prisma, JOB_ID);
     runId = await createLifecycleRun(prisma, JOB_ID, EXCHANGE, "HISTORICAL");
     const summary = createSummary();
     summary.permanentUnavailable = unavailable.length;
