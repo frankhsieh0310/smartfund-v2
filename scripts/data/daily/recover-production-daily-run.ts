@@ -11,7 +11,7 @@ async function main(): Promise<void> {
       jobId,
     );
     const expiredLocks = await prisma.$executeRawUnsafe(
-      "DELETE FROM production_scheduler_locks WHERE job_id = $1 AND expires_at < NOW()",
+      "DELETE FROM production_scheduler_locks WHERE job_id = $1 AND NOT EXISTS (SELECT 1 FROM production_scheduler_runs WHERE job_id = $1 AND status = 'IN_PROGRESS')",
       jobId,
     );
     console.log(JSON.stringify({ jobId, abandonedRuns, expiredLocks }));
