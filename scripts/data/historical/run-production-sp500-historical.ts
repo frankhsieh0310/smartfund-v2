@@ -14,7 +14,7 @@ import {
   releaseLifecycleLock,
 } from "../production/run-lifecycle.ts";
 
-type Stock = { id: string; ticker: string; yahooSymbol: string; latestDate: Date | null };
+type Stock = { id: string; ticker: string; yahooSymbol: string; latestDate: Date | null; historyBackfilledAt: Date | null };
 type Candle = { date: Date; open: number | null; high: number | null; low: number | null; close: number | null; volume: number | null; adjClose: number | null };
 type Mapping = { canonical_symbol: string; provider_symbol: string; availability: string; rule: string; reason: string; evidence: string | null };
 type Member = { canonicalSymbol: string; stock: Stock | null; mapping: Mapping | null };
@@ -78,7 +78,7 @@ async function resolveUniverse(): Promise<Member[]> {
   const candidates = tickers.flatMap((ticker) => [...yahooCandidates(ticker), mappingByCanonical.get(ticker)?.provider_symbol].filter((value): value is string => Boolean(value)));
   const rows = await prisma.stock.findMany({
     where: { country: "US", isActive: true, OR: [{ ticker: { in: candidates } }, { yahooSymbol: { in: candidates } }] },
-    select: { id: true, ticker: true, yahooSymbol: true, latestDate: true },
+    select: { id: true, ticker: true, yahooSymbol: true, latestDate: true, historyBackfilledAt: true },
   });
   const byCandidate = new Map<string, Stock>();
   for (const row of rows) for (const candidate of yahooCandidates(row.ticker).concat(row.yahooSymbol)) byCandidate.set(candidate, row);
@@ -116,9 +116,7 @@ async function main(): Promise<void> {
       const batch = pending.slice(offset, offset + CONCURRENCY);
       const outcomes = await Promise.all(batch.map(async (stock) => {
         try {
-          const existingYahooRow = await prisma.stockHistory.findFirst({ where: { stockId: stock.id, source: "YAHOO" }, select: { id: true } });
-          if (existingYahooRow) {
-            await prisma.stock.update({ where: { id: stock.id }, data: { historyBackfilledAt: new Date() } });
+          if (stock.historyBackfilledAt) {
             return { attempted: 1, completed: 1, noUpdate: 1 };
           }
           const candles = await fetchMax(stock.yahooSymbol);
