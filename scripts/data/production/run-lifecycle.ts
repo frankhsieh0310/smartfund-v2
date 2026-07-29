@@ -21,6 +21,21 @@ export type ResumeCheckpoint = {
   details: Partial<RunSummary> | null;
 };
 
+function resumeSummary(value: unknown): Partial<RunSummary> | null {
+  let parsed: unknown = value;
+  if (typeof parsed === "string") {
+    try { parsed = JSON.parse(parsed); } catch { return null; }
+  }
+  if (!parsed || typeof parsed !== "object") return null;
+  const fields = ["attempted", "completed", "inserted", "updated", "failed", "success", "noUpdate", "permanentUnavailable", "retryableFailure"] as const;
+  const result: Partial<RunSummary> = {};
+  for (const field of fields) {
+    const candidate = (parsed as Record<string, unknown>)[field];
+    if (typeof candidate === "number" && Number.isFinite(candidate)) result[field] = candidate;
+  }
+  return result;
+}
+
 export function createSummary(): RunSummary {
   return { attempted: 0, completed: 0, inserted: 0, updated: 0, failed: 0, success: 0, noUpdate: 0, permanentUnavailable: 0, retryableFailure: 0 };
 }
@@ -84,11 +99,12 @@ export async function persistLifecycleCheckpoint(prisma: PrismaClient, runId: st
 }
 
 export async function loadLifecycleResumeCheckpoint(prisma: PrismaClient, jobId: string): Promise<ResumeCheckpoint | null> {
-  const rows = await prisma.$queryRawUnsafe<ResumeCheckpoint[]>(
+  const rows = await prisma.$queryRawUnsafe<Array<Omit<ResumeCheckpoint, "details"> & { details: unknown }>>(
     "SELECT c.last_symbol, c.processed, c.succeeded, c.failed, r.details FROM production_scheduler_checkpoints c JOIN production_scheduler_runs r ON r.id = c.run_id WHERE c.job_id = $1 AND r.status <> 'COMPLETED' ORDER BY c.updated_at DESC LIMIT 1",
     jobId,
   );
-  return rows[0] ?? null;
+  const row = rows[0];
+  return row ? { ...row, details: resumeSummary(row.details) } : null;
 }
 
 export async function completeLifecycleRun(prisma: PrismaClient, runId: string, summary: RunSummary, latestTradingDate: Date | null, validation: Record<string, unknown>): Promise<void> {
