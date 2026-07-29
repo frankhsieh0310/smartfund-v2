@@ -129,7 +129,10 @@ async function main(): Promise<void> {
       const batch = selected.slice(offset, offset + CONCURRENCY);
       const outcomes = await Promise.all(batch.map(async (stock) => {
         try {
-          if (stock.historyBackfilledAt) {
+          const yahooProvenance = stock.historyBackfilledAt
+            ? await prisma.stockHistory.findFirst({ where: { stockId: stock.id, source: "YAHOO" }, select: { id: true } })
+            : null;
+          if (yahooProvenance) {
             return { attempted: 1, completed: 1, noUpdate: 1 };
           }
           const candles = await fetchMax(stock.yahooSymbol);
