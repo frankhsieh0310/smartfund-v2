@@ -18,6 +18,7 @@ export type ResumeCheckpoint = {
   processed: number;
   succeeded: number;
   failed: number;
+  details: Partial<RunSummary> | null;
 };
 
 export function createSummary(): RunSummary {
@@ -39,6 +40,14 @@ export async function acquireLifecycleLock(prisma: PrismaClient, jobId: string, 
 
 export async function releaseLifecycleLock(prisma: PrismaClient, jobId: string, owner: string): Promise<void> {
   await prisma.$executeRawUnsafe("DELETE FROM production_scheduler_locks WHERE job_id = $1 AND owner = $2", jobId, owner);
+}
+
+export async function heartbeatLifecycleLock(prisma: PrismaClient, jobId: string, owner: string): Promise<void> {
+  await prisma.$executeRawUnsafe(
+    "UPDATE production_scheduler_locks SET expires_at = NOW() + INTERVAL '8 hours', updated_at = NOW() WHERE job_id = $1 AND owner = $2",
+    jobId,
+    owner,
+  );
 }
 
 export async function createLifecycleRun(prisma: PrismaClient, jobId: string, exchange: string, runType: string): Promise<string> {
@@ -76,7 +85,7 @@ export async function persistLifecycleCheckpoint(prisma: PrismaClient, runId: st
 
 export async function loadLifecycleResumeCheckpoint(prisma: PrismaClient, jobId: string): Promise<ResumeCheckpoint | null> {
   const rows = await prisma.$queryRawUnsafe<ResumeCheckpoint[]>(
-    "SELECT c.last_symbol, c.processed, c.succeeded, c.failed FROM production_scheduler_checkpoints c JOIN production_scheduler_runs r ON r.id = c.run_id WHERE c.job_id = $1 AND r.status <> 'COMPLETED' ORDER BY c.updated_at DESC LIMIT 1",
+    "SELECT c.last_symbol, c.processed, c.succeeded, c.failed, r.details FROM production_scheduler_checkpoints c JOIN production_scheduler_runs r ON r.id = c.run_id WHERE c.job_id = $1 AND r.status <> 'COMPLETED' ORDER BY c.updated_at DESC LIMIT 1",
     jobId,
   );
   return rows[0] ?? null;

@@ -1,0 +1,30 @@
+[
+  {
+    "market": "SP500",
+    "canonicalSymbol": "BRKB",
+    "provider": "YAHOO",
+    "providerSymbol": "BRK-B",
+    "availability": "ACTIVE",
+    "rule": "S_AND_P_CLASS_SHARE_DOT_TO_YAHOO_HYPHEN",
+    "reason": "S&P constituent CSV omits the share-class separator; Yahoo Finance uses a hyphen."
+  },
+  {
+    "market": "SP500",
+    "canonicalSymbol": "BFB",
+    "provider": "YAHOO",
+    "providerSymbol": "BF-B",
+    "availability": "ACTIVE",
+    "rule": "S_AND_P_CLASS_SHARE_DOT_TO_YAHOO_HYPHEN",
+    "reason": "S&P constituent CSV omits the share-class separator; Yahoo Finance uses a hyphen."
+  },
+  {
+    "market": "SP500",
+    "canonicalSymbol": "HOLX",
+    "provider": "YAHOO",
+    "providerSymbol": "HOLX",
+    "availability": "PERMANENT_UNAVAILABLE",
+    "rule": "YAHOO_CHART_API_NO_DATA",
+    "reason": "No production master match; Yahoo Chart API returned Not Found / No data found on 2026-07-29.",
+    "evidence": "YAHOO_CHART_HTTP_404"
+  }
+]

@@ -8,6 +8,7 @@ import {
   createLifecycleRun,
   createSummary,
   failLifecycleRun,
+  heartbeatLifecycleLock,
   loadLifecycleResumeCheckpoint,
   persistLifecycleCheckpoint,
   releaseLifecycleLock,
@@ -15,6 +16,8 @@ import {
 
 type Stock = { id: string; ticker: string; yahooSymbol: string; latestDate: Date | null };
 type Candle = { date: Date; open: number | null; high: number | null; low: number | null; close: number | null; volume: number | null; adjClose: number | null };
+type Mapping = { canonical_symbol: string; provider_symbol: string; availability: string; rule: string; reason: string; evidence: string | null };
+type Member = { canonicalSymbol: string; stock: Stock | null; mapping: Mapping | null };
 
 const prisma = new PrismaClient();
 const JOB_ID = "sp500-yahoo-historical";
@@ -67,27 +70,38 @@ async function persistFailure(stock: Stock, error: unknown): Promise<"PERMANENT_
   return kind;
 }
 
-async function resolveUniverse(): Promise<{ stocks: Stock[]; unmatched: string[] }> {
+async function resolveUniverse(): Promise<Member[]> {
   const csv = await readFile(join(process.cwd(), "scripts", "sp500.csv"), "utf8");
   const tickers = csvTickers(csv);
-  const candidates = tickers.flatMap(yahooCandidates);
+  const mappings = await prisma.$queryRawUnsafe<Mapping[]>("SELECT canonical_symbol, provider_symbol, availability, rule, reason, evidence FROM provider_symbol_mappings WHERE market = 'SP500' AND provider = 'YAHOO'");
+  const mappingByCanonical = new Map(mappings.map((mapping) => [mapping.canonical_symbol, mapping]));
+  const candidates = tickers.flatMap((ticker) => [...yahooCandidates(ticker), mappingByCanonical.get(ticker)?.provider_symbol].filter((value): value is string => Boolean(value)));
   const rows = await prisma.stock.findMany({
     where: { country: "US", isActive: true, OR: [{ ticker: { in: candidates } }, { yahooSymbol: { in: candidates } }] },
     select: { id: true, ticker: true, yahooSymbol: true, latestDate: true },
   });
   const byCandidate = new Map<string, Stock>();
   for (const row of rows) for (const candidate of yahooCandidates(row.ticker).concat(row.yahooSymbol)) byCandidate.set(candidate, row);
-  const stocks: Stock[] = [];
-  const unmatched: string[] = [];
-  for (const ticker of tickers) {
-    const stock = yahooCandidates(ticker).map((candidate) => byCandidate.get(candidate)).find((value): value is Stock => Boolean(value));
-    if (stock) stocks.push(stock); else unmatched.push(ticker);
-  }
-  return { stocks: [...new Map(stocks.map((stock) => [stock.id, stock])).values()].sort((a, b) => a.yahooSymbol.localeCompare(b.yahooSymbol)), unmatched };
+  return tickers.map((canonicalSymbol) => {
+    const mapping = mappingByCanonical.get(canonicalSymbol) ?? null;
+    const candidatesForMember = [...yahooCandidates(canonicalSymbol), mapping?.provider_symbol].filter((value): value is string => Boolean(value));
+    const stock = candidatesForMember.map((candidate) => byCandidate.get(candidate)).find((value): value is Stock => Boolean(value)) ?? null;
+    return { canonicalSymbol, stock, mapping };
+  });
+}
+
+async function existingYahooCoverage(stockIds: string[]): Promise<Set<string>> {
+  const rows = await prisma.stockHistory.groupBy({ by: ["stockId"], where: { stockId: { in: stockIds }, source: "YAHOO" }, _count: { _all: true } });
+  return new Set(rows.filter((row) => row._count._all >= 20).map((row) => row.stockId));
 }
 
 async function main(): Promise<void> {
-  const { stocks, unmatched } = await resolveUniverse();
+  const members = await resolveUniverse();
+  const unavailable = members.filter((member) => !member.stock && member.mapping?.availability === "PERMANENT_UNAVAILABLE");
+  const unresolved = members.filter((member) => !member.stock && !unavailable.includes(member));
+  if (unresolved.length) throw new Error(`UNRESOLVED_SP500_MAPPING:${unresolved.map((member) => member.canonicalSymbol).join(",")}`);
+  const stocks = members.flatMap((member) => member.stock ? [member.stock] : []).sort((a, b) => a.yahooSymbol.localeCompare(b.yahooSymbol));
+  const verifiedCoverage = await existingYahooCoverage(stocks.map((stock) => stock.id));
   const owner = `historical:${process.env.RAILWAY_DEPLOYMENT_ID ?? process.pid}`;
   if (!await acquireLifecycleLock(prisma, JOB_ID, owner)) {
     console.log(JSON.stringify({ jobId: JOB_ID, status: "SKIPPED_LOCKED" }));
@@ -97,17 +111,21 @@ async function main(): Promise<void> {
   try {
     runId = await createLifecycleRun(prisma, JOB_ID, EXCHANGE, "HISTORICAL");
     const summary = createSummary();
-    summary.permanentUnavailable = unmatched.length;
-    summary.attempted = unmatched.length;
+    summary.permanentUnavailable = unavailable.length;
+    summary.attempted = unavailable.length;
     const resume = await loadLifecycleResumeCheckpoint(prisma, JOB_ID);
     const resumeIndex = resume?.last_symbol ? stocks.findIndex((stock) => stock.yahooSymbol === resume.last_symbol) : -1;
     if (resume?.last_symbol && resumeIndex < 0) throw new Error(`RESUME_SYMBOL_NOT_IN_UNIVERSE:${resume.last_symbol}`);
-    if (resume) Object.assign(summary, { attempted: resume.processed, completed: resume.succeeded, failed: resume.failed });
-    const pending = resume ? stocks.slice(resumeIndex + 1) : stocks;
+    if (resume) Object.assign(summary, resume.details ?? { attempted: resume.processed, completed: resume.succeeded, failed: resume.failed });
+    const pending = (resume ? stocks.slice(resumeIndex + 1) : stocks);
     for (let offset = 0; offset < pending.length; offset += CONCURRENCY) {
       const batch = pending.slice(offset, offset + CONCURRENCY);
       const outcomes = await Promise.all(batch.map(async (stock) => {
         try {
+          if (verifiedCoverage.has(stock.id)) {
+            await prisma.stock.update({ where: { id: stock.id }, data: { historyBackfilledAt: new Date() } });
+            return { attempted: 1, completed: 1, noUpdate: 1 };
+          }
           const candles = await fetchMax(stock.yahooSymbol);
           const valid = candles?.filter((candle) => candle.close !== null) ?? [];
           if (!valid.length) throw new Error("YAHOO_NO_DATA");
@@ -131,17 +149,21 @@ async function main(): Promise<void> {
           return { attempted: 1, failed: 1, permanentUnavailable: kind === "PERMANENT_UNAVAILABLE" ? 1 : 0, retryableFailure: kind === "RETRYABLE_FAILURE" ? 1 : 0 };
         }
       }));
+      const attemptedBeforeBatch = summary.attempted;
       outcomes.forEach((outcome) => addOutcome(summary, outcome));
-      if ((offset + batch.length) % CHECKPOINT_EVERY === 0 || offset + batch.length === pending.length) await persistLifecycleCheckpoint(prisma, runId, summary, batch.at(-1)!.yahooSymbol);
+      if (Math.floor(attemptedBeforeBatch / CHECKPOINT_EVERY) < Math.floor(summary.attempted / CHECKPOINT_EVERY) || offset + batch.length === pending.length) {
+        await persistLifecycleCheckpoint(prisma, runId, summary, batch.at(-1)!.yahooSymbol);
+        await heartbeatLifecycleLock(prisma, JOB_ID, owner);
+      }
     }
     const retryable = await prisma.$queryRawUnsafe<{ count: number }[]>("SELECT COUNT(*)::int AS count FROM production_scheduler_failures WHERE job_id = $1 AND classification = 'RETRYABLE_FAILURE' AND resolved = FALSE", JOB_ID);
     const latest = await prisma.stock.findFirst({ where: { id: { in: stocks.map((stock) => stock.id) } }, orderBy: { latestDate: "desc" }, select: { latestDate: true } });
     const validation = {
-      status: summary.attempted === stocks.length + unmatched.length && retryable[0]?.count === 0 ? "PASS" : "FAIL",
+      status: summary.attempted === members.length && retryable[0]?.count === 0 ? "PASS" : "FAIL",
       market: EXCHANGE,
-      universe: stocks.length + unmatched.length,
+      universe: members.length,
       resolvedStocks: stocks.length,
-      unmatched,
+      permanentUnavailable: unavailable.map((member) => ({ canonicalSymbol: member.canonicalSymbol, providerSymbol: member.mapping?.provider_symbol, rule: member.mapping?.rule, reason: member.mapping?.reason, evidence: member.mapping?.evidence })),
       processed: summary.attempted,
       completed: summary.completed,
       failed: summary.failed,

@@ -8,6 +8,7 @@ import {
   createLifecycleRun,
   createSummary,
   failLifecycleRun,
+  heartbeatLifecycleLock,
   loadLifecycleResumeCheckpoint,
   persistLifecycleCheckpoint,
   releaseLifecycleLock,
@@ -109,11 +110,7 @@ async function execute(job: Job, runType: RunType): Promise<Record<string, unkno
     const resume = runType === "PRIMARY" ? await loadLifecycleResumeCheckpoint(prisma, job.id) : null;
     const resumeIndex = resume?.last_symbol ? allStocks.findIndex((stock) => stock.yahooSymbol === resume.last_symbol) : -1;
     if (resume?.last_symbol && resumeIndex < 0) throw new Error(`RESUME_SYMBOL_NOT_IN_UNIVERSE:${resume.last_symbol}`);
-    if (resume) {
-      summary.attempted = resume.processed;
-      summary.completed = resume.succeeded;
-      summary.failed = resume.failed;
-    }
+    if (resume) Object.assign(summary, resume.details ?? { attempted: resume.processed, completed: resume.succeeded, failed: resume.failed });
     const stocks = resume ? allStocks.slice(resumeIndex + 1) : allStocks;
     for (let offset = 0; offset < stocks.length; offset += CONCURRENCY) {
       const batch = stocks.slice(offset, offset + CONCURRENCY);
@@ -147,6 +144,7 @@ async function execute(job: Job, runType: RunType): Promise<Record<string, unkno
           return { completed: 0, inserted: 0, updated: 0, failed: 1, success: 0, noUpdate: 0, permanentUnavailable: classification === "PERMANENT_UNAVAILABLE" ? 1 : 0, retryableFailure: classification === "RETRYABLE_FAILURE" ? 1 : 0 };
         }
       }));
+      const attemptedBeforeBatch = summary.attempted;
       for (const outcome of outcomes) {
         summary.attempted += 1;
         summary.completed += outcome.completed;
@@ -158,8 +156,9 @@ async function execute(job: Job, runType: RunType): Promise<Record<string, unkno
         summary.permanentUnavailable += outcome.permanentUnavailable;
         summary.retryableFailure += outcome.retryableFailure;
       }
-      if ((offset + batch.length) % CHECKPOINT_EVERY === 0 || offset + batch.length === stocks.length) {
+      if (Math.floor(attemptedBeforeBatch / CHECKPOINT_EVERY) < Math.floor(summary.attempted / CHECKPOINT_EVERY) || offset + batch.length === stocks.length) {
         await persistLifecycleCheckpoint(prisma, runId, summary, batch.at(-1)!.yahooSymbol);
+        await heartbeatLifecycleLock(prisma, job.id, owner);
       }
     }
     const latest = allStocks.reduce<Date | null>((current, stock) => !current || stock.latestDate! > current ? stock.latestDate : current, null);
