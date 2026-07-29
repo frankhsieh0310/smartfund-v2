@@ -24,6 +24,14 @@
       "primaryTime": "18:30",
       "retryTime": "22:30",
       "weekdays": [1, 2, 3, 4, 5]
+    },
+    {
+      "id": "nyse-yahoo-daily",
+      "exchange": "NYSE",
+      "timezone": "America/New_York",
+      "primaryTime": "18:30",
+      "retryTime": "22:30",
+      "weekdays": [1, 2, 3, 4, 5]
     }
   ]
 }
