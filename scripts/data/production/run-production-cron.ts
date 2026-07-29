@@ -10,7 +10,10 @@ function run(script: string, args: string[]): Promise<void> {
 
 async function main(): Promise<void> {
   await run("scripts/data/daily/run-production-yahoo-daily.ts", ["--all-due"]);
-  await run("scripts/data/historical/run-production-sp500-historical.ts", ["--market=NYSE", "--max-symbols=25"]);
+  // The production runner retains its durable checkpoint between Cron invocations.
+  // A larger bounded slice reaches the Historical Ready gate promptly without
+  // introducing a second worker or bypassing the lifecycle lock.
+  await run("scripts/data/historical/run-production-sp500-historical.ts", ["--market=NYSE", "--max-symbols=200"]);
 }
 
 main().catch((error: unknown) => {
