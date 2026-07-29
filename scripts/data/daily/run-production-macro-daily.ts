@@ -12,6 +12,7 @@ const prisma = new PrismaClient();
 const JOB_ID = "macro-production-daily";
 const CONCURRENCY = 4;
 const CHECKPOINT_EVERY = 25;
+const force = process.argv.includes("--force");
 
 async function configuredProviders(): Promise<string[]> {
   const config = JSON.parse(await readFile(join(process.cwd(), "config", "asset-provider-registry.json"), "utf8")) as { assets: { MACRO?: { providerAdapters?: string[] } } };
@@ -39,7 +40,7 @@ async function failure(series: Series, error: unknown): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  if (await completedToday()) { console.log(JSON.stringify({ jobId: JOB_ID, status: "SKIPPED_COMPLETED" })); return; }
+  if (!force && await completedToday()) { console.log(JSON.stringify({ jobId: JOB_ID, status: "SKIPPED_COMPLETED" })); return; }
   const owner = `macro-daily:${process.env.RAILWAY_DEPLOYMENT_ID ?? process.pid}`;
   if (!await acquireLifecycleLock(prisma, JOB_ID, owner)) { console.log(JSON.stringify({ jobId: JOB_ID, status: "SKIPPED_LOCKED" })); return; }
   let runId = "";
