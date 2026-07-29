@@ -81,8 +81,18 @@ async function upsertYahooCandles(stock: Stock, candles: Candle[]): Promise<{ in
     stock.yahooSymbol,
     JSON.stringify(payload),
   );
+  await prisma.stockHistory.deleteMany({ where: { stockId: stock.id, OR: [{ source: { not: "YAHOO" } }, { source: null }] } });
   const inserted = Math.max(0, valid.length - existing);
   return { inserted, updated: valid.length - inserted };
+}
+
+async function hasValidatedYahooHistorical(stock: Stock): Promise<boolean> {
+  const rows = await prisma.$queryRawUnsafe<Array<{ total_rows: number; non_yahoo_rows: number; invalid_rows: number }>>(
+    "SELECT COUNT(*)::int AS total_rows, COUNT(*) FILTER (WHERE source IS DISTINCT FROM 'YAHOO')::int AS non_yahoo_rows, COUNT(*) FILTER (WHERE close IS NULL OR (high IS NOT NULL AND low IS NOT NULL AND high < low) OR (high IS NOT NULL AND open IS NOT NULL AND high < open) OR (high IS NOT NULL AND close IS NOT NULL AND high < close) OR (low IS NOT NULL AND open IS NOT NULL AND low > open) OR (low IS NOT NULL AND close IS NOT NULL AND low > close))::int AS invalid_rows FROM stock_history WHERE stock_id = $1",
+    stock.id,
+  );
+  const row = rows[0];
+  return Boolean(row && row.total_rows > 0 && row.non_yahoo_rows === 0 && row.invalid_rows === 0);
 }
 
 function classification(error: unknown): "PERMANENT_UNAVAILABLE" | "RETRYABLE_FAILURE" {
@@ -105,13 +115,13 @@ async function persistFailure(stock: Stock, error: unknown): Promise<"PERMANENT_
   return kind;
 }
 
-type Quality = { duplicate_rows: number; invalid_ohlcv_rows: number; yahoo_covered_stocks: number; earliest_date: Date | null; latest_date: Date | null };
+type Quality = { duplicate_rows: number; invalid_ohlcv_rows: number; yahoo_covered_stocks: number; non_yahoo_rows: number; earliest_date: Date | null; latest_date: Date | null };
 async function validateHistoricalRows(stockIds: string[]): Promise<Quality> {
   const rows = await prisma.$queryRawUnsafe<Quality[]>(
-    "WITH scoped AS (SELECT stock_id, date, open, high, low, close, source FROM stock_history WHERE stock_id = ANY($1::text[])) SELECT (SELECT COUNT(*)::int FROM (SELECT stock_id, date FROM scoped GROUP BY stock_id, date HAVING COUNT(*) > 1) duplicates) AS duplicate_rows, (SELECT COUNT(*)::int FROM scoped WHERE close IS NULL OR (high IS NOT NULL AND low IS NOT NULL AND high < low) OR (high IS NOT NULL AND open IS NOT NULL AND high < open) OR (high IS NOT NULL AND close IS NOT NULL AND high < close) OR (low IS NOT NULL AND open IS NOT NULL AND low > open) OR (low IS NOT NULL AND close IS NOT NULL AND low > close)) AS invalid_ohlcv_rows, (SELECT COUNT(DISTINCT stock_id)::int FROM scoped WHERE source = 'YAHOO') AS yahoo_covered_stocks, (SELECT MIN(date) FROM scoped) AS earliest_date, (SELECT MAX(date) FROM scoped) AS latest_date",
+    "WITH scoped AS (SELECT stock_id, date, open, high, low, close, source FROM stock_history WHERE stock_id = ANY($1::text[])) SELECT (SELECT COUNT(*)::int FROM (SELECT stock_id, date FROM scoped GROUP BY stock_id, date HAVING COUNT(*) > 1) duplicates) AS duplicate_rows, (SELECT COUNT(*)::int FROM scoped WHERE close IS NULL OR (high IS NOT NULL AND low IS NOT NULL AND high < low) OR (high IS NOT NULL AND open IS NOT NULL AND high < open) OR (high IS NOT NULL AND close IS NOT NULL AND high < close) OR (low IS NOT NULL AND open IS NOT NULL AND low > open) OR (low IS NOT NULL AND close IS NOT NULL AND low > close)) AS invalid_ohlcv_rows, (SELECT COUNT(DISTINCT stock_id)::int FROM scoped WHERE source = 'YAHOO') AS yahoo_covered_stocks, (SELECT COUNT(*)::int FROM scoped WHERE source IS DISTINCT FROM 'YAHOO') AS non_yahoo_rows, (SELECT MIN(date) FROM scoped) AS earliest_date, (SELECT MAX(date) FROM scoped) AS latest_date",
     stockIds,
   );
-  return rows[0] ?? { duplicate_rows: 0, invalid_ohlcv_rows: 0, yahoo_covered_stocks: 0, earliest_date: null, latest_date: null };
+  return rows[0] ?? { duplicate_rows: 0, invalid_ohlcv_rows: 0, yahoo_covered_stocks: 0, non_yahoo_rows: 0, earliest_date: null, latest_date: null };
 }
 
 async function resolveUniverse(): Promise<Member[]> {
@@ -161,10 +171,7 @@ async function main(): Promise<void> {
       const batch = selected.slice(offset, offset + CONCURRENCY);
       const outcomes = await Promise.all(batch.map(async (stock) => {
         try {
-          const yahooProvenance = stock.historyBackfilledAt
-            ? await prisma.stockHistory.findFirst({ where: { stockId: stock.id, source: "YAHOO" }, select: { id: true } })
-            : null;
-          if (yahooProvenance) {
+          if (await hasValidatedYahooHistorical(stock)) {
             return { attempted: 1, completed: 1, noUpdate: 1 };
           }
           const candles = await fetchMax(stock.yahooSymbol);
@@ -195,7 +202,7 @@ async function main(): Promise<void> {
     const retryable = await prisma.$queryRawUnsafe<{ count: number }[]>("SELECT COUNT(*)::int AS count FROM production_scheduler_failures WHERE job_id = $1 AND classification = 'RETRYABLE_FAILURE' AND resolved = FALSE", JOB_ID);
     const quality = await validateHistoricalRows(stocks.map((stock) => stock.id));
     const validation = {
-      status: summary.attempted === members.length && retryable[0]?.count === 0 && quality.duplicate_rows === 0 && quality.invalid_ohlcv_rows === 0 && quality.yahoo_covered_stocks === stocks.length ? "PASS" : "FAIL",
+      status: summary.attempted === members.length && retryable[0]?.count === 0 && quality.duplicate_rows === 0 && quality.invalid_ohlcv_rows === 0 && quality.non_yahoo_rows === 0 && quality.yahoo_covered_stocks === stocks.length ? "PASS" : "FAIL",
       market: EXCHANGE,
       universe: members.length,
       resolvedStocks: stocks.length,
@@ -208,6 +215,7 @@ async function main(): Promise<void> {
       duplicateRows: quality.duplicate_rows,
       invalidOhlcvRows: quality.invalid_ohlcv_rows,
       yahooCoveredStocks: quality.yahoo_covered_stocks,
+      nonYahooRows: quality.non_yahoo_rows,
       earliestTradingDate: quality.earliest_date,
       latestTradingDate: quality.latest_date,
       latestCompletedSymbol: stocks.at(-1)?.yahooSymbol ?? null,
