@@ -53,6 +53,36 @@ async function fetchMax(symbol: string): Promise<Candle[] | null> {
   }
 }
 
+async function upsertYahooCandles(stock: Stock, candles: Candle[]): Promise<{ inserted: number; updated: number }> {
+  const valid = candles.filter((candle) => candle.close !== null);
+  const existing = await prisma.stockHistory.count({ where: { stockId: stock.id } });
+  const payload = valid.map((candle) => ({
+    date: candle.date.toISOString().slice(0, 10),
+    open: candle.open,
+    high: candle.high,
+    low: candle.low,
+    close: candle.close,
+    adjustedClose: candle.adjClose,
+    volume: candle.volume,
+  }));
+  await prisma.$executeRawUnsafe(
+    `INSERT INTO stock_history (stock_id, date, open, high, low, close, adjusted_close, volume, source, source_symbol, provider_method, imported_at, updated_at)
+     SELECT $1, (value->>'date')::date, NULLIF(value->>'open', '')::numeric, NULLIF(value->>'high', '')::numeric,
+            NULLIF(value->>'low', '')::numeric, (value->>'close')::numeric, NULLIF(value->>'adjustedClose', '')::numeric,
+            NULLIF(value->>'volume', '')::numeric, 'YAHOO', $2, 'YAHOO_CHART_API', NOW(), NOW()
+     FROM jsonb_array_elements($3::jsonb) AS value
+     ON CONFLICT (stock_id, date) DO UPDATE SET
+       open = EXCLUDED.open, high = EXCLUDED.high, low = EXCLUDED.low, close = EXCLUDED.close,
+       adjusted_close = EXCLUDED.adjusted_close, volume = EXCLUDED.volume, source = 'YAHOO',
+       source_symbol = EXCLUDED.source_symbol, provider_method = 'YAHOO_CHART_API', updated_at = NOW()`,
+    stock.id,
+    stock.yahooSymbol,
+    JSON.stringify(payload),
+  );
+  const inserted = Math.max(0, valid.length - existing);
+  return { inserted, updated: valid.length - inserted };
+}
+
 function classification(error: unknown): "PERMANENT_UNAVAILABLE" | "RETRYABLE_FAILURE" {
   const message = error instanceof Error ? error.message : String(error);
   return message.includes("YAHOO_NO_DATA") || message.includes("YAHOO_HTTP_404") || message.includes("YAHOO_HTTP_422") ? "PERMANENT_UNAVAILABLE" : "RETRYABLE_FAILURE";
@@ -138,17 +168,7 @@ async function main(): Promise<void> {
           const candles = await fetchMax(stock.yahooSymbol);
           const valid = candles?.filter((candle) => candle.close !== null) ?? [];
           if (!valid.length) throw new Error("YAHOO_NO_DATA");
-          let inserted = 0;
-          let updated = 0;
-          for (const candle of valid) {
-            const existing = await prisma.stockHistory.findUnique({ where: { stockId_date: { stockId: stock.id, date: candle.date } }, select: { id: true } });
-            await prisma.stockHistory.upsert({
-              where: { stockId_date: { stockId: stock.id, date: candle.date } },
-              create: { stockId: stock.id, date: candle.date, open: candle.open, high: candle.high, low: candle.low, close: candle.close!, adjustedClose: candle.adjClose, volume: candle.volume, source: "YAHOO", sourceSymbol: stock.yahooSymbol, providerMethod: "YAHOO_CHART_API", importedAt: new Date(), updatedAt: new Date() },
-              update: { open: candle.open, high: candle.high, low: candle.low, close: candle.close!, adjustedClose: candle.adjClose, volume: candle.volume, source: "YAHOO", sourceSymbol: stock.yahooSymbol, providerMethod: "YAHOO_CHART_API", updatedAt: new Date() },
-            });
-            if (existing) updated++; else inserted++;
-          }
+          const { inserted, updated } = await upsertYahooCandles(stock, valid);
           const latest = valid.at(-1)!;
           await prisma.stock.update({ where: { id: stock.id }, data: { latestDate: latest.date, latestClose: latest.close!, historyBackfilledAt: new Date() } });
           await prisma.$executeRawUnsafe("DELETE FROM production_scheduler_failures WHERE job_id = $1 AND stock_id = $2", JOB_ID, stock.id);
