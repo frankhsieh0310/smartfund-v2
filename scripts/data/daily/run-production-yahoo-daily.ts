@@ -89,6 +89,15 @@ async function checkpoint(runId: string, summary: Record<string, number>, curren
   );
 }
 
+type ResumeCheckpoint = { last_symbol: string | null; processed: number; succeeded: number; failed: number };
+async function loadResumeCheckpoint(jobId: string): Promise<ResumeCheckpoint | null> {
+  const rows = await prisma.$queryRawUnsafe<ResumeCheckpoint[]>(
+    "SELECT c.last_symbol, c.processed, c.succeeded, c.failed FROM production_scheduler_checkpoints c JOIN production_scheduler_runs r ON r.id = c.run_id WHERE c.job_id = $1 AND r.status <> 'COMPLETED'",
+    jobId,
+  );
+  return rows[0] ?? null;
+}
+
 function errorType(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
   if (message.includes("AbortError")) return "YAHOO_TIMEOUT";
@@ -107,11 +116,20 @@ async function execute(job: Job, runType: RunType): Promise<Record<string, unkno
     const failedStockIds = runType === "RETRY"
       ? (await prisma.$queryRawUnsafe<{ stock_id: string }[]>('SELECT stock_id FROM production_scheduler_failures WHERE job_id = $1', job.id)).map((row) => row.stock_id)
       : [];
-    const stocks = await prisma.stock.findMany({
+    const allStocks = await prisma.stock.findMany({
       where: { exchange: job.exchange, isActive: true, yahooSymbol: { not: "" }, latestDate: { not: null }, ...(runType === "RETRY" ? { id: { in: failedStockIds } } : {}) },
       orderBy: { yahooSymbol: "asc" },
       select: { id: true, yahooSymbol: true, latestDate: true },
     });
+    const resume = runType === "PRIMARY" ? await loadResumeCheckpoint(job.id) : null;
+    const resumeIndex = resume?.last_symbol ? allStocks.findIndex((stock) => stock.yahooSymbol === resume.last_symbol) : -1;
+    if (resume?.last_symbol && resumeIndex < 0) throw new Error(`RESUME_SYMBOL_NOT_IN_UNIVERSE:${resume.last_symbol}`);
+    if (resume) {
+      summary.attempted = resume.processed;
+      summary.completed = resume.succeeded;
+      summary.failed = resume.failed;
+    }
+    const stocks = resume ? allStocks.slice(resumeIndex + 1) : allStocks;
     for (let offset = 0; offset < stocks.length; offset += CONCURRENCY) {
       const batch = stocks.slice(offset, offset + CONCURRENCY);
       const outcomes = await Promise.all(batch.map(async (stock) => {
