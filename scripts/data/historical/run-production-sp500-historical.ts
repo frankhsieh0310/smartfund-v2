@@ -150,6 +150,11 @@ async function main(): Promise<void> {
   const unresolved = members.filter((member) => !member.stock && !unavailable.includes(member));
   if (unresolved.length) throw new Error(`UNRESOLVED_SP500_MAPPING:${unresolved.map((member) => member.canonicalSymbol).join(",")}`);
   const stocks = members.flatMap((member) => member.stock ? [member.stock] : []).sort((a, b) => a.yahooSymbol.localeCompare(b.yahooSymbol));
+  const lifecycle = await prisma.$queryRawUnsafe<Array<{ historical_status: string }>>("SELECT historical_status FROM production_market_lifecycles WHERE market_id = $1", "SP500");
+  if (lifecycle[0]?.historical_status === "MARKET_COMPLETE") {
+    console.log(JSON.stringify({ jobId: JOB_ID, status: "SKIPPED_COMPLETED" }));
+    return;
+  }
   const owner = `historical:${process.env.RAILWAY_DEPLOYMENT_ID ?? process.pid}`;
   if (!await acquireLifecycleLock(prisma, JOB_ID, owner)) {
     console.log(JSON.stringify({ jobId: JOB_ID, status: "SKIPPED_LOCKED" }));

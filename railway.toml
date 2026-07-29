@@ -2,6 +2,6 @@
 builder = "DOCKERFILE"
 
 [deploy]
-startCommand = "node --experimental-strip-types scripts/data/daily/run-production-yahoo-daily.ts --all-due"
+startCommand = "node --experimental-strip-types scripts/data/production/run-production-cron.ts"
 restartPolicyType = "NEVER"
 cronSchedule = "*/5 * * * *"
