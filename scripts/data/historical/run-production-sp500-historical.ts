@@ -11,6 +11,7 @@ import {
   heartbeatLifecycleLock,
   loadLifecycleResumeCheckpoint,
   persistLifecycleCheckpoint,
+  pauseLifecycleRun,
   releaseLifecycleLock,
 } from "../production/run-lifecycle.ts";
 
@@ -24,6 +25,8 @@ const JOB_ID = "sp500-yahoo-historical";
 const EXCHANGE = "SP500";
 const CHECKPOINT_EVERY = 25;
 const CONCURRENCY = 4;
+const maxSymbolsArg = process.argv.find((value) => value.startsWith("--max-symbols="))?.slice("--max-symbols=".length);
+const maxSymbols = maxSymbolsArg ? Number.parseInt(maxSymbolsArg, 10) : null;
 
 function csvTickers(contents: string): string[] {
   return [...new Set(contents.split(/\r?\n/).slice(1).map((line) => line.split(",")[0]?.trim()).filter((ticker): ticker is string => Boolean(ticker)))];
@@ -111,9 +114,10 @@ async function main(): Promise<void> {
     const resumeIndex = resume?.last_symbol ? stocks.findIndex((stock) => stock.yahooSymbol === resume.last_symbol) : -1;
     if (resume?.last_symbol && resumeIndex < 0) throw new Error(`RESUME_SYMBOL_NOT_IN_UNIVERSE:${resume.last_symbol}`);
     if (resume) Object.assign(summary, resume.details ?? { attempted: resume.processed, completed: resume.succeeded, failed: resume.failed });
-    const pending = (resume ? stocks.slice(resumeIndex + 1) : stocks);
-    for (let offset = 0; offset < pending.length; offset += CONCURRENCY) {
-      const batch = pending.slice(offset, offset + CONCURRENCY);
+    const pending = resume ? stocks.slice(resumeIndex + 1) : stocks;
+    const selected = maxSymbols && maxSymbols > 0 ? pending.slice(0, maxSymbols) : pending;
+    for (let offset = 0; offset < selected.length; offset += CONCURRENCY) {
+      const batch = selected.slice(offset, offset + CONCURRENCY);
       const outcomes = await Promise.all(batch.map(async (stock) => {
         try {
           if (stock.historyBackfilledAt) {
@@ -144,10 +148,15 @@ async function main(): Promise<void> {
       }));
       const attemptedBeforeBatch = summary.attempted;
       outcomes.forEach((outcome) => addOutcome(summary, outcome));
-      if (Math.floor(attemptedBeforeBatch / CHECKPOINT_EVERY) < Math.floor(summary.attempted / CHECKPOINT_EVERY) || offset + batch.length === pending.length) {
+      if (Math.floor(attemptedBeforeBatch / CHECKPOINT_EVERY) < Math.floor(summary.attempted / CHECKPOINT_EVERY) || offset + batch.length === selected.length) {
         await persistLifecycleCheckpoint(prisma, runId, summary, batch.at(-1)!.yahooSymbol);
         await heartbeatLifecycleLock(prisma, JOB_ID, owner);
       }
+    }
+    if (selected.length < pending.length) {
+      await pauseLifecycleRun(prisma, runId);
+      console.log(JSON.stringify({ runId, status: "PAUSED", processed: summary.attempted, lastSymbol: selected.at(-1)?.yahooSymbol ?? null }, null, 2));
+      return;
     }
     const retryable = await prisma.$queryRawUnsafe<{ count: number }[]>("SELECT COUNT(*)::int AS count FROM production_scheduler_failures WHERE job_id = $1 AND classification = 'RETRYABLE_FAILURE' AND resolved = FALSE", JOB_ID);
     const latest = await prisma.stock.findFirst({ where: { id: { in: stocks.map((stock) => stock.id) } }, orderBy: { latestDate: "desc" }, select: { latestDate: true } });

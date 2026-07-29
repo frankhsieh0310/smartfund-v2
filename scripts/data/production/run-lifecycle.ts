@@ -120,3 +120,10 @@ export async function failLifecycleRun(prisma: PrismaClient, runId: string, erro
     error instanceof Error ? error.message : String(error),
   ).catch(() => undefined);
 }
+
+export async function pauseLifecycleRun(prisma: PrismaClient, runId: string): Promise<void> {
+  await prisma.$executeRawUnsafe(
+    "UPDATE production_scheduler_runs SET status = 'PAUSED', completed_at = NOW(), exit_code = 0 WHERE id = $1",
+    runId,
+  );
+}
