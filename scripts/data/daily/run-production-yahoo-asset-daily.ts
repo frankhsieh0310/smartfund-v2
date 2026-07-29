@@ -1,0 +1,138 @@
+import { randomUUID } from "node:crypto";
+import { PrismaClient } from "@prisma/client";
+import {
+  acquireLifecycleLock,
+  completeLifecycleRun,
+  createLifecycleRun,
+  createSummary,
+  failLifecycleRun,
+  heartbeatLifecycleLock,
+  loadLifecycleResumeCheckpoint,
+  persistLifecycleCheckpoint,
+  releaseLifecycleLock,
+} from "../production/run-lifecycle.ts";
+
+type AssetKind = "GLOBAL_ETF" | "BOND_YIELD" | "MARKET_INDEX" | "VOLATILITY";
+type Item = { id: string; symbol: string; latestDate: Date | null };
+type Candle = { date: Date; open: number | null; high: number | null; low: number | null; close: number | null; volume: number | null };
+
+const prisma = new PrismaClient();
+const CONCURRENCY = 4;
+const CHECKPOINT_EVERY = 25;
+const MAX_PER_CRON = 100;
+const requested = process.argv.find((value) => value.startsWith("--job="))?.slice(6) as AssetKind | undefined;
+const kinds: AssetKind[] = requested ? [requested] : ["GLOBAL_ETF", "BOND_YIELD", "MARKET_INDEX", "VOLATILITY"];
+
+function jobId(kind: AssetKind): string { return `${kind.toLowerCase()}-production-daily`; }
+function exchange(kind: AssetKind): string { return kind; }
+
+function newYorkDay(value = new Date()): string {
+  const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(value);
+  const get = (type: string) => parts.find((part) => part.type === type)?.value ?? "";
+  return `${get("year")}-${get("month")}-${get("day")}`;
+}
+
+async function completedToday(job: string): Promise<boolean> {
+  const rows = await prisma.$queryRawUnsafe<{ started_at: Date }[]>("SELECT started_at FROM production_scheduler_runs WHERE job_id = $1 AND run_type = 'PRIMARY' AND status = 'COMPLETED' ORDER BY started_at DESC LIMIT 1", job);
+  return Boolean(rows[0] && newYorkDay(rows[0].started_at) === newYorkDay());
+}
+
+async function fetchIncremental(symbol: string, latestDate: Date | null): Promise<Candle[]> {
+  const period1 = Math.floor((latestDate?.getTime() ?? Date.now() - 7 * 86_400_000) / 1000);
+  const period2 = Math.floor((Date.now() + 86_400_000) / 1000);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30_000);
+  try {
+    const response = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?period1=${period1}&period2=${period2}&interval=1d&events=history`, { headers: { "User-Agent": "Mozilla/5.0 (SmartFund Production Asset Daily)" }, signal: controller.signal });
+    if (!response.ok) throw new Error(`YAHOO_HTTP_${response.status}`);
+    const payload = await response.json() as { chart?: { result?: Array<{ timestamp?: number[]; indicators?: { quote?: Array<Record<string, Array<number | null>>> } }> } };
+    const result = payload.chart?.result?.[0];
+    if (!result) throw new Error("YAHOO_NO_DATA");
+    const quote = result.indicators?.quote?.[0] ?? {};
+    return (result.timestamp ?? []).map((timestamp, index) => ({ date: new Date(timestamp * 1000), open: quote.open?.[index] ?? null, high: quote.high?.[index] ?? null, low: quote.low?.[index] ?? null, close: quote.close?.[index] ?? null, volume: quote.volume?.[index] ?? null })).filter((row) => row.close !== null);
+  } finally { clearTimeout(timeout); }
+}
+
+async function universe(kind: AssetKind): Promise<Item[]> {
+  if (kind === "GLOBAL_ETF") {
+    return prisma.$queryRawUnsafe<Item[]>("SELECT e.id, e.code AS symbol, MAX(h.date) AS \"latestDate\" FROM etfs e JOIN etf_history h ON h.etf_id = e.id WHERE e.is_active = TRUE AND NOT (COALESCE(e.exchange, '') ILIKE '%TW%' OR e.currency = 'TWD') GROUP BY e.id, e.code ORDER BY e.code");
+  }
+  const type = kind === "BOND_YIELD" ? "BOND" : kind === "MARKET_INDEX" ? "INDEX" : "VOLATILITY";
+  return prisma.$queryRawUnsafe<Item[]>("SELECT m.id, m.symbol, MAX(h.date) AS \"latestDate\" FROM market_master m JOIN market_history h ON h.symbol = m.symbol WHERE m.is_active = TRUE AND m.asset_type::text = $1 GROUP BY m.id, m.symbol ORDER BY m.symbol", type);
+}
+
+async function upsert(kind: AssetKind, item: Item, candle: Candle): Promise<boolean> {
+  if (kind === "GLOBAL_ETF") {
+    const existing = await prisma.$queryRawUnsafe<{ exists: boolean }[]>("SELECT EXISTS(SELECT 1 FROM etf_history WHERE etf_id = $1 AND date = $2::date) AS exists", item.id, candle.date.toISOString().slice(0, 10));
+    await prisma.$executeRawUnsafe("INSERT INTO etf_history (id, etf_id, date, price, volume) VALUES ($1, $2, $3::date, $4, $5) ON CONFLICT (etf_id, date) DO UPDATE SET price = EXCLUDED.price, volume = EXCLUDED.volume", randomUUID(), item.id, candle.date.toISOString().slice(0, 10), candle.close, candle.volume);
+    await prisma.$executeRawUnsafe("UPDATE etfs SET latest_price = $2, volume = $3, price_updated_at = NOW(), updated_at = NOW() WHERE id = $1", item.id, candle.close, candle.volume);
+    return existing[0]?.exists ?? false;
+  }
+  const existing = await prisma.$queryRawUnsafe<{ exists: boolean }[]>("SELECT EXISTS(SELECT 1 FROM market_history WHERE symbol = $1 AND date = $2::date) AS exists", item.symbol, candle.date.toISOString().slice(0, 10));
+  await prisma.$executeRawUnsafe("INSERT INTO market_history (id, symbol, date, open, high, low, close, volume) VALUES ($1, $2, $3::date, $4, $5, $6, $7, $8) ON CONFLICT (symbol, date) DO UPDATE SET open = EXCLUDED.open, high = EXCLUDED.high, low = EXCLUDED.low, close = EXCLUDED.close, volume = EXCLUDED.volume", randomUUID(), item.symbol, candle.date.toISOString().slice(0, 10), candle.open, candle.high, candle.low, candle.close, candle.volume);
+  await prisma.$executeRawUnsafe("UPDATE market_master SET latest_close = $2, latest_date = $3::date, updated_at = NOW() WHERE id = $1", item.id, candle.close, candle.date.toISOString().slice(0, 10));
+  return existing[0]?.exists ?? false;
+}
+
+function classification(error: unknown): "PERMANENT_UNAVAILABLE" | "RETRYABLE_FAILURE" {
+  const message = error instanceof Error ? error.message : String(error);
+  return /YAHOO_HTTP_(404|422)|YAHOO_NO_DATA/.test(message) ? "PERMANENT_UNAVAILABLE" : "RETRYABLE_FAILURE";
+}
+
+async function recordFailure(job: string, item: Item, error: unknown): Promise<"PERMANENT_UNAVAILABLE" | "RETRYABLE_FAILURE"> {
+  const kind = classification(error);
+  const message = error instanceof Error ? error.message : String(error);
+  await prisma.$executeRawUnsafe("INSERT INTO production_scheduler_failures (job_id, stock_id, symbol, attempts, last_error, error_type, last_attempted_at, next_retry_at, classification, resolved, resolution_reason) VALUES ($1, $2, $3, 1, $4, $5, NOW(), CASE WHEN $6 = 'RETRYABLE_FAILURE' THEN NOW() + INTERVAL '15 minutes' ELSE NULL END, $6, $6 = 'PERMANENT_UNAVAILABLE', CASE WHEN $6 = 'PERMANENT_UNAVAILABLE' THEN $4 ELSE NULL END) ON CONFLICT (job_id, stock_id) DO UPDATE SET attempts = production_scheduler_failures.attempts + 1, last_error = EXCLUDED.last_error, error_type = EXCLUDED.error_type, last_attempted_at = NOW(), next_retry_at = EXCLUDED.next_retry_at, classification = EXCLUDED.classification, resolved = EXCLUDED.resolved, resolution_reason = EXCLUDED.resolution_reason", job, item.id, item.symbol, message, message.includes("AbortError") ? "YAHOO_TIMEOUT" : "YAHOO_HTTP_ERROR", kind);
+  return kind;
+}
+
+async function run(kind: AssetKind): Promise<Record<string, unknown>> {
+  const job = jobId(kind);
+  if (await completedToday(job)) return { job, status: "SKIPPED_COMPLETED" };
+  const owner = `asset-daily:${process.env.RAILWAY_DEPLOYMENT_ID ?? process.pid}:${kind}`;
+  if (!await acquireLifecycleLock(prisma, job, owner)) return { job, status: "SKIPPED_LOCKED" };
+  let runId = "";
+  try {
+    runId = await createLifecycleRun(prisma, job, exchange(kind), "PRIMARY");
+    const all = await universe(kind);
+    const summary = createSummary();
+    const resume = await loadLifecycleResumeCheckpoint(prisma, job);
+    const resumeIndex = resume?.last_symbol ? all.findIndex((item) => item.symbol === resume.last_symbol) : -1;
+    if (resume?.last_symbol && resumeIndex < 0) throw new Error(`RESUME_SYMBOL_NOT_IN_UNIVERSE:${resume.last_symbol}`);
+    if (resume) Object.assign(summary, resume.details ?? { attempted: resume.processed, completed: resume.succeeded, failed: resume.failed });
+    const selected = (resume ? all.slice(resumeIndex + 1) : all).slice(0, MAX_PER_CRON);
+    for (let offset = 0; offset < selected.length; offset += CONCURRENCY) {
+      const batch = selected.slice(offset, offset + CONCURRENCY);
+      const outcomes = await Promise.all(batch.map(async (item) => {
+        try {
+          const candles = await fetchIncremental(item.symbol, item.latestDate);
+          const newest = candles.at(-1);
+          if (!newest) throw new Error("YAHOO_NO_DATA");
+          const existed = await upsert(kind, item, newest);
+          await prisma.$executeRawUnsafe("DELETE FROM production_scheduler_failures WHERE job_id = $1 AND stock_id = $2", job, item.id);
+          return { attempted: 1, completed: 1, success: existed ? 0 : 1, noUpdate: existed ? 1 : 0, inserted: existed ? 0 : 1, updated: existed ? 1 : 0 };
+        } catch (error) {
+          const result = await recordFailure(job, item, error);
+          return { attempted: 1, failed: 1, permanentUnavailable: result === "PERMANENT_UNAVAILABLE" ? 1 : 0, retryableFailure: result === "RETRYABLE_FAILURE" ? 1 : 0 };
+        }
+      }));
+      outcomes.forEach((outcome) => Object.entries(outcome).forEach(([key, value]) => { (summary as Record<string, number>)[key] = ((summary as Record<string, number>)[key] ?? 0) + (value ?? 0); }));
+      if (summary.attempted % CHECKPOINT_EVERY === 0 || offset + batch.length === selected.length) {
+        await persistLifecycleCheckpoint(prisma, runId, summary, batch.at(-1)!.symbol);
+        await heartbeatLifecycleLock(prisma, job, owner);
+      }
+    }
+    const remaining = all.length - summary.attempted;
+    if (remaining > 0) {
+      await prisma.$executeRawUnsafe("UPDATE production_scheduler_runs SET status = 'PAUSED', completed_at = NOW(), exit_code = 0 WHERE id = $1", runId);
+      return { job, status: "PAUSED", processed: summary.attempted, remaining, lastSymbol: selected.at(-1)?.symbol ?? null };
+    }
+    const validation = { status: summary.attempted === all.length && summary.attempted === summary.completed + summary.failed ? "PASS" : "FAIL", assetClass: kind, universe: all.length, processed: summary.attempted, source: "YAHOO", summaryType: "DAILY_SUMMARY" };
+    await completeLifecycleRun(prisma, runId, summary, null, validation);
+    return { job, status: validation.status, ...summary };
+  } catch (error) { if (runId) await failLifecycleRun(prisma, runId, error); throw error; }
+  finally { await releaseLifecycleLock(prisma, job, owner); }
+}
+
+async function main(): Promise<void> { console.log(JSON.stringify({ results: await Promise.all(kinds.map(run)) }, null, 2)); }
+main().catch((error: unknown) => { console.error(error); process.exitCode = 1; }).finally(async () => prisma.$disconnect());
