@@ -162,7 +162,7 @@ async function main(): Promise<void> {
   if (unresolved.length) throw new Error(`UNRESOLVED_SP500_MAPPING:${unresolved.map((member) => member.canonicalSymbol).join(",")}`);
   const stocks = members.flatMap((member) => member.stock ? [member.stock] : []).sort((a, b) => a.yahooSymbol.localeCompare(b.yahooSymbol));
   const lifecycle = await prisma.$queryRawUnsafe<Array<{ historical_status: string }>>("SELECT historical_status FROM production_market_lifecycles WHERE market_id = $1", MARKET);
-  if (lifecycle[0]?.historical_status === "MARKET_COMPLETE") {
+  if (["MARKET_COMPLETE", "HISTORICAL_READY_WITH_EXCEPTIONS"].includes(lifecycle[0]?.historical_status ?? "")) {
     console.log(JSON.stringify({ jobId: JOB_ID, status: "SKIPPED_COMPLETED" }));
     return;
   }
@@ -218,8 +218,19 @@ async function main(): Promise<void> {
     }
     const retryable = await prisma.$queryRawUnsafe<{ count: number }[]>("SELECT COUNT(*)::int AS count FROM production_scheduler_failures WHERE job_id = $1 AND classification = 'RETRYABLE_FAILURE' AND resolved = FALSE", JOB_ID);
     const quality = await validateHistoricalRows(stocks.map((stock) => stock.id));
+    const historicalCoverage = members.length === 0 ? 0 : quality.yahoo_covered_stocks / members.length;
+    const classified = summary.completed + summary.failed;
+    const validationPasses = summary.attempted === stocks.length
+      && classified === stocks.length
+      && historicalCoverage >= 0.98
+      && quality.duplicate_rows === 0
+      && quality.invalid_ohlcv_rows === 0
+      && quality.non_yahoo_rows === 0;
+    const historicalState = !validationPasses
+      ? "RETRY_REQUIRED"
+      : (summary.failed > 0 || (retryable[0]?.count ?? 0) > 0 ? "HISTORICAL_READY_WITH_EXCEPTIONS" : "MARKET_COMPLETE");
     const validation = {
-      status: summary.attempted === members.length && retryable[0]?.count === 0 && quality.duplicate_rows === 0 && quality.invalid_ohlcv_rows === 0 && quality.non_yahoo_rows === 0 && quality.yahoo_covered_stocks === stocks.length ? "PASS" : "FAIL",
+      status: validationPasses ? "PASS" : "FAIL",
       market: EXCHANGE,
       universe: members.length,
       resolvedStocks: stocks.length,
@@ -228,6 +239,8 @@ async function main(): Promise<void> {
       completed: summary.completed,
       failed: summary.failed,
       retryableFailures: retryable[0]?.count ?? 0,
+      historicalCoverage,
+      historicalState,
       source: "YAHOO",
       duplicateRows: quality.duplicate_rows,
       invalidOhlcvRows: quality.invalid_ohlcv_rows,
@@ -244,11 +257,11 @@ async function main(): Promise<void> {
       MARKET,
       EXCHANGE,
       JOB_ID,
-      validation.status === "PASS" ? "MARKET_COMPLETE" : "RETRY_REQUIRED",
+      historicalState,
       runId,
       JSON.stringify(validation),
     );
-    console.log(JSON.stringify({ runId, status: validation.status === "PASS" ? "MARKET_COMPLETE" : "RETRY_REQUIRED", summary, validation }, null, 2));
+    console.log(JSON.stringify({ runId, status: historicalState, summary, validation }, null, 2));
   } catch (error) {
     if (runId) await failLifecycleRun(prisma, runId, error);
     throw error;
