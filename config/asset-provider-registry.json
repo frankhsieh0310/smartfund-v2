@@ -4,7 +4,16 @@
     "STOCK": { "providerAdapter": "YAHOO_CHART" },
     "ETF": { "providerAdapter": "YAHOO_CHART" },
     "MARKET_INDEX": { "providerAdapter": "YAHOO_CHART" },
-    "BOND_YIELD": { "providerAdapter": "FRED" },
+    "BOND_YIELD": {
+      "providerAdapter": "FRED",
+      "instrumentMappings": {
+        "US13W": "DGS3MO",
+        "US2Y": "DGS2",
+        "US5Y": "DGS5",
+        "US10Y": "DGS10",
+        "US30Y": "DGS30"
+      }
+    },
     "VOLATILITY": { "providerAdapter": "YAHOO_CHART" },
     "COMMODITY": { "providerAdapter": "YAHOO_CHART" },
     "FX": { "providerAdapter": "YAHOO_CHART" },

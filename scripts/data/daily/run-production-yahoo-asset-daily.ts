@@ -24,7 +24,7 @@ const CONCURRENCY = 4;
 const CHECKPOINT_EVERY = 25;
 const MAX_PER_CRON = 100;
 const requested = process.argv.find((value) => value.startsWith("--job="))?.slice(6) as AssetKind | undefined;
-const kinds: AssetKind[] = requested ? [requested] : ["GLOBAL_ETF", "MARKET_INDEX", "VOLATILITY"];
+const kinds: AssetKind[] = requested ? [requested] : ["GLOBAL_ETF", "BOND_YIELD", "MARKET_INDEX", "VOLATILITY"];
 
 function jobId(kind: AssetKind): string { return `${kind.toLowerCase()}-production-daily`; }
 function exchange(kind: AssetKind): string { return kind; }
@@ -44,10 +44,11 @@ function providerAssetClass(kind: AssetKind): ProviderAssetClass {
   return kind === "GLOBAL_ETF" ? "ETF" : kind === "MARKET_INDEX" ? "MARKET_INDEX" : kind;
 }
 
-async function configuredProvider(assetClass: ProviderAssetClass): Promise<string> {
-  const config = JSON.parse(await readFile(join(process.cwd(), "config", "asset-provider-registry.json"), "utf8")) as { assets: Record<string, { providerAdapter?: string }> };
-  const provider = config.assets[assetClass]?.providerAdapter;
-  if (!provider) throw new Error(`PROVIDER_MAPPING_NOT_CONFIGURED:${assetClass}`);
+type ProviderConfig = { providerAdapter?: string; instrumentMappings?: Record<string, string> };
+async function configuredProvider(assetClass: ProviderAssetClass): Promise<ProviderConfig> {
+  const config = JSON.parse(await readFile(join(process.cwd(), "config", "asset-provider-registry.json"), "utf8")) as { assets: Record<string, ProviderConfig> };
+  const provider = config.assets[assetClass];
+  if (!provider?.providerAdapter) throw new Error(`PROVIDER_MAPPING_NOT_CONFIGURED:${assetClass}`);
   return provider;
 }
 
@@ -91,7 +92,8 @@ async function run(kind: AssetKind): Promise<Record<string, unknown>> {
   if (!await acquireLifecycleLock(prisma, job, owner)) return { job, status: "SKIPPED_LOCKED" };
   let runId = "";
   try {
-    const adapter = productionProviderRegistry.get(await configuredProvider(providerAssetClass(kind)));
+    const providerConfig = await configuredProvider(providerAssetClass(kind));
+    const adapter = productionProviderRegistry.get(providerConfig.providerAdapter!);
     if (!adapter.supportedAssetClasses.includes(providerAssetClass(kind))) throw new Error(`PROVIDER_UNSUPPORTED_ASSET_CLASS:${kind}`);
     runId = await createLifecycleRun(prisma, job, exchange(kind), "PRIMARY");
     const all = await universe(kind);
@@ -105,10 +107,13 @@ async function run(kind: AssetKind): Promise<Record<string, unknown>> {
       const batch = selected.slice(offset, offset + CONCURRENCY);
       const outcomes = await Promise.all(batch.map(async (item) => {
         try {
-          const candles = await adapter.fetchLatest({ assetClass: providerAssetClass(kind), instrument: { id: item.id, symbol: item.symbol, latestDate: item.latestDate } });
+          const sourceSymbol = providerConfig.instrumentMappings?.[item.symbol] ?? item.symbol;
+          const candles = await adapter.fetchLatest({ assetClass: providerAssetClass(kind), instrument: { id: item.id, symbol: sourceSymbol, latestDate: item.latestDate } });
           const newest = candles.at(-1);
-          if (!newest || newest.close === null || newest.close === undefined) throw new Error("YAHOO_NO_DATA");
-          const existed = await upsert(kind, item, newest);
+          const normalized = newest && (newest.close ?? newest.value) !== undefined && (newest.close ?? newest.value) !== null
+            ? { ...newest, close: newest.close ?? newest.value } : null;
+          if (!normalized) throw new Error("PROVIDER_NO_DATA");
+          const existed = await upsert(kind, item, normalized);
           await prisma.$executeRawUnsafe("DELETE FROM production_scheduler_failures WHERE job_id = $1 AND stock_id = $2", job, item.id);
           return { attempted: 1, completed: 1, success: existed ? 0 : 1, noUpdate: existed ? 1 : 0, inserted: existed ? 0 : 1, updated: existed ? 1 : 0 };
         } catch (error) {

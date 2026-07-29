@@ -14,6 +14,7 @@ async function main(): Promise<void> {
   // historical slices.
   await run("scripts/data/daily/run-production-yahoo-daily.ts", ["--all-due"]);
   await run("scripts/data/daily/run-production-yahoo-asset-daily.ts", []);
+  await run("scripts/data/daily/run-production-macro-daily.ts", []);
   // The production runner retains its durable checkpoint between Cron invocations.
   // A larger bounded slice reaches the Historical Ready gate promptly without
   // introducing a second worker or bypassing the lifecycle lock.
