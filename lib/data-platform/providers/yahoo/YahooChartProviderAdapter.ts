@@ -45,10 +45,13 @@ export class YahooChartProviderAdapter implements ProviderAdapter {
 
   validate(points: ProviderPoint[]): ProviderValidation {
     if (!points.length) return { valid: false, reason: "YAHOO_NO_DATA" };
-    const invalid = points.find((point) => point.close === null
-      || (point.high !== null && point.low !== null && point.high < point.low)
-      || (point.high !== null && point.open !== null && point.high < point.open)
-      || (point.low !== null && point.open !== null && point.low > point.open));
+    const invalid = points.find((point) => {
+      const { close, high, low, open } = point;
+      return close == null
+        || (high != null && low != null && high < low)
+        || (high != null && open != null && high < open)
+        || (low != null && open != null && low > open);
+    });
     return invalid ? { valid: false, reason: "INVALID_OHLCV" } : { valid: true };
   }
 
