@@ -82,6 +82,18 @@ async function checkpoint(runId: string, summary: Record<string, number>, curren
     runId, summary.attempted, summary.completed, summary.inserted, summary.updated, summary.failed,
     JSON.stringify({ ...summary, currentSymbol, checkpointAt: new Date().toISOString() }),
   );
+  await prisma.$executeRawUnsafe(
+    "INSERT INTO production_scheduler_checkpoints (job_id, run_id, last_symbol, processed, succeeded, failed, started_at, updated_at) SELECT job_id, id, $2, $3, $4, $5, started_at, NOW() FROM production_scheduler_runs WHERE id = $1 ON CONFLICT (job_id) DO UPDATE SET run_id = EXCLUDED.run_id, last_symbol = EXCLUDED.last_symbol, processed = EXCLUDED.processed, succeeded = EXCLUDED.succeeded, failed = EXCLUDED.failed, updated_at = NOW()",
+    runId, currentSymbol, summary.attempted, summary.completed, summary.failed,
+  );
+}
+
+function errorType(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  if (message.includes("AbortError")) return "YAHOO_TIMEOUT";
+  if (message.includes("YAHOO_CHART_HTTP_")) return "YAHOO_HTTP_ERROR";
+  if (message.includes("Prisma") || message.includes("database")) return "DATABASE_ERROR";
+  return "UNKNOWN_ERROR";
 }
 
 async function execute(job: Job, runType: RunType): Promise<Record<string, unknown>> {
@@ -123,7 +135,7 @@ async function execute(job: Job, runType: RunType): Promise<Record<string, unkno
           await prisma.$executeRawUnsafe('DELETE FROM production_scheduler_failures WHERE job_id = $1 AND stock_id = $2', job.id, stock.id);
           return { completed: 1, inserted, updated, failed: 0 };
         } catch (error) {
-        await prisma.$executeRawUnsafe('INSERT INTO production_scheduler_failures (job_id, stock_id, symbol, attempts, last_error, last_attempted_at) VALUES ($1, $2, $3, 1, $4, NOW()) ON CONFLICT (job_id, stock_id) DO UPDATE SET attempts = production_scheduler_failures.attempts + 1, last_error = EXCLUDED.last_error, last_attempted_at = NOW()', job.id, stock.id, stock.yahooSymbol, error instanceof Error ? error.message : String(error));
+        await prisma.$executeRawUnsafe("INSERT INTO production_scheduler_failures (job_id, stock_id, symbol, attempts, last_error, error_type, last_attempted_at, next_retry_at) VALUES ($1, $2, $3, 1, $4, $5, NOW(), NOW() + INTERVAL '15 minutes') ON CONFLICT (job_id, stock_id) DO UPDATE SET attempts = production_scheduler_failures.attempts + 1, last_error = EXCLUDED.last_error, error_type = EXCLUDED.error_type, last_attempted_at = NOW(), next_retry_at = NOW() + INTERVAL '15 minutes'", job.id, stock.id, stock.yahooSymbol, error instanceof Error ? error.message : String(error), errorType(error));
           return { completed: 0, inserted: 0, updated: 0, failed: 1 };
         }
       }));
