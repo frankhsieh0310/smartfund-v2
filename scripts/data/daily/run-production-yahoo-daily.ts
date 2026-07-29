@@ -2,6 +2,16 @@ import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { PrismaClient } from "@prisma/client";
+import {
+  acquireLifecycleLock,
+  completeLifecycleRun,
+  createLifecycleRun,
+  createSummary,
+  failLifecycleRun,
+  loadLifecycleResumeCheckpoint,
+  persistLifecycleCheckpoint,
+  releaseLifecycleLock,
+} from "../production/run-lifecycle";
 
 type YahooCandle = { date: Date; open: number | null; high: number | null; low: number | null; close: number | null; volume: number | null; adjClose: number | null };
 
@@ -65,39 +75,6 @@ async function lastSuccessDay(jobId: string, timezone: string, runType: RunType)
   return rows[0] ? clock(timezone, rows[0].started_at).day : null;
 }
 
-async function acquire(jobId: string, owner: string): Promise<boolean> {
-  const rows = await prisma.$queryRawUnsafe<{ job_id: string }[]>(
-    'INSERT INTO production_scheduler_locks (job_id, owner, expires_at, updated_at) VALUES ($1, $2, NOW() + INTERVAL \'8 hours\', NOW()) ON CONFLICT (job_id) DO UPDATE SET owner = EXCLUDED.owner, expires_at = EXCLUDED.expires_at, updated_at = NOW() WHERE production_scheduler_locks.expires_at < NOW() RETURNING job_id',
-    jobId, owner,
-  );
-  return rows.length === 1;
-}
-
-async function release(jobId: string, owner: string): Promise<void> {
-  await prisma.$executeRawUnsafe('DELETE FROM production_scheduler_locks WHERE job_id = $1 AND owner = $2', jobId, owner);
-}
-
-async function checkpoint(runId: string, summary: Record<string, number>, currentSymbol: string): Promise<void> {
-  await prisma.$executeRawUnsafe(
-    "UPDATE production_scheduler_runs SET attempted = $2, completed = $3, inserted = $4, updated = $5, failed = $6, details = $7::jsonb WHERE id = $1",
-    runId, summary.attempted, summary.completed, summary.inserted, summary.updated, summary.failed,
-    JSON.stringify({ ...summary, currentSymbol, checkpointAt: new Date().toISOString() }),
-  );
-  await prisma.$executeRawUnsafe(
-    "INSERT INTO production_scheduler_checkpoints (job_id, run_id, last_symbol, processed, succeeded, failed, started_at, updated_at) SELECT job_id, id, $2, $3, $4, $5, started_at, NOW() FROM production_scheduler_runs WHERE id = $1 ON CONFLICT (job_id) DO UPDATE SET run_id = EXCLUDED.run_id, last_symbol = EXCLUDED.last_symbol, processed = EXCLUDED.processed, succeeded = EXCLUDED.succeeded, failed = EXCLUDED.failed, updated_at = NOW()",
-    runId, currentSymbol, summary.attempted, summary.completed, summary.failed,
-  );
-}
-
-type ResumeCheckpoint = { last_symbol: string | null; processed: number; succeeded: number; failed: number };
-async function loadResumeCheckpoint(jobId: string): Promise<ResumeCheckpoint | null> {
-  const rows = await prisma.$queryRawUnsafe<ResumeCheckpoint[]>(
-    "SELECT c.last_symbol, c.processed, c.succeeded, c.failed FROM production_scheduler_checkpoints c JOIN production_scheduler_runs r ON r.id = c.run_id WHERE c.job_id = $1 AND r.status <> 'COMPLETED'",
-    jobId,
-  );
-  return rows[0] ?? null;
-}
-
 function errorType(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
   if (message.includes("AbortError")) return "YAHOO_TIMEOUT";
@@ -114,12 +91,13 @@ function failureClassification(error: unknown): "PERMANENT_UNAVAILABLE" | "RETRY
 }
 
 async function execute(job: Job, runType: RunType): Promise<Record<string, unknown>> {
-  const runId = randomUUID();
+  let runId = randomUUID();
   const owner = `${process.env.RAILWAY_DEPLOYMENT_ID ?? process.env.HOSTNAME ?? "worker"}:${process.pid}:${runId}`;
-  if (!await acquire(job.id, owner)) return { jobId: job.id, status: "SKIPPED_LOCKED" };
-  const summary = { attempted: 0, completed: 0, inserted: 0, updated: 0, failed: 0, success: 0, noUpdate: 0, permanentUnavailable: 0, retryableFailure: 0 };
+  if (!await acquireLifecycleLock(prisma, job.id, owner)) return { jobId: job.id, status: "SKIPPED_LOCKED" };
+  const summary = createSummary();
   try {
-    await prisma.$executeRawUnsafe('INSERT INTO production_scheduler_runs (id, job_id, exchange, run_type, status) VALUES ($1, $2, $3, $4, \'IN_PROGRESS\')', runId, job.id, job.exchange, runType);
+    const lifecycleRunId = await createLifecycleRun(prisma, job.id, job.exchange, runType);
+    runId = lifecycleRunId;
     const failedStockIds = runType === "RETRY"
       ? (await prisma.$queryRawUnsafe<{ stock_id: string }[]>('SELECT stock_id FROM production_scheduler_failures WHERE job_id = $1', job.id)).map((row) => row.stock_id)
       : [];
@@ -128,7 +106,7 @@ async function execute(job: Job, runType: RunType): Promise<Record<string, unkno
       orderBy: { yahooSymbol: "asc" },
       select: { id: true, yahooSymbol: true, latestDate: true },
     });
-    const resume = runType === "PRIMARY" ? await loadResumeCheckpoint(job.id) : null;
+    const resume = runType === "PRIMARY" ? await loadLifecycleResumeCheckpoint(prisma, job.id) : null;
     const resumeIndex = resume?.last_symbol ? allStocks.findIndex((stock) => stock.yahooSymbol === resume.last_symbol) : -1;
     if (resume?.last_symbol && resumeIndex < 0) throw new Error(`RESUME_SYMBOL_NOT_IN_UNIVERSE:${resume.last_symbol}`);
     if (resume) {
@@ -181,16 +159,18 @@ async function execute(job: Job, runType: RunType): Promise<Record<string, unkno
         summary.retryableFailure += outcome.retryableFailure;
       }
       if ((offset + batch.length) % CHECKPOINT_EVERY === 0 || offset + batch.length === stocks.length) {
-        await checkpoint(runId, summary, batch.at(-1)!.yahooSymbol);
+        await persistLifecycleCheckpoint(prisma, runId, summary, batch.at(-1)!.yahooSymbol);
       }
     }
-    await prisma.$executeRawUnsafe("UPDATE production_scheduler_runs SET status = 'COMPLETED', completed_at = NOW(), attempted = $2, completed = $3, inserted = $4, updated = $5, failed = $6, success_count = $7, no_update_count = $8, permanent_unavailable_count = $9, retryable_failure_count = $10, exit_code = 0, validation_status = CASE WHEN $2 = $7 + $8 + $9 + $10 THEN 'PASS' ELSE 'FAIL' END, details = $11::jsonb WHERE id = $1", runId, summary.attempted, summary.completed, summary.inserted, summary.updated, summary.failed, summary.success, summary.noUpdate, summary.permanentUnavailable, summary.retryableFailure, JSON.stringify(summary));
+    const latest = allStocks.reduce<Date | null>((current, stock) => !current || stock.latestDate! > current ? stock.latestDate : current, null);
+    const validation = { status: summary.attempted === summary.success + summary.noUpdate + summary.permanentUnavailable + summary.retryableFailure ? "PASS" : "FAIL", market: job.exchange, universe: allStocks.length, processed: summary.attempted, source: "YAHOO", summaryType: "DAILY_SUMMARY" };
+    await completeLifecycleRun(prisma, runId, summary, latest, validation);
     return { jobId: job.id, runType, status: "COMPLETED", ...summary };
   } catch (error) {
-    await prisma.$executeRawUnsafe('UPDATE production_scheduler_runs SET status = \'FAILED\', completed_at = NOW(), error = $2 WHERE id = $1', runId, error instanceof Error ? error.message : String(error)).catch(() => undefined);
+    await failLifecycleRun(prisma, runId, error);
     throw error;
   } finally {
-    await release(job.id, owner);
+    await releaseLifecycleLock(prisma, job.id, owner);
   }
 }
 
