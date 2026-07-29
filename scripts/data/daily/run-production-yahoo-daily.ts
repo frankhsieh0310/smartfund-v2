@@ -106,11 +106,18 @@ function errorType(error: unknown): string {
   return "UNKNOWN_ERROR";
 }
 
+function failureClassification(error: unknown): "PERMANENT_UNAVAILABLE" | "RETRYABLE_FAILURE" {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.includes("YAHOO_NO_DATA") || message.includes("YAHOO_CHART_HTTP_404") || message.includes("YAHOO_CHART_HTTP_422")
+    ? "PERMANENT_UNAVAILABLE"
+    : "RETRYABLE_FAILURE";
+}
+
 async function execute(job: Job, runType: RunType): Promise<Record<string, unknown>> {
   const runId = randomUUID();
   const owner = `${process.env.RAILWAY_DEPLOYMENT_ID ?? process.env.HOSTNAME ?? "worker"}:${process.pid}:${runId}`;
   if (!await acquire(job.id, owner)) return { jobId: job.id, status: "SKIPPED_LOCKED" };
-  const summary = { attempted: 0, completed: 0, inserted: 0, updated: 0, failed: 0 };
+  const summary = { attempted: 0, completed: 0, inserted: 0, updated: 0, failed: 0, success: 0, noUpdate: 0, permanentUnavailable: 0, retryableFailure: 0 };
   try {
     await prisma.$executeRawUnsafe('INSERT INTO production_scheduler_runs (id, job_id, exchange, run_type, status) VALUES ($1, $2, $3, $4, \'IN_PROGRESS\')', runId, job.id, job.exchange, runType);
     const failedStockIds = runType === "RETRY"
@@ -136,7 +143,9 @@ async function execute(job: Job, runType: RunType): Promise<Record<string, unkno
         try {
           const period1 = Math.floor(stock.latestDate!.getTime() / 1000);
           const period2 = Math.floor((Date.now() + 86_400_000) / 1000);
-          const candles = (await fetchYahooChartPeriod(stock.yahooSymbol, period1, period2))?.candles ?? [];
+          const chart = await fetchYahooChartPeriod(stock.yahooSymbol, period1, period2);
+          if (!chart) throw new Error("YAHOO_NO_DATA");
+          const candles = chart.candles;
           let inserted = 0;
           let updated = 0;
           for (const candle of candles.filter((row) => row.close !== null && row.date >= stock.latestDate!)) {
@@ -152,10 +161,12 @@ async function execute(job: Job, runType: RunType): Promise<Record<string, unkno
           const latest = candles.filter((row) => row.close !== null).at(-1);
           if (latest) await prisma.stock.update({ where: { id: stock.id }, data: { latestDate: latest.date, latestClose: latest.close! } });
           await prisma.$executeRawUnsafe('DELETE FROM production_scheduler_failures WHERE job_id = $1 AND stock_id = $2', job.id, stock.id);
-          return { completed: 1, inserted, updated, failed: 0 };
+          const noUpdate = inserted + updated === 0 ? 1 : 0;
+          return { completed: 1, inserted, updated, failed: 0, success: noUpdate ? 0 : 1, noUpdate, permanentUnavailable: 0, retryableFailure: 0 };
         } catch (error) {
-        await prisma.$executeRawUnsafe("INSERT INTO production_scheduler_failures (job_id, stock_id, symbol, attempts, last_error, error_type, last_attempted_at, next_retry_at) VALUES ($1, $2, $3, 1, $4, $5, NOW(), NOW() + INTERVAL '15 minutes') ON CONFLICT (job_id, stock_id) DO UPDATE SET attempts = production_scheduler_failures.attempts + 1, last_error = EXCLUDED.last_error, error_type = EXCLUDED.error_type, last_attempted_at = NOW(), next_retry_at = NOW() + INTERVAL '15 minutes'", job.id, stock.id, stock.yahooSymbol, error instanceof Error ? error.message : String(error), errorType(error));
-          return { completed: 0, inserted: 0, updated: 0, failed: 1 };
+          const classification = failureClassification(error);
+          await prisma.$executeRawUnsafe("INSERT INTO production_scheduler_failures (job_id, stock_id, symbol, attempts, last_error, error_type, last_attempted_at, next_retry_at, classification, resolved, resolution_reason) VALUES ($1, $2, $3, 1, $4, $5, NOW(), CASE WHEN $6 = 'RETRYABLE_FAILURE' THEN NOW() + INTERVAL '15 minutes' ELSE NULL END, $6, $6 = 'PERMANENT_UNAVAILABLE', CASE WHEN $6 = 'PERMANENT_UNAVAILABLE' THEN $5 ELSE NULL END) ON CONFLICT (job_id, stock_id) DO UPDATE SET attempts = production_scheduler_failures.attempts + 1, last_error = EXCLUDED.last_error, error_type = EXCLUDED.error_type, classification = EXCLUDED.classification, resolved = EXCLUDED.resolved, resolution_reason = EXCLUDED.resolution_reason, last_attempted_at = NOW(), next_retry_at = EXCLUDED.next_retry_at", job.id, stock.id, stock.yahooSymbol, error instanceof Error ? error.message : String(error), errorType(error), classification);
+          return { completed: 0, inserted: 0, updated: 0, failed: 1, success: 0, noUpdate: 0, permanentUnavailable: classification === "PERMANENT_UNAVAILABLE" ? 1 : 0, retryableFailure: classification === "RETRYABLE_FAILURE" ? 1 : 0 };
         }
       }));
       for (const outcome of outcomes) {
@@ -164,12 +175,16 @@ async function execute(job: Job, runType: RunType): Promise<Record<string, unkno
         summary.inserted += outcome.inserted;
         summary.updated += outcome.updated;
         summary.failed += outcome.failed;
+        summary.success += outcome.success;
+        summary.noUpdate += outcome.noUpdate;
+        summary.permanentUnavailable += outcome.permanentUnavailable;
+        summary.retryableFailure += outcome.retryableFailure;
       }
       if ((offset + batch.length) % CHECKPOINT_EVERY === 0 || offset + batch.length === stocks.length) {
         await checkpoint(runId, summary, batch.at(-1)!.yahooSymbol);
       }
     }
-    await prisma.$executeRawUnsafe('UPDATE production_scheduler_runs SET status = \'COMPLETED\', completed_at = NOW(), attempted = $2, completed = $3, inserted = $4, updated = $5, failed = $6, details = $7::jsonb WHERE id = $1', runId, summary.attempted, summary.completed, summary.inserted, summary.updated, summary.failed, JSON.stringify(summary));
+    await prisma.$executeRawUnsafe("UPDATE production_scheduler_runs SET status = 'COMPLETED', completed_at = NOW(), attempted = $2, completed = $3, inserted = $4, updated = $5, failed = $6, success_count = $7, no_update_count = $8, permanent_unavailable_count = $9, retryable_failure_count = $10, exit_code = 0, validation_status = CASE WHEN $2 = $7 + $8 + $9 + $10 THEN 'PASS' ELSE 'FAIL' END, details = $11::jsonb WHERE id = $1", runId, summary.attempted, summary.completed, summary.inserted, summary.updated, summary.failed, summary.success, summary.noUpdate, summary.permanentUnavailable, summary.retryableFailure, JSON.stringify(summary));
     return { jobId: job.id, runType, status: "COMPLETED", ...summary };
   } catch (error) {
     await prisma.$executeRawUnsafe('UPDATE production_scheduler_runs SET status = \'FAILED\', completed_at = NOW(), error = $2 WHERE id = $1', runId, error instanceof Error ? error.message : String(error)).catch(() => undefined);
