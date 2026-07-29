@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { randomUUID } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
 import {
   addOutcome,
@@ -57,6 +58,7 @@ async function upsertYahooCandles(stock: Stock, candles: Candle[]): Promise<{ in
   const valid = candles.filter((candle) => candle.close !== null);
   const existing = await prisma.stockHistory.count({ where: { stockId: stock.id } });
   const payload = valid.map((candle) => ({
+    id: randomUUID(),
     date: candle.date.toISOString().slice(0, 10),
     open: candle.open,
     high: candle.high,
@@ -66,8 +68,8 @@ async function upsertYahooCandles(stock: Stock, candles: Candle[]): Promise<{ in
     volume: candle.volume,
   }));
   await prisma.$executeRawUnsafe(
-    `INSERT INTO stock_history (stock_id, date, open, high, low, close, adjusted_close, volume, source, source_symbol, provider_method, imported_at, updated_at)
-     SELECT $1, (value->>'date')::date, NULLIF(value->>'open', '')::numeric, NULLIF(value->>'high', '')::numeric,
+    `INSERT INTO stock_history (id, stock_id, date, open, high, low, close, adjusted_close, volume, source, source_symbol, provider_method, imported_at, updated_at)
+     SELECT value->>'id', $1, (value->>'date')::date, NULLIF(value->>'open', '')::numeric, NULLIF(value->>'high', '')::numeric,
             NULLIF(value->>'low', '')::numeric, (value->>'close')::numeric, NULLIF(value->>'adjustedClose', '')::numeric,
             NULLIF(value->>'volume', '')::numeric, 'YAHOO', $2, 'YAHOO_CHART_API', NOW(), NOW()
      FROM jsonb_array_elements($3::jsonb) AS value

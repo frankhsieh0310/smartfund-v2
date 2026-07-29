@@ -8,7 +8,7 @@ async function main(): Promise<void> {
       prisma.$queryRawUnsafe("SELECT id, status, started_at, completed_at, exit_code, attempted, completed, failed, details FROM production_scheduler_runs WHERE job_id = $1 ORDER BY started_at DESC LIMIT 5", "sp500-yahoo-historical"),
       prisma.$queryRawUnsafe("SELECT job_id, run_id, last_symbol, processed, succeeded, failed, started_at, updated_at FROM production_scheduler_checkpoints WHERE job_id = $1", "sp500-yahoo-historical"),
       prisma.$queryRawUnsafe("SELECT job_id, owner, created_at, updated_at, expires_at FROM production_scheduler_locks WHERE job_id = $1", "sp500-yahoo-historical"),
-      prisma.$queryRawUnsafe("SELECT COUNT(*)::int AS count FROM production_scheduler_failures WHERE job_id = $1", "sp500-yahoo-historical"),
+      prisma.$queryRawUnsafe("SELECT symbol, attempts, error_type, classification, resolved, last_error, last_attempted_at, next_retry_at FROM production_scheduler_failures WHERE job_id = $1 ORDER BY symbol", "sp500-yahoo-historical"),
     ]);
     console.log(JSON.stringify({ runs, checkpoints, locks, failures }, null, 2));
   } finally {
