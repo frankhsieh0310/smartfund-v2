@@ -90,18 +90,12 @@ async function resolveUniverse(): Promise<Member[]> {
   });
 }
 
-async function existingYahooCoverage(stockIds: string[]): Promise<Set<string>> {
-  const rows = await prisma.stockHistory.groupBy({ by: ["stockId"], where: { stockId: { in: stockIds }, source: "YAHOO" }, _count: { _all: true } });
-  return new Set(rows.filter((row) => row._count._all >= 20).map((row) => row.stockId));
-}
-
 async function main(): Promise<void> {
   const members = await resolveUniverse();
   const unavailable = members.filter((member) => !member.stock && member.mapping?.availability === "PERMANENT_UNAVAILABLE");
   const unresolved = members.filter((member) => !member.stock && !unavailable.includes(member));
   if (unresolved.length) throw new Error(`UNRESOLVED_SP500_MAPPING:${unresolved.map((member) => member.canonicalSymbol).join(",")}`);
   const stocks = members.flatMap((member) => member.stock ? [member.stock] : []).sort((a, b) => a.yahooSymbol.localeCompare(b.yahooSymbol));
-  const verifiedCoverage = await existingYahooCoverage(stocks.map((stock) => stock.id));
   const owner = `historical:${process.env.RAILWAY_DEPLOYMENT_ID ?? process.pid}`;
   if (!await acquireLifecycleLock(prisma, JOB_ID, owner)) {
     console.log(JSON.stringify({ jobId: JOB_ID, status: "SKIPPED_LOCKED" }));
@@ -122,7 +116,8 @@ async function main(): Promise<void> {
       const batch = pending.slice(offset, offset + CONCURRENCY);
       const outcomes = await Promise.all(batch.map(async (stock) => {
         try {
-          if (verifiedCoverage.has(stock.id)) {
+          const existingYahooRow = await prisma.stockHistory.findFirst({ where: { stockId: stock.id, source: "YAHOO" }, select: { id: true } });
+          if (existingYahooRow) {
             await prisma.stock.update({ where: { id: stock.id }, data: { historyBackfilledAt: new Date() } });
             return { attempted: 1, completed: 1, noUpdate: 1 };
           }
