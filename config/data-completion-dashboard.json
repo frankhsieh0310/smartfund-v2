@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-30T01:36:03.472Z",
+  "generatedAt": "2026-07-30T01:48:50.512Z",
   "source": "Supabase canonical tables + production_scheduler_runs",
   "metricMode": "FAST_CANONICAL",
   "policy": "Provider Latest Available",
@@ -246,7 +246,7 @@
       "production": "NOT_VERIFIED",
       "latestRun": {
         "status": "PAUSED",
-        "startedAt": "2026-07-30T01:15:17.151Z",
+        "startedAt": "2026-07-30T01:40:25.891Z",
         "latestTradingDate": null,
         "validation": null
       },
@@ -568,9 +568,174 @@
       "nextTask": "No dedicated Master, canonical history, Daily lifecycle, or API."
     }
   ],
+  "completionQueue": [
+    {
+      "assetId": "etf-global",
+      "asset": "Global ETF",
+      "provider": "YAHOO",
+      "adapter": "YAHOO_CHART",
+      "providerReady": true,
+      "historicalCoverage": 100,
+      "daily": "PAUSED",
+      "production": "NOT_VERIFIED",
+      "blockingIssue": "Finish the resumable whole-universe Daily validation.",
+      "priorityScore": 200
+    },
+    {
+      "assetId": "commodity",
+      "asset": "Commodity",
+      "provider": "YAHOO",
+      "adapter": "YAHOO_CHART",
+      "providerReady": true,
+      "historicalCoverage": 100,
+      "daily": "NOT_STARTED",
+      "production": "NOT_VERIFIED",
+      "blockingIssue": "No dedicated Production Daily or API.",
+      "priorityScore": 200
+    },
+    {
+      "assetId": "fx",
+      "asset": "FX",
+      "provider": "YAHOO",
+      "adapter": "YAHOO_CHART",
+      "providerReady": true,
+      "historicalCoverage": 100,
+      "daily": "NOT_STARTED",
+      "production": "NOT_VERIFIED",
+      "blockingIssue": "No dedicated Production Daily or API.",
+      "priorityScore": 200
+    },
+    {
+      "assetId": "crypto",
+      "asset": "Crypto",
+      "provider": "YAHOO",
+      "adapter": "YAHOO_CHART",
+      "providerReady": true,
+      "historicalCoverage": 100,
+      "daily": "NOT_STARTED",
+      "production": "NOT_VERIFIED",
+      "blockingIssue": "No dedicated Production Daily or API.",
+      "priorityScore": 200
+    },
+    {
+      "assetId": "stocks-nyse",
+      "asset": "NYSE",
+      "provider": "YAHOO",
+      "adapter": "YAHOO_CHART",
+      "providerReady": true,
+      "historicalCoverage": 99.92,
+      "daily": "IN_PROGRESS",
+      "production": "NOT_VERIFIED",
+      "blockingIssue": "Historical and Daily lifecycle evidence determines readiness.",
+      "priorityScore": 199.92
+    },
+    {
+      "assetId": "stocks-amex",
+      "asset": "AMEX",
+      "provider": "YAHOO",
+      "adapter": "YAHOO_CHART",
+      "providerReady": true,
+      "historicalCoverage": 99.65,
+      "daily": "NOT_STARTED",
+      "production": "NOT_VERIFIED",
+      "blockingIssue": "Historical and Daily lifecycle evidence determines readiness.",
+      "priorityScore": 199.65
+    },
+    {
+      "assetId": "etf-taiwan",
+      "asset": "Taiwan ETF",
+      "provider": "YAHOO",
+      "adapter": "YAHOO_CHART",
+      "providerReady": true,
+      "historicalCoverage": 66.76,
+      "daily": "NOT_STARTED",
+      "production": "NOT_VERIFIED",
+      "blockingIssue": "Historical coverage and a dedicated Daily lifecycle are absent.",
+      "priorityScore": 166.76
+    },
+    {
+      "assetId": "global-index",
+      "asset": "Global Stock Index",
+      "provider": "YAHOO",
+      "adapter": "YAHOO_CHART",
+      "providerReady": true,
+      "historicalCoverage": 0,
+      "daily": "NOT_STARTED",
+      "production": "NOT_VERIFIED",
+      "blockingIssue": "No Production Daily lifecycle/API bridge.",
+      "priorityScore": 100
+    },
+    {
+      "assetId": "precious-metals",
+      "asset": "Precious Metals",
+      "provider": "YAHOO",
+      "adapter": "YAHOO_CHART",
+      "providerReady": true,
+      "historicalCoverage": 0,
+      "daily": "NOT_STARTED",
+      "production": "NOT_VERIFIED",
+      "blockingIssue": "Complete historical coverage, Daily lifecycle, and API.",
+      "priorityScore": 100
+    },
+    {
+      "assetId": "energy",
+      "asset": "Energy / Oil",
+      "provider": "YAHOO",
+      "adapter": "YAHOO_CHART",
+      "providerReady": true,
+      "historicalCoverage": 0,
+      "daily": "NOT_STARTED",
+      "production": "NOT_VERIFIED",
+      "blockingIssue": "Complete historical coverage, Daily lifecycle, and API.",
+      "priorityScore": 100
+    },
+    {
+      "assetId": "funds",
+      "asset": "Mutual Funds",
+      "provider": "UNRESOLVED",
+      "adapter": null,
+      "providerReady": false,
+      "historicalCoverage": 97.48,
+      "daily": "NOT_STARTED",
+      "production": "NOT_VERIFIED",
+      "blockingIssue": "Provider mapping, provenance, and Production Daily are not complete.",
+      "priorityScore": 97.48
+    },
+    {
+      "assetId": "insurance",
+      "asset": "Insurance",
+      "provider": "UNRESOLVED",
+      "adapter": null,
+      "providerReady": false,
+      "historicalCoverage": 0,
+      "daily": "NOT_STARTED",
+      "production": "NOT_VERIFIED",
+      "blockingIssue": "Historical exceptions, provenance, Production Daily, and API are incomplete.",
+      "priorityScore": 0
+    },
+    {
+      "assetId": "reit",
+      "asset": "REIT",
+      "provider": "UNRESOLVED",
+      "adapter": null,
+      "providerReady": false,
+      "historicalCoverage": 0,
+      "daily": "NOT_STARTED",
+      "production": "NOT_VERIFIED",
+      "blockingIssue": "No dedicated Master, canonical history, Daily lifecycle, or API.",
+      "priorityScore": 0
+    }
+  ],
   "nextTask": {
-    "id": "etf-global",
-    "name": "Global ETF",
-    "blockingIssue": "Finish the resumable whole-universe Daily validation."
+    "assetId": "etf-global",
+    "asset": "Global ETF",
+    "provider": "YAHOO",
+    "adapter": "YAHOO_CHART",
+    "providerReady": true,
+    "historicalCoverage": 100,
+    "daily": "PAUSED",
+    "production": "NOT_VERIFIED",
+    "blockingIssue": "Finish the resumable whole-universe Daily validation.",
+    "priorityScore": 200
   }
 }

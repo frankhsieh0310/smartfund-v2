@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { PrismaClient } from "@prisma/client";
 
@@ -6,6 +6,7 @@ type Status = "NOT_STARTED" | "MASTER_ONLY" | "PARTIAL_HISTORICAL" | "HISTORICAL
 type Counts = { universe: number; historical: number; rows: number; earliest: Date | null; latest: Date | null };
 type Definition = { id: string; assetClass: string; name: string; provider: string; api: string | null; jobs: string[]; sql?: string; blocking: string };
 type Run = { status: string; started_at: Date; latest_trading_date: Date | null; validation_status: string | null };
+type AcquisitionPlan = { assets: Array<{ id: string; provider: string; adapter: string | null; state: string }> };
 
 const prisma = new PrismaClient();
 const root = process.cwd();
@@ -96,6 +97,14 @@ function status(count: Counts, run: Run | null, api: string | null): Status {
   return api && run.status === "COMPLETED" && run.validation_status === "PASS" ? "PRODUCT_READY" : "DAILY_ACTIVE";
 }
 
+function acquisitionId(assetId: string): string {
+  if (assetId.startsWith("stocks-")) return "stocks";
+  if (assetId === "etf-taiwan" || assetId === "etf-global" || assetId === "funds" || assetId === "macro" || assetId === "bond" || assetId === "index" || assetId === "volatility" || assetId === "commodity" || assetId === "fx" || assetId === "crypto" || assetId === "reit" || assetId === "insurance") return assetId;
+  if (assetId === "global-index") return "market-index";
+  if (assetId === "precious-metals") return "precious-metal";
+  return assetId;
+}
+
 async function main(): Promise<void> {
   // Run these aggregate queries serially. The ETF/fund history tables are
   // intentionally large; parallel full-table counts would compete with Daily
@@ -110,13 +119,21 @@ async function main(): Promise<void> {
   }
   const groups = Object.entries(Object.groupBy(assets, (asset) => asset.assetClass)).map(([assetClass, values]) => ({ assetClass, completion: +((values ?? []).reduce((sum, asset) => sum + asset.completion, 0) / (values?.length || 1)).toFixed(2) }));
   const overall = +(assets.reduce((sum, asset) => sum + asset.completion, 0) / assets.length).toFixed(2);
-  const nextTask = [...assets].filter((asset) => asset.status !== "PRODUCT_READY").sort((a, b) => b.completion - a.completion)[0] ?? null;
-  const dashboard = { generatedAt: new Date().toISOString(), source: "Supabase canonical tables + production_scheduler_runs", metricMode: deep ? "DEEP_EXACT" : "FAST_CANONICAL", policy: "Provider Latest Available", globalCompletion: overall, groups, assets, nextTask: nextTask ? { id: nextTask.id, name: nextTask.name, blockingIssue: nextTask.blocking } : null };
+  const plan = JSON.parse(await readFile(join(root, "config", "global-data-acquisition-plan.json"), "utf8")) as AcquisitionPlan;
+  const planById = new Map(plan.assets.map((asset) => [asset.id, asset]));
+  const completionQueue = assets.filter((asset) => asset.status !== "PRODUCT_READY").map((asset) => {
+    const acquisition = planById.get(acquisitionId(asset.id));
+    const providerReady = acquisition?.state === "DECLARED" || acquisition?.state === "ACTIVE";
+    const dailyGap = asset.daily === "ACTIVE" ? 0 : 1;
+    return { assetId: asset.id, asset: asset.name, provider: acquisition?.provider ?? "UNRESOLVED", adapter: acquisition?.adapter ?? null, providerReady, historicalCoverage: asset.historicalCoverage, daily: asset.daily, production: asset.production, blockingIssue: asset.blocking, priorityScore: +(dailyGap * 100 + (providerReady ? 0 : -100) + asset.historicalCoverage).toFixed(2) };
+  }).sort((a, b) => b.priorityScore - a.priorityScore || b.historicalCoverage - a.historicalCoverage);
+  const nextTask = completionQueue[0] ?? null;
+  const dashboard = { generatedAt: new Date().toISOString(), source: "Supabase canonical tables + production_scheduler_runs", metricMode: deep ? "DEEP_EXACT" : "FAST_CANONICAL", policy: "Provider Latest Available", globalCompletion: overall, groups, assets, completionQueue, nextTask };
   await mkdir(join(root, "config"), { recursive: true });
   await mkdir(join(root, "docs"), { recursive: true });
   await writeFile(join(root, "config", "data-completion-dashboard.json"), `${JSON.stringify(dashboard, null, 2)}\n`);
   const rows = assets.map((asset) => `| ${asset.name} | ${asset.universe} | ${asset.historical}/${asset.universe} (${asset.historicalCoverage}%) | ${asset.daily} | ${asset.production} | ${asset.api ?? "—"} | ${asset.provider} | ${asset.latest ?? "—"} | ${asset.status} | ${asset.completion}% | ${asset.blocking} | ${asset.nextTask} |`).join("\n");
-  await writeFile(join(root, "docs", "data-completion-dashboard.md"), `# SmartFund Data Completion Dashboard\n\n> Generated from canonical Supabase tables and Production Run Ledger at **${dashboard.generatedAt}**. Do not edit manually; the Production Coordinator rebuilds it after every Cron pass. Metric mode: **${dashboard.metricMode}** (fast mode uses canonical master flags to protect Daily from multi-million-row scans; \`--deep\` runs an exact audit).\n\n## Global Completion: ${overall}%\n\n${groups.map((group) => `- ${group.assetClass}: **${group.completion}%**`).join("\n")}\n\n## Asset Completion\n\n| Asset | Universe | Historical | Daily | Production | API | Provider | Latest Date | Status | Completion | Blocking Issue | Next Task |\n| --- | ---: | --- | --- | --- | --- | --- | --- | --- | ---: | --- | --- |\n${rows}\n\n## Next Task\n\n${nextTask ? `**${nextTask.name}** — ${nextTask.blocking}` : "All tracked assets are PRODUCT_READY."}\n`);
+  await writeFile(join(root, "docs", "data-completion-dashboard.md"), `# SmartFund Data Completion Dashboard\n\n> Generated from canonical Supabase tables and Production Run Ledger at **${dashboard.generatedAt}**. Do not edit manually; the Production Coordinator rebuilds it after every Cron pass. Metric mode: **${dashboard.metricMode}** (fast mode uses canonical master flags to protect Daily from multi-million-row scans; \`--deep\` runs an exact audit).\n\n## Global Completion: ${overall}%\n\n${groups.map((group) => `- ${group.assetClass}: **${group.completion}%**`).join("\n")}\n\n## Asset Completion\n\n| Asset | Universe | Historical | Daily | Production | API | Provider | Latest Date | Status | Completion | Blocking Issue | Next Task |\n| --- | ---: | --- | --- | --- | --- | --- | --- | --- | ---: | --- | --- |\n${rows}\n\n## Data Completion Queue\n\n| Priority | Asset | Provider | Daily | Historical | Blocking Issue |\n| ---: | --- | --- | --- | ---: | --- |\n${completionQueue.map((item, index) => `| ${index + 1} | ${item.asset} | ${item.provider} | ${item.daily} | ${item.historicalCoverage}% | ${item.blockingIssue} |`).join("\n")}\n\n## Next Task\n\n${nextTask ? `**${nextTask.asset}** — ${nextTask.blockingIssue}` : "All tracked assets are PRODUCT_READY."}\n`);
   console.log(JSON.stringify({ globalCompletion: overall, assets: assets.length, nextTask: dashboard.nextTask }, null, 2));
 }
 

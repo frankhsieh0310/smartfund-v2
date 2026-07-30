@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "policy": {
+    "authority": "This file is the required provider decision source for Historical and Daily ingestion.",
+    "freshness": "PROVIDER_LATEST_AVAILABLE",
+    "historical": "Historical fetches use the declared provider only; Daily fetches are incremental only.",
+    "changeControl": "A provider may change only through a committed update to this plan and a registered ProviderAdapter."
+  },
+  "registeredAdapters": ["YAHOO_CHART", "FRED", "ECB"],
+  "assets": [
+    { "id": "stocks", "scope": ["TWSE", "TPEx", "NASDAQ", "NYSE", "AMEX", "Japan", "HKEX", "KRX", "SSE", "SZSE"], "provider": "YAHOO", "adapter": "YAHOO_CHART", "historical": "Yahoo Chart period=max", "daily": "Yahoo Chart incremental", "latestRule": "PROVIDER_LATEST_AVAILABLE", "state": "DECLARED" },
+    { "id": "etf-taiwan", "scope": "Taiwan ETF", "provider": "YAHOO", "adapter": "YAHOO_CHART", "historical": "Yahoo Chart period=max", "daily": "Yahoo Chart incremental", "latestRule": "PROVIDER_LATEST_AVAILABLE", "state": "DECLARED" },
+    { "id": "etf-global", "scope": "Global ETF", "provider": "YAHOO", "adapter": "YAHOO_CHART", "historical": "Yahoo Chart period=max", "daily": "Yahoo Chart incremental", "latestRule": "PROVIDER_LATEST_AVAILABLE", "state": "DECLARED" },
+    { "id": "funds", "scope": "Mutual Funds", "provider": "UNRESOLVED", "adapter": null, "historical": "No legal production source selected", "daily": "Blocked until a Fund ProviderAdapter and provider decision are committed", "evidence": "8,842 fund_provider_mappings use yahoo; legacy MoneyDJ scheduler/scripts also exist; neither is a registered Production Fund adapter.", "state": "PROVIDER_DECISION_REQUIRED" },
+    { "id": "macro-fred", "scope": "Macro series: CCSA,CPIAUCSL,CPILFESL,DFF,DGORDER,DGS10,DGS2,DGS30,FEDFUNDS,GDP,GDPC1,HOUST,ICSA,INDPRO,M2SL,PAYEMS,PCEPI,PCEPILFE,PERMIT,PI,PPIACO,RSAFS,UMCSENT,UNRATE", "provider": "FRED", "adapter": "FRED", "historical": "FRED series observations", "daily": "FRED incremental", "latestRule": "PROVIDER_LATEST_AVAILABLE", "releaseFrequency": "Per series", "state": "ACTIVE" },
+    { "id": "macro-ecb", "scope": "Macro/rates: FM/D.U2.EUR.4F.KR.DFR.LEV, FM/D.U2.EUR.4F.KR.MLFR.LEV, FM/D.U2.EUR.4F.KR.MRR_FR.LEV", "provider": "ECB", "adapter": "ECB", "historical": "ECB Data API", "daily": "ECB incremental", "latestRule": "PROVIDER_LATEST_AVAILABLE", "releaseFrequency": "Daily", "state": "ACTIVE" },
+    { "id": "macro-imf", "scope": "90 configured IMF series", "provider": "IMF", "adapter": null, "historical": "Existing historical data only", "daily": "PROVIDER_PENDING", "state": "ADAPTER_REQUIRED" },
+    { "id": "macro-oecd", "scope": "22 configured OECD CLI series", "provider": "OECD", "adapter": null, "historical": "Existing historical data only", "daily": "PROVIDER_PENDING", "state": "ADAPTER_REQUIRED" },
+    { "id": "macro-world-bank", "scope": "16 configured World Bank series", "provider": "World Bank", "adapter": null, "historical": "Existing historical data only", "daily": "PROVIDER_PENDING", "state": "ADAPTER_REQUIRED" },
+    { "id": "bond-yield", "scope": "US13W→DGS3MO, US2Y→DGS2, US5Y→DGS5, US10Y→DGS10, US30Y→DGS30", "provider": "FRED", "adapter": "FRED", "historical": "FRED series observations", "daily": "FRED incremental", "latestRule": "PROVIDER_LATEST_AVAILABLE", "state": "ACTIVE" },
+    { "id": "market-index", "scope": "market_master INDEX and global index symbols", "provider": "YAHOO", "adapter": "YAHOO_CHART", "historical": "Yahoo Chart period=max", "daily": "Yahoo Chart incremental", "latestRule": "PROVIDER_LATEST_AVAILABLE", "state": "DECLARED" },
+    { "id": "volatility", "scope": "Volatility series", "provider": "YAHOO", "adapter": "YAHOO_CHART", "historical": "Yahoo Chart period=max", "daily": "Yahoo Chart incremental", "latestRule": "PROVIDER_LATEST_AVAILABLE", "state": "ACTIVE" },
+    { "id": "commodity", "scope": "Commodity futures/proxies", "provider": "YAHOO", "adapter": "YAHOO_CHART", "historical": "Yahoo Chart period=max where symbol is available", "daily": "Yahoo Chart incremental", "exception": "YAHOO_NOT_AVAILABLE requires a committed provider decision; none is selected today.", "state": "DECLARED" },
+    { "id": "precious-metal", "scope": "Gold, silver, platinum, palladium and proxies", "provider": "YAHOO", "adapter": "YAHOO_CHART", "historical": "Yahoo Chart period=max where symbol is available", "daily": "Yahoo Chart incremental", "state": "DECLARED" },
+    { "id": "energy", "scope": "WTI, Brent, natural gas and energy products", "provider": "YAHOO", "adapter": "YAHOO_CHART", "historical": "Yahoo Chart period=max where symbol is available", "daily": "Yahoo Chart incremental", "state": "DECLARED" },
+    { "id": "fx", "scope": "FX pairs", "provider": "YAHOO", "adapter": "YAHOO_CHART", "historical": "Yahoo Chart period=max", "daily": "Yahoo Chart incremental", "state": "DECLARED", "note": "ECB is not currently selected as the FX provider." },
+    { "id": "crypto", "scope": "Yahoo-listed USD crypto pairs", "provider": "YAHOO", "adapter": "YAHOO_CHART", "historical": "Yahoo Chart period=max", "daily": "Yahoo Chart incremental", "state": "DECLARED", "note": "CoinGecko/CoinMarketCap have no registered adapter and are not selected." },
+    { "id": "reit", "scope": "REIT", "provider": "UNRESOLVED", "adapter": null, "historical": "No legal production source selected", "daily": "Not started", "state": "PROVIDER_DECISION_REQUIRED" },
+    { "id": "insurance", "scope": "Insurance products", "provider": "UNRESOLVED", "adapter": null, "historical": "Legacy provider scripts exist but no Production Adapter decision", "daily": "Not started", "state": "PROVIDER_DECISION_REQUIRED" }
+  ],
+  "queuePolicy": {
+    "sort": ["production daily gap", "historical coverage descending", "provider declared before provider unresolved", "completion percentage ascending"],
+    "productionGate": ["provider is DECLARED or ACTIVE", "adapter is registered", "historical strategy exists", "daily strategy exists", "provider latest available freshness rule"],
+    "nonBlocking": ["individual Yahoo no data", "symbol mapping exception", "provider publication lag"],
+    "blocking": ["provider unresolved", "adapter absent", "systemic download failure", "systemic database write failure"]
+  }
+}

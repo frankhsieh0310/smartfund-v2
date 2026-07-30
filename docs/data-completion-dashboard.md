@@ -1,6 +1,6 @@
 # SmartFund Data Completion Dashboard
 
-> Generated from canonical Supabase tables and Production Run Ledger at **2026-07-30T01:36:03.472Z**. Do not edit manually; the Production Coordinator rebuilds it after every Cron pass. Metric mode: **FAST_CANONICAL** (fast mode uses canonical master flags to protect Daily from multi-million-row scans; `--deep` runs an exact audit).
+> Generated from canonical Supabase tables and Production Run Ledger at **2026-07-30T01:48:50.512Z**. Do not edit manually; the Production Coordinator rebuilds it after every Cron pass. Metric mode: **FAST_CANONICAL** (fast mode uses canonical master flags to protect Daily from multi-million-row scans; `--deep` runs an exact audit).
 
 ## Global Completion: 59.75%
 
@@ -43,6 +43,24 @@
 | Energy / Oil | 0 | 0/0 (0%) | NOT_STARTED | NOT_VERIFIED | — | YAHOO_CHART | — | NOT_STARTED | 0% | Complete historical coverage, Daily lifecycle, and API. | Complete historical coverage, Daily lifecycle, and API. |
 | Insurance | 456 | 0/456 (0%) | NOT_STARTED | NOT_VERIFIED | — | PROVIDER_PENDING | — | MASTER_ONLY | 0% | Historical exceptions, provenance, Production Daily, and API are incomplete. | Historical exceptions, provenance, Production Daily, and API are incomplete. |
 | REIT | 0 | 0/0 (0%) | NOT_STARTED | NOT_VERIFIED | — | NOT_CONFIGURED | — | NOT_STARTED | 0% | No dedicated Master, canonical history, Daily lifecycle, or API. | No dedicated Master, canonical history, Daily lifecycle, or API. |
+
+## Data Completion Queue
+
+| Priority | Asset | Provider | Daily | Historical | Blocking Issue |
+| ---: | --- | --- | --- | ---: | --- |
+| 1 | Global ETF | YAHOO | PAUSED | 100% | Finish the resumable whole-universe Daily validation. |
+| 2 | Commodity | YAHOO | NOT_STARTED | 100% | No dedicated Production Daily or API. |
+| 3 | FX | YAHOO | NOT_STARTED | 100% | No dedicated Production Daily or API. |
+| 4 | Crypto | YAHOO | NOT_STARTED | 100% | No dedicated Production Daily or API. |
+| 5 | NYSE | YAHOO | IN_PROGRESS | 99.92% | Historical and Daily lifecycle evidence determines readiness. |
+| 6 | AMEX | YAHOO | NOT_STARTED | 99.65% | Historical and Daily lifecycle evidence determines readiness. |
+| 7 | Taiwan ETF | YAHOO | NOT_STARTED | 66.76% | Historical coverage and a dedicated Daily lifecycle are absent. |
+| 8 | Global Stock Index | YAHOO | NOT_STARTED | 0% | No Production Daily lifecycle/API bridge. |
+| 9 | Precious Metals | YAHOO | NOT_STARTED | 0% | Complete historical coverage, Daily lifecycle, and API. |
+| 10 | Energy / Oil | YAHOO | NOT_STARTED | 0% | Complete historical coverage, Daily lifecycle, and API. |
+| 11 | Mutual Funds | UNRESOLVED | NOT_STARTED | 97.48% | Provider mapping, provenance, and Production Daily are not complete. |
+| 12 | Insurance | UNRESOLVED | NOT_STARTED | 0% | Historical exceptions, provenance, Production Daily, and API are incomplete. |
+| 13 | REIT | UNRESOLVED | NOT_STARTED | 0% | No dedicated Master, canonical history, Daily lifecycle, or API. |
 
 ## Next Task
 
