@@ -20,7 +20,16 @@ export class YahooChartProviderAdapter implements ProviderAdapter {
   source() { return { provider: "YAHOO", method: "YAHOO_CHART_API" }; }
 
   async fetchLatest(request: ProviderFetchRequest): Promise<ProviderPoint[]> {
-    return this.fetch(request, request.instrument.latestDate ?? new Date(Date.now() - 7 * 86_400_000));
+    const points = await this.fetch(request, request.instrument.latestDate ?? new Date(Date.now() - 7 * 86_400_000), request.assetClass === "ETF");
+    // ETF history is stored canonically as price/NAV plus volume. Yahoo can
+    // occasionally publish an intraday-consistent close with a transient
+    // high/open mismatch. That must not discard a valid incremental close.
+    if (request.assetClass === "ETF") {
+      const latest = points.at(-1);
+      if (!latest || latest.close == null || !Number.isFinite(latest.close)) throw new Error("YAHOO_NO_DATA");
+      return points;
+    }
+    return points;
   }
 
   async fetchHistorical(request: ProviderFetchRequest): Promise<ProviderPoint[]> {
@@ -55,7 +64,7 @@ export class YahooChartProviderAdapter implements ProviderAdapter {
     return invalid ? { valid: false, reason: "INVALID_OHLCV" } : { valid: true };
   }
 
-  private async fetch(request: ProviderFetchRequest, start: Date): Promise<ProviderPoint[]> {
+  private async fetch(request: ProviderFetchRequest, start: Date, closeOnlyValidation = false): Promise<ProviderPoint[]> {
     const period1 = Math.floor(start.getTime() / 1000);
     const period2 = Math.floor((request.endDate?.getTime() ?? Date.now() + 86_400_000) / 1000);
     const controller = new AbortController();
@@ -66,7 +75,11 @@ export class YahooChartProviderAdapter implements ProviderAdapter {
       });
       if (!response.ok) throw new Error(`YAHOO_HTTP_${response.status}`);
       const points = this.normalize(await response.json());
-      const validation = this.validate(points);
+      const validation = closeOnlyValidation
+        ? (points.length && points.every((point) => point.close != null && Number.isFinite(point.close))
+          ? { valid: true }
+          : { valid: false, reason: "YAHOO_NO_DATA" })
+        : this.validate(points);
       if (!validation.valid) throw new Error(validation.reason);
       return points;
     } finally { clearTimeout(timeout); }

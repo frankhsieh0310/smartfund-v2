@@ -22,7 +22,9 @@ type Item = { id: string; symbol: string; latestDate: Date | null };
 const prisma = new PrismaClient();
 const CONCURRENCY = 4;
 const CHECKPOINT_EVERY = 25;
-const MAX_PER_CRON = 100;
+// Four requests at a time keeps Yahoo within the established rate limit while
+// finishing a 12k ETF universe in bounded, resumable production slices.
+const MAX_PER_CRON = 200;
 const requested = process.argv.find((value) => value.startsWith("--job="))?.slice(6) as AssetKind | undefined;
 const kinds: AssetKind[] = requested ? [requested] : ["GLOBAL_ETF", "BOND_YIELD", "MARKET_INDEX", "VOLATILITY"];
 
@@ -60,6 +62,13 @@ async function universe(kind: AssetKind): Promise<Item[]> {
   return prisma.$queryRawUnsafe<Item[]>("SELECT m.id, m.symbol, MAX(h.date) AS \"latestDate\" FROM market_master m JOIN market_history h ON h.symbol = m.symbol WHERE m.is_active = TRUE AND m.asset_type::text = $1 GROUP BY m.id, m.symbol ORDER BY m.symbol", type);
 }
 
+async function latestStoredDate(kind: AssetKind): Promise<Date | null> {
+  const rows = kind === "GLOBAL_ETF"
+    ? await prisma.$queryRawUnsafe<{ latest: Date | null }[]>("SELECT MAX(h.date) AS latest FROM etf_history h JOIN etfs e ON e.id = h.etf_id WHERE e.is_active = TRUE AND NOT (COALESCE(e.exchange, '') ILIKE '%TW%' OR e.currency = 'TWD')")
+    : await prisma.$queryRawUnsafe<{ latest: Date | null }[]>("SELECT MAX(h.date) AS latest FROM market_history h JOIN market_master m ON m.symbol = h.symbol WHERE m.is_active = TRUE AND m.asset_type::text = $1", kind === "BOND_YIELD" ? "BOND" : kind === "MARKET_INDEX" ? "INDEX" : "VOLATILITY");
+  return rows[0]?.latest ?? null;
+}
+
 async function upsert(kind: AssetKind, item: Item, candle: ProviderPoint): Promise<boolean> {
   if (kind === "GLOBAL_ETF") {
     const existing = await prisma.$queryRawUnsafe<{ exists: boolean }[]>("SELECT EXISTS(SELECT 1 FROM etf_history WHERE etf_id = $1 AND date = $2::date) AS exists", item.id, candle.date.toISOString().slice(0, 10));
@@ -83,6 +92,16 @@ async function recordFailure(job: string, item: Item, error: unknown): Promise<"
   const message = error instanceof Error ? error.message : String(error);
   await prisma.$executeRawUnsafe("INSERT INTO production_scheduler_failures (job_id, stock_id, symbol, attempts, last_error, error_type, last_attempted_at, next_retry_at, classification, resolved, resolution_reason) VALUES ($1, $2, $3, 1, $4, $5, NOW(), CASE WHEN $6 = 'RETRYABLE_FAILURE' THEN NOW() + INTERVAL '15 minutes' ELSE NULL END, $6, $6 = 'PERMANENT_UNAVAILABLE', CASE WHEN $6 = 'PERMANENT_UNAVAILABLE' THEN $4 ELSE NULL END) ON CONFLICT (job_id, stock_id) DO UPDATE SET attempts = production_scheduler_failures.attempts + 1, last_error = EXCLUDED.last_error, error_type = EXCLUDED.error_type, last_attempted_at = NOW(), next_retry_at = EXCLUDED.next_retry_at, classification = EXCLUDED.classification, resolved = EXCLUDED.resolved, resolution_reason = EXCLUDED.resolution_reason", job, item.id, item.symbol, message, message.includes("AbortError") ? "YAHOO_TIMEOUT" : "YAHOO_HTTP_ERROR", kind);
   return kind;
+}
+
+async function dueRetryItems(job: string, all: Item[]): Promise<Item[]> {
+  const rows = await prisma.$queryRawUnsafe<{ stock_id: string }[]>(
+    "SELECT stock_id FROM production_scheduler_failures WHERE job_id = $1 AND resolved = FALSE AND classification = 'RETRYABLE_FAILURE' AND (next_retry_at IS NULL OR next_retry_at <= NOW()) ORDER BY last_attempted_at ASC LIMIT $2",
+    job,
+    MAX_PER_CRON,
+  );
+  const ids = new Set(rows.map((row) => row.stock_id));
+  return all.filter((item) => ids.has(item.id));
 }
 
 async function run(kind: AssetKind): Promise<Record<string, unknown>> {
@@ -132,8 +151,46 @@ async function run(kind: AssetKind): Promise<Record<string, unknown>> {
       await prisma.$executeRawUnsafe("UPDATE production_scheduler_runs SET status = 'PAUSED', completed_at = NOW(), exit_code = 0 WHERE id = $1", runId);
       return { job, status: "PAUSED", processed: summary.attempted, remaining, lastSymbol: selected.at(-1)?.symbol ?? null };
     }
-    const validation = { status: summary.attempted === all.length && summary.attempted === summary.completed + summary.failed ? "PASS" : "FAIL", assetClass: kind, universe: all.length, processed: summary.attempted, source: adapter.source(), summaryType: "DAILY_SUMMARY" };
-    await completeLifecycleRun(prisma, runId, summary, null, validation);
+
+    // Main-universe progress is durable. Once it reaches the end, retry only
+    // due transient failures without moving the main checkpoint backwards.
+    const retries = await dueRetryItems(job, all);
+    for (let offset = 0; offset < retries.length; offset += CONCURRENCY) {
+      const batch = retries.slice(offset, offset + CONCURRENCY);
+      const outcomes = await Promise.all(batch.map(async (item) => {
+        try {
+          const sourceSymbol = providerConfig.instrumentMappings?.[item.symbol] ?? item.symbol;
+          const candles = await adapter.fetchLatest({ assetClass: providerAssetClass(kind), instrument: { id: item.id, symbol: sourceSymbol, latestDate: item.latestDate } });
+          const newest = candles.at(-1);
+          const normalized = newest && (newest.close ?? newest.value) != null ? { ...newest, close: newest.close ?? newest.value } : null;
+          if (!normalized) throw new Error("PROVIDER_NO_DATA");
+          const existed = await upsert(kind, item, normalized);
+          await prisma.$executeRawUnsafe("DELETE FROM production_scheduler_failures WHERE job_id = $1 AND stock_id = $2", job, item.id);
+          return { completed: 1, failed: -1, retryableFailure: -1, success: existed ? 0 : 1, noUpdate: existed ? 1 : 0, inserted: existed ? 0 : 1, updated: existed ? 1 : 0 };
+        } catch (error) {
+          const result = await recordFailure(job, item, error);
+          return result === "PERMANENT_UNAVAILABLE" ? { retryableFailure: -1, permanentUnavailable: 1 } : {};
+        }
+      }));
+      outcomes.forEach((outcome) => Object.entries(outcome).forEach(([key, value]) => { (summary as Record<string, number>)[key] = ((summary as Record<string, number>)[key] ?? 0) + (value ?? 0); }));
+      await persistLifecycleCheckpoint(prisma, runId, summary, resume?.last_symbol ?? selected.at(-1)?.symbol ?? all.at(-1)!.symbol);
+      await heartbeatLifecycleLock(prisma, job, owner);
+    }
+
+    const coverage = all.length === 0 ? 1 : (summary.success + summary.noUpdate + summary.permanentUnavailable) / all.length;
+    const latestTradingDate = await latestStoredDate(kind);
+    const validation = {
+      status: summary.attempted === all.length && summary.attempted === summary.completed + summary.failed && coverage >= 0.98 ? "PASS" : "FAIL",
+      assetClass: kind,
+      universe: all.length,
+      processed: summary.attempted,
+      coverage,
+      retryCount: retries.length,
+      latestTradingDate: latestTradingDate?.toISOString().slice(0, 10) ?? null,
+      source: adapter.source(),
+      summaryType: "DAILY_SUMMARY",
+    };
+    await completeLifecycleRun(prisma, runId, summary, latestTradingDate, validation);
     return { job, status: validation.status, ...summary };
   } catch (error) { if (runId) await failLifecycleRun(prisma, runId, error); throw error; }
   finally { await releaseLifecycleLock(prisma, job, owner); }
