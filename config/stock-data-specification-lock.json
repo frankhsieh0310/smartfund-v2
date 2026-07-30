@@ -1,0 +1,8 @@
+{
+  "specification": "stock-data-specification",
+  "lockedVersion": "1.0",
+  "lockedCommit": "620a210391e48cdc8113087706e0ea66a802d0e3",
+  "status": "LOCKED",
+  "policy": "Database, Provider Adapters, workers, APIs and frontend work must implement the locked v1.0 specification. New stock-data fields require explicit user approval of a versioned v2 specification change and must not be added to v1.0.",
+  "changeRoute": "docs/stock-data-specification-v2-backlog.md"
+}
