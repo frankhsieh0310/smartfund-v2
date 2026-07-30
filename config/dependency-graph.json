@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "nodes": [
+    {"metric":"pe_ttm","dependencies":["close_price","diluted_eps_ttm"],"formula":"close_price / diluted_eps_ttm"},
+    {"metric":"pb","dependencies":["close_price","shareholders_equity","shares_outstanding"],"formula":"close_price / (shareholders_equity / shares_outstanding)"},
+    {"metric":"ps_ttm","dependencies":["close_price","shares_outstanding","revenue_ttm"],"formula":"(close_price * shares_outstanding) / revenue_ttm"},
+    {"metric":"market_cap","dependencies":["close_price","shares_outstanding"],"formula":"close_price * shares_outstanding"},
+    {"metric":"enterprise_value","dependencies":["market_cap","total_debt","preferred_shares_outstanding","minority_interest","cash_and_cash_equivalents","short_term_investments"],"formula":"market_cap + total_debt + preferred_equity + minority_interest - cash_and_short_term_investments"},
+    {"metric":"ev_ebitda","dependencies":["enterprise_value","ebitda_ttm"],"formula":"enterprise_value / ebitda_ttm"},
+    {"metric":"roe","dependencies":["net_income_ttm","shareholders_equity","prior_period_shareholders_equity"],"formula":"net_income_ttm / average_equity"},
+    {"metric":"roic","dependencies":["operating_income_ttm","income_tax_expense_ttm","earnings_before_tax_ttm","total_debt","shareholders_equity","cash_and_cash_equivalents"],"formula":"NOPAT / invested_capital"},
+    {"metric":"dividend_yield","dependencies":["cash_dividend_per_share_ttm","close_price"],"formula":"cash_dividend_per_share_ttm / close_price"},
+    {"metric":"free_cash_flow","dependencies":["operating_cash_flow","capital_expenditure"],"formula":"operating_cash_flow - capital_expenditure"}
+  ],
+  "graphPolicy":"Every dependency is point-in-time: a price uses its market date; a filing fact uses the most recently public filing available on that date."
+}
