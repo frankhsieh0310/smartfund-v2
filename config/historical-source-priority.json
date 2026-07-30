@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "project": "Historical Financial Source Discovery",
+  "rule": "Discovery precedes schema, API and ingestion. Candidate access never implies Production licence approval.",
+  "priority": [
+    { "tier": "P0", "markets": ["Taiwan", "US"], "sourceFamilies": ["official filings/open data", "issuer IR", "structured XBRL", "rebuildable price-plus-filing metrics"] },
+    { "tier": "P1", "markets": ["Japan", "Korea", "Hong Kong", "Canada", "Australia", "Europe", "India", "China", "Singapore"], "sourceFamilies": ["official disclosure repositories", "exchange archives", "XBRL archives"] },
+    { "tier": "P2", "markets": ["Global"], "sourceFamilies": ["commercial", "freemium", "community", "academic", "validation-only references"] }
+  ],
+  "approvalStates": ["DISCOVERED", "ACCESS_VERIFIED", "LICENSE_REVIEW_REQUIRED", "PRODUCTION_APPROVED", "VALIDATION_REFERENCE_ONLY", "REJECTED"],
+  "metricPriorities": ["statements", "per-share", "valuation history", "ratios", "dividends/corporate actions", "ownership history", "estimates/revisions", "returns/risk/factors"]
+}

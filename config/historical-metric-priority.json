@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "masterListStatus": "DISCOVERY_BASELINE",
+  "priorities": {
+    "P0": ["income_statement", "balance_sheet", "cash_flow", "shares_and_per_share", "revenue", "eps", "book_value", "dividends", "corporate_actions"],
+    "P1": ["historical_pe", "historical_pb", "historical_ps", "historical_ev", "historical_ev_ebitda", "historical_dividend_yield", "roe", "roa", "roic", "margins", "liquidity", "leverage", "interest_coverage"],
+    "P1_5": ["ownership_history", "ownership_change", "short_interest", "estimate_history", "estimate_revision", "event_calendar", "returns", "risk", "drawdown", "correlation", "factor_exposure", "peer_ranking"],
+    "P2": ["esg_history", "options_history", "transcripts", "alternative_data"]
+  },
+  "masterMetricGroups": {
+    "statements": ["revenue","cost_of_revenue","gross_profit","operating_income","ebit","ebitda","pretax_income","tax_expense","net_income","net_income_common","basic_eps","diluted_eps","shares_basic","shares_diluted","cash_and_equivalents","receivables","inventory","current_assets","total_assets","ppe","goodwill","current_liabilities","total_liabilities","short_debt","long_debt","total_debt","equity","operating_cash_flow","capex","free_cash_flow","depreciation","stock_based_compensation","dividends_paid"],
+    "valuation": ["market_cap","enterprise_value","pe_ttm","pe_forward","pb","ps_ttm","peg","ev_ebitda","ev_sales","ev_ebit","dividend_yield","earnings_yield","fcf_yield","historical_pe","historical_pb","historical_ps","historical_ev_ebitda","valuation_percentile","valuation_5y_average","valuation_10y_average"],
+    "quality_and_ratios": ["roe","roa","roic","gross_margin","operating_margin","ebitda_margin","net_margin","current_ratio","quick_ratio","cash_ratio","debt_equity","debt_assets","net_debt_ebitda","interest_coverage","asset_turnover","inventory_turnover","receivable_turnover","payout_ratio","retention_ratio","fcf_conversion"],
+    "growth": ["revenue_growth_qoq","revenue_growth_yoy","eps_growth_qoq","eps_growth_yoy","ebitda_growth","fcf_growth","book_value_growth","share_count_growth","dividend_growth","five_year_revenue_cagr","five_year_eps_cagr","ten_year_revenue_cagr","ten_year_eps_cagr"],
+    "dividend_and_actions": ["dividend_per_share","ex_dividend_date","payment_date","record_date","dividend_frequency","special_dividend","split_ratio","reverse_split_ratio","rights_issue","symbol_change","merger","spin_off","delisting","buyback","share_issuance"],
+    "ownership": ["institutional_ownership","institutional_holder_shares","institutional_holder_value","institutional_change_shares","institutional_change_percent","mutual_fund_ownership","etf_ownership","insider_ownership","insider_buy","insider_sell","major_holder_percent","short_interest","shares_short","short_ratio","days_to_cover","float_short_percent"],
+    "estimates": ["eps_estimate","revenue_estimate","ebitda_estimate","target_price_mean","target_price_high","target_price_low","recommendation_consensus","analyst_count","eps_revision_30d","eps_revision_90d","eps_revision_180d","revenue_revision_30d","target_price_revision","upgrade","downgrade","earnings_surprise"],
+    "returns_and_risk": ["price_return_1m","price_return_3m","price_return_6m","price_return_ytd","price_return_1y","price_return_3y","price_return_5y","price_return_10y","total_return_1y","total_return_3y","total_return_5y","dividend_return","volatility_30d","volatility_1y","beta","sharpe","sortino","tracking_error","information_ratio","max_drawdown","current_drawdown","recovery_days"],
+    "market_intelligence": ["correlation_sp500","correlation_nasdaq","correlation_0050","correlation_gold","correlation_btc","correlation_bond","growth_factor","value_factor","momentum_factor","quality_factor","size_factor","dividend_factor","low_volatility_factor","industry_rank","pe_rank","roe_rank","margin_rank","revenue_growth_rank","eps_growth_rank","market_cap_rank"]
+  }
+}
