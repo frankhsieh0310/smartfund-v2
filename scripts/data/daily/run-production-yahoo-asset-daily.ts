@@ -13,6 +13,7 @@ import {
   heartbeatLifecycleLock,
   loadLifecycleResumeCheckpoint,
   persistLifecycleCheckpoint,
+  recoverOrphanedLifecycleRun,
   releaseLifecycleLock,
 } from "../production/run-lifecycle.ts";
 
@@ -106,6 +107,7 @@ async function dueRetryItems(job: string, all: Item[]): Promise<Item[]> {
 
 async function run(kind: AssetKind): Promise<Record<string, unknown>> {
   const job = jobId(kind);
+  await recoverOrphanedLifecycleRun(prisma, job);
   if (await completedToday(job)) return { job, status: "SKIPPED_COMPLETED" };
   const owner = `asset-daily:${process.env.RAILWAY_DEPLOYMENT_ID ?? process.pid}:${kind}`;
   if (!await acquireLifecycleLock(prisma, job, owner)) return { job, status: "SKIPPED_LOCKED" };

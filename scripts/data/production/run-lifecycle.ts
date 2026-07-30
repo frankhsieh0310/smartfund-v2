@@ -44,24 +44,24 @@ export function addOutcome(summary: RunSummary, outcome: Partial<RunSummary>): v
   for (const key of Object.keys(summary) as Array<keyof RunSummary>) summary[key] += outcome[key] ?? 0;
 }
 
-const LOCK_STALE_AFTER_MINUTES = 20;
+const LOCK_STALE_AFTER_MINUTES = 10;
 
 /**
  * A Railway cron process can be killed after acquiring its lock but before its
- * first checkpoint.  Treat an untouched lock as stale after a bounded window;
+ * first checkpoint. Treat an untouched lock as stale after a bounded window;
  * this is intentionally much shorter than the previous eight-hour lease so a
  * subsequent cron can resume from the durable checkpoint.
  */
 export async function recoverOrphanedLifecycleRun(prisma: PrismaClient, jobId: string): Promise<number> {
   return prisma.$executeRawUnsafe(
-    "UPDATE production_scheduler_runs SET status = 'ABANDONED', completed_at = NOW(), exit_code = 1, error = COALESCE(error, 'ORPHANED_LOCK_RECOVERY') WHERE job_id = $1 AND status = 'IN_PROGRESS' AND started_at < NOW() - INTERVAL '20 minutes'",
+    "UPDATE production_scheduler_runs SET status = 'ABANDONED', completed_at = NOW(), exit_code = 1, error = COALESCE(error, 'ORPHANED_LOCK_RECOVERY') WHERE job_id = $1 AND status = 'IN_PROGRESS' AND started_at < NOW() - INTERVAL '10 minutes'",
     jobId,
   );
 }
 
 export async function acquireLifecycleLock(prisma: PrismaClient, jobId: string, owner: string): Promise<boolean> {
   const rows = await prisma.$queryRawUnsafe<{ job_id: string }[]>(
-    "INSERT INTO production_scheduler_locks (job_id, owner, expires_at, updated_at) VALUES ($1, $2, NOW() + INTERVAL '20 minutes', NOW()) ON CONFLICT (job_id) DO UPDATE SET owner = EXCLUDED.owner, expires_at = EXCLUDED.expires_at, updated_at = NOW() WHERE production_scheduler_locks.expires_at < NOW() OR production_scheduler_locks.updated_at < NOW() - INTERVAL '20 minutes' RETURNING job_id",
+    "INSERT INTO production_scheduler_locks (job_id, owner, expires_at, updated_at) VALUES ($1, $2, NOW() + INTERVAL '10 minutes', NOW()) ON CONFLICT (job_id) DO UPDATE SET owner = EXCLUDED.owner, expires_at = EXCLUDED.expires_at, updated_at = NOW() WHERE production_scheduler_locks.expires_at < NOW() OR production_scheduler_locks.updated_at < NOW() - INTERVAL '10 minutes' RETURNING job_id",
     jobId,
     owner,
   );
@@ -74,7 +74,7 @@ export async function releaseLifecycleLock(prisma: PrismaClient, jobId: string, 
 
 export async function heartbeatLifecycleLock(prisma: PrismaClient, jobId: string, owner: string): Promise<void> {
   await prisma.$executeRawUnsafe(
-    "UPDATE production_scheduler_locks SET expires_at = NOW() + INTERVAL '20 minutes', updated_at = NOW() WHERE job_id = $1 AND owner = $2",
+    "UPDATE production_scheduler_locks SET expires_at = NOW() + INTERVAL '10 minutes', updated_at = NOW() WHERE job_id = $1 AND owner = $2",
     jobId,
     owner,
   );
