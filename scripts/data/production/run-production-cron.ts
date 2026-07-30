@@ -9,12 +9,17 @@ function run(script: string, args: string[]): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  // Daily production work is independent of Historical progress.  Preserve the
-  // global priority order: stock daily, non-stock asset daily, then background
-  // historical slices.
-  await run("scripts/data/daily/run-production-yahoo-daily.ts", ["--all-due"]);
-  await run("scripts/data/daily/run-production-yahoo-asset-daily.ts", []);
-  await run("scripts/data/daily/run-production-macro-daily.ts", []);
+  // Daily jobs are independent lifecycle units. A slow stock-market Daily run
+  // must never starve ETF, Macro, Bond, Index, or Volatility Daily work.
+  // Each runner retains its own distributed lock and controlled provider
+  // concurrency; Historical remains strictly after the Daily dispatches.
+  const daily = await Promise.allSettled([
+    run("scripts/data/daily/run-production-yahoo-daily.ts", ["--all-due"]),
+    run("scripts/data/daily/run-production-yahoo-asset-daily.ts", []),
+    run("scripts/data/daily/run-production-macro-daily.ts", []),
+  ]);
+  const rejected = daily.find((result): result is PromiseRejectedResult => result.status === "rejected");
+  if (rejected) throw rejected.reason;
   // The production runner retains its durable checkpoint between Cron invocations.
   // A larger bounded slice reaches the Historical Ready gate promptly without
   // introducing a second worker or bypassing the lifecycle lock.
