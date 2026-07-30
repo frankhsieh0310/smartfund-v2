@@ -1,108 +1,110 @@
-# SmartFund Stock Data Specification
+# SmartFund Stock Data Specification v1.0
 
-> **Permanent minimum scope:** Yahoo Finance stock quote surfaces are the
-> minimum SmartFund stock-data scope. The machine-readable authority is
-> [`config/stock-data-specification.json`](../config/stock-data-specification.json).
-> This is a specification only: it creates no downloader, API, schema, worker
-> or scheduler.
+> **Final specification.** This document and
+> [`config/stock-data-specification.json`](../config/stock-data-specification.json)
+> are the stable contract for SmartFund stock data. Database, crawlers,
+> Provider Adapters, APIs and frontend views must conform to it. This version
+> creates **no** database change, API, worker or frontend feature.
 
-## Permanent exclusion
+## Permanent product rule
 
-News, articles, commentary, video, live streams and social/community content
-are permanently excluded. SmartFund must not fetch, cache, quote, republish,
-analyse or expose them. No sentiment may be derived from excluded content.
+Yahoo Finance stock quote surfaces are SmartFund's minimum stock-data scope for
+Yahoo-listed equities (for example `2330.TW`, `AAPL`, `MSFT`, `NVDA`).
+SmartFund can add deterministic data products, but cannot claim a Yahoo field
+as complete until its canonical storage, provenance, lifecycle validation and
+production API exist.
 
-## Evidence used
+### Permanent exclusion
 
-Yahoo’s current help pages describe quote-page research surfaces including
-Profile, Financials, Holders, Options, Sustainability and Historical Data.
-Yahoo’s historical-data documentation confirms price, dividend and split data
-for eligible quotes. The repository evidence used for current status is the
-Prisma `Stock`, `StockHistory` and `StockTechnical` models, the Yahoo Chart
-adapter, the technical-indicator script, and the three existing stock APIs.
-Yahoo UI availability is conditional by security, market and licensing tier;
-the specification never treats an unavailable Yahoo field as a fabricated
-value.
+**News, articles, commentary, video, live streams, forum, community, comments,
+chat and every social-content derivative are excluded forever.** SmartFund must
+not fetch, archive, quote, republish, analyse, score or expose them.
 
-## Coverage inventory
+## Stable data-domain design
 
-| Area | Yahoo availability | Current SmartFund status | Historical | Daily | API | Provider / cadence | Priority |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| OHLC, adjusted close, volume, intraday and historical price | Yes | Partial | `stock_history` supports OHLCV/provenance | Partial by onboarded market | Partial | `YAHOO_CHART`; provider latest available | P0 |
-| Average volume, turnover, VWAP, market cap, EV, 52-week metrics, bid/ask | Conditional | Partial / not built | No point-in-time statistics history | Not built | Not built | Yahoo quote summary; derived VWAP/turnover where defined | P1 |
-| Yahoo chart + SmartFund extended technicals | Yes / derived | Partial | Existing: SMA, EMA, MACD, KD, RSI, ATR, Bollinger | Not built as Production lifecycle | Not built | Deterministic calculation from Yahoo OHLCV | P1 |
-| Profile, executives, share structure | Conditional | Partial | Not built | Not built | Partial | Yahoo quote summary; change-only refresh | P1 |
-| Income statement, balance sheet, cash flow, annual/quarterly/TTM | Conditional | Not built | Not built | Filing/release cadence | Not built | Yahoo quote summary; official fallback only by decision | P1 |
-| Ratios and valuation | Conditional / derived | Not built | Not built | Quote + filing cadence | Not built | Yahoo quote summary + transparent calculation | P1 |
-| Dividends and corporate actions | Partial | Partial adjusted-price effect only | No structured event history | Not built | Not built | Yahoo events; official provider needed for complete non-split actions | P1 |
-| Ownership, insiders and short interest | Conditional | Not built | Not built | Report cadence | Not built | Yahoo holders/statistics | P2 |
-| ESG / sustainability | Conditional/licensed | Not built | Not built | Provider cadence | Not built | Yahoo sustainability only after licence review | P2 |
-| Analyst targets, estimates and revisions | Conditional/licensed | Not built | Not built | Provider cadence | Not built | Yahoo analysis only after licence review | P2 |
-| Options | Conditional | Not built | Not built | Quote cadence | Not built | Yahoo options only after licence review | P3 |
-| SmartFund proprietary scores | Not Yahoo | Not built | Not built | Not built | Not built | Versioned SmartFund scoring with input provenance | P2 |
+Future schema work must use these canonical, versioned domains rather than add
+one-off columns for every metric:
 
-## Exact field scope
+`market_bar`, `quote_snapshot`, `issuer_profile`, `financial_statement`,
+`financial_metric`, `corporate_event`, `calendar_event`, `ownership_snapshot`,
+`ownership_change`, `analyst_estimate`, `analyst_revision`, `derived_metric`,
+`performance_return`, `drawdown_metric`, `correlation_metric`,
+`factor_exposure`, `peer_ranking`, `rule_insight`.
 
-The JSON specification lists every field within these groups, with the same
-answer for Yahoo availability, current build state, historical lifecycle,
-daily lifecycle, API, provider, update cadence and other-provider requirement.
+Every record requires instrument identity, provider, source symbol, provider
+method, as-of date, effective date where applicable, imported/updated time,
+period type and a calculation version for derived data. This keeps the schema
+stable for at least the next three years while permitting new metrics.
 
-- **Price:** Open, High, Low, Close, Adjusted Close, Volume, Average Volume,
-  Turnover, VWAP, Market Cap, 52 Week High/Low, intraday, historical daily,
-  weekly and monthly prices.
-- **Technical:** SMA, EMA, MACD, RSI, KD, ATR, ADX, CCI, Williams %R, ROC,
-  Momentum, OBV, VWAP, Bollinger Bands, Beta, historical volatility, distance
-  to MA, Trend Score, support, resistance, breakout, gap and trend direction.
-- **Profile:** company name, ticker, exchange, country, currency, sector,
-  industry, GICS, description, website, employees, IPO date, CEO, executives,
-  market cap, enterprise value, shares outstanding, float and fiscal year end.
-- **Financials:** income statement, balance sheet, cash flow, annual,
-  quarterly, TTM, revenue, profits, EPS, cash flow, capex, FCF, assets,
-  liabilities, equity, cash and debt.
-- **Ratios:** PE, Forward PE, PEG, PB, PS, dividend yield, ROE, ROA, ROIC,
-  gross/operating/net margin, debt/equity, current/quick ratio, revenue/EPS
-  growth, FCF, EV/EBITDA, EV/Sales and payout ratio.
-- **Events:** dividend history, ex-date, payment date, split/reverse split,
-  rights issue, symbol change, merger, spin-off and delisting.
-- **Ownership:** major, institutional, mutual fund and ETF holders; insider
-  holdings/transactions; short interest, shares short, short ratio and holder
-  percentages.
-- **Other Yahoo surfaces:** ESG/sustainability, analyst targets/consensus,
-  earnings estimates/revisions/history/surprise, and options chains.
-- **SmartFund-only:** AI, quality, growth, value, momentum, risk, composite
-  and SmartMatch scores.
+## Source and freshness policy
 
-## Provider and implementation rules
+| Domain | Provider | Adapter state | Refresh / freshness rule |
+| --- | --- | --- | --- |
+| Market prices | Yahoo | `YAHOO_CHART` registered | `period=max` for first Historical; then incremental to **Provider Latest Available** |
+| Quote/profile/statistics/financials/holders | Yahoo | `YAHOO_QUOTE_SUMMARY` required | Change detection or provider publication cadence |
+| Dividends/corporate actions/events | Yahoo minimum | `YAHOO_CORPORATE_ACTIONS` required | Announcement, effective-date and revision checks |
+| Technicals, returns, risk, factors, rankings, scores, insights | SmartFund | deterministic calculation adapter required | Recalculate after validated inputs change |
+| ESG/analyst/options | Yahoo only if permitted | licence review required | Provider Latest Available; no use before legal/provider approval |
 
-1. `YAHOO_CHART` remains the sole market-price provider: historical uses
-   `period=max`; Daily is incremental and validates **Provider Latest
-   Available**, not today’s calendar date.
-2. Quote/profile/financial/holder data requires a registered
-   `YAHOO_QUOTE_SUMMARY` adapter before implementation. Corporate actions,
-   sustainability, analysis and options each require their named adapter and a
-   legal availability review.
-3. SmartFund technicals are deterministic, versioned calculations from
-   canonical Yahoo OHLCV. They do not create a duplicate price downloader.
-4. Financial, ownership, ESG, analyst and event fields refresh on provider
-   publication cadence; they are not falsely forced into a market-day schedule.
-5. If Yahoo does not structurally or legally provide a required corporate
-   action or licensed field, an official/approved provider must be committed
-   before ingestion—never guessed or scraped around restrictions.
+“Latest” always means the provider's latest valid available observation—not the
+calendar date. Financial, ownership, ESG, analyst and event data follow release
+or report cadence, not a fabricated daily update.
 
-## Product priority
+## v1.0 coverage matrix
 
-1. **P0:** price/history provenance and Production Daily for every stock
-   market.
-2. **P1:** quote statistics, full technical lifecycle, profile/share
-   structure, statements, ratios, dividends and corporate actions.
-3. **P2:** holders/short interest, ESG and analyst data after licence review,
-   then SmartFund proprietary scores.
-4. **P3:** options.
-5. **Excluded:** all editorial, media and social/community content.
+Each row defines Database, Provider, API, Frontend, Priority, Status, Required
+or Optional, expected refresh and freshness policy for **every field named in
+the Field scope column**. The JSON file is the exact machine-readable field
+inventory.
+
+| Data domain / field scope | Yahoo availability | Database | Provider | API / Frontend | Priority | Required | Status | Expected refresh / freshness |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| **Price:** Open, High, Low, Close, Adjusted Close, Volume, intraday, historical daily/weekly/monthly | Yes | `Stock` / `StockHistory` partial | Yahoo Chart | Existing partial APIs | P0 | Yes | Partial | Intraday when published; daily to Provider Latest Available |
+| **Quote statistics:** average volume, turnover, VWAP, market cap, EV, 52W high/low, range, bid/ask, shares, float | Conditional | `quote_snapshot` required | Yahoo quote summary; deterministic VWAP/turnover | Not built | P1 | Yes | Not built | Quote/EOD snapshot; Provider Latest Available |
+| **Technical:** SMA, EMA, MACD, RSI, KD, ATR, ADX, CCI, Williams %R, ROC, Momentum, OBV, VWAP, Bollinger, Beta, historical volatility, MA distance, trend/support/resistance/breakout/gap | Yes / derived | `StockTechnical` partial; `derived_metric` required | SmartFund from Yahoo OHLCV | Not built | P1 | Yes | Partial | Recalculate after accepted bar |
+| **Profile:** identity, sector/industry/GICS, description, site, employees, IPO, CEO/executives, fiscal year | Conditional | `Stock` partial; `issuer_profile` required | Yahoo quote summary | Existing partial API | P1 | Yes | Partial | Change detection / filing-event refresh |
+| **Statements:** Income Statement, Balance Sheet, Cash Flow; annual, quarterly, TTM and named lines | Conditional | `financial_statement` required | Yahoo quote summary | Not built | P1 | Yes | Not built | Filing/publication cadence |
+| **Ratios:** PE, Forward PE, PEG, PB, PS, yield, ROE/ROA/ROIC, margins, leverage/liquidity, growth, FCF, EV multiples, payout | Conditional / derived | `financial_metric` required | Yahoo quote summary + deterministic calculation | Not built | P1 | Yes | Not built | Quote and statement cadence |
+| **Dividends / actions:** history, ex-date, payment, split/reverse split, rights, symbol change, merger, spin-off, delisting | Partial / conditional | `corporate_event` required | Yahoo corporate actions; official supplement where Yahoo is incomplete | Not built | P1 | Yes | Not built | Event publication/effective-date checks |
+| **Event Calendar:** dividends, ex-div, splits, rights, earnings, calls, shareholder meetings, ETF rebalance, MSCI/FTSE/S&P changes, timeline | Partial / conditional | `calendar_event` required | Yahoo + approved issuer/exchange/index calendars | Not built | **P1.5** | Yes | Not built | Daily due-event/revision check |
+| **Ownership Change:** holders, institutions, funds/ETFs, insiders, short interest plus previous %, current %, change %, quarter | Conditional | `ownership_snapshot`, `ownership_change` required | Yahoo holders; official filing fallback for full coverage | Not built | **P1.5** | Yes | Not built | Report/publication cadence |
+| **Estimate Revision:** targets, consensus, EPS/revenue estimates and revisions, upgrades/downgrades, 30/90/180-day windows, earnings/surprise | Conditional / licensed | `analyst_estimate`, `analyst_revision` required | Yahoo analysis only after licence review | Not built | **P1.5** | Yes | Not built | Provider revision cadence |
+| **Valuation History:** PE/PB/PS/EV-EBITDA history, percentile, 5Y/10Y averages | Derived from Yahoo inputs | `financial_metric` snapshots required | SmartFund calculation | Not built | **P1.5** | Yes | Not built | After validated quote/statement change |
+| **Risk / Total Return / Drawdown:** volatility, Sharpe, Sortino, beta, tracking error, information ratio, price/dividend/total return windows, drawdowns, recovery days | Derived from Yahoo inputs | return/drawdown/derived domains required | SmartFund calculation | Not built | **P1.5** | Yes | Not built | After validated daily bar/event |
+| **Correlation / Factor / Peer:** correlations to S&P 500, NASDAQ, 0050, gold, BTC, bonds; factor exposures; industry and metric rankings | Derived from declared inputs | correlation/factor/ranking domains required | SmartFund calculation | Not built | **P1.5** | Yes | Not built | After bar, fundamental or peer-universe change |
+| **ESG:** ESG/E/S/G, controversy, percentile, Yahoo sustainability fields | Conditional / licensed | Required | Yahoo only after licence review | Not built | P2 | Optional | Not built | Provider release cadence |
+| **Options:** expiry, calls/puts, strike, prices, volume, OI, IV, ITM, contract | Conditional / licensed | Required | Yahoo only after licence review | Not built | P3 | Optional | Not built | Provider quote cadence |
+| **SmartFund scores & rule insights:** AI/quality/growth/value/momentum/risk/composite/SmartMatch; explainable valuation, peer, dividend, growth, revision and drawdown insights | SmartFund only | derived/insight domains required | Deterministic rules/calculations | Not built | P2 | Optional | Not built | After valid dependent input changes |
+
+## P1.5 definition
+
+P1.5 is not a cosmetic enhancement. It creates the time-aware layer needed for
+serious research and SmartMatch: timelines, ownership changes, forecast
+vintages, valuation percentiles, risk/return histories, benchmark correlations,
+factor exposures and peer-relative rankings. All P1.5 data must retain its
+source/as-of date and calculation or peer-universe version.
+
+## Priority and implementation phases
+
+1. **P0 — Foundation:** price, Historical provenance and Production Daily.
+2. **P1 — Issuer Core:** fundamentals, statements, ratios, actions and complete
+   deterministic technical lifecycle.
+3. **P1.5 — Market Intelligence:** event timeline, ownership change, revisions,
+   valuation history, risk/return/drawdown, correlation/factors/peers.
+4. **P2 — Enrichment:** holders, ESG and analyst data after licence review,
+   then SmartFund scores and rule insights.
+5. **P3 — Derivative Extension:** options.
+6. **Excluded:** all editorial, media and social/community content.
 
 ## Acceptance rule
 
-SmartFund may claim a Yahoo field only after canonical storage, provenance,
-historical policy where applicable, update cadence, validation, lifecycle
-summary and a production API are all present. Until then the field remains
-explicitly `PARTIAL` or `NOT_BUILT` in the specification.
+A field is complete only when its required domain, Provider Adapter, provenance,
+historical policy, refresh policy, validation, Production lifecycle, API and
+frontend contract are present. Until then it remains `PARTIAL` or `NOT_BUILT`.
+No implementation may bypass the provider/licence policy or invent missing data.
+
+## Sources
+
+- [Yahoo Finance quote-page research surfaces](https://help.yahoo.com/kb/SLN28277.html)
+- [Yahoo Finance investment research overview](https://help.yahoo.com/kb/SLN28276.html)
+- [Yahoo Finance historical prices, dividends and splits](https://in.help.yahoo.com/kb/finance/download-historical-data-yahoo-finance-sln2311.html)

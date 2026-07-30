@@ -1,239 +1,151 @@
 {
-  "version": 1,
-  "authority": "Yahoo Finance stock quote surfaces define SmartFund's minimum stock-data scope. This specification is the implementation authority; no stock field may be marked complete without its declared source, provenance, lifecycle and API evidence.",
-  "scope": ["Yahoo-listed equities including 2330.TW, AAPL, MSFT and NVDA"],
+  "version": "1.0",
+  "status": "FINAL_SPECIFICATION",
+  "authority": "This is the stable SmartFund stock-data contract. Database, provider adapters, workers, APIs and frontend views must implement this contract; additions require a versioned specification change.",
+  "scope": "Yahoo-listed equities, including 2330.TW, AAPL, MSFT and NVDA. Yahoo stock-quote data is the minimum product scope.",
   "permanentExclusions": {
-    "categories": ["news", "articles", "commentary", "video", "live streams", "social/community/conversations"],
-    "policy": "Never fetch, cache, quote, republish, analyse or expose these content types. They are excluded for copyright, licensing and compliance reasons."
+    "fields": ["news", "articles", "commentary", "video", "live streams", "forum", "community", "chat", "social posts", "sentiment derived from excluded content"],
+    "rule": "Never fetch, archive, quote, republish, analyse, score or expose excluded content."
   },
-  "statusLegend": {
-    "PARTIAL": "Schema, script or API exists, but coverage or Production lifecycle is not proven for every stock.",
-    "NOT_BUILT": "No canonical Production schema, worker and API contract exist.",
-    "DERIVED_NOT_BUILT": "May be calculated solely from canonical data but has not been implemented.",
-    "CONDITIONAL": "Yahoo exposes the field only for eligible securities or regions.",
-    "EXCLUDED": "Deliberately forbidden by the permanent exclusion policy."
+  "freshnessPolicy": {
+    "marketData": "Database latest accepted observation must equal Provider Latest Available; calendar date is never the freshness target.",
+    "filingAndEventData": "Refresh on provider publication, filing, report date, effective date or change detection; do not fabricate daily updates.",
+    "derivedData": "Recalculate only after validated dependent data changes; store calculation version, as-of date and input provenance.",
+    "unavailable": "Provider-lagged, unsupported or permanently unavailable fields are classified and retained as explicit exceptions, never filled with guesses."
+  },
+  "schemaStability": {
+    "canonicalDomains": ["market_bar", "quote_snapshot", "issuer_profile", "financial_statement", "financial_metric", "corporate_event", "calendar_event", "ownership_snapshot", "ownership_change", "analyst_estimate", "analyst_revision", "derived_metric", "performance_return", "drawdown_metric", "correlation_metric", "factor_exposure", "peer_ranking", "rule_insight"],
+    "requiredDimensions": ["instrument_id", "as_of_date", "effective_date when applicable", "period_type", "provider", "source_symbol", "provider_method", "imported_at", "updated_at", "calculation_version when derived"],
+    "rule": "Use canonical time-series/snapshot domains with metric identifiers and versions. Do not add one-off columns for every future ratio or score."
   },
   "providerPolicy": {
-    "marketPrice": { "provider": "YAHOO", "adapter": "YAHOO_CHART", "method": "YAHOO_CHART_API", "historical": "period=max", "daily": "incremental to Provider Latest Available" },
-    "quoteFundamentals": { "provider": "YAHOO", "adapter": "YAHOO_QUOTE_SUMMARY (REQUIRED)", "method": "Yahoo quote-page data modules", "note": "No registered Production adapter currently exists." },
-    "corporateActions": { "provider": "YAHOO", "adapter": "YAHOO_CORPORATE_ACTIONS (REQUIRED)", "method": "Yahoo history events plus verified official-event fallback policy", "note": "Rights, symbol changes, mergers, spin-offs and delistings are not uniformly structured by Yahoo." },
-    "technical": { "provider": "SMARTFUND", "adapter": "CALCULATED_FROM_YAHOO_OHLCV", "method": "Versioned deterministic calculations", "note": "No second price provider is required." }
+    "marketPrice": { "provider": "YAHOO", "adapter": "YAHOO_CHART", "availability": "REGISTERED", "historical": "period=max", "daily": "incremental to Provider Latest Available" },
+    "quoteData": { "provider": "YAHOO", "adapter": "YAHOO_QUOTE_SUMMARY", "availability": "REQUIRED_NOT_REGISTERED", "note": "Profile, statistics, financials, holders and selected analyst fields." },
+    "corporateEvents": { "provider": "YAHOO", "adapter": "YAHOO_CORPORATE_ACTIONS", "availability": "REQUIRED_NOT_REGISTERED", "note": "Yahoo events minimum; official provider decision is required where Yahoo has incomplete structured coverage." },
+    "technicalAndIntelligence": { "provider": "SMARTFUND", "adapter": "CALCULATED_FROM_CANONICAL_DATA", "availability": "REQUIRED_NOT_REGISTERED", "note": "Deterministic, versioned calculations; no duplicate price downloader." },
+    "restrictedYahooSurfaces": { "provider": "YAHOO", "adapter": "LICENCE_REVIEW_REQUIRED", "availability": "NOT_IMPLEMENTABLE_UNTIL_REVIEW", "note": "ESG, analyst/research and options data may be market-, subscription- or licence-dependent." }
   },
-  "sections": [
+  "domains": [
     {
-      "id": "price-and-history",
-      "priority": "P0",
-      "yahooSurface": ["Summary", "Chart", "Historical Data", "Statistics"],
-      "fields": ["Open", "High", "Low", "Close", "Adjusted Close", "Volume", "Intraday price", "Historical daily price", "Historical weekly/monthly price"],
-      "yahooAvailability": "YES",
-      "current": "PARTIAL",
-      "historical": "PARTIAL: stock_history stores OHLC, adjustedClose, volume, source, sourceSymbol and providerMethod; global coverage is tracked separately.",
-      "daily": "PARTIAL: Yahoo incremental Production lifecycle exists only for markets already onboarded.",
-      "api": "PARTIAL: /api/stocks/[symbol] and /api/stocks/[symbol]/history expose the stored fields.",
-      "provider": "YAHOO_CHART",
-      "frequency": "Intraday while Yahoo publishes; daily bars validated against Provider Latest Available.",
-      "otherProviderRequired": "NO",
-      "implementationPriority": "P0"
+      "id": "price_history_daily",
+      "priority": "P0", "implementationPhase": "Foundation", "status": "PARTIAL",
+      "fields": ["Open", "High", "Low", "Close", "Adjusted Close", "Volume", "Intraday price", "Historical daily/weekly/monthly price"],
+      "yahooAvailability": "YES", "database": "PARTIAL: Stock and StockHistory exist with OHLCV, source and source_symbol.", "historical": "PARTIAL: coverage depends on market lifecycle.", "daily": "PARTIAL: Production Daily exists only for onboarded markets.", "api": "PARTIAL: /api/stocks, /api/stocks/[symbol], /api/stocks/[symbol]/history.", "frontend": "PARTIAL", "provider": "YAHOO_CHART", "required": true, "optional": false,
+      "expectedRefreshFrequency": "Intraday while provider publishes; validated Daily after market close.", "dataFreshnessPolicy": "Provider Latest Available", "otherProviderRequired": "NO"
     },
     {
-      "id": "price-statistics",
-      "priority": "P1",
-      "yahooSurface": ["Summary", "Statistics"],
-      "fields": ["Average Volume (3 month/10 day)", "Turnover", "VWAP", "Market Cap", "Enterprise Value", "52 Week High", "52 Week Low", "Day Range", "Previous Close", "Bid", "Ask", "Average Daily Volume"],
-      "yahooAvailability": "CONDITIONAL: Yahoo displays most quote statistics for eligible securities; turnover and VWAP are not universal standalone Yahoo quote fields.",
-      "current": "PARTIAL: Stock stores latestClose/latestDate only; no canonical quote-statistics snapshot exists.",
-      "historical": "NOT_BUILT for point-in-time quote-statistics history; 52-week and VWAP may be calculated from OHLCV.",
-      "daily": "NOT_BUILT",
-      "api": "PARTIAL: latest close only; no quote-statistics contract.",
-      "provider": "YAHOO_QUOTE_SUMMARY (REQUIRED); SMARTFUND derivation for turnover/VWAP where definable",
-      "frequency": "Provider quote refresh / end-of-day snapshot; derived values follow each completed bar.",
-      "otherProviderRequired": "NO for Yahoo-exposed values; definition required for turnover.",
-      "implementationPriority": "P1"
+      "id": "quote_statistics",
+      "priority": "P1", "implementationPhase": "Issuer Core", "status": "NOT_BUILT",
+      "fields": ["Average Volume (10-day/3-month)", "Turnover", "VWAP", "Market Cap", "Enterprise Value", "52 Week High", "52 Week Low", "Day Range", "Previous Close", "Bid", "Ask", "Shares Outstanding", "Float"],
+      "yahooAvailability": "CONDITIONAL: most quote statistics are shown for eligible securities; turnover/VWAP are not universal standalone Yahoo fields.", "database": "NOT_BUILT: quote_snapshot domain required.", "historical": "NOT_BUILT: point-in-time snapshots required.", "daily": "NOT_BUILT", "api": "NOT_BUILT", "frontend": "NOT_BUILT", "provider": "YAHOO_QUOTE_SUMMARY plus deterministic turnover/VWAP", "required": true, "optional": false,
+      "expectedRefreshFrequency": "Quote refresh and end-of-day snapshot.", "dataFreshnessPolicy": "Provider Latest Available", "otherProviderRequired": "NO"
     },
     {
-      "id": "technical-analysis",
-      "priority": "P1",
-      "yahooSurface": ["Chart indicators and comparisons"],
-      "fields": ["Yahoo chart ranges, intervals, comparisons and displayed indicators", "SMA", "EMA", "MACD", "RSI", "KD", "ATR", "ADX", "CCI", "Williams %R", "ROC", "Momentum", "OBV", "VWAP", "Bollinger Bands", "Beta", "Historical Volatility", "Distance to MA", "Trend Score", "Support", "Resistance", "Breakout", "Gap", "Trend Direction"],
-      "yahooAvailability": "YES for interactive charting/indicator surface; field availability and parameter choices vary by Yahoo UI and security.",
-      "current": "PARTIAL: stock_technical schema/calculator cover SMA(5/20/60/120/240), EMA(12/26), MACD, KD, RSI14, ATR14 and Bollinger Bands; no Production API or lifecycle evidence.",
-      "historical": "PARTIAL for listed implemented indicators; NOT_BUILT for ADX, CCI, Williams %R, ROC, Momentum, OBV, VWAP, Beta, volatility, distance, scores, support/resistance, breakout, gap and trend direction.",
-      "daily": "NOT_BUILT as a Production technical recalculation lifecycle.",
-      "api": "NOT_BUILT",
-      "provider": "SMARTFUND CALCULATED_FROM_YAHOO_OHLCV",
-      "frequency": "Recalculate after each accepted Yahoo daily bar; intraday technicals require a separately approved intraday lifecycle.",
-      "otherProviderRequired": "NO",
-      "implementationPriority": "P1"
+      "id": "technical_analysis",
+      "priority": "P1", "implementationPhase": "Issuer Core", "status": "PARTIAL",
+      "fields": ["Yahoo chart ranges/intervals/comparisons", "SMA", "EMA", "MACD", "RSI", "KD", "ATR", "ADX", "CCI", "Williams %R", "ROC", "Momentum", "OBV", "VWAP", "Bollinger Bands", "Beta", "Historical Volatility", "Distance to MA", "Trend Score", "Support", "Resistance", "Breakout", "Gap", "Trend Direction"],
+      "yahooAvailability": "YES for Yahoo chart surface; displayed indicator parameters vary by security and UI.", "database": "PARTIAL: StockTechnical covers SMA, EMA, MACD, KD, RSI, ATR and Bollinger only.", "historical": "PARTIAL for existing indicators; remaining fields NOT_BUILT.", "daily": "NOT_BUILT as Production recalculation lifecycle.", "api": "NOT_BUILT", "frontend": "NOT_BUILT", "provider": "SMARTFUND CALCULATED_FROM_YAHOO_OHLCV", "required": true, "optional": false,
+      "expectedRefreshFrequency": "After each validated daily bar; intraday only after an approved intraday lifecycle.", "dataFreshnessPolicy": "Derived from latest validated canonical bar", "otherProviderRequired": "NO"
     },
     {
-      "id": "company-profile-and-share-structure",
-      "priority": "P1",
-      "yahooSurface": ["Profile", "Statistics", "Summary"],
-      "fields": ["Company Name", "Ticker", "Exchange", "Country", "Currency", "Sector", "Industry", "GICS classification", "Company Description", "Website", "Employees", "IPO Date", "CEO", "Key Executives", "Market Cap", "Enterprise Value", "Shares Outstanding", "Float", "Fiscal Year End"],
-      "yahooAvailability": "CONDITIONAL: Profile and statistics are normally available for covered operating companies; GICS, IPO date, float and executives vary by market/security.",
-      "current": "PARTIAL: Stock stores ticker, Yahoo symbol, exchange, country, currency, company name, sector and industry only.",
-      "historical": "NOT_BUILT for profile/share-structure effective-dated history.",
-      "daily": "NOT_BUILT; profile data needs event-driven/periodic refresh rather than market-day-only refresh.",
-      "api": "PARTIAL: /api/stocks and /api/stocks/[symbol] expose a subset.",
-      "provider": "YAHOO_QUOTE_SUMMARY (REQUIRED)",
-      "frequency": "Profile/share structure: daily freshness check with change-only write; fiscal metadata: periodic/filing-event refresh.",
-      "otherProviderRequired": "NO for Yahoo minimum; official exchange/filing source is required only if Yahoo omits a mandatory field.",
-      "implementationPriority": "P1"
+      "id": "company_profile",
+      "priority": "P1", "implementationPhase": "Issuer Core", "status": "PARTIAL",
+      "fields": ["Company Name", "Ticker", "Exchange", "Country", "Currency", "Sector", "Industry", "GICS", "Company Description", "Website", "Employees", "IPO Date", "CEO", "Key Executives", "Fiscal Year End"],
+      "yahooAvailability": "CONDITIONAL by issuer and market.", "database": "PARTIAL: Stock holds identity, exchange, country, currency, sector and industry only.", "historical": "NOT_BUILT: effective-dated profile history required.", "daily": "NOT_BUILT: use change detection, not forced market-day refresh.", "api": "PARTIAL", "frontend": "PARTIAL", "provider": "YAHOO_QUOTE_SUMMARY", "required": true, "optional": false,
+      "expectedRefreshFrequency": "Daily change check; filing/event refresh for executives and fiscal metadata.", "dataFreshnessPolicy": "Provider Latest Available", "otherProviderRequired": "Official exchange/filing fallback only when Yahoo lacks a required field"
     },
     {
-      "id": "financial-statements",
-      "priority": "P1",
-      "yahooSurface": ["Financials"],
-      "fields": ["Income Statement", "Balance Sheet", "Cash Flow", "Annual statements", "Quarterly statements", "TTM values", "Revenue", "Cost of Revenue", "Gross Profit", "Operating Income", "Net Income", "EPS", "Cash From Operations", "Capital Expenditure", "Free Cash Flow", "Total Assets", "Total Liabilities", "Equity", "Cash", "Debt"],
-      "yahooAvailability": "CONDITIONAL: Yahoo Financials provides annual/quarterly statements for covered issuers; TTM presentation and line coverage vary by issuer/market.",
-      "current": "NOT_BUILT",
-      "historical": "NOT_BUILT",
-      "daily": "NOT_BUILT; financial data should update on provider filing/statement refresh, not every trading day.",
-      "api": "NOT_BUILT",
-      "provider": "YAHOO_QUOTE_SUMMARY (REQUIRED)",
-      "frequency": "Provider Latest Available after earnings/filing refresh; annual, quarterly and TTM versions retained separately.",
-      "otherProviderRequired": "NO for Yahoo minimum; official filing adapter may be needed where Yahoo has no statement coverage.",
-      "implementationPriority": "P1"
+      "id": "financial_statements",
+      "priority": "P1", "implementationPhase": "Issuer Core", "status": "NOT_BUILT",
+      "fields": ["Income Statement", "Balance Sheet", "Cash Flow", "Annual", "Quarterly", "TTM", "Revenue", "Cost of Revenue", "Gross Profit", "Operating Income", "Net Income", "EPS", "Operating Cash Flow", "Capital Expenditure", "Free Cash Flow", "Assets", "Liabilities", "Equity", "Cash", "Debt"],
+      "yahooAvailability": "CONDITIONAL by issuer and market.", "database": "NOT_BUILT: financial_statement domain required.", "historical": "NOT_BUILT: retain statement period, filing/publication date and restatement version.", "daily": "NOT_BUILT: release/filing cadence only.", "api": "NOT_BUILT", "frontend": "NOT_BUILT", "provider": "YAHOO_QUOTE_SUMMARY", "required": true, "optional": false,
+      "expectedRefreshFrequency": "Provider publication / filing cadence.", "dataFreshnessPolicy": "Provider Latest Available with statement restatement version", "otherProviderRequired": "Official filing adapter when Yahoo coverage is absent"
     },
     {
-      "id": "financial-ratios-and-valuation",
-      "priority": "P1",
-      "yahooSurface": ["Statistics", "Financials", "Analysis"],
+      "id": "financial_ratios_and_valuation",
+      "priority": "P1", "implementationPhase": "Issuer Core", "status": "NOT_BUILT",
       "fields": ["PE", "Forward PE", "PEG", "PB", "PS", "Dividend Yield", "ROE", "ROA", "ROIC", "Gross Margin", "Operating Margin", "Net Margin", "Debt / Equity", "Current Ratio", "Quick Ratio", "Revenue Growth", "EPS Growth", "FCF", "EV / EBITDA", "EV / Sales", "Payout Ratio"],
-      "yahooAvailability": "CONDITIONAL: Yahoo statistics/financials/analysis expose many ratios, but market and issuer coverage varies; ROIC and Quick Ratio may require transparent SmartFund calculation.",
-      "current": "NOT_BUILT for Stocks.",
-      "historical": "NOT_BUILT for period-end ratio history.",
-      "daily": "NOT_BUILT; market-dependent ratios refresh with quote updates, statement-dependent ratios refresh after filings.",
-      "api": "NOT_BUILT",
-      "provider": "YAHOO_QUOTE_SUMMARY (REQUIRED) plus SMARTFUND calculated ratios from canonical statements/quotes",
-      "frequency": "Provider Latest Available; retain as-of date and calculation version.",
-      "otherProviderRequired": "NO for Yahoo minimum",
-      "implementationPriority": "P1"
+      "yahooAvailability": "CONDITIONAL: Yahoo displays many ratios; ROIC and Quick Ratio may be transparently derived.", "database": "NOT_BUILT: financial_metric domain required.", "historical": "NOT_BUILT: retain metric as-of date and source/calculation version.", "daily": "NOT_BUILT: quote-dependent values refresh daily; statement-dependent values refresh after filings.", "api": "NOT_BUILT", "frontend": "NOT_BUILT", "provider": "YAHOO_QUOTE_SUMMARY plus SMARTFUND calculation", "required": true, "optional": false,
+      "expectedRefreshFrequency": "Provider quote and filing cadence.", "dataFreshnessPolicy": "Provider Latest Available / calculated from latest valid inputs", "otherProviderRequired": "NO for Yahoo minimum"
     },
     {
-      "id": "dividends-and-corporate-actions",
-      "priority": "P1",
-      "yahooSurface": ["Historical Data", "Summary", "Statistics"],
+      "id": "corporate_actions_and_dividends",
+      "priority": "P1", "implementationPhase": "Issuer Core", "status": "NOT_BUILT",
       "fields": ["Dividend", "Dividend History", "Ex-dividend Date", "Payment Date", "Dividend Yield", "Payout Ratio", "Split", "Reverse Split", "Rights Issue", "Symbol Change", "Merger", "Spin-off", "Delisting"],
-      "yahooAvailability": "YES for dividend and split history for many Yahoo symbols; CONDITIONAL/PARTIAL for payment date and non-split corporate actions; Yahoo does not guarantee a complete structured rights/merger/spin-off/delisting feed.",
-      "current": "PARTIAL only through adjusted price effects; no canonical dividend/corporate-action table or API.",
-      "historical": "NOT_BUILT as structured events.",
-      "daily": "NOT_BUILT; event ingestion should be incremental and effective-date aware.",
-      "api": "NOT_BUILT",
-      "provider": "YAHOO_CORPORATE_ACTIONS (REQUIRED); official corporate-action provider decision needed for fields Yahoo does not structurally provide.",
-      "frequency": "Provider Latest Available with future announced/effective events retained separately.",
-      "otherProviderRequired": "YES for complete rights, symbol change, merger, spin-off and delisting coverage.",
-      "implementationPriority": "P1"
+      "yahooAvailability": "YES for many dividends/splits; CONDITIONAL/PARTIAL for payment date and complex corporate actions.", "database": "NOT_BUILT: corporate_event domain required.", "historical": "NOT_BUILT: event/effective dates and revisions required.", "daily": "NOT_BUILT: incremental event lifecycle required.", "api": "NOT_BUILT", "frontend": "NOT_BUILT", "provider": "YAHOO_CORPORATE_ACTIONS", "required": true, "optional": false,
+      "expectedRefreshFrequency": "Provider event publication and effective-date checks.", "dataFreshnessPolicy": "Provider Latest Available plus future effective events", "otherProviderRequired": "YES for complete rights, symbol-change, merger, spin-off and delisting coverage"
     },
     {
-      "id": "ownership-short-interest-and-insiders",
-      "priority": "P2",
-      "yahooSurface": ["Holders", "Statistics"],
-      "fields": ["Major Holders", "Institution Holders", "Mutual Fund Holders", "ETF Holders", "Insider Holdings", "Insider Transactions", "Short Interest", "Shares Short", "Short Ratio", "Percent Held by Insiders", "Percent Held by Institutions"],
-      "yahooAvailability": "CONDITIONAL: Yahoo Holders/Statistics expose selected ownership and short-interest data, mainly for covered markets; ETF-holder and insider detail are not universal.",
-      "current": "NOT_BUILT",
-      "historical": "NOT_BUILT for report-date snapshots.",
-      "daily": "NOT_BUILT; ownership data follows provider report cadence, not trading-day cadence.",
-      "api": "NOT_BUILT",
-      "provider": "YAHOO_QUOTE_SUMMARY (REQUIRED)",
-      "frequency": "Provider Latest Available / report-date snapshots.",
-      "otherProviderRequired": "NO for Yahoo minimum; official regulator/filing source required for universal coverage.",
-      "implementationPriority": "P2"
+      "id": "event_calendar",
+      "priority": "P1.5", "implementationPhase": "Market Intelligence", "status": "NOT_BUILT",
+      "fields": ["Dividend", "Ex-Dividend", "Split", "Rights", "Earnings", "Conference Call", "Shareholder Meeting", "ETF Rebalance", "MSCI Index Change", "FTSE Index Change", "S&P Index Change", "Timeline"],
+      "yahooAvailability": "CONDITIONAL: Yahoo exposes selected earnings/dividend/split calendar information; full rights, meeting and index-rebalance coverage is not uniformly available.", "database": "NOT_BUILT: calendar_event domain required.", "historical": "NOT_BUILT: announced, effective, actual and cancelled states required.", "daily": "NOT_BUILT: due-event and revision checks required.", "api": "NOT_BUILT", "frontend": "NOT_BUILT", "provider": "YAHOO_CORPORATE_ACTIONS plus approved official issuer/exchange/index-calendar adapters", "required": true, "optional": false,
+      "expectedRefreshFrequency": "Daily event refresh plus provider announcement revisions.", "dataFreshnessPolicy": "Provider Latest Available and future-event effective date", "otherProviderRequired": "YES for shareholder meetings, rights and complete MSCI/FTSE/S&P rebalance coverage"
     },
     {
-      "id": "esg-and-sustainability",
-      "priority": "P2",
-      "yahooSurface": ["Sustainability"],
-      "fields": ["ESG Score", "Environment Score", "Social Score", "Governance Score", "Controversy Level", "Peer Percentile", "ESG Risk/Ranking fields displayed by Yahoo"],
-      "yahooAvailability": "CONDITIONAL: Yahoo Sustainability is not available for every issuer and may contain licensed/restricted datasets.",
-      "current": "NOT_BUILT",
-      "historical": "NOT_BUILT",
-      "daily": "NOT_BUILT; refresh follows provider release cadence.",
-      "api": "NOT_BUILT",
-      "provider": "YAHOO_SUSTAINABILITY (PROVIDER/LICENCE REVIEW REQUIRED)",
-      "frequency": "Provider Latest Available.",
-      "otherProviderRequired": "YES if Yahoo terms or coverage do not permit Production use.",
-      "implementationPriority": "P2"
+      "id": "ownership_and_ownership_change",
+      "priority": "P1.5", "implementationPhase": "Market Intelligence", "status": "NOT_BUILT",
+      "fields": ["Major Holders", "Institution Holders", "Mutual Fund Holders", "ETF Holders", "Insider Holdings", "Insider Transactions", "Short Interest", "Shares Short", "Short Ratio", "Percent Held by Insiders", "Percent Held by Institutions", "Institution Previous %", "Institution Current %", "Institution Change %", "Quarter"],
+      "yahooAvailability": "CONDITIONAL, mainly for supported markets and report dates.", "database": "NOT_BUILT: ownership_snapshot and ownership_change domains required.", "historical": "NOT_BUILT: immutable report-date snapshots and calculated deltas required.", "daily": "NOT_BUILT: report/publication cadence only.", "api": "NOT_BUILT", "frontend": "NOT_BUILT", "provider": "YAHOO_QUOTE_SUMMARY", "required": true, "optional": false,
+      "expectedRefreshFrequency": "Provider report-date/publication cadence.", "dataFreshnessPolicy": "Provider Latest Available report snapshot", "otherProviderRequired": "Official regulator/filing source for universal coverage"
     },
     {
-      "id": "analyst-estimates-and-earnings",
-      "priority": "P2",
-      "yahooSurface": ["Analysis", "Summary", "Financials"],
-      "fields": ["Target Price", "Target High", "Target Low", "Target Mean", "Recommendation", "Recommendation Trend", "Analyst Consensus", "Earnings Estimate", "Revenue Estimate", "EPS Trend", "EPS Revision", "Growth Estimate", "Earnings Date", "Earnings History", "Surprise"],
-      "yahooAvailability": "CONDITIONAL: Analysis data is issuer/market dependent and some Yahoo research surfaces can be subscription/licence restricted.",
-      "current": "NOT_BUILT",
-      "historical": "NOT_BUILT for estimate/revision vintages.",
-      "daily": "NOT_BUILT; refresh when Yahoo publishes an estimate/revision/earnings event.",
-      "api": "NOT_BUILT",
-      "provider": "YAHOO_ANALYSIS (PROVIDER/LICENCE REVIEW REQUIRED)",
-      "frequency": "Provider Latest Available; preserve publication and effective dates.",
-      "otherProviderRequired": "YES if Yahoo terms or coverage do not permit Production use.",
-      "implementationPriority": "P2"
+      "id": "analyst_estimates_and_revisions",
+      "priority": "P1.5", "implementationPhase": "Market Intelligence", "status": "NOT_BUILT",
+      "fields": ["Target Price", "Target High", "Target Low", "Target Mean", "Recommendation", "Consensus", "Earnings Estimate", "Revenue Estimate", "EPS Trend", "EPS Revision", "Revenue Revision", "Target Price Revision", "Upgrade", "Downgrade", "30-day Revision", "90-day Revision", "180-day Revision", "Earnings Date", "Earnings History", "Surprise"],
+      "yahooAvailability": "CONDITIONAL and potentially licence/subscription restricted.", "database": "NOT_BUILT: analyst_estimate and analyst_revision domains required.", "historical": "NOT_BUILT: retain forecast vintages, publication date and horizon.", "daily": "NOT_BUILT: provider revision/earnings event cadence.", "api": "NOT_BUILT", "frontend": "NOT_BUILT", "provider": "YAHOO_ANALYSIS subject to licence review", "required": true, "optional": false,
+      "expectedRefreshFrequency": "Provider Latest Available revision cadence.", "dataFreshnessPolicy": "Provider Latest Available with vintage preservation", "otherProviderRequired": "YES if Yahoo terms/coverage do not permit Production use"
+    },
+    {
+      "id": "valuation_history",
+      "priority": "P1.5", "implementationPhase": "Market Intelligence", "status": "NOT_BUILT",
+      "fields": ["PE History", "PB History", "PS History", "EV/EBITDA History", "Historical Percentile", "5-year Average", "10-year Average"],
+      "yahooAvailability": "Yahoo shows current statistics; complete point-in-time valuation history is a SmartFund derived requirement.", "database": "NOT_BUILT: financial_metric snapshots required.", "historical": "NOT_BUILT: reconstruct only from point-in-time quote and statement versions.", "daily": "NOT_BUILT", "api": "NOT_BUILT", "frontend": "NOT_BUILT", "provider": "SMARTFUND calculated from Yahoo quote/statements", "required": true, "optional": false,
+      "expectedRefreshFrequency": "After validated quote or statement changes.", "dataFreshnessPolicy": "Derived from latest valid point-in-time inputs", "otherProviderRequired": "NO"
+    },
+    {
+      "id": "risk_performance_and_drawdown",
+      "priority": "P1.5", "implementationPhase": "Market Intelligence", "status": "NOT_BUILT",
+      "fields": ["Volatility", "Sharpe", "Sortino", "Max Drawdown", "Beta", "Tracking Error", "Information Ratio", "Price Return", "Dividend Return", "Total Return", "1M", "3M", "6M", "YTD", "1Y", "3Y", "5Y", "10Y", "Since Inception", "Current Drawdown", "52W Drawdown", "Historical Max Drawdown", "Recovery Days"],
+      "yahooAvailability": "Yahoo provides relevant price/dividend/beta inputs; the complete risk, return and drawdown set is SmartFund derived.", "database": "NOT_BUILT: performance_return, drawdown_metric and derived_metric domains required.", "historical": "NOT_BUILT: rolling-window and calculation-version snapshots required.", "daily": "NOT_BUILT", "api": "NOT_BUILT", "frontend": "NOT_BUILT", "provider": "SMARTFUND calculated from Yahoo OHLCV/dividends and declared benchmarks", "required": true, "optional": false,
+      "expectedRefreshFrequency": "After each validated daily bar/event.", "dataFreshnessPolicy": "Derived from Provider Latest Available inputs", "otherProviderRequired": "NO"
+    },
+    {
+      "id": "correlation_factor_and_peer_ranking",
+      "priority": "P1.5", "implementationPhase": "Market Intelligence", "status": "NOT_BUILT",
+      "fields": ["Market Correlation", "S&P 500 Correlation", "NASDAQ Correlation", "0050 Correlation", "Gold Correlation", "BTC Correlation", "Bond Correlation", "Growth Exposure", "Value Exposure", "Momentum Exposure", "Quality Exposure", "Size Exposure", "Dividend Exposure", "Low Volatility Exposure", "Industry Ranking", "PE Ranking", "ROE Ranking", "Margin Ranking", "Revenue Growth Ranking", "EPS Growth Ranking", "Market Cap Ranking"],
+      "yahooAvailability": "Yahoo provides some underlying market series; correlations, factor exposure and peer rankings are SmartFund derived.", "database": "NOT_BUILT: correlation_metric, factor_exposure and peer_ranking domains required.", "historical": "NOT_BUILT: benchmark universe, window and peer-set version required.", "daily": "NOT_BUILT", "api": "NOT_BUILT", "frontend": "NOT_BUILT", "provider": "SMARTFUND calculated from declared Yahoo/FRED benchmark inputs", "required": true, "optional": false,
+      "expectedRefreshFrequency": "After validated daily bars and peer/fundamental updates.", "dataFreshnessPolicy": "Derived from latest valid inputs and versioned peer universe", "otherProviderRequired": "NO for declared benchmarks; provider decision required for any new benchmark"
+    },
+    {
+      "id": "esg_sustainability",
+      "priority": "P2", "implementationPhase": "Enrichment", "status": "NOT_BUILT",
+      "fields": ["ESG Score", "Environment Score", "Social Score", "Governance Score", "Controversy Level", "Peer Percentile", "Yahoo-displayed sustainability fields"],
+      "yahooAvailability": "CONDITIONAL and potentially licensed.", "database": "NOT_BUILT", "historical": "NOT_BUILT", "daily": "NOT_BUILT", "api": "NOT_BUILT", "frontend": "NOT_BUILT", "provider": "YAHOO_SUSTAINABILITY subject to licence review", "required": false, "optional": true,
+      "expectedRefreshFrequency": "Provider release cadence.", "dataFreshnessPolicy": "Provider Latest Available", "otherProviderRequired": "YES if Yahoo use is not permitted"
     },
     {
       "id": "options",
-      "priority": "P3",
-      "yahooSurface": ["Options"],
+      "priority": "P3", "implementationPhase": "Derivative Extension", "status": "NOT_BUILT",
       "fields": ["Option Expiration", "Call/Put", "Strike", "Last Price", "Bid", "Ask", "Change", "Volume", "Open Interest", "Implied Volatility", "In The Money", "Contract Symbol"],
-      "yahooAvailability": "CONDITIONAL: Yahoo Options is available only for optionable instruments and supported markets.",
-      "current": "NOT_BUILT",
-      "historical": "NOT_BUILT",
-      "daily": "NOT_BUILT",
-      "api": "NOT_BUILT",
-      "provider": "YAHOO_OPTIONS (PROVIDER/LICENCE REVIEW REQUIRED)",
-      "frequency": "Provider quote cadence / Provider Latest Available.",
-      "otherProviderRequired": "YES if Yahoo does not legally/technically support Production retrieval.",
-      "implementationPriority": "P3"
+      "yahooAvailability": "CONDITIONAL: only optionable instruments and supported markets.", "database": "NOT_BUILT", "historical": "NOT_BUILT", "daily": "NOT_BUILT", "api": "NOT_BUILT", "frontend": "NOT_BUILT", "provider": "YAHOO_OPTIONS subject to licence review", "required": false, "optional": true,
+      "expectedRefreshFrequency": "Provider quote cadence.", "dataFreshnessPolicy": "Provider Latest Available", "otherProviderRequired": "YES if Yahoo use is not permitted"
     },
     {
-      "id": "smartfund-proprietary-scores",
-      "priority": "P2",
-      "yahooSurface": ["Not supplied by Yahoo"],
-      "fields": ["AI Score", "Quality Score", "Growth Score", "Value Score", "Momentum Score", "Risk Score", "Composite Score", "SmartMatch Score"],
-      "yahooAvailability": "NO: SmartFund-exclusive derived fields.",
-      "current": "NOT_BUILT",
-      "historical": "NOT_BUILT: score histories require point-in-time source snapshots and versioning.",
-      "daily": "NOT_BUILT: calculate only after source freshness/validation succeeds.",
-      "api": "NOT_BUILT",
-      "provider": "SMARTFUND deterministic/AI scoring with input provenance",
-      "frequency": "After valid price, fundamental and risk inputs; version every model/calculation.",
-      "otherProviderRequired": "NO, but source inputs must be available and licensed.",
-      "implementationPriority": "P2"
+      "id": "smartfund_scores_and_insights",
+      "priority": "P2", "implementationPhase": "Enrichment", "status": "NOT_BUILT",
+      "fields": ["AI Score", "Quality Score", "Growth Score", "Value Score", "Momentum Score", "Risk Score", "Composite Score", "SmartMatch Score", "PE above/below historical average insight", "ROE peer-percentile insight", "Dividend-growth streak insight", "Revenue-growth streak insight", "EPS-revision insight", "Distance-to-high insight"],
+      "yahooAvailability": "NO: SmartFund-exclusive scores and rule-based insights.", "database": "NOT_BUILT: derived_metric and rule_insight domains required.", "historical": "NOT_BUILT: point-in-time inputs, rule/model versions and explanation payload required.", "daily": "NOT_BUILT", "api": "NOT_BUILT", "frontend": "NOT_BUILT", "provider": "SMARTFUND deterministic calculation/rule engine", "required": false, "optional": true,
+      "expectedRefreshFrequency": "After validated dependencies change.", "dataFreshnessPolicy": "Derived from latest valid inputs; rules must expose evidence and version", "otherProviderRequired": "NO"
     },
     {
-      "id": "excluded-content",
-      "priority": "EXCLUDED",
-      "yahooSurface": ["News", "Yahoo Finance Video", "Live streams", "Conversations", "social/community", "commentary", "articles"],
-      "fields": ["News headlines", "articles", "publisher text", "commentary", "video", "live streams", "social posts", "community conversations", "sentiment derived from excluded content"],
-      "yahooAvailability": "YES on Yahoo, but permanently excluded from SmartFund.",
-      "current": "EXCLUDED",
-      "historical": "EXCLUDED",
-      "daily": "EXCLUDED",
-      "api": "EXCLUDED",
-      "provider": "NONE",
-      "frequency": "Never ingest.",
-      "otherProviderRequired": "NO: no substitute is permitted under this specification.",
-      "implementationPriority": "EXCLUDED"
+      "id": "excluded_content",
+      "priority": "EXCLUDED", "implementationPhase": "Never", "status": "EXCLUDED",
+      "fields": ["News", "Articles", "Commentary", "Video", "Live", "Forum", "Community", "Comment", "Chat", "Social content"],
+      "yahooAvailability": "Yahoo may display these surfaces, but they are permanently excluded.", "database": "EXCLUDED", "historical": "EXCLUDED", "daily": "EXCLUDED", "api": "EXCLUDED", "frontend": "EXCLUDED", "provider": "NONE", "required": false, "optional": false,
+      "expectedRefreshFrequency": "Never ingest.", "dataFreshnessPolicy": "Not applicable", "otherProviderRequired": "No substitute is permitted"
     }
   ],
-  "priorityOrder": [
-    "P0: complete Yahoo price/history provenance and Production Daily across stock markets",
-    "P1: quote statistics, profile/share structure, statements, ratios, dividends/corporate actions, and full deterministic technical lifecycle",
-    "P2: ownership/short interest, ESG subject to licence review, analyst/earnings subject to licence review, then SmartFund scores",
-    "P3: options",
-    "EXCLUDED: all news, articles, commentary, video, live and social/community content"
-  ],
-  "acceptance": [
-    "Every implemented field records provider, source symbol, as-of/effective date, imported/updated timestamp and method/version.",
-    "Daily freshness compares database latest value with Provider Latest Available, not calendar date.",
-    "Financial, ownership, ESG, analyst and corporate-event data use provider release/report cadence rather than a forced daily bar rule.",
-    "Yahoo-restricted or incomplete structured fields require an explicit legal provider decision before Production ingestion; never screen-scrape around access restrictions.",
-    "No excluded content may enter raw archives, caches, database tables, APIs, scores or logs."
-  ],
-  "sources": [
-    "https://help.yahoo.com/kb/SLN28277.html",
-    "https://help.yahoo.com/kb/SLN28276.html",
-    "https://in.help.yahoo.com/kb/finance/download-historical-data-yahoo-finance-sln2311.html",
-    "https://finance.yahoo.com/quote/AAPL/"
-  ]
+  "priorityOrder": ["P0 Price/Historical/Daily", "P1 Fundamental/Statements/Ratios/Corporate Actions/Technical", "P1.5 Events/Ownership Change/Revisions/Valuation History/Risk-Return-Drawdown/Correlation-Factors-Peers", "P2 Holders/ESG/Analyst/SmartFund Scores", "P3 Options", "EXCLUDED Content"],
+  "sources": ["https://help.yahoo.com/kb/SLN28277.html", "https://help.yahoo.com/kb/SLN28276.html", "https://in.help.yahoo.com/kb/finance/download-historical-data-yahoo-finance-sln2311.html", "https://finance.yahoo.com/quote/AAPL/"]
 }
