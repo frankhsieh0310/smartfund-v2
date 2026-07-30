@@ -1,0 +1,576 @@
+{
+  "generatedAt": "2026-07-30T01:36:03.472Z",
+  "source": "Supabase canonical tables + production_scheduler_runs",
+  "metricMode": "FAST_CANONICAL",
+  "policy": "Provider Latest Available",
+  "globalCompletion": 59.75,
+  "groups": [
+    {
+      "assetClass": "Stocks",
+      "completion": 88.45
+    },
+    {
+      "assetClass": "ETF",
+      "completion": 62.11
+    },
+    {
+      "assetClass": "Funds",
+      "completion": 63.61
+    },
+    {
+      "assetClass": "Macro",
+      "completion": 100
+    },
+    {
+      "assetClass": "Index",
+      "completion": 50
+    },
+    {
+      "assetClass": "Bond",
+      "completion": 100
+    },
+    {
+      "assetClass": "Commodity",
+      "completion": 55
+    },
+    {
+      "assetClass": "FX",
+      "completion": 55
+    },
+    {
+      "assetClass": "Crypto",
+      "completion": 55
+    },
+    {
+      "assetClass": "Volatility",
+      "completion": 100
+    },
+    {
+      "assetClass": "Precious Metal",
+      "completion": 0
+    },
+    {
+      "assetClass": "Energy",
+      "completion": 0
+    },
+    {
+      "assetClass": "Insurance",
+      "completion": 0
+    },
+    {
+      "assetClass": "REIT",
+      "completion": 0
+    }
+  ],
+  "assets": [
+    {
+      "id": "stocks-twse",
+      "assetClass": "Stocks",
+      "name": "TWSE",
+      "provider": "YAHOO_CHART",
+      "api": "/api/stocks",
+      "jobs": [
+        "twse-yahoo-daily"
+      ],
+      "sql": "SELECT (SELECT COUNT(*)::int FROM stocks WHERE exchange='TWSE' AND is_active) AS universe, (SELECT COUNT(DISTINCT h.stock_id)::int FROM stock_history h JOIN stocks s ON s.id=h.stock_id WHERE s.exchange='TWSE' AND s.is_active) AS historical, (SELECT COUNT(*)::int FROM stock_history h JOIN stocks s ON s.id=h.stock_id WHERE s.exchange='TWSE') AS rows, (SELECT MIN(h.date) FROM stock_history h JOIN stocks s ON s.id=h.stock_id WHERE s.exchange='TWSE') AS earliest, (SELECT MAX(h.date) FROM stock_history h JOIN stocks s ON s.id=h.stock_id WHERE s.exchange='TWSE') AS latest",
+      "blocking": "Historical and Daily lifecycle evidence determines readiness.",
+      "universe": 1088,
+      "historical": 1088,
+      "rows": 0,
+      "earliest": "2026-07-28",
+      "latest": "2026-07-29",
+      "historicalCoverage": 100,
+      "daily": "ACTIVE",
+      "production": "PASS",
+      "latestRun": {
+        "status": "COMPLETED",
+        "startedAt": "2026-07-29T14:30:37.266Z",
+        "latestTradingDate": null,
+        "validation": "PASS"
+      },
+      "status": "PRODUCT_READY",
+      "completion": 100,
+      "nextTask": "Historical and Daily lifecycle evidence determines readiness."
+    },
+    {
+      "id": "stocks-tpex",
+      "assetClass": "Stocks",
+      "name": "TPEx",
+      "provider": "YAHOO_CHART",
+      "api": "/api/stocks",
+      "jobs": [
+        "tpex-yahoo-daily"
+      ],
+      "sql": "SELECT (SELECT COUNT(*)::int FROM stocks WHERE exchange='TPEx' AND is_active) AS universe, (SELECT COUNT(DISTINCT h.stock_id)::int FROM stock_history h JOIN stocks s ON s.id=h.stock_id WHERE s.exchange='TPEx' AND s.is_active) AS historical, (SELECT COUNT(*)::int FROM stock_history h JOIN stocks s ON s.id=h.stock_id WHERE s.exchange='TPEx') AS rows, (SELECT MIN(h.date) FROM stock_history h JOIN stocks s ON s.id=h.stock_id WHERE s.exchange='TPEx') AS earliest, (SELECT MAX(h.date) FROM stock_history h JOIN stocks s ON s.id=h.stock_id WHERE s.exchange='TPEx') AS latest",
+      "blocking": "Historical and Daily lifecycle evidence determines readiness.",
+      "universe": 889,
+      "historical": 889,
+      "rows": 0,
+      "earliest": "2026-07-28",
+      "latest": "2026-07-29",
+      "historicalCoverage": 100,
+      "daily": "ACTIVE",
+      "production": "PASS",
+      "latestRun": {
+        "status": "COMPLETED",
+        "startedAt": "2026-07-29T14:30:44.390Z",
+        "latestTradingDate": null,
+        "validation": "PASS"
+      },
+      "status": "PRODUCT_READY",
+      "completion": 100,
+      "nextTask": "Historical and Daily lifecycle evidence determines readiness."
+    },
+    {
+      "id": "stocks-nasdaq",
+      "assetClass": "Stocks",
+      "name": "NASDAQ",
+      "provider": "YAHOO_CHART",
+      "api": "/api/stocks",
+      "jobs": [
+        "nasdaq-yahoo-daily"
+      ],
+      "sql": "SELECT (SELECT COUNT(*)::int FROM stocks WHERE exchange='NASDAQ' AND is_active) AS universe, (SELECT COUNT(DISTINCT h.stock_id)::int FROM stock_history h JOIN stocks s ON s.id=h.stock_id WHERE s.exchange='NASDAQ' AND s.is_active) AS historical, (SELECT COUNT(*)::int FROM stock_history h JOIN stocks s ON s.id=h.stock_id WHERE s.exchange='NASDAQ') AS rows, (SELECT MIN(h.date) FROM stock_history h JOIN stocks s ON s.id=h.stock_id WHERE s.exchange='NASDAQ') AS earliest, (SELECT MAX(h.date) FROM stock_history h JOIN stocks s ON s.id=h.stock_id WHERE s.exchange='NASDAQ') AS latest",
+      "blocking": "Historical and Daily lifecycle evidence determines readiness.",
+      "universe": 3562,
+      "historical": 3561,
+      "rows": 0,
+      "earliest": "2026-07-13",
+      "latest": "2026-07-29",
+      "historicalCoverage": 99.97,
+      "daily": "ACTIVE",
+      "production": "PASS",
+      "latestRun": {
+        "status": "COMPLETED",
+        "startedAt": "2026-07-30T01:15:14.936Z",
+        "latestTradingDate": "2026-07-29",
+        "validation": "PASS"
+      },
+      "status": "PRODUCT_READY",
+      "completion": 99.98,
+      "nextTask": "Historical and Daily lifecycle evidence determines readiness."
+    },
+    {
+      "id": "stocks-nyse",
+      "assetClass": "Stocks",
+      "name": "NYSE",
+      "provider": "YAHOO_CHART",
+      "api": "/api/stocks",
+      "jobs": [
+        "nyse-yahoo-daily"
+      ],
+      "sql": "SELECT (SELECT COUNT(*)::int FROM stocks WHERE exchange='NYSE' AND is_active) AS universe, (SELECT COUNT(DISTINCT h.stock_id)::int FROM stock_history h JOIN stocks s ON s.id=h.stock_id WHERE s.exchange='NYSE' AND s.is_active) AS historical, (SELECT COUNT(*)::int FROM stock_history h JOIN stocks s ON s.id=h.stock_id WHERE s.exchange='NYSE') AS rows, (SELECT MIN(h.date) FROM stock_history h JOIN stocks s ON s.id=h.stock_id WHERE s.exchange='NYSE') AS earliest, (SELECT MAX(h.date) FROM stock_history h JOIN stocks s ON s.id=h.stock_id WHERE s.exchange='NYSE') AS latest",
+      "blocking": "Historical and Daily lifecycle evidence determines readiness.",
+      "universe": 2610,
+      "historical": 2608,
+      "rows": 0,
+      "earliest": "2026-07-13",
+      "latest": "2026-07-29",
+      "historicalCoverage": 99.92,
+      "daily": "IN_PROGRESS",
+      "production": "NOT_VERIFIED",
+      "latestRun": {
+        "status": "IN_PROGRESS",
+        "startedAt": "2026-07-30T01:32:52.731Z",
+        "latestTradingDate": null,
+        "validation": null
+      },
+      "status": "DAILY_ACTIVE",
+      "completion": 77.46,
+      "nextTask": "Historical and Daily lifecycle evidence determines readiness."
+    },
+    {
+      "id": "stocks-amex",
+      "assetClass": "Stocks",
+      "name": "AMEX",
+      "provider": "YAHOO_CHART",
+      "api": "/api/stocks",
+      "jobs": [
+        "amex-yahoo-daily"
+      ],
+      "sql": "SELECT (SELECT COUNT(*)::int FROM stocks WHERE exchange='AMEX' AND is_active) AS universe, (SELECT COUNT(DISTINCT h.stock_id)::int FROM stock_history h JOIN stocks s ON s.id=h.stock_id WHERE s.exchange='AMEX' AND s.is_active) AS historical, (SELECT COUNT(*)::int FROM stock_history h JOIN stocks s ON s.id=h.stock_id WHERE s.exchange='AMEX') AS rows, (SELECT MIN(h.date) FROM stock_history h JOIN stocks s ON s.id=h.stock_id WHERE s.exchange='AMEX') AS earliest, (SELECT MAX(h.date) FROM stock_history h JOIN stocks s ON s.id=h.stock_id WHERE s.exchange='AMEX') AS latest",
+      "blocking": "Historical and Daily lifecycle evidence determines readiness.",
+      "universe": 287,
+      "historical": 286,
+      "rows": 0,
+      "earliest": "2026-07-15",
+      "latest": "2026-07-28",
+      "historicalCoverage": 99.65,
+      "daily": "NOT_STARTED",
+      "production": "NOT_VERIFIED",
+      "latestRun": null,
+      "status": "HISTORICAL_READY",
+      "completion": 64.81,
+      "nextTask": "Historical and Daily lifecycle evidence determines readiness."
+    },
+    {
+      "id": "etf-taiwan",
+      "assetClass": "ETF",
+      "name": "Taiwan ETF",
+      "provider": "YAHOO_CHART",
+      "api": "/api/etfs",
+      "jobs": [],
+      "sql": "SELECT (SELECT COUNT(*)::int FROM etfs e WHERE e.is_active AND (COALESCE(e.exchange,'') ILIKE '%TW%' OR e.currency='TWD')) AS universe, (SELECT COUNT(DISTINCT h.etf_id)::int FROM etf_history h JOIN etfs e ON e.id=h.etf_id WHERE e.is_active AND (COALESCE(e.exchange,'') ILIKE '%TW%' OR e.currency='TWD')) AS historical, (SELECT COUNT(*)::int FROM etf_history h JOIN etfs e ON e.id=h.etf_id WHERE COALESCE(e.exchange,'') ILIKE '%TW%' OR e.currency='TWD') AS rows, (SELECT MIN(h.date) FROM etf_history h JOIN etfs e ON e.id=h.etf_id WHERE COALESCE(e.exchange,'') ILIKE '%TW%' OR e.currency='TWD') AS earliest, (SELECT MAX(h.date) FROM etf_history h JOIN etfs e ON e.id=h.etf_id WHERE COALESCE(e.exchange,'') ILIKE '%TW%' OR e.currency='TWD') AS latest",
+      "blocking": "Historical coverage and a dedicated Daily lifecycle are absent.",
+      "universe": 349,
+      "historical": 233,
+      "rows": 0,
+      "earliest": "2026-07-10",
+      "latest": "2026-07-11",
+      "historicalCoverage": 66.76,
+      "daily": "NOT_STARTED",
+      "production": "NOT_VERIFIED",
+      "latestRun": null,
+      "status": "PARTIAL_HISTORICAL",
+      "completion": 46.72,
+      "nextTask": "Historical coverage and a dedicated Daily lifecycle are absent."
+    },
+    {
+      "id": "etf-global",
+      "assetClass": "ETF",
+      "name": "Global ETF",
+      "provider": "YAHOO_CHART",
+      "api": "/api/etfs",
+      "jobs": [
+        "global_etf-production-daily"
+      ],
+      "sql": "SELECT (SELECT COUNT(*)::int FROM etfs e WHERE e.is_active AND NOT (COALESCE(e.exchange,'') ILIKE '%TW%' OR e.currency='TWD')) AS universe, (SELECT COUNT(DISTINCT h.etf_id)::int FROM etf_history h JOIN etfs e ON e.id=h.etf_id WHERE e.is_active AND NOT (COALESCE(e.exchange,'') ILIKE '%TW%' OR e.currency='TWD')) AS historical, (SELECT COUNT(*)::int FROM etf_history h JOIN etfs e ON e.id=h.etf_id WHERE e.is_active AND NOT (COALESCE(e.exchange,'') ILIKE '%TW%' OR e.currency='TWD')) AS rows, (SELECT MIN(h.date) FROM etf_history h JOIN etfs e ON e.id=h.etf_id WHERE e.is_active AND NOT (COALESCE(e.exchange,'') ILIKE '%TW%' OR e.currency='TWD')) AS earliest, (SELECT MAX(h.date) FROM etf_history h JOIN etfs e ON e.id=h.etf_id WHERE e.is_active AND NOT (COALESCE(e.exchange,'') ILIKE '%TW%' OR e.currency='TWD')) AS latest",
+      "blocking": "Finish the resumable whole-universe Daily validation.",
+      "universe": 12453,
+      "historical": 12453,
+      "rows": 0,
+      "earliest": "2026-07-29",
+      "latest": "2026-07-30",
+      "historicalCoverage": 100,
+      "daily": "PAUSED",
+      "production": "NOT_VERIFIED",
+      "latestRun": {
+        "status": "PAUSED",
+        "startedAt": "2026-07-30T01:15:17.151Z",
+        "latestTradingDate": null,
+        "validation": null
+      },
+      "status": "DAILY_ACTIVE",
+      "completion": 77.5,
+      "nextTask": "Finish the resumable whole-universe Daily validation."
+    },
+    {
+      "id": "funds",
+      "assetClass": "Funds",
+      "name": "Mutual Funds",
+      "provider": "MAPPING_PENDING",
+      "api": "/api/funds",
+      "jobs": [],
+      "sql": "SELECT (SELECT COUNT(*)::int FROM funds WHERE is_active) AS universe, (SELECT COUNT(DISTINCT h.fund_id)::int FROM fund_history h JOIN funds f ON f.id=h.fund_id WHERE f.is_active) AS historical, (SELECT COUNT(*)::int FROM fund_history) AS rows, (SELECT MIN(date) FROM fund_history) AS earliest, (SELECT MAX(date) FROM fund_history) AS latest",
+      "blocking": "Provider mapping, provenance, and Production Daily are not complete.",
+      "universe": 12035,
+      "historical": 11732,
+      "rows": 0,
+      "earliest": "2026-07-10",
+      "latest": "2026-07-25",
+      "historicalCoverage": 97.48,
+      "daily": "NOT_STARTED",
+      "production": "NOT_VERIFIED",
+      "latestRun": null,
+      "status": "PARTIAL_HISTORICAL",
+      "completion": 63.61,
+      "nextTask": "Provider mapping, provenance, and Production Daily are not complete."
+    },
+    {
+      "id": "macro",
+      "assetClass": "Macro",
+      "name": "Macro (all providers)",
+      "provider": "FRED/ECB + PROVIDER_PENDING",
+      "api": "/api/economic-series",
+      "jobs": [
+        "macro-production-daily"
+      ],
+      "sql": "SELECT (SELECT COUNT(*)::int FROM economic_series WHERE enabled) AS universe, (SELECT COUNT(DISTINCT v.series_id)::int FROM economic_values v JOIN economic_series s ON s.id=v.series_id WHERE s.enabled) AS historical, (SELECT COUNT(*)::int FROM economic_values) AS rows, (SELECT MIN(date) FROM economic_values) AS earliest, (SELECT MAX(date) FROM economic_values) AS latest",
+      "blocking": "IMF/OECD/World Bank remain PROVIDER_PENDING; FRED/ECB are independently active.",
+      "universe": 155,
+      "historical": 155,
+      "rows": 0,
+      "earliest": "2026-07-11",
+      "latest": "2026-07-29",
+      "historicalCoverage": 100,
+      "daily": "ACTIVE",
+      "production": "PASS",
+      "latestRun": {
+        "status": "COMPLETED",
+        "startedAt": "2026-07-29T15:47:45.276Z",
+        "latestTradingDate": null,
+        "validation": "PASS"
+      },
+      "status": "PRODUCT_READY",
+      "completion": 100,
+      "nextTask": "IMF/OECD/World Bank remain PROVIDER_PENDING; FRED/ECB are independently active."
+    },
+    {
+      "id": "global-index",
+      "assetClass": "Index",
+      "name": "Global Stock Index",
+      "provider": "YAHOO_CHART",
+      "api": null,
+      "jobs": [],
+      "sql": "SELECT (SELECT COUNT(*)::int FROM market_indexes) AS universe, (SELECT COUNT(DISTINCT index_id)::int FROM index_history) AS historical, (SELECT COUNT(*)::int FROM index_history) AS rows, (SELECT MIN(date) FROM index_history) AS earliest, (SELECT MAX(date) FROM index_history) AS latest",
+      "blocking": "No Production Daily lifecycle/API bridge.",
+      "universe": 26,
+      "historical": 0,
+      "rows": 0,
+      "earliest": null,
+      "latest": null,
+      "historicalCoverage": 0,
+      "daily": "NOT_STARTED",
+      "production": "NOT_VERIFIED",
+      "latestRun": null,
+      "status": "MASTER_ONLY",
+      "completion": 0,
+      "nextTask": "No Production Daily lifecycle/API bridge."
+    },
+    {
+      "id": "index",
+      "assetClass": "Index",
+      "name": "Index",
+      "provider": "YAHOO_CHART",
+      "api": "/api/market-indices",
+      "jobs": [
+        "market_index-production-daily"
+      ],
+      "sql": "SELECT (SELECT COUNT(*)::int FROM market_master m WHERE m.is_active AND m.asset_type::text='MARKET_INDEX') AS universe, (SELECT COUNT(DISTINCT h.symbol)::int FROM market_history h JOIN market_master m ON m.symbol=h.symbol WHERE m.is_active AND m.asset_type::text='MARKET_INDEX') AS historical, (SELECT COUNT(*)::int FROM market_history h JOIN market_master m ON m.symbol=h.symbol WHERE m.asset_type::text='MARKET_INDEX') AS rows, (SELECT MIN(h.date) FROM market_history h JOIN market_master m ON m.symbol=h.symbol WHERE m.asset_type::text='MARKET_INDEX') AS earliest, (SELECT MAX(h.date) FROM market_history h JOIN market_master m ON m.symbol=h.symbol WHERE m.asset_type::text='MARKET_INDEX') AS latest",
+      "blocking": "Record current Production validation.",
+      "universe": 29,
+      "historical": 29,
+      "rows": 0,
+      "earliest": "2020-12-30",
+      "latest": "2026-07-29",
+      "historicalCoverage": 100,
+      "daily": "ACTIVE",
+      "production": "PASS",
+      "latestRun": {
+        "status": "COMPLETED",
+        "startedAt": "2026-07-29T15:15:11.423Z",
+        "latestTradingDate": null,
+        "validation": "PASS"
+      },
+      "status": "PRODUCT_READY",
+      "completion": 100,
+      "nextTask": "Record current Production validation."
+    },
+    {
+      "id": "bond",
+      "assetClass": "Bond",
+      "name": "Bond",
+      "provider": "FRED/ECB",
+      "api": "/api/bond-yields",
+      "jobs": [
+        "bond_yield-production-daily"
+      ],
+      "sql": "SELECT (SELECT COUNT(*)::int FROM market_master m WHERE m.is_active AND m.asset_type::text='BOND') AS universe, (SELECT COUNT(DISTINCT h.symbol)::int FROM market_history h JOIN market_master m ON m.symbol=h.symbol WHERE m.is_active AND m.asset_type::text='BOND') AS historical, (SELECT COUNT(*)::int FROM market_history h JOIN market_master m ON m.symbol=h.symbol WHERE m.asset_type::text='BOND') AS rows, (SELECT MIN(h.date) FROM market_history h JOIN market_master m ON m.symbol=h.symbol WHERE m.asset_type::text='BOND') AS earliest, (SELECT MAX(h.date) FROM market_history h JOIN market_master m ON m.symbol=h.symbol WHERE m.asset_type::text='BOND') AS latest",
+      "blocking": "Record current Production validation.",
+      "universe": 5,
+      "historical": 5,
+      "rows": 0,
+      "earliest": "2026-06-30",
+      "latest": "2026-07-10",
+      "historicalCoverage": 100,
+      "daily": "ACTIVE",
+      "production": "PASS",
+      "latestRun": {
+        "status": "COMPLETED",
+        "startedAt": "2026-07-29T15:15:10.220Z",
+        "latestTradingDate": null,
+        "validation": "PASS"
+      },
+      "status": "PRODUCT_READY",
+      "completion": 100,
+      "nextTask": "Record current Production validation."
+    },
+    {
+      "id": "commodity",
+      "assetClass": "Commodity",
+      "name": "Commodity",
+      "provider": "YAHOO_CHART",
+      "api": null,
+      "jobs": [],
+      "sql": "SELECT (SELECT COUNT(*)::int FROM market_master m WHERE m.is_active AND m.asset_type::text='COMMODITY') AS universe, (SELECT COUNT(DISTINCT h.symbol)::int FROM market_history h JOIN market_master m ON m.symbol=h.symbol WHERE m.is_active AND m.asset_type::text='COMMODITY') AS historical, (SELECT COUNT(*)::int FROM market_history h JOIN market_master m ON m.symbol=h.symbol WHERE m.asset_type::text='COMMODITY') AS rows, (SELECT MIN(h.date) FROM market_history h JOIN market_master m ON m.symbol=h.symbol WHERE m.asset_type::text='COMMODITY') AS earliest, (SELECT MAX(h.date) FROM market_history h JOIN market_master m ON m.symbol=h.symbol WHERE m.asset_type::text='COMMODITY') AS latest",
+      "blocking": "No dedicated Production Daily or API.",
+      "universe": 28,
+      "historical": 28,
+      "rows": 0,
+      "earliest": "2026-07-10",
+      "latest": "2026-07-27",
+      "historicalCoverage": 100,
+      "daily": "NOT_STARTED",
+      "production": "NOT_VERIFIED",
+      "latestRun": null,
+      "status": "HISTORICAL_READY",
+      "completion": 55,
+      "nextTask": "No dedicated Production Daily or API."
+    },
+    {
+      "id": "fx",
+      "assetClass": "FX",
+      "name": "FX",
+      "provider": "YAHOO_CHART",
+      "api": null,
+      "jobs": [],
+      "sql": "SELECT (SELECT COUNT(*)::int FROM market_master m WHERE m.is_active AND m.asset_type::text='FOREX') AS universe, (SELECT COUNT(DISTINCT h.symbol)::int FROM market_history h JOIN market_master m ON m.symbol=h.symbol WHERE m.is_active AND m.asset_type::text='FOREX') AS historical, (SELECT COUNT(*)::int FROM market_history h JOIN market_master m ON m.symbol=h.symbol WHERE m.asset_type::text='FOREX') AS rows, (SELECT MIN(h.date) FROM market_history h JOIN market_master m ON m.symbol=h.symbol WHERE m.asset_type::text='FOREX') AS earliest, (SELECT MAX(h.date) FROM market_history h JOIN market_master m ON m.symbol=h.symbol WHERE m.asset_type::text='FOREX') AS latest",
+      "blocking": "No dedicated Production Daily or API.",
+      "universe": 21,
+      "historical": 21,
+      "rows": 0,
+      "earliest": "2026-07-10",
+      "latest": "2026-07-27",
+      "historicalCoverage": 100,
+      "daily": "NOT_STARTED",
+      "production": "NOT_VERIFIED",
+      "latestRun": null,
+      "status": "HISTORICAL_READY",
+      "completion": 55,
+      "nextTask": "No dedicated Production Daily or API."
+    },
+    {
+      "id": "crypto",
+      "assetClass": "Crypto",
+      "name": "Crypto",
+      "provider": "YAHOO_CHART",
+      "api": null,
+      "jobs": [],
+      "sql": "SELECT (SELECT COUNT(*)::int FROM market_master m WHERE m.is_active AND m.asset_type::text='CRYPTO') AS universe, (SELECT COUNT(DISTINCT h.symbol)::int FROM market_history h JOIN market_master m ON m.symbol=h.symbol WHERE m.is_active AND m.asset_type::text='CRYPTO') AS historical, (SELECT COUNT(*)::int FROM market_history h JOIN market_master m ON m.symbol=h.symbol WHERE m.asset_type::text='CRYPTO') AS rows, (SELECT MIN(h.date) FROM market_history h JOIN market_master m ON m.symbol=h.symbol WHERE m.asset_type::text='CRYPTO') AS earliest, (SELECT MAX(h.date) FROM market_history h JOIN market_master m ON m.symbol=h.symbol WHERE m.asset_type::text='CRYPTO') AS latest",
+      "blocking": "No dedicated Production Daily or API.",
+      "universe": 15,
+      "historical": 15,
+      "rows": 0,
+      "earliest": "2026-07-11",
+      "latest": "2026-07-27",
+      "historicalCoverage": 100,
+      "daily": "NOT_STARTED",
+      "production": "NOT_VERIFIED",
+      "latestRun": null,
+      "status": "HISTORICAL_READY",
+      "completion": 55,
+      "nextTask": "No dedicated Production Daily or API."
+    },
+    {
+      "id": "volatility",
+      "assetClass": "Volatility",
+      "name": "Volatility",
+      "provider": "YAHOO_CHART",
+      "api": "/api/volatility",
+      "jobs": [
+        "volatility-production-daily"
+      ],
+      "sql": "SELECT (SELECT COUNT(*)::int FROM market_master m WHERE m.is_active AND m.asset_type::text='VOLATILITY') AS universe, (SELECT COUNT(DISTINCT h.symbol)::int FROM market_history h JOIN market_master m ON m.symbol=h.symbol WHERE m.is_active AND m.asset_type::text='VOLATILITY') AS historical, (SELECT COUNT(*)::int FROM market_history h JOIN market_master m ON m.symbol=h.symbol WHERE m.asset_type::text='VOLATILITY') AS rows, (SELECT MIN(h.date) FROM market_history h JOIN market_master m ON m.symbol=h.symbol WHERE m.asset_type::text='VOLATILITY') AS earliest, (SELECT MAX(h.date) FROM market_history h JOIN market_master m ON m.symbol=h.symbol WHERE m.asset_type::text='VOLATILITY') AS latest",
+      "blocking": "Record current Production validation.",
+      "universe": 1,
+      "historical": 1,
+      "rows": 0,
+      "earliest": "2026-07-10",
+      "latest": "2026-07-10",
+      "historicalCoverage": 100,
+      "daily": "ACTIVE",
+      "production": "PASS",
+      "latestRun": {
+        "status": "COMPLETED",
+        "startedAt": "2026-07-29T15:15:11.401Z",
+        "latestTradingDate": null,
+        "validation": "PASS"
+      },
+      "status": "PRODUCT_READY",
+      "completion": 100,
+      "nextTask": "Record current Production validation."
+    },
+    {
+      "id": "precious-metals",
+      "assetClass": "Precious Metal",
+      "name": "Precious Metals",
+      "provider": "YAHOO_CHART",
+      "api": null,
+      "jobs": [],
+      "sql": "SELECT COUNT(*) FILTER (WHERE m.is_active)::int AS universe, COUNT(*) FILTER (WHERE EXISTS (SELECT 1 FROM market_history h WHERE h.symbol=m.symbol))::int AS historical, (SELECT COUNT(*)::int FROM market_history h JOIN market_master m2 ON m2.symbol=h.symbol WHERE COALESCE(m2.category,'') ILIKE '%metal%')::int AS rows, (SELECT MIN(h.date) FROM market_history h JOIN market_master m2 ON m2.symbol=h.symbol WHERE COALESCE(m2.category,'') ILIKE '%metal%') AS earliest, (SELECT MAX(h.date) FROM market_history h JOIN market_master m2 ON m2.symbol=h.symbol WHERE COALESCE(m2.category,'') ILIKE '%metal%') AS latest FROM market_master m WHERE COALESCE(m.category,'') ILIKE '%metal%'",
+      "blocking": "Complete historical coverage, Daily lifecycle, and API.",
+      "universe": 0,
+      "historical": 0,
+      "rows": 0,
+      "earliest": null,
+      "latest": null,
+      "historicalCoverage": 0,
+      "daily": "NOT_STARTED",
+      "production": "NOT_VERIFIED",
+      "latestRun": null,
+      "status": "NOT_STARTED",
+      "completion": 0,
+      "nextTask": "Complete historical coverage, Daily lifecycle, and API."
+    },
+    {
+      "id": "energy",
+      "assetClass": "Energy",
+      "name": "Energy / Oil",
+      "provider": "YAHOO_CHART",
+      "api": null,
+      "jobs": [],
+      "sql": "SELECT COUNT(*) FILTER (WHERE m.is_active)::int AS universe, COUNT(*) FILTER (WHERE EXISTS (SELECT 1 FROM market_history h WHERE h.symbol=m.symbol))::int AS historical, (SELECT COUNT(*)::int FROM market_history h JOIN market_master m2 ON m2.symbol=h.symbol WHERE COALESCE(m2.category,'') ILIKE '%energy%' OR COALESCE(m2.category,'') ILIKE '%oil%')::int AS rows, (SELECT MIN(h.date) FROM market_history h JOIN market_master m2 ON m2.symbol=h.symbol WHERE COALESCE(m2.category,'') ILIKE '%energy%' OR COALESCE(m2.category,'') ILIKE '%oil%') AS earliest, (SELECT MAX(h.date) FROM market_history h JOIN market_master m2 ON m2.symbol=h.symbol WHERE COALESCE(m2.category,'') ILIKE '%energy%' OR COALESCE(m2.category,'') ILIKE '%oil%') AS latest FROM market_master m WHERE COALESCE(m.category,'') ILIKE '%energy%' OR COALESCE(m.category,'') ILIKE '%oil%'",
+      "blocking": "Complete historical coverage, Daily lifecycle, and API.",
+      "universe": 0,
+      "historical": 0,
+      "rows": 0,
+      "earliest": null,
+      "latest": null,
+      "historicalCoverage": 0,
+      "daily": "NOT_STARTED",
+      "production": "NOT_VERIFIED",
+      "latestRun": null,
+      "status": "NOT_STARTED",
+      "completion": 0,
+      "nextTask": "Complete historical coverage, Daily lifecycle, and API."
+    },
+    {
+      "id": "insurance",
+      "assetClass": "Insurance",
+      "name": "Insurance",
+      "provider": "PROVIDER_PENDING",
+      "api": null,
+      "jobs": [],
+      "sql": "SELECT COUNT(*) FILTER (WHERE p.is_active)::int AS universe, COUNT(*) FILTER (WHERE EXISTS (SELECT 1 FROM insurance_history h WHERE h.product_id=p.id))::int AS historical, (SELECT COUNT(*)::int FROM insurance_history)::int AS rows, (SELECT MIN(date) FROM insurance_history) AS earliest, (SELECT MAX(date) FROM insurance_history) AS latest FROM insurance_products p",
+      "blocking": "Historical exceptions, provenance, Production Daily, and API are incomplete.",
+      "universe": 456,
+      "historical": 0,
+      "rows": 0,
+      "earliest": null,
+      "latest": null,
+      "historicalCoverage": 0,
+      "daily": "NOT_STARTED",
+      "production": "NOT_VERIFIED",
+      "latestRun": null,
+      "status": "MASTER_ONLY",
+      "completion": 0,
+      "nextTask": "Historical exceptions, provenance, Production Daily, and API are incomplete."
+    },
+    {
+      "id": "reit",
+      "assetClass": "REIT",
+      "name": "REIT",
+      "provider": "NOT_CONFIGURED",
+      "api": null,
+      "jobs": [],
+      "blocking": "No dedicated Master, canonical history, Daily lifecycle, or API.",
+      "universe": 0,
+      "historical": 0,
+      "rows": 0,
+      "earliest": null,
+      "latest": null,
+      "historicalCoverage": 0,
+      "daily": "NOT_STARTED",
+      "production": "NOT_VERIFIED",
+      "latestRun": null,
+      "status": "NOT_STARTED",
+      "completion": 0,
+      "nextTask": "No dedicated Master, canonical history, Daily lifecycle, or API."
+    }
+  ],
+  "nextTask": {
+    "id": "etf-global",
+    "name": "Global ETF",
+    "blockingIssue": "Finish the resumable whole-universe Daily validation."
+  }
+}

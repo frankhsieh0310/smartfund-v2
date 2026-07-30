@@ -24,6 +24,9 @@ async function main(): Promise<void> {
   // A larger bounded slice reaches the Historical Ready gate promptly without
   // introducing a second worker or bypassing the lifecycle lock.
   await run("scripts/data/historical/run-production-sp500-historical.ts", ["--market=NYSE", "--max-symbols=200"]);
+  // Rebuild the only completion dashboard from canonical tables and the run
+  // ledger after every production scheduler pass. No hand-maintained scores.
+  await run("scripts/data/production/build-data-completion-dashboard.ts", []);
 }
 
 main().catch((error: unknown) => {
