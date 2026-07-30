@@ -6,7 +6,10 @@ type Status = "NOT_STARTED" | "MASTER_ONLY" | "PARTIAL_HISTORICAL" | "HISTORICAL
 type Counts = { universe: number; historical: number; rows: number; earliest: Date | null; latest: Date | null };
 type Definition = { id: string; assetClass: string; name: string; provider: string; api: string | null; jobs: string[]; sql?: string; blocking: string };
 type Run = { status: string; started_at: Date; latest_trading_date: Date | null; validation_status: string | null };
-type AcquisitionPlan = { assets: Array<{ id: string; provider: string; adapter: string | null; state: string }> };
+type AcquisitionPlan = {
+  assets: Array<{ id: string; provider: string; adapter: string | null; state: string }>;
+  queuePolicy?: { assetPriority?: string[] };
+};
 
 const prisma = new PrismaClient();
 const root = process.cwd();
@@ -105,6 +108,14 @@ function acquisitionId(assetId: string): string {
   return assetId;
 }
 
+/** Asset production follows the committed provider-and-product-value order.
+ * Stock exchanges remain exclusively in the Stocks lifecycle. */
+function assetPriorityRank(assetId: string, plan: AcquisitionPlan): number | null {
+  if (assetId.startsWith("stocks-")) return null;
+  const rank = plan.queuePolicy?.assetPriority?.indexOf(acquisitionId(assetId)) ?? -1;
+  return rank >= 0 ? rank + 1 : 100;
+}
+
 async function main(): Promise<void> {
   // Run these aggregate queries serially. The ETF/fund history tables are
   // intentionally large; parallel full-table counts would compete with Daily
@@ -121,12 +132,14 @@ async function main(): Promise<void> {
   const overall = +(assets.reduce((sum, asset) => sum + asset.completion, 0) / assets.length).toFixed(2);
   const plan = JSON.parse(await readFile(join(root, "config", "global-data-acquisition-plan.json"), "utf8")) as AcquisitionPlan;
   const planById = new Map(plan.assets.map((asset) => [asset.id, asset]));
-  const completionQueue = assets.filter((asset) => asset.status !== "PRODUCT_READY").map((asset) => {
+  const completionQueue = assets.filter((asset) => asset.status !== "PRODUCT_READY").flatMap((asset) => {
+    const priority = assetPriorityRank(asset.id, plan);
+    if (priority === null) return [];
     const acquisition = planById.get(acquisitionId(asset.id));
     const providerReady = acquisition?.state === "DECLARED" || acquisition?.state === "ACTIVE";
     const dailyGap = asset.daily === "ACTIVE" ? 0 : 1;
-    return { assetId: asset.id, asset: asset.name, provider: acquisition?.provider ?? "UNRESOLVED", adapter: acquisition?.adapter ?? null, providerReady, historicalCoverage: asset.historicalCoverage, daily: asset.daily, production: asset.production, blockingIssue: asset.blocking, priorityScore: +(dailyGap * 100 + (providerReady ? 0 : -100) + asset.historicalCoverage).toFixed(2) };
-  }).sort((a, b) => b.priorityScore - a.priorityScore || b.historicalCoverage - a.historicalCoverage);
+    return [{ assetId: asset.id, asset: asset.name, provider: acquisition?.provider ?? "UNRESOLVED", adapter: acquisition?.adapter ?? null, providerReady, priority, historicalCoverage: asset.historicalCoverage, daily: asset.daily, production: asset.production, blockingIssue: asset.blocking, priorityScore: +(dailyGap * 100 + (providerReady ? 0 : -100) + asset.historicalCoverage).toFixed(2) }];
+  }).sort((a, b) => a.priority - b.priority || b.priorityScore - a.priorityScore || b.historicalCoverage - a.historicalCoverage);
   const nextTask = completionQueue[0] ?? null;
   const dashboard = { generatedAt: new Date().toISOString(), source: "Supabase canonical tables + production_scheduler_runs", metricMode: deep ? "DEEP_EXACT" : "FAST_CANONICAL", policy: "Provider Latest Available", globalCompletion: overall, groups, assets, completionQueue, nextTask };
   await mkdir(join(root, "config"), { recursive: true });

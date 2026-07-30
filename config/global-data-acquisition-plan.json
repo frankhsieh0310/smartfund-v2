@@ -29,7 +29,25 @@
     { "id": "insurance", "scope": "Insurance products", "provider": "UNRESOLVED", "adapter": null, "historical": "Legacy provider scripts exist but no Production Adapter decision", "daily": "Not started", "state": "PROVIDER_DECISION_REQUIRED" }
   ],
   "queuePolicy": {
-    "sort": ["production daily gap", "historical coverage descending", "provider declared before provider unresolved", "completion percentage ascending"],
+    "authority": "Asset priority is decided by reusable ProviderAdapter coverage and product value, never by stock-market sequence.",
+    "assetPriority": [
+      "etf-global",
+      "etf-taiwan",
+      "funds",
+      "commodity",
+      "energy",
+      "precious-metal",
+      "fx",
+      "crypto",
+      "reit",
+      "insurance",
+      "macro-imf",
+      "macro-oecd",
+      "macro-world-bank"
+    ],
+    "stockMarketPolicy": "Stock exchanges (NYSE, AMEX, Japan, HKEX and others) remain in the Stocks lifecycle and are not ranked against asset-class Production work.",
+    "providerReusePolicy": "A ProviderAdapter is implemented and validated once, then dispatched to every eligible asset in its priority group; asset workflows must not create duplicate downloaders.",
+    "sort": ["assetPriority", "provider adapter readiness", "daily production gap", "historical coverage descending"],
     "productionGate": ["provider is DECLARED or ACTIVE", "adapter is registered", "historical strategy exists", "daily strategy exists", "provider latest available freshness rule"],
     "nonBlocking": ["individual Yahoo no data", "symbol mapping exception", "provider publication lag"],
     "blocking": ["provider unresolved", "adapter absent", "systemic download failure", "systemic database write failure"]
