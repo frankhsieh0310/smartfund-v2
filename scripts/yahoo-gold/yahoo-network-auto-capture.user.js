@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SmartFund Yahoo Network Auto Capture
 // @namespace    https://smartfund.app/
-// @version      1.0.2
+// @version      1.0.3
 // @downloadURL   https://raw.githubusercontent.com/frankhsieh0310/smartfund-v2/master/scripts/yahoo-gold/yahoo-network-auto-capture.user.js
 // @updateURL     https://raw.githubusercontent.com/frankhsieh0310/smartfund-v2/master/scripts/yahoo-gold/yahoo-network-auto-capture.user.js
 // @description  Saves a sanitized network capture after a Yahoo Finance Export or Download click.
@@ -12,8 +12,6 @@
 // ==/UserScript==
 
 (() => {
-  console.log("SMARTFUND USERSCRIPT LOADED");
-
   const INSTALL_KEY = "__SMARTFUND_YAHOO_NETWORK_AUTO_CAPTURE__";
   const MAX_BODY_LENGTH = 5_000;
   const EXPORT_DELAY_MS = 2_500;
@@ -21,7 +19,11 @@
   const sensitiveKey = /(?:cookie|authorization|crumb|token|api[_-]?key|session|set-cookie)/i;
   const page = typeof unsafeWindow === "undefined" ? window : unsafeWindow;
   const pageDocument = page.document;
-  console.log(page.location.href);
+  const pageConsole = page.console || console;
+  const log = (...args) => pageConsole.log(...args);
+  const logError = (...args) => pageConsole.error(...args);
+  log("SMARTFUND USERSCRIPT LOADED");
+  log(page.location.href);
 
   if (page[INSTALL_KEY]) return;
 
@@ -56,7 +58,7 @@
       add({ kind: "FETCH", method: String(init.method || (input instanceof page.Request ? input.method : "GET")).toUpperCase(), requestUrl: sanitizeUrl(input instanceof page.Request ? input.url : String(input)), status: response.status, contentType: response.headers.get("content-type"), bodyPreview: responsePreview, containsValuationKeywords: isValuation(responsePreview) });
       return response;
     };
-    console.log("FETCH HOOKED");
+    log("FETCH HOOKED");
 
     page.XMLHttpRequest.prototype.open = function smartfundAutoCaptureOpen(method, url, ...rest) {
       this.__smartfundYahooRequest = { method: String(method).toUpperCase(), requestUrl: sanitizeUrl(String(url)) };
@@ -71,7 +73,7 @@
       }, { once: true });
       return native.xhrSend.apply(this, args);
     };
-    console.log("XHR HOOKED");
+    log("XHR HOOKED");
 
     page.URL.createObjectURL = function smartfundAutoCaptureBlob(blob) {
       const objectUrl = native.createObjectURL(blob);
@@ -81,20 +83,20 @@
       }).catch(() => add({ kind: "BLOB", method: null, requestUrl: objectUrl, status: null, contentType: blob?.type || null, blobMimeType: blob?.type || null, blobSize: blob?.size ?? null, bodyPreview: "[BLOB_TEXT_UNAVAILABLE]", containsValuationKeywords: false }));
       return objectUrl;
     };
-    console.log("BLOB HOOKED");
+    log("BLOB HOOKED");
 
     let pendingExport = null;
     const downloadSanitizedCapture = () => {
-      console.log("GENERATING JSON");
+      log("GENERATING JSON");
       try {
         const json = JSON.stringify(page.YAHOO_NETWORK_LOGS, null, 2);
         const dataUrl = `data:application/json;charset=utf-8,${encodeURIComponent(json)}`;
         if (typeof GM_download === "function") {
-          console.log("GM_DOWNLOAD CALLED");
-          GM_download({ url: dataUrl, name: "yahoo-network-sanitized.json", saveAs: false, onload: () => console.log("JSON DOWNLOADED"), onerror: (error) => console.error("JSON DOWNLOAD FAILED", error) });
+          log("GM_DOWNLOAD CALLED");
+          GM_download({ url: dataUrl, name: "yahoo-network-sanitized.json", saveAs: false, onload: () => log("JSON DOWNLOADED"), onerror: (error) => logError("JSON DOWNLOAD FAILED", error) });
           return;
         }
-        console.error("GM_DOWNLOAD UNAVAILABLE", typeof GM_download);
+        logError("GM_DOWNLOAD UNAVAILABLE", typeof GM_download);
         const blob = new page.Blob([json], { type: "application/json" });
         const href = native.createObjectURL(blob);
         const anchor = pageDocument.createElement("a");
@@ -105,9 +107,9 @@
         anchor.click();
         anchor.remove();
         setTimeout(() => native.revokeObjectURL(href), 1_000);
-        console.log("JSON DOWNLOADED");
+        log("JSON DOWNLOADED");
       } catch (error) {
-        console.error("JSON GENERATION FAILED", error);
+        logError("JSON GENERATION FAILED", error);
       }
     };
     pageDocument.addEventListener("click", (event) => {
@@ -115,13 +117,13 @@
       const controls = [event.target, ...(event.composedPath?.() || [])];
       const control = controls.find((candidate) => isExportControl(candidate)) || event.target?.closest?.("button,a,[role='button']");
       if (!isExportControl(control)) return;
-      console.log("DOWNLOAD CLICK DETECTED");
+      log("DOWNLOAD CLICK DETECTED");
       add({ kind: "MARK", label: "before-download", method: null, requestUrl: null, status: null, contentType: null, bodyPreview: "", containsValuationKeywords: false });
       clearTimeout(pendingExport);
       pendingExport = setTimeout(downloadSanitizedCapture, EXPORT_DELAY_MS);
     }, true);
     page[INSTALL_KEY] = true;
   } catch (error) {
-    console.error("SMARTFUND USERSCRIPT FAILED", error);
+    logError("SMARTFUND USERSCRIPT FAILED", error);
   }
 })();
