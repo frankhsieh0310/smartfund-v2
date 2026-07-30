@@ -21,6 +21,7 @@
   const BADGE_ID = "smartfund-yahoo-capture-status";
   const MAX_BODY_LENGTH = 5_000;
   const EXPORT_DELAY_MS = 2_500;
+  const GM_DOWNLOAD_TIMEOUT_MS = 5_000;
   const valuationKeywords = ["Market Cap", "Enterprise Value", "Trailing P/E", "Forward P/E", "Price/Sales", "Price/Book", "PeRatio", "ForwardPeRatio", "MarketCap", "EnterpriseValue"];
   const sensitiveKey = /(?:cookie|authorization|crumb|token|api[_-]?key|session|set-cookie)/i;
   const hookState = { fetch: false, xhr: false, blob: false };
@@ -117,14 +118,48 @@
       showStatus("GENERATING JSON");
       try {
         const json = JSON.stringify(page.YAHOO_NETWORK_LOGS, null, 2);
+        const blob = new page.Blob([json], { type: "application/json" });
         const dataUrl = `data:application/json;charset=utf-8,${encodeURIComponent(json)}`;
+        let completed = false;
+        let fallbackTimer = null;
+        const fallbackDownload = (reason) => {
+          if (completed) return;
+          completed = true;
+          if (fallbackTimer) clearTimeout(fallbackTimer);
+          logError("GM_DOWNLOAD FALLBACK", reason);
+          showStatus("BLOB FALLBACK");
+          try {
+            const href = native.createObjectURL(blob);
+            const anchor = pageDocument.createElement("a");
+            anchor.href = href;
+            anchor.download = "yahoo-network-sanitized.json";
+            anchor.style.display = "none";
+            (pageDocument.documentElement || pageDocument.body).appendChild(anchor);
+            anchor.click();
+            anchor.remove();
+            setTimeout(() => native.revokeObjectURL(href), 1_000);
+            log("BLOB FALLBACK CLICKED");
+            showStatus("JSON DOWNLOADED");
+          } catch (error) {
+            logError("BLOB FALLBACK FAILED", error);
+            showStatus(`ERROR: ${error?.message || error}`, true);
+          }
+        };
+        const complete = () => {
+          if (completed) return;
+          completed = true;
+          if (fallbackTimer) clearTimeout(fallbackTimer);
+          log("JSON DOWNLOADED");
+          showStatus("JSON DOWNLOADED");
+        };
         if (typeof GM_download === "function") {
           log("GM_DOWNLOAD CALLED");
-          GM_download({ url: dataUrl, name: "yahoo-network-sanitized.json", saveAs: false, onload: () => { log("JSON DOWNLOADED"); showStatus("JSON DOWNLOADED"); }, onerror: (error) => { logError("JSON DOWNLOAD FAILED", error); showStatus(`ERROR: ${error?.error || error}`, true); } });
+          fallbackTimer = setTimeout(() => fallbackDownload("GM_DOWNLOAD_TIMEOUT"), GM_DOWNLOAD_TIMEOUT_MS);
+          const result = GM_download({ url: dataUrl, name: "yahoo-network-sanitized.json", saveAs: false, onload: complete, onerror: (error) => fallbackDownload(error?.error || error || "GM_DOWNLOAD_ERROR") });
+          if (result && typeof result.then === "function") result.catch((error) => fallbackDownload(error?.message || error || "GM_DOWNLOAD_REJECTED"));
           return;
         }
-        logError("GM_DOWNLOAD UNAVAILABLE", typeof GM_download);
-        showStatus("ERROR: GM_DOWNLOAD UNAVAILABLE", true);
+        fallbackDownload("GM_DOWNLOAD_UNAVAILABLE");
       } catch (error) {
         logError("JSON GENERATION FAILED", error);
         showStatus(`ERROR: ${error?.message || error}`, true);

@@ -27,6 +27,7 @@ class BrowserUrl extends URL {
 }
 
 async function main() {
+  const forceFallback = process.argv.includes("--fallback");
   const source = await readFile(new URL("./yahoo-network-auto-capture.user.js", import.meta.url), "utf8");
   const listeners = new Map<string, Array<(event: unknown) => void>>();
   let downloadedHref = "";
@@ -44,7 +45,8 @@ async function main() {
     location: { href: "https://finance.yahoo.com/quote/AAPL/key-statistics/" },
     fetch: async () => new FakeResponse(), XMLHttpRequest: FakeXhr, URL: BrowserUrl, Blob, Request, document, setTimeout, clearTimeout,
   };
-  const GM_download = ({ url, onload }: { url: string; onload: () => void }) => {
+  const GM_download = ({ url, onload, onerror }: { url: string; onload: () => void; onerror: (error: { error: string }) => void }) => {
+    if (forceFallback) { setTimeout(() => onerror({ error: "TEST_GM_DOWNLOAD_ERROR" }), 0); return; }
     downloadedJson = decodeURIComponent(url.split(",", 2)[1] ?? "");
     onload();
   };
@@ -60,6 +62,6 @@ async function main() {
   if (!json.includes('"kind": "FETCH"') || !json.includes('"kind": "XHR"') || !json.includes('"kind": "BLOB"')) throw new Error("AUTOMATIC_DOWNLOAD_FAILED");
   if (json.includes("must-not-leak")) throw new Error("SENSITIVE_VALUE_NOT_REDACTED");
   if (elements.get("smartfund-yahoo-capture-status")?.textContent !== "SMARTFUND CAPTURE JSON DOWNLOADED") throw new Error("VISIBLE_STATUS_BADGE_FAILED");
-  console.log(JSON.stringify({ status: "PASS", downloadedFile: "yahoo-network-sanitized.json", intercepted: ["FETCH", "XHR", "BLOB"], sensitiveValues: "REDACTED" }, null, 2));
+  console.log(JSON.stringify({ status: "PASS", path: forceFallback ? "BLOB_FALLBACK" : "GM_DOWNLOAD", downloadedFile: "yahoo-network-sanitized.json", intercepted: ["FETCH", "XHR", "BLOB"], sensitiveValues: "REDACTED" }, null, 2));
 }
 main().catch((error) => { console.error(error instanceof Error ? error.message : String(error)); process.exitCode = 1; });
