@@ -116,6 +116,7 @@
     "data:yahoo:gold:download": "node --import tsx --env-file=.env scripts/yahoo-gold-browser.ts --resume",
     "data:yahoo:gold:import": "node --import tsx --env-file=.env scripts/import-yahoo-gold-csv.ts",
     "data:yahoo:gold:analyze-request": "node --import tsx scripts/yahoo-gold/analyze-request.ts",
+    "test:yahoo:gold:network-interceptor": "node --import tsx scripts/yahoo-gold/test-browser-network-interceptor.ts",
     "export-data-dictionary": "tsx scripts/export-data-dictionary.ts",
     "export-coverage-matrix": "tsx scripts/export-coverage-matrix.ts",
     "export-history-coverage": "tsx scripts/export-history-coverage.ts",
