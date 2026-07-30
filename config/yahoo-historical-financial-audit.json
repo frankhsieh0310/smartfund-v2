@@ -1,0 +1,141 @@
+{
+  "version": "1.0",
+  "auditedAt": "2026-07-30",
+  "scope": "Yahoo Finance technical capability and public-term audit; no ingestion performed",
+  "productionDecision": {
+    "approved": false,
+    "reason": "Yahoo public terms prohibit automated collection without prior permission and commercial reproduction/distribution without explicit written permission."
+  },
+  "observedSymbols": [
+    {
+      "symbol": "AAPL",
+      "annualStatementPeriods": 5,
+      "annualEarliest": "2021-09-30",
+      "annualLatest": "2025-09-30",
+      "quarterlyStatementPeriods": "5-6 by statement",
+      "chartRows": 6682,
+      "dividendEvents": 56,
+      "splitEvents": 4
+    },
+    {
+      "symbol": "2330.TW",
+      "annualStatementPeriods": 5,
+      "annualEarliest": "2021-12-31",
+      "annualLatest": "2025-12-31",
+      "quarterlyStatementPeriods": "5-7 by statement",
+      "chartRows": 6613,
+      "dividendEvents": 44,
+      "splitEvents": 10,
+      "clientCompatibilityNote": "Trailing requests exposed validation-schema drift in yahoo-finance2 3.15.3."
+    }
+  ],
+  "historicalFieldCounts": {
+    "priceAndCorporateAction": 8,
+    "incomeStatementDeclared": 142,
+    "balanceSheetDeclared": 285,
+    "cashFlowDeclared": 147,
+    "financialStatementRawDeduplicated": 484,
+    "historicalValuationDirect": 0,
+    "historicalRatioDirect": 0,
+    "historicalDividendDirect": 2,
+    "historicalOwnershipComplete": 0,
+    "historicalEstimateRevisionComplete": 0,
+    "technicalHistoricalFieldTotal": 492
+  },
+  "capabilities": [
+    {
+      "family": "price_ohlcv",
+      "fields": ["open", "high", "low", "close", "adjustedClose", "volume"],
+      "historicalSeries": true,
+      "frequency": "trading_day",
+      "csv": "Yahoo UI CSV requires Gold",
+      "programmatic": "yes_unofficial_endpoint",
+      "officialBulk": false,
+      "directImportTechnical": true,
+      "directImportProductionAuthorised": false,
+      "action": "licensed_direct_import_candidate"
+    },
+    {
+      "family": "financial_statements_raw",
+      "fields": "484 declared de-duplicated raw facts across income statement, balance sheet and cash flow",
+      "historicalSeries": true,
+      "periods": ["annual", "quarterly", "trailing"],
+      "frequency": "post_filing; trailing updates quarterly",
+      "csv": false,
+      "programmatic": "yes_unofficial_endpoint",
+      "officialBulk": false,
+      "directImportTechnical": true,
+      "directImportProductionAuthorised": false,
+      "action": "licensed_direct_raw_import_candidate"
+    },
+    {
+      "family": "valuation_and_ratios",
+      "fields": ["PE", "forwardPE", "PB", "PS", "PEG", "EV", "EV_EBITDA", "margins", "ROE", "ROA", "ROIC", "currentRatio", "quickRatio"],
+      "historicalSeries": false,
+      "currentSnapshot": true,
+      "csv": false,
+      "programmatic": "current_quote_summary_only",
+      "officialBulk": false,
+      "directImportTechnical": false,
+      "directImportProductionAuthorised": false,
+      "action": "rebuild_from_licensed_raw_data"
+    },
+    {
+      "family": "market_cap_and_shares",
+      "fields": ["marketCap", "ordinarySharesNumber", "shareIssued", "treasurySharesNumber", "basicAverageShares", "dilutedAverageShares"],
+      "historicalSeries": "partial_filing_period_shares_only",
+      "csv": false,
+      "programmatic": "current_cap_plus_periodic_statement_shares",
+      "officialBulk": false,
+      "directImportTechnical": "partial",
+      "directImportProductionAuthorised": false,
+      "action": "rebuild_historical_market_cap_from_price_and_point_in_time_shares"
+    },
+    {
+      "family": "dividends_and_splits",
+      "fields": ["cashDividendEvent", "splitEvent", "dividendPerShare", "cashDividendsPaid"],
+      "historicalSeries": true,
+      "frequency": "event_driven_and_filing_period",
+      "csv": "Yahoo historical-event UI CSV requires Gold",
+      "programmatic": "yes_unofficial_chart_endpoint",
+      "officialBulk": false,
+      "directImportTechnical": true,
+      "directImportProductionAuthorised": false,
+      "action": "licensed_direct_event_import_candidate"
+    },
+    {
+      "family": "earnings_and_estimates",
+      "fields": ["earningsActual", "earningsDate", "surprise", "revenueEstimate", "epsEstimate", "targetPrice", "recommendationTrend", "upgradeDowngrade"],
+      "historicalSeries": "limited_recent_only",
+      "csv": false,
+      "programmatic": "quote_summary_modules",
+      "officialBulk": false,
+      "directImportTechnical": "partial",
+      "directImportProductionAuthorised": false,
+      "action": "need_licensed_estimate_history_provider_for_revision_history"
+    },
+    {
+      "family": "ownership",
+      "fields": ["majorHolders", "institutionOwnership", "fundOwnership", "insiderHolders", "insiderTransactions"],
+      "historicalSeries": "snapshots_or_transactions_only",
+      "csv": false,
+      "programmatic": "quote_summary_modules",
+      "officialBulk": false,
+      "directImportTechnical": "partial",
+      "directImportProductionAuthorised": false,
+      "action": "need_licensed_or_filing_derived_ownership_history"
+    }
+  ],
+  "importPolicy": {
+    "directYahooWhenAvailable": false,
+    "reason": "Technical availability is not a production-use licence.",
+    "formulaOnlyWhenDirectSeriesMissing": true,
+    "formulasNeededFor": ["historicalMarketCap", "historicalPE", "historicalPB", "historicalPS", "historicalEV", "historicalEV_EBITDA", "marginHistory", "ROEHistory", "ROAHistory", "ROICHistory"]
+  },
+  "officialSources": [
+    "https://help.yahoo.com/kb/finance/SLN2310.html",
+    "https://help.yahoo.com/kb/finance/certain-amounts-sln2311.html",
+    "https://legal.yahoo.com/us/en/yahoo/terms/otos/index.html",
+    "https://legal.yahoo.com/us/en/yahoo/terms/product-atos/apitnc/index.html"
+  ]
+}
