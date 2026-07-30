@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SmartFund Yahoo Network Auto Capture
 // @namespace    https://smartfund.app/
-// @version      1.0.4
+// @version      1.0.5
 // @downloadURL  https://raw.githubusercontent.com/frankhsieh0310/smartfund-v2/master/scripts/yahoo-gold/yahoo-network-auto-capture.user.js
 // @updateURL    https://raw.githubusercontent.com/frankhsieh0310/smartfund-v2/master/scripts/yahoo-gold/yahoo-network-auto-capture.user.js
 // @description  Saves a sanitized network capture after a Yahoo Finance Export or Download click.
