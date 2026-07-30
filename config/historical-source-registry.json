@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "status": "INITIAL_SOURCE_CATALOG",
+  "policy": "A source is not Production-approved merely because it is visible on a website. Commercial and redistribution rights remain UNKNOWN until legal/provider review records approval.",
+  "sources": [
+    { "id": "SEC_EDGAR_XBRL", "region": "US", "official": true, "api": true, "freeAccess": true, "commercialUse": "REVIEW_REQUIRED", "earliestHistoricalYear": "Issuer- and taxonomy-specific; audit required", "metrics": ["annual/quarterly financial statements", "cash flow", "shares", "filing dates", "insider forms"], "url": "https://data.sec.gov/", "status": "CANDIDATE" },
+    { "id": "TWSE_OPENAPI", "region": "TWSE", "official": true, "api": true, "freeAccess": true, "commercialUse": "REVIEW_REQUIRED", "earliestHistoricalYear": "Endpoint-specific; audit required", "metrics": ["income statement", "balance sheet", "monthly revenue", "dividend", "ownership/governance", "earnings and corporate events"], "url": "https://openapi.twse.com.tw/", "status": "CANDIDATE" },
+    { "id": "TPEX_OPENDATA", "region": "TPEx", "official": true, "api": "TO_VERIFY", "freeAccess": "TO_VERIFY", "commercialUse": "REVIEW_REQUIRED", "earliestHistoricalYear": "TO_AUDIT", "metrics": ["financial statements", "ownership", "dividends", "corporate events"], "url": "https://www.tpex.org.tw/", "status": "CANDIDATE" },
+    { "id": "YAHOO_QUOTE_SUMMARY", "region": "Taiwan and US", "official": false, "api": "UNOFFICIAL_SURFACE", "freeAccess": "TO_VERIFY", "commercialUse": "REVIEW_REQUIRED", "earliestHistoricalYear": "Issuer-specific; audit required", "metrics": ["current profile", "statistics", "financials", "holders", "estimates", "dividend fields"], "url": "https://finance.yahoo.com/", "status": "REFERENCE_AND_MINIMUM_SCOPE" },
+    { "id": "YAHOO_CHART", "region": "Taiwan and US", "official": false, "api": "CURRENT_ADAPTER", "freeAccess": "CURRENT_USE", "commercialUse": "REVIEW_REQUIRED", "earliestHistoricalYear": "Symbol-specific", "metrics": ["price history", "volume", "adjusted close", "dividend/split events where available"], "url": "https://finance.yahoo.com/", "status": "PRODUCTION_PRICE_PROVIDER" },
+    { "id": "COMPANIESMARKETCAP", "region": "Reference", "official": false, "api": "TO_VERIFY", "freeAccess": "TO_VERIFY", "commercialUse": "REVIEW_REQUIRED", "earliestHistoricalYear": "TO_AUDIT", "metrics": ["market cap", "valuation sanity check"], "url": "https://companiesmarketcap.com/", "status": "VALIDATION_REFERENCE_ONLY" },
+    { "id": "MACROTRENDS", "region": "Reference", "official": false, "api": "TO_VERIFY", "freeAccess": "TO_VERIFY", "commercialUse": "REVIEW_REQUIRED", "earliestHistoricalYear": "TO_AUDIT", "metrics": ["financial statements", "ratios", "valuation sanity check"], "url": "https://www.macrotrends.net/", "status": "VALIDATION_REFERENCE_ONLY" },
+    { "id": "FULLRATIO", "region": "Reference", "official": false, "api": "TO_VERIFY", "freeAccess": "TO_VERIFY", "commercialUse": "REVIEW_REQUIRED", "earliestHistoricalYear": "TO_AUDIT", "metrics": ["ratio sanity check"], "url": "https://fullratio.com/", "status": "VALIDATION_REFERENCE_ONLY" },
+    { "id": "STOCKANALYSIS", "region": "Reference", "official": false, "api": "TO_VERIFY", "freeAccess": "TO_VERIFY", "commercialUse": "REVIEW_REQUIRED", "earliestHistoricalYear": "TO_AUDIT", "metrics": ["statements", "ratios", "estimates sanity check"], "url": "https://stockanalysis.com/", "status": "VALIDATION_REFERENCE_ONLY" }
+  ],
+  "metricSourcePolicy": {
+    "financial_statements": ["SEC_EDGAR_XBRL", "TWSE_OPENAPI", "TPEX_OPENDATA", "YAHOO_QUOTE_SUMMARY"],
+    "valuation_and_ratios": ["SMARTFUND_REBUILD_FROM_FINANCIALS_AND_PRICE", "YAHOO_QUOTE_SUMMARY", "COMPANIESMARKETCAP", "MACROTRENDS", "FULLRATIO", "STOCKANALYSIS"],
+    "dividend_and_corporate_actions": ["YAHOO_CHART", "TWSE_OPENAPI", "TPEX_OPENDATA", "SEC_EDGAR_XBRL"],
+    "ownership_and_estimates": ["SEC_EDGAR_XBRL", "TWSE_OPENAPI", "TPEX_OPENDATA", "YAHOO_QUOTE_SUMMARY", "STOCKANALYSIS"]
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "generatedAt": "2026-07-30",
+  "mode": "BASELINE_SCHEMA_AND_PRODUCTION_AUDIT",
+  "markets": [
+    { "market": "Taiwan", "universe": 1977, "priceCoverage": 100, "financialCoverage": 0, "valuationCoverage": 0, "dividendCoverage": 0, "ownershipCoverage": 0, "status": "PRICE_READY_FINANCIAL_NOT_STARTED" },
+    { "market": "US", "universe": 6459, "priceCoverage": 99.94, "financialCoverage": 0, "valuationCoverage": 0, "dividendCoverage": 0, "ownershipCoverage": 0, "status": "PRICE_READY_WITH_EXCEPTIONS_FINANCIAL_NOT_STARTED" },
+    { "market": "ETF", "universe": 12802, "priceCoverage": 99.09, "financialCoverage": 0, "valuationCoverage": 0, "dividendCoverage": 0, "ownershipCoverage": 0, "status": "PRICE_LIFECYCLE_IN_PROGRESS" },
+    { "market": "Fund", "universe": 12035, "priceCoverage": 97.48, "financialCoverage": 0, "valuationCoverage": 0, "dividendCoverage": 0, "ownershipCoverage": 0, "status": "PROVIDER_MAPPING_PENDING" },
+    { "market": "Macro", "universe": 155, "priceCoverage": 0, "financialCoverage": 100, "valuationCoverage": 0, "dividendCoverage": 0, "ownershipCoverage": 0, "status": "FRED_ECB_ACTIVE_PROVIDER_PENDING_REMAINDER" },
+    { "market": "Index", "universe": 55, "priceCoverage": 52.73, "financialCoverage": 0, "valuationCoverage": 0, "dividendCoverage": 0, "ownershipCoverage": 0, "status": "MIXED" }
+  ],
+  "definition": "Financial/valuation/dividend/ownership coverage is zero until canonical historical tables, source provenance and validation evidence exist."
+}

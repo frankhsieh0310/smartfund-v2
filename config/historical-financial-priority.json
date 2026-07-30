@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "objective": "Build the Taiwan + US Historical Financial Layer in parallel with existing Yahoo Price Daily operations.",
+  "scope": {
+    "taiwan": { "markets": ["TWSE", "TPEx"], "universe": 1977 },
+    "us": { "markets": ["NASDAQ", "NYSE", "AMEX"], "universe": 6459 }
+  },
+  "rules": ["Do not block price Daily or Global ETF Production validation.", "Do not publish derived metrics before formula validation passes.", "Every financial value is historical, period-aware, source-aware and restatement-aware.", "Other markets remain low priority until Taiwan and US Financial Layer reaches Historical Ready."],
+  "priority": [
+    { "phase": "P0", "domains": ["price exceptions", "price daily", "financial statements", "per-share data", "dividends", "corporate actions"] },
+    { "phase": "P1", "domains": ["historical valuation: PE/PB/PS/EV/EV_EBITDA/dividend_yield", "historical ratios: ROE/ROA/ROIC/margins/current_ratio/quick_ratio/debt_equity/interest_coverage"] },
+    { "phase": "P1.5", "domains": ["ownership snapshots and change", "estimates and revisions", "event calendar", "formula validation and confidence"] },
+    { "phase": "P2", "domains": ["historical financial coverage expansion", "peer/factor/risk intelligence"] }
+  ],
+  "productionGate": ["source catalog entry audited", "canonical financial domain available", "source provenance retained", "period and restatement version retained", "formula validation PASS for derived metrics", "coverage dashboard updated"]
+}
