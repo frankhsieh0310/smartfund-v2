@@ -31,12 +31,14 @@ async function main() {
   const listeners = new Map<string, Array<(event: unknown) => void>>();
   let downloadedHref = "";
   let downloadedJson = "";
-  const root = { appendChild() {} };
+  const elements = new Map<string, { textContent?: string }>();
+  const root = { appendChild(element: { id?: string; textContent?: string }) { if (element.id) elements.set(element.id, element); } };
   const document = {
     documentElement: root,
     body: root,
     addEventListener(name: string, listener: (event: unknown) => void) { listeners.set(name, [...(listeners.get(name) ?? []), listener]); },
-    createElement: () => ({ href: "", download: "", style: {}, click() { downloadedHref = this.href; }, remove() {} }),
+    getElementById: (id: string) => elements.get(id) ?? null,
+    createElement: () => ({ href: "", download: "", style: {}, textContent: "", click() { downloadedHref = this.href; }, remove() {} }),
   };
   const windowObject: Record<string, unknown> = {
     location: { href: "https://finance.yahoo.com/quote/AAPL/key-statistics/" },
@@ -57,6 +59,7 @@ async function main() {
   const json = downloadedJson || (downloaded ? await downloaded.text() : "");
   if (!json.includes('"kind": "FETCH"') || !json.includes('"kind": "XHR"') || !json.includes('"kind": "BLOB"')) throw new Error("AUTOMATIC_DOWNLOAD_FAILED");
   if (json.includes("must-not-leak")) throw new Error("SENSITIVE_VALUE_NOT_REDACTED");
+  if (elements.get("smartfund-yahoo-capture-status")?.textContent !== "SMARTFUND CAPTURE JSON DOWNLOADED") throw new Error("VISIBLE_STATUS_BADGE_FAILED");
   console.log(JSON.stringify({ status: "PASS", downloadedFile: "yahoo-network-sanitized.json", intercepted: ["FETCH", "XHR", "BLOB"], sensitiveValues: "REDACTED" }, null, 2));
 }
 main().catch((error) => { console.error(error instanceof Error ? error.message : String(error)); process.exitCode = 1; });
