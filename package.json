@@ -111,6 +111,7 @@
     "data:us:universe": "node --experimental-strip-types --env-file=.env scripts/data/us/discover-us-stock-universe.ts",
     "data:yahoo:html:etf:backfill": "tsx scripts/data/yahoo/backfill-yahoo-html-etf-history.ts",
     "data:financial:sec:backfill": "node --import tsx --env-file=.env scripts/data/financial/backfill-sec-financial-metric.ts --metric=revenue --resume",
+    "data:financial:yahoo:backfill": "node --import tsx --env-file=.env scripts/data/financial/backfill-yahoo-financial.ts --stage=statements --resume",
     "export-data-dictionary": "tsx scripts/export-data-dictionary.ts",
     "export-coverage-matrix": "tsx scripts/export-coverage-matrix.ts",
     "export-history-coverage": "tsx scripts/export-history-coverage.ts",

@@ -1,0 +1,67 @@
+{
+  "version": "1.0",
+  "provider": "YAHOO",
+  "scope": "Historical financial ingestion priority and order",
+  "defaultHistoricalRange": { "period1": "2010-01-01", "period2": "now" },
+  "priority": {
+    "P1_INGEST_NOW": {
+      "fetch": true,
+      "stages": [
+        {
+          "order": 1,
+          "name": "income_statement",
+          "fields": "All dated numeric fields returned by fundamentalsTimeSeries module=financials for annual and quarterly periods",
+          "reason": "Direct raw historical financial facts; do not replace with a derived ratio."
+        },
+        {
+          "order": 2,
+          "name": "balance_sheet",
+          "fields": "All dated numeric fields returned by fundamentalsTimeSeries module=balance-sheet for annual and quarterly periods",
+          "reason": "Direct raw historical financial facts including equity, book-value inputs and filing-period share facts."
+        },
+        {
+          "order": 3,
+          "name": "cash_flow",
+          "fields": "All dated numeric fields returned by fundamentalsTimeSeries module=cash-flow for annual and quarterly periods",
+          "reason": "Direct raw historical cash-flow, free-cash-flow, capex and dividend-paid facts."
+        },
+        {
+          "order": 4,
+          "name": "dividends",
+          "fields": ["cash dividend event", "statement dividendPerShare", "cashDividendsPaid"],
+          "reason": "Direct dated events and raw statement facts."
+        },
+        {
+          "order": 5,
+          "name": "corporate_actions",
+          "fields": ["split event", "split ratio"],
+          "reason": "Direct dated chart event records."
+        }
+      ]
+    },
+    "P2_REBUILD_AND_VALIDATE": {
+      "fetch": false,
+      "fields": [
+        "trailingTwelveMonthFinancials", "historicalMarketCap", "historicalPE", "historicalPB", "historicalPS", "historicalEV", "historicalEVToEBITDA",
+        "historicalGrossMargin", "historicalOperatingMargin", "historicalNetMargin", "historicalROE", "historicalROA", "historicalROIC"
+      ],
+      "reason": "These are valuation or ratio outputs. Build only after their period-aligned raw dependencies have been ingested and validated."
+    },
+    "P3_DEFERRED": {
+      "fetch": false,
+      "fields": ["ownershipHistory", "institutionChange", "fundHolderChange", "insiderHistory", "estimateRevisionHistory", "sustainabilityHistory"],
+      "reason": "The observed surfaces are snapshot, limited-event, forward, or absent rather than complete dated historical series."
+    }
+  },
+  "fieldPolicy": {
+    "datedNumericFundamentalsTimeSeriesField": { "priority": "P1_INGEST_NOW", "fetch": true, "reason": "Direct raw dated value." },
+    "chartDividendOrSplitEvent": { "priority": "P1_INGEST_NOW", "fetch": true, "reason": "Direct dated event." },
+    "currentOrTrailingValuationStatistic": { "priority": "P2_REBUILD_AND_VALIDATE", "fetch": false, "reason": "Not a complete dated historical series." },
+    "ownershipOrEstimateSnapshot": { "priority": "P3_DEFERRED", "fetch": false, "reason": "Not a complete historical series." }
+  },
+  "ingestionOrder": ["income_statement", "balance_sheet", "cash_flow", "dividends", "corporate_actions", "valuation_rebuild", "ownership", "estimates"],
+  "targetTable": "stock_financial_facts",
+  "sourceValues": ["YAHOO_FINANCIAL_TIMESERIES", "YAHOO_CHART_API"],
+  "rawArchive": "debug/yahoo-financial/raw",
+  "checkpoint": "production_scheduler_checkpoints"
+}
