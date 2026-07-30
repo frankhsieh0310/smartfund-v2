@@ -44,6 +44,13 @@ export interface ProviderAdapter {
   readonly id: string;
   readonly supportedAssetClasses: readonly ProviderAssetClass[];
   fetchLatest(request: ProviderFetchRequest): Promise<ProviderPoint[]>;
+  /**
+   * The newest dated observation the provider currently publishes for this
+   * instrument. This deliberately represents provider availability, not the
+   * local calendar, so markets with different sessions and official series
+   * with publication lags are not falsely marked stale.
+   */
+  latestAvailableDate(request: ProviderFetchRequest): Promise<Date | null>;
   fetchHistorical(request: ProviderFetchRequest): Promise<ProviderPoint[]>;
   normalize(payload: unknown): ProviderPoint[];
   validate(points: ProviderPoint[]): ProviderValidation;

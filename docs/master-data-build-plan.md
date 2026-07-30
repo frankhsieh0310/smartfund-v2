@@ -127,3 +127,19 @@ This is the highest-leverage next task because it is already in Production, has 
 - [ ] Latest-date freshness is within the asset's trading/release calendar
 - [ ] Status can advance to `PRODUCT_READY`
 
+## Data Freshness Policy (permanent)
+
+Daily freshness is measured against the **latest valid observation currently
+published by the configured provider**, never against the local calendar date.
+Every production provider adapter implements `latestAvailableDate()` and the
+Daily lifecycle compares that value with the database's latest value per
+instrument or series.
+
+- `databaseLatest >= providerLatestAvailable` records `UP_TO_PROVIDER_LATEST`,
+  exits successfully, and does not retry.
+- A retry is permitted only when a provider has a newer available observation
+  than the database or when the fetch/write itself had a transient failure.
+- Provider publication lag, different exchange sessions, weekends, holidays,
+  and monthly/quarterly macro releases are valid states—not stale data.
+- Each Daily Summary persists the freshness policy and the count confirmed
+  `UP_TO_PROVIDER_LATEST` so production evidence remains auditable.

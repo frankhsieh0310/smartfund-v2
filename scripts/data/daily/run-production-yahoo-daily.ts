@@ -137,11 +137,14 @@ async function execute(job: Job, runType: RunType): Promise<Record<string, unkno
           if (latest) await prisma.stock.update({ where: { id: stock.id }, data: { latestDate: latest.date, latestClose: latest.close! } });
           await prisma.$executeRawUnsafe('DELETE FROM production_scheduler_failures WHERE job_id = $1 AND stock_id = $2', job.id, stock.id);
           const noUpdate = inserted + updated === 0 ? 1 : 0;
-          return { completed: 1, inserted, updated, failed: 0, success: noUpdate ? 0 : 1, noUpdate, permanentUnavailable: 0, retryableFailure: 0 };
+          // The Yahoo response itself defines the latest available session for
+          // this symbol. A no-op is therefore fresh when Yahoo has not yet
+          // published another candle; it is not a calendar-date failure.
+          return { completed: 1, inserted, updated, failed: 0, success: noUpdate ? 0 : 1, noUpdate, permanentUnavailable: 0, retryableFailure: 0, upToProviderLatest: 1 };
         } catch (error) {
           const classification = failureClassification(error);
           await prisma.$executeRawUnsafe("INSERT INTO production_scheduler_failures (job_id, stock_id, symbol, attempts, last_error, error_type, last_attempted_at, next_retry_at, classification, resolved, resolution_reason) VALUES ($1, $2, $3, 1, $4, $5, NOW(), CASE WHEN $6 = 'RETRYABLE_FAILURE' THEN NOW() + INTERVAL '15 minutes' ELSE NULL END, $6, $6 = 'PERMANENT_UNAVAILABLE', CASE WHEN $6 = 'PERMANENT_UNAVAILABLE' THEN $5 ELSE NULL END) ON CONFLICT (job_id, stock_id) DO UPDATE SET attempts = production_scheduler_failures.attempts + 1, last_error = EXCLUDED.last_error, error_type = EXCLUDED.error_type, classification = EXCLUDED.classification, resolved = EXCLUDED.resolved, resolution_reason = EXCLUDED.resolution_reason, last_attempted_at = NOW(), next_retry_at = EXCLUDED.next_retry_at", job.id, stock.id, stock.yahooSymbol, error instanceof Error ? error.message : String(error), errorType(error), classification);
-          return { completed: 0, inserted: 0, updated: 0, failed: 1, success: 0, noUpdate: 0, permanentUnavailable: classification === "PERMANENT_UNAVAILABLE" ? 1 : 0, retryableFailure: classification === "RETRYABLE_FAILURE" ? 1 : 0 };
+          return { completed: 0, inserted: 0, updated: 0, failed: 1, success: 0, noUpdate: 0, permanentUnavailable: classification === "PERMANENT_UNAVAILABLE" ? 1 : 0, retryableFailure: classification === "RETRYABLE_FAILURE" ? 1 : 0, upToProviderLatest: 0 };
         }
       }));
       const attemptedBeforeBatch = summary.attempted;
@@ -155,6 +158,7 @@ async function execute(job: Job, runType: RunType): Promise<Record<string, unkno
         summary.noUpdate += outcome.noUpdate;
         summary.permanentUnavailable += outcome.permanentUnavailable;
         summary.retryableFailure += outcome.retryableFailure;
+        summary.upToProviderLatest += outcome.upToProviderLatest;
       }
       if (Math.floor(attemptedBeforeBatch / CHECKPOINT_EVERY) < Math.floor(summary.attempted / CHECKPOINT_EVERY) || offset + batch.length === stocks.length) {
         await persistLifecycleCheckpoint(prisma, runId, summary, batch.at(-1)!.yahooSymbol);
@@ -162,7 +166,7 @@ async function execute(job: Job, runType: RunType): Promise<Record<string, unkno
       }
     }
     const latest = allStocks.reduce<Date | null>((current, stock) => !current || stock.latestDate! > current ? stock.latestDate : current, null);
-    const validation = { status: summary.attempted === summary.success + summary.noUpdate + summary.permanentUnavailable + summary.retryableFailure ? "PASS" : "FAIL", market: job.exchange, universe: allStocks.length, processed: summary.attempted, source: "YAHOO", summaryType: "DAILY_SUMMARY" };
+    const validation = { status: summary.attempted === summary.success + summary.noUpdate + summary.permanentUnavailable + summary.retryableFailure ? "PASS" : "FAIL", market: job.exchange, universe: allStocks.length, processed: summary.attempted, freshness: { policy: "PROVIDER_LATEST_AVAILABLE", upToProviderLatest: summary.upToProviderLatest }, source: "YAHOO", summaryType: "DAILY_SUMMARY" };
     await completeLifecycleRun(prisma, runId, summary, latest, validation);
     return { jobId: job.id, runType, status: "COMPLETED", ...summary };
   } catch (error) {

@@ -23,6 +23,11 @@ function noNewData(error: unknown): boolean {
   return /(?:FRED|ECB)_NO_DATA/.test(error instanceof Error ? error.message : String(error));
 }
 
+function day(value: Date | null | undefined): string | null { return value ? value.toISOString().slice(0, 10) : null; }
+function isCurrent(databaseLatest: Date | null, providerLatest: Date | null): boolean {
+  return Boolean(providerLatest && databaseLatest && day(databaseLatest)! >= day(providerLatest)!);
+}
+
 function newYorkDay(value = new Date()): string {
   const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(value);
   const get = (type: string) => parts.find((part) => part.type === type)?.value ?? "";
@@ -61,7 +66,13 @@ async function main(): Promise<void> {
       const outcomes = await Promise.all(batch.map(async (series) => {
         try {
           const adapter = productionProviderRegistry.get(series.provider);
-          const points = await adapter.fetchLatest({ assetClass: "MACRO", instrument: { id: series.id, symbol: series.seriesId, latestDate: series.latestDate } });
+          const request = { assetClass: "MACRO" as const, instrument: { id: series.id, symbol: series.seriesId, latestDate: series.latestDate } };
+          const providerLatest = await adapter.latestAvailableDate(request);
+          if (isCurrent(series.latestDate, providerLatest)) {
+            await prisma.$executeRawUnsafe("DELETE FROM production_scheduler_failures WHERE job_id = $1 AND stock_id = $2", JOB_ID, series.id);
+            return { attempted: 1, completed: 1, noUpdate: 1, upToProviderLatest: 1 };
+          }
+          const points = await adapter.fetchLatest(request);
           let inserted = 0; let updated = 0;
           for (const point of points.filter((point) => point.value !== null && point.value !== undefined)) {
             const existing = await prisma.economicValue.findUnique({ where: { seriesId_date: { seriesId: series.id, date: point.date } }, select: { id: true } });
@@ -69,7 +80,7 @@ async function main(): Promise<void> {
             if (existing) updated++; else inserted++;
           }
           await prisma.$executeRawUnsafe("DELETE FROM production_scheduler_failures WHERE job_id = $1 AND stock_id = $2", JOB_ID, series.id);
-          return { attempted: 1, completed: 1, inserted, updated, success: inserted + updated ? 1 : 0, noUpdate: inserted + updated ? 0 : 1 };
+          return { attempted: 1, completed: 1, inserted, updated, success: inserted + updated ? 1 : 0, noUpdate: inserted + updated ? 0 : 1, upToProviderLatest: providerLatest && points.at(-1)?.date && day(points.at(-1)!.date) >= day(providerLatest) ? 1 : 0 };
         } catch (error) {
           if (noNewData(error)) return { attempted: 1, completed: 1, noUpdate: 1 };
           await failure(series, error); return { attempted: 1, failed: 1, retryableFailure: 1 };
@@ -78,7 +89,7 @@ async function main(): Promise<void> {
       outcomes.forEach((outcome) => Object.entries(outcome).forEach(([key, value]) => { (summary as Record<string, number>)[key] = ((summary as Record<string, number>)[key] ?? 0) + (value ?? 0); }));
       if (summary.attempted % CHECKPOINT_EVERY === 0 || offset + batch.length === selected.length) { await persistLifecycleCheckpoint(prisma, runId, summary, `${batch.at(-1)!.provider}:${batch.at(-1)!.seriesId}`); await heartbeatLifecycleLock(prisma, JOB_ID, owner); }
     }
-    const validation = { status: summary.attempted === available.length && summary.attempted === summary.completed + summary.failed ? "PASS" : "FAIL", universe: all.length, adapterUniverse: available.length, providerPending: pending.map((series) => ({ provider: series.provider, seriesId: series.seriesId })), source: "OFFICIAL_PROVIDER_ADAPTERS", summaryType: "DAILY_SUMMARY" };
+    const validation = { status: summary.attempted === available.length && summary.attempted === summary.completed + summary.failed ? "PASS" : "FAIL", universe: all.length, adapterUniverse: available.length, providerPending: pending.map((series) => ({ provider: series.provider, seriesId: series.seriesId })), freshness: { policy: "PROVIDER_LATEST_AVAILABLE", upToProviderLatest: summary.upToProviderLatest }, source: "OFFICIAL_PROVIDER_ADAPTERS", summaryType: "DAILY_SUMMARY" };
     await completeLifecycleRun(prisma, runId, summary, null, validation);
     console.log(JSON.stringify({ jobId: JOB_ID, status: validation.status, ...summary, providerPending: pending.length }, null, 2));
   } catch (error) { if (runId) await failLifecycleRun(prisma, runId, error); throw error; }

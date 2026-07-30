@@ -32,6 +32,13 @@ export class YahooChartProviderAdapter implements ProviderAdapter {
     return points;
   }
 
+  async latestAvailableDate(request: ProviderFetchRequest): Promise<Date | null> {
+    // A short provider-side window is sufficient to establish freshness and
+    // avoids treating a calendar day before Yahoo publishes its close as stale.
+    const points = await this.fetch(request, new Date(Date.now() - 60 * 86_400_000), true);
+    return points.at(-1)?.date ?? null;
+  }
+
   async fetchHistorical(request: ProviderFetchRequest): Promise<ProviderPoint[]> {
     return this.fetch(request, request.startDate ?? new Date(0));
   }

@@ -18,6 +18,11 @@ export class FredProviderAdapter implements ProviderAdapter {
     return this.fetch(request, request.instrument.latestDate ?? new Date(Date.now() - 31 * 86_400_000));
   }
 
+  async latestAvailableDate(request: ProviderFetchRequest): Promise<Date | null> {
+    const points = await this.fetch(request, undefined, true);
+    return points.at(-1)?.date ?? null;
+  }
+
   async fetchHistorical(request: ProviderFetchRequest): Promise<ProviderPoint[]> {
     return this.fetch(request, request.startDate ?? new Date("1900-01-01T00:00:00.000Z"));
   }
@@ -35,14 +40,15 @@ export class FredProviderAdapter implements ProviderAdapter {
       : { valid: false, reason: "FRED_NO_DATA" };
   }
 
-  private async fetch(request: ProviderFetchRequest, start: Date): Promise<ProviderPoint[]> {
+  private async fetch(request: ProviderFetchRequest, start?: Date, latestOnly = false): Promise<ProviderPoint[]> {
     if (!this.apiKey) throw new Error("FRED_API_KEY_REQUIRED");
     const url = new URL("https://api.stlouisfed.org/fred/series/observations");
     url.searchParams.set("series_id", request.instrument.symbol);
     url.searchParams.set("api_key", this.apiKey);
     url.searchParams.set("file_type", "json");
-    url.searchParams.set("sort_order", "asc");
-    url.searchParams.set("observation_start", start.toISOString().slice(0, 10));
+    url.searchParams.set("sort_order", latestOnly ? "desc" : "asc");
+    if (latestOnly) url.searchParams.set("limit", "1");
+    if (start) url.searchParams.set("observation_start", start.toISOString().slice(0, 10));
     if (request.endDate) url.searchParams.set("observation_end", request.endDate.toISOString().slice(0, 10));
     const response = await fetch(url, { signal: AbortSignal.timeout(30_000) });
     if (!response.ok) throw new Error(`FRED_HTTP_${response.status}`);

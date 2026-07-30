@@ -11,6 +11,11 @@ export class EcbProviderAdapter implements ProviderAdapter {
     return this.fetch(request, request.instrument.latestDate ?? new Date(Date.now() - 31 * 86_400_000));
   }
 
+  async latestAvailableDate(request: ProviderFetchRequest): Promise<Date | null> {
+    const points = await this.fetch(request, undefined, true);
+    return points.at(-1)?.date ?? null;
+  }
+
   async fetchHistorical(request: ProviderFetchRequest): Promise<ProviderPoint[]> {
     return this.fetch(request, request.startDate ?? new Date("1900-01-01T00:00:00.000Z"));
   }
@@ -32,10 +37,11 @@ export class EcbProviderAdapter implements ProviderAdapter {
       : { valid: false, reason: "ECB_NO_DATA" };
   }
 
-  private async fetch(request: ProviderFetchRequest, start: Date): Promise<ProviderPoint[]> {
+  private async fetch(request: ProviderFetchRequest, start?: Date, latestOnly = false): Promise<ProviderPoint[]> {
     const url = new URL(`https://data-api.ecb.europa.eu/service/data/${request.instrument.symbol}`);
     url.searchParams.set("format", "csvdata");
-    url.searchParams.set("startPeriod", start.toISOString().slice(0, 10));
+    if (latestOnly) url.searchParams.set("lastNObservations", "1");
+    if (start) url.searchParams.set("startPeriod", start.toISOString().slice(0, 10));
     if (request.endDate) url.searchParams.set("endPeriod", request.endDate.toISOString().slice(0, 10));
     const response = await fetch(url, { headers: { Accept: "text/csv" }, signal: AbortSignal.timeout(30_000) });
     if (!response.ok) throw new Error(`ECB_HTTP_${response.status}`);

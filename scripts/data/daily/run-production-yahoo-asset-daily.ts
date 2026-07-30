@@ -31,6 +31,10 @@ const kinds: AssetKind[] = requested ? [requested] : ["GLOBAL_ETF", "BOND_YIELD"
 
 function jobId(kind: AssetKind): string { return `${kind.toLowerCase()}-production-daily`; }
 function exchange(kind: AssetKind): string { return kind; }
+function day(value: Date | null | undefined): string | null { return value ? value.toISOString().slice(0, 10) : null; }
+function isCurrent(databaseLatest: Date | null, providerLatest: Date | null): boolean {
+  return Boolean(providerLatest && databaseLatest && day(databaseLatest)! >= day(providerLatest)!);
+}
 
 function newYorkDay(value = new Date()): string {
   const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(value);
@@ -105,6 +109,34 @@ async function dueRetryItems(job: string, all: Item[]): Promise<Item[]> {
   return all.filter((item) => ids.has(item.id));
 }
 
+async function processItem(
+  kind: AssetKind,
+  job: string,
+  item: Item,
+  adapter: ReturnType<typeof productionProviderRegistry.get>,
+  providerConfig: ProviderConfig,
+): Promise<Partial<ReturnType<typeof createSummary>>> {
+  try {
+    const sourceSymbol = providerConfig.instrumentMappings?.[item.symbol] ?? item.symbol;
+    const request = { assetClass: providerAssetClass(kind), instrument: { id: item.id, symbol: sourceSymbol, latestDate: item.latestDate } } as const;
+    const providerLatest = await adapter.latestAvailableDate(request);
+    if (isCurrent(item.latestDate, providerLatest)) {
+      await prisma.$executeRawUnsafe("DELETE FROM production_scheduler_failures WHERE job_id = $1 AND stock_id = $2", job, item.id);
+      return { attempted: 1, completed: 1, noUpdate: 1, upToProviderLatest: 1 };
+    }
+    const candles = await adapter.fetchLatest(request);
+    const newest = candles.at(-1);
+    const normalized = newest && (newest.close ?? newest.value) != null ? { ...newest, close: newest.close ?? newest.value } : null;
+    if (!normalized) throw new Error("PROVIDER_NO_DATA");
+    const existed = await upsert(kind, item, normalized);
+    await prisma.$executeRawUnsafe("DELETE FROM production_scheduler_failures WHERE job_id = $1 AND stock_id = $2", job, item.id);
+    return { attempted: 1, completed: 1, success: existed ? 0 : 1, noUpdate: existed ? 1 : 0, inserted: existed ? 0 : 1, updated: existed ? 1 : 0, upToProviderLatest: providerLatest && day(normalized.date) >= day(providerLatest) ? 1 : 0 };
+  } catch (error) {
+    const result = await recordFailure(job, item, error);
+    return { attempted: 1, failed: 1, permanentUnavailable: result === "PERMANENT_UNAVAILABLE" ? 1 : 0, retryableFailure: result === "RETRYABLE_FAILURE" ? 1 : 0 };
+  }
+}
+
 async function run(kind: AssetKind): Promise<Record<string, unknown>> {
   const job = jobId(kind);
   await recoverOrphanedLifecycleRun(prisma, job);
@@ -126,22 +158,7 @@ async function run(kind: AssetKind): Promise<Record<string, unknown>> {
     const selected = (resume ? all.slice(resumeIndex + 1) : all).slice(0, MAX_PER_CRON);
     for (let offset = 0; offset < selected.length; offset += CONCURRENCY) {
       const batch = selected.slice(offset, offset + CONCURRENCY);
-      const outcomes = await Promise.all(batch.map(async (item) => {
-        try {
-          const sourceSymbol = providerConfig.instrumentMappings?.[item.symbol] ?? item.symbol;
-          const candles = await adapter.fetchLatest({ assetClass: providerAssetClass(kind), instrument: { id: item.id, symbol: sourceSymbol, latestDate: item.latestDate } });
-          const newest = candles.at(-1);
-          const normalized = newest && (newest.close ?? newest.value) !== undefined && (newest.close ?? newest.value) !== null
-            ? { ...newest, close: newest.close ?? newest.value } : null;
-          if (!normalized) throw new Error("PROVIDER_NO_DATA");
-          const existed = await upsert(kind, item, normalized);
-          await prisma.$executeRawUnsafe("DELETE FROM production_scheduler_failures WHERE job_id = $1 AND stock_id = $2", job, item.id);
-          return { attempted: 1, completed: 1, success: existed ? 0 : 1, noUpdate: existed ? 1 : 0, inserted: existed ? 0 : 1, updated: existed ? 1 : 0 };
-        } catch (error) {
-          const result = await recordFailure(job, item, error);
-          return { attempted: 1, failed: 1, permanentUnavailable: result === "PERMANENT_UNAVAILABLE" ? 1 : 0, retryableFailure: result === "RETRYABLE_FAILURE" ? 1 : 0 };
-        }
-      }));
+      const outcomes = await Promise.all(batch.map((item) => processItem(kind, job, item, adapter, providerConfig)));
       outcomes.forEach((outcome) => Object.entries(outcome).forEach(([key, value]) => { (summary as Record<string, number>)[key] = ((summary as Record<string, number>)[key] ?? 0) + (value ?? 0); }));
       if (summary.attempted % CHECKPOINT_EVERY === 0 || offset + batch.length === selected.length) {
         await persistLifecycleCheckpoint(prisma, runId, summary, batch.at(-1)!.symbol);
@@ -160,19 +177,8 @@ async function run(kind: AssetKind): Promise<Record<string, unknown>> {
     for (let offset = 0; offset < retries.length; offset += CONCURRENCY) {
       const batch = retries.slice(offset, offset + CONCURRENCY);
       const outcomes = await Promise.all(batch.map(async (item) => {
-        try {
-          const sourceSymbol = providerConfig.instrumentMappings?.[item.symbol] ?? item.symbol;
-          const candles = await adapter.fetchLatest({ assetClass: providerAssetClass(kind), instrument: { id: item.id, symbol: sourceSymbol, latestDate: item.latestDate } });
-          const newest = candles.at(-1);
-          const normalized = newest && (newest.close ?? newest.value) != null ? { ...newest, close: newest.close ?? newest.value } : null;
-          if (!normalized) throw new Error("PROVIDER_NO_DATA");
-          const existed = await upsert(kind, item, normalized);
-          await prisma.$executeRawUnsafe("DELETE FROM production_scheduler_failures WHERE job_id = $1 AND stock_id = $2", job, item.id);
-          return { completed: 1, failed: -1, retryableFailure: -1, success: existed ? 0 : 1, noUpdate: existed ? 1 : 0, inserted: existed ? 0 : 1, updated: existed ? 1 : 0 };
-        } catch (error) {
-          const result = await recordFailure(job, item, error);
-          return result === "PERMANENT_UNAVAILABLE" ? { retryableFailure: -1, permanentUnavailable: 1 } : {};
-        }
+        const outcome = await processItem(kind, job, item, adapter, providerConfig);
+        return { ...outcome, attempted: 0, completed: (outcome.completed ?? 0), failed: (outcome.failed ?? 0) - 1, retryableFailure: (outcome.retryableFailure ?? 0) - 1 };
       }));
       outcomes.forEach((outcome) => Object.entries(outcome).forEach(([key, value]) => { (summary as Record<string, number>)[key] = ((summary as Record<string, number>)[key] ?? 0) + (value ?? 0); }));
       await persistLifecycleCheckpoint(prisma, runId, summary, resume?.last_symbol ?? selected.at(-1)?.symbol ?? all.at(-1)!.symbol);
@@ -189,6 +195,7 @@ async function run(kind: AssetKind): Promise<Record<string, unknown>> {
       coverage,
       retryCount: retries.length,
       latestTradingDate: latestTradingDate?.toISOString().slice(0, 10) ?? null,
+      freshness: { policy: "PROVIDER_LATEST_AVAILABLE", upToProviderLatest: summary.upToProviderLatest, databaseLatest: latestTradingDate?.toISOString().slice(0, 10) ?? null },
       source: adapter.source(),
       summaryType: "DAILY_SUMMARY",
     };

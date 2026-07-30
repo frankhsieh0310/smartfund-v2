@@ -11,6 +11,7 @@ export type RunSummary = {
   noUpdate: number;
   permanentUnavailable: number;
   retryableFailure: number;
+  upToProviderLatest: number;
 };
 
 export type ResumeCheckpoint = {
@@ -27,7 +28,7 @@ function resumeSummary(value: unknown): Partial<RunSummary> | null {
     try { parsed = JSON.parse(parsed); } catch { return null; }
   }
   if (!parsed || typeof parsed !== "object") return null;
-  const fields = ["attempted", "completed", "inserted", "updated", "failed", "success", "noUpdate", "permanentUnavailable", "retryableFailure"] as const;
+  const fields = ["attempted", "completed", "inserted", "updated", "failed", "success", "noUpdate", "permanentUnavailable", "retryableFailure", "upToProviderLatest"] as const;
   const result: Partial<RunSummary> = {};
   for (const field of fields) {
     const candidate = (parsed as Record<string, unknown>)[field];
@@ -37,7 +38,7 @@ function resumeSummary(value: unknown): Partial<RunSummary> | null {
 }
 
 export function createSummary(): RunSummary {
-  return { attempted: 0, completed: 0, inserted: 0, updated: 0, failed: 0, success: 0, noUpdate: 0, permanentUnavailable: 0, retryableFailure: 0 };
+  return { attempted: 0, completed: 0, inserted: 0, updated: 0, failed: 0, success: 0, noUpdate: 0, permanentUnavailable: 0, retryableFailure: 0, upToProviderLatest: 0 };
 }
 
 export function addOutcome(summary: RunSummary, outcome: Partial<RunSummary>): void {
