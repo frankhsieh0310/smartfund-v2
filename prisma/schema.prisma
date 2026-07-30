@@ -1344,6 +1344,7 @@ model Stock {
   updatedAt           DateTime         @updatedAt @map("updated_at")
   historyBackfilledAt DateTime?        @map("history_backfilled_at")
   history             StockHistory[]
+  financialFacts      StockFinancialFact[]
   technical           StockTechnical[]
 
   @@unique([ticker, exchange])
@@ -1374,6 +1375,34 @@ model StockHistory {
   @@unique([stockId, date])
   @@index([stockId, date])
   @@map("stock_history")
+}
+
+model StockFinancialFact {
+  id                 String   @id @default(uuid())
+  stockId            String   @map("stock_id")
+  metric             String
+  periodStart        DateTime? @map("period_start") @db.Date
+  periodEnd          DateTime @map("period_end") @db.Date
+  fiscalPeriod       String?  @map("fiscal_period")
+  formType           String?  @map("form_type")
+  filingDate         DateTime? @map("filing_date") @db.Date
+  publicationDate    DateTime? @map("publication_date") @db.Date
+  value              Decimal  @db.Decimal(30, 8)
+  unit               String
+  currency           String?
+  source             String
+  sourceFactKey      String   @map("source_fact_key")
+  sourceDocumentUrl  String?  @map("source_document_url")
+  restatementVersion String?  @map("restatement_version")
+  importedAt         DateTime @default(now()) @map("imported_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+  stock              Stock    @relation(fields: [stockId], references: [id], onDelete: Cascade)
+
+  @@unique([stockId, metric, periodEnd, source, sourceFactKey])
+  @@index([stockId, metric, periodEnd])
+  @@index([metric, periodEnd])
+  @@index([source, publicationDate])
+  @@map("stock_financial_facts")
 }
 
 model ProductionSchedulerRun {

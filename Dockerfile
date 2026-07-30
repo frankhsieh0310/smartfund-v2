@@ -9,4 +9,4 @@ COPY . .
 # the real URLs only at runtime, so use non-sensitive placeholders at build time.
 RUN DATABASE_URL="postgresql://build:build@localhost:5432/build" DIRECT_URL="postgresql://build:build@localhost:5432/build" npx prisma generate
 
-CMD ["node", "--experimental-strip-types", "scripts/data/daily/run-production-yahoo-daily.ts", "--all-due"]
+CMD ["sh", "-c", "npx prisma migrate deploy && node --experimental-strip-types scripts/data/production/run-production-cron.ts"]
