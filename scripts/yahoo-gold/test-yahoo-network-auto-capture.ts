@@ -51,7 +51,7 @@ async function main() {
   await (windowObject.fetch as (url: string) => Promise<FakeResponse>)("https://example.test/valuation?ticker=AAPL&token=must-not-leak");
   const xhr = new FakeXhr(); xhr.open("GET", "https://example.test/valuation?symbol=AAPL&crumb=must-not-leak"); xhr.send();
   (windowObject.URL as typeof BrowserUrl).createObjectURL(new Blob(["Market Cap,session=must-not-leak"], { type: "text/csv" }));
-  for (const listener of listeners.get("click") ?? []) listener({ isTrusted: true, target: { closest: () => ({ innerText: "Download CSV", textContent: "Download CSV", getAttribute: () => null }) } });
+  for (const listener of listeners.get("click") ?? []) listener({ isTrusted: true, target: { closest: () => ({ innerText: "下載 CSV", textContent: "下載 CSV", getAttribute: () => null }) } });
   await new Promise((resolve) => setTimeout(resolve, 2_600));
   const downloaded = BrowserUrl.blobs.get(downloadedHref);
   const json = downloadedJson || (downloaded ? await downloaded.text() : "");

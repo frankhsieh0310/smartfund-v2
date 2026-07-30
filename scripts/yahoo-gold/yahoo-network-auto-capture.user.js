@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SmartFund Yahoo Network Auto Capture
 // @namespace    https://smartfund.app/
-// @version      1.0.1
+// @version      1.0.2
 // @downloadURL   https://raw.githubusercontent.com/frankhsieh0310/smartfund-v2/master/scripts/yahoo-gold/yahoo-network-auto-capture.user.js
 // @updateURL     https://raw.githubusercontent.com/frankhsieh0310/smartfund-v2/master/scripts/yahoo-gold/yahoo-network-auto-capture.user.js
 // @description  Saves a sanitized network capture after a Yahoo Finance Export or Download click.
@@ -46,7 +46,7 @@
     const preview = (value) => redactText(value).slice(0, MAX_BODY_LENGTH);
     const isValuation = (value) => valuationKeywords.some((keyword) => String(value).toLowerCase().includes(keyword.toLowerCase()));
     const add = (entry) => page.YAHOO_NETWORK_LOGS.push({ timestamp: new Date().toISOString(), ...entry });
-    const isExportControl = (element) => /(?:download|export)/i.test([element?.innerText, element?.textContent, element?.getAttribute?.("aria-label"), element?.getAttribute?.("title")].filter(Boolean).join(" "));
+    const isExportControl = (element) => /(?:download|export|下載|匯出)/i.test([element?.innerText, element?.textContent, element?.getAttribute?.("aria-label"), element?.getAttribute?.("title")].filter(Boolean).join(" "));
 
     page.YAHOO_NETWORK_LOGS = [];
     page.fetch = async function smartfundAutoCaptureFetch(input, init = {}) {
@@ -90,9 +90,11 @@
         const json = JSON.stringify(page.YAHOO_NETWORK_LOGS, null, 2);
         const dataUrl = `data:application/json;charset=utf-8,${encodeURIComponent(json)}`;
         if (typeof GM_download === "function") {
+          console.log("GM_DOWNLOAD CALLED");
           GM_download({ url: dataUrl, name: "yahoo-network-sanitized.json", saveAs: false, onload: () => console.log("JSON DOWNLOADED"), onerror: (error) => console.error("JSON DOWNLOAD FAILED", error) });
           return;
         }
+        console.error("GM_DOWNLOAD UNAVAILABLE", typeof GM_download);
         const blob = new page.Blob([json], { type: "application/json" });
         const href = native.createObjectURL(blob);
         const anchor = pageDocument.createElement("a");
