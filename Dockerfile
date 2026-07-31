@@ -1,6 +1,10 @@
 FROM node:22-bookworm-slim
 
 WORKDIR /app
+# Browser automation is a local/manual workflow. The Production Daily Engine
+# uses Yahoo Chart HTTP requests, so Railway must not download Chromium while
+# installing the optional Puppeteer package.
+ENV PUPPETEER_SKIP_DOWNLOAD=true
 RUN apt-get update -y && apt-get install -y --no-install-recommends openssl && rm -rf /var/lib/apt/lists/*
 COPY package.json package-lock.json ./
 RUN npm ci
