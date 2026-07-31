@@ -1,5 +1,4 @@
 import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
-import { existsSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { PrismaClient } from "@prisma/client";
 import { YahooHtmlHistoryProvider, type YahooHistoryRow } from "../../../lib/data-platform/providers/yahoo/YahooHtmlHistoryProvider.ts";
@@ -10,7 +9,8 @@ const provider = new YahooHtmlHistoryProvider();
 const args = process.argv.slice(2);
 const option = (name: string, fallback?: string) => args.find((value) => value.startsWith(`--${name}=`))?.slice(name.length + 3) ?? fallback;
 const flag = (name: string) => args.includes(`--${name}`);
-const market = option("market", "GLOBAL_EX_TW")!;
+const market = option("market");
+if (!market) throw new Error("MARKET_REQUIRED: use the market-specific production Yahoo daily job");
 const limit = Number(option("limit", "0"));
 const batchSize = Math.max(1, Number(option("batch-size", "100")));
 const dryRun = flag("dry-run");
@@ -53,15 +53,6 @@ type TestResult = {
   latencyMs: number;
   fallbackReason?: string;
 };
-
-function globalBackfillActive(): boolean {
-  const path = join(root, "debug", "data-006f-global-stock-overnight", "run-ledger.json");
-  if (!existsSync(path)) return false;
-  try {
-    const ledger = JSON.parse(readFileSync(path, "utf8")) as { lastHeartbeatAt?: string };
-    return Boolean(ledger.lastHeartbeatAt && Date.now() - new Date(ledger.lastHeartbeatAt).getTime() < 15 * 60_000);
-  } catch { return false; }
-}
 
 function suffix(symbol: string): string | null {
   const value = symbol.split(".").at(-1);
@@ -118,11 +109,7 @@ async function loadTestUniverse(path: string): Promise<StockInput[]> {
 
 async function loadUniverse(): Promise<StockInput[]> {
   if (testUniversePath) return loadTestUniverse(testUniversePath);
-  const marketFilter = market === "TWSE"
-    ? { exchange: "TWSE" }
-    : market === "TPEx"
-      ? { exchange: "TPEx" }
-      : { NOT: [{ exchange: "TWSE" }, { exchange: "TPEx" }] };
+  const marketFilter = { exchange: market };
   return prisma.stock.findMany({
     where: { isActive: true, yahooSymbol: { not: "" }, latestDate: { not: null }, ...marketFilter },
     orderBy: { yahooSymbol: "asc" },
@@ -196,10 +183,6 @@ async function recordLiveFailure(stock: StockInput, message: string): Promise<vo
 
 async function main(): Promise<void> {
   await Promise.all([mkdir(outputDirectory, { recursive: true }), mkdir(rawDirectory, { recursive: true })]);
-  if (!dryRun && globalBackfillActive() && !flag("allow-during-backfill")) {
-    await writeState({ jobId: `stock-${market.toLowerCase()}`, provider: "Yahoo HTML", status: "SKIPPED_BACKFILL_ACTIVE", completedAt: new Date().toISOString(), healthScore: 100 });
-    return;
-  }
 
   const [checkpoint, allStocks] = await Promise.all([loadCheckpoint(), loadUniverse()]);
   const selected = limit > 0 ? allStocks.slice(0, limit) : allStocks;

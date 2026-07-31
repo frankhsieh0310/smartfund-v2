@@ -4,6 +4,8 @@
     {
       "id": "twse-yahoo-daily",
       "exchange": "TWSE",
+      "exchanges": ["TWSE"],
+      "country": "TW",
       "timezone": "Asia/Taipei",
       "primaryTime": "18:30",
       "retryTime": "22:30",
@@ -12,6 +14,8 @@
     {
       "id": "tpex-yahoo-daily",
       "exchange": "TPEx",
+      "exchanges": ["TPEx"],
+      "country": "TW",
       "timezone": "Asia/Taipei",
       "primaryTime": "18:30",
       "retryTime": "22:30",
@@ -20,6 +24,8 @@
     {
       "id": "nasdaq-yahoo-daily",
       "exchange": "NASDAQ",
+      "exchanges": ["NASDAQ", "NMS", "NGM", "NCM"],
+      "country": "US",
       "timezone": "America/New_York",
       "primaryTime": "18:30",
       "retryTime": "22:30",
@@ -28,7 +34,119 @@
     {
       "id": "nyse-yahoo-daily",
       "exchange": "NYSE",
+      "exchanges": ["NYSE", "NYQ"],
+      "country": "US",
       "timezone": "America/New_York",
+      "primaryTime": "18:30",
+      "retryTime": "22:30",
+      "weekdays": [1, 2, 3, 4, 5]
+    },
+    {
+      "id": "amex-yahoo-daily",
+      "exchange": "AMEX",
+      "exchanges": ["AMEX", "ASE"],
+      "country": "US",
+      "timezone": "America/New_York",
+      "primaryTime": "18:30",
+      "retryTime": "22:30",
+      "weekdays": [1, 2, 3, 4, 5]
+    },
+    {
+      "id": "japan-yahoo-daily",
+      "exchange": "Japan",
+      "exchanges": ["JPX"],
+      "country": "JP",
+      "timezone": "Asia/Tokyo",
+      "primaryTime": "18:30",
+      "retryTime": "22:30",
+      "weekdays": [1, 2, 3, 4, 5]
+    },
+    {
+      "id": "korea-yahoo-daily",
+      "exchange": "Korea",
+      "exchanges": ["KOE", "KSC"],
+      "country": "KR",
+      "timezone": "Asia/Seoul",
+      "primaryTime": "18:30",
+      "retryTime": "22:30",
+      "weekdays": [1, 2, 3, 4, 5]
+    },
+    {
+      "id": "hong-kong-yahoo-daily",
+      "exchange": "Hong Kong",
+      "exchanges": ["HKG"],
+      "country": "HK",
+      "timezone": "Asia/Hong_Kong",
+      "primaryTime": "18:30",
+      "retryTime": "22:30",
+      "weekdays": [1, 2, 3, 4, 5]
+    },
+    {
+      "id": "canada-yahoo-daily",
+      "exchange": "Canada",
+      "exchanges": ["TOR", "NEO", "VAN", "CNQ"],
+      "country": "CA",
+      "timezone": "America/Toronto",
+      "primaryTime": "18:30",
+      "retryTime": "22:30",
+      "weekdays": [1, 2, 3, 4, 5]
+    },
+    {
+      "id": "australia-yahoo-daily",
+      "exchange": "Australia",
+      "exchanges": ["ASX", "CXA"],
+      "country": "AU",
+      "timezone": "Australia/Sydney",
+      "primaryTime": "18:30",
+      "retryTime": "22:30",
+      "weekdays": [1, 2, 3, 4, 5]
+    },
+    {
+      "id": "germany-yahoo-daily",
+      "exchange": "Germany",
+      "exchanges": ["FRA", "GER", "STU", "MUN", "DUS", "HAM", "HAN"],
+      "country": "DE",
+      "timezone": "Europe/Berlin",
+      "primaryTime": "18:30",
+      "retryTime": "22:30",
+      "weekdays": [1, 2, 3, 4, 5]
+    },
+    {
+      "id": "france-yahoo-daily",
+      "exchange": "France",
+      "exchanges": ["ENX", "PAR"],
+      "country": "FR",
+      "timezone": "Europe/Paris",
+      "primaryTime": "18:30",
+      "retryTime": "22:30",
+      "weekdays": [1, 2, 3, 4, 5]
+    },
+    {
+      "id": "united-kingdom-yahoo-daily",
+      "exchange": "United Kingdom",
+      "exchanges": ["LSE", "CXE", "IOB", "AQS"],
+      "country": "GB",
+      "timezone": "Europe/London",
+      "primaryTime": "18:30",
+      "retryTime": "22:30",
+      "weekdays": [1, 2, 3, 4, 5]
+    },
+    {
+      "id": "italy-yahoo-daily",
+      "exchange": "Italy",
+      "exchanges": ["MIL", "TLO"],
+      "country": "IT",
+      "timezone": "Europe/Rome",
+      "primaryTime": "18:30",
+      "retryTime": "22:30",
+      "weekdays": [1, 2, 3, 4, 5]
+    },
+    {
+      "id": "netherlands-yahoo-daily",
+      "exchange": "Netherlands",
+      "exchanges": ["DXE", "AMS"],
+      "country": "NL",
+      "timezone": "Europe/Amsterdam",
       "primaryTime": "18:30",
       "retryTime": "22:30",
       "weekdays": [1, 2, 3, 4, 5]

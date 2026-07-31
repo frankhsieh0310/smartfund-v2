@@ -1,0 +1,101 @@
+{
+  "timezone": "Asia/Taipei",
+  "schedulerIntervalMinutes": 15,
+  "jobs": [
+    {
+      "id": "macro-world-bank",
+      "provider": "World Bank",
+      "assetClass": "Macro",
+      "kind": "api",
+      "frequency": "daily",
+      "time": "06:00",
+      "command": ["scripts/backfill-world-bank-open-data.mjs", "--incremental", "--apply", "--confirm-production-write"],
+      "status": "READY"
+    },
+    {
+      "id": "macro-fred",
+      "provider": "FRED",
+      "assetClass": "Macro",
+      "kind": "api",
+      "frequency": "daily",
+      "time": "06:10",
+      "command": ["scripts/data/run-fred.ts", "--incremental", "--apply"],
+      "requiresEnv": ["FRED_API_KEY"],
+      "status": "READY"
+    },
+    {
+      "id": "fund-moneydj",
+      "provider": "MoneyDJ",
+      "assetClass": "Fund",
+      "kind": "api",
+      "frequency": "daily",
+      "time": "09:00",
+      "command": ["scripts/data/daily/daily-moneydj-fund-incremental.ts", "--resume"],
+      "runtime": "tsx",
+      "status": "READY"
+    },
+    {
+      "id": "etf-yahoo",
+      "provider": "Yahoo HTML",
+      "assetClass": "ETF",
+      "kind": "browser",
+      "frequency": "daily",
+      "time": "08:00",
+      "command": ["scripts/data/daily/daily-yahoo-etf-incremental.ts"],
+      "status": "READY"
+    },
+    {
+      "id": "global-index-yahoo-backfill",
+      "provider": "Yahoo HTML",
+      "assetClass": "Global Index",
+      "kind": "browser",
+      "frequency": "daily",
+      "time": "08:20",
+      "command": ["scripts/data/yahoo/backfill-yahoo-index-history.ts", "--only-missing", "--resume"],
+      "runtime": "tsx",
+      "status": "READY"
+    },
+    {
+      "id": "global-index-yahoo",
+      "provider": "Yahoo HTML",
+      "assetClass": "Global Index",
+      "kind": "browser",
+      "frequency": "daily",
+      "time": "08:30",
+      "command": ["scripts/data/daily/daily-yahoo-index-incremental.ts", "--resume"],
+      "runtime": "tsx",
+      "status": "READY"
+    },
+    {
+      "id": "macro-ecb",
+      "provider": "ECB",
+      "assetClass": "Macro",
+      "kind": "api",
+      "frequency": "daily",
+      "time": "06:20",
+      "command": ["scripts/data/backfill-ecb-history.ts", "--apply", "--incremental"],
+      "runtime": "tsx",
+      "status": "READY"
+    },
+    {
+      "id": "macro-imf",
+      "provider": "IMF",
+      "assetClass": "Macro",
+      "kind": "api",
+      "frequency": "weekly",
+      "time": "06:30",
+      "status": "BACKFILL_ONLY",
+      "reason": "Existing IMF runner re-downloads full history and is not eligible for daily scheduling."
+    },
+    {
+      "id": "macro-oecd",
+      "provider": "OECD",
+      "assetClass": "Macro",
+      "kind": "api",
+      "frequency": "weekly",
+      "time": "06:40",
+      "status": "BACKFILL_ONLY",
+      "reason": "Existing OECD runner re-downloads full history and is not eligible for daily scheduling."
+    }
+  ]
+}

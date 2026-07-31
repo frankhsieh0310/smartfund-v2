@@ -1,0 +1,28 @@
+{
+  "lookbackDays": { "stock": 7, "etf": 7, "index": 7, "commodity": 7, "fx": 7, "crypto": 3, "fund": 14 },
+  "providers": [
+    { "id": "world-bank", "provider": "World Bank", "assetType": "Macro", "mode": "DAILY_ACTIVE", "dailyJob": "macro-world-bank" },
+    { "id": "fred", "provider": "FRED", "assetType": "Macro", "mode": "DAILY_ACTIVE", "dailyJob": "macro-fred", "requiresEnv": ["FRED_API_KEY"] },
+    { "id": "ecb", "provider": "ECB", "assetType": "Macro", "mode": "DAILY_READY", "dailyJob": "macro-ecb" },
+    { "id": "imf", "provider": "IMF", "assetType": "Macro", "mode": "BACKFILL_PENDING", "dailyJob": "macro-imf" },
+    { "id": "oecd", "provider": "OECD", "assetType": "Macro", "mode": "BACKFILL_PENDING", "dailyJob": "macro-oecd" },
+    { "id": "twse-stock", "provider": "Yahoo Chart", "assetType": "TWSE Stock", "mode": "DAILY_READY", "dailyJob": "twse-yahoo-daily" },
+    { "id": "tpex-stock", "provider": "Yahoo Chart", "assetType": "TPEx Stock", "mode": "DAILY_READY", "dailyJob": "tpex-yahoo-daily" },
+    { "id": "nasdaq-stock", "provider": "Yahoo Chart", "assetType": "NASDAQ Stock", "mode": "DAILY_READY", "dailyJob": "nasdaq-yahoo-daily" },
+    { "id": "nyse-stock", "provider": "Yahoo Chart", "assetType": "NYSE Stock", "mode": "DAILY_READY", "dailyJob": "nyse-yahoo-daily" },
+    { "id": "amex-stock", "provider": "Yahoo Chart", "assetType": "AMEX Stock", "mode": "DAILY_READY", "dailyJob": "amex-yahoo-daily" },
+    { "id": "japan-stock", "provider": "Yahoo Chart", "assetType": "Japan Stock", "mode": "DAILY_READY", "dailyJob": "japan-yahoo-daily" },
+    { "id": "korea-stock", "provider": "Yahoo Chart", "assetType": "Korea Stock", "mode": "DAILY_READY", "dailyJob": "korea-yahoo-daily" },
+    { "id": "hong-kong-stock", "provider": "Yahoo Chart", "assetType": "Hong Kong Stock", "mode": "DAILY_READY", "dailyJob": "hong-kong-yahoo-daily" },
+    { "id": "canada-stock", "provider": "Yahoo Chart", "assetType": "Canada Stock", "mode": "DAILY_READY", "dailyJob": "canada-yahoo-daily" },
+    { "id": "australia-stock", "provider": "Yahoo Chart", "assetType": "Australia Stock", "mode": "DAILY_READY", "dailyJob": "australia-yahoo-daily" },
+    { "id": "germany-stock", "provider": "Yahoo Chart", "assetType": "Germany Stock", "mode": "DAILY_READY", "dailyJob": "germany-yahoo-daily" },
+    { "id": "france-stock", "provider": "Yahoo Chart", "assetType": "France Stock", "mode": "DAILY_READY", "dailyJob": "france-yahoo-daily" },
+    { "id": "united-kingdom-stock", "provider": "Yahoo Chart", "assetType": "United Kingdom Stock", "mode": "DAILY_READY", "dailyJob": "united-kingdom-yahoo-daily" },
+    { "id": "italy-stock", "provider": "Yahoo Chart", "assetType": "Italy Stock", "mode": "DAILY_READY", "dailyJob": "italy-yahoo-daily" },
+    { "id": "netherlands-stock", "provider": "Yahoo Chart", "assetType": "Netherlands Stock", "mode": "DAILY_READY", "dailyJob": "netherlands-yahoo-daily" },
+    { "id": "etf", "provider": "Yahoo HTML", "assetType": "ETF", "mode": "DAILY_READY", "dailyJob": "etf-yahoo" },
+    { "id": "fund", "provider": "MoneyDJ", "assetType": "Fund", "mode": "DAILY_ACTIVE", "dailyJob": "fund-moneydj" },
+    { "id": "global-index", "provider": "Yahoo HTML", "assetType": "Global Index", "mode": "DAILY_READY", "dailyJob": "global-index-yahoo" }
+  ]
+}

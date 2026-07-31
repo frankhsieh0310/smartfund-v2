@@ -39,6 +39,8 @@ async function fetchYahooChartPeriod(symbol: string, period1: number, period2: n
 type Job = {
   id: string;
   exchange: string;
+  exchanges?: string[];
+  country?: string;
   timezone: string;
   primaryTime: string;
   retryTime: string;
@@ -103,7 +105,7 @@ async function execute(job: Job, runType: RunType): Promise<Record<string, unkno
       ? (await prisma.$queryRawUnsafe<{ stock_id: string }[]>('SELECT stock_id FROM production_scheduler_failures WHERE job_id = $1', job.id)).map((row) => row.stock_id)
       : [];
     const allStocks = await prisma.stock.findMany({
-      where: { exchange: job.exchange, isActive: true, yahooSymbol: { not: "" }, latestDate: { not: null }, ...(runType === "RETRY" ? { id: { in: failedStockIds } } : {}) },
+      where: { exchange: { in: job.exchanges ?? [job.exchange] }, ...(job.country ? { country: job.country } : {}), isActive: true, yahooSymbol: { not: "" }, latestDate: { not: null }, ...(runType === "RETRY" ? { id: { in: failedStockIds } } : {}) },
       orderBy: { yahooSymbol: "asc" },
       select: { id: true, yahooSymbol: true, latestDate: true },
     });
@@ -186,7 +188,16 @@ async function main(): Promise<void> {
     const candidates: Array<[RunType, string]> = [["PRIMARY", job.primaryTime], ["RETRY", job.retryTime]];
     for (const [runType, time] of candidates) {
       const due = runAllDue ? now.time >= time : now.time === time;
-      if (due && await lastSuccessDay(job.id, job.timezone, runType) !== now.day) results.push(await execute(job, runType));
+      if (due && await lastSuccessDay(job.id, job.timezone, runType) !== now.day) {
+        try {
+          results.push(await execute(job, runType));
+        } catch (error) {
+          // A market is a complete lifecycle boundary. Persisting the failed
+          // run is execute()'s responsibility; this dispatcher must continue
+          // with every other independently locked market job.
+          results.push({ jobId: job.id, runType, status: "FAILED", error: error instanceof Error ? error.message : String(error) });
+        }
+      }
     }
   }
   console.log(JSON.stringify({ at: new Date().toISOString(), results }, null, 2));
