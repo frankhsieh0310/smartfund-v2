@@ -1,0 +1,28 @@
+{
+  "version": "1.0.0",
+  "generatedAt": "2026-07-31T14:13:20.749Z",
+  "scope": "Global stock data platform",
+  "entries": [
+    {"category":"identity","field":"stock_id","location":"stocks.id","status":"COMPLETE","source":"SmartFund master","refresh":"discovery"},
+    {"category":"identity","field":"ticker_yahoo_symbol","location":"stocks.ticker, stocks.yahoo_symbol","status":"COMPLETE","source":"Universe/Yahoo mapping","refresh":"discovery"},
+    {"category":"identity","field":"exchange_country_currency","location":"stocks.exchange, country, currency","status":"COMPLETE","source":"Universe/Yahoo","refresh":"discovery"},
+    {"category":"price","field":"date_open_high_low_close","location":"stock_history","status":"COMPLETE","source":"YAHOO_CHART","refresh":"daily_incremental"},
+    {"category":"price","field":"adjusted_close","location":"stock_history.adjusted_close","status":"COMPLETE","source":"YAHOO_CHART","refresh":"daily_incremental"},
+    {"category":"price","field":"volume","location":"stock_history.volume","status":"COMPLETE","source":"YAHOO_CHART","refresh":"daily_incremental"},
+    {"category":"price","field":"provenance","location":"stock_history.source, source_symbol, provider_method","status":"COMPLETE","source":"SmartFund","refresh":"per_write"},
+    {"category":"price_telemetry","field":"http_status_response_type_parser_version","location":"run_artifacts","status":"PARTIAL","source":"Yahoo worker","refresh":"per_request"},
+    {"category":"lifecycle","field":"run_lock_checkpoint_retry_failure","location":"production_scheduler_*","status":"COMPLETE","source":"SmartFund lifecycle","refresh":"per_run"},
+    {"category":"corporate_action","field":"cash_dividend","location":"stock_financial_facts:yahoo.event.cashDividend","status":"PROTOTYPE","source":"YAHOO_CHART","refresh":"event_daily"},
+    {"category":"corporate_action","field":"split_ratio","location":"stock_financial_facts:yahoo.event.splitRatio","status":"PROTOTYPE","source":"YAHOO_CHART","refresh":"event_daily"},
+    {"category":"corporate_action","field":"rights_bonus_reduction_symbol_change_delisting","location":null,"status":"NOT_STARTED","source":"Official/Yahoo planned","refresh":"event_driven"},
+    {"category":"financial_raw","field":"revenue","location":"stock_financial_facts","status":"PARTIAL_HISTORICAL","source":"SEC_EDGAR","refresh":"quarterly_annual"},
+    {"category":"financial_raw","field":"diluted_eps","location":"stock_financial_facts","status":"PROTOTYPE","source":"SEC_EDGAR_COMPANYFACTS","refresh":"quarterly_annual"},
+    {"category":"financial_raw","field":"income_balance_cashflow_other","location":"stock_financial_facts","status":"PROTOTYPE","source":"Official filings","refresh":"quarterly_annual"},
+    {"category":"valuation","field":"historical_pe","location":"stock_financial_facts:valuation.pe","status":"PARTIAL_HISTORICAL","source":"TWSE_OFFICIAL_BWIBBU/TPEx_OFFICIAL_BWIBBU","refresh":"daily"},
+    {"category":"valuation","field":"point_in_time_pe","location":"stock_financial_facts:valuation.pe.ttm.point_in_time","status":"PROTOTYPE","source":"SEC_EDGAR_PLUS_YAHOO_PRICE","refresh":"daily_filing"},
+    {"category":"valuation","field":"pb_ps_peg_ev_market_cap_history","location":null,"status":"NOT_STARTED","source":"Raw facts/formulas planned","refresh":"quarterly_daily"},
+    {"category":"ratios","field":"roe_roa_roic_margins_liquidity_leverage","location":null,"status":"PROTOTYPE","source":"Derived raw facts","refresh":"quarterly"},
+    {"category":"quality","field":"unique_stock_date_and_required_close","location":"stock_history","status":"COMPLETE","source":"Database constraint","refresh":"per_write"},
+    {"category":"quality","field":"ohlcv_currency_timezone_corporate_financial_validation","location":"validation harness","status":"PARTIAL","source":"SmartFund validators","refresh":"per_run"}
+  ]
+}
