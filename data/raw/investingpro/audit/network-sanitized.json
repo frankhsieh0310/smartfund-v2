@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "provider": "INVESTING_PRO",
+  "capturedAt": "2026-07-31T15:44:14.000Z",
+  "target": {
+    "company": "Toyota Motor Corp",
+    "tradingItem": "TSE:7203",
+    "url": "https://hk.investing.com/pro/TSE:7203/explorer/pe_ltm"
+  },
+  "authentication": {
+    "observedSignedIn": false,
+    "sensitiveValuesInspected": false
+  },
+  "requests": [],
+  "downloads": [],
+  "status": "NOT_CAPTURED",
+  "reason": "The controlled browser session showed a Sign in control and did not expose an authenticated InvestingPro network capture surface. No credentials, cookies, headers, tokens, or protected browser state were accessed."
+}
