@@ -115,6 +115,7 @@
     "data:financial:sec-pe:backfill": "node --import tsx --env-file=.env scripts/data/financial/backfill-sec-historical-pe.ts --symbols=AAPL,MSFT,NVDA",
     "data:financial:fmp:pe-audit": "node --import tsx scripts/data/financial/audit-fmp-historical-pe.ts",
     "data:financial:sec-pe:compare-yahoo-gold": "node --import tsx --env-file=.env scripts/data/financial/compare-sec-pe-to-yahoo-gold.ts",
+    "data:financial:sec-pe:debug-yahoo-gold": "node --import tsx --env-file=.env scripts/data/financial/debug-sec-vs-yahoo-pe.ts",
     "data:financial:yahoo:backfill": "node --import tsx --env-file=.env scripts/data/financial/backfill-yahoo-financial.ts --stage=statements --resume",
     "data:yahoo:gold:login": "node --import tsx --env-file=.env scripts/yahoo-gold-browser.ts --login",
     "data:yahoo:gold:download": "node --import tsx --env-file=.env scripts/yahoo-gold-browser.ts --resume",
