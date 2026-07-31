@@ -1,6 +1,6 @@
 # SmartFund Global Data Dictionary
 
-This dictionary is the data-platform contract for the current production model. Status reflects actual production evidence as of 2026-07-31, not planned capability. `Complete` means the field exists in the canonical table; it does not imply every global symbol has a complete history.
+This dictionary is the data-platform contract for the current production model. Status reflects actual production evidence as of 2026-07-31, not planned capability. `Complete` means the field exists in the canonical table; it does not imply every global symbol has a complete history. The market and domain evidence behind each entry is in the [Global Coverage Matrix](global-coverage-matrix.md), [Financial Statement Coverage](financial-statement-coverage.md), [Corporate Action Coverage](corporate-action-coverage.md), [Derived Metrics Coverage](derived-metrics-coverage.md), and [Data Quality Coverage](data-quality-coverage.md).
 
 | Category | Field / field family | Canonical location | Status | Current source | Refresh | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -45,6 +45,10 @@ This dictionary is the data-platform contract for the current production model. 
 | Quality | Currency / timezone validation | Config / diagnostics | Partial | Universe + Yahoo | Every run | Timezone is not stored on the price row |
 | Quality | Split/dividend reconciliation | No global gate | Not started | Corporate-action engine | Event-driven | |
 | Quality | Financial-statement / ratio cross-source validation | Prototype | SEC / official / reference providers | Filing/quarterly | Not production-wide |
+
+## Required dictionary columns for all future data fields
+
+Every newly proposed field must record its category, canonical location, schema status, database coverage, global coverage, source/provider, refresh cadence, validation status, historical availability, and production-readiness status before it is declared available. This rule keeps a field from being confused with a script, a prototype, or a configured-but-unverified scheduler.
 
 ## Status vocabulary
 

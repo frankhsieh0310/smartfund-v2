@@ -1,7 +1,15 @@
 {
-  "version": "1.0.0",
-  "generatedAt": "2026-07-31T14:13:20.749Z",
+  "version": "1.1.0",
+  "generatedAt": "2026-07-31T14:20:42.469Z",
   "scope": "Global stock data platform",
+  "coverageReports": [
+    "docs/global-coverage-matrix.md",
+    "docs/financial-statement-coverage.md",
+    "docs/corporate-action-coverage.md",
+    "docs/derived-metrics-coverage.md",
+    "docs/data-quality-coverage.md",
+    "docs/production-readiness.md"
+  ],
   "entries": [
     {"category":"identity","field":"stock_id","location":"stocks.id","status":"COMPLETE","source":"SmartFund master","refresh":"discovery"},
     {"category":"identity","field":"ticker_yahoo_symbol","location":"stocks.ticker, stocks.yahoo_symbol","status":"COMPLETE","source":"Universe/Yahoo mapping","refresh":"discovery"},
