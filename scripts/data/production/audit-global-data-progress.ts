@@ -18,13 +18,17 @@ function marketSql(market: Market): { sql: string; values: string[] } {
   const placeholders = market.exchanges.map((_, index) => `$${index + 1}`).join(", ");
   return {
     sql: `SELECT
-      COUNT(*)::int AS universe,
-      COUNT(*) FILTER (WHERE s.is_active)::int AS active,
-      COUNT(*) FILTER (WHERE NOT s.is_active)::int AS inactive,
-      COUNT(*) FILTER (WHERE s.history_backfilled_at IS NOT NULL)::int AS historical_stocks,
+      COUNT(DISTINCT s.id)::int AS universe,
+      COUNT(DISTINCT s.id) FILTER (WHERE s.is_active)::int AS active,
+      COUNT(DISTINCT s.id) FILTER (WHERE NOT s.is_active)::int AS inactive,
+      COUNT(DISTINCT s.id) FILTER (WHERE s.history_backfilled_at IS NOT NULL)::int AS historical_stocks,
       MIN(s.history_backfilled_at) AS historical_evidence_started_at,
-      MAX(s.latest_date) AS latest
+      MAX(s.latest_date) AS latest,
+      COUNT(DISTINCT sf.stock_id) FILTER (WHERE sf.source IN ('YAHOO_FINANCIAL_TIMESERIES', 'SEC_EDGAR', 'SEC_EDGAR_COMPANYFACTS'))::int AS financial_any_stocks,
+      COUNT(DISTINCT sf.stock_id) FILTER (WHERE sf.metric IN ('yahoo.event.cashDividend', 'yahoo.event.splitRatio'))::int AS corporate_action_any_stocks,
+      COUNT(DISTINCT sf.stock_id) FILTER (WHERE sf.metric LIKE 'valuation.%' OR sf.source = 'SEC_EDGAR_DERIVED')::int AS derived_any_stocks
       FROM stocks s
+      LEFT JOIN stock_financial_facts sf ON sf.stock_id = s.id
       WHERE s.exchange IN (${placeholders}) AND s.country = $${market.exchanges.length + 1}`,
     values: [...market.exchanges, market.country],
   };
@@ -45,9 +49,22 @@ async function main(): Promise<void> {
     // Production connections or contend with Daily jobs.
     const coverage = await prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(query.sql, ...query.values);
     const runs = await prisma.$queryRawUnsafe<Array<Record<string, unknown>>>("SELECT status, attempted, completed, failed, latest_trading_date, validation_status, exit_code, started_at, completed_at FROM production_scheduler_runs WHERE job_id = $1 ORDER BY started_at DESC LIMIT 1", market.jobId);
+    const lastValidatedRuns = await prisma.$queryRawUnsafe<Array<Record<string, unknown>>>("SELECT attempted, completed, failed, latest_trading_date, completed_at FROM production_scheduler_runs WHERE job_id = $1 AND status = 'COMPLETED' AND validation_status = 'PASS' AND completed > 0 ORDER BY completed_at DESC LIMIT 1", market.jobId);
     const checkpoints = await prisma.$queryRawUnsafe<Array<Record<string, unknown>>>("SELECT last_symbol, processed, succeeded, failed, updated_at FROM production_scheduler_checkpoints WHERE job_id = $1", market.jobId);
     const failures = await prisma.$queryRawUnsafe<Array<Record<string, unknown>>>("SELECT COUNT(*)::int AS open FROM production_scheduler_failures WHERE job_id = $1 AND resolved = false", market.jobId);
-    marketRows.push({ ...market, ...coverage[0], lastRun: runs[0] ?? null, checkpoint: checkpoints[0] ?? null, openFailures: failures[0]?.open ?? 0 });
+    marketRows.push({
+      ...market,
+      ...coverage[0],
+      // Strict full-domain completion remains zero until every required field
+      // has a verified Historical + Incremental + Validation + Production path.
+      financial_complete_stocks: 0,
+      corporate_action_complete_stocks: 0,
+      derived_complete_stocks: 0,
+      lastRun: runs[0] ?? null,
+      lastValidatedRun: lastValidatedRuns[0] ?? null,
+      checkpoint: checkpoints[0] ?? null,
+      openFailures: failures[0]?.open ?? 0,
+    });
   }
   const financialSummary = await prisma.$queryRawUnsafe<Array<Record<string, unknown>>>("SELECT COUNT(*)::int AS rows, COUNT(DISTINCT stock_id)::int AS stocks, COUNT(DISTINCT metric)::int AS metrics, MIN(period_end) AS earliest, MAX(period_end) AS latest FROM stock_financial_facts");
   const financialFacts = await prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(detail
