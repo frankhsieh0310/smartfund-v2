@@ -18,12 +18,12 @@ This dictionary is the data-platform contract for the current production model. 
 | Price telemetry | HTTP status / response type / parser version | Run artifacts, not price row | Partial | Yahoo worker diagnostics | Per request | Not currently canonical per-row fields |
 | Price telemetry | Staleness / validation result | Run validation, not price row | Partial | Scheduler lifecycle | Per run | Provider-latest policy used where runs validate |
 | Lifecycle | Run ID / job ID / lock / checkpoint / retry / failure | `production_scheduler_*` tables | Complete | SmartFund lifecycle | Every run | Isolated by market job ID |
-| Corporate action | Cash dividend | `stock_financial_facts` metric `yahoo.event.cashDividend` | Prototype | Yahoo Chart | Event-driven / daily | 3 symbols at snapshot |
-| Corporate action | Stock split | `stock_financial_facts` metric `yahoo.event.splitRatio` | Prototype | Yahoo Chart | Event-driven / daily | 2 symbols at snapshot |
+| Corporate action | Cash dividend | `stock_financial_facts` metric `yahoo.event.cashDividend` | Prototype | Yahoo Chart | Event-driven / daily | Historical + incremental pilot: 5 symbols / 309 facts |
+| Corporate action | Stock split | `stock_financial_facts` metric `yahoo.event.splitRatio` | Prototype | Yahoo Chart | Event-driven / daily | Historical + incremental pilot: 5 symbols / 55 facts |
 | Corporate action | Ex-date / record date / payment date | No canonical event table | Not started | Proposed Yahoo + official adapters | Daily | Requires dedicated event model |
 | Corporate action | Rights / bonus / capital reduction | No canonical event table | Not started | Official market sources | Event-driven | |
 | Corporate action | Symbol change / rename / listing / delisting | Stock master status only | Partial | Universe maintenance | Maintenance | No event history/lineage table |
-| Financial raw | Revenue | `stock_financial_facts` | Partial historical | SEC EDGAR | Quarterly/annual | 571 stocks at snapshot |
+| Financial raw | Revenue | `stock_financial_facts` | Partial historical | SEC EDGAR + Yahoo pilot | Quarterly/annual | 571 SEC-covered stocks; Yahoo lifecycle pilot verified for five symbols |
 | Financial raw | Cost of revenue / gross profit | `stock_financial_facts` | Prototype | SEC / official filings | Quarterly/annual | Schema supports it; no global coverage proof |
 | Financial raw | Operating income / EBIT / EBITDA / pretax / net income | `stock_financial_facts` | Prototype | SEC / official filings | Quarterly/annual | |
 | Financial raw | Basic / diluted EPS | `stock_financial_facts` | Prototype | SEC EDGAR | Quarterly/annual | Diluted EPS proof is 3 stocks |

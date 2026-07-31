@@ -5,7 +5,9 @@ import { PrismaClient } from "@prisma/client";
 type SecFact = { start?: string; end: string; fy?: number; fp?: string; form?: string; filed?: string; accn?: string };
 type Checkpoint = { metric: string; lastStockId?: string; processed: number; succeeded: number; failed: number; rows: number; updatedAt: string };
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({
+  datasources: { db: { url: process.env.DIRECT_URL ?? process.env.DATABASE_URL } },
+});
 const args = new Map(process.argv.slice(2).map((value) => {
   const [key, ...rest] = value.replace(/^--/, "").split("=");
   return [key, rest.join("=") || "true"];

@@ -1,6 +1,6 @@
 # Financial Statement Coverage
 
-Snapshot: 2026-07-31. Canonical storage is `stock_financial_facts`, which supports stock, period, fiscal period, form, point-in-time filing/publication dates, source provenance, units, currency, and restatement version. It has **140,796 facts across 670 stocks and 257 metric names**. This is not yet a global statement database.
+Snapshot: 2026-07-31. Canonical storage is `stock_financial_facts`, which supports stock, period, fiscal period, form, point-in-time filing/publication dates, source provenance, units, currency, and restatement version. It has **145,297 facts across 670 stocks and 276 metric names** after the Phase 2 pilot. This is not yet a global statement database.
 
 | Field | Canonical schema | Actual database coverage | Global status | Current source | Expected refresh | Next data gate |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -20,6 +20,10 @@ Snapshot: 2026-07-31. Canonical storage is `stock_financial_facts`, which suppor
 | Free cash flow | Yes (generic fact / derived) | No global evidence | Prototype | Raw cash flow + formula | Quarterly / annual | Define point-in-time calculation policy |
 | Shares outstanding / weighted shares | Yes (generic fact) | No global evidence | Prototype | SEC / official filings | Quarterly / annual | Filing-date and split-basis validation |
 | Book value per share | Yes (generic fact / derived) | No global evidence | Prototype | Equity + shares / official | Quarterly / annual | Define calculation and validation policy |
+
+## Phase 2 pipeline proof
+
+The existing Yahoo financial pipeline was run against AAPL, MSFT, NVDA, 2330.TW, and 2317.TW. Historical mode wrote **4,501** statement/event facts with 5/5 successful symbols and no failures. Incremental mode then completed 5/5 with zero new facts and correctly recorded `NO_UPDATE=5` / `UP_TO_PROVIDER_LATEST=5`. A controlled pause after two symbols checkpointed at `2330.TW`; `--resume` processed only the remaining three. This is real pipeline evidence, but it is a five-symbol pilot—not global financial coverage.
 
 ## Official-provider readiness by market
 

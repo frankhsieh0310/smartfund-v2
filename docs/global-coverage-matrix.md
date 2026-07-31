@@ -1,4 +1,4 @@
-# Global Coverage Matrix
+# Global Data Coverage Matrix v2
 
 Snapshot: 2026-07-31 22:20 Asia/Taipei. Evidence is the read-only production audit of stock master, price history, lifecycle tables, and committed daily-job configuration. Statuses: **Complete** = production evidence; **Partial** = real but incomplete data; **Prototype** = limited proof/schema only; **Not started** = no production evidence.
 
@@ -23,3 +23,15 @@ Snapshot: 2026-07-31 22:20 Asia/Taipei. Evidence is the read-only production aud
 - **Daily price**: a configured scheduler is not treated as completed execution. Only TWSE has the current completed run proof. TPEx and Japan were actively running at this snapshot; NASDAQ/NYSE had prior validated completion-skip evidence.
 - **Corporate action and financial data** are cross-market capabilities, not completed per-market datasets. The table prevents the price engine's high coverage from being misrepresented as financial coverage.
 - The only missing market scheduler in this scope is Spain (`MCE`).
+
+## Field lifecycle matrix
+
+`Historical backfill` and `Incremental update` are separate gates. A field is not complete until canonical storage, historical ingestion, incremental execution, validation, and Production evidence all exist.
+
+| Field family | Schema | Historical backfill | Incremental update | Validation | Production | Actual evidence |
+| --- | --- | --- | --- | --- | --- | --- |
+| Trade date, OHLC, adjusted close, volume | Yes | 99.994% of audited stock universe | Active by isolated market job | Lifecycle + provider validation | Partial global rollout | 71,300 / 71,304 canonical backfill markers |
+| Revenue through book value per share | Yes, generic facts | **Pilot passed: 5 symbols** | **Pilot passed: 5 symbols** | Numeric, period, provenance; global statement validation pending | No global Production run | 4,501 Yahoo statement/event facts inserted in Phase 2 pilot |
+| Cash dividend / split ratio | Generic facts only | **Pilot passed: 5 symbols** | **Pilot passed: 5 symbols** | Source/key/date + idempotency; event reconciliation pending | No global Production run | 309 dividend and 55 split facts across five pilot symbols |
+| Corporate-action dates and non-Yahoo event types | No dedicated event schema | No | No | No | No | Record/payment dates, rights, mergers, renames, delistings remain absent |
+| Market cap, EV, PE/PB/PS and ratios | Generic facts support storage | PE partial only | No global incremental calculation | Prototype only | No | Taiwan PE 97 stocks; US point-in-time PE 3-stock proof |

@@ -18,7 +18,7 @@ Snapshot: 2026-07-31. This report distinguishes database-enforced controls from 
 | Historical gap detection | Backfill/lifecycle | Partial | Canonical backfill flag exists; row-level gap audit is not global |
 | Corporate-action consistency | Not implemented | Not started | Requires canonical event model |
 | Provenance validation | Price and financial facts | Partial | Source fields exist; global source completeness report is not yet automated |
-| Failure/retry/lock/checkpoint | Daily lifecycle | Complete | Separate job lifecycle tables, isolated by market job ID |
+| Failure/retry/lock/checkpoint | Daily and financial lifecycle | Complete | Financial pilot checkpointed after two symbols and resumed from the next symbol |
 
 ## Immediate quality conclusion
 
