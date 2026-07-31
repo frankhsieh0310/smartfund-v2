@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { PrismaClient } from "@prisma/client";
 
@@ -36,7 +36,8 @@ async function getCheckpoint(): Promise<Checkpoint> {
   if (!resume) return { processedDates: 0, inserted: 0, failedDates: 0, updatedAt: new Date().toISOString() };
   try { return JSON.parse(await readFile(checkpointPath, "utf8")) as Checkpoint; } catch { return { processedDates: 0, inserted: 0, failedDates: 0, updatedAt: new Date().toISOString() }; }
 }
-async function saveCheckpoint(checkpoint: Checkpoint) { checkpoint.updatedAt = new Date().toISOString(); await mkdir(dirname(checkpointPath), { recursive: true }); await writeFile(checkpointPath, JSON.stringify(checkpoint, null, 2)); }
+async function atomicJson(path: string, payload: unknown) { const temporary = `${path}.${process.pid}.tmp`; await mkdir(dirname(path), { recursive: true }); await writeFile(temporary, JSON.stringify(payload, null, 2)); await rename(temporary, path); }
+async function saveCheckpoint(checkpoint: Checkpoint) { checkpoint.updatedAt = new Date().toISOString(); await atomicJson(checkpointPath, checkpoint); }
 async function fetchJson(url: string): Promise<{ status: number; body: unknown; elapsed: number }> {
   const started = Date.now(); const response = await fetch(url, { headers: { Accept: "application/json", "User-Agent": "SmartFund official PE audit contact@smartfund.app" } });
   const text = await response.text(); let body: unknown; try { body = JSON.parse(text); } catch { body = { raw: text.slice(0, 300) }; }
@@ -73,9 +74,9 @@ async function main() {
       await new Promise((resolveDelay) => setTimeout(resolveDelay, sleepMs));
     }
     checkpoint.processedDates += 1; checkpoint.date = date;
-    if (checkpoint.processedDates % 10 === 0) { await saveCheckpoint(checkpoint); await mkdir(dirname(auditPath), { recursive: true }); await writeFile(auditPath, JSON.stringify(audit, null, 2)); }
+    if (checkpoint.processedDates % 10 === 0) { await saveCheckpoint(checkpoint); await atomicJson(auditPath, audit); }
   }
-  await saveCheckpoint(checkpoint); await mkdir(dirname(auditPath), { recursive: true }); await writeFile(auditPath, JSON.stringify(audit, null, 2));
+  await saveCheckpoint(checkpoint); await atomicJson(auditPath, audit);
   console.log(JSON.stringify({ status: "COMPLETE", universe: stocks.length, range: audit.range, checkpoint, medianLatencyMs: audit.timings.sort((a, b) => a - b)[Math.floor(audit.timings.length / 2)] ?? null, http: audit.http, auditPath }));
 }
 main().finally(() => prisma.$disconnect());
