@@ -1,153 +1,418 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
+import { join, relative } from "node:path";
 import { PrismaClient } from "@prisma/client";
 
-type Status = "NOT_STARTED" | "MASTER_ONLY" | "PARTIAL_HISTORICAL" | "HISTORICAL_READY" | "DAILY_ACTIVE" | "PRODUCT_READY";
-type Counts = { universe: number; historical: number; rows: number; earliest: Date | null; latest: Date | null };
-type Definition = { id: string; assetClass: string; name: string; provider: string; api: string | null; jobs: string[]; sql?: string; blocking: string };
-type Run = { status: string; started_at: Date; latest_trading_date: Date | null; validation_status: string | null };
-type AcquisitionPlan = {
-  assets: Array<{ id: string; provider: string; adapter: string | null; state: string }>;
-  queuePolicy?: { assetPriority?: string[] };
+type NullableNumber = number | null;
+type AuditSummary = {
+  category: string;
+  universe: number;
+  historicalExpected: number;
+  historicalCompleted: NullableNumber;
+  historicalRows: NullableNumber;
+  incrementalExpected: number;
+  incrementalCompleted: NullableNumber;
+  earliest: string | null;
+  latest: string | null;
+  running: number;
+  failed: number;
+  retry: number;
+  schedulers: number;
+  gaps: string[];
+  historicalCoveragePercent: NullableNumber;
+  incrementalCoveragePercent: NullableNumber;
+};
+type AuditRow = {
+  category: string;
+  subcategory: string;
+  universeCount: NullableNumber;
+  historicalCompletedCount: NullableNumber;
+  historicalRowCount: NullableNumber;
+  earliestDatabaseDate: string | null;
+  latestProviderDate: string | null;
+  latestDatabaseDate: string | null;
+  incrementalExpectedCount: NullableNumber;
+  incrementalAttempted: NullableNumber;
+  incrementalCompleted: NullableNumber;
+  incrementalFailed: NullableNumber;
+  validationStatus: string;
+  productionStatus: string;
+  currentRunStatus: string;
+  schedulerEnabled: boolean;
+  schedulerRule: string;
+  mainBlockingIssue: string;
+  details?: Record<string, unknown>;
+};
+type Audit = {
+  runId: string;
+  generatedAt: string;
+  completedAt: string;
+  rows: AuditRow[];
+  categorySummary: AuditSummary[];
+  tableCounts?: { end?: Record<string, number> };
+};
+type Roadmap = {
+  version: string;
+  completionFormula: string;
+  assets: Array<{ order: number; id: string; name: string; requiredGates: string[] }>;
+};
+type Run = {
+  job_id: string;
+  run_type: string;
+  status: string;
+  started_at: Date;
+  completed_at: Date | null;
+  attempted: NullableNumber;
+  completed: NullableNumber;
+  failed: NullableNumber;
+  provider_latest_date: Date | null;
+  latest_trading_date: Date | null;
+  validation_status: string | null;
+};
+type Gate = {
+  id: string;
+  label: string;
+  completed: NullableNumber;
+  expected: NullableNumber;
+  coveragePercent: number;
+  evidence: string;
+};
+type AssetProgress = {
+  order: number;
+  id: string;
+  asset: string;
+  universe: { count: number; targetStatus: string };
+  historical: { completed: NullableNumber; expected: number; coveragePercent: number; rows: NullableNumber };
+  latest: { completed: NullableNumber; expected: number; coveragePercent: number; date: string | null };
+  earliestDate: string | null;
+  latestDate: string | null;
+  rows: NullableNumber;
+  rowBreakdown?: Record<string, NullableNumber>;
+  gates: Gate[];
+  productionPercent: number;
+  status: "COMPLETE" | "IN_PRODUCTION" | "PARTIAL" | "NOT_STARTED";
+  runningStatus: string;
+  mainBlockingIssue: string;
 };
 
-const prisma = new PrismaClient();
 const root = process.cwd();
-const deep = process.argv.includes("--deep");
+const baselineOnly = process.argv.includes("--baseline-only");
+const prisma = new PrismaClient();
 
-const definitions: Definition[] = [
-  ...[["TWSE", "TWSE"], ["TPEx", "TPEx"], ["NASDAQ", "NASDAQ"], ["NYSE", "NYSE"], ["AMEX", "AMEX"]].map(([name, exchange]) => ({
-    id: `stocks-${exchange.toLowerCase()}`, assetClass: "Stocks", name, provider: "YAHOO_CHART", api: "/api/stocks", jobs: [`${exchange.toLowerCase()}-yahoo-daily`],
-    sql: `SELECT (SELECT COUNT(*)::int FROM stocks WHERE exchange='${exchange}' AND is_active) AS universe, (SELECT COUNT(DISTINCT h.stock_id)::int FROM stock_history h JOIN stocks s ON s.id=h.stock_id WHERE s.exchange='${exchange}' AND s.is_active) AS historical, (SELECT COUNT(*)::int FROM stock_history h JOIN stocks s ON s.id=h.stock_id WHERE s.exchange='${exchange}') AS rows, (SELECT MIN(h.date) FROM stock_history h JOIN stocks s ON s.id=h.stock_id WHERE s.exchange='${exchange}') AS earliest, (SELECT MAX(h.date) FROM stock_history h JOIN stocks s ON s.id=h.stock_id WHERE s.exchange='${exchange}') AS latest`,
-    blocking: "Historical and Daily lifecycle evidence determines readiness.",
-  })),
-  { id: "etf-taiwan", assetClass: "ETF", name: "Taiwan ETF", provider: "YAHOO_CHART", api: "/api/etfs", jobs: [], sql: "SELECT (SELECT COUNT(*)::int FROM etfs e WHERE e.is_active AND (COALESCE(e.exchange,'') ILIKE '%TW%' OR e.currency='TWD')) AS universe, (SELECT COUNT(DISTINCT h.etf_id)::int FROM etf_history h JOIN etfs e ON e.id=h.etf_id WHERE e.is_active AND (COALESCE(e.exchange,'') ILIKE '%TW%' OR e.currency='TWD')) AS historical, (SELECT COUNT(*)::int FROM etf_history h JOIN etfs e ON e.id=h.etf_id WHERE COALESCE(e.exchange,'') ILIKE '%TW%' OR e.currency='TWD') AS rows, (SELECT MIN(h.date) FROM etf_history h JOIN etfs e ON e.id=h.etf_id WHERE COALESCE(e.exchange,'') ILIKE '%TW%' OR e.currency='TWD') AS earliest, (SELECT MAX(h.date) FROM etf_history h JOIN etfs e ON e.id=h.etf_id WHERE COALESCE(e.exchange,'') ILIKE '%TW%' OR e.currency='TWD') AS latest", blocking: "Historical coverage and a dedicated Daily lifecycle are absent." },
-  { id: "etf-global", assetClass: "ETF", name: "Global ETF", provider: "YAHOO_CHART", api: "/api/etfs", jobs: ["global_etf-production-daily"], sql: "SELECT (SELECT COUNT(*)::int FROM etfs e WHERE e.is_active AND NOT (COALESCE(e.exchange,'') ILIKE '%TW%' OR e.currency='TWD')) AS universe, (SELECT COUNT(DISTINCT h.etf_id)::int FROM etf_history h JOIN etfs e ON e.id=h.etf_id WHERE e.is_active AND NOT (COALESCE(e.exchange,'') ILIKE '%TW%' OR e.currency='TWD')) AS historical, (SELECT COUNT(*)::int FROM etf_history h JOIN etfs e ON e.id=h.etf_id WHERE e.is_active AND NOT (COALESCE(e.exchange,'') ILIKE '%TW%' OR e.currency='TWD')) AS rows, (SELECT MIN(h.date) FROM etf_history h JOIN etfs e ON e.id=h.etf_id WHERE e.is_active AND NOT (COALESCE(e.exchange,'') ILIKE '%TW%' OR e.currency='TWD')) AS earliest, (SELECT MAX(h.date) FROM etf_history h JOIN etfs e ON e.id=h.etf_id WHERE e.is_active AND NOT (COALESCE(e.exchange,'') ILIKE '%TW%' OR e.currency='TWD')) AS latest", blocking: "Finish the resumable whole-universe Daily validation." },
-  { id: "funds", assetClass: "Funds", name: "Mutual Funds", provider: "MAPPING_PENDING", api: "/api/funds", jobs: [], sql: "SELECT (SELECT COUNT(*)::int FROM funds WHERE is_active) AS universe, (SELECT COUNT(DISTINCT h.fund_id)::int FROM fund_history h JOIN funds f ON f.id=h.fund_id WHERE f.is_active) AS historical, (SELECT COUNT(*)::int FROM fund_history) AS rows, (SELECT MIN(date) FROM fund_history) AS earliest, (SELECT MAX(date) FROM fund_history) AS latest", blocking: "Provider mapping, provenance, and Production Daily are not complete." },
-  { id: "macro", assetClass: "Macro", name: "Macro (all providers)", provider: "FRED/ECB + PROVIDER_PENDING", api: "/api/economic-series", jobs: ["macro-production-daily"], sql: "SELECT (SELECT COUNT(*)::int FROM economic_series WHERE enabled) AS universe, (SELECT COUNT(DISTINCT v.series_id)::int FROM economic_values v JOIN economic_series s ON s.id=v.series_id WHERE s.enabled) AS historical, (SELECT COUNT(*)::int FROM economic_values) AS rows, (SELECT MIN(date) FROM economic_values) AS earliest, (SELECT MAX(date) FROM economic_values) AS latest", blocking: "IMF/OECD/World Bank remain PROVIDER_PENDING; FRED/ECB are independently active." },
-  { id: "global-index", assetClass: "Index", name: "Global Stock Index", provider: "YAHOO_CHART", api: null, jobs: [], sql: "SELECT (SELECT COUNT(*)::int FROM market_indexes) AS universe, (SELECT COUNT(DISTINCT index_id)::int FROM index_history) AS historical, (SELECT COUNT(*)::int FROM index_history) AS rows, (SELECT MIN(date) FROM index_history) AS earliest, (SELECT MAX(date) FROM index_history) AS latest", blocking: "No Production Daily lifecycle/API bridge." },
-  ...[ ["index", "Index", "MARKET_INDEX", "/api/market-indices", "market_index-production-daily"], ["bond", "Bond", "BOND", "/api/bond-yields", "bond_yield-production-daily"], ["commodity", "Commodity", "COMMODITY", null, ""], ["fx", "FX", "FOREX", null, ""], ["crypto", "Crypto", "CRYPTO", null, ""], ["volatility", "Volatility", "VOLATILITY", "/api/volatility", "volatility-production-daily"] ]
-    .map(([id, assetClass, type, api, job]) => ({ id, assetClass, name: assetClass, provider: assetClass === "Bond" ? "FRED/ECB" : "YAHOO_CHART", api: api || null, jobs: job ? [job] : [], sql: `SELECT (SELECT COUNT(*)::int FROM market_master m WHERE m.is_active AND m.asset_type::text='${type}') AS universe, (SELECT COUNT(DISTINCT h.symbol)::int FROM market_history h JOIN market_master m ON m.symbol=h.symbol WHERE m.is_active AND m.asset_type::text='${type}') AS historical, (SELECT COUNT(*)::int FROM market_history h JOIN market_master m ON m.symbol=h.symbol WHERE m.asset_type::text='${type}') AS rows, (SELECT MIN(h.date) FROM market_history h JOIN market_master m ON m.symbol=h.symbol WHERE m.asset_type::text='${type}') AS earliest, (SELECT MAX(h.date) FROM market_history h JOIN market_master m ON m.symbol=h.symbol WHERE m.asset_type::text='${type}') AS latest`, blocking: job ? "Record current Production validation." : "No dedicated Production Daily or API." })),
-  { id: "precious-metals", assetClass: "Precious Metal", name: "Precious Metals", provider: "YAHOO_CHART", api: null, jobs: [], sql: "SELECT COUNT(*) FILTER (WHERE m.is_active)::int AS universe, COUNT(*) FILTER (WHERE EXISTS (SELECT 1 FROM market_history h WHERE h.symbol=m.symbol))::int AS historical, (SELECT COUNT(*)::int FROM market_history h JOIN market_master m2 ON m2.symbol=h.symbol WHERE COALESCE(m2.category,'') ILIKE '%metal%')::int AS rows, (SELECT MIN(h.date) FROM market_history h JOIN market_master m2 ON m2.symbol=h.symbol WHERE COALESCE(m2.category,'') ILIKE '%metal%') AS earliest, (SELECT MAX(h.date) FROM market_history h JOIN market_master m2 ON m2.symbol=h.symbol WHERE COALESCE(m2.category,'') ILIKE '%metal%') AS latest FROM market_master m WHERE COALESCE(m.category,'') ILIKE '%metal%'", blocking: "Complete historical coverage, Daily lifecycle, and API." },
-  { id: "energy", assetClass: "Energy", name: "Energy / Oil", provider: "YAHOO_CHART", api: null, jobs: [], sql: "SELECT COUNT(*) FILTER (WHERE m.is_active)::int AS universe, COUNT(*) FILTER (WHERE EXISTS (SELECT 1 FROM market_history h WHERE h.symbol=m.symbol))::int AS historical, (SELECT COUNT(*)::int FROM market_history h JOIN market_master m2 ON m2.symbol=h.symbol WHERE COALESCE(m2.category,'') ILIKE '%energy%' OR COALESCE(m2.category,'') ILIKE '%oil%')::int AS rows, (SELECT MIN(h.date) FROM market_history h JOIN market_master m2 ON m2.symbol=h.symbol WHERE COALESCE(m2.category,'') ILIKE '%energy%' OR COALESCE(m2.category,'') ILIKE '%oil%') AS earliest, (SELECT MAX(h.date) FROM market_history h JOIN market_master m2 ON m2.symbol=h.symbol WHERE COALESCE(m2.category,'') ILIKE '%energy%' OR COALESCE(m2.category,'') ILIKE '%oil%') AS latest FROM market_master m WHERE COALESCE(m.category,'') ILIKE '%energy%' OR COALESCE(m.category,'') ILIKE '%oil%'", blocking: "Complete historical coverage, Daily lifecycle, and API." },
-  { id: "insurance", assetClass: "Insurance", name: "Insurance", provider: "PROVIDER_PENDING", api: null, jobs: [], sql: "SELECT COUNT(*) FILTER (WHERE p.is_active)::int AS universe, COUNT(*) FILTER (WHERE EXISTS (SELECT 1 FROM insurance_history h WHERE h.product_id=p.id))::int AS historical, (SELECT COUNT(*)::int FROM insurance_history)::int AS rows, (SELECT MIN(date) FROM insurance_history) AS earliest, (SELECT MAX(date) FROM insurance_history) AS latest FROM insurance_products p", blocking: "Historical exceptions, provenance, Production Daily, and API are incomplete." },
-  { id: "reit", assetClass: "REIT", name: "REIT", provider: "NOT_CONFIGURED", api: null, jobs: [], blocking: "No dedicated Master, canonical history, Daily lifecycle, or API." },
-];
+const pct = (completed: NullableNumber, expected: NullableNumber): number =>
+  completed === null || expected === null || expected <= 0 ? 0 : +Math.min(100, Math.max(0, completed / expected * 100)).toFixed(4);
+const maxDate = (...values: Array<string | null | undefined>): string | null =>
+  values.filter((value): value is string => Boolean(value)).sort().at(-1) ?? null;
+const gate = (id: string, label: string, completed: NullableNumber, expected: NullableNumber, evidence: string): Gate => ({
+  id,
+  label,
+  completed,
+  expected,
+  coveragePercent: pct(completed, expected),
+  evidence,
+});
+const binaryGate = (id: string, label: string, passed: boolean, evidence: string): Gate => gate(id, label, passed ? 1 : 0, 1, evidence);
 
-function number(value: unknown): number { return Number(value ?? 0); }
-function date(value: Date | null): string | null { return value ? value.toISOString().slice(0, 10) : null; }
-
-async function counts(definition: Definition): Promise<Counts> {
-  if (!deep) return fastCounts(definition);
-  if (!definition.sql) return { universe: 0, historical: 0, rows: 0, earliest: null, latest: null };
-  const rows = await prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(definition.sql);
-  const row = rows[0] ?? {};
-  return { universe: number(row.universe), historical: number(row.historical), rows: number(row.rows), earliest: row.earliest as Date | null, latest: row.latest as Date | null };
+async function latestAudit(): Promise<{ file: string; audit: Audit }> {
+  const base = join(root, "debug", "global-data-audit");
+  const directories = (await readdir(base, { withFileTypes: true }))
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .sort()
+    .reverse();
+  for (const directory of directories) {
+    const file = join(base, directory, "global-data-status.json");
+    try {
+      return { file, audit: JSON.parse(await readFile(file, "utf8")) as Audit };
+    } catch {
+      // An incomplete audit directory is ignored; the latest completed artifact remains authoritative.
+    }
+  }
+  throw new Error("No completed Global Data Audit artifact was found");
 }
 
-/**
- * The scheduled view must never scan tens of millions of historical rows.
- * It uses canonical master freshness/backfill flags and PostgreSQL maintained
- * table statistics. `--deep` remains available for a full exact audit.
- */
-async function fastCounts(definition: Definition): Promise<Counts> {
-  const stockExchange = definition.id.startsWith("stocks-") ? (definition.name === "TPEx" ? "TPEx" : definition.name) : null;
-  if (stockExchange) return one("SELECT COUNT(*) FILTER (WHERE is_active)::int AS universe, COUNT(*) FILTER (WHERE history_backfilled_at IS NOT NULL)::int AS historical, 0::int AS rows, MIN(latest_date) AS earliest, MAX(latest_date) AS latest FROM stocks WHERE exchange=$1", stockExchange);
-  if (definition.id === "etf-taiwan") return one("SELECT COUNT(*) FILTER (WHERE is_active)::int AS universe, COUNT(*) FILTER (WHERE latest_price IS NOT NULL)::int AS historical, 0::int AS rows, MIN(price_updated_at) AS earliest, MAX(price_updated_at) AS latest FROM etfs WHERE COALESCE(exchange,'') ILIKE '%TW%' OR currency='TWD'");
-  if (definition.id === "etf-global") {
-    const result = await one("SELECT COUNT(*) FILTER (WHERE is_active)::int AS universe, COUNT(*) FILTER (WHERE latest_price IS NOT NULL)::int AS historical, 0::int AS rows, MIN(price_updated_at) AS earliest, MAX(price_updated_at) AS latest FROM etfs WHERE is_active AND NOT (COALESCE(exchange,'') ILIKE '%TW%' OR currency='TWD')");
-    // `etf_history` has 13m+ rows and no master-level historical completion
-    // flag. The last audited canonical coverage was 12,453/12,453; Daily
-    // price freshness must not overwrite that Historical fact with a slice.
-    result.historical = result.universe;
-    return result;
+async function recentRuns(): Promise<{ runs: Run[]; error: string | null }> {
+  if (baselineOnly) return { runs: [], error: null };
+  try {
+    const runs = await prisma.$queryRawUnsafe<Run[]>(
+      "SELECT job_id,run_type,status,started_at,completed_at,attempted,completed,failed,provider_latest_date,latest_trading_date,validation_status FROM production_scheduler_runs WHERE started_at >= NOW()-INTERVAL '45 days' ORDER BY started_at DESC",
+    );
+    return { runs, error: null };
+  } catch (error) {
+    return { runs: [], error: error instanceof Error ? error.message : String(error) };
   }
-  if (definition.id === "funds") return one("SELECT COUNT(*) FILTER (WHERE is_active)::int AS universe, COUNT(*) FILTER (WHERE latest_nav IS NOT NULL)::int AS historical, 0::int AS rows, MIN(updated_at) AS earliest, MAX(updated_at) AS latest FROM funds");
-  if (definition.id === "macro") return one("SELECT COUNT(*) FILTER (WHERE enabled)::int AS universe, COUNT(*) FILTER (WHERE last_update IS NOT NULL)::int AS historical, 0::int AS rows, MIN(last_update) AS earliest, MAX(last_update) AS latest FROM economic_series");
-  if (["index", "bond", "commodity", "fx", "crypto", "volatility", "precious-metals", "energy"].includes(definition.id)) {
-    const type = definition.id === "index" ? "INDEX" : definition.id === "bond" ? "BOND" : definition.id === "fx" ? "FOREX" : definition.id === "crypto" ? "CRYPTO" : definition.id === "volatility" ? "VOLATILITY" : "COMMODITY";
-    let condition = `asset_type::text='${type}'`;
-    if (definition.id === "precious-metals") condition += " AND COALESCE(category,'') ILIKE '%metal%'";
-    if (definition.id === "energy") condition += " AND (COALESCE(category,'') ILIKE '%energy%' OR COALESCE(category,'') ILIKE '%oil%')";
-    return one(`SELECT COUNT(*) FILTER (WHERE is_active)::int AS universe, COUNT(*) FILTER (WHERE latest_date IS NOT NULL)::int AS historical, 0::int AS rows, MIN(latest_date) AS earliest, MAX(latest_date) AS latest FROM market_master WHERE ${condition}`);
-  }
-  if (definition.id === "global-index") return one("SELECT COUNT(*)::int AS universe, COUNT(*) FILTER (WHERE first_trade_date IS NOT NULL)::int AS historical, 0::int AS rows, MIN(first_trade_date) AS earliest, MAX(first_trade_date) AS latest FROM market_indexes");
-  if (definition.id === "insurance") return one("SELECT COUNT(*) FILTER (WHERE is_active)::int AS universe, 0::int AS historical, 0::int AS rows, NULL::date AS earliest, NULL::date AS latest FROM insurance_products");
-  return { universe: 0, historical: 0, rows: 0, earliest: null, latest: null };
 }
 
-async function one(sql: string, ...values: string[]): Promise<Counts> {
-  const rows = await prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(sql, ...values);
-  const row = rows[0] ?? {};
-  const result = { universe: number(row.universe), historical: number(row.historical), rows: number(row.rows), earliest: row.earliest as Date | null, latest: row.latest as Date | null };
+function latestPrimaryByJob(runs: Run[]): Map<string, Run> {
+  const result = new Map<string, Run>();
+  for (const run of runs) {
+    if (run.run_type === "PRIMARY" && !result.has(run.job_id)) result.set(run.job_id, run);
+  }
   return result;
 }
 
-async function latestRun(jobs: string[]): Promise<Run | null> {
-  for (const job of jobs) {
-    const rows = await prisma.$queryRawUnsafe<Run[]>("SELECT status, started_at, latest_trading_date, validation_status FROM production_scheduler_runs WHERE job_id=$1 ORDER BY started_at DESC LIMIT 1", job);
-    if (rows[0]) return rows[0];
-  }
-  return null;
+function mergeRun(row: AuditRow, run: Run | undefined, baselineCompletedAt: string): AuditRow {
+  if (!run || run.started_at.toISOString() <= baselineCompletedAt) return row;
+  return {
+    ...row,
+    incrementalAttempted: run.attempted,
+    incrementalCompleted: run.completed,
+    incrementalFailed: run.failed,
+    latestProviderDate: run.provider_latest_date?.toISOString().slice(0, 10) ?? row.latestProviderDate,
+    latestDatabaseDate: run.latest_trading_date?.toISOString().slice(0, 10) ?? row.latestDatabaseDate,
+    validationStatus: run.validation_status ?? row.validationStatus,
+    currentRunStatus: run.status,
+  };
 }
 
-function status(count: Counts, run: Run | null, api: string | null): Status {
-  const coverage = count.universe ? count.historical / count.universe : 0;
-  if (!count.universe) return "NOT_STARTED";
-  if (!count.historical) return "MASTER_ONLY";
-  if (coverage < 0.98) return "PARTIAL_HISTORICAL";
-  if (!run) return "HISTORICAL_READY";
-  return api && run.status === "COMPLETED" && run.validation_status === "PASS" ? "PRODUCT_READY" : "DAILY_ACTIVE";
+function baseAsset(
+  roadmap: Roadmap["assets"][number],
+  summary: AuditSummary,
+  gates: Gate[],
+  latestCompleted: NullableNumber = summary.incrementalCompleted,
+  latestExpected = summary.incrementalExpected,
+  latestDate = summary.latest,
+  rows: NullableNumber = summary.historicalRows,
+  runningStatus = summary.running > 0 ? "RUNNING" : "IDLE",
+): AssetProgress {
+  const productionPercent = +(gates.reduce((sum, item) => sum + item.coveragePercent, 0) / Math.max(1, gates.length)).toFixed(2);
+  const status = productionPercent === 100 ? "COMPLETE" : runningStatus === "RUNNING" ? "IN_PRODUCTION" : summary.universe > 0 ? "PARTIAL" : "NOT_STARTED";
+  const weakestGate = gates.reduce((weakest, item) => item.coveragePercent < weakest.coveragePercent ? item : weakest, gates[0]);
+  return {
+    order: roadmap.order,
+    id: roadmap.id,
+    asset: roadmap.name,
+    universe: { count: summary.universe, targetStatus: "REGISTERED" },
+    historical: {
+      completed: summary.historicalCompleted,
+      expected: summary.historicalExpected,
+      coveragePercent: pct(summary.historicalCompleted, summary.historicalExpected),
+      rows,
+    },
+    latest: { completed: latestCompleted, expected: latestExpected, coveragePercent: pct(latestCompleted, latestExpected), date: latestDate },
+    earliestDate: summary.earliest,
+    latestDate,
+    rows,
+    gates,
+    productionPercent,
+    status,
+    runningStatus,
+    mainBlockingIssue: weakestGate?.coveragePercent < 100 ? weakestGate.evidence : "None",
+  };
 }
 
-function acquisitionId(assetId: string): string {
-  if (assetId.startsWith("stocks-")) return "stocks";
-  if (assetId === "etf-taiwan" || assetId === "etf-global" || assetId === "funds" || assetId === "macro" || assetId === "bond" || assetId === "index" || assetId === "volatility" || assetId === "commodity" || assetId === "fx" || assetId === "crypto" || assetId === "reit" || assetId === "insurance") return assetId;
-  if (assetId === "global-index") return "market-index";
-  if (assetId === "precious-metals") return "precious-metal";
-  return assetId;
-}
-
-/** Asset production follows the committed provider-and-product-value order.
- * Stock exchanges remain exclusively in the Stocks lifecycle. */
-function assetPriorityRank(assetId: string, plan: AcquisitionPlan): number | null {
-  if (assetId.startsWith("stocks-")) return null;
-  const rank = plan.queuePolicy?.assetPriority?.indexOf(acquisitionId(assetId)) ?? -1;
-  return rank >= 0 ? rank + 1 : 100;
+function aggregateStockRows(rows: AuditRow[]): { expected: number; completed: number; latest: string | null; passed: number; schedulers: number; running: boolean } {
+  return rows.reduce((result, row) => ({
+    expected: result.expected + Number(row.universeCount ?? 0),
+    completed: result.completed + Number(row.incrementalCompleted ?? 0),
+    latest: maxDate(result.latest, row.latestProviderDate, row.latestDatabaseDate),
+    passed: result.passed + (row.validationStatus === "PASS" ? 1 : 0),
+    schedulers: result.schedulers + (row.schedulerEnabled ? 1 : 0),
+    running: result.running || ["IN_PROGRESS", "RUNNING"].includes(row.currentRunStatus),
+  }), { expected: 0, completed: 0, latest: null as string | null, passed: 0, schedulers: 0, running: false });
 }
 
 async function main(): Promise<void> {
-  // Run these aggregate queries serially. The ETF/fund history tables are
-  // intentionally large; parallel full-table counts would compete with Daily
-  // writes and turn the dashboard into a production bottleneck.
-  const assets: Array<Record<string, unknown> & { assetClass: string; completion: number; status: Status; name: string; blocking: string }> = [];
-  for (const definition of definitions) {
-    const [metric, run] = await Promise.all([counts(definition), latestRun(definition.jobs)]);
-    const historicalCoverage = metric.universe ? +(metric.historical / metric.universe * 100).toFixed(2) : 0;
-    const daily = run?.status === "COMPLETED" && run.validation_status === "PASS" ? "ACTIVE" : run ? run.status : "NOT_STARTED";
-    const completion = +(historicalCoverage * 0.55 + (daily === "ACTIVE" ? 25 : run ? 12.5 : 0) + (definition.api ? 10 : 0) + (run?.validation_status === "PASS" ? 10 : 0)).toFixed(2);
-    assets.push({ ...definition, ...metric, earliest: date(metric.earliest), latest: date(metric.latest), historicalCoverage, daily, production: run?.validation_status === "PASS" ? "PASS" : "NOT_VERIFIED", latestRun: run ? { status: run.status, startedAt: run.started_at.toISOString(), latestTradingDate: date(run.latest_trading_date), validation: run.validation_status } : null, status: status(metric, run, definition.api), completion: Math.min(100, completion), nextTask: definition.blocking });
+  const [{ file: auditFile, audit }, roadmap, runRefresh] = await Promise.all([
+    latestAudit(),
+    readFile(join(root, "config", "global-asset-production-roadmap.json"), "utf8").then((value) => JSON.parse(value) as Roadmap),
+    recentRuns(),
+  ]);
+  const summaries = new Map(audit.categorySummary.map((item) => [item.category, item]));
+  const summary = (category: string): AuditSummary => {
+    const value = summaries.get(category);
+    if (!value) throw new Error(`Audit baseline is missing category: ${category}`);
+    return value;
+  };
+  const roadmapById = new Map(roadmap.assets.map((asset) => [asset.id, asset]));
+  const required = (id: string) => {
+    const item = roadmapById.get(id);
+    if (!item) throw new Error(`Roadmap is missing asset: ${id}`);
+    return item;
+  };
+  const latestRuns = latestPrimaryByJob(runRefresh.runs);
+
+  const stockAuditRows = audit.rows.filter((row) => row.category === "Global Stocks");
+  const stockRows = stockAuditRows.map((row) => {
+    const job = `${row.subcategory.toLowerCase().replaceAll(" ", "-")}-yahoo-daily`;
+    return mergeRun(row, latestRuns.get(job), audit.completedAt);
+  });
+  const stockLive = aggregateStockRows(stockRows);
+  const stock = summary("Global Stocks");
+  const financial = summary("Financial Statements");
+  const corporate = summary("Corporate Actions");
+  const derived = summary("Derived Metrics");
+  const stockGates = [
+    gate("universe", "Universe", stock.universe, stock.universe, `${stock.universe.toLocaleString()} registered stocks`),
+    gate("historical_price", "Historical Price", stock.historicalCompleted, stock.historicalExpected, `${stock.historicalCompleted ?? "UNKNOWN"}/${stock.historicalExpected}`),
+    gate("daily_price", "Daily Price", stockLive.completed, stockLive.expected, `${stockLive.completed}/${stockLive.expected} in latest market runs`),
+    gate("financial_statements", "Financial Statements", financial.historicalCompleted, financial.historicalExpected, "Per-stock coverage is UNKNOWN because the completed audit query exceeded the production statement timeout"),
+    gate("corporate_actions", "Corporate Actions", corporate.historicalCompleted, corporate.historicalExpected, "No canonical stock corporate-action production ledger"),
+    gate("derived_metrics", "Derived Metrics", derived.historicalCompleted, derived.historicalExpected, `${derived.historicalCompleted ?? 0}/${derived.historicalExpected}; lower-bound evidence only`),
+    gate("validation", "Validation", stockLive.passed, stockRows.length, `${stockLive.passed}/${stockRows.length} market latest runs validated PASS`),
+    gate("production_scheduler", "Production Scheduler", stockLive.schedulers, stockRows.length, `${stockLive.schedulers}/${stockRows.length} markets scheduler-enabled`),
+  ];
+  const stockAsset = baseAsset(required("stocks"), stock, stockGates, stockLive.completed, stockLive.expected, stockLive.latest, audit.tableCounts?.end?.stock_history ?? stock.historicalRows, stockLive.running ? "RUNNING" : "IDLE");
+  stockAsset.rowBreakdown = {
+    historicalPrice: audit.tableCounts?.end?.stock_history ?? null,
+    financialFacts: audit.tableCounts?.end?.stock_financial_facts ?? null,
+    corporateActions: corporate.historicalRows,
+    derivedMetrics: derived.historicalRows,
+  };
+  stockAsset.rows = Object.values(stockAsset.rowBreakdown).reduce<number>((sum, value) => sum + Number(value ?? 0), 0);
+
+  const etfSummary = summary("ETF");
+  const etfRows = audit.rows.filter((row) => row.category === "ETF" && row.subcategory !== "Global ETF Production Daily Lifecycle");
+  const etfLifecycleBase = audit.rows.find((row) => row.category === "ETF" && row.subcategory === "Global ETF Production Daily Lifecycle");
+  const etfLifecycle = etfLifecycleBase ? mergeRun(etfLifecycleBase, latestRuns.get("global_etf-production-daily"), audit.completedAt) : null;
+  const etfNavRows = etfRows.reduce((sum, row) => sum + Number((row.details?.navRows as number | undefined) ?? 0), 0);
+  const etfGates = [
+    gate("universe", "Universe", etfSummary.universe, etfSummary.universe, `${etfSummary.universe} registered ETFs`),
+    gate("historical_price", "Historical Price", etfSummary.historicalCompleted, etfSummary.historicalExpected, `${etfSummary.historicalCompleted}/${etfSummary.historicalExpected}`),
+    gate("daily_price", "Daily Price", etfLifecycle?.incrementalCompleted ?? etfSummary.incrementalCompleted, etfLifecycle?.incrementalExpectedCount ?? etfSummary.incrementalExpected, etfLifecycle?.currentRunStatus ?? "No production lifecycle evidence"),
+    gate("nav", "NAV", null, etfSummary.universe, `${etfNavRows} NAV rows exist, but product coverage was not verified`),
+    gate("distribution", "Distribution", 0, etfSummary.universe, "0 ETF products with canonical distributions in the completed audit"),
+    gate("holdings", "Holdings", 0, etfSummary.universe, "0 ETF products with canonical holdings in the completed audit"),
+    gate("corporate_actions", "Corporate Actions", 0, etfSummary.universe, "No complete ETF corporate-action production evidence"),
+    gate("derived_metrics", "Derived Metrics", 0, etfSummary.universe, "No complete ETF derived-metric production evidence"),
+    gate("validation", "Validation", etfRows.filter((row) => row.validationStatus === "PASS").length, etfRows.length, "Regional validation evidence"),
+    binaryGate("production_scheduler", "Production Scheduler", etfLifecycle?.productionStatus === "PRODUCTION" && etfLifecycle.validationStatus === "PASS", etfLifecycle?.currentRunStatus ?? "No completed validated lifecycle"),
+  ];
+  const etfAsset = baseAsset(required("etf"), etfSummary, etfGates, etfLifecycle?.incrementalCompleted ?? etfSummary.incrementalCompleted, etfLifecycle?.incrementalExpectedCount ?? etfSummary.incrementalExpected, maxDate(etfLifecycle?.latestProviderDate, etfLifecycle?.latestDatabaseDate, etfSummary.latest), etfSummary.historicalRows, etfLifecycle && ["IN_PROGRESS", "RUNNING"].includes(etfLifecycle.currentRunStatus) ? "RUNNING" : etfLifecycle?.currentRunStatus ?? "IDLE");
+
+  const fundSummary = summary("Fund");
+  const fundRow = audit.rows.find((row) => row.category === "Fund" && row.subcategory.startsWith("All Funds"));
+  const fundGates = [
+    gate("universe", "Universe", fundSummary.universe, fundSummary.universe, `${fundSummary.universe} registered funds`),
+    gate("historical_nav", "Historical NAV", fundSummary.historicalCompleted, fundSummary.historicalExpected, `${fundSummary.historicalCompleted}/${fundSummary.historicalExpected}`),
+    gate("daily_nav", "Daily NAV", fundSummary.incrementalCompleted, fundSummary.incrementalExpected, `${fundSummary.incrementalCompleted}/${fundSummary.incrementalExpected}`),
+    gate("distribution", "Distribution", 0, fundSummary.universe, "0 canonical fund distribution products in the completed audit"),
+    gate("portfolio", "Portfolio", 0, fundSummary.universe, "0 canonical fund holding products in the completed audit"),
+    gate("characteristics", "Characteristics", 0, fundSummary.universe, "Domicile/share-class characteristics are not normalized"),
+    binaryGate("validation", "Validation", fundRow?.validationStatus === "PASS", fundRow?.validationStatus ?? "NOT_RUN"),
+    binaryGate("production_scheduler", "Production Scheduler", fundRow?.schedulerEnabled === true && fundRow.productionStatus === "PRODUCTION", fundRow?.schedulerRule ?? "NOT_CONFIGURED"),
+  ];
+  const fundAsset = baseAsset(required("fund"), fundSummary, fundGates);
+
+  const standard = (
+    id: string,
+    category: string,
+    options: { targetRegistered?: boolean; extraGates?: Gate[]; job?: string; historicalGateId?: string } = {},
+  ): AssetProgress => {
+    const item = summary(category);
+    const baseRow = audit.rows.find((row) => row.category === category);
+    const liveRow = baseRow && options.job ? mergeRun(baseRow, latestRuns.get(options.job), audit.completedAt) : baseRow;
+    const universeGate = options.targetRegistered === false
+      ? binaryGate("universe", "Universe", false, `${item.universe} configured; full target universe is not registered`)
+      : gate("universe", "Universe", item.universe, item.universe, `${item.universe} registered instruments/series`);
+    const gates = [
+      universeGate,
+      gate(options.historicalGateId ?? "historical", "Historical", item.historicalCompleted, item.historicalExpected, `${item.historicalCompleted ?? "UNKNOWN"}/${item.historicalExpected}`),
+      ...(options.extraGates ?? []),
+      gate(id === "crypto" ? "incremental_24_7" : "incremental", id === "crypto" ? "Incremental 24/7" : "Incremental", liveRow?.incrementalCompleted ?? item.incrementalCompleted, liveRow?.incrementalExpectedCount ?? item.incrementalExpected, liveRow?.currentRunStatus ?? "No lifecycle evidence"),
+      binaryGate("validation", "Validation", liveRow?.validationStatus === "PASS", liveRow?.validationStatus ?? "NOT_RUN"),
+      binaryGate("production_scheduler", "Production Scheduler", liveRow?.schedulerEnabled === true && liveRow.productionStatus === "PRODUCTION", liveRow?.schedulerRule ?? "NOT_CONFIGURED"),
+    ];
+    return baseAsset(required(id), item, gates, liveRow?.incrementalCompleted ?? item.incrementalCompleted, liveRow?.incrementalExpectedCount ?? item.incrementalExpected, maxDate(liveRow?.latestProviderDate, liveRow?.latestDatabaseDate, item.latest), item.historicalRows, liveRow && ["IN_PROGRESS", "RUNNING"].includes(liveRow.currentRunStatus) ? "RUNNING" : liveRow?.currentRunStatus ?? "IDLE");
+  };
+
+  const economicSummary = summary("Economic Data");
+  const economicRow = audit.rows.find((row) => row.category === "Economic Data" && row.subcategory === "All Economic Series");
+  const revisionRows = Number((economicRow?.details?.revisedRows as number | undefined) ?? 0);
+  const economicAsset = standard("economic-data", "Economic Data", {
+    job: "macro-production-daily",
+    extraGates: [gate("revision_history", "Revision History", revisionRows, economicSummary.historicalRows, `${revisionRows}/${economicSummary.historicalRows ?? 0} rows retain revision history; vintage observations are not preserved`)],
+  });
+  const commodityAsset = standard("commodity", "Commodities", { targetRegistered: false });
+  commodityAsset.rowBreakdown = {
+    canonicalCommodity: summary("Commodities").historicalRows,
+    preciousMetal: summary("Precious Metals").historicalRows,
+    energy: summary("Energy").historicalRows,
+  };
+  const bondAsset = standard("bond", "Bonds", {
+    targetRegistered: false,
+    historicalGateId: "historical_price_yield",
+    extraGates: [gate("spread", "Spread", 0, 1, "No canonical bond spread production evidence")],
+  });
+  const assets = [
+    stockAsset,
+    etfAsset,
+    fundAsset,
+    standard("government-yield", "Government Yields", { targetRegistered: false, job: "bond_yield-production-daily" }),
+    economicAsset,
+    commodityAsset,
+    standard("fx", "FX", { targetRegistered: false }),
+    standard("crypto", "Crypto", { targetRegistered: false }),
+    bondAsset,
+  ].sort((a, b) => a.order - b.order);
+
+  for (const asset of assets) {
+    const configured = required(asset.id).requiredGates;
+    const emitted = new Set(asset.gates.map((item) => item.id));
+    const missing = configured.filter((id) => !emitted.has(id));
+    const unexpected = asset.gates.map((item) => item.id).filter((id) => !configured.includes(id));
+    if (missing.length || unexpected.length) throw new Error(`${asset.asset} gate mismatch; missing=${missing.join(",")}; unexpected=${unexpected.join(",")}`);
   }
-  const groups = Object.entries(Object.groupBy(assets, (asset) => asset.assetClass)).map(([assetClass, values]) => ({ assetClass, completion: +((values ?? []).reduce((sum, asset) => sum + asset.completion, 0) / (values?.length || 1)).toFixed(2) }));
-  const overall = +(assets.reduce((sum, asset) => sum + asset.completion, 0) / assets.length).toFixed(2);
-  const plan = JSON.parse(await readFile(join(root, "config", "global-data-acquisition-plan.json"), "utf8")) as AcquisitionPlan;
-  const planById = new Map(plan.assets.map((asset) => [asset.id, asset]));
-  const completionQueue = assets.filter((asset) => asset.status !== "PRODUCT_READY").flatMap((asset) => {
-    const priority = assetPriorityRank(asset.id, plan);
-    if (priority === null) return [];
-    const acquisition = planById.get(acquisitionId(asset.id));
-    const providerReady = acquisition?.state === "DECLARED" || acquisition?.state === "ACTIVE";
-    const dailyGap = asset.daily === "ACTIVE" ? 0 : 1;
-    return [{ assetId: asset.id, asset: asset.name, provider: acquisition?.provider ?? "UNRESOLVED", adapter: acquisition?.adapter ?? null, providerReady, priority, historicalCoverage: asset.historicalCoverage, daily: asset.daily, production: asset.production, blockingIssue: asset.blocking, priorityScore: +(dailyGap * 100 + (providerReady ? 0 : -100) + asset.historicalCoverage).toFixed(2) }];
-  }).sort((a, b) => a.priority - b.priority || b.priorityScore - a.priorityScore || b.historicalCoverage - a.historicalCoverage);
-  const nextTask = completionQueue[0] ?? null;
-  const dashboard = { generatedAt: new Date().toISOString(), source: "Supabase canonical tables + production_scheduler_runs", metricMode: deep ? "DEEP_EXACT" : "FAST_CANONICAL", policy: "Provider Latest Available", globalCompletion: overall, groups, assets, completionQueue, nextTask };
-  await mkdir(join(root, "config"), { recursive: true });
-  await mkdir(join(root, "docs"), { recursive: true });
-  await writeFile(join(root, "config", "data-completion-dashboard.json"), `${JSON.stringify(dashboard, null, 2)}\n`);
-  const rows = assets.map((asset) => `| ${asset.name} | ${asset.universe} | ${asset.historical}/${asset.universe} (${asset.historicalCoverage}%) | ${asset.daily} | ${asset.production} | ${asset.api ?? "—"} | ${asset.provider} | ${asset.latest ?? "—"} | ${asset.status} | ${asset.completion}% | ${asset.blocking} | ${asset.nextTask} |`).join("\n");
-  await writeFile(join(root, "docs", "data-completion-dashboard.md"), `# SmartFund Data Completion Dashboard\n\n> Generated from canonical Supabase tables and Production Run Ledger at **${dashboard.generatedAt}**. Do not edit manually; the Production Coordinator rebuilds it after every Cron pass. Metric mode: **${dashboard.metricMode}** (fast mode uses canonical master flags to protect Daily from multi-million-row scans; \`--deep\` runs an exact audit).\n\n## Global Completion: ${overall}%\n\n${groups.map((group) => `- ${group.assetClass}: **${group.completion}%**`).join("\n")}\n\n## Asset Completion\n\n| Asset | Universe | Historical | Daily | Production | API | Provider | Latest Date | Status | Completion | Blocking Issue | Next Task |\n| --- | ---: | --- | --- | --- | --- | --- | --- | --- | ---: | --- | --- |\n${rows}\n\n## Data Completion Queue\n\n| Priority | Asset | Provider | Daily | Historical | Blocking Issue |\n| ---: | --- | --- | --- | ---: | --- |\n${completionQueue.map((item, index) => `| ${index + 1} | ${item.asset} | ${item.provider} | ${item.daily} | ${item.historicalCoverage}% | ${item.blockingIssue} |`).join("\n")}\n\n## Next Task\n\n${nextTask ? `**${nextTask.asset}** — ${nextTask.blockingIssue}` : "All tracked assets are PRODUCT_READY."}\n`);
-  console.log(JSON.stringify({ globalCompletion: overall, assets: assets.length, nextTask: dashboard.nextTask }, null, 2));
+
+  const currentAsset = assets.find((asset) => asset.productionPercent < 100) ?? null;
+  const globalProductionPercent = +(assets.reduce((sum, asset) => sum + asset.productionPercent, 0) / assets.length).toFixed(2);
+  const dashboard = {
+    generatedAt: new Date().toISOString(),
+    mode: "PRODUCTION_PROGRESS_FROM_COMPLETED_AUDIT",
+    baselineAudit: { runId: audit.runId, completedAt: audit.completedAt, file: relative(root, auditFile).replaceAll("\\", "/") },
+    lifecycleRefresh: { mode: baselineOnly ? "BASELINE_ONLY" : "RUN_LEDGER_ONLY", error: runRefresh.error },
+    roadmapVersion: roadmap.version,
+    completionFormula: roadmap.completionFormula,
+    globalProductionPercent,
+    currentAsset: currentAsset?.asset ?? null,
+    assets,
+  };
+
+  const numberText = (value: NullableNumber): string => value === null ? "UNKNOWN" : value.toLocaleString("en-US");
+  const ratioText = (completed: NullableNumber, expected: number, coverage: number): string => `${numberText(completed)} / ${numberText(expected)} (${coverage.toFixed(4)}%)`;
+  const table = assets.map((asset) => `| ${asset.order} | ${asset.asset} | ${numberText(asset.universe.count)} | ${ratioText(asset.historical.completed, asset.historical.expected, asset.historical.coveragePercent)} | ${ratioText(asset.latest.completed, asset.latest.expected, asset.latest.coveragePercent)} | ${numberText(asset.rows)} | ${asset.earliestDate ?? "UNKNOWN"} | ${asset.latestDate ?? "UNKNOWN"} | ${asset.productionPercent.toFixed(2)}% | ${asset.status} | ${asset.mainBlockingIssue} |`).join("\n");
+  const gates = assets.flatMap((asset) => [
+    `### ${asset.order}. ${asset.asset}`,
+    "",
+    "| Gate | Completed | Expected | Coverage | Evidence |",
+    "| --- | ---: | ---: | ---: | --- |",
+    ...asset.gates.map((item) => `| ${item.label} | ${numberText(item.completed)} | ${numberText(item.expected)} | ${item.coveragePercent.toFixed(4)}% | ${item.evidence} |`),
+    "",
+  ]).join("\n");
+  const markdown = `# SmartFund Global Asset Progress Dashboard
+
+> Generated automatically at **${dashboard.generatedAt}**. Coverage baseline is the already-completed Global Data Audit **${audit.runId}**; this dashboard does **not** rerun that audit. Production lifecycle evidence is refreshed from the small Run Ledger only. Unknown required gates score 0 and are never guessed.
+
+## Global Production: ${globalProductionPercent.toFixed(2)}%
+
+Current asset: **${dashboard.currentAsset ?? "All complete"}**
+
+| Order | Asset | Universe | Historical | Latest | Rows | Earliest | Latest Date | Production | Status | Main Gap |
+| ---: | --- | ---: | --- | --- | ---: | --- | --- | ---: | --- | --- |
+${table}
+
+## Production Gates
+
+${gates}
+`;
+  const markdownOutput = `${markdown.trimEnd()}\n`;
+
+  await Promise.all([
+    mkdir(join(root, "config"), { recursive: true }),
+    mkdir(join(root, "docs"), { recursive: true }),
+  ]);
+  await Promise.all([
+    writeFile(join(root, "config", "global-asset-progress-dashboard.json"), `${JSON.stringify(dashboard, null, 2)}\n`),
+    writeFile(join(root, "docs", "global-asset-progress-dashboard.md"), markdownOutput),
+    // Compatibility aliases keep existing consumers on the same single source.
+    writeFile(join(root, "config", "data-completion-dashboard.json"), `${JSON.stringify(dashboard, null, 2)}\n`),
+    writeFile(join(root, "docs", "data-completion-dashboard.md"), markdownOutput),
+  ]);
+  console.log(JSON.stringify({ globalProductionPercent, currentAsset: dashboard.currentAsset, assets: assets.map((asset) => ({ order: asset.order, asset: asset.asset, productionPercent: asset.productionPercent })) }, null, 2));
 }
 
-main().catch((error: unknown) => { console.error(error); process.exitCode = 1; }).finally(async () => prisma.$disconnect());
+main()
+  .catch((error: unknown) => {
+    console.error(error);
+    process.exitCode = 1;
+  })
+  .finally(async () => prisma.$disconnect());
