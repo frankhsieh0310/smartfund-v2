@@ -1,0 +1,1413 @@
+category,subcategory,providerSource,availabilityStatus,universeCount,activeCount,mappedCount,historicalExpectedCount,historicalCompletedCount,historicalCoveragePercent,historicalRowCount,earliestAvailableDate,earliestDatabaseDate,latestProviderDate,latestDatabaseDate,incrementalExpectedCount,incrementalAttempted,incrementalCompleted,incrementalFailed,incrementalCoveragePercent,noUpdateCount,noDataCount,staleCount,retryQueueCount,retryRecoveredCount,permanentFailureCount,lastSuccessfulRun,currentRunStatus,currentCheckpoint,activeLock,lastHeartbeat,schedulerEnabled,schedulerRule,schedulerTimezone,updateFrequency,validationStatus,productionStatus,mainBlockingIssue,details
+Global Stocks,AMEX,YAHOO_CHART,PARTIALLY_AVAILABLE,288,288,288,288,287,99.6528,,,,2026-07-28,2026-07-31,288,270,270,0,93.75,0,0,0,,0,,2026-08-01T04:10:39.000Z,COMPLETED,ZONE; 270/270/0,false,2026-08-01T04:10:31.000Z,true,Exchange close 16:00 + 80m; Railway poll 5m,America/New_York,Each exchange trading day after provider final candle,PASS,PRODUCTION,Exact stock_history row aggregation exceeded production statement timeout; product coverage uses stocks.history_backfilled_at,"{
+  ""inactive"": 0,
+  ""delisted"": 0,
+  ""missingYahooSymbol"": 0,
+  ""missingOfficialIdentifier"": ""NOT_MODELED"",
+  ""historyBackfilledFlag"": 287,
+  ""exactHistoryRows"": ""UNKNOWN_STATEMENT_TIMEOUT"",
+  ""completeOhlcvRows"": null,
+  ""yahooRows"": null,
+  ""latestProviderDate"": ""2026-07-28"",
+  ""incrementalAttempted"": 270,
+  ""incrementalCompleted"": 270,
+  ""incrementalFailed"": 0,
+  ""noUpdateCount"": 0,
+  ""noDataCount"": 0,
+  ""staleCount"": 0,
+  ""retryQueueCount"": null,
+  ""retryRecoveredCount"": 0,
+  ""permanentFailureCount"": null,
+  ""lastSuccessfulRun"": ""2026-08-01T04:10:39.000Z"",
+  ""currentRunStatus"": ""COMPLETED"",
+  ""currentCheckpoint"": ""ZONE; 270/270/0"",
+  ""activeLock"": false,
+  ""lastHeartbeat"": ""2026-08-01T04:10:31.000Z"",
+  ""validationStatus"": ""PASS"",
+  ""runEvidence"": {
+    ""id"": ""33bde3a9-f43c-464e-8294-886039e55346"",
+    ""runType"": ""PRIMARY"",
+    ""status"": ""COMPLETED"",
+    ""targetTradeDate"": null,
+    ""exitCode"": 0,
+    ""error"": null
+  }
+}"
+Financial Statements,AMEX,SEC EDGAR,PARTIALLY_AVAILABLE,288,288,,288,,,,,,,,288,,,,,,,,,,,,NOT_STARTED,,false,,false,No independent filing-triggered production scheduler evidenced,Provider publication time,Filing publication,NO_PRODUCTION_VALIDATION_LEDGER,PARTIAL,Exact per-market financial aggregation exceeded production statement timeout,"{
+  ""rows"": ""UNKNOWN_STATEMENT_TIMEOUT"",
+  ""stocks"": ""UNKNOWN_STATEMENT_TIMEOUT""
+}"
+Corporate Actions,AMEX,NOT_MODELED_FOR_STOCKS,SOURCE_RESEARCH_REQUIRED,288,288,0,288,0,0,0,,,,,288,0,0,0,0,,,,,,,,NOT_STARTED,,false,,false,NOT_CONFIGURED,NOT_CONFIGURED,Announcement-triggered,NOT_RUN,NOT_STARTED,No stock corporate-action table or production ingestion ledger; adjusted close is not an event ledger,"{
+  ""supportedEvents"": [],
+  ""schemaEvidence"": ""distributions links ETF/Fund/Asset only""
+}"
+Derived Metrics,AMEX,SMARTFUND_DERIVED + source financial facts,AVAILABLE_NOT_CONNECTED,288,288,0,288,0,0,0,,,,,288,,,,,,,,,,,,NOT_STARTED,,false,,false,No production derived-metric scheduler evidenced,N/A,After price/filing updates,NO_POINT_IN_TIME_PRODUCTION_VALIDATION,PROTOTYPE,Technical per-market aggregation timed out; reported derived count is a lower bound from financial-ratio facts,"{
+  ""technical"": {
+    ""status"": ""UNKNOWN_STATEMENT_TIMEOUT""
+  },
+  ""financialRatios"": {},
+  ""coverageIsLowerBound"": true
+}"
+Global Stocks,Australia,YAHOO_CHART,AVAILABLE_AND_INGESTED,3607,3607,3607,3607,3607,100,,,,2026-07-31,2026-07-31,3607,3607,3184,423,88.2728,0,0,423,423,0,0,2026-08-01T10:05:47.000Z,COMPLETED,ZZA.XA; 423/0/423,false,2026-08-01T10:05:43.000Z,true,Exchange close 16:11 + 45m; Railway poll 5m,Australia/Sydney,Each exchange trading day after provider final candle,PASS,PRODUCTION,Exact stock_history row aggregation exceeded production statement timeout; product coverage uses stocks.history_backfilled_at,"{
+  ""inactive"": 0,
+  ""delisted"": 0,
+  ""missingYahooSymbol"": 0,
+  ""missingOfficialIdentifier"": ""NOT_MODELED"",
+  ""historyBackfilledFlag"": 3607,
+  ""exactHistoryRows"": ""UNKNOWN_STATEMENT_TIMEOUT"",
+  ""completeOhlcvRows"": null,
+  ""yahooRows"": null,
+  ""latestProviderDate"": ""2026-07-31"",
+  ""incrementalAttempted"": 3607,
+  ""incrementalCompleted"": 3184,
+  ""incrementalFailed"": 423,
+  ""noUpdateCount"": 0,
+  ""noDataCount"": 0,
+  ""staleCount"": 423,
+  ""retryQueueCount"": 423,
+  ""retryRecoveredCount"": 0,
+  ""permanentFailureCount"": 0,
+  ""lastSuccessfulRun"": ""2026-08-01T10:05:47.000Z"",
+  ""currentRunStatus"": ""COMPLETED"",
+  ""currentCheckpoint"": ""ZZA.XA; 423/0/423"",
+  ""activeLock"": false,
+  ""lastHeartbeat"": ""2026-08-01T10:05:43.000Z"",
+  ""validationStatus"": ""PASS"",
+  ""runEvidence"": {
+    ""id"": ""671e1e19-fdcd-4305-bd76-10b33a34d5a7"",
+    ""runType"": ""PRIMARY"",
+    ""status"": ""COMPLETED"",
+    ""targetTradeDate"": ""2026-07-31"",
+    ""exitCode"": 0,
+    ""error"": null
+  }
+}"
+Financial Statements,Australia,UNCONFIRMED,PARTIALLY_AVAILABLE,3607,3607,,3607,,,,,,,,3607,,,,,,,,,,,,NOT_STARTED,,false,,false,No independent filing-triggered production scheduler evidenced,Provider publication time,Filing publication,NO_PRODUCTION_VALIDATION_LEDGER,PARTIAL,Exact per-market financial aggregation exceeded production statement timeout,"{
+  ""rows"": ""UNKNOWN_STATEMENT_TIMEOUT"",
+  ""stocks"": ""UNKNOWN_STATEMENT_TIMEOUT""
+}"
+Corporate Actions,Australia,NOT_MODELED_FOR_STOCKS,SOURCE_RESEARCH_REQUIRED,3607,3607,0,3607,0,0,0,,,,,3607,0,0,0,0,,,,,,,,NOT_STARTED,,false,,false,NOT_CONFIGURED,NOT_CONFIGURED,Announcement-triggered,NOT_RUN,NOT_STARTED,No stock corporate-action table or production ingestion ledger; adjusted close is not an event ledger,"{
+  ""supportedEvents"": [],
+  ""schemaEvidence"": ""distributions links ETF/Fund/Asset only""
+}"
+Derived Metrics,Australia,SMARTFUND_DERIVED + source financial facts,AVAILABLE_NOT_CONNECTED,3607,3607,0,3607,0,0,0,,,,,3607,,,,,,,,,,,,NOT_STARTED,,false,,false,No production derived-metric scheduler evidenced,N/A,After price/filing updates,NO_POINT_IN_TIME_PRODUCTION_VALIDATION,PROTOTYPE,Technical per-market aggregation timed out; reported derived count is a lower bound from financial-ratio facts,"{
+  ""technical"": {
+    ""status"": ""UNKNOWN_STATEMENT_TIMEOUT""
+  },
+  ""financialRatios"": {},
+  ""coverageIsLowerBound"": true
+}"
+Global Stocks,Canada,YAHOO_CHART,AVAILABLE_AND_INGESTED,4797,4797,4797,4797,4797,100,,,,,2026-07-28,4797,,,,,,,,,0,,,NOT_STARTED,,false,,true,Exchange close 16:10 + 60m; Railway poll 5m,America/Toronto,Each exchange trading day after provider final candle,NOT_RUN,PRODUCTION,Exact stock_history row aggregation exceeded production statement timeout; product coverage uses stocks.history_backfilled_at,"{
+  ""inactive"": 0,
+  ""delisted"": 0,
+  ""missingYahooSymbol"": 0,
+  ""missingOfficialIdentifier"": ""NOT_MODELED"",
+  ""historyBackfilledFlag"": 4797,
+  ""exactHistoryRows"": ""UNKNOWN_STATEMENT_TIMEOUT"",
+  ""completeOhlcvRows"": null,
+  ""yahooRows"": null,
+  ""latestProviderDate"": null,
+  ""incrementalAttempted"": null,
+  ""incrementalCompleted"": null,
+  ""incrementalFailed"": null,
+  ""noUpdateCount"": null,
+  ""noDataCount"": null,
+  ""staleCount"": null,
+  ""retryQueueCount"": null,
+  ""retryRecoveredCount"": 0,
+  ""permanentFailureCount"": null,
+  ""lastSuccessfulRun"": null,
+  ""currentRunStatus"": ""NOT_STARTED"",
+  ""currentCheckpoint"": null,
+  ""activeLock"": false,
+  ""lastHeartbeat"": null,
+  ""validationStatus"": ""NOT_RUN"",
+  ""runEvidence"": null
+}"
+Financial Statements,Canada,UNCONFIRMED,PARTIALLY_AVAILABLE,4797,4797,,4797,,,,,,,,4797,,,,,,,,,,,,NOT_STARTED,,false,,false,No independent filing-triggered production scheduler evidenced,Provider publication time,Filing publication,NO_PRODUCTION_VALIDATION_LEDGER,PARTIAL,Exact per-market financial aggregation exceeded production statement timeout,"{
+  ""rows"": ""UNKNOWN_STATEMENT_TIMEOUT"",
+  ""stocks"": ""UNKNOWN_STATEMENT_TIMEOUT""
+}"
+Corporate Actions,Canada,NOT_MODELED_FOR_STOCKS,SOURCE_RESEARCH_REQUIRED,4797,4797,0,4797,0,0,0,,,,,4797,0,0,0,0,,,,,,,,NOT_STARTED,,false,,false,NOT_CONFIGURED,NOT_CONFIGURED,Announcement-triggered,NOT_RUN,NOT_STARTED,No stock corporate-action table or production ingestion ledger; adjusted close is not an event ledger,"{
+  ""supportedEvents"": [],
+  ""schemaEvidence"": ""distributions links ETF/Fund/Asset only""
+}"
+Derived Metrics,Canada,SMARTFUND_DERIVED + source financial facts,AVAILABLE_NOT_CONNECTED,4797,4797,0,4797,0,0,0,,,,,4797,,,,,,,,,,,,NOT_STARTED,,false,,false,No production derived-metric scheduler evidenced,N/A,After price/filing updates,NO_POINT_IN_TIME_PRODUCTION_VALIDATION,PROTOTYPE,Technical per-market aggregation timed out; reported derived count is a lower bound from financial-ratio facts,"{
+  ""technical"": {
+    ""status"": ""UNKNOWN_STATEMENT_TIMEOUT""
+  },
+  ""financialRatios"": {},
+  ""coverageIsLowerBound"": true
+}"
+Global Stocks,France,YAHOO_CHART,AVAILABLE_AND_INGESTED,9661,9661,9661,9661,9661,100,,,,2026-07-28,2026-07-31,9661,9058,9058,0,93.7584,3,0,0,,0,,2026-07-31T19:52:10.000Z,COMPLETED,ZT37S.NX; 9058/9058/0,false,2026-07-31T19:52:08.000Z,true,Exchange close 17:35 + 45m; Railway poll 5m,Europe/Paris,Each exchange trading day after provider final candle,PASS,PRODUCTION,Exact stock_history row aggregation exceeded production statement timeout; product coverage uses stocks.history_backfilled_at,"{
+  ""inactive"": 0,
+  ""delisted"": 0,
+  ""missingYahooSymbol"": 0,
+  ""missingOfficialIdentifier"": ""NOT_MODELED"",
+  ""historyBackfilledFlag"": 9661,
+  ""exactHistoryRows"": ""UNKNOWN_STATEMENT_TIMEOUT"",
+  ""completeOhlcvRows"": null,
+  ""yahooRows"": null,
+  ""latestProviderDate"": ""2026-07-28"",
+  ""incrementalAttempted"": 9058,
+  ""incrementalCompleted"": 9058,
+  ""incrementalFailed"": 0,
+  ""noUpdateCount"": 3,
+  ""noDataCount"": 0,
+  ""staleCount"": 0,
+  ""retryQueueCount"": null,
+  ""retryRecoveredCount"": 0,
+  ""permanentFailureCount"": null,
+  ""lastSuccessfulRun"": ""2026-07-31T19:52:10.000Z"",
+  ""currentRunStatus"": ""COMPLETED"",
+  ""currentCheckpoint"": ""ZT37S.NX; 9058/9058/0"",
+  ""activeLock"": false,
+  ""lastHeartbeat"": ""2026-07-31T19:52:08.000Z"",
+  ""validationStatus"": ""PASS"",
+  ""runEvidence"": {
+    ""id"": ""8c8317f8-1cc5-4c41-b9e1-280955cb72b8"",
+    ""runType"": ""PRIMARY"",
+    ""status"": ""COMPLETED"",
+    ""targetTradeDate"": null,
+    ""exitCode"": 0,
+    ""error"": null
+  }
+}"
+Financial Statements,France,UNCONFIRMED,PARTIALLY_AVAILABLE,9661,9661,,9661,,,,,,,,9661,,,,,,,,,,,,NOT_STARTED,,false,,false,No independent filing-triggered production scheduler evidenced,Provider publication time,Filing publication,NO_PRODUCTION_VALIDATION_LEDGER,PARTIAL,Exact per-market financial aggregation exceeded production statement timeout,"{
+  ""rows"": ""UNKNOWN_STATEMENT_TIMEOUT"",
+  ""stocks"": ""UNKNOWN_STATEMENT_TIMEOUT""
+}"
+Corporate Actions,France,NOT_MODELED_FOR_STOCKS,SOURCE_RESEARCH_REQUIRED,9661,9661,0,9661,0,0,0,,,,,9661,0,0,0,0,,,,,,,,NOT_STARTED,,false,,false,NOT_CONFIGURED,NOT_CONFIGURED,Announcement-triggered,NOT_RUN,NOT_STARTED,No stock corporate-action table or production ingestion ledger; adjusted close is not an event ledger,"{
+  ""supportedEvents"": [],
+  ""schemaEvidence"": ""distributions links ETF/Fund/Asset only""
+}"
+Derived Metrics,France,SMARTFUND_DERIVED + source financial facts,AVAILABLE_NOT_CONNECTED,9661,9661,0,9661,0,0,0,,,,,9661,,,,,,,,,,,,NOT_STARTED,,false,,false,No production derived-metric scheduler evidenced,N/A,After price/filing updates,NO_POINT_IN_TIME_PRODUCTION_VALIDATION,PROTOTYPE,Technical per-market aggregation timed out; reported derived count is a lower bound from financial-ratio facts,"{
+  ""technical"": {
+    ""status"": ""UNKNOWN_STATEMENT_TIMEOUT""
+  },
+  ""financialRatios"": {},
+  ""coverageIsLowerBound"": true
+}"
+Global Stocks,Germany,YAHOO_CHART,AVAILABLE_AND_INGESTED,10010,10010,10010,10010,10010,100,,,,2026-07-28,2026-07-31,10010,356,356,0,3.5564,0,0,0,,0,,2026-07-31T16:53:32.000Z,COMPLETED,ZX6.DU; 356/356/0,false,2026-07-31T16:53:31.000Z,true,Exchange close 22:00 + 45m; Railway poll 5m,Europe/Berlin,Each exchange trading day after provider final candle,PASS,PRODUCTION,Exact stock_history row aggregation exceeded production statement timeout; product coverage uses stocks.history_backfilled_at,"{
+  ""inactive"": 0,
+  ""delisted"": 0,
+  ""missingYahooSymbol"": 0,
+  ""missingOfficialIdentifier"": ""NOT_MODELED"",
+  ""historyBackfilledFlag"": 10010,
+  ""exactHistoryRows"": ""UNKNOWN_STATEMENT_TIMEOUT"",
+  ""completeOhlcvRows"": null,
+  ""yahooRows"": null,
+  ""latestProviderDate"": ""2026-07-28"",
+  ""incrementalAttempted"": 356,
+  ""incrementalCompleted"": 356,
+  ""incrementalFailed"": 0,
+  ""noUpdateCount"": 0,
+  ""noDataCount"": 0,
+  ""staleCount"": 0,
+  ""retryQueueCount"": null,
+  ""retryRecoveredCount"": 0,
+  ""permanentFailureCount"": null,
+  ""lastSuccessfulRun"": ""2026-07-31T16:53:32.000Z"",
+  ""currentRunStatus"": ""COMPLETED"",
+  ""currentCheckpoint"": ""ZX6.DU; 356/356/0"",
+  ""activeLock"": false,
+  ""lastHeartbeat"": ""2026-07-31T16:53:31.000Z"",
+  ""validationStatus"": ""PASS"",
+  ""runEvidence"": {
+    ""id"": ""09c3a69e-70cb-4be6-8eef-99c933339e9e"",
+    ""runType"": ""PRIMARY"",
+    ""status"": ""COMPLETED"",
+    ""targetTradeDate"": null,
+    ""exitCode"": 0,
+    ""error"": null
+  }
+}"
+Financial Statements,Germany,UNCONFIRMED,PARTIALLY_AVAILABLE,10010,10010,,10010,,,,,,,,10010,,,,,,,,,,,,NOT_STARTED,,false,,false,No independent filing-triggered production scheduler evidenced,Provider publication time,Filing publication,NO_PRODUCTION_VALIDATION_LEDGER,PARTIAL,Exact per-market financial aggregation exceeded production statement timeout,"{
+  ""rows"": ""UNKNOWN_STATEMENT_TIMEOUT"",
+  ""stocks"": ""UNKNOWN_STATEMENT_TIMEOUT""
+}"
+Corporate Actions,Germany,NOT_MODELED_FOR_STOCKS,SOURCE_RESEARCH_REQUIRED,10010,10010,0,10010,0,0,0,,,,,10010,0,0,0,0,,,,,,,,NOT_STARTED,,false,,false,NOT_CONFIGURED,NOT_CONFIGURED,Announcement-triggered,NOT_RUN,NOT_STARTED,No stock corporate-action table or production ingestion ledger; adjusted close is not an event ledger,"{
+  ""supportedEvents"": [],
+  ""schemaEvidence"": ""distributions links ETF/Fund/Asset only""
+}"
+Derived Metrics,Germany,SMARTFUND_DERIVED + source financial facts,AVAILABLE_NOT_CONNECTED,10010,10010,0,10010,0,0,0,,,,,10010,,,,,,,,,,,,NOT_STARTED,,false,,false,No production derived-metric scheduler evidenced,N/A,After price/filing updates,NO_POINT_IN_TIME_PRODUCTION_VALIDATION,PROTOTYPE,Technical per-market aggregation timed out; reported derived count is a lower bound from financial-ratio facts,"{
+  ""technical"": {
+    ""status"": ""UNKNOWN_STATEMENT_TIMEOUT""
+  },
+  ""financialRatios"": {},
+  ""coverageIsLowerBound"": true
+}"
+Global Stocks,Hong Kong,YAHOO_CHART,AVAILABLE_AND_INGESTED,9586,9586,9586,9586,9586,100,,,,2026-07-31,2026-07-31,9586,9050,5896,3154,61.5064,0,0,3154,3154,0,0,2026-08-01T07:20:33.000Z,FAILED,9999.HK; 9050/5896/3154,false,2026-08-01T09:50:41.000Z,true,Exchange close 16:10 + 45m; Railway poll 5m,Asia/Hong_Kong,Each exchange trading day after provider final candle,FAIL,PRODUCTION,Exact stock_history row aggregation exceeded production statement timeout; product coverage uses stocks.history_backfilled_at,"{
+  ""inactive"": 0,
+  ""delisted"": 0,
+  ""missingYahooSymbol"": 0,
+  ""missingOfficialIdentifier"": ""NOT_MODELED"",
+  ""historyBackfilledFlag"": 9586,
+  ""exactHistoryRows"": ""UNKNOWN_STATEMENT_TIMEOUT"",
+  ""completeOhlcvRows"": null,
+  ""yahooRows"": null,
+  ""latestProviderDate"": ""2026-07-31"",
+  ""incrementalAttempted"": 9050,
+  ""incrementalCompleted"": 5896,
+  ""incrementalFailed"": 3154,
+  ""noUpdateCount"": 0,
+  ""noDataCount"": 0,
+  ""staleCount"": 3154,
+  ""retryQueueCount"": 3154,
+  ""retryRecoveredCount"": 0,
+  ""permanentFailureCount"": 0,
+  ""lastSuccessfulRun"": ""2026-08-01T07:20:33.000Z"",
+  ""currentRunStatus"": ""FAILED"",
+  ""currentCheckpoint"": ""9999.HK; 9050/5896/3154"",
+  ""activeLock"": false,
+  ""lastHeartbeat"": ""2026-08-01T09:50:41.000Z"",
+  ""validationStatus"": ""FAIL"",
+  ""runEvidence"": {
+    ""id"": ""fc96ff9f-da75-4ca5-a24b-651db290908d"",
+    ""runType"": ""PRIMARY"",
+    ""status"": ""FAILED"",
+    ""targetTradeDate"": ""2026-07-31"",
+    ""exitCode"": 1,
+    ""error"": null
+  }
+}"
+Financial Statements,Hong Kong,UNCONFIRMED,PARTIALLY_AVAILABLE,9586,9586,,9586,,,,,,,,9586,,,,,,,,,,,,NOT_STARTED,,false,,false,No independent filing-triggered production scheduler evidenced,Provider publication time,Filing publication,NO_PRODUCTION_VALIDATION_LEDGER,PARTIAL,Exact per-market financial aggregation exceeded production statement timeout,"{
+  ""rows"": ""UNKNOWN_STATEMENT_TIMEOUT"",
+  ""stocks"": ""UNKNOWN_STATEMENT_TIMEOUT""
+}"
+Corporate Actions,Hong Kong,NOT_MODELED_FOR_STOCKS,SOURCE_RESEARCH_REQUIRED,9586,9586,0,9586,0,0,0,,,,,9586,0,0,0,0,,,,,,,,NOT_STARTED,,false,,false,NOT_CONFIGURED,NOT_CONFIGURED,Announcement-triggered,NOT_RUN,NOT_STARTED,No stock corporate-action table or production ingestion ledger; adjusted close is not an event ledger,"{
+  ""supportedEvents"": [],
+  ""schemaEvidence"": ""distributions links ETF/Fund/Asset only""
+}"
+Derived Metrics,Hong Kong,SMARTFUND_DERIVED + source financial facts,AVAILABLE_NOT_CONNECTED,9586,9586,0,9586,0,0,0,,,,,9586,,,,,,,,,,,,NOT_STARTED,,false,,false,No production derived-metric scheduler evidenced,N/A,After price/filing updates,NO_POINT_IN_TIME_PRODUCTION_VALIDATION,PROTOTYPE,Technical per-market aggregation timed out; reported derived count is a lower bound from financial-ratio facts,"{
+  ""technical"": {
+    ""status"": ""UNKNOWN_STATEMENT_TIMEOUT""
+  },
+  ""financialRatios"": {},
+  ""coverageIsLowerBound"": true
+}"
+Global Stocks,Italy,YAHOO_CHART,AVAILABLE_AND_INGESTED,10055,10055,10055,10055,10055,100,,,,,2026-07-28,10055,,,,,,,,,0,,,NOT_STARTED,,false,,true,Exchange close 17:35 + 55m; Railway poll 5m,Europe/Rome,Each exchange trading day after provider final candle,NOT_RUN,PRODUCTION,Exact stock_history row aggregation exceeded production statement timeout; product coverage uses stocks.history_backfilled_at,"{
+  ""inactive"": 0,
+  ""delisted"": 0,
+  ""missingYahooSymbol"": 0,
+  ""missingOfficialIdentifier"": ""NOT_MODELED"",
+  ""historyBackfilledFlag"": 10055,
+  ""exactHistoryRows"": ""UNKNOWN_STATEMENT_TIMEOUT"",
+  ""completeOhlcvRows"": null,
+  ""yahooRows"": null,
+  ""latestProviderDate"": null,
+  ""incrementalAttempted"": null,
+  ""incrementalCompleted"": null,
+  ""incrementalFailed"": null,
+  ""noUpdateCount"": null,
+  ""noDataCount"": null,
+  ""staleCount"": null,
+  ""retryQueueCount"": null,
+  ""retryRecoveredCount"": 0,
+  ""permanentFailureCount"": null,
+  ""lastSuccessfulRun"": null,
+  ""currentRunStatus"": ""NOT_STARTED"",
+  ""currentCheckpoint"": null,
+  ""activeLock"": false,
+  ""lastHeartbeat"": null,
+  ""validationStatus"": ""NOT_RUN"",
+  ""runEvidence"": null
+}"
+Financial Statements,Italy,UNCONFIRMED,PARTIALLY_AVAILABLE,10055,10055,,10055,,,,,,,,10055,,,,,,,,,,,,NOT_STARTED,,false,,false,No independent filing-triggered production scheduler evidenced,Provider publication time,Filing publication,NO_PRODUCTION_VALIDATION_LEDGER,PARTIAL,Exact per-market financial aggregation exceeded production statement timeout,"{
+  ""rows"": ""UNKNOWN_STATEMENT_TIMEOUT"",
+  ""stocks"": ""UNKNOWN_STATEMENT_TIMEOUT""
+}"
+Corporate Actions,Italy,NOT_MODELED_FOR_STOCKS,SOURCE_RESEARCH_REQUIRED,10055,10055,0,10055,0,0,0,,,,,10055,0,0,0,0,,,,,,,,NOT_STARTED,,false,,false,NOT_CONFIGURED,NOT_CONFIGURED,Announcement-triggered,NOT_RUN,NOT_STARTED,No stock corporate-action table or production ingestion ledger; adjusted close is not an event ledger,"{
+  ""supportedEvents"": [],
+  ""schemaEvidence"": ""distributions links ETF/Fund/Asset only""
+}"
+Derived Metrics,Italy,SMARTFUND_DERIVED + source financial facts,AVAILABLE_NOT_CONNECTED,10055,10055,0,10055,0,0,0,,,,,10055,,,,,,,,,,,,NOT_STARTED,,false,,false,No production derived-metric scheduler evidenced,N/A,After price/filing updates,NO_POINT_IN_TIME_PRODUCTION_VALIDATION,PROTOTYPE,Technical per-market aggregation timed out; reported derived count is a lower bound from financial-ratio facts,"{
+  ""technical"": {
+    ""status"": ""UNKNOWN_STATEMENT_TIMEOUT""
+  },
+  ""financialRatios"": {},
+  ""coverageIsLowerBound"": true
+}"
+Global Stocks,Japan,YAHOO_CHART,AVAILABLE_AND_INGESTED,3845,3845,3845,3845,3845,100,,,,2026-07-31,2026-07-31,3845,2089,2077,12,54.0182,7,0,12,12,0,0,2026-08-01T10:00:33.000Z,FAILED,9997.T; 2089/2077/12,false,2026-08-01T10:00:43.000Z,true,Exchange close 15:30 + 45m; Railway poll 5m,Asia/Tokyo,Each exchange trading day after provider final candle,FAIL,PRODUCTION,Exact stock_history row aggregation exceeded production statement timeout; product coverage uses stocks.history_backfilled_at,"{
+  ""inactive"": 0,
+  ""delisted"": 0,
+  ""missingYahooSymbol"": 0,
+  ""missingOfficialIdentifier"": ""NOT_MODELED"",
+  ""historyBackfilledFlag"": 3845,
+  ""exactHistoryRows"": ""UNKNOWN_STATEMENT_TIMEOUT"",
+  ""completeOhlcvRows"": null,
+  ""yahooRows"": null,
+  ""latestProviderDate"": ""2026-07-31"",
+  ""incrementalAttempted"": 2089,
+  ""incrementalCompleted"": 2077,
+  ""incrementalFailed"": 12,
+  ""noUpdateCount"": 7,
+  ""noDataCount"": 0,
+  ""staleCount"": 12,
+  ""retryQueueCount"": 12,
+  ""retryRecoveredCount"": 0,
+  ""permanentFailureCount"": 0,
+  ""lastSuccessfulRun"": ""2026-08-01T10:00:33.000Z"",
+  ""currentRunStatus"": ""FAILED"",
+  ""currentCheckpoint"": ""9997.T; 2089/2077/12"",
+  ""activeLock"": false,
+  ""lastHeartbeat"": ""2026-08-01T10:00:43.000Z"",
+  ""validationStatus"": ""FAIL"",
+  ""runEvidence"": {
+    ""id"": ""ad1074a8-6ad6-4196-97ee-7c5e09c46a6a"",
+    ""runType"": ""PRIMARY"",
+    ""status"": ""FAILED"",
+    ""targetTradeDate"": ""2026-07-31"",
+    ""exitCode"": 1,
+    ""error"": null
+  }
+}"
+Financial Statements,Japan,UNCONFIRMED,PARTIALLY_AVAILABLE,3845,3845,,3845,,,,,,,,3845,,,,,,,,,,,,NOT_STARTED,,false,,false,No independent filing-triggered production scheduler evidenced,Provider publication time,Filing publication,NO_PRODUCTION_VALIDATION_LEDGER,PARTIAL,Exact per-market financial aggregation exceeded production statement timeout,"{
+  ""rows"": ""UNKNOWN_STATEMENT_TIMEOUT"",
+  ""stocks"": ""UNKNOWN_STATEMENT_TIMEOUT""
+}"
+Corporate Actions,Japan,NOT_MODELED_FOR_STOCKS,SOURCE_RESEARCH_REQUIRED,3845,3845,0,3845,0,0,0,,,,,3845,0,0,0,0,,,,,,,,NOT_STARTED,,false,,false,NOT_CONFIGURED,NOT_CONFIGURED,Announcement-triggered,NOT_RUN,NOT_STARTED,No stock corporate-action table or production ingestion ledger; adjusted close is not an event ledger,"{
+  ""supportedEvents"": [],
+  ""schemaEvidence"": ""distributions links ETF/Fund/Asset only""
+}"
+Derived Metrics,Japan,SMARTFUND_DERIVED + source financial facts,AVAILABLE_NOT_CONNECTED,3845,3845,0,3845,0,0,0,,,,,3845,,,,,,,,,,,,NOT_STARTED,,false,,false,No production derived-metric scheduler evidenced,N/A,After price/filing updates,NO_POINT_IN_TIME_PRODUCTION_VALIDATION,PROTOTYPE,Technical per-market aggregation timed out; reported derived count is a lower bound from financial-ratio facts,"{
+  ""technical"": {
+    ""status"": ""UNKNOWN_STATEMENT_TIMEOUT""
+  },
+  ""financialRatios"": {},
+  ""coverageIsLowerBound"": true
+}"
+Global Stocks,Korea,YAHOO_CHART,AVAILABLE_AND_INGESTED,2672,2672,2672,2672,2672,100,,,,2026-07-31,2026-07-31,2672,2672,2664,8,99.7006,24,0,8,8,0,0,2026-08-01T10:00:51.000Z,COMPLETED,75601BA2.KS; 8/0/8,false,2026-08-01T10:00:47.000Z,true,Exchange close 15:30 + 50m; Railway poll 5m,Asia/Seoul,Each exchange trading day after provider final candle,PASS,PRODUCTION,Exact stock_history row aggregation exceeded production statement timeout; product coverage uses stocks.history_backfilled_at,"{
+  ""inactive"": 0,
+  ""delisted"": 0,
+  ""missingYahooSymbol"": 0,
+  ""missingOfficialIdentifier"": ""NOT_MODELED"",
+  ""historyBackfilledFlag"": 2672,
+  ""exactHistoryRows"": ""UNKNOWN_STATEMENT_TIMEOUT"",
+  ""completeOhlcvRows"": null,
+  ""yahooRows"": null,
+  ""latestProviderDate"": ""2026-07-31"",
+  ""incrementalAttempted"": 2672,
+  ""incrementalCompleted"": 2664,
+  ""incrementalFailed"": 8,
+  ""noUpdateCount"": 24,
+  ""noDataCount"": 0,
+  ""staleCount"": 8,
+  ""retryQueueCount"": 8,
+  ""retryRecoveredCount"": 0,
+  ""permanentFailureCount"": 0,
+  ""lastSuccessfulRun"": ""2026-08-01T10:00:51.000Z"",
+  ""currentRunStatus"": ""COMPLETED"",
+  ""currentCheckpoint"": ""75601BA2.KS; 8/0/8"",
+  ""activeLock"": false,
+  ""lastHeartbeat"": ""2026-08-01T10:00:47.000Z"",
+  ""validationStatus"": ""PASS"",
+  ""runEvidence"": {
+    ""id"": ""f98823b2-16c2-4607-a6e7-ee6a84a5a47f"",
+    ""runType"": ""PRIMARY"",
+    ""status"": ""COMPLETED"",
+    ""targetTradeDate"": ""2026-07-31"",
+    ""exitCode"": 0,
+    ""error"": null
+  }
+}"
+Financial Statements,Korea,UNCONFIRMED,PARTIALLY_AVAILABLE,2672,2672,,2672,,,,,,,,2672,,,,,,,,,,,,NOT_STARTED,,false,,false,No independent filing-triggered production scheduler evidenced,Provider publication time,Filing publication,NO_PRODUCTION_VALIDATION_LEDGER,PARTIAL,Exact per-market financial aggregation exceeded production statement timeout,"{
+  ""rows"": ""UNKNOWN_STATEMENT_TIMEOUT"",
+  ""stocks"": ""UNKNOWN_STATEMENT_TIMEOUT""
+}"
+Corporate Actions,Korea,NOT_MODELED_FOR_STOCKS,SOURCE_RESEARCH_REQUIRED,2672,2672,0,2672,0,0,0,,,,,2672,0,0,0,0,,,,,,,,NOT_STARTED,,false,,false,NOT_CONFIGURED,NOT_CONFIGURED,Announcement-triggered,NOT_RUN,NOT_STARTED,No stock corporate-action table or production ingestion ledger; adjusted close is not an event ledger,"{
+  ""supportedEvents"": [],
+  ""schemaEvidence"": ""distributions links ETF/Fund/Asset only""
+}"
+Derived Metrics,Korea,SMARTFUND_DERIVED + source financial facts,AVAILABLE_NOT_CONNECTED,2672,2672,0,2672,0,0,0,,,,,2672,,,,,,,,,,,,NOT_STARTED,,false,,false,No production derived-metric scheduler evidenced,N/A,After price/filing updates,NO_POINT_IN_TIME_PRODUCTION_VALIDATION,PROTOTYPE,Technical per-market aggregation timed out; reported derived count is a lower bound from financial-ratio facts,"{
+  ""technical"": {
+    ""status"": ""UNKNOWN_STATEMENT_TIMEOUT""
+  },
+  ""financialRatios"": {},
+  ""coverageIsLowerBound"": true
+}"
+Global Stocks,NASDAQ,YAHOO_CHART,PARTIALLY_AVAILABLE,3581,3581,3581,3581,3580,99.9721,,,,2026-07-29,2026-07-31,3581,3571,3571,0,99.7207,0,0,0,,0,,2026-08-01T02:19:38.000Z,COMPLETED,ZYME; 3571/3571/0,false,2026-08-01T02:19:36.000Z,true,Exchange close 16:00 + 60m; Railway poll 5m,America/New_York,Each exchange trading day after provider final candle,PASS,PRODUCTION,Exact stock_history row aggregation exceeded production statement timeout; product coverage uses stocks.history_backfilled_at,"{
+  ""inactive"": 0,
+  ""delisted"": 0,
+  ""missingYahooSymbol"": 0,
+  ""missingOfficialIdentifier"": ""NOT_MODELED"",
+  ""historyBackfilledFlag"": 3580,
+  ""exactHistoryRows"": ""UNKNOWN_STATEMENT_TIMEOUT"",
+  ""completeOhlcvRows"": null,
+  ""yahooRows"": null,
+  ""latestProviderDate"": ""2026-07-29"",
+  ""incrementalAttempted"": 3571,
+  ""incrementalCompleted"": 3571,
+  ""incrementalFailed"": 0,
+  ""noUpdateCount"": 0,
+  ""noDataCount"": 0,
+  ""staleCount"": 0,
+  ""retryQueueCount"": null,
+  ""retryRecoveredCount"": 0,
+  ""permanentFailureCount"": null,
+  ""lastSuccessfulRun"": ""2026-08-01T02:19:38.000Z"",
+  ""currentRunStatus"": ""COMPLETED"",
+  ""currentCheckpoint"": ""ZYME; 3571/3571/0"",
+  ""activeLock"": false,
+  ""lastHeartbeat"": ""2026-08-01T02:19:36.000Z"",
+  ""validationStatus"": ""PASS"",
+  ""runEvidence"": {
+    ""id"": ""0898e000-cf85-4567-b2cb-3851d8a07cf6"",
+    ""runType"": ""PRIMARY"",
+    ""status"": ""COMPLETED"",
+    ""targetTradeDate"": null,
+    ""exitCode"": 0,
+    ""error"": null
+  }
+}"
+Financial Statements,NASDAQ,SEC EDGAR,PARTIALLY_AVAILABLE,3581,3581,,3581,,,,,,,,3581,,,,,,,,,,,,NOT_STARTED,,false,,false,No independent filing-triggered production scheduler evidenced,Provider publication time,Filing publication,NO_PRODUCTION_VALIDATION_LEDGER,PARTIAL,Exact per-market financial aggregation exceeded production statement timeout,"{
+  ""rows"": ""UNKNOWN_STATEMENT_TIMEOUT"",
+  ""stocks"": ""UNKNOWN_STATEMENT_TIMEOUT""
+}"
+Corporate Actions,NASDAQ,NOT_MODELED_FOR_STOCKS,SOURCE_RESEARCH_REQUIRED,3581,3581,0,3581,0,0,0,,,,,3581,0,0,0,0,,,,,,,,NOT_STARTED,,false,,false,NOT_CONFIGURED,NOT_CONFIGURED,Announcement-triggered,NOT_RUN,NOT_STARTED,No stock corporate-action table or production ingestion ledger; adjusted close is not an event ledger,"{
+  ""supportedEvents"": [],
+  ""schemaEvidence"": ""distributions links ETF/Fund/Asset only""
+}"
+Derived Metrics,NASDAQ,SMARTFUND_DERIVED + source financial facts,PARTIALLY_AVAILABLE,3581,3581,3,3581,3,0.0838,10977,,2010-04-21,,2026-07-29,3581,,,,,,,,,,,,NOT_STARTED,,false,,false,No production derived-metric scheduler evidenced,N/A,After price/filing updates,NO_POINT_IN_TIME_PRODUCTION_VALIDATION,PARTIAL,Technical per-market aggregation timed out; reported derived count is a lower bound from financial-ratio facts,"{
+  ""technical"": {
+    ""status"": ""UNKNOWN_STATEMENT_TIMEOUT""
+  },
+  ""financialRatios"": {
+    ""market"": ""NASDAQ"",
+    ""rows"": 10977,
+    ""stocks"": 3,
+    ""earliest"": ""2010-04-21T00:00:00.000Z"",
+    ""latest"": ""2026-07-29T00:00:00.000Z"",
+    ""metrics"": ""valuation.pe.ttm.point_in_time""
+  },
+  ""coverageIsLowerBound"": true
+}"
+Global Stocks,Netherlands,YAHOO_CHART,AVAILABLE_AND_INGESTED,2442,2442,2442,2442,2442,100,,,,,2026-07-28,2442,,,,,,,,,0,,,NOT_STARTED,,false,,true,Exchange close 17:35 + 60m; Railway poll 5m,Europe/Amsterdam,Each exchange trading day after provider final candle,NOT_RUN,PRODUCTION,Exact stock_history row aggregation exceeded production statement timeout; product coverage uses stocks.history_backfilled_at,"{
+  ""inactive"": 0,
+  ""delisted"": 0,
+  ""missingYahooSymbol"": 0,
+  ""missingOfficialIdentifier"": ""NOT_MODELED"",
+  ""historyBackfilledFlag"": 2442,
+  ""exactHistoryRows"": ""UNKNOWN_STATEMENT_TIMEOUT"",
+  ""completeOhlcvRows"": null,
+  ""yahooRows"": null,
+  ""latestProviderDate"": null,
+  ""incrementalAttempted"": null,
+  ""incrementalCompleted"": null,
+  ""incrementalFailed"": null,
+  ""noUpdateCount"": null,
+  ""noDataCount"": null,
+  ""staleCount"": null,
+  ""retryQueueCount"": null,
+  ""retryRecoveredCount"": 0,
+  ""permanentFailureCount"": null,
+  ""lastSuccessfulRun"": null,
+  ""currentRunStatus"": ""NOT_STARTED"",
+  ""currentCheckpoint"": null,
+  ""activeLock"": false,
+  ""lastHeartbeat"": null,
+  ""validationStatus"": ""NOT_RUN"",
+  ""runEvidence"": null
+}"
+Financial Statements,Netherlands,UNCONFIRMED,PARTIALLY_AVAILABLE,2442,2442,,2442,,,,,,,,2442,,,,,,,,,,,,NOT_STARTED,,false,,false,No independent filing-triggered production scheduler evidenced,Provider publication time,Filing publication,NO_PRODUCTION_VALIDATION_LEDGER,PARTIAL,Exact per-market financial aggregation exceeded production statement timeout,"{
+  ""rows"": ""UNKNOWN_STATEMENT_TIMEOUT"",
+  ""stocks"": ""UNKNOWN_STATEMENT_TIMEOUT""
+}"
+Corporate Actions,Netherlands,NOT_MODELED_FOR_STOCKS,SOURCE_RESEARCH_REQUIRED,2442,2442,0,2442,0,0,0,,,,,2442,0,0,0,0,,,,,,,,NOT_STARTED,,false,,false,NOT_CONFIGURED,NOT_CONFIGURED,Announcement-triggered,NOT_RUN,NOT_STARTED,No stock corporate-action table or production ingestion ledger; adjusted close is not an event ledger,"{
+  ""supportedEvents"": [],
+  ""schemaEvidence"": ""distributions links ETF/Fund/Asset only""
+}"
+Derived Metrics,Netherlands,SMARTFUND_DERIVED + source financial facts,AVAILABLE_NOT_CONNECTED,2442,2442,0,2442,0,0,0,,,,,2442,,,,,,,,,,,,NOT_STARTED,,false,,false,No production derived-metric scheduler evidenced,N/A,After price/filing updates,NO_POINT_IN_TIME_PRODUCTION_VALIDATION,PROTOTYPE,Technical per-market aggregation timed out; reported derived count is a lower bound from financial-ratio facts,"{
+  ""technical"": {
+    ""status"": ""UNKNOWN_STATEMENT_TIMEOUT""
+  },
+  ""financialRatios"": {},
+  ""coverageIsLowerBound"": true
+}"
+Global Stocks,NYSE,YAHOO_CHART,PARTIALLY_AVAILABLE,2635,2635,2635,2635,2633,99.9241,,,,2026-07-29,2026-07-31,2635,2266,2266,0,85.9962,0,0,0,,0,,2026-08-01T03:42:11.000Z,COMPLETED,ZWS; 2266/2266/0,false,2026-08-01T03:42:09.000Z,true,Exchange close 16:00 + 70m; Railway poll 5m,America/New_York,Each exchange trading day after provider final candle,PASS,PRODUCTION,Exact stock_history row aggregation exceeded production statement timeout; product coverage uses stocks.history_backfilled_at,"{
+  ""inactive"": 0,
+  ""delisted"": 0,
+  ""missingYahooSymbol"": 0,
+  ""missingOfficialIdentifier"": ""NOT_MODELED"",
+  ""historyBackfilledFlag"": 2633,
+  ""exactHistoryRows"": ""UNKNOWN_STATEMENT_TIMEOUT"",
+  ""completeOhlcvRows"": null,
+  ""yahooRows"": null,
+  ""latestProviderDate"": ""2026-07-29"",
+  ""incrementalAttempted"": 2266,
+  ""incrementalCompleted"": 2266,
+  ""incrementalFailed"": 0,
+  ""noUpdateCount"": 0,
+  ""noDataCount"": 0,
+  ""staleCount"": 0,
+  ""retryQueueCount"": null,
+  ""retryRecoveredCount"": 0,
+  ""permanentFailureCount"": null,
+  ""lastSuccessfulRun"": ""2026-08-01T03:42:11.000Z"",
+  ""currentRunStatus"": ""COMPLETED"",
+  ""currentCheckpoint"": ""ZWS; 2266/2266/0"",
+  ""activeLock"": false,
+  ""lastHeartbeat"": ""2026-08-01T03:42:09.000Z"",
+  ""validationStatus"": ""PASS"",
+  ""runEvidence"": {
+    ""id"": ""5018901b-180b-42ae-94d2-8b573fcf5e6f"",
+    ""runType"": ""PRIMARY"",
+    ""status"": ""COMPLETED"",
+    ""targetTradeDate"": null,
+    ""exitCode"": 0,
+    ""error"": null
+  }
+}"
+Financial Statements,NYSE,SEC EDGAR,PARTIALLY_AVAILABLE,2635,2635,,2635,,,,,,,,2635,,,,,,,,,,,,NOT_STARTED,,false,,false,No independent filing-triggered production scheduler evidenced,Provider publication time,Filing publication,NO_PRODUCTION_VALIDATION_LEDGER,PARTIAL,Exact per-market financial aggregation exceeded production statement timeout,"{
+  ""rows"": ""UNKNOWN_STATEMENT_TIMEOUT"",
+  ""stocks"": ""UNKNOWN_STATEMENT_TIMEOUT""
+}"
+Corporate Actions,NYSE,NOT_MODELED_FOR_STOCKS,SOURCE_RESEARCH_REQUIRED,2635,2635,0,2635,0,0,0,,,,,2635,0,0,0,0,,,,,,,,NOT_STARTED,,false,,false,NOT_CONFIGURED,NOT_CONFIGURED,Announcement-triggered,NOT_RUN,NOT_STARTED,No stock corporate-action table or production ingestion ledger; adjusted close is not an event ledger,"{
+  ""supportedEvents"": [],
+  ""schemaEvidence"": ""distributions links ETF/Fund/Asset only""
+}"
+Derived Metrics,NYSE,SMARTFUND_DERIVED + source financial facts,AVAILABLE_NOT_CONNECTED,2635,2635,0,2635,0,0,0,,,,,2635,,,,,,,,,,,,NOT_STARTED,,false,,false,No production derived-metric scheduler evidenced,N/A,After price/filing updates,NO_POINT_IN_TIME_PRODUCTION_VALIDATION,PROTOTYPE,Technical per-market aggregation timed out; reported derived count is a lower bound from financial-ratio facts,"{
+  ""technical"": {
+    ""status"": ""UNKNOWN_STATEMENT_TIMEOUT""
+  },
+  ""financialRatios"": {},
+  ""coverageIsLowerBound"": true
+}"
+Global Stocks,Other:CH:EBS,YAHOO_CHART,PARTIALLY_AVAILABLE,559,559,559,559,559,100,,,,,2026-07-28,559,,,,,,,,,0,,,NOT_STARTED,,false,,false,NOT_CONFIGURED,NOT_CONFIGURED,Each exchange trading day after provider final candle,NOT_RUN,PARTIAL,No production exchange scheduler,"{
+  ""inactive"": 0,
+  ""delisted"": 0,
+  ""missingYahooSymbol"": 0,
+  ""missingOfficialIdentifier"": ""NOT_MODELED"",
+  ""historyBackfilledFlag"": 559,
+  ""exactHistoryRows"": ""UNKNOWN_STATEMENT_TIMEOUT"",
+  ""completeOhlcvRows"": null,
+  ""yahooRows"": null,
+  ""latestProviderDate"": null,
+  ""incrementalAttempted"": null,
+  ""incrementalCompleted"": null,
+  ""incrementalFailed"": null,
+  ""noUpdateCount"": null,
+  ""noDataCount"": null,
+  ""staleCount"": null,
+  ""retryQueueCount"": null,
+  ""retryRecoveredCount"": 0,
+  ""permanentFailureCount"": null,
+  ""lastSuccessfulRun"": null,
+  ""currentRunStatus"": ""NOT_STARTED"",
+  ""currentCheckpoint"": null,
+  ""activeLock"": false,
+  ""lastHeartbeat"": null,
+  ""validationStatus"": ""NOT_RUN"",
+  ""runEvidence"": null
+}"
+Financial Statements,Other:CH:EBS,UNCONFIRMED,PARTIALLY_AVAILABLE,559,559,,559,,,,,,,,559,,,,,,,,,,,,NOT_STARTED,,false,,false,No independent filing-triggered production scheduler evidenced,Provider publication time,Filing publication,NO_PRODUCTION_VALIDATION_LEDGER,PARTIAL,Exact per-market financial aggregation exceeded production statement timeout,"{
+  ""rows"": ""UNKNOWN_STATEMENT_TIMEOUT"",
+  ""stocks"": ""UNKNOWN_STATEMENT_TIMEOUT""
+}"
+Corporate Actions,Other:CH:EBS,NOT_MODELED_FOR_STOCKS,SOURCE_RESEARCH_REQUIRED,559,559,0,559,0,0,0,,,,,559,0,0,0,0,,,,,,,,NOT_STARTED,,false,,false,NOT_CONFIGURED,NOT_CONFIGURED,Announcement-triggered,NOT_RUN,NOT_STARTED,No stock corporate-action table or production ingestion ledger; adjusted close is not an event ledger,"{
+  ""supportedEvents"": [],
+  ""schemaEvidence"": ""distributions links ETF/Fund/Asset only""
+}"
+Derived Metrics,Other:CH:EBS,SMARTFUND_DERIVED + source financial facts,AVAILABLE_NOT_CONNECTED,559,559,0,559,0,0,0,,,,,559,,,,,,,,,,,,NOT_STARTED,,false,,false,No production derived-metric scheduler evidenced,N/A,After price/filing updates,NO_POINT_IN_TIME_PRODUCTION_VALIDATION,PROTOTYPE,Technical per-market aggregation timed out; reported derived count is a lower bound from financial-ratio facts,"{
+  ""technical"": {
+    ""status"": ""UNKNOWN_STATEMENT_TIMEOUT""
+  },
+  ""financialRatios"": {},
+  ""coverageIsLowerBound"": true
+}"
+Global Stocks,Other:CN:SHH,YAHOO_CHART,PARTIALLY_AVAILABLE,3425,3425,3425,3425,3425,100,,,,,2026-07-28,3425,,,,,,,,,0,,,NOT_STARTED,,false,,false,NOT_CONFIGURED,NOT_CONFIGURED,Each exchange trading day after provider final candle,NOT_RUN,PARTIAL,No production exchange scheduler,"{
+  ""inactive"": 0,
+  ""delisted"": 0,
+  ""missingYahooSymbol"": 0,
+  ""missingOfficialIdentifier"": ""NOT_MODELED"",
+  ""historyBackfilledFlag"": 3425,
+  ""exactHistoryRows"": ""UNKNOWN_STATEMENT_TIMEOUT"",
+  ""completeOhlcvRows"": null,
+  ""yahooRows"": null,
+  ""latestProviderDate"": null,
+  ""incrementalAttempted"": null,
+  ""incrementalCompleted"": null,
+  ""incrementalFailed"": null,
+  ""noUpdateCount"": null,
+  ""noDataCount"": null,
+  ""staleCount"": null,
+  ""retryQueueCount"": null,
+  ""retryRecoveredCount"": 0,
+  ""permanentFailureCount"": null,
+  ""lastSuccessfulRun"": null,
+  ""currentRunStatus"": ""NOT_STARTED"",
+  ""currentCheckpoint"": null,
+  ""activeLock"": false,
+  ""lastHeartbeat"": null,
+  ""validationStatus"": ""NOT_RUN"",
+  ""runEvidence"": null
+}"
+Financial Statements,Other:CN:SHH,UNCONFIRMED,PARTIALLY_AVAILABLE,3425,3425,,3425,,,,,,,,3425,,,,,,,,,,,,NOT_STARTED,,false,,false,No independent filing-triggered production scheduler evidenced,Provider publication time,Filing publication,NO_PRODUCTION_VALIDATION_LEDGER,PARTIAL,Exact per-market financial aggregation exceeded production statement timeout,"{
+  ""rows"": ""UNKNOWN_STATEMENT_TIMEOUT"",
+  ""stocks"": ""UNKNOWN_STATEMENT_TIMEOUT""
+}"
+Corporate Actions,Other:CN:SHH,NOT_MODELED_FOR_STOCKS,SOURCE_RESEARCH_REQUIRED,3425,3425,0,3425,0,0,0,,,,,3425,0,0,0,0,,,,,,,,NOT_STARTED,,false,,false,NOT_CONFIGURED,NOT_CONFIGURED,Announcement-triggered,NOT_RUN,NOT_STARTED,No stock corporate-action table or production ingestion ledger; adjusted close is not an event ledger,"{
+  ""supportedEvents"": [],
+  ""schemaEvidence"": ""distributions links ETF/Fund/Asset only""
+}"
+Derived Metrics,Other:CN:SHH,SMARTFUND_DERIVED + source financial facts,AVAILABLE_NOT_CONNECTED,3425,3425,0,3425,0,0,0,,,,,3425,,,,,,,,,,,,NOT_STARTED,,false,,false,No production derived-metric scheduler evidenced,N/A,After price/filing updates,NO_POINT_IN_TIME_PRODUCTION_VALIDATION,PROTOTYPE,Technical per-market aggregation timed out; reported derived count is a lower bound from financial-ratio facts,"{
+  ""technical"": {
+    ""status"": ""UNKNOWN_STATEMENT_TIMEOUT""
+  },
+  ""financialRatios"": {},
+  ""coverageIsLowerBound"": true
+}"
+Global Stocks,Other:CN:SHZ,YAHOO_CHART,PARTIALLY_AVAILABLE,3938,3938,3938,3938,3938,100,,,,,2026-07-28,3938,,,,,,,,,0,,,NOT_STARTED,,false,,false,NOT_CONFIGURED,NOT_CONFIGURED,Each exchange trading day after provider final candle,NOT_RUN,PARTIAL,No production exchange scheduler,"{
+  ""inactive"": 0,
+  ""delisted"": 0,
+  ""missingYahooSymbol"": 0,
+  ""missingOfficialIdentifier"": ""NOT_MODELED"",
+  ""historyBackfilledFlag"": 3938,
+  ""exactHistoryRows"": ""UNKNOWN_STATEMENT_TIMEOUT"",
+  ""completeOhlcvRows"": null,
+  ""yahooRows"": null,
+  ""latestProviderDate"": null,
+  ""incrementalAttempted"": null,
+  ""incrementalCompleted"": null,
+  ""incrementalFailed"": null,
+  ""noUpdateCount"": null,
+  ""noDataCount"": null,
+  ""staleCount"": null,
+  ""retryQueueCount"": null,
+  ""retryRecoveredCount"": 0,
+  ""permanentFailureCount"": null,
+  ""lastSuccessfulRun"": null,
+  ""currentRunStatus"": ""NOT_STARTED"",
+  ""currentCheckpoint"": null,
+  ""activeLock"": false,
+  ""lastHeartbeat"": null,
+  ""validationStatus"": ""NOT_RUN"",
+  ""runEvidence"": null
+}"
+Financial Statements,Other:CN:SHZ,UNCONFIRMED,PARTIALLY_AVAILABLE,3938,3938,,3938,,,,,,,,3938,,,,,,,,,,,,NOT_STARTED,,false,,false,No independent filing-triggered production scheduler evidenced,Provider publication time,Filing publication,NO_PRODUCTION_VALIDATION_LEDGER,PARTIAL,Exact per-market financial aggregation exceeded production statement timeout,"{
+  ""rows"": ""UNKNOWN_STATEMENT_TIMEOUT"",
+  ""stocks"": ""UNKNOWN_STATEMENT_TIMEOUT""
+}"
+Corporate Actions,Other:CN:SHZ,NOT_MODELED_FOR_STOCKS,SOURCE_RESEARCH_REQUIRED,3938,3938,0,3938,0,0,0,,,,,3938,0,0,0,0,,,,,,,,NOT_STARTED,,false,,false,NOT_CONFIGURED,NOT_CONFIGURED,Announcement-triggered,NOT_RUN,NOT_STARTED,No stock corporate-action table or production ingestion ledger; adjusted close is not an event ledger,"{
+  ""supportedEvents"": [],
+  ""schemaEvidence"": ""distributions links ETF/Fund/Asset only""
+}"
+Derived Metrics,Other:CN:SHZ,SMARTFUND_DERIVED + source financial facts,AVAILABLE_NOT_CONNECTED,3938,3938,0,3938,0,0,0,,,,,3938,,,,,,,,,,,,NOT_STARTED,,false,,false,No production derived-metric scheduler evidenced,N/A,After price/filing updates,NO_POINT_IN_TIME_PRODUCTION_VALIDATION,PROTOTYPE,Technical per-market aggregation timed out; reported derived count is a lower bound from financial-ratio facts,"{
+  ""technical"": {
+    ""status"": ""UNKNOWN_STATEMENT_TIMEOUT""
+  },
+  ""financialRatios"": {},
+  ""coverageIsLowerBound"": true
+}"
+Global Stocks,Other:SE:STO,YAHOO_CHART,PARTIALLY_AVAILABLE,1146,1146,1146,1146,1146,100,,,,,2026-07-28,1146,,,,,,,,,0,,,NOT_STARTED,,false,,false,NOT_CONFIGURED,NOT_CONFIGURED,Each exchange trading day after provider final candle,NOT_RUN,PARTIAL,No production exchange scheduler,"{
+  ""inactive"": 0,
+  ""delisted"": 0,
+  ""missingYahooSymbol"": 0,
+  ""missingOfficialIdentifier"": ""NOT_MODELED"",
+  ""historyBackfilledFlag"": 1146,
+  ""exactHistoryRows"": ""UNKNOWN_STATEMENT_TIMEOUT"",
+  ""completeOhlcvRows"": null,
+  ""yahooRows"": null,
+  ""latestProviderDate"": null,
+  ""incrementalAttempted"": null,
+  ""incrementalCompleted"": null,
+  ""incrementalFailed"": null,
+  ""noUpdateCount"": null,
+  ""noDataCount"": null,
+  ""staleCount"": null,
+  ""retryQueueCount"": null,
+  ""retryRecoveredCount"": 0,
+  ""permanentFailureCount"": null,
+  ""lastSuccessfulRun"": null,
+  ""currentRunStatus"": ""NOT_STARTED"",
+  ""currentCheckpoint"": null,
+  ""activeLock"": false,
+  ""lastHeartbeat"": null,
+  ""validationStatus"": ""NOT_RUN"",
+  ""runEvidence"": null
+}"
+Financial Statements,Other:SE:STO,UNCONFIRMED,PARTIALLY_AVAILABLE,1146,1146,,1146,,,,,,,,1146,,,,,,,,,,,,NOT_STARTED,,false,,false,No independent filing-triggered production scheduler evidenced,Provider publication time,Filing publication,NO_PRODUCTION_VALIDATION_LEDGER,PARTIAL,Exact per-market financial aggregation exceeded production statement timeout,"{
+  ""rows"": ""UNKNOWN_STATEMENT_TIMEOUT"",
+  ""stocks"": ""UNKNOWN_STATEMENT_TIMEOUT""
+}"
+Corporate Actions,Other:SE:STO,NOT_MODELED_FOR_STOCKS,SOURCE_RESEARCH_REQUIRED,1146,1146,0,1146,0,0,0,,,,,1146,0,0,0,0,,,,,,,,NOT_STARTED,,false,,false,NOT_CONFIGURED,NOT_CONFIGURED,Announcement-triggered,NOT_RUN,NOT_STARTED,No stock corporate-action table or production ingestion ledger; adjusted close is not an event ledger,"{
+  ""supportedEvents"": [],
+  ""schemaEvidence"": ""distributions links ETF/Fund/Asset only""
+}"
+Derived Metrics,Other:SE:STO,SMARTFUND_DERIVED + source financial facts,AVAILABLE_NOT_CONNECTED,1146,1146,0,1146,0,0,0,,,,,1146,,,,,,,,,,,,NOT_STARTED,,false,,false,No production derived-metric scheduler evidenced,N/A,After price/filing updates,NO_POINT_IN_TIME_PRODUCTION_VALIDATION,PROTOTYPE,Technical per-market aggregation timed out; reported derived count is a lower bound from financial-ratio facts,"{
+  ""technical"": {
+    ""status"": ""UNKNOWN_STATEMENT_TIMEOUT""
+  },
+  ""financialRatios"": {},
+  ""coverageIsLowerBound"": true
+}"
+Global Stocks,Other:SG:SES,YAHOO_CHART,PARTIALLY_AVAILABLE,570,570,570,570,570,100,,,,,2026-07-28,570,,,,,,,,,0,,,NOT_STARTED,,false,,false,NOT_CONFIGURED,NOT_CONFIGURED,Each exchange trading day after provider final candle,NOT_RUN,PARTIAL,No production exchange scheduler,"{
+  ""inactive"": 0,
+  ""delisted"": 0,
+  ""missingYahooSymbol"": 0,
+  ""missingOfficialIdentifier"": ""NOT_MODELED"",
+  ""historyBackfilledFlag"": 570,
+  ""exactHistoryRows"": ""UNKNOWN_STATEMENT_TIMEOUT"",
+  ""completeOhlcvRows"": null,
+  ""yahooRows"": null,
+  ""latestProviderDate"": null,
+  ""incrementalAttempted"": null,
+  ""incrementalCompleted"": null,
+  ""incrementalFailed"": null,
+  ""noUpdateCount"": null,
+  ""noDataCount"": null,
+  ""staleCount"": null,
+  ""retryQueueCount"": null,
+  ""retryRecoveredCount"": 0,
+  ""permanentFailureCount"": null,
+  ""lastSuccessfulRun"": null,
+  ""currentRunStatus"": ""NOT_STARTED"",
+  ""currentCheckpoint"": null,
+  ""activeLock"": false,
+  ""lastHeartbeat"": null,
+  ""validationStatus"": ""NOT_RUN"",
+  ""runEvidence"": null
+}"
+Financial Statements,Other:SG:SES,UNCONFIRMED,PARTIALLY_AVAILABLE,570,570,,570,,,,,,,,570,,,,,,,,,,,,NOT_STARTED,,false,,false,No independent filing-triggered production scheduler evidenced,Provider publication time,Filing publication,NO_PRODUCTION_VALIDATION_LEDGER,PARTIAL,Exact per-market financial aggregation exceeded production statement timeout,"{
+  ""rows"": ""UNKNOWN_STATEMENT_TIMEOUT"",
+  ""stocks"": ""UNKNOWN_STATEMENT_TIMEOUT""
+}"
+Corporate Actions,Other:SG:SES,NOT_MODELED_FOR_STOCKS,SOURCE_RESEARCH_REQUIRED,570,570,0,570,0,0,0,,,,,570,0,0,0,0,,,,,,,,NOT_STARTED,,false,,false,NOT_CONFIGURED,NOT_CONFIGURED,Announcement-triggered,NOT_RUN,NOT_STARTED,No stock corporate-action table or production ingestion ledger; adjusted close is not an event ledger,"{
+  ""supportedEvents"": [],
+  ""schemaEvidence"": ""distributions links ETF/Fund/Asset only""
+}"
+Derived Metrics,Other:SG:SES,SMARTFUND_DERIVED + source financial facts,AVAILABLE_NOT_CONNECTED,570,570,0,570,0,0,0,,,,,570,,,,,,,,,,,,NOT_STARTED,,false,,false,No production derived-metric scheduler evidenced,N/A,After price/filing updates,NO_POINT_IN_TIME_PRODUCTION_VALIDATION,PROTOTYPE,Technical per-market aggregation timed out; reported derived count is a lower bound from financial-ratio facts,"{
+  ""technical"": {
+    ""status"": ""UNKNOWN_STATEMENT_TIMEOUT""
+  },
+  ""financialRatios"": {},
+  ""coverageIsLowerBound"": true
+}"
+Global Stocks,Other:US:BTS,YAHOO_CHART,PARTIALLY_AVAILABLE,1,1,1,1,1,100,,,,,2026-07-27,1,,,,,,,,,0,,,NOT_STARTED,,false,,false,NOT_CONFIGURED,NOT_CONFIGURED,Each exchange trading day after provider final candle,NOT_RUN,PARTIAL,No production exchange scheduler,"{
+  ""inactive"": 0,
+  ""delisted"": 0,
+  ""missingYahooSymbol"": 0,
+  ""missingOfficialIdentifier"": ""NOT_MODELED"",
+  ""historyBackfilledFlag"": 1,
+  ""exactHistoryRows"": ""UNKNOWN_STATEMENT_TIMEOUT"",
+  ""completeOhlcvRows"": null,
+  ""yahooRows"": null,
+  ""latestProviderDate"": null,
+  ""incrementalAttempted"": null,
+  ""incrementalCompleted"": null,
+  ""incrementalFailed"": null,
+  ""noUpdateCount"": null,
+  ""noDataCount"": null,
+  ""staleCount"": null,
+  ""retryQueueCount"": null,
+  ""retryRecoveredCount"": 0,
+  ""permanentFailureCount"": null,
+  ""lastSuccessfulRun"": null,
+  ""currentRunStatus"": ""NOT_STARTED"",
+  ""currentCheckpoint"": null,
+  ""activeLock"": false,
+  ""lastHeartbeat"": null,
+  ""validationStatus"": ""NOT_RUN"",
+  ""runEvidence"": null
+}"
+Financial Statements,Other:US:BTS,UNCONFIRMED,PARTIALLY_AVAILABLE,1,1,,1,,,,,,,,1,,,,,,,,,,,,NOT_STARTED,,false,,false,No independent filing-triggered production scheduler evidenced,Provider publication time,Filing publication,NO_PRODUCTION_VALIDATION_LEDGER,PARTIAL,Exact per-market financial aggregation exceeded production statement timeout,"{
+  ""rows"": ""UNKNOWN_STATEMENT_TIMEOUT"",
+  ""stocks"": ""UNKNOWN_STATEMENT_TIMEOUT""
+}"
+Corporate Actions,Other:US:BTS,NOT_MODELED_FOR_STOCKS,SOURCE_RESEARCH_REQUIRED,1,1,0,1,0,0,0,,,,,1,0,0,0,0,,,,,,,,NOT_STARTED,,false,,false,NOT_CONFIGURED,NOT_CONFIGURED,Announcement-triggered,NOT_RUN,NOT_STARTED,No stock corporate-action table or production ingestion ledger; adjusted close is not an event ledger,"{
+  ""supportedEvents"": [],
+  ""schemaEvidence"": ""distributions links ETF/Fund/Asset only""
+}"
+Derived Metrics,Other:US:BTS,SMARTFUND_DERIVED + source financial facts,AVAILABLE_NOT_CONNECTED,1,1,0,1,0,0,0,,,,,1,,,,,,,,,,,,NOT_STARTED,,false,,false,No production derived-metric scheduler evidenced,N/A,After price/filing updates,NO_POINT_IN_TIME_PRODUCTION_VALIDATION,PROTOTYPE,Technical per-market aggregation timed out; reported derived count is a lower bound from financial-ratio facts,"{
+  ""technical"": {
+    ""status"": ""UNKNOWN_STATEMENT_TIMEOUT""
+  },
+  ""financialRatios"": {},
+  ""coverageIsLowerBound"": true
+}"
+Global Stocks,Other:US:PNK,YAHOO_CHART,PARTIALLY_AVAILABLE,1,1,1,1,1,100,,,,,2026-07-17,1,,,,,,,,,0,,,NOT_STARTED,,false,,false,NOT_CONFIGURED,NOT_CONFIGURED,Each exchange trading day after provider final candle,NOT_RUN,PARTIAL,No production exchange scheduler,"{
+  ""inactive"": 0,
+  ""delisted"": 0,
+  ""missingYahooSymbol"": 0,
+  ""missingOfficialIdentifier"": ""NOT_MODELED"",
+  ""historyBackfilledFlag"": 1,
+  ""exactHistoryRows"": ""UNKNOWN_STATEMENT_TIMEOUT"",
+  ""completeOhlcvRows"": null,
+  ""yahooRows"": null,
+  ""latestProviderDate"": null,
+  ""incrementalAttempted"": null,
+  ""incrementalCompleted"": null,
+  ""incrementalFailed"": null,
+  ""noUpdateCount"": null,
+  ""noDataCount"": null,
+  ""staleCount"": null,
+  ""retryQueueCount"": null,
+  ""retryRecoveredCount"": 0,
+  ""permanentFailureCount"": null,
+  ""lastSuccessfulRun"": null,
+  ""currentRunStatus"": ""NOT_STARTED"",
+  ""currentCheckpoint"": null,
+  ""activeLock"": false,
+  ""lastHeartbeat"": null,
+  ""validationStatus"": ""NOT_RUN"",
+  ""runEvidence"": null
+}"
+Financial Statements,Other:US:PNK,UNCONFIRMED,PARTIALLY_AVAILABLE,1,1,,1,,,,,,,,1,,,,,,,,,,,,NOT_STARTED,,false,,false,No independent filing-triggered production scheduler evidenced,Provider publication time,Filing publication,NO_PRODUCTION_VALIDATION_LEDGER,PARTIAL,Exact per-market financial aggregation exceeded production statement timeout,"{
+  ""rows"": ""UNKNOWN_STATEMENT_TIMEOUT"",
+  ""stocks"": ""UNKNOWN_STATEMENT_TIMEOUT""
+}"
+Corporate Actions,Other:US:PNK,NOT_MODELED_FOR_STOCKS,SOURCE_RESEARCH_REQUIRED,1,1,0,1,0,0,0,,,,,1,0,0,0,0,,,,,,,,NOT_STARTED,,false,,false,NOT_CONFIGURED,NOT_CONFIGURED,Announcement-triggered,NOT_RUN,NOT_STARTED,No stock corporate-action table or production ingestion ledger; adjusted close is not an event ledger,"{
+  ""supportedEvents"": [],
+  ""schemaEvidence"": ""distributions links ETF/Fund/Asset only""
+}"
+Derived Metrics,Other:US:PNK,SMARTFUND_DERIVED + source financial facts,AVAILABLE_NOT_CONNECTED,1,1,0,1,0,0,0,,,,,1,,,,,,,,,,,,NOT_STARTED,,false,,false,No production derived-metric scheduler evidenced,N/A,After price/filing updates,NO_POINT_IN_TIME_PRODUCTION_VALIDATION,PROTOTYPE,Technical per-market aggregation timed out; reported derived count is a lower bound from financial-ratio facts,"{
+  ""technical"": {
+    ""status"": ""UNKNOWN_STATEMENT_TIMEOUT""
+  },
+  ""financialRatios"": {},
+  ""coverageIsLowerBound"": true
+}"
+Global Stocks,Spain,YAHOO_CHART,AVAILABLE_AND_INGESTED,200,200,200,200,200,100,,,,,2026-07-28,200,,,,,,,,,0,,,NOT_STARTED,,false,,true,Exchange close 17:35 + 50m; Railway poll 5m,Europe/Madrid,Each exchange trading day after provider final candle,NOT_RUN,PRODUCTION,Exact stock_history row aggregation exceeded production statement timeout; product coverage uses stocks.history_backfilled_at,"{
+  ""inactive"": 0,
+  ""delisted"": 0,
+  ""missingYahooSymbol"": 0,
+  ""missingOfficialIdentifier"": ""NOT_MODELED"",
+  ""historyBackfilledFlag"": 200,
+  ""exactHistoryRows"": ""UNKNOWN_STATEMENT_TIMEOUT"",
+  ""completeOhlcvRows"": null,
+  ""yahooRows"": null,
+  ""latestProviderDate"": null,
+  ""incrementalAttempted"": null,
+  ""incrementalCompleted"": null,
+  ""incrementalFailed"": null,
+  ""noUpdateCount"": null,
+  ""noDataCount"": null,
+  ""staleCount"": null,
+  ""retryQueueCount"": null,
+  ""retryRecoveredCount"": 0,
+  ""permanentFailureCount"": null,
+  ""lastSuccessfulRun"": null,
+  ""currentRunStatus"": ""NOT_STARTED"",
+  ""currentCheckpoint"": null,
+  ""activeLock"": false,
+  ""lastHeartbeat"": null,
+  ""validationStatus"": ""NOT_RUN"",
+  ""runEvidence"": null
+}"
+Financial Statements,Spain,UNCONFIRMED,PARTIALLY_AVAILABLE,200,200,,200,,,,,,,,200,,,,,,,,,,,,NOT_STARTED,,false,,false,No independent filing-triggered production scheduler evidenced,Provider publication time,Filing publication,NO_PRODUCTION_VALIDATION_LEDGER,PARTIAL,Exact per-market financial aggregation exceeded production statement timeout,"{
+  ""rows"": ""UNKNOWN_STATEMENT_TIMEOUT"",
+  ""stocks"": ""UNKNOWN_STATEMENT_TIMEOUT""
+}"
+Corporate Actions,Spain,NOT_MODELED_FOR_STOCKS,SOURCE_RESEARCH_REQUIRED,200,200,0,200,0,0,0,,,,,200,0,0,0,0,,,,,,,,NOT_STARTED,,false,,false,NOT_CONFIGURED,NOT_CONFIGURED,Announcement-triggered,NOT_RUN,NOT_STARTED,No stock corporate-action table or production ingestion ledger; adjusted close is not an event ledger,"{
+  ""supportedEvents"": [],
+  ""schemaEvidence"": ""distributions links ETF/Fund/Asset only""
+}"
+Derived Metrics,Spain,SMARTFUND_DERIVED + source financial facts,AVAILABLE_NOT_CONNECTED,200,200,0,200,0,0,0,,,,,200,,,,,,,,,,,,NOT_STARTED,,false,,false,No production derived-metric scheduler evidenced,N/A,After price/filing updates,NO_POINT_IN_TIME_PRODUCTION_VALIDATION,PROTOTYPE,Technical per-market aggregation timed out; reported derived count is a lower bound from financial-ratio facts,"{
+  ""technical"": {
+    ""status"": ""UNKNOWN_STATEMENT_TIMEOUT""
+  },
+  ""financialRatios"": {},
+  ""coverageIsLowerBound"": true
+}"
+Global Stocks,TPEx,YAHOO_CHART,AVAILABLE_AND_INGESTED,889,889,889,889,889,100,,,,2026-07-31,2026-07-31,889,889,889,0,100,0,0,0,,0,,2026-07-31T16:05:51.000Z,COMPLETED,9962.TWO; 889/889/0,false,2026-07-31T16:05:43.000Z,true,Exchange close 13:30 + 50m; Railway poll 5m,Asia/Taipei,Each exchange trading day after provider final candle,PASS,PRODUCTION,Exact stock_history row aggregation exceeded production statement timeout; product coverage uses stocks.history_backfilled_at,"{
+  ""inactive"": 0,
+  ""delisted"": 0,
+  ""missingYahooSymbol"": 0,
+  ""missingOfficialIdentifier"": ""NOT_MODELED"",
+  ""historyBackfilledFlag"": 889,
+  ""exactHistoryRows"": ""UNKNOWN_STATEMENT_TIMEOUT"",
+  ""completeOhlcvRows"": null,
+  ""yahooRows"": null,
+  ""latestProviderDate"": ""2026-07-31"",
+  ""incrementalAttempted"": 889,
+  ""incrementalCompleted"": 889,
+  ""incrementalFailed"": 0,
+  ""noUpdateCount"": 0,
+  ""noDataCount"": 0,
+  ""staleCount"": 0,
+  ""retryQueueCount"": null,
+  ""retryRecoveredCount"": 0,
+  ""permanentFailureCount"": null,
+  ""lastSuccessfulRun"": ""2026-07-31T16:05:51.000Z"",
+  ""currentRunStatus"": ""COMPLETED"",
+  ""currentCheckpoint"": ""9962.TWO; 889/889/0"",
+  ""activeLock"": false,
+  ""lastHeartbeat"": ""2026-07-31T16:05:43.000Z"",
+  ""validationStatus"": ""PASS"",
+  ""runEvidence"": {
+    ""id"": ""d4254c47-9684-4533-9821-b487925f7028"",
+    ""runType"": ""PRIMARY"",
+    ""status"": ""COMPLETED"",
+    ""targetTradeDate"": null,
+    ""exitCode"": 0,
+    ""error"": null
+  }
+}"
+Financial Statements,TPEx,MOPS,PARTIALLY_AVAILABLE,889,889,,889,,,,,,,,889,,,,,,,,,,,,NOT_STARTED,,false,,false,No independent filing-triggered production scheduler evidenced,Provider publication time,Filing publication,NO_PRODUCTION_VALIDATION_LEDGER,PARTIAL,Exact per-market financial aggregation exceeded production statement timeout,"{
+  ""rows"": ""UNKNOWN_STATEMENT_TIMEOUT"",
+  ""stocks"": ""UNKNOWN_STATEMENT_TIMEOUT""
+}"
+Corporate Actions,TPEx,NOT_MODELED_FOR_STOCKS,SOURCE_RESEARCH_REQUIRED,889,889,0,889,0,0,0,,,,,889,0,0,0,0,,,,,,,,NOT_STARTED,,false,,false,NOT_CONFIGURED,NOT_CONFIGURED,Announcement-triggered,NOT_RUN,NOT_STARTED,No stock corporate-action table or production ingestion ledger; adjusted close is not an event ledger,"{
+  ""supportedEvents"": [],
+  ""schemaEvidence"": ""distributions links ETF/Fund/Asset only""
+}"
+Derived Metrics,TPEx,SMARTFUND_DERIVED + source financial facts,PARTIALLY_AVAILABLE,889,889,95,889,95,10.6862,82479,,2021-08-02,,2026-07-30,889,,,,,,,,,,,,NOT_STARTED,,false,,false,No production derived-metric scheduler evidenced,N/A,After price/filing updates,NO_POINT_IN_TIME_PRODUCTION_VALIDATION,PARTIAL,Technical per-market aggregation timed out; reported derived count is a lower bound from financial-ratio facts,"{
+  ""technical"": {
+    ""status"": ""UNKNOWN_STATEMENT_TIMEOUT""
+  },
+  ""financialRatios"": {
+    ""market"": ""TPEx"",
+    ""rows"": 82479,
+    ""stocks"": 95,
+    ""earliest"": ""2021-08-02T00:00:00.000Z"",
+    ""latest"": ""2026-07-30T00:00:00.000Z"",
+    ""metrics"": ""valuation.pe""
+  },
+  ""coverageIsLowerBound"": true
+}"
+Global Stocks,TWSE,YAHOO_CHART,AVAILABLE_AND_INGESTED,1088,1088,1088,1088,1088,100,,,,2026-07-31,2026-07-31,1088,1088,1088,0,100,0,0,0,,0,,2026-07-31T14:55:10.000Z,COMPLETED,9958.TW; 1088/1088/0,false,2026-07-31T14:10:21.000Z,true,Exchange close 13:30 + 45m; Railway poll 5m,Asia/Taipei,Each exchange trading day after provider final candle,PASS,PRODUCTION,Exact stock_history row aggregation exceeded production statement timeout; product coverage uses stocks.history_backfilled_at,"{
+  ""inactive"": 0,
+  ""delisted"": 0,
+  ""missingYahooSymbol"": 0,
+  ""missingOfficialIdentifier"": ""NOT_MODELED"",
+  ""historyBackfilledFlag"": 1088,
+  ""exactHistoryRows"": ""UNKNOWN_STATEMENT_TIMEOUT"",
+  ""completeOhlcvRows"": null,
+  ""yahooRows"": null,
+  ""latestProviderDate"": ""2026-07-31"",
+  ""incrementalAttempted"": 1088,
+  ""incrementalCompleted"": 1088,
+  ""incrementalFailed"": 0,
+  ""noUpdateCount"": 0,
+  ""noDataCount"": 0,
+  ""staleCount"": 0,
+  ""retryQueueCount"": null,
+  ""retryRecoveredCount"": 0,
+  ""permanentFailureCount"": null,
+  ""lastSuccessfulRun"": ""2026-07-31T14:55:10.000Z"",
+  ""currentRunStatus"": ""COMPLETED"",
+  ""currentCheckpoint"": ""9958.TW; 1088/1088/0"",
+  ""activeLock"": false,
+  ""lastHeartbeat"": ""2026-07-31T14:10:21.000Z"",
+  ""validationStatus"": ""PASS"",
+  ""runEvidence"": {
+    ""id"": ""6b98fa37-c4ee-476b-9d12-dab1c8d670c6"",
+    ""runType"": ""PRIMARY"",
+    ""status"": ""COMPLETED"",
+    ""targetTradeDate"": null,
+    ""exitCode"": 0,
+    ""error"": null
+  }
+}"
+Financial Statements,TWSE,MOPS,PARTIALLY_AVAILABLE,1088,1088,,1088,,,,,,,,1088,,,,,,,,,,,,NOT_STARTED,,false,,false,No independent filing-triggered production scheduler evidenced,Provider publication time,Filing publication,NO_PRODUCTION_VALIDATION_LEDGER,PARTIAL,Exact per-market financial aggregation exceeded production statement timeout,"{
+  ""rows"": ""UNKNOWN_STATEMENT_TIMEOUT"",
+  ""stocks"": ""UNKNOWN_STATEMENT_TIMEOUT""
+}"
+Corporate Actions,TWSE,NOT_MODELED_FOR_STOCKS,SOURCE_RESEARCH_REQUIRED,1088,1088,0,1088,0,0,0,,,,,1088,0,0,0,0,,,,,,,,NOT_STARTED,,false,,false,NOT_CONFIGURED,NOT_CONFIGURED,Announcement-triggered,NOT_RUN,NOT_STARTED,No stock corporate-action table or production ingestion ledger; adjusted close is not an event ledger,"{
+  ""supportedEvents"": [],
+  ""schemaEvidence"": ""distributions links ETF/Fund/Asset only""
+}"
+Derived Metrics,TWSE,SMARTFUND_DERIVED + source financial facts,PARTIALLY_AVAILABLE,1088,1088,2,1088,2,0.1838,2426,,2021-08-02,,2026-07-30,1088,,,,,,,,,,,,NOT_STARTED,,false,,false,No production derived-metric scheduler evidenced,N/A,After price/filing updates,NO_POINT_IN_TIME_PRODUCTION_VALIDATION,PARTIAL,Technical per-market aggregation timed out; reported derived count is a lower bound from financial-ratio facts,"{
+  ""technical"": {
+    ""status"": ""UNKNOWN_STATEMENT_TIMEOUT""
+  },
+  ""financialRatios"": {
+    ""market"": ""TWSE"",
+    ""rows"": 2426,
+    ""stocks"": 2,
+    ""earliest"": ""2021-08-02T00:00:00.000Z"",
+    ""latest"": ""2026-07-30T00:00:00.000Z"",
+    ""metrics"": ""valuation.pe""
+  },
+  ""coverageIsLowerBound"": true
+}"
+Global Stocks,United Kingdom,YAHOO_CHART,AVAILABLE_AND_INGESTED,5948,5948,5948,5948,5948,100,,,,,2026-07-31,5948,3176,3176,0,53.3961,0,0,0,,0,,,STALE,TE10.L; 3176/3176/0,false,2026-08-01T00:08:48.000Z,true,Exchange close 16:35 + 45m; Railway poll 5m,Europe/London,Each exchange trading day after provider final candle,NOT_RUN,PRODUCTION,Exact stock_history row aggregation exceeded production statement timeout; product coverage uses stocks.history_backfilled_at,"{
+  ""inactive"": 0,
+  ""delisted"": 0,
+  ""missingYahooSymbol"": 0,
+  ""missingOfficialIdentifier"": ""NOT_MODELED"",
+  ""historyBackfilledFlag"": 5948,
+  ""exactHistoryRows"": ""UNKNOWN_STATEMENT_TIMEOUT"",
+  ""completeOhlcvRows"": null,
+  ""yahooRows"": null,
+  ""latestProviderDate"": null,
+  ""incrementalAttempted"": 3176,
+  ""incrementalCompleted"": 3176,
+  ""incrementalFailed"": 0,
+  ""noUpdateCount"": 0,
+  ""noDataCount"": 0,
+  ""staleCount"": 0,
+  ""retryQueueCount"": null,
+  ""retryRecoveredCount"": 0,
+  ""permanentFailureCount"": null,
+  ""lastSuccessfulRun"": null,
+  ""currentRunStatus"": ""STALE"",
+  ""currentCheckpoint"": ""TE10.L; 3176/3176/0"",
+  ""activeLock"": false,
+  ""lastHeartbeat"": ""2026-08-01T00:08:48.000Z"",
+  ""validationStatus"": ""NOT_RUN"",
+  ""runEvidence"": {
+    ""id"": ""c093922f-86fd-4829-ac59-2a283de5bdb0"",
+    ""runType"": ""PRIMARY"",
+    ""status"": ""STALE"",
+    ""targetTradeDate"": null,
+    ""exitCode"": 1,
+    ""error"": ""STALE_LOCK_CLEANUP""
+  }
+}"
+Financial Statements,United Kingdom,UNCONFIRMED,PARTIALLY_AVAILABLE,5948,5948,,5948,,,,,,,,5948,,,,,,,,,,,,NOT_STARTED,,false,,false,No independent filing-triggered production scheduler evidenced,Provider publication time,Filing publication,NO_PRODUCTION_VALIDATION_LEDGER,PARTIAL,Exact per-market financial aggregation exceeded production statement timeout,"{
+  ""rows"": ""UNKNOWN_STATEMENT_TIMEOUT"",
+  ""stocks"": ""UNKNOWN_STATEMENT_TIMEOUT""
+}"
+Corporate Actions,United Kingdom,NOT_MODELED_FOR_STOCKS,SOURCE_RESEARCH_REQUIRED,5948,5948,0,5948,0,0,0,,,,,5948,0,0,0,0,,,,,,,,NOT_STARTED,,false,,false,NOT_CONFIGURED,NOT_CONFIGURED,Announcement-triggered,NOT_RUN,NOT_STARTED,No stock corporate-action table or production ingestion ledger; adjusted close is not an event ledger,"{
+  ""supportedEvents"": [],
+  ""schemaEvidence"": ""distributions links ETF/Fund/Asset only""
+}"
+Derived Metrics,United Kingdom,SMARTFUND_DERIVED + source financial facts,AVAILABLE_NOT_CONNECTED,5948,5948,0,5948,0,0,0,,,,,5948,,,,,,,,,,,,NOT_STARTED,,false,,false,No production derived-metric scheduler evidenced,N/A,After price/filing updates,NO_POINT_IN_TIME_PRODUCTION_VALIDATION,PROTOTYPE,Technical per-market aggregation timed out; reported derived count is a lower bound from financial-ratio facts,"{
+  ""technical"": {
+    ""status"": ""UNKNOWN_STATEMENT_TIMEOUT""
+  },
+  ""financialRatios"": {},
+  ""coverageIsLowerBound"": true
+}"
+ETF,Europe ETF,yahoo-finance,AVAILABLE_AND_INGESTED,5692,5692,5692,5692,5692,100,5834874,,2016-07-25,,2026-07-31,,,,,,,,,,,,,NOT_STARTED,,false,,true,Railway cron */5; shared Global ETF resumable slices,America/New_York provider day,Exchange/provider latest available,NOT_RUN,PRODUCTION,Regional daily counts are not isolated inside the combined Global ETF run,"{
+  ""priceRows"": 5834874,
+  ""navRows"": 0,
+  ""holdings"": {
+    ""holding_products"": 0,
+    ""holding_rows"": 0,
+    ""distribution_products"": 0,
+    ""distribution_rows"": 0
+  },
+  ""rowLevelProvenance"": ""NOT_MODELED_IN_ETF_HISTORY""
+}"
+ETF,Hong Kong ETF,yahoo-finance,AVAILABLE_AND_INGESTED,342,342,342,342,342,100,361415,,2016-07-25,,2026-07-31,,,,,,,,,,,,,NOT_STARTED,,false,,true,Railway cron */5; shared Global ETF resumable slices,America/New_York provider day,Exchange/provider latest available,NOT_RUN,PRODUCTION,Regional daily counts are not isolated inside the combined Global ETF run,"{
+  ""priceRows"": 361415,
+  ""navRows"": 0,
+  ""holdings"": {
+    ""holding_products"": 0,
+    ""holding_rows"": 0,
+    ""distribution_products"": 0,
+    ""distribution_rows"": 0
+  },
+  ""rowLevelProvenance"": ""NOT_MODELED_IN_ETF_HISTORY""
+}"
+ETF,Japan ETF,yahoo-finance,AVAILABLE_AND_INGESTED,467,467,467,467,467,100,589636,,2016-07-25,,2026-07-31,,,,,,,,,,,,,NOT_STARTED,,false,,true,Railway cron */5; shared Global ETF resumable slices,America/New_York provider day,Exchange/provider latest available,NOT_RUN,PRODUCTION,Regional daily counts are not isolated inside the combined Global ETF run,"{
+  ""priceRows"": 589636,
+  ""navRows"": 0,
+  ""holdings"": {
+    ""holding_products"": 0,
+    ""holding_rows"": 0,
+    ""distribution_products"": 0,
+    ""distribution_rows"": 0
+  },
+  ""rowLevelProvenance"": ""NOT_MODELED_IN_ETF_HISTORY""
+}"
+ETF,Other Global ETF,yahoo-finance,AVAILABLE_AND_INGESTED,77,77,77,77,77,100,104706,,2016-07-25,,2026-07-31,,,,,,,,,,,,,NOT_STARTED,,false,,true,Railway cron */5; shared Global ETF resumable slices,America/New_York provider day,Exchange/provider latest available,NOT_RUN,PRODUCTION,Regional daily counts are not isolated inside the combined Global ETF run,"{
+  ""priceRows"": 104706,
+  ""navRows"": 0,
+  ""holdings"": {
+    ""holding_products"": 0,
+    ""holding_rows"": 0,
+    ""distribution_products"": 0,
+    ""distribution_rows"": 0
+  },
+  ""rowLevelProvenance"": ""NOT_MODELED_IN_ETF_HISTORY""
+}"
+ETF,Taiwan ETF,"twse-domestic-etf-csv, 未知（待補）",PARTIALLY_AVAILABLE,349,349,349,349,232,66.4756,343290,,2008-01-02,,2026-07-24,,,,,,,,,,,,,NOT_STARTED,,false,,false,CONFIG_ONLY in data-daily-schedule.json; not Railway production job,Asia/Taipei config,Exchange/provider latest available,NO_PRODUCTION_RUN_LEDGER,PARTIAL,117 active ETFs have no history,"{
+  ""priceRows"": 343173,
+  ""navRows"": 695,
+  ""holdings"": {
+    ""holding_products"": 0,
+    ""holding_rows"": 0,
+    ""distribution_products"": 0,
+    ""distribution_rows"": 0
+  },
+  ""rowLevelProvenance"": ""NOT_MODELED_IN_ETF_HISTORY""
+}"
+ETF,United States ETF,yahoo-finance,AVAILABLE_AND_INGESTED,5875,5875,5875,5875,5875,100,6121258,,1993-01-29,,2026-07-31,,,,,,,,,,,,,NOT_STARTED,,false,,true,Railway cron */5; shared Global ETF resumable slices,America/New_York provider day,Exchange/provider latest available,NOT_RUN,PRODUCTION,Regional daily counts are not isolated inside the combined Global ETF run,"{
+  ""priceRows"": 6121258,
+  ""navRows"": 0,
+  ""holdings"": {
+    ""holding_products"": 0,
+    ""holding_rows"": 0,
+    ""distribution_products"": 0,
+    ""distribution_rows"": 0
+  },
+  ""rowLevelProvenance"": ""NOT_MODELED_IN_ETF_HISTORY""
+}"
+ETF,Global ETF Production Daily Lifecycle,YAHOO_CHART,PARTIALLY_AVAILABLE,,,,,,,,,,,,12453,3600,3600,0,28.9087,0,0,0,37,0,0,2026-07-30T09:11:57.000Z,PAUSED,DADS; 3600/3600/0,false,2026-08-01T10:03:43.000Z,true,Railway cron */5; resumable slices; combined Global ETF universe,America/New_York provider day,Provider latest available,NOT_RUN,PARTIAL,Production run is combined; regional incremental counts are not isolated,"{
+  ""latestProviderDate"": null,
+  ""incrementalAttempted"": 3600,
+  ""incrementalCompleted"": 3600,
+  ""incrementalFailed"": 0,
+  ""noUpdateCount"": 0,
+  ""noDataCount"": 0,
+  ""staleCount"": 0,
+  ""retryQueueCount"": 37,
+  ""retryRecoveredCount"": 0,
+  ""permanentFailureCount"": 0,
+  ""lastSuccessfulRun"": ""2026-07-30T09:11:57.000Z"",
+  ""currentRunStatus"": ""PAUSED"",
+  ""currentCheckpoint"": ""DADS; 3600/3600/0"",
+  ""activeLock"": false,
+  ""lastHeartbeat"": ""2026-08-01T10:03:43.000Z"",
+  ""validationStatus"": ""NOT_RUN"",
+  ""runEvidence"": {
+    ""id"": ""ae35ea2e-a48b-4ce1-b5e1-6e7be7cfffb6"",
+    ""runType"": ""PRIMARY"",
+    ""status"": ""PAUSED"",
+    ""targetTradeDate"": null,
+    ""exitCode"": 0,
+    ""error"": null
+  }
+}"
+Fund,All Funds (domestic/offshore classification unavailable),"NULL, tdcc-offshore, yahoo",PARTIALLY_AVAILABLE,12035,12035,5321,12035,11815,98.172,19470555,,2003-11-01,,2026-07-31,12035,,11732,,97.4823,,,,,,,,NOT_STARTED,,false,,false,MoneyDJ job is CONFIG_ONLY; not called by Railway production cron,Asia/Taipei config,Provider NAV publication,NO_PRODUCTION_RUN_LEDGER,PARTIAL,Fund master lacks domicile/share-class fields needed to split Taiwan/offshore/US/UCITS/Japan; 220 funds have no history,"{
+  ""navRows"": 19470555,
+  ""latestNavProducts"": 11732,
+  ""holdings"": {
+    ""holding_products"": 0,
+    ""holding_rows"": 0,
+    ""distribution_products"": 0,
+    ""distribution_rows"": 0
+  },
+  ""rowLevelProvenance"": ""NOT_MODELED_IN_FUND_HISTORY""
+}"
+Fund,Taiwan Domestic Funds,UNCLASSIFIABLE_FROM_CURRENT_MASTER,PARTIALLY_AVAILABLE,,,,,,,,,,,,,,,,,,,,,,,,NOT_STARTED,,false,,false,NOT_CONFIGURED,NOT_CONFIGURED,NOT_CONFIGURED,NOT_RUN,PARTIAL,Current fund master has no reliable domicile/share-class classification; aggregate data exists but cannot be truthfully split,{}
+Fund,Offshore Funds,UNCLASSIFIABLE_FROM_CURRENT_MASTER,PARTIALLY_AVAILABLE,,,,,,,,,,,,,,,,,,,,,,,,NOT_STARTED,,false,,false,NOT_CONFIGURED,NOT_CONFIGURED,NOT_CONFIGURED,NOT_RUN,PARTIAL,Current fund master has no reliable domicile/share-class classification; aggregate data exists but cannot be truthfully split,{}
+Fund,US Mutual Funds,UNCLASSIFIABLE_FROM_CURRENT_MASTER,PARTIALLY_AVAILABLE,,,,,,,,,,,,,,,,,,,,,,,,NOT_STARTED,,false,,false,NOT_CONFIGURED,NOT_CONFIGURED,NOT_CONFIGURED,NOT_RUN,PARTIAL,Current fund master has no reliable domicile/share-class classification; aggregate data exists but cannot be truthfully split,{}
+Fund,Europe UCITS,UNCLASSIFIABLE_FROM_CURRENT_MASTER,PARTIALLY_AVAILABLE,,,,,,,,,,,,,,,,,,,,,,,,NOT_STARTED,,false,,false,NOT_CONFIGURED,NOT_CONFIGURED,NOT_CONFIGURED,NOT_RUN,PARTIAL,Current fund master has no reliable domicile/share-class classification; aggregate data exists but cannot be truthfully split,{}
+Fund,Japan Funds,UNCLASSIFIABLE_FROM_CURRENT_MASTER,PARTIALLY_AVAILABLE,,,,,,,,,,,,,,,,,,,,,,,,NOT_STARTED,,false,,false,NOT_CONFIGURED,NOT_CONFIGURED,NOT_CONFIGURED,NOT_RUN,PARTIAL,Current fund master has no reliable domicile/share-class classification; aggregate data exists but cannot be truthfully split,{}
+Commodities,Industrial/Agriculture/Livestock not normalized,"YAHOO_CHART, yahoo-finance2",PARTIALLY_AVAILABLE,12,12,12,12,8,66.6667,52556,,2000-01-03,,2026-07-10,12,,,,,,,,,0,,,NOT_STARTED,,false,,false,"Provider registry exists, but runner does not dispatch this asset class",NOT_CONFIGURED,Provider/market settlement,NOT_RUN,PARTIAL,"Historical data exists, but no Railway production incremental job is connected","{
+  ""rowLevelProvenance"": ""NOT_MODELED_IN_MARKET_HISTORY"",
+  ""latestProviderDate"": null,
+  ""incrementalAttempted"": null,
+  ""incrementalCompleted"": null,
+  ""incrementalFailed"": null,
+  ""noUpdateCount"": null,
+  ""noDataCount"": null,
+  ""staleCount"": null,
+  ""retryQueueCount"": null,
+  ""retryRecoveredCount"": 0,
+  ""permanentFailureCount"": null,
+  ""lastSuccessfulRun"": null,
+  ""currentRunStatus"": ""NOT_STARTED"",
+  ""currentCheckpoint"": null,
+  ""activeLock"": false,
+  ""lastHeartbeat"": null,
+  ""validationStatus"": ""NOT_RUN"",
+  ""runEvidence"": null
+}"
+Crypto,All configured series,"YAHOO_CHART, yahoo-finance2",PARTIALLY_AVAILABLE,15,15,15,15,7,46.6667,22435,,2014-09-17,,2026-07-11,15,,,,,,,,,0,,,NOT_STARTED,,false,,false,"Provider registry exists, but runner does not dispatch this asset class",NOT_CONFIGURED,24/7 required; current scheduler absent,NOT_RUN,PARTIAL,"Historical data exists, but no Railway production incremental job is connected","{
+  ""rowLevelProvenance"": ""NOT_MODELED_IN_MARKET_HISTORY"",
+  ""latestProviderDate"": null,
+  ""incrementalAttempted"": null,
+  ""incrementalCompleted"": null,
+  ""incrementalFailed"": null,
+  ""noUpdateCount"": null,
+  ""noDataCount"": null,
+  ""staleCount"": null,
+  ""retryQueueCount"": null,
+  ""retryRecoveredCount"": 0,
+  ""permanentFailureCount"": null,
+  ""lastSuccessfulRun"": null,
+  ""currentRunStatus"": ""NOT_STARTED"",
+  ""currentCheckpoint"": null,
+  ""activeLock"": false,
+  ""lastHeartbeat"": null,
+  ""validationStatus"": ""NOT_RUN"",
+  ""runEvidence"": null
+}"
+Energy,All configured series,"YAHOO_CHART, yahoo-finance2",PARTIALLY_AVAILABLE,8,8,8,8,5,62.5,30649,,2000-08-23,,2026-07-10,8,,,,,,,,,0,,,NOT_STARTED,,false,,false,"Provider registry exists, but runner does not dispatch this asset class",NOT_CONFIGURED,Provider/market settlement,NOT_RUN,PARTIAL,"Historical data exists, but no Railway production incremental job is connected","{
+  ""rowLevelProvenance"": ""NOT_MODELED_IN_MARKET_HISTORY"",
+  ""latestProviderDate"": null,
+  ""incrementalAttempted"": null,
+  ""incrementalCompleted"": null,
+  ""incrementalFailed"": null,
+  ""noUpdateCount"": null,
+  ""noDataCount"": null,
+  ""staleCount"": null,
+  ""retryQueueCount"": null,
+  ""retryRecoveredCount"": 0,
+  ""permanentFailureCount"": null,
+  ""lastSuccessfulRun"": null,
+  ""currentRunStatus"": ""NOT_STARTED"",
+  ""currentCheckpoint"": null,
+  ""activeLock"": false,
+  ""lastHeartbeat"": null,
+  ""validationStatus"": ""NOT_RUN"",
+  ""runEvidence"": null
+}"
+FX,All configured series,"YAHOO_CHART, yahoo-finance2",PARTIALLY_AVAILABLE,21,21,21,21,11,52.381,68221,,1971-01-04,,2026-07-11,21,,,,,,,,,0,,,NOT_STARTED,,false,,false,"Provider registry exists, but runner does not dispatch this asset class",NOT_CONFIGURED,Daily/intraday required; current scheduler absent,NOT_RUN,PARTIAL,"Historical data exists, but no Railway production incremental job is connected","{
+  ""rowLevelProvenance"": ""NOT_MODELED_IN_MARKET_HISTORY"",
+  ""latestProviderDate"": null,
+  ""incrementalAttempted"": null,
+  ""incrementalCompleted"": null,
+  ""incrementalFailed"": null,
+  ""noUpdateCount"": null,
+  ""noDataCount"": null,
+  ""staleCount"": null,
+  ""retryQueueCount"": null,
+  ""retryRecoveredCount"": 0,
+  ""permanentFailureCount"": null,
+  ""lastSuccessfulRun"": null,
+  ""currentRunStatus"": ""NOT_STARTED"",
+  ""currentCheckpoint"": null,
+  ""activeLock"": false,
+  ""lastHeartbeat"": null,
+  ""validationStatus"": ""NOT_RUN"",
+  ""runEvidence"": null
+}"
+Government Yields,All configured series,yahoo-finance2,AVAILABLE_AND_INGESTED,5,5,5,5,5,100,54834,,1970-01-02,2026-07-30,2026-07-30,5,5,5,0,100,0,0,0,,0,,2026-08-01T04:15:36.000Z,COMPLETED,US5Y; 5/5/0,false,2026-08-01T04:15:33.000Z,true,Railway cron */5; provider-latest adapter,America/New_York provider day,Provider/market settlement,PASS,PRODUCTION,None evidenced,"{
+  ""rowLevelProvenance"": ""NOT_MODELED_IN_MARKET_HISTORY"",
+  ""latestProviderDate"": ""2026-07-30"",
+  ""incrementalAttempted"": 5,
+  ""incrementalCompleted"": 5,
+  ""incrementalFailed"": 0,
+  ""noUpdateCount"": 0,
+  ""noDataCount"": 0,
+  ""staleCount"": 0,
+  ""retryQueueCount"": null,
+  ""retryRecoveredCount"": 0,
+  ""permanentFailureCount"": null,
+  ""lastSuccessfulRun"": ""2026-08-01T04:15:36.000Z"",
+  ""currentRunStatus"": ""COMPLETED"",
+  ""currentCheckpoint"": ""US5Y; 5/5/0"",
+  ""activeLock"": false,
+  ""lastHeartbeat"": ""2026-08-01T04:15:33.000Z"",
+  ""validationStatus"": ""PASS"",
+  ""runEvidence"": {
+    ""id"": ""705f2a66-9e8c-4381-a4b8-c301ef5e25a7"",
+    ""runType"": ""PRIMARY"",
+    ""status"": ""COMPLETED"",
+    ""targetTradeDate"": null,
+    ""exitCode"": 0,
+    ""error"": null
+  }
+}"
+Precious Metals,All configured series,"YAHOO_CHART, yahoo-finance2",PARTIALLY_AVAILABLE,8,8,8,8,4,50,26021,,1997-10-29,,2026-07-10,8,,,,,,,,,0,,,NOT_STARTED,,false,,false,"Provider registry exists, but runner does not dispatch this asset class",NOT_CONFIGURED,Provider/market settlement,NOT_RUN,PARTIAL,"Historical data exists, but no Railway production incremental job is connected","{
+  ""rowLevelProvenance"": ""NOT_MODELED_IN_MARKET_HISTORY"",
+  ""latestProviderDate"": null,
+  ""incrementalAttempted"": null,
+  ""incrementalCompleted"": null,
+  ""incrementalFailed"": null,
+  ""noUpdateCount"": null,
+  ""noDataCount"": null,
+  ""staleCount"": null,
+  ""retryQueueCount"": null,
+  ""retryRecoveredCount"": 0,
+  ""permanentFailureCount"": null,
+  ""lastSuccessfulRun"": null,
+  ""currentRunStatus"": ""NOT_STARTED"",
+  ""currentCheckpoint"": null,
+  ""activeLock"": false,
+  ""lastHeartbeat"": null,
+  ""validationStatus"": ""NOT_RUN"",
+  ""runEvidence"": null
+}"
+Stock Indices,All configured series,yahoo-finance2,AVAILABLE_AND_INGESTED,29,29,29,29,29,100,255368,,1970-01-02,2026-07-31,2026-07-31,29,29,2,27,6.8966,2,27,0,0,0,0,2026-08-01T04:15:36.000Z,COMPLETED,TOPIX; 29/2/27,false,2026-08-01T04:15:32.000Z,true,Railway cron */5; provider-latest adapter,America/New_York provider day,Provider/market settlement,PASS,PRODUCTION,None evidenced,"{
+  ""rowLevelProvenance"": ""NOT_MODELED_IN_MARKET_HISTORY"",
+  ""latestProviderDate"": ""2026-07-31"",
+  ""incrementalAttempted"": 29,
+  ""incrementalCompleted"": 2,
+  ""incrementalFailed"": 27,
+  ""noUpdateCount"": 2,
+  ""noDataCount"": 27,
+  ""staleCount"": 0,
+  ""retryQueueCount"": 0,
+  ""retryRecoveredCount"": 0,
+  ""permanentFailureCount"": 0,
+  ""lastSuccessfulRun"": ""2026-08-01T04:15:36.000Z"",
+  ""currentRunStatus"": ""COMPLETED"",
+  ""currentCheckpoint"": ""TOPIX; 29/2/27"",
+  ""activeLock"": false,
+  ""lastHeartbeat"": ""2026-08-01T04:15:32.000Z"",
+  ""validationStatus"": ""PASS"",
+  ""runEvidence"": {
+    ""id"": ""b1243db0-3a28-447e-b5f7-790c750af3ac"",
+    ""runType"": ""PRIMARY"",
+    ""status"": ""COMPLETED"",
+    ""targetTradeDate"": null,
+    ""exitCode"": 0,
+    ""error"": null
+  }
+}"
+Volatility,All configured series,yahoo-finance2,AVAILABLE_AND_INGESTED,1,1,1,1,1,100,9198,,1990-01-02,2026-07-10,2026-07-10,1,1,0,1,0,0,1,0,0,0,0,2026-08-01T04:15:29.000Z,COMPLETED,VIX; 1/0/1,false,2026-08-01T04:15:25.000Z,true,Railway cron */5; provider-latest adapter,America/New_York provider day,Provider/market settlement,PASS,PRODUCTION,None evidenced,"{
+  ""rowLevelProvenance"": ""NOT_MODELED_IN_MARKET_HISTORY"",
+  ""latestProviderDate"": ""2026-07-10"",
+  ""incrementalAttempted"": 1,
+  ""incrementalCompleted"": 0,
+  ""incrementalFailed"": 1,
+  ""noUpdateCount"": 0,
+  ""noDataCount"": 1,
+  ""staleCount"": 0,
+  ""retryQueueCount"": 0,
+  ""retryRecoveredCount"": 0,
+  ""permanentFailureCount"": 0,
+  ""lastSuccessfulRun"": ""2026-08-01T04:15:29.000Z"",
+  ""currentRunStatus"": ""COMPLETED"",
+  ""currentCheckpoint"": ""VIX; 1/0/1"",
+  ""activeLock"": false,
+  ""lastHeartbeat"": ""2026-08-01T04:15:25.000Z"",
+  ""validationStatus"": ""PASS"",
+  ""runEvidence"": {
+    ""id"": ""7d5bef3f-0f50-4d9a-9cb6-b5a7376a8b9d"",
+    ""runType"": ""PRIMARY"",
+    ""status"": ""COMPLETED"",
+    ""targetTradeDate"": null,
+    ""exitCode"": 0,
+    ""error"": null
+  }
+}"
+Stock Indices,market_indexes canonical table,"YAHOO_CHART, YAHOO_HTML",PARTIALLY_AVAILABLE,26,26,26,26,25,96.1538,188767,,1965-01-05,,2026-07-29,,,,,,,,,,,,,NOT_STARTED,,false,,false,Separate canonical index table is not connected to Railway asset runner,NOT_CONFIGURED,Exchange close,NO_PRODUCTION_LEDGER,PARTIAL,Duplicate index storage paths (market_master and market_indexes) are not reconciled,"{
+  ""rows"": 188767,
+  ""products"": 25,
+  ""earliest"": ""1965-01-05T00:00:00.000Z"",
+  ""latest"": ""2026-07-29T00:00:00.000Z"",
+  ""yahoo_rows"": 0
+}"
+Economic Data,All Economic Series,"ECB, FRED, IMF, OECD, World Bank",AVAILABLE_AND_INGESTED,155,155,155,155,155,100,74588,,1947-01-01,,2026-08-01,155,27,27,0,17.4194,20,0,0,,0,,2026-08-01T04:15:47.000Z,COMPLETED,FRED:UNRATE; 27/27/0,false,2026-08-01T04:15:45.000Z,true,Railway cron */5; adapters currently executable for FRED/ECB,Provider publication schedule,Official provider release,PASS,PRODUCTION,"Vintage history is not preserved by unique(series,date)","{
+  ""providers"": 5,
+  ""revisedRows"": 0,
+  ""provenanceRows"": 74400,
+  ""vintageDataPreserved"": false,
+  ""latestProviderDate"": null,
+  ""incrementalAttempted"": 27,
+  ""incrementalCompleted"": 27,
+  ""incrementalFailed"": 0,
+  ""noUpdateCount"": 20,
+  ""noDataCount"": 0,
+  ""staleCount"": 0,
+  ""retryQueueCount"": null,
+  ""retryRecoveredCount"": 0,
+  ""permanentFailureCount"": null,
+  ""lastSuccessfulRun"": ""2026-08-01T04:15:47.000Z"",
+  ""currentRunStatus"": ""COMPLETED"",
+  ""currentCheckpoint"": ""FRED:UNRATE; 27/27/0"",
+  ""activeLock"": false,
+  ""lastHeartbeat"": ""2026-08-01T04:15:45.000Z"",
+  ""validationStatus"": ""PASS"",
+  ""runEvidence"": {
+    ""id"": ""9961e02a-95e2-48f5-ae64-4aa242ba697c"",
+    ""runType"": ""PRIMARY"",
+    ""status"": ""COMPLETED"",
+    ""targetTradeDate"": null,
+    ""exitCode"": 0,
+    ""error"": null
+  }
+}"
+Economic Data,Provider: ECB,ECB,PARTIALLY_AVAILABLE,3,27194,3,27194,3,0.011,27194,,1999-01-01,,2026-08-01,,,,,,,,,,,,,NOT_STARTED,,false,,true,Railway macro adapter,Provider release,DAILY,PASS,PRODUCTION,None evidenced,{}
+Economic Data,Provider: FRED,FRED,PARTIALLY_AVAILABLE,24,28624,24,28624,24,0.0838,28624,,1947-01-01,,2026-07-30,,,,,,,,,,,,,NOT_STARTED,,false,,true,Railway macro adapter,Provider release,"DAILY, MONTHLY, QUARTERLY, WEEKLY",PASS,PRODUCTION,None evidenced,{}
+Economic Data,Provider: IMF,IMF,PARTIALLY_AVAILABLE,90,3918,90,3918,90,2.2971,3918,,1980-01-01,,2026-01-01,,,,,,,,,,,,,NOT_STARTED,,false,,false,Backfill/config only; not verified in Railway incremental runner,Provider release,ANNUAL,NO_INCREMENTAL_VALIDATION,PARTIAL,Provider is present in database but current production macro registry/adapter execution is incomplete,{}
+Economic Data,Provider: OECD,OECD,PARTIALLY_AVAILABLE,22,14219,22,14219,22,0.1547,14219,,1955-01-01,,2026-06-01,,,,,,,,,,,,,NOT_STARTED,,false,,false,Backfill/config only; not verified in Railway incremental runner,Provider release,MONTHLY,NO_INCREMENTAL_VALIDATION,PARTIAL,Provider is present in database but current production macro registry/adapter execution is incomplete,{}
+Economic Data,Provider: World Bank,World Bank,PARTIALLY_AVAILABLE,16,633,16,633,16,2.5276,633,,1960-01-01,,2025-01-01,,,,,,,,,,,,,NOT_STARTED,,false,,false,Backfill/config only; not verified in Railway incremental runner,Provider release,ANNUAL,NO_INCREMENTAL_VALIDATION,PARTIAL,Provider is present in database but current production macro registry/adapter execution is incomplete,{}
+Central Bank Data,Policy rates / balance-sheet-like series,"ECB, FRED",PARTIALLY_AVAILABLE,8,8,8,8,8,100,53571,,1954-07-01,,2026-08-01,,,,,,,,,,,,,NOT_STARTED,,false,,true,Through macro FRED/ECB adapters only,Provider release,Official release,PASS,PARTIAL,No complete per-central-bank registry for BOJ/BOE/BOC/RBA/CBC/PBOC/BOK,{}
+Other Asset: ETF,assets + asset_performances,"Aquis AQSE, Cboe UK, Cboe US, HKSE, IOB, LSE, Nasdaq GIDS, NasdaqGM, NYSE, NYSE American, NYSEArca, OTC Markets OTCID, OTC Markets OTCPK, OTC Markets OTCQB, OTC Markets OTCQX, SES, Tokyo, 元大證券投資信託股份有限公司, 未標示, 未知（待補）, 第一金證券投資信託股份有限公司",AVAILABLE_NOT_CONNECTED,12802,12802,12802,12802,0,0,0,,,,,,,,,,,,,,,,,NOT_STARTED,,false,,false,NOT_CONFIGURED,NOT_CONFIGURED,Provider-specific,NOT_RUN,PROTOTYPE,No dedicated production lifecycle; row-level provenance is not modeled,{}
+Other Asset: FUND,assets + asset_performances,", 中國信託證券投資信託股份有限公司, 全球證券投資顧問股份有限公司, 匯豐證券投資信託股份有限公司, 台新證券投資信託股份有限公司, 合作金庫證券投資信託股份有限公司, 品浩太平洋證券投資顧問股份有限公司, 國泰證券投資顧問股份有限公司, 大華銀證券投資信託股份有限公司, 安聯證券投資信託股份有限公司, 宏利證券投資信託股份有限公司, 宏遠證券投資顧問股份有限公司, 富盛證券投資顧問股份有限公司, 富蘭克林證券投資顧問股份有限公司, 富達證券投資信託股份有限公司, 展新證券投資顧問股份有限公司, 待補（Yahoo篩選器頁面未提供發行機構資訊）, 摩根證券投資信託股份有限公司, 施羅德證券投資信託股份有限公司, 景順證券投資信託股份有限公司, 東方匯理證券投資信託股份有限公司, 柏瑞證券投資信託股份有限公司, 法銀巴黎證券投資顧問股份有限公司, 瀚亞證券投資信託股份有限公司, 玉山證券投資信託股份有限公司, 瑞銀證券投資信託股份有限公司, 百達證券投資顧問股份有限公司, 萬寶證券投資顧問股份有限公司, 第一金證券投資信託股份有限公司, 聯博證券投資信託股份有限公司, 貝萊德證券投資信託股份有限公司, 路博邁證券投資信託股份有限公司, 野村證券投資信託股份有限公司, 霸菱證券投資顧問股份有限公司",AVAILABLE_NOT_CONNECTED,12035,12035,12035,12035,0,0,0,,,,,,,,,,,,,,,,,NOT_STARTED,,false,,false,NOT_CONFIGURED,NOT_CONFIGURED,Provider-specific,NOT_RUN,PROTOTYPE,No dedicated production lifecycle; row-level provenance is not modeled,{}
+Alternative Data,Insurance Products,Product-specific sources not normalized,PARTIALLY_AVAILABLE,456,456,456,456,442,96.9298,19230,,2016-11-06,,2026-07-07,,,,,,,,,,,,,NOT_STARTED,,false,,false,NOT_CONFIGURED,NOT_CONFIGURED,NOT_CONFIGURED,NOT_RUN,PARTIAL,"No production scheduler, checkpoint, failure queue, or row-level provenance",{}
+Bonds,Individual Government/Corporate/Municipal/Agency/Convertible Bonds,NO_CONFIRMED_PRODUCTION_SOURCE,SOURCE_RESEARCH_REQUIRED,0,0,0,0,0,0,0,,,,,,,,,,,,,,,,,NOT_STARTED,,false,,false,NOT_CONFIGURED,NOT_CONFIGURED,NOT_CONFIGURED,NOT_RUN,NOT_STARTED,No canonical production table and no verified ingestion evidence,{}
+Futures / Options,Futures contracts / options chains / implied volatility / open interest,NO_CONFIRMED_PRODUCTION_SOURCE,SOURCE_RESEARCH_REQUIRED,0,0,0,0,0,0,0,,,,,,,,,,,,,,,,,NOT_STARTED,,false,,false,NOT_CONFIGURED,NOT_CONFIGURED,NOT_CONFIGURED,NOT_RUN,NOT_STARTED,No canonical production table and no verified ingestion evidence,{}
+Alternative Data,CDS / swaps / credit ratings / freight / semiconductor pricing / carbon markets,NO_CONFIRMED_PRODUCTION_SOURCE,SOURCE_RESEARCH_REQUIRED,0,0,0,0,0,0,0,,,,,,,,,,,,,,,,,NOT_STARTED,,false,,false,NOT_CONFIGURED,NOT_CONFIGURED,NOT_CONFIGURED,NOT_RUN,NOT_STARTED,No canonical production table and no verified ingestion evidence,{}
+Alternative Data,Fund flows / ETF flows / short interest / insider / institutional holdings / analyst estimates,NO_CONFIRMED_PRODUCTION_SOURCE,SOURCE_RESEARCH_REQUIRED,0,0,0,0,0,0,0,,,,,,,,,,,,,,,,,NOT_STARTED,,false,,false,NOT_CONFIGURED,NOT_CONFIGURED,NOT_CONFIGURED,NOT_RUN,NOT_STARTED,No canonical production table and no verified ingestion evidence,{}
+Alternative Data,Earnings/dividend/economic/IPO/delisting/corporate-action calendars,NO_CONFIRMED_PRODUCTION_SOURCE,SOURCE_RESEARCH_REQUIRED,0,0,0,0,0,0,0,,,,,,,,,,,,,,,,,NOT_STARTED,,false,,false,NOT_CONFIGURED,NOT_CONFIGURED,NOT_CONFIGURED,NOT_RUN,NOT_STARTED,No canonical production table and no verified ingestion evidence,{}
+REIT / Real Estate,Property indices / cap rates / rental indices / private-market proxies,NO_CONFIRMED_PRODUCTION_SOURCE,SOURCE_RESEARCH_REQUIRED,0,0,0,0,0,0,0,,,,,,,,,,,,,,,,,NOT_STARTED,,false,,false,NOT_CONFIGURED,NOT_CONFIGURED,NOT_CONFIGURED,NOT_RUN,NOT_STARTED,No canonical production table and no verified ingestion evidence,{}
