@@ -592,20 +592,18 @@ async function dispatcher(): Promise<void> {
     if (activeIds.has(decision.job.id)) skipped.push({ jobId: decision.job.id, status: "RUNNING", targetTradeDate: decision.targetTradeDate });
     else if (!selected.includes(decision)) skipped.push({ jobId: decision.job.id, status: "QUEUED", targetTradeDate: decision.targetTradeDate });
   }
-  const results: Record<string, unknown>[] = [];
-  for (const decision of selected) {
+  const results = await Promise.all(selected.map(async (decision): Promise<Record<string, unknown>> => {
     const probe = await providerReady(decision.job, decision.targetTradeDate);
     await recordProviderProbe(decision.job, decision.targetTradeDate, probe);
     if (!probe.ready) {
-      results.push({ jobId: decision.job.id, targetTradeDate: decision.targetTradeDate, status: "PROVIDER_NOT_READY", providerLatestDate: probe.providerLatestDate, reason: probe.reason });
-      continue;
+      return { jobId: decision.job.id, targetTradeDate: decision.targetTradeDate, status: "PROVIDER_NOT_READY", providerLatestDate: probe.providerLatestDate, reason: probe.reason };
     }
     try {
-      results.push(await execute(decision.job, decision.targetTradeDate, decision.runType, probe.providerLatestDate));
+      return await execute(decision.job, decision.targetTradeDate, decision.runType, probe.providerLatestDate);
     } catch (error) {
-      results.push({ jobId: decision.job.id, targetTradeDate: decision.targetTradeDate, status: "FAILED", error: error instanceof Error ? error.message : String(error) });
+      return { jobId: decision.job.id, targetTradeDate: decision.targetTradeDate, status: "FAILED", error: error instanceof Error ? error.message : String(error) };
     }
-  }
+  }));
   console.log(JSON.stringify({ at: new Date().toISOString(), active: [...activeIds], results, skipped, staleCleanup }, null, 2));
 }
 

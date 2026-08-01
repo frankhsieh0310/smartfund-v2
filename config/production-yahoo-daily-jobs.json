@@ -4,7 +4,7 @@
   "calendarValidThrough": "2026-12-31",
   "pollIntervalMinutes": 5,
   "maxConcurrentMarketJobs": 3,
-  "maxNewMarketJobsPerDispatch": 1,
+  "maxNewMarketJobsPerDispatch": 3,
   "jobs": [
     {
       "id": "twse-yahoo-daily",

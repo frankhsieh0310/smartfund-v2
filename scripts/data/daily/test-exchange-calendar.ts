@@ -22,6 +22,8 @@ async function main(): Promise<void> {
   assert.ok(!JSON.stringify(raw).includes("primaryTime"));
   assert.ok(!JSON.stringify(raw).includes("retryTime"));
   assert.ok(!/priority|marketCap|volume|userInterest|etfExposure/i.test(JSON.stringify(raw)));
+  assert.equal(registry.maxConcurrentMarketJobs, 3);
+  assert.equal(registry.maxNewMarketJobsPerDispatch, 3);
 
   const nasdaq = registry.jobs.find((job) => job.market === "NASDAQ")!;
   assert.equal(marketClock("Asia/Taipei", dispatchAt(nasdaq, "2026-07-31")).time, "05:00");
@@ -44,6 +46,7 @@ async function main(): Promise<void> {
     spain: "PASS",
     noGlobalJob: "PASS",
     noPriorityFilter: "PASS",
+    boundedConcurrentDispatch: "PASS",
     ianaDstConversion: "PASS",
     holidayAndHalfDay: "PASS",
   }, null, 2));
