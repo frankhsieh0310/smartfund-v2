@@ -42,7 +42,7 @@ async function main(): Promise<void> {
     }
     return;
   }
-  await run("scripts/data/financial/run-production-sec-financial.ts", [`--market=${market}`, "--max-symbols=25"]);
+  await run("scripts/data/financial/run-production-sec-financial.ts", [`--market=${market}`, "--max-symbols=50"]);
 }
 
 main().catch((error: unknown) => {
