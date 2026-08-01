@@ -2,6 +2,6 @@
 builder = "DOCKERFILE"
 
 [deploy]
-startCommand = "node --experimental-strip-types scripts/data/production/run-production-cron.ts"
+startCommand = "sh -c \"npx prisma migrate deploy && node --experimental-strip-types scripts/data/production/run-production-cron.ts\""
 restartPolicyType = "NEVER"
 cronSchedule = "*/5 * * * *"

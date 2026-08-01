@@ -14,7 +14,7 @@ async function main(): Promise<void> {
   // Each runner retains its own distributed lock and controlled provider
   // concurrency; Historical remains strictly after the Daily dispatches.
   const daily = await Promise.allSettled([
-    run("scripts/data/daily/run-production-yahoo-daily.ts", ["--all-due"]),
+    run("scripts/data/daily/run-production-yahoo-daily.ts", ["--dispatch"]),
     run("scripts/data/daily/run-production-yahoo-asset-daily.ts", []),
     run("scripts/data/daily/run-production-macro-daily.ts", []),
   ]);

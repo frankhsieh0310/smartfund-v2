@@ -1406,20 +1406,33 @@ model StockFinancialFact {
 }
 
 model ProductionSchedulerRun {
-  id          String    @id
-  jobId       String    @map("job_id")
-  exchange    String
-  runType     String    @map("run_type")
-  status      String
-  startedAt   DateTime  @default(now()) @map("started_at")
-  completedAt DateTime? @map("completed_at")
-  attempted   Int       @default(0)
-  completed   Int       @default(0)
-  inserted    Int       @default(0)
-  updated     Int       @default(0)
-  failed      Int       @default(0)
-  details     Json?
-  error       String?
+  id                        String    @id
+  jobId                     String    @map("job_id")
+  exchange                  String
+  runType                   String    @map("run_type")
+  status                    String
+  startedAt                 DateTime  @default(now()) @map("started_at")
+  completedAt               DateTime? @map("completed_at")
+  attempted                 Int       @default(0)
+  completed                 Int       @default(0)
+  inserted                  Int       @default(0)
+  updated                   Int       @default(0)
+  failed                    Int       @default(0)
+  universeCount             Int       @default(0) @map("universe_count")
+  successCount              Int       @default(0) @map("success_count")
+  noUpdateCount             Int       @default(0) @map("no_update_count")
+  permanentUnavailableCount Int       @default(0) @map("permanent_unavailable_count")
+  retryableFailureCount     Int       @default(0) @map("retryable_failure_count")
+  latestTradingDate         DateTime? @map("latest_trading_date")
+  targetTradeDate           DateTime? @map("target_trade_date") @db.Date
+  expectedTradingDate       DateTime? @map("expected_trading_date") @db.Date
+  providerLatestDate        DateTime? @map("provider_latest_date") @db.Date
+  runKey                    String?   @unique @map("run_key")
+  validationStatus          String?   @map("validation_status")
+  validationDetails         Json?     @map("validation_details")
+  exitCode                  Int?      @map("exit_code")
+  details                   Json?
+  error                     String?
 
   @@index([jobId, startedAt])
   @@map("production_scheduler_runs")
@@ -1436,16 +1449,45 @@ model ProductionSchedulerLock {
 }
 
 model ProductionSchedulerFailure {
-  jobId           String   @map("job_id")
-  stockId         String   @map("stock_id")
-  symbol          String
-  attempts        Int      @default(1)
-  lastError       String   @map("last_error")
-  lastAttemptedAt DateTime @default(now()) @map("last_attempted_at")
+  jobId              String    @map("job_id")
+  stockId            String    @map("stock_id")
+  symbol             String
+  attempts           Int       @default(1)
+  lastError          String    @map("last_error")
+  lastAttemptedAt    DateTime  @default(now()) @map("last_attempted_at")
+  errorType          String    @default("UNKNOWN_ERROR") @map("error_type")
+  nextRetryAt        DateTime? @map("next_retry_at")
+  resolvedAt         DateTime? @map("resolved_at")
+  classification     String    @default("RETRYABLE_FAILURE")
+  resolved           Boolean   @default(false)
+  resolutionReason   String?   @map("resolution_reason")
+  targetTradeDate    DateTime? @map("target_trade_date") @db.Date
+  providerLatestDate DateTime? @map("provider_latest_date") @db.Date
+  firstFailedAt      DateTime  @default(now()) @map("first_failed_at")
+  lastHttpStatus     Int?      @map("last_http_status")
+  rawResponsePath    String?   @map("raw_response_path")
 
   @@id([jobId, stockId])
   @@index([jobId])
   @@map("production_scheduler_failures")
+}
+
+model ProductionSchedulerCheckpoint {
+  checkpointKey   String    @id @map("checkpoint_key")
+  jobId           String    @map("job_id")
+  runId           String    @map("run_id")
+  lastSymbol      String?   @map("last_symbol")
+  processed       Int       @default(0)
+  succeeded       Int       @default(0)
+  failed          Int       @default(0)
+  targetTradeDate DateTime? @map("target_trade_date") @db.Date
+  runType         String?   @map("run_type")
+  startedAt       DateTime  @map("started_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  @@unique([jobId, targetTradeDate, runType])
+  @@index([jobId, updatedAt])
+  @@map("production_scheduler_checkpoints")
 }
 
 model ProductCoverageSnapshot {

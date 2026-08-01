@@ -36,11 +36,8 @@ function marketSql(market: Market): { sql: string; values: string[] } {
 
 async function main(): Promise<void> {
   const detail = process.argv.includes("--detail");
-  const config = JSON.parse(await readFile(join(process.cwd(), "config", "production-yahoo-daily-jobs.json"), "utf8")) as { jobs: Array<{ id: string; exchange: string; exchanges?: string[]; country?: string }> };
-  const markets: Market[] = [
-    ...config.jobs.map((job) => ({ jobId: job.id, market: job.exchange, exchanges: job.exchanges ?? [job.exchange], country: job.country ?? "", scheduled: true })),
-    { jobId: "spain-yahoo-daily", market: "Spain", exchanges: ["MCE"], country: "ES", scheduled: false },
-  ];
+  const config = JSON.parse(await readFile(join(process.cwd(), "config", "production-yahoo-daily-jobs.json"), "utf8")) as { jobs: Array<{ id: string; market: string; exchange: string; exchanges: string[]; country: string; schedulerEnabled: boolean }> };
+  const markets: Market[] = config.jobs.map((job) => ({ jobId: job.id, market: job.market, exchanges: job.exchanges, country: job.country, scheduled: job.schedulerEnabled }));
   const marketRows: Array<Record<string, unknown>> = [];
   for (const market of markets) {
     const query = marketSql(market);

@@ -32,6 +32,20 @@ const CHECKPOINT_EVERY = 25;
 const CONCURRENCY = 4;
 const maxSymbolsArg = process.argv.find((value) => value.startsWith("--max-symbols="))?.slice("--max-symbols=".length);
 const maxSymbols = maxSymbolsArg ? Number.parseInt(maxSymbolsArg, 10) : null;
+const DAILY_JOB_ID = MARKET === "NYSE" ? "nyse-yahoo-daily" : "sp500-yahoo-daily";
+
+async function dailyIsActive(): Promise<boolean> {
+  const rows = await prisma.$queryRawUnsafe<Array<{ active: boolean }>>(
+    "SELECT EXISTS(SELECT 1 FROM production_scheduler_locks WHERE job_id=$1 AND expires_at>NOW() AND updated_at>NOW()-INTERVAL '10 minutes') AS active",
+    DAILY_JOB_ID,
+  );
+  return Boolean(rows[0]?.active);
+}
+
+async function historicalPauseRequested(runId: string): Promise<boolean> {
+  const rows = await prisma.$queryRawUnsafe<Array<{ status: string }>>("SELECT status FROM production_scheduler_runs WHERE id=$1", runId);
+  return rows[0]?.status === "PAUSE_REQUESTED";
+}
 
 function csvTickers(contents: string): string[] {
   return [...new Set(contents.split(/\r?\n/).slice(1).map((line) => line.split(",")[0]?.trim()).filter((ticker): ticker is string => Boolean(ticker)))];
@@ -167,6 +181,10 @@ async function main(): Promise<void> {
     return;
   }
   const owner = `historical:${process.env.RAILWAY_DEPLOYMENT_ID ?? process.pid}`;
+  if (await dailyIsActive()) {
+    console.log(JSON.stringify({ jobId: JOB_ID, status: "PAUSED_DAILY_PRIORITY", checkpointPreserved: true }));
+    return;
+  }
   if (!await acquireLifecycleLock(prisma, JOB_ID, owner)) {
     console.log(JSON.stringify({ jobId: JOB_ID, status: "SKIPPED_LOCKED" }));
     return;
@@ -209,6 +227,11 @@ async function main(): Promise<void> {
       if (Math.floor(attemptedBeforeBatch / CHECKPOINT_EVERY) < Math.floor(summary.attempted / CHECKPOINT_EVERY) || offset + batch.length === selected.length) {
         await persistLifecycleCheckpoint(prisma, runId, summary, batch.at(-1)!.yahooSymbol);
         await heartbeatLifecycleLock(prisma, JOB_ID, owner);
+        if (await dailyIsActive() || await historicalPauseRequested(runId)) {
+          await pauseLifecycleRun(prisma, runId);
+          console.log(JSON.stringify({ runId, status: "PAUSED_DAILY_PRIORITY", processed: summary.attempted, lastSymbol: batch.at(-1)!.yahooSymbol }, null, 2));
+          return;
+        }
       }
     }
     if (selected.length < pending.length) {
