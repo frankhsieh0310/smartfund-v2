@@ -44,9 +44,9 @@ function newYorkDay(value = new Date()): string {
   return `${get("year")}-${get("month")}-${get("day")}`;
 }
 
-async function completedToday(job: string): Promise<boolean> {
-  const rows = await prisma.$queryRawUnsafe<{ started_at: Date }[]>("SELECT started_at FROM production_scheduler_runs WHERE job_id = $1 AND run_type = 'PRIMARY' AND status = 'COMPLETED' ORDER BY started_at DESC LIMIT 1", job);
-  return Boolean(rows[0] && newYorkDay(rows[0].started_at) === newYorkDay());
+async function completedToday(job: string, retryCompletedFailures = false): Promise<boolean> {
+  const rows = await prisma.$queryRawUnsafe<{ started_at: Date; failed: number }[]>("SELECT started_at, failed FROM production_scheduler_runs WHERE job_id = $1 AND run_type = 'PRIMARY' AND status = 'COMPLETED' ORDER BY started_at DESC LIMIT 1", job);
+  return Boolean(rows[0] && newYorkDay(rows[0].started_at) === newYorkDay() && (!retryCompletedFailures || rows[0].failed === 0));
 }
 
 function providerAssetClass(kind: AssetKind): ProviderAssetClass {
@@ -177,7 +177,7 @@ async function processItem(
 async function run(kind: AssetKind): Promise<Record<string, unknown>> {
   const job = jobId(kind);
   await recoverOrphanedLifecycleRun(prisma, job);
-  if (!force && await completedToday(job)) return { job, status: "SKIPPED_COMPLETED" };
+  if (!force && await completedToday(job, completionKinds.includes(kind))) return { job, status: "SKIPPED_COMPLETED" };
   const owner = `asset-daily:${process.env.RAILWAY_DEPLOYMENT_ID ?? process.pid}:${kind}`;
   if (!await acquireLifecycleLock(prisma, job, owner)) return { job, status: "SKIPPED_LOCKED" };
   let runId = "";
