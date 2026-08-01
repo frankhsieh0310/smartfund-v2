@@ -1,6 +1,6 @@
 # SmartFund Asset Layer Dashboard
 
-> Generated automatically at **2026-08-01T12:02:28.461Z** from completed Audit **2026-08-01T10-06-12-466Z** plus a small read-only Run Ledger refresh. No new audit is executed. Asset/global composite percentages are intentionally prohibited.
+> Generated automatically at **2026-08-01T12:08:58.379Z** from completed Audit **2026-08-01T10-06-12-466Z** plus a small read-only Run Ledger refresh. No new audit is executed. Asset/global composite percentages are intentionally prohibited.
 
 Current production asset: **Stocks**
 
@@ -11,7 +11,7 @@ Current production asset: **Stocks**
 | Universe | [##########] | 80,944 | 80,944 | 100.0000% | 80,944 | UNKNOWN | 2026-08-01 | PRODUCTION |
 | Historical Price | [##########] | 80,940 | 80,944 | 99.9951% | 106,632,352 | UNKNOWN | 2026-07-31 | PARTIAL_PRODUCTION |
 | Daily Price | [####------] | 34,495 | 80,944 | 42.6159% | UNKNOWN | UNKNOWN | 2026-07-31 | PARTIAL_PRODUCTION |
-| Financial Statements | [----------] | 2,565 | 80,944 | 3.1689% | 3,896,271 | 1987-05-11 | 2027-07-17 | DATA_ONLY |
+| Financial Statements | [----------] | 2,587 | 80,944 | 3.1960% | 3,955,474 | 1987-05-11 | 2027-07-17 | DATA_ONLY |
 | Corporate Actions | [----------] | 0 | 80,944 | 0.0000% | 0 | UNKNOWN | UNKNOWN | NOT_STARTED |
 | Derived Metrics | [----------] | 100 | 80,944 | 0.1235% | 95,882 | 2010-04-21 | 2026-07-30 | PROTOTYPE |
 | Validation | [####------] | 9 | 23 | 39.1304% | 9 | UNKNOWN | 2026-07-31 | PARTIAL_PRODUCTION |

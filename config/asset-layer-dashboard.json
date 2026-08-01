@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-01T12:02:28.461Z",
+  "generatedAt": "2026-08-01T12:08:58.379Z",
   "mode": "ASSET_LAYER_PROGRESS_FROM_COMPLETED_AUDIT",
   "compositePercentages": "PROHIBITED",
   "baselineAudit": {
@@ -72,12 +72,12 @@
           "id": "financial_statements",
           "layer": "Financial Statements",
           "universe": 80944,
-          "completed": 2565,
-          "rows": 3896271,
+          "completed": 2587,
+          "rows": 3955474,
           "earliestDate": "1987-05-11",
           "latestDate": "2027-07-17",
           "production": "DATA_ONLY",
-          "evidence": "2565/80944 stocks; 3,896,271 canonical facts",
+          "evidence": "2587/80944 stocks; 3,955,474 canonical facts",
           "missing": [
             "Revenue coverage",
             "EPS coverage",
@@ -88,7 +88,7 @@
             "Incremental filing scheduler",
             "Production validation"
           ],
-          "coveragePercent": 3.1689
+          "coveragePercent": 3.196
         },
         {
           "id": "corporate_actions",

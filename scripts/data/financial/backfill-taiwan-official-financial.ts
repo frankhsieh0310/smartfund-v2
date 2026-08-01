@@ -526,10 +526,10 @@ async function runMarket(market: Market): Promise<RunReport> {
   let runId: string | null = null;
   let lockHeld = false;
   const savedCheckpoint = resume ? await readCheckpoint(market) : null;
-  const checkpoint = savedCheckpoint?.fromRocYear === fromRocYear && savedCheckpoint?.toRocYear === toRocYear
+  let checkpoint = savedCheckpoint?.fromRocYear === fromRocYear && savedCheckpoint?.toRocYear === toRocYear
     ? savedCheckpoint
     : null;
-  const summary = restoreSummary(checkpoint);
+  let summary = restoreSummary(checkpoint);
   const failures: Array<{ sourceKey: string; reason: string }> = [];
   const officialSymbols = new Set<string>();
   const mappedSymbols = new Set<string>();
@@ -564,7 +564,20 @@ async function runMarket(market: Market): Promise<RunReport> {
       }
       const dbCheckpoint = resume ? await loadLifecycleResumeCheckpoint(prisma, jobId, incremental ? { targetTradeDate: targetDate, runType } : undefined) : null;
       if (dbCheckpoint?.last_symbol && !checkpoint?.lastSourceKey) {
-        console.warn(`Database checkpoint ${dbCheckpoint.last_symbol} exists without a local archive checkpoint; local archive remains authoritative.`);
+        checkpoint = {
+          version: 1,
+          market,
+          fromRocYear,
+          toRocYear,
+          lastSourceKey: dbCheckpoint.last_symbol,
+          processedDocuments: dbCheckpoint.processed,
+          parsedFacts: Number(dbCheckpoint.details?.inserted ?? 0),
+          failedDocuments: dbCheckpoint.failed,
+          updatedAt: new Date().toISOString(),
+        };
+        summary = restoreSummary(checkpoint);
+        if (dbCheckpoint.details) Object.assign(summary, dbCheckpoint.details);
+        console.log(JSON.stringify({ status: "RESUMED_FROM_DATABASE_CHECKPOINT", market, jobId, lastSourceKey: dbCheckpoint.last_symbol, processed: dbCheckpoint.processed }));
       }
     }
 
