@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-01T12:08:58.379Z",
+  "generatedAt": "2026-08-01T12:27:10.828Z",
   "baselineAudit": {
     "runId": "2026-08-01T10-06-12-466Z",
     "completedAt": "2026-08-01T10:08:46.118Z",
@@ -51,8 +51,8 @@
       "asset": "Stocks",
       "layer": "Financial Statements",
       "universe": 80944,
-      "completed": 2587,
-      "coveragePercent": 3.196,
+      "completed": 2624,
+      "coveragePercent": 3.2417,
       "production": "DATA_ONLY",
       "missing": [
         "Revenue coverage",
@@ -64,7 +64,7 @@
         "Incremental filing scheduler",
         "Production validation"
       ],
-      "evidence": "2587/80944 stocks; 3,955,474 canonical facts"
+      "evidence": "2624/80944 stocks; 4,059,413 canonical facts"
     },
     {
       "order": 1,
@@ -170,14 +170,14 @@
       "asset": "ETF",
       "layer": "Daily Price",
       "universe": 12453,
-      "completed": 0,
-      "coveragePercent": 0,
+      "completed": 5400,
+      "coveragePercent": 43.363,
       "production": "PARTIAL_PRODUCTION",
       "missing": [
         "Complete the resumable Global ETF universe",
         "Regional Daily counts are not isolated"
       ],
-      "evidence": "IN_PROGRESS"
+      "evidence": "PAUSED"
     },
     {
       "order": 2,

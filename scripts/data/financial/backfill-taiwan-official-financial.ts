@@ -505,6 +505,30 @@ async function buildMarketCoverage(prisma: PrismaClient, market: Market, officia
   };
 }
 
+async function buildIncrementalCoverage(prisma: PrismaClient, market: Market, currentFactCount: number, latestPeriod: string | null): Promise<MarketCoverage> {
+  const historicalJobId = `official-financial-${market.toLowerCase()}-historical`;
+  const rows = await prisma.$queryRawUnsafe<Array<{ validation_details: Record<string, unknown> | null; latest_trading_date: Date | null }>>(
+    "SELECT validation_details, latest_trading_date FROM production_scheduler_runs WHERE job_id = $1 AND status = 'COMPLETED' AND validation_status = 'PASS' ORDER BY completed_at DESC LIMIT 1",
+    historicalJobId,
+  );
+  const validation = rows[0]?.validation_details ?? {};
+  const universe = Number(validation.universe ?? 0);
+  const mappedIssuers = Number(validation.mappedIssuers ?? 0);
+  return {
+    universe,
+    mappedIssuers,
+    missingIdentifierSymbols: Array.isArray(validation.missingIdentifiers) ? validation.missingIdentifiers.map(String) : [],
+    financialComplete: Number(validation.financialComplete ?? mappedIssuers),
+    financialPartial: Number(validation.financialPartial ?? 0),
+    noFiling: Number(validation.noFiling ?? Math.max(0, universe - mappedIssuers)),
+    unsupportedSecurity: Number(validation.unsupportedSecurity ?? 0),
+    databaseFactCount: currentFactCount,
+    earliestPeriod: null,
+    latestPeriod: latestPeriod ?? rows[0]?.latest_trading_date?.toISOString().slice(0, 10) ?? null,
+    ledgerPath: "PRODUCTION_HISTORICAL_VALIDATION",
+  };
+}
+
 function restoreSummary(checkpoint: FileCheckpoint | null): RunSummary {
   const summary = createSummary();
   if (!checkpoint) return summary;
@@ -686,7 +710,9 @@ async function runMarket(market: Market): Promise<RunReport> {
       });
     }
     const coverage = prisma
-      ? await buildMarketCoverage(prisma, market, officialSymbols)
+      ? incremental
+        ? await buildIncrementalCoverage(prisma, market, summary.inserted, latestPeriod)
+        : await buildMarketCoverage(prisma, market, officialSymbols)
       : null;
     if (coverage) {
       databaseFactCount = coverage.databaseFactCount;

@@ -251,6 +251,8 @@ function normalizeCompanyFacts(stock: Stock, cik: string, payload: SecCompanyFac
       for (const [unit, facts] of Object.entries(concept?.units ?? {})) {
         for (const fact of facts) {
           if (!fact.end || typeof fact.val !== "number" || !Number.isFinite(fact.val) || !ALLOWED_FORMS.has(fact.form ?? "")) continue;
+          if (fact.start && fact.start > fact.end) continue;
+          if (fact.filed && fact.end > fact.filed) continue;
           const key = `${fact.accn ?? "NO_ACCN"}:${fact.start ?? "INSTANT"}:${fact.end}:${fact.fp ?? "NO_FP"}:${unit}`;
           const existing = selected.get(key);
           if (!existing || rank < existing.rank) selected.set(key, { fact, concept: alias.name, unit, rank });
@@ -339,6 +341,12 @@ async function resolveFailure(stock: Stock): Promise<void> {
   );
 }
 
+async function removeInvalidPointInTimeFacts(): Promise<number> {
+  return prisma.$executeRawUnsafe(
+    "DELETE FROM stock_financial_facts WHERE source = 'SEC_EDGAR' AND filing_date IS NOT NULL AND period_end > filing_date",
+  );
+}
+
 async function processStock(stock: Stock, cikByTicker: Map<string, string>): Promise<{ facts: number; latest: string | null }> {
   const cik = cikByTicker.get(normalizedTicker(stock.ticker));
   if (!cik) throw new Error("SEC_CIK_NOT_FOUND");
@@ -404,6 +412,8 @@ async function main(): Promise<void> {
       JOB_ID,
     );
     if (reconciledFailures > 0) console.log(JSON.stringify({ market: MARKET, retryRecovered: reconciledFailures, reason: "FACTS_ALREADY_INGESTED" }));
+    const invalidFactsRemoved = await removeInvalidPointInTimeFacts();
+    if (invalidFactsRemoved > 0) console.log(JSON.stringify({ market: MARKET, invalidFactsRemoved, validation: "PERIOD_END_NOT_AFTER_FILING_DATE" }));
     summary = restoreSummary(resume?.details ?? null, resume);
     const resumeIndex = resume?.last_symbol ? stocks.findIndex((stock) => stock.ticker === resume.last_symbol) : -1;
     if (resume?.last_symbol && resumeIndex < 0) throw new Error(`CHECKPOINT_SYMBOL_NOT_FOUND:${resume.last_symbol}`);

@@ -1,19 +1,19 @@
 # SmartFund Global Missing Matrix
 
-> Generated with the Asset Layer Dashboard at **2026-08-01T12:08:58.379Z**. Missing items are reported by layer and are never hidden inside an asset average.
+> Generated with the Asset Layer Dashboard at **2026-08-01T12:27:10.828Z**. Missing items are reported by layer and are never hidden inside an asset average.
 
 | Order | Asset | Layer | Coverage | Production | Missing | Evidence |
 | ---: | --- | --- | ---: | --- | --- | --- |
 | 1 | Stocks | Universe | 100.0000% | PRODUCTION | Official identifier mapping is incomplete for non-US/non-Taiwan markets | 80,944 registered stocks |
 | 1 | Stocks | Historical Price | 99.9951% | PARTIAL_PRODUCTION | 4 stocks lack completed historical-price status; Exact earliest date timed out in the completed audit | 80940/80944 stocks |
 | 1 | Stocks | Daily Price | 42.6159% | PARTIAL_PRODUCTION | 46449 stocks were not completed in their latest market run | 34495/80944 stocks in latest per-market runs |
-| 1 | Stocks | Financial Statements | 3.1960% | DATA_ONLY | Revenue coverage; EPS coverage; Cash coverage; Debt coverage; Assets/Liabilities/Equity coverage; Cash-flow coverage; Incremental filing scheduler; Production validation | 2587/80944 stocks; 3,955,474 canonical facts |
+| 1 | Stocks | Financial Statements | 3.2417% | DATA_ONLY | Revenue coverage; EPS coverage; Cash coverage; Debt coverage; Assets/Liabilities/Equity coverage; Cash-flow coverage; Incremental filing scheduler; Production validation | 2624/80944 stocks; 4,059,413 canonical facts |
 | 1 | Stocks | Corporate Actions | 0.0000% | NOT_STARTED | Dividend; Split/Reverse Split; Rights Issue; Bonus Share; Capital Reduction; Ticker/Company Name Change; Listing/Delisting | No canonical stock corporate-action production ledger |
 | 1 | Stocks | Derived Metrics | 0.1235% | PROTOTYPE | Market Cap; Enterprise Value; PE/PB/PS; Dividend Yield; ROE/ROA/ROIC; Margins; Debt Ratios; EV/EBITDA; Point-in-time validation; Incremental calculation | 100/80944; lower-bound financial-ratio evidence |
 | 1 | Stocks | Validation | 39.1304% | PARTIAL_PRODUCTION | Canada: NOT_RUN; Hong Kong: FAIL; Italy: NOT_RUN; Japan: FAIL; Netherlands: NOT_RUN; Other:CH:EBS: NOT_RUN; Other:CN:SHH: NOT_RUN; Other:CN:SHZ: NOT_RUN; Other:SE:STO: NOT_RUN; Other:SG:SES: NOT_RUN; Other:US:BTS: NOT_RUN; Other:US:PNK: NOT_RUN; Spain: NOT_RUN; United Kingdom: NOT_RUN | 9/23 market latest runs validated PASS |
 | 1 | Stocks | Scheduler | 69.5652% | PARTIAL_PRODUCTION | Other:CH:EBS; Other:CN:SHH; Other:CN:SHZ; Other:SE:STO; Other:SG:SES; Other:US:BTS; Other:US:PNK | 16/23 stock markets scheduler-enabled |
 | 2 | ETF | Historical Price | 99.0861% | PARTIAL_PRODUCTION | 117 ETFs have no completed history | 12685/12802 |
-| 2 | ETF | Daily Price | 0.0000% | PARTIAL_PRODUCTION | Complete the resumable Global ETF universe; Regional Daily counts are not isolated | IN_PROGRESS |
+| 2 | ETF | Daily Price | 43.3630% | PARTIAL_PRODUCTION | Complete the resumable Global ETF universe; Regional Daily counts are not isolated | PAUSED |
 | 2 | ETF | NAV | UNKNOWN | DATA_ONLY | Per-ETF NAV coverage; Global NAV incremental scheduler; NAV validation | 695 NAV rows; product coverage is unverified |
 | 2 | ETF | Distribution | 0.0000% | NOT_STARTED | Distribution history; Incremental distribution updates | 0 canonical ETF distribution products |
 | 2 | ETF | Holdings | 0.0000% | NOT_STARTED | Holdings; Holding weights; Sector/Country/Asset allocation; Portfolio date | 0 canonical ETF holding products |
