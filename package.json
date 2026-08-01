@@ -112,6 +112,8 @@
     "data:yahoo:html:etf:backfill": "tsx scripts/data/yahoo/backfill-yahoo-html-etf-history.ts",
     "data:financial:sec:backfill": "node --import tsx --env-file=.env scripts/data/financial/backfill-sec-financial-metric.ts --metric=revenue --resume",
     "data:financial:twse-pe:backfill": "node --import tsx --env-file=.env scripts/data/financial/backfill-taiwan-official-pe.ts --limit=100 --resume",
+    "data:financial:taiwan:official": "node --experimental-strip-types --env-file=.env scripts/data/financial/backfill-taiwan-official-financial.ts --resume",
+    "data:financial:taiwan:official:apply": "node --experimental-strip-types --env-file=.env scripts/data/financial/backfill-taiwan-official-financial.ts --apply --resume",
     "data:financial:sec-pe:backfill": "node --import tsx --env-file=.env scripts/data/financial/backfill-sec-historical-pe.ts --symbols=AAPL,MSFT,NVDA",
     "data:financial:fmp:pe-audit": "node --import tsx scripts/data/financial/audit-fmp-historical-pe.ts",
     "data:financial:sec-pe:compare-yahoo-gold": "node --import tsx --env-file=.env scripts/data/financial/compare-sec-pe-to-yahoo-gold.ts",
