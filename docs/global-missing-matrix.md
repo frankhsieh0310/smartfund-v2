@@ -1,6 +1,6 @@
 # SmartFund Global Missing Matrix
 
-> Generated with the Asset Layer Dashboard at **2026-08-01T12:27:10.828Z**. Missing items are reported by layer and are never hidden inside an asset average.
+> Updated from verified Railway production data at **2026-08-01T13:50:54.520Z**. Missing items are reported by layer and are never hidden inside an asset average.
 
 | Order | Asset | Layer | Coverage | Production | Missing | Evidence |
 | ---: | --- | --- | ---: | --- | --- | --- |
@@ -31,20 +31,9 @@
 | 5 | Economic Data | Revision | 0.0000% | NOT_STARTED | Initial release; Revised value; Revision date; Vintage observations | 0/74588 rows retain revisions |
 | 5 | Economic Data | Incremental | 17.4194% | PARTIAL_PRODUCTION | IMF incremental; OECD incremental; World Bank incremental | COMPLETED |
 | 6 | Commodity | Universe | UNKNOWN | DATA_ONLY | Complete canonical universe | 12 configured instruments; full target universe is not registered |
-| 6 | Commodity | Historical | 66.6667% | DATA_ONLY | 4 configured instruments lack history | 8/12 |
-| 6 | Commodity | Latest | 0.0000% | NOT_STARTED | Production incremental updater | No Railway production incremental run |
-| 6 | Commodity | Scheduler | 0.0000% | NOT_STARTED | Production scheduler | Provider registry exists, but runner does not dispatch this asset class |
-| 6 | Commodity | Validation | 0.0000% | NOT_STARTED | Production validation | NOT_RUN |
 | 7 | FX | Universe | UNKNOWN | DATA_ONLY | Complete canonical universe | 21 configured instruments; full target universe is not registered |
-| 7 | FX | Historical | 52.3810% | DATA_ONLY | 10 configured instruments lack history | 11/21 |
-| 7 | FX | Latest | 0.0000% | NOT_STARTED | Production incremental updater | No Railway production incremental run |
-| 7 | FX | Scheduler | 0.0000% | NOT_STARTED | Production scheduler | Provider registry exists, but runner does not dispatch this asset class |
-| 7 | FX | Validation | 0.0000% | NOT_STARTED | Production validation | NOT_RUN |
 | 8 | Crypto | Universe | UNKNOWN | DATA_ONLY | Complete canonical universe | 15 configured instruments; full target universe is not registered |
-| 8 | Crypto | Historical | 46.6667% | DATA_ONLY | 8 configured instruments lack history | 7/15 |
-| 8 | Crypto | Latest | 0.0000% | NOT_STARTED | 24/7 latest updater | No Railway production incremental run |
 | 8 | Crypto | 24/7 Scheduler | 0.0000% | NOT_STARTED | 24/7 scheduler | Provider registry exists, but runner does not dispatch this asset class |
-| 8 | Crypto | Validation | 0.0000% | NOT_STARTED | Production validation | NOT_RUN |
 | 9 | Bond | Universe | UNKNOWN | NOT_STARTED | Government bonds; Corporate bonds; Municipal/Agency bonds; Convertible bonds | No canonical individual bond universe |
 | 9 | Bond | Historical | UNKNOWN | NOT_STARTED | Historical price; Historical yield; Duration; Spread | No canonical bond history |
 | 9 | Bond | Daily | UNKNOWN | NOT_STARTED | Latest price; Latest yield; Incremental scheduler | No incremental bond lifecycle |

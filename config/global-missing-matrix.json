@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-01T12:27:10.828Z",
+  "generatedAt": "2026-08-01T13:50:54.520Z",
   "baselineAudit": {
     "runId": "2026-08-01T10-06-12-466Z",
     "completedAt": "2026-08-01T10:08:46.118Z",
@@ -432,58 +432,6 @@
       "evidence": "12 configured instruments; full target universe is not registered"
     },
     {
-      "order": 6,
-      "asset": "Commodity",
-      "layer": "Historical",
-      "universe": 12,
-      "completed": 8,
-      "coveragePercent": 66.6667,
-      "production": "DATA_ONLY",
-      "missing": [
-        "4 configured instruments lack history"
-      ],
-      "evidence": "8/12"
-    },
-    {
-      "order": 6,
-      "asset": "Commodity",
-      "layer": "Latest",
-      "universe": 12,
-      "completed": 0,
-      "coveragePercent": 0,
-      "production": "NOT_STARTED",
-      "missing": [
-        "Production incremental updater"
-      ],
-      "evidence": "No Railway production incremental run"
-    },
-    {
-      "order": 6,
-      "asset": "Commodity",
-      "layer": "Scheduler",
-      "universe": 1,
-      "completed": 0,
-      "coveragePercent": 0,
-      "production": "NOT_STARTED",
-      "missing": [
-        "Production scheduler"
-      ],
-      "evidence": "Provider registry exists, but runner does not dispatch this asset class"
-    },
-    {
-      "order": 6,
-      "asset": "Commodity",
-      "layer": "Validation",
-      "universe": 1,
-      "completed": 0,
-      "coveragePercent": 0,
-      "production": "NOT_STARTED",
-      "missing": [
-        "Production validation"
-      ],
-      "evidence": "NOT_RUN"
-    },
-    {
       "order": 7,
       "asset": "FX",
       "layer": "Universe",
@@ -495,58 +443,6 @@
         "Complete canonical universe"
       ],
       "evidence": "21 configured instruments; full target universe is not registered"
-    },
-    {
-      "order": 7,
-      "asset": "FX",
-      "layer": "Historical",
-      "universe": 21,
-      "completed": 11,
-      "coveragePercent": 52.381,
-      "production": "DATA_ONLY",
-      "missing": [
-        "10 configured instruments lack history"
-      ],
-      "evidence": "11/21"
-    },
-    {
-      "order": 7,
-      "asset": "FX",
-      "layer": "Latest",
-      "universe": 21,
-      "completed": 0,
-      "coveragePercent": 0,
-      "production": "NOT_STARTED",
-      "missing": [
-        "Production incremental updater"
-      ],
-      "evidence": "No Railway production incremental run"
-    },
-    {
-      "order": 7,
-      "asset": "FX",
-      "layer": "Scheduler",
-      "universe": 1,
-      "completed": 0,
-      "coveragePercent": 0,
-      "production": "NOT_STARTED",
-      "missing": [
-        "Production scheduler"
-      ],
-      "evidence": "Provider registry exists, but runner does not dispatch this asset class"
-    },
-    {
-      "order": 7,
-      "asset": "FX",
-      "layer": "Validation",
-      "universe": 1,
-      "completed": 0,
-      "coveragePercent": 0,
-      "production": "NOT_STARTED",
-      "missing": [
-        "Production validation"
-      ],
-      "evidence": "NOT_RUN"
     },
     {
       "order": 8,
@@ -564,32 +460,6 @@
     {
       "order": 8,
       "asset": "Crypto",
-      "layer": "Historical",
-      "universe": 15,
-      "completed": 7,
-      "coveragePercent": 46.6667,
-      "production": "DATA_ONLY",
-      "missing": [
-        "8 configured instruments lack history"
-      ],
-      "evidence": "7/15"
-    },
-    {
-      "order": 8,
-      "asset": "Crypto",
-      "layer": "Latest",
-      "universe": 15,
-      "completed": 0,
-      "coveragePercent": 0,
-      "production": "NOT_STARTED",
-      "missing": [
-        "24/7 latest updater"
-      ],
-      "evidence": "No Railway production incremental run"
-    },
-    {
-      "order": 8,
-      "asset": "Crypto",
       "layer": "24/7 Scheduler",
       "universe": 1,
       "completed": 0,
@@ -599,19 +469,6 @@
         "24/7 scheduler"
       ],
       "evidence": "Provider registry exists, but runner does not dispatch this asset class"
-    },
-    {
-      "order": 8,
-      "asset": "Crypto",
-      "layer": "Validation",
-      "universe": 1,
-      "completed": 0,
-      "coveragePercent": 0,
-      "production": "NOT_STARTED",
-      "missing": [
-        "Production validation"
-      ],
-      "evidence": "NOT_RUN"
     },
     {
       "order": 9,
