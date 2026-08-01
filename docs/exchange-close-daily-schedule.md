@@ -1,6 +1,6 @@
 # Exchange Close Daily Schedule
 
-Generated from the Production exchange calendar registry at 2026-08-01T04:56:46.312Z.
+Generated from the Production exchange calendar registry at 2026-08-01T06:11:30.503Z.
 
 Taiwan execution time is calculated from each exchange's IANA timezone, official trading date, special close and stabilization delay. It changes with daylight-saving time and special sessions; it is not a permanently fixed clock time.
 
@@ -15,7 +15,7 @@ Taiwan execution time is calculated from each exchange's IANA timezone, official
 | Korea | KRX | Asia/Seoul | 15:30 | None configured | NO_DST | 2026-07-31 14:30 | 50 min | 2026-08-03 15:20 | [Official calendar](https://global.krx.co.kr/contents/GLB/06/0602/0602010201/GLB0602010201T1.jsp) | SCHEDULED / NOT YET COMPLETE | korea-yahoo-daily | korea-yahoo-daily | korea-yahoo-daily:{tradeDate}:PRIMARY | None |
 | Hong Kong | HKEX | Asia/Hong_Kong | 16:10 | 2026-02-16 12:10 (HALF_DAY)<br>2026-12-24 12:10 (HALF_DAY)<br>2026-12-31 12:10 (HALF_DAY) | NO_DST | 2026-07-31 16:10 | 45 min | 2026-08-03 16:55 | [Official calendar](https://www.hkex.com.hk/Services/Trading-hours-and-Severe-Weather-Arrangements/Trading-Hours/Securities-Market?sc_lang=en) | SCHEDULED / NOT YET COMPLETE | hong-kong-yahoo-daily | hong-kong-yahoo-daily | hong-kong-yahoo-daily:{tradeDate}:PRIMARY | None |
 | Canada | TSX/TSXV | America/Toronto | 16:10 | 2026-12-24 13:00 (HALF_DAY) | DST | 2026-08-01 04:10 | 60 min | 2026-08-05 05:10 | [Official calendar](https://www.tsx.com/en/trading/calendars-and-trading-hours/calendar) | SCHEDULED / NOT YET COMPLETE | canada-yahoo-daily | canada-yahoo-daily | canada-yahoo-daily:{tradeDate}:PRIMARY | None |
-| Australia | ASX | Australia/Sydney | 16:11 | 2026-12-24 14:10 (HALF_DAY)<br>2026-12-31 14:10 (HALF_DAY) | STANDARD | 2026-07-31 14:11 | 45 min | 2026-08-03 14:56 | [Official calendar](https://www.asx.com.au/markets/market-resources/trading-hours-calendar/cash-market-trading-hours/trading-calendar) | RUNNING | australia-yahoo-daily | australia-yahoo-daily | australia-yahoo-daily:{tradeDate}:PRIMARY | None |
+| Australia | ASX | Australia/Sydney | 16:11 | 2026-12-24 14:10 (HALF_DAY)<br>2026-12-31 14:10 (HALF_DAY) | STANDARD | 2026-07-31 14:11 | 45 min | 2026-08-03 14:56 | [Official calendar](https://www.asx.com.au/markets/market-resources/trading-hours-calendar/cash-market-trading-hours/trading-calendar) | SCHEDULED / LAST COMPLETE | australia-yahoo-daily | australia-yahoo-daily | australia-yahoo-daily:{tradeDate}:PRIMARY | 2026-07-31 |
 | Germany | Xetra/Frankfurt | Europe/Berlin | 22:00 | None configured | DST | 2026-08-01 04:00 | 45 min | 2026-08-04 04:45 | [Official calendar](https://www.xetra.com/xetra-en/trading/trading-calendar-and-trading-hours) | SCHEDULED / LAST COMPLETE | germany-yahoo-daily | germany-yahoo-daily | germany-yahoo-daily:{tradeDate}:PRIMARY | 2026-07-28 |
 | France | Euronext Paris | Europe/Paris | 17:35 | 2026-12-24 14:05 (HALF_DAY)<br>2026-12-31 14:05 (HALF_DAY) | DST | 2026-07-31 23:35 | 45 min | 2026-08-04 00:20 | [Official calendar](https://www.euronext.com/en/trading/trading-hours-holidays) | SCHEDULED / LAST COMPLETE | france-yahoo-daily | france-yahoo-daily | france-yahoo-daily:{tradeDate}:PRIMARY | 2026-07-28 |
 | United Kingdom | LSE | Europe/London | 16:35 | 2026-12-24 12:30 (HALF_DAY)<br>2026-12-31 12:30 (HALF_DAY) | DST | 2026-07-31 23:35 | 45 min | 2026-08-04 00:20 | [Official calendar](https://www.londonstockexchange.com/equities-trading/business-days) | SCHEDULED / NOT YET COMPLETE | united-kingdom-yahoo-daily | united-kingdom-yahoo-daily | united-kingdom-yahoo-daily:{tradeDate}:PRIMARY | None |
@@ -25,7 +25,7 @@ Taiwan execution time is calculated from each exchange's IANA timezone, official
 
 ## Runtime rules
 
-- Railway Cron polls every 5 minutes and dispatches at most 1 new market per poll, with no more than 3 active market jobs.
+- Railway Cron polls every 5 minutes and dispatches at most 3 new market per poll, with no more than 3 active market jobs.
 - A job is eligible only after the exchange's real close plus stabilization delay and after Yahoo exposes a complete target-date daily candle.
 - Every job reads the market's complete active Universe; priority, volume and popularity are not filters.
 - The execution identity is market + targetTradeDate + runType. Locks, checkpoints, retries and failure rows are market-isolated.
