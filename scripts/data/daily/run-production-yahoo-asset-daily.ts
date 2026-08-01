@@ -44,9 +44,13 @@ function newYorkDay(value = new Date()): string {
   return `${get("year")}-${get("month")}-${get("day")}`;
 }
 
-async function completedToday(job: string, retryCompletedFailures = false): Promise<boolean> {
-  const rows = await prisma.$queryRawUnsafe<{ started_at: Date; failed: number }[]>("SELECT started_at, failed FROM production_scheduler_runs WHERE job_id = $1 AND run_type = 'PRIMARY' AND status = 'COMPLETED' ORDER BY started_at DESC LIMIT 1", job);
-  return Boolean(rows[0] && newYorkDay(rows[0].started_at) === newYorkDay() && (!retryCompletedFailures || rows[0].failed === 0));
+async function completedToday(job: string, kind: AssetKind): Promise<boolean> {
+  const rows = await prisma.$queryRawUnsafe<{ started_at: Date; failed: number; validation_details: { mappingCount?: number } | null }[]>("SELECT started_at, failed, validation_details FROM production_scheduler_runs WHERE job_id = $1 AND run_type = 'PRIMARY' AND status = 'COMPLETED' ORDER BY started_at DESC LIMIT 1", job);
+  if (!rows[0] || newYorkDay(rows[0].started_at) !== newYorkDay()) return false;
+  if (!completionKinds.includes(kind)) return true;
+  const providerConfig = await configuredProvider(providerAssetClass(kind));
+  const expectedMappingCount = Object.keys(providerConfig.instrumentMappings ?? {}).length;
+  return rows[0].failed === 0 && rows[0].validation_details?.mappingCount === expectedMappingCount;
 }
 
 function providerAssetClass(kind: AssetKind): ProviderAssetClass {
@@ -157,7 +161,7 @@ async function processItem(
     const sourceSymbol = providerConfig.instrumentMappings?.[item.symbol] ?? item.symbol;
     const request = { assetClass: providerAssetClass(kind), instrument: { id: item.id, symbol: sourceSymbol, latestDate: item.latestDate } } as const;
     const providerLatest = await adapter.latestAvailableDate(request);
-    if (isCurrent(item.latestDate, providerLatest)) {
+    if (sourceSymbol === item.symbol && isCurrent(item.latestDate, providerLatest)) {
       await prisma.$executeRawUnsafe("DELETE FROM production_scheduler_failures WHERE job_id = $1 AND stock_id = $2", job, item.id);
       return { attempted: 1, completed: 1, noUpdate: 1, upToProviderLatest: 1 };
     }
@@ -177,7 +181,7 @@ async function processItem(
 async function run(kind: AssetKind): Promise<Record<string, unknown>> {
   const job = jobId(kind);
   await recoverOrphanedLifecycleRun(prisma, job);
-  if (!force && await completedToday(job, completionKinds.includes(kind))) return { job, status: "SKIPPED_COMPLETED" };
+  if (!force && await completedToday(job, kind)) return { job, status: "SKIPPED_COMPLETED" };
   const owner = `asset-daily:${process.env.RAILWAY_DEPLOYMENT_ID ?? process.pid}:${kind}`;
   if (!await acquireLifecycleLock(prisma, job, owner)) return { job, status: "SKIPPED_LOCKED" };
   let runId = "";
@@ -234,6 +238,7 @@ async function run(kind: AssetKind): Promise<Record<string, unknown>> {
       latestTradingDate: latestTradingDate?.toISOString().slice(0, 10) ?? null,
       freshness: { policy: "PROVIDER_LATEST_AVAILABLE", upToProviderLatest: summary.upToProviderLatest, databaseLatest: latestTradingDate?.toISOString().slice(0, 10) ?? null },
       source: adapter.source(),
+      mappingCount: Object.keys(providerConfig.instrumentMappings ?? {}).length,
       summaryType: "DAILY_SUMMARY",
     };
     await completeLifecycleRun(prisma, runId, summary, latestTradingDate, validation);
