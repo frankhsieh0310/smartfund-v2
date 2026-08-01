@@ -29,7 +29,12 @@ async function main(): Promise<void> {
   // The production runner retains its durable checkpoint between Cron invocations.
   // A larger bounded slice reaches the Historical Ready gate promptly without
   // introducing a second worker or bypassing the lifecycle lock.
-  await run("scripts/data/historical/run-production-sp500-historical.ts", ["--market=NYSE", "--max-symbols=200"]);
+  await run("scripts/data/historical/run-production-sp500-historical.ts", ["--market=NYSE", "--max-symbols=200"]).catch((error: unknown) => {
+    // Historical validation is lower priority than every Daily and official
+    // filing lifecycle. Preserve its checkpoint and expose the failure without
+    // crashing the independent production pipelines in this Cron invocation.
+    console.error(JSON.stringify({ pipeline: "NYSE_HISTORICAL", status: "FAILED", error: error instanceof Error ? error.message : String(error) }));
+  });
   // Rebuild the only completion dashboard from canonical tables and the run
   // ledger after every production scheduler pass. No hand-maintained scores.
   await run("scripts/data/production/build-data-completion-dashboard.ts", []);
