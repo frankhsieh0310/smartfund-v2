@@ -48,9 +48,12 @@ type StockTask = { id: string; yahooSymbol: string; latestDate: Date | null };
 type TaskOutcome = Pick<RunSummary, "completed" | "inserted" | "updated" | "failed" | "success" | "noUpdate" | "permanentUnavailable" | "retryableFailure" | "upToProviderLatest">;
 
 class YahooRequestError extends Error {
-  constructor(message: string, readonly httpStatus: number | null = null) {
+  readonly httpStatus: number | null;
+
+  constructor(message: string, httpStatus: number | null = null) {
     super(message);
     this.name = "YahooRequestError";
+    this.httpStatus = httpStatus;
   }
 }
 
