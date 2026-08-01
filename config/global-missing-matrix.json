@@ -1,0 +1,710 @@
+{
+  "generatedAt": "2026-08-01T11:26:58.216Z",
+  "baselineAudit": {
+    "runId": "2026-08-01T10-06-12-466Z",
+    "completedAt": "2026-08-01T10:08:46.118Z",
+    "file": "debug/global-data-audit/2026-08-01T10-06-12-466Z/global-data-status.json"
+  },
+  "missing": [
+    {
+      "order": 1,
+      "asset": "Stocks",
+      "layer": "Universe",
+      "universe": 80944,
+      "completed": 80944,
+      "coveragePercent": 100,
+      "production": "PRODUCTION",
+      "missing": [
+        "Official identifier mapping is incomplete for non-US/non-Taiwan markets"
+      ],
+      "evidence": "80,944 registered stocks"
+    },
+    {
+      "order": 1,
+      "asset": "Stocks",
+      "layer": "Historical Price",
+      "universe": 80944,
+      "completed": 80940,
+      "coveragePercent": 99.9951,
+      "production": "PARTIAL_PRODUCTION",
+      "missing": [
+        "4 stocks lack completed historical-price status",
+        "Exact earliest date timed out in the completed audit"
+      ],
+      "evidence": "80940/80944 stocks"
+    },
+    {
+      "order": 1,
+      "asset": "Stocks",
+      "layer": "Daily Price",
+      "universe": 80944,
+      "completed": 34495,
+      "coveragePercent": 42.6159,
+      "production": "PARTIAL_PRODUCTION",
+      "missing": [
+        "46449 stocks were not completed in their latest market run"
+      ],
+      "evidence": "34495/80944 stocks in latest per-market runs"
+    },
+    {
+      "order": 1,
+      "asset": "Stocks",
+      "layer": "Financial Statements",
+      "universe": 80944,
+      "completed": null,
+      "coveragePercent": null,
+      "production": "DATA_ONLY",
+      "missing": [
+        "Revenue coverage",
+        "EPS coverage",
+        "Cash coverage",
+        "Debt coverage",
+        "Assets/Liabilities/Equity coverage",
+        "Cash-flow coverage",
+        "Incremental filing scheduler",
+        "Production validation"
+      ],
+      "evidence": "3,848,211 fact rows exist, but per-stock coverage query exceeded the production statement timeout"
+    },
+    {
+      "order": 1,
+      "asset": "Stocks",
+      "layer": "Corporate Actions",
+      "universe": 80944,
+      "completed": 0,
+      "coveragePercent": 0,
+      "production": "NOT_STARTED",
+      "missing": [
+        "Dividend",
+        "Split/Reverse Split",
+        "Rights Issue",
+        "Bonus Share",
+        "Capital Reduction",
+        "Ticker/Company Name Change",
+        "Listing/Delisting"
+      ],
+      "evidence": "No canonical stock corporate-action production ledger"
+    },
+    {
+      "order": 1,
+      "asset": "Stocks",
+      "layer": "Derived Metrics",
+      "universe": 80944,
+      "completed": 100,
+      "coveragePercent": 0.1235,
+      "production": "PROTOTYPE",
+      "missing": [
+        "Market Cap",
+        "Enterprise Value",
+        "PE/PB/PS",
+        "Dividend Yield",
+        "ROE/ROA/ROIC",
+        "Margins",
+        "Debt Ratios",
+        "EV/EBITDA",
+        "Point-in-time validation",
+        "Incremental calculation"
+      ],
+      "evidence": "100/80944; lower-bound financial-ratio evidence"
+    },
+    {
+      "order": 1,
+      "asset": "Stocks",
+      "layer": "Validation",
+      "universe": 23,
+      "completed": 9,
+      "coveragePercent": 39.1304,
+      "production": "PARTIAL_PRODUCTION",
+      "missing": [
+        "Canada: NOT_RUN",
+        "Hong Kong: FAIL",
+        "Italy: NOT_RUN",
+        "Japan: FAIL",
+        "Netherlands: NOT_RUN",
+        "Other:CH:EBS: NOT_RUN",
+        "Other:CN:SHH: NOT_RUN",
+        "Other:CN:SHZ: NOT_RUN",
+        "Other:SE:STO: NOT_RUN",
+        "Other:SG:SES: NOT_RUN",
+        "Other:US:BTS: NOT_RUN",
+        "Other:US:PNK: NOT_RUN",
+        "Spain: NOT_RUN",
+        "United Kingdom: NOT_RUN"
+      ],
+      "evidence": "9/23 market latest runs validated PASS"
+    },
+    {
+      "order": 1,
+      "asset": "Stocks",
+      "layer": "Scheduler",
+      "universe": 23,
+      "completed": 16,
+      "coveragePercent": 69.5652,
+      "production": "PARTIAL_PRODUCTION",
+      "missing": [
+        "Other:CH:EBS",
+        "Other:CN:SHH",
+        "Other:CN:SHZ",
+        "Other:SE:STO",
+        "Other:SG:SES",
+        "Other:US:BTS",
+        "Other:US:PNK"
+      ],
+      "evidence": "16/23 stock markets scheduler-enabled"
+    },
+    {
+      "order": 2,
+      "asset": "ETF",
+      "layer": "Historical Price",
+      "universe": 12802,
+      "completed": 12685,
+      "coveragePercent": 99.0861,
+      "production": "PARTIAL_PRODUCTION",
+      "missing": [
+        "117 ETFs have no completed history"
+      ],
+      "evidence": "12685/12802"
+    },
+    {
+      "order": 2,
+      "asset": "ETF",
+      "layer": "Daily Price",
+      "universe": 12453,
+      "completed": 5000,
+      "coveragePercent": 40.151,
+      "production": "PARTIAL_PRODUCTION",
+      "missing": [
+        "Complete the resumable Global ETF universe",
+        "Regional Daily counts are not isolated"
+      ],
+      "evidence": "PAUSED"
+    },
+    {
+      "order": 2,
+      "asset": "ETF",
+      "layer": "NAV",
+      "universe": 12802,
+      "completed": null,
+      "coveragePercent": null,
+      "production": "DATA_ONLY",
+      "missing": [
+        "Per-ETF NAV coverage",
+        "Global NAV incremental scheduler",
+        "NAV validation"
+      ],
+      "evidence": "695 NAV rows; product coverage is unverified"
+    },
+    {
+      "order": 2,
+      "asset": "ETF",
+      "layer": "Distribution",
+      "universe": 12802,
+      "completed": 0,
+      "coveragePercent": 0,
+      "production": "NOT_STARTED",
+      "missing": [
+        "Distribution history",
+        "Incremental distribution updates"
+      ],
+      "evidence": "0 canonical ETF distribution products"
+    },
+    {
+      "order": 2,
+      "asset": "ETF",
+      "layer": "Holdings",
+      "universe": 12802,
+      "completed": 0,
+      "coveragePercent": 0,
+      "production": "NOT_STARTED",
+      "missing": [
+        "Holdings",
+        "Holding weights",
+        "Sector/Country/Asset allocation",
+        "Portfolio date"
+      ],
+      "evidence": "0 canonical ETF holding products"
+    },
+    {
+      "order": 2,
+      "asset": "ETF",
+      "layer": "Corporate Actions",
+      "universe": 12802,
+      "completed": 0,
+      "coveragePercent": 0,
+      "production": "NOT_STARTED",
+      "missing": [
+        "Split",
+        "Distribution",
+        "Listing/Delisting",
+        "Incremental updates"
+      ],
+      "evidence": "No complete ETF corporate-action production evidence"
+    },
+    {
+      "order": 2,
+      "asset": "ETF",
+      "layer": "Validation",
+      "universe": 6,
+      "completed": 0,
+      "coveragePercent": 0,
+      "production": "NOT_STARTED",
+      "missing": [
+        "Price validation",
+        "NAV validation",
+        "Holdings validation",
+        "Distribution validation"
+      ],
+      "evidence": "No regional ETF validation run passed in the completed audit"
+    },
+    {
+      "order": 2,
+      "asset": "ETF",
+      "layer": "Scheduler",
+      "universe": 6,
+      "completed": 5,
+      "coveragePercent": 83.3333,
+      "production": "PARTIAL_PRODUCTION",
+      "missing": [
+        "Taiwan ETF"
+      ],
+      "evidence": "5/6 ETF regions scheduler-enabled"
+    },
+    {
+      "order": 3,
+      "asset": "Fund",
+      "layer": "Universe",
+      "universe": 12035,
+      "completed": 12035,
+      "coveragePercent": 100,
+      "production": "PARTIAL_PRODUCTION",
+      "missing": [
+        "Domicile",
+        "Share class",
+        "Reliable regional classification"
+      ],
+      "evidence": "12035 funds; 5321 mapped"
+    },
+    {
+      "order": 3,
+      "asset": "Fund",
+      "layer": "Historical NAV",
+      "universe": 12035,
+      "completed": 11815,
+      "coveragePercent": 98.172,
+      "production": "DATA_ONLY",
+      "missing": [
+        "220 funds lack historical NAV",
+        "Row-level provenance"
+      ],
+      "evidence": "11815/12035"
+    },
+    {
+      "order": 3,
+      "asset": "Fund",
+      "layer": "Daily NAV",
+      "universe": 12035,
+      "completed": 11732,
+      "coveragePercent": 97.4823,
+      "production": "DATA_ONLY",
+      "missing": [
+        "Railway production scheduler",
+        "Checkpoint/Resume evidence",
+        "Daily validation ledger"
+      ],
+      "evidence": "11732/12035 have latest NAV"
+    },
+    {
+      "order": 3,
+      "asset": "Fund",
+      "layer": "Distribution",
+      "universe": 12035,
+      "completed": 0,
+      "coveragePercent": 0,
+      "production": "NOT_STARTED",
+      "missing": [
+        "Distribution history",
+        "Incremental distribution updates"
+      ],
+      "evidence": "0 canonical fund distribution products"
+    },
+    {
+      "order": 3,
+      "asset": "Fund",
+      "layer": "Portfolio",
+      "universe": 12035,
+      "completed": 0,
+      "coveragePercent": 0,
+      "production": "NOT_STARTED",
+      "missing": [
+        "Holdings",
+        "Asset/Country/Sector allocation",
+        "Credit quality",
+        "Duration/Yield",
+        "Expense ratio"
+      ],
+      "evidence": "0 canonical fund holding products"
+    },
+    {
+      "order": 3,
+      "asset": "Fund",
+      "layer": "Validation",
+      "universe": 1,
+      "completed": 0,
+      "coveragePercent": 0,
+      "production": "NOT_STARTED",
+      "missing": [
+        "Historical NAV validation",
+        "Latest NAV validation",
+        "Portfolio validation",
+        "Distribution validation"
+      ],
+      "evidence": "NO_PRODUCTION_RUN_LEDGER"
+    },
+    {
+      "order": 4,
+      "asset": "Government Yield",
+      "layer": "Universe",
+      "universe": 5,
+      "completed": 5,
+      "coveragePercent": null,
+      "production": "PARTIAL_PRODUCTION",
+      "missing": [
+        "Global country registry",
+        "Complete tenor registry"
+      ],
+      "evidence": "5 configured series; global country/tenor target is not registered"
+    },
+    {
+      "order": 4,
+      "asset": "Government Yield",
+      "layer": "Yield Curve",
+      "universe": 5,
+      "completed": 5,
+      "coveragePercent": null,
+      "production": "PARTIAL_PRODUCTION",
+      "missing": [
+        "Overnight/1M/3M/6M/1Y/2Y/3Y/5Y/7Y/10Y/20Y/30Y by country"
+      ],
+      "evidence": "Only 5 configured yield series; complete country/tenor curve is not registered"
+    },
+    {
+      "order": 5,
+      "asset": "Economic Data",
+      "layer": "Revision",
+      "universe": 74588,
+      "completed": 0,
+      "coveragePercent": 0,
+      "production": "NOT_STARTED",
+      "missing": [
+        "Initial release",
+        "Revised value",
+        "Revision date",
+        "Vintage observations"
+      ],
+      "evidence": "0/74588 rows retain revisions"
+    },
+    {
+      "order": 5,
+      "asset": "Economic Data",
+      "layer": "Incremental",
+      "universe": 155,
+      "completed": 27,
+      "coveragePercent": 17.4194,
+      "production": "PARTIAL_PRODUCTION",
+      "missing": [
+        "IMF incremental",
+        "OECD incremental",
+        "World Bank incremental"
+      ],
+      "evidence": "COMPLETED"
+    },
+    {
+      "order": 6,
+      "asset": "Commodity",
+      "layer": "Universe",
+      "universe": 12,
+      "completed": 12,
+      "coveragePercent": null,
+      "production": "DATA_ONLY",
+      "missing": [
+        "Complete canonical universe"
+      ],
+      "evidence": "12 configured instruments; full target universe is not registered"
+    },
+    {
+      "order": 6,
+      "asset": "Commodity",
+      "layer": "Historical",
+      "universe": 12,
+      "completed": 8,
+      "coveragePercent": 66.6667,
+      "production": "DATA_ONLY",
+      "missing": [
+        "4 configured instruments lack history"
+      ],
+      "evidence": "8/12"
+    },
+    {
+      "order": 6,
+      "asset": "Commodity",
+      "layer": "Latest",
+      "universe": 12,
+      "completed": 0,
+      "coveragePercent": 0,
+      "production": "NOT_STARTED",
+      "missing": [
+        "Production incremental updater"
+      ],
+      "evidence": "No Railway production incremental run"
+    },
+    {
+      "order": 6,
+      "asset": "Commodity",
+      "layer": "Scheduler",
+      "universe": 1,
+      "completed": 0,
+      "coveragePercent": 0,
+      "production": "NOT_STARTED",
+      "missing": [
+        "Production scheduler"
+      ],
+      "evidence": "Provider registry exists, but runner does not dispatch this asset class"
+    },
+    {
+      "order": 6,
+      "asset": "Commodity",
+      "layer": "Validation",
+      "universe": 1,
+      "completed": 0,
+      "coveragePercent": 0,
+      "production": "NOT_STARTED",
+      "missing": [
+        "Production validation"
+      ],
+      "evidence": "NOT_RUN"
+    },
+    {
+      "order": 7,
+      "asset": "FX",
+      "layer": "Universe",
+      "universe": 21,
+      "completed": 21,
+      "coveragePercent": null,
+      "production": "DATA_ONLY",
+      "missing": [
+        "Complete canonical universe"
+      ],
+      "evidence": "21 configured instruments; full target universe is not registered"
+    },
+    {
+      "order": 7,
+      "asset": "FX",
+      "layer": "Historical",
+      "universe": 21,
+      "completed": 11,
+      "coveragePercent": 52.381,
+      "production": "DATA_ONLY",
+      "missing": [
+        "10 configured instruments lack history"
+      ],
+      "evidence": "11/21"
+    },
+    {
+      "order": 7,
+      "asset": "FX",
+      "layer": "Latest",
+      "universe": 21,
+      "completed": 0,
+      "coveragePercent": 0,
+      "production": "NOT_STARTED",
+      "missing": [
+        "Production incremental updater"
+      ],
+      "evidence": "No Railway production incremental run"
+    },
+    {
+      "order": 7,
+      "asset": "FX",
+      "layer": "Scheduler",
+      "universe": 1,
+      "completed": 0,
+      "coveragePercent": 0,
+      "production": "NOT_STARTED",
+      "missing": [
+        "Production scheduler"
+      ],
+      "evidence": "Provider registry exists, but runner does not dispatch this asset class"
+    },
+    {
+      "order": 7,
+      "asset": "FX",
+      "layer": "Validation",
+      "universe": 1,
+      "completed": 0,
+      "coveragePercent": 0,
+      "production": "NOT_STARTED",
+      "missing": [
+        "Production validation"
+      ],
+      "evidence": "NOT_RUN"
+    },
+    {
+      "order": 8,
+      "asset": "Crypto",
+      "layer": "Universe",
+      "universe": 15,
+      "completed": 15,
+      "coveragePercent": null,
+      "production": "DATA_ONLY",
+      "missing": [
+        "Complete canonical universe"
+      ],
+      "evidence": "15 configured instruments; full target universe is not registered"
+    },
+    {
+      "order": 8,
+      "asset": "Crypto",
+      "layer": "Historical",
+      "universe": 15,
+      "completed": 7,
+      "coveragePercent": 46.6667,
+      "production": "DATA_ONLY",
+      "missing": [
+        "8 configured instruments lack history"
+      ],
+      "evidence": "7/15"
+    },
+    {
+      "order": 8,
+      "asset": "Crypto",
+      "layer": "Latest",
+      "universe": 15,
+      "completed": 0,
+      "coveragePercent": 0,
+      "production": "NOT_STARTED",
+      "missing": [
+        "24/7 latest updater"
+      ],
+      "evidence": "No Railway production incremental run"
+    },
+    {
+      "order": 8,
+      "asset": "Crypto",
+      "layer": "24/7 Scheduler",
+      "universe": 1,
+      "completed": 0,
+      "coveragePercent": 0,
+      "production": "NOT_STARTED",
+      "missing": [
+        "24/7 scheduler"
+      ],
+      "evidence": "Provider registry exists, but runner does not dispatch this asset class"
+    },
+    {
+      "order": 8,
+      "asset": "Crypto",
+      "layer": "Validation",
+      "universe": 1,
+      "completed": 0,
+      "coveragePercent": 0,
+      "production": "NOT_STARTED",
+      "missing": [
+        "Production validation"
+      ],
+      "evidence": "NOT_RUN"
+    },
+    {
+      "order": 9,
+      "asset": "Bond",
+      "layer": "Universe",
+      "universe": null,
+      "completed": 0,
+      "coveragePercent": null,
+      "production": "NOT_STARTED",
+      "missing": [
+        "Government bonds",
+        "Corporate bonds",
+        "Municipal/Agency bonds",
+        "Convertible bonds"
+      ],
+      "evidence": "No canonical individual bond universe"
+    },
+    {
+      "order": 9,
+      "asset": "Bond",
+      "layer": "Historical",
+      "universe": null,
+      "completed": 0,
+      "coveragePercent": null,
+      "production": "NOT_STARTED",
+      "missing": [
+        "Historical price",
+        "Historical yield",
+        "Duration",
+        "Spread"
+      ],
+      "evidence": "No canonical bond history"
+    },
+    {
+      "order": 9,
+      "asset": "Bond",
+      "layer": "Daily",
+      "universe": null,
+      "completed": 0,
+      "coveragePercent": null,
+      "production": "NOT_STARTED",
+      "missing": [
+        "Latest price",
+        "Latest yield",
+        "Incremental scheduler"
+      ],
+      "evidence": "No incremental bond lifecycle"
+    },
+    {
+      "order": 9,
+      "asset": "Bond",
+      "layer": "Corporate",
+      "universe": null,
+      "completed": 0,
+      "coveragePercent": null,
+      "production": "NOT_STARTED",
+      "missing": [
+        "Issuer",
+        "Coupon",
+        "Maturity",
+        "Rating",
+        "Call/Put features"
+      ],
+      "evidence": "No corporate bond universe"
+    },
+    {
+      "order": 9,
+      "asset": "Bond",
+      "layer": "Yield",
+      "universe": null,
+      "completed": 0,
+      "coveragePercent": null,
+      "production": "NOT_STARTED",
+      "missing": [
+        "YTM",
+        "YTW",
+        "OAS",
+        "Credit spread"
+      ],
+      "evidence": "No individual bond yield layer"
+    },
+    {
+      "order": 9,
+      "asset": "Bond",
+      "layer": "Validation",
+      "universe": 1,
+      "completed": 0,
+      "coveragePercent": 0,
+      "production": "NOT_STARTED",
+      "missing": [
+        "Bond validation"
+      ],
+      "evidence": "NOT_RUN"
+    }
+  ]
+}

@@ -1,8 +1,8 @@
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
   "policy": "GLOBAL_ASSET_PRODUCTION",
   "sourcePolicy": "Use the latest completed Global Data Audit as the immutable coverage baseline; refresh lifecycle evidence only. Do not start a new audit from the dashboard.",
-  "completionFormula": "Arithmetic mean of required gate coverage. Unknown or unverified required gates contribute 0 until production evidence exists.",
+  "completionPolicy": "Layer-only reporting. Asset and global composite production percentages are prohibited. Unknown layer coverage remains UNKNOWN and is never converted to zero or averaged.",
   "requiredLifecycle": [
     "Universe",
     "Historical",
@@ -15,7 +15,7 @@
       "order": 1,
       "id": "stocks",
       "name": "Stocks",
-      "requiredGates": [
+      "requiredLayers": [
         "universe",
         "historical_price",
         "daily_price",
@@ -23,14 +23,14 @@
         "corporate_actions",
         "derived_metrics",
         "validation",
-        "production_scheduler"
+        "scheduler"
       ]
     },
     {
       "order": 2,
       "id": "etf",
       "name": "ETF",
-      "requiredGates": [
+      "requiredLayers": [
         "universe",
         "historical_price",
         "daily_price",
@@ -38,98 +38,94 @@
         "distribution",
         "holdings",
         "corporate_actions",
-        "derived_metrics",
         "validation",
-        "production_scheduler"
+        "scheduler"
       ]
     },
     {
       "order": 3,
       "id": "fund",
       "name": "Fund",
-      "requiredGates": [
+      "requiredLayers": [
         "universe",
         "historical_nav",
         "daily_nav",
         "distribution",
         "portfolio",
-        "characteristics",
-        "validation",
-        "production_scheduler"
+        "validation"
       ]
     },
     {
       "order": 4,
       "id": "government-yield",
       "name": "Government Yield",
-      "requiredGates": [
+      "requiredLayers": [
         "universe",
         "historical",
-        "incremental",
-        "validation",
-        "production_scheduler"
+        "daily",
+        "yield_curve",
+        "validation"
       ]
     },
     {
       "order": 5,
       "id": "economic-data",
       "name": "Economic Data",
-      "requiredGates": [
+      "requiredLayers": [
         "universe",
         "historical",
         "revision_history",
         "incremental",
-        "validation",
-        "production_scheduler"
+        "validation"
       ]
     },
     {
       "order": 6,
       "id": "commodity",
       "name": "Commodity",
-      "requiredGates": [
+      "requiredLayers": [
         "universe",
         "historical",
-        "incremental",
-        "validation",
-        "production_scheduler"
+        "latest",
+        "scheduler",
+        "validation"
       ]
     },
     {
       "order": 7,
       "id": "fx",
       "name": "FX",
-      "requiredGates": [
+      "requiredLayers": [
         "universe",
         "historical",
-        "incremental",
-        "validation",
-        "production_scheduler"
+        "latest",
+        "scheduler",
+        "validation"
       ]
     },
     {
       "order": 8,
       "id": "crypto",
       "name": "Crypto",
-      "requiredGates": [
+      "requiredLayers": [
         "universe",
         "historical",
-        "incremental_24_7",
-        "validation",
-        "production_scheduler"
+        "latest",
+        "scheduler_24_7",
+        "validation"
       ]
     },
     {
       "order": 9,
       "id": "bond",
       "name": "Bond",
-      "requiredGates": [
+      "requiredLayers": [
         "universe",
-        "historical_price_yield",
-        "incremental",
-        "spread",
-        "validation",
-        "production_scheduler"
+        "historical",
+        "daily",
+        "corporate",
+        "yield",
+        "validation"
       ]
     }
   ]
