@@ -13,6 +13,11 @@ async function main(): Promise<void> {
   // must never starve ETF, Macro, Bond, Index, or Volatility Daily work.
   // Each runner retains its own distributed lock and controlled provider
   // concurrency; Historical remains strictly after the Daily dispatches.
+  const financial = run("scripts/data/financial/run-production-financial.ts", []).catch((error: unknown) => {
+    // Financial ingestion owns an independent lifecycle. A filing-provider
+    // failure must be visible, but must never cancel price/asset Daily work.
+    console.error(JSON.stringify({ pipeline: "OFFICIAL_FINANCIAL", status: "FAILED", error: error instanceof Error ? error.message : String(error) }));
+  });
   const daily = await Promise.allSettled([
     run("scripts/data/daily/run-production-yahoo-daily.ts", ["--dispatch"]),
     run("scripts/data/daily/run-production-yahoo-asset-daily.ts", []),
@@ -20,6 +25,7 @@ async function main(): Promise<void> {
   ]);
   const rejected = daily.find((result): result is PromiseRejectedResult => result.status === "rejected");
   if (rejected) throw rejected.reason;
+  await financial;
   // The production runner retains its durable checkpoint between Cron invocations.
   // A larger bounded slice reaches the Historical Ready gate promptly without
   // introducing a second worker or bypassing the lifecycle lock.

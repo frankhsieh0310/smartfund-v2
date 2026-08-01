@@ -57,6 +57,12 @@ type Run = {
   latest_trading_date: Date | null;
   validation_status: string | null;
 };
+type FinancialLive = {
+  stocks: number;
+  rows: number;
+  earliest: string | null;
+  latest: string | null;
+};
 type Layer = {
   id: string;
   layer: string;
@@ -122,6 +128,24 @@ async function recentRuns(): Promise<{ runs: Run[]; error: string | null }> {
   }
 }
 
+async function liveFinancialCoverage(): Promise<FinancialLive | null> {
+  if (baselineOnly) return null;
+  try {
+    const rows = await prisma.$queryRawUnsafe<Array<{ stocks: number; rows: bigint; earliest: Date | null; latest: Date | null }>>(
+      "SELECT COUNT(DISTINCT stock_id)::int AS stocks, COUNT(*)::bigint AS rows, MIN(period_end) AS earliest, MAX(period_end) AS latest FROM stock_financial_facts",
+    );
+    const row = rows[0];
+    return row ? {
+      stocks: Number(row.stocks),
+      rows: Number(row.rows),
+      earliest: row.earliest?.toISOString().slice(0, 10) ?? null,
+      latest: row.latest?.toISOString().slice(0, 10) ?? null,
+    } : null;
+  } catch {
+    return null;
+  }
+}
+
 function latestPrimaryByJob(runs: Run[]): Map<string, Run> {
   const result = new Map<string, Run>();
   for (const run of runs) {
@@ -170,10 +194,11 @@ function missingRecord(asset: AssetLayers, item: Layer) {
 }
 
 async function main(): Promise<void> {
-  const [{ file: auditFile, audit }, roadmap, refresh] = await Promise.all([
+  const [{ file: auditFile, audit }, roadmap, refresh, financialLive] = await Promise.all([
     latestAudit(),
     readFile(join(root, "config", "global-asset-production-roadmap.json"), "utf8").then((value) => JSON.parse(value) as Roadmap),
     recentRuns(),
+    liveFinancialCoverage(),
   ]);
   const summaries = new Map(audit.categorySummary.map((item) => [item.category, item]));
   const summary = (category: string): AuditSummary => {
@@ -209,7 +234,7 @@ async function main(): Promise<void> {
       layer({ id: "universe", layer: "Universe", universe: stockSummary.universe, completed: stockSummary.universe, rows: stockSummary.universe, earliestDate: null, latestDate: audit.completedAt.slice(0, 10), production: "PRODUCTION", evidence: `${stockSummary.universe.toLocaleString()} registered stocks`, missing: ["Official identifier mapping is incomplete for non-US/non-Taiwan markets"] }),
       layer({ id: "historical_price", layer: "Historical Price", universe: stockSummary.historicalExpected, completed: stockSummary.historicalCompleted, rows: stockPriceRows, earliestDate: stockSummary.earliest, latestDate: stockSummary.latest, production: "PARTIAL_PRODUCTION", evidence: `${stockSummary.historicalCompleted ?? "UNKNOWN"}/${stockSummary.historicalExpected} stocks`, missing: [`${stockSummary.historicalExpected - Number(stockSummary.historicalCompleted ?? 0)} stocks lack completed historical-price status`, "Exact earliest date timed out in the completed audit"] }),
       layer({ id: "daily_price", layer: "Daily Price", universe: stockLive.universe, completed: stockLive.completed, rows: null, earliestDate: null, latestDate: stockLive.latest, production: "PARTIAL_PRODUCTION", evidence: `${stockLive.completed}/${stockLive.universe} stocks in latest per-market runs`, missing: [`${stockLive.universe - stockLive.completed} stocks were not completed in their latest market run`] }),
-      layer({ id: "financial_statements", layer: "Financial Statements", universe: stockSummary.universe, completed: financialSummary.historicalCompleted, coveragePercent: null, rows: audit.tableCounts?.end?.stock_financial_facts ?? financialSummary.historicalRows, earliestDate: financialSummary.earliest, latestDate: financialSummary.latest, production: "DATA_ONLY", evidence: "3,848,211 fact rows exist, but per-stock coverage query exceeded the production statement timeout", missing: ["Revenue coverage", "EPS coverage", "Cash coverage", "Debt coverage", "Assets/Liabilities/Equity coverage", "Cash-flow coverage", "Incremental filing scheduler", "Production validation"] }),
+      layer({ id: "financial_statements", layer: "Financial Statements", universe: stockSummary.universe, completed: financialLive?.stocks ?? financialSummary.historicalCompleted, rows: financialLive?.rows ?? audit.tableCounts?.end?.stock_financial_facts ?? financialSummary.historicalRows, earliestDate: financialLive?.earliest ?? financialSummary.earliest, latestDate: financialLive?.latest ?? financialSummary.latest, production: "DATA_ONLY", evidence: financialLive ? `${financialLive.stocks}/${stockSummary.universe} stocks; ${financialLive.rows.toLocaleString()} canonical facts` : "Production financial coverage query unavailable; using completed audit baseline", missing: ["Revenue coverage", "EPS coverage", "Cash coverage", "Debt coverage", "Assets/Liabilities/Equity coverage", "Cash-flow coverage", "Incremental filing scheduler", "Production validation"] }),
       layer({ id: "corporate_actions", layer: "Corporate Actions", universe: stockSummary.universe, completed: corporateSummary.historicalCompleted, rows: corporateSummary.historicalRows, earliestDate: corporateSummary.earliest, latestDate: corporateSummary.latest, production: "NOT_STARTED", evidence: "No canonical stock corporate-action production ledger", missing: ["Dividend", "Split/Reverse Split", "Rights Issue", "Bonus Share", "Capital Reduction", "Ticker/Company Name Change", "Listing/Delisting"] }),
       layer({ id: "derived_metrics", layer: "Derived Metrics", universe: derivedSummary.historicalExpected, completed: derivedSummary.historicalCompleted, rows: derivedSummary.historicalRows, earliestDate: derivedSummary.earliest, latestDate: derivedSummary.latest, production: "PROTOTYPE", evidence: `${derivedSummary.historicalCompleted ?? 0}/${derivedSummary.historicalExpected}; lower-bound financial-ratio evidence`, missing: ["Market Cap", "Enterprise Value", "PE/PB/PS", "Dividend Yield", "ROE/ROA/ROIC", "Margins", "Debt Ratios", "EV/EBITDA", "Point-in-time validation", "Incremental calculation"] }),
       layer({ id: "validation", layer: "Validation", universe: stockRows.length, completed: stockLive.validationPass, rows: stockLive.validationPass, earliestDate: null, latestDate: stockLive.latest, production: "PARTIAL_PRODUCTION", evidence: `${stockLive.validationPass}/${stockRows.length} market latest runs validated PASS`, missing: stockRows.filter((row) => row.validationStatus !== "PASS").map((row) => `${row.subcategory}: ${row.validationStatus}`) }),

@@ -66,7 +66,7 @@ type FileCheckpoint = {
 
 type RunReport = {
   market: Market;
-  mode: "ARCHIVE_ONLY" | "APPLY";
+  mode: "ARCHIVE_ONLY" | "APPLY" | "INCREMENTAL";
   startedAt: string;
   finishedAt: string;
   sourceDocuments: number;
@@ -134,9 +134,11 @@ const args = new Set(process.argv.slice(2));
 const valueArg = (name: string) => process.argv.slice(2).find((arg) => arg.startsWith(`${name}=`))?.slice(name.length + 1);
 const apply = args.has("--apply");
 const resume = args.has("--resume");
+const incremental = args.has("--incremental");
 const currentRocYear = new Date().getUTCFullYear() - 1911;
-const fromRocYear = Number(valueArg("--from-year") ?? DEFAULT_FROM_ROC_YEAR);
+const fromRocYear = Number(valueArg("--from-year") ?? (incremental ? currentRocYear - 1 : DEFAULT_FROM_ROC_YEAR));
 const toRocYear = Number(valueArg("--to-year") ?? currentRocYear);
+const targetDate = new Date(`${new Date().toISOString().slice(0, 10)}T00:00:00.000Z`);
 const requestedMarkets = (valueArg("--markets") ?? "TWSE,TPEX")
   .split(",")
   .map((market) => market.trim().toUpperCase())
@@ -335,7 +337,7 @@ async function writeAtomic(file: string, content: string): Promise<void> {
 }
 
 function checkpointPath(market: Market): string {
-  const mode = apply ? "apply" : "archive";
+  const mode = incremental ? `incremental-${targetDate.toISOString().slice(0, 10)}` : apply ? "apply" : "archive";
   return path.join(OUTPUT_ROOT, market.toLowerCase(), `checkpoint-${mode}.json`);
 }
 
@@ -350,7 +352,7 @@ async function readCheckpoint(market: Market): Promise<FileCheckpoint | null> {
 async function persistFileCheckpoint(checkpoint: FileCheckpoint): Promise<void> {
   const content = `${JSON.stringify(checkpoint, null, 2)}\n`;
   await writeAtomic(checkpointPath(checkpoint.market), content);
-  await writeAtomic(path.join(OUTPUT_ROOT, checkpoint.market.toLowerCase(), "checkpoint.json"), content);
+  await writeAtomic(path.join(OUTPUT_ROOT, checkpoint.market.toLowerCase(), incremental ? "checkpoint-incremental.json" : "checkpoint.json"), content);
 }
 
 async function archiveTask(task: SourceTask, html: string, facts: ParsedFact[]): Promise<{ htmlPath: string; factsPath: string }> {
@@ -517,7 +519,8 @@ function restoreSummary(checkpoint: FileCheckpoint | null): RunSummary {
 
 async function runMarket(market: Market): Promise<RunReport> {
   const startedAt = new Date().toISOString();
-  const jobId = `official-financial-${market.toLowerCase()}-historical`;
+  const jobId = `official-financial-${market.toLowerCase()}-${incremental ? "incremental" : "historical"}`;
+  const runType = incremental ? "OFFICIAL_FINANCIAL_INCREMENTAL" : "OFFICIAL_FINANCIAL_HISTORICAL";
   const owner = `${process.env.RAILWAY_REPLICA_ID ?? "local"}:${process.pid}`;
   const prisma = apply ? new PrismaClient() : null;
   let runId: string | null = null;
@@ -541,8 +544,25 @@ async function runMarket(market: Market): Promise<RunReport> {
       await recoverOrphanedLifecycleRun(prisma, jobId);
       lockHeld = await acquireLifecycleLock(prisma, jobId, owner);
       if (!lockHeld) throw new Error(`SKIPPED_LOCKED:${jobId}`);
-      runId = await createLifecycleRun(prisma, jobId, market, "OFFICIAL_FINANCIAL_HISTORICAL");
-      const dbCheckpoint = resume ? await loadLifecycleResumeCheckpoint(prisma, jobId) : null;
+      runId = await createLifecycleRun(prisma, jobId, market, runType, incremental ? {
+        targetTradeDate: targetDate,
+        runKey: `${jobId}:${targetDate.toISOString().slice(0, 10)}`,
+      } : {});
+      const existingRun = incremental
+        ? await prisma.$queryRawUnsafe<Array<{ status: string }>>("SELECT status FROM production_scheduler_runs WHERE id = $1", runId)
+        : [];
+      if (existingRun[0]?.status === "COMPLETED") {
+        console.log(JSON.stringify({ status: "SKIPPED_COMPLETED", market, jobId, targetDate: targetDate.toISOString().slice(0, 10) }));
+        return {
+          market, mode: "INCREMENTAL", startedAt, finishedAt: new Date().toISOString(), sourceDocuments: 0,
+          failedDocuments: 0, rawArchiveCount: 0, normalizedFactCount: 0, databaseFactCount: 0,
+          universe: 0, officialSymbols: 0, mappedIssuers: 0, missingIdentifiers: 0,
+          missingIdentifierSymbols: [], financialComplete: 0, financialPartial: 0, noFiling: 0,
+          unsupportedSecurity: 0, statusLedger: null, earliestPeriod: null, latestPeriod: null,
+          checkpoint: null, failures: [],
+        };
+      }
+      const dbCheckpoint = resume ? await loadLifecycleResumeCheckpoint(prisma, jobId, incremental ? { targetTradeDate: targetDate, runType } : undefined) : null;
       if (dbCheckpoint?.last_symbol && !checkpoint?.lastSourceKey) {
         console.warn(`Database checkpoint ${dbCheckpoint.last_symbol} exists without a local archive checkpoint; local archive remains authoritative.`);
       }
@@ -612,7 +632,7 @@ async function runMarket(market: Market): Promise<RunReport> {
       };
       await persistFileCheckpoint(nextCheckpoint);
       if (prisma && runId) {
-        await persistLifecycleCheckpoint(prisma, runId, summary, task.sourceKey);
+        await persistLifecycleCheckpoint(prisma, runId, summary, task.sourceKey, incremental ? { jobId, targetTradeDate: targetDate, runType } : undefined);
         await heartbeatLifecycleLock(prisma, jobId, owner);
       }
       console.log(JSON.stringify({ market, sourceKey: task.sourceKey, facts: facts.length, processed: summary.attempted, failed: summary.failed }));
@@ -680,7 +700,7 @@ async function runMarket(market: Market): Promise<RunReport> {
 
     const report: RunReport = {
       market,
-      mode: apply ? "APPLY" : "ARCHIVE_ONLY",
+      mode: incremental ? "INCREMENTAL" : apply ? "APPLY" : "ARCHIVE_ONLY",
       startedAt,
       finishedAt: new Date().toISOString(),
       sourceDocuments: archiveSummary.rawArchiveCount,

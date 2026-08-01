@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-01T11:26:58.216Z",
+  "generatedAt": "2026-08-01T11:48:18.756Z",
   "mode": "ASSET_LAYER_PROGRESS_FROM_COMPLETED_AUDIT",
   "compositePercentages": "PROHIBITED",
   "baselineAudit": {
@@ -72,13 +72,12 @@
           "id": "financial_statements",
           "layer": "Financial Statements",
           "universe": 80944,
-          "completed": null,
-          "coveragePercent": null,
-          "rows": 3848211,
-          "earliestDate": null,
-          "latestDate": null,
+          "completed": 2543,
+          "rows": 3854104,
+          "earliestDate": "1987-05-11",
+          "latestDate": "2026-07-30",
           "production": "DATA_ONLY",
-          "evidence": "3,848,211 fact rows exist, but per-stock coverage query exceeded the production statement timeout",
+          "evidence": "2543/80944 stocks; 3,854,104 canonical facts",
           "missing": [
             "Revenue coverage",
             "EPS coverage",
@@ -88,7 +87,8 @@
             "Cash-flow coverage",
             "Incremental filing scheduler",
             "Production validation"
-          ]
+          ],
+          "coveragePercent": 3.1417
         },
         {
           "id": "corporate_actions",
@@ -225,7 +225,7 @@
           "id": "daily_price",
           "layer": "Daily Price",
           "universe": 12453,
-          "completed": 5000,
+          "completed": 5200,
           "rows": null,
           "earliestDate": null,
           "latestDate": "2026-07-31",
@@ -235,7 +235,7 @@
             "Complete the resumable Global ETF universe",
             "Regional Daily counts are not isolated"
           ],
-          "coveragePercent": 40.151
+          "coveragePercent": 41.757
         },
         {
           "id": "nav",
