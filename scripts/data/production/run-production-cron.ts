@@ -37,7 +37,9 @@ async function main(): Promise<void> {
   });
   // Rebuild the only completion dashboard from canonical tables and the run
   // ledger after every production scheduler pass. No hand-maintained scores.
-  await run("scripts/data/production/build-data-completion-dashboard.ts", []);
+  await run("scripts/data/production/build-data-completion-dashboard.ts", []).catch((error: unknown) => {
+    console.error(JSON.stringify({ pipeline: "LAYER_DASHBOARD_REFRESH", status: "FAILED", error: error instanceof Error ? error.message : String(error) }));
+  });
 }
 
 main().catch((error: unknown) => {

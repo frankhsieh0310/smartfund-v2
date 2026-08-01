@@ -194,8 +194,19 @@ function missingRecord(asset: AssetLayers, item: Layer) {
 }
 
 async function main(): Promise<void> {
+  let auditSource: { file: string; audit: Audit };
+  try {
+    auditSource = await latestAudit();
+  } catch (error) {
+    console.log(JSON.stringify({
+      status: "SKIPPED_NO_AUDIT_BASELINE",
+      reason: error instanceof Error ? error.message : String(error),
+      existingDashboardPreserved: true,
+    }));
+    return;
+  }
   const [{ file: auditFile, audit }, roadmap, refresh, financialLive] = await Promise.all([
-    latestAudit(),
+    Promise.resolve(auditSource),
     readFile(join(root, "config", "global-asset-production-roadmap.json"), "utf8").then((value) => JSON.parse(value) as Roadmap),
     recentRuns(),
     liveFinancialCoverage(),
