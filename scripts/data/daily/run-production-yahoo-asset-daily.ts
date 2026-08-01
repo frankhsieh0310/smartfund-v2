@@ -17,8 +17,8 @@ import {
   releaseLifecycleLock,
 } from "../production/run-lifecycle.ts";
 
-type AssetKind = "GLOBAL_ETF" | "BOND_YIELD" | "MARKET_INDEX" | "VOLATILITY";
-type Item = { id: string; symbol: string; latestDate: Date | null };
+type AssetKind = "GLOBAL_ETF" | "BOND_YIELD" | "MARKET_INDEX" | "VOLATILITY" | "COMMODITY" | "FX" | "CRYPTO";
+type Item = { id: string; symbol: string; name: string; currency: string | null; latestDate: Date | null };
 
 const prisma = new PrismaClient();
 const CONCURRENCY = 4;
@@ -27,7 +27,8 @@ const CHECKPOINT_EVERY = 25;
 // finishing a 12k ETF universe in bounded, resumable production slices.
 const MAX_PER_CRON = 200;
 const requested = process.argv.find((value) => value.startsWith("--job="))?.slice(6) as AssetKind | undefined;
-const kinds: AssetKind[] = requested ? [requested] : ["GLOBAL_ETF", "BOND_YIELD", "MARKET_INDEX", "VOLATILITY"];
+const primaryKinds: AssetKind[] = ["GLOBAL_ETF", "BOND_YIELD", "MARKET_INDEX", "VOLATILITY"];
+const completionKinds: AssetKind[] = ["COMMODITY", "FX", "CRYPTO"];
 
 function jobId(kind: AssetKind): string { return `${kind.toLowerCase()}-production-daily`; }
 function exchange(kind: AssetKind): string { return kind; }
@@ -51,6 +52,18 @@ function providerAssetClass(kind: AssetKind): ProviderAssetClass {
   return kind === "GLOBAL_ETF" ? "ETF" : kind === "MARKET_INDEX" ? "MARKET_INDEX" : kind;
 }
 
+function marketType(kind: AssetKind): "BOND" | "INDEX" | "VOLATILITY" | "COMMODITY" | "FOREX" | "CRYPTO" {
+  if (kind === "BOND_YIELD") return "BOND";
+  if (kind === "MARKET_INDEX") return "INDEX";
+  if (kind === "FX") return "FOREX";
+  if (kind === "GLOBAL_ETF") throw new Error("ETF_DOES_NOT_USE_MARKET_TYPE");
+  return kind;
+}
+
+function usesCanonicalMarketData(kind: AssetKind): boolean {
+  return kind === "COMMODITY" || kind === "FX" || kind === "CRYPTO";
+}
+
 type ProviderConfig = { providerAdapter?: string; instrumentMappings?: Record<string, string> };
 async function configuredProvider(assetClass: ProviderAssetClass): Promise<ProviderConfig> {
   const config = JSON.parse(await readFile(join(process.cwd(), "config", "asset-provider-registry.json"), "utf8")) as { assets: Record<string, ProviderConfig> };
@@ -61,16 +74,21 @@ async function configuredProvider(assetClass: ProviderAssetClass): Promise<Provi
 
 async function universe(kind: AssetKind): Promise<Item[]> {
   if (kind === "GLOBAL_ETF") {
-    return prisma.$queryRawUnsafe<Item[]>("SELECT e.id, e.code AS symbol, MAX(h.date) AS \"latestDate\" FROM etfs e JOIN etf_history h ON h.etf_id = e.id WHERE e.is_active = TRUE AND NOT (COALESCE(e.exchange, '') ILIKE '%TW%' OR e.currency = 'TWD') GROUP BY e.id, e.code ORDER BY e.code");
+    return prisma.$queryRawUnsafe<Item[]>("SELECT e.id, e.code AS symbol, e.name, e.currency, MAX(h.date) AS \"latestDate\" FROM etfs e JOIN etf_history h ON h.etf_id = e.id WHERE e.is_active = TRUE AND NOT (COALESCE(e.exchange, '') ILIKE '%TW%' OR e.currency = 'TWD') GROUP BY e.id, e.code, e.name, e.currency ORDER BY e.code");
   }
-  const type = kind === "BOND_YIELD" ? "BOND" : kind === "MARKET_INDEX" ? "INDEX" : "VOLATILITY";
-  return prisma.$queryRawUnsafe<Item[]>("SELECT m.id, m.symbol, MAX(h.date) AS \"latestDate\" FROM market_master m JOIN market_history h ON h.symbol = m.symbol WHERE m.is_active = TRUE AND m.asset_type::text = $1 GROUP BY m.id, m.symbol ORDER BY m.symbol", type);
+  const type = marketType(kind);
+  if (usesCanonicalMarketData(kind)) {
+    return prisma.$queryRawUnsafe<Item[]>("SELECT m.id,m.symbol,m.name,m.currency,(SELECT MAX(d.date) FROM market_data d WHERE d.symbol=m.symbol) AS \"latestDate\" FROM market_master m WHERE m.is_active=TRUE AND m.asset_type::text=$1 ORDER BY m.symbol", type);
+  }
+  return prisma.$queryRawUnsafe<Item[]>("SELECT m.id,m.symbol,m.name,m.currency,MAX(h.date) AS \"latestDate\" FROM market_master m JOIN market_history h ON h.symbol=m.symbol WHERE m.is_active=TRUE AND m.asset_type::text=$1 GROUP BY m.id,m.symbol,m.name,m.currency ORDER BY m.symbol", type);
 }
 
 async function latestStoredDate(kind: AssetKind): Promise<Date | null> {
   const rows = kind === "GLOBAL_ETF"
     ? await prisma.$queryRawUnsafe<{ latest: Date | null }[]>("SELECT MAX(h.date) AS latest FROM etf_history h JOIN etfs e ON e.id = h.etf_id WHERE e.is_active = TRUE AND NOT (COALESCE(e.exchange, '') ILIKE '%TW%' OR e.currency = 'TWD')")
-    : await prisma.$queryRawUnsafe<{ latest: Date | null }[]>("SELECT MAX(h.date) AS latest FROM market_history h JOIN market_master m ON m.symbol = h.symbol WHERE m.is_active = TRUE AND m.asset_type::text = $1", kind === "BOND_YIELD" ? "BOND" : kind === "MARKET_INDEX" ? "INDEX" : "VOLATILITY");
+    : usesCanonicalMarketData(kind)
+      ? await prisma.$queryRawUnsafe<{ latest: Date | null }[]>("SELECT MAX(d.date) AS latest FROM market_data d JOIN market_master m ON m.symbol=d.symbol WHERE m.is_active=TRUE AND m.asset_type::text=$1", marketType(kind))
+      : await prisma.$queryRawUnsafe<{ latest: Date | null }[]>("SELECT MAX(h.date) AS latest FROM market_history h JOIN market_master m ON m.symbol=h.symbol WHERE m.is_active=TRUE AND m.asset_type::text=$1", marketType(kind));
   return rows[0]?.latest ?? null;
 }
 
@@ -79,6 +97,24 @@ async function upsert(kind: AssetKind, item: Item, candle: ProviderPoint): Promi
     const existing = await prisma.$queryRawUnsafe<{ exists: boolean }[]>("SELECT EXISTS(SELECT 1 FROM etf_history WHERE etf_id = $1 AND date = $2::date) AS exists", item.id, candle.date.toISOString().slice(0, 10));
     await prisma.$executeRawUnsafe("INSERT INTO etf_history (id, etf_id, date, price, volume) VALUES ($1, $2, $3::date, $4, $5) ON CONFLICT (etf_id, date) DO UPDATE SET price = EXCLUDED.price, volume = EXCLUDED.volume", randomUUID(), item.id, candle.date.toISOString().slice(0, 10), candle.close, candle.volume);
     await prisma.$executeRawUnsafe("UPDATE etfs SET latest_price = $2, volume = $3, price_updated_at = NOW(), updated_at = NOW() WHERE id = $1", item.id, candle.close, candle.volume);
+    return existing[0]?.exists ?? false;
+  }
+  if (usesCanonicalMarketData(kind)) {
+    const type = marketType(kind);
+    const tradeDate = candle.date.toISOString().slice(0, 10);
+    const existing = await prisma.$queryRawUnsafe<{ exists: boolean }[]>("SELECT EXISTS(SELECT 1 FROM market_data WHERE symbol=$1 AND date=$2::date) AS exists", item.symbol, tradeDate);
+    await prisma.$executeRawUnsafe(
+      `INSERT INTO market_data (id,symbol,name,type,date,close,open,high,low,volume,currency,source)
+       VALUES ($1,$2,$3,$4::"MarketType",$5::date,$6,$7,$8,$9,$10,$11,'YAHOO_CHART')
+       ON CONFLICT (symbol,date) DO UPDATE SET close=EXCLUDED.close,open=EXCLUDED.open,high=EXCLUDED.high,
+         low=EXCLUDED.low,volume=EXCLUDED.volume,currency=COALESCE(EXCLUDED.currency,market_data.currency),source='YAHOO_CHART'`,
+      randomUUID(), item.symbol, item.name, type, tradeDate, candle.close, candle.open, candle.high, candle.low, candle.volume, item.currency,
+    );
+    await prisma.$executeRawUnsafe(
+      "INSERT INTO market_history (id,symbol,date,open,high,low,close,volume) VALUES ($1,$2,$3::date,$4,$5,$6,$7,$8) ON CONFLICT (symbol,date) DO UPDATE SET open=EXCLUDED.open,high=EXCLUDED.high,low=EXCLUDED.low,close=EXCLUDED.close,volume=EXCLUDED.volume",
+      randomUUID(), item.symbol, tradeDate, candle.open, candle.high, candle.low, candle.close, candle.volume,
+    );
+    await prisma.$executeRawUnsafe("UPDATE market_master SET latest_close=$2,latest_date=$3::date,updated_at=NOW() WHERE id=$1", item.id, candle.close, tradeDate);
     return existing[0]?.exists ?? false;
   }
   const existing = await prisma.$queryRawUnsafe<{ exists: boolean }[]>("SELECT EXISTS(SELECT 1 FROM market_history WHERE symbol = $1 AND date = $2::date) AS exists", item.symbol, candle.date.toISOString().slice(0, 10));
@@ -205,5 +241,13 @@ async function run(kind: AssetKind): Promise<Record<string, unknown>> {
   finally { await releaseLifecycleLock(prisma, job, owner); }
 }
 
-async function main(): Promise<void> { console.log(JSON.stringify({ results: await Promise.all(kinds.map(run)) }, null, 2)); }
+async function main(): Promise<void> {
+  if (requested) {
+    console.log(JSON.stringify({ results: [await run(requested)] }, null, 2));
+    return;
+  }
+  const results = await Promise.all(primaryKinds.map(run));
+  for (const kind of completionKinds) results.push(await run(kind));
+  console.log(JSON.stringify({ results }, null, 2));
+}
 main().catch((error: unknown) => { console.error(error); process.exitCode = 1; }).finally(async () => prisma.$disconnect());
