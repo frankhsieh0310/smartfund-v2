@@ -27,6 +27,7 @@ const CHECKPOINT_EVERY = 25;
 // finishing a 12k ETF universe in bounded, resumable production slices.
 const MAX_PER_CRON = 200;
 const requested = process.argv.find((value) => value.startsWith("--job="))?.slice(6) as AssetKind | undefined;
+const force = process.argv.includes("--force");
 const primaryKinds: AssetKind[] = ["GLOBAL_ETF", "BOND_YIELD", "MARKET_INDEX", "VOLATILITY"];
 const completionKinds: AssetKind[] = ["COMMODITY", "FX", "CRYPTO"];
 
@@ -176,7 +177,7 @@ async function processItem(
 async function run(kind: AssetKind): Promise<Record<string, unknown>> {
   const job = jobId(kind);
   await recoverOrphanedLifecycleRun(prisma, job);
-  if (await completedToday(job)) return { job, status: "SKIPPED_COMPLETED" };
+  if (!force && await completedToday(job)) return { job, status: "SKIPPED_COMPLETED" };
   const owner = `asset-daily:${process.env.RAILWAY_DEPLOYMENT_ID ?? process.pid}:${kind}`;
   if (!await acquireLifecycleLock(prisma, job, owner)) return { job, status: "SKIPPED_LOCKED" };
   let runId = "";
@@ -246,8 +247,18 @@ async function main(): Promise<void> {
     console.log(JSON.stringify({ results: [await run(requested)] }, null, 2));
     return;
   }
-  const results = await Promise.all(primaryKinds.map(run));
-  for (const kind of completionKinds) results.push(await run(kind));
+  const runIsolated = async (kind: AssetKind): Promise<Record<string, unknown>> => {
+    try { return await run(kind); }
+    catch (error) {
+      return {
+        job: jobId(kind),
+        status: "FAILED",
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  };
+  const results = await Promise.all(primaryKinds.map(runIsolated));
+  for (const kind of completionKinds) results.push(await runIsolated(kind));
   console.log(JSON.stringify({ results }, null, 2));
 }
 main().catch((error: unknown) => { console.error(error); process.exitCode = 1; }).finally(async () => prisma.$disconnect());

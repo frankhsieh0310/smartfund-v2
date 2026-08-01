@@ -15,9 +15,56 @@
       }
     },
     "VOLATILITY": { "providerAdapter": "YAHOO_CHART" },
-    "COMMODITY": { "providerAdapter": "YAHOO_CHART" },
-    "FX": { "providerAdapter": "YAHOO_CHART" },
-    "CRYPTO": { "providerAdapter": "YAHOO_CHART" },
+    "COMMODITY": {
+      "providerAdapter": "YAHOO_CHART",
+      "instrumentMappings": {
+        "BRENT": "BZ=F",
+        "COCOA": "CC=F",
+        "COFFEE": "KC=F",
+        "COPPER": "HG=F",
+        "CORN": "ZC=F",
+        "COTTON": "CT=F",
+        "GASOLINE": "RB=F",
+        "GOLD": "GC=F",
+        "HEATOIL": "HO=F",
+        "NATGAS": "NG=F",
+        "PALLADIUM": "PA=F",
+        "PLATINUM": "PL=F",
+        "SILVER": "SI=F",
+        "SOYBEAN": "ZS=F",
+        "SUGAR": "SB=F",
+        "WHEAT": "ZW=F",
+        "WTI": "CL=F"
+      }
+    },
+    "FX": {
+      "providerAdapter": "YAHOO_CHART",
+      "instrumentMappings": {
+        "AUDUSD": "AUDUSD=X",
+        "DXY": "DX-Y.NYB",
+        "EURUSD": "EURUSD=X",
+        "GBPUSD": "GBPUSD=X",
+        "NZDUSD": "NZDUSD=X",
+        "USDCAD": "CAD=X",
+        "USDCHF": "CHF=X",
+        "USDCNH": "CNH=X",
+        "USDHKD": "HKD=X",
+        "USDJPY": "JPY=X",
+        "USDTWD": "TWD=X"
+      }
+    },
+    "CRYPTO": {
+      "providerAdapter": "YAHOO_CHART",
+      "instrumentMappings": {
+        "ADA": "ADA-USD",
+        "BNB": "BNB-USD",
+        "BTC": "BTC-USD",
+        "DOGE": "DOGE-USD",
+        "ETH": "ETH-USD",
+        "SOL": "SOL-USD",
+        "XRP": "XRP-USD"
+      }
+    },
     "MACRO": { "providerAdapters": ["FRED", "ECB", "IMF", "OECD", "WORLD_BANK"] }
   }
 }
