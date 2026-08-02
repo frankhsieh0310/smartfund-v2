@@ -15,11 +15,35 @@
       "assignments": [
         "global-roadmap",
         "worker-assignment",
-        "railway-handoff"
+        "railway-handoff",
+        "bond",
+        "global-indices",
+        "volatility",
+        "fx",
+        "commodity",
+        "crypto",
+        "government-yield",
+        "policy-money-market-rates",
+        "credit-spreads",
+        "economic",
+        "shipping-energy-housing-liquidity"
       ],
       "scopedAssignments": [
         { "domain": "BOND", "market": "US_TREASURY", "mode": "HISTORICAL" },
         { "domain": "BOND", "market": "US_TREASURY", "mode": "INCREMENTAL" }
+      ],
+      "authorizedQueue": [
+        "BOND",
+        "GLOBAL_INDICES",
+        "VOLATILITY",
+        "FX",
+        "COMMODITY",
+        "CRYPTO",
+        "GOVERNMENT_YIELD",
+        "POLICY_MONEY_MARKET_RATES",
+        "CREDIT_SPREADS",
+        "ECONOMIC",
+        "SHIPPING_ENERGY_HOUSING_LIQUIDITY"
       ]
     },
     {
@@ -45,27 +69,71 @@
       "name": "WORKER-01",
       "nodeId": "worker-01-main",
       "role": "HISTORICAL_WORKER",
-      "status": "ACTIVE",
-      "assignment": {
-        "domain": "FINANCIAL",
-        "market": "NASDAQ",
-        "mode": "HISTORICAL"
-      }
+      "status": "DISABLED",
+      "assignments": [],
+      "pausedAssignments": [
+        {
+          "domain": "FINANCIAL",
+          "market": "NASDAQ",
+          "mode": "HISTORICAL",
+          "status": "SUPERSEDED_BY_GLOBAL_STOCK_COMPLETION"
+        }
+      ]
     },
     {
       "name": "WORKER-02",
       "nodeId": "worker-02-desktop",
-      "role": "HISTORICAL_WORKER",
+      "role": "GLOBAL_STOCK_COMPLETION_WORKER",
       "status": "ACTIVE",
       "assignments": [
-        "simple-time-series-global-historical",
-        "simple-time-series-global-latest-canary",
-        "simple-time-series-global-validation"
+        "global-stock-data-completion"
       ],
       "scopedAssignments": [
-        { "domain": "SIMPLE_TIME_SERIES", "market": "GLOBAL_INDICES", "mode": "HISTORICAL" },
-        { "domain": "SIMPLE_TIME_SERIES", "market": "GLOBAL_INDICES", "mode": "INCREMENTAL" }
+        { "domain": "STOCK", "market": "TWSE", "mode": "COMPLETION" },
+        { "domain": "STOCK", "market": "TPEX", "mode": "COMPLETION" },
+        { "domain": "STOCK", "market": "NASDAQ", "mode": "COMPLETION" },
+        { "domain": "STOCK", "market": "NYSE", "mode": "COMPLETION" },
+        { "domain": "STOCK", "market": "AMEX", "mode": "COMPLETION" },
+        { "domain": "STOCK", "market": "JAPAN", "mode": "COMPLETION" },
+        { "domain": "STOCK", "market": "KOREA", "mode": "COMPLETION" },
+        { "domain": "STOCK", "market": "HONG_KONG", "mode": "COMPLETION" },
+        { "domain": "STOCK", "market": "CHINA_SHANGHAI", "mode": "COMPLETION" },
+        { "domain": "STOCK", "market": "CHINA_SHENZHEN", "mode": "COMPLETION" },
+        { "domain": "STOCK", "market": "SINGAPORE", "mode": "COMPLETION" },
+        { "domain": "STOCK", "market": "CANADA", "mode": "COMPLETION" },
+        { "domain": "STOCK", "market": "AUSTRALIA", "mode": "COMPLETION" },
+        { "domain": "STOCK", "market": "UNITED_KINGDOM", "mode": "COMPLETION" },
+        { "domain": "STOCK", "market": "GERMANY", "mode": "COMPLETION" },
+        { "domain": "STOCK", "market": "FRANCE", "mode": "COMPLETION" },
+        { "domain": "STOCK", "market": "NETHERLANDS", "mode": "COMPLETION" },
+        { "domain": "STOCK", "market": "SPAIN", "mode": "COMPLETION" },
+        { "domain": "STOCK", "market": "ITALY", "mode": "COMPLETION" },
+        { "domain": "STOCK", "market": "SWITZERLAND", "mode": "COMPLETION" },
+        { "domain": "STOCK", "market": "SWEDEN", "mode": "COMPLETION" }
       ],
+      "authorizedLayers": [
+        "UNIVERSE_IDENTITY",
+        "HISTORICAL_PRICE",
+        "LATEST_FRESHNESS_VALIDATION",
+        "CORPORATE_ACTIONS",
+        "FINANCIAL_HISTORICAL",
+        "FINANCIAL_COMPLETENESS",
+        "DERIVED_METRICS",
+        "TECHNICAL_INDICATORS",
+        "RISK_RETURN",
+        "DIVIDEND_ANALYTICS",
+        "OWNERSHIP",
+        "INSIDER",
+        "SHORT_INTEREST",
+        "ANALYST_ESTIMATES",
+        "EVENTS_FILINGS",
+        "CLASSIFICATION",
+        "DATA_QUALITY_LINEAGE"
+      ],
+      "failurePolicy": {
+        "singleItemFailure": "RECORD_FAILURE_ADVANCE_CHECKPOINT_CONTINUE",
+        "blockedScope": "SAVE_STATE_CONTINUE_NEXT_AUTHORIZED_SCOPE"
+      },
       "pausedAssignments": [
         {
           "domain": "FINANCIAL",
@@ -76,16 +144,27 @@
         }
       ],
       "authorizedQueue": [
-        "GLOBAL_INDICES",
-        "VOLATILITY",
-        "FX_EXPANSION",
-        "COMMODITY_EXPANSION",
-        "CRYPTO_EXPANSION",
-        "GOVERNMENT_YIELD_EXPANSION",
-        "POLICY_MONEY_MARKET_RATES",
-        "CREDIT_SPREADS",
-        "ECONOMIC_EXPANSION",
-        "SHIPPING_ENERGY_HOUSING_LIQUIDITY"
+        "TWSE",
+        "TPEX",
+        "NASDAQ",
+        "NYSE",
+        "AMEX",
+        "JAPAN",
+        "KOREA",
+        "HONG_KONG",
+        "CHINA_SHANGHAI",
+        "CHINA_SHENZHEN",
+        "SINGAPORE",
+        "CANADA",
+        "AUSTRALIA",
+        "UNITED_KINGDOM",
+        "GERMANY",
+        "FRANCE",
+        "NETHERLANDS",
+        "SPAIN",
+        "ITALY",
+        "SWITZERLAND",
+        "SWEDEN"
       ]
     }
   ]

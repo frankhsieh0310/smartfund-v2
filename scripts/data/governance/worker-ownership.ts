@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-export type WorkerMode = "HISTORICAL" | "INCREMENTAL" | "DAILY" | "RETRY" | "SCHEDULER";
+export type WorkerMode = "HISTORICAL" | "INCREMENTAL" | "DAILY" | "RETRY" | "SCHEDULER" | "COMPLETION";
 export type WorkerStatus = "ACTIVE" | "READY" | "BLOCKED" | "DISABLED";
 
 export type WorkerScope = {
@@ -13,11 +13,18 @@ export type WorkerScope = {
 export type WorkerNode = {
   name: string;
   nodeId: string;
-  role: "MASTER" | "PRODUCTION" | "HISTORICAL_WORKER";
+  role: "MASTER" | "PRODUCTION" | "HISTORICAL_WORKER" | "GLOBAL_STOCK_COMPLETION_WORKER";
   status: WorkerStatus;
   assignments?: string[];
   assignment?: WorkerScope;
   scopedAssignments?: WorkerScope[];
+  pausedAssignments?: Array<WorkerScope & { status: string; checkpoint?: string }>;
+  authorizedQueue?: string[];
+  authorizedLayers?: string[];
+  failurePolicy?: {
+    singleItemFailure: string;
+    blockedScope: string;
+  };
   blockedReason?: string;
 };
 
@@ -81,7 +88,7 @@ export function validateWorkerRegistry(registry: WorkerRegistry): WorkerRegistry
     if (!node.nodeId?.trim()) fail("WORKER_REGISTRY_INVALID", "NODE_ID_REQUIRED");
     if (nodeIds.has(node.nodeId)) fail("WORKER_NODE_ID_COLLISION", node.nodeId);
     nodeIds.add(node.nodeId);
-    if (!(["MASTER", "PRODUCTION", "HISTORICAL_WORKER"] as string[]).includes(node.role)) {
+    if (!(["MASTER", "PRODUCTION", "HISTORICAL_WORKER", "GLOBAL_STOCK_COMPLETION_WORKER"] as string[]).includes(node.role)) {
       fail("WORKER_REGISTRY_INVALID", `ROLE:${node.nodeId}`);
     }
     if (!(["ACTIVE", "READY", "BLOCKED", "DISABLED"] as string[]).includes(node.status)) {
@@ -90,6 +97,12 @@ export function validateWorkerRegistry(registry: WorkerRegistry): WorkerRegistry
     for (const scope of nodeScopes(node)) {
       if (!scope.domain || !scope.market || !scope.mode) fail("WORKER_REGISTRY_INVALID", `SCOPE:${node.nodeId}`);
       if (FORBIDDEN_FALLBACKS.has(scope.market)) fail("WORKER_FALLBACK_SCOPE_FORBIDDEN", `${node.nodeId}:${scope.market}`);
+      if (node.role === "GLOBAL_STOCK_COMPLETION_WORKER" && (scope.domain !== "STOCK" || scope.mode !== "COMPLETION")) {
+        fail("WORKER_ROLE_SCOPE_FORBIDDEN", `${node.nodeId}:${scope.domain}:${scope.market}:${scope.mode}`);
+      }
+      if (node.role === "PRODUCTION" && (scope.mode === "HISTORICAL" || scope.mode === "COMPLETION")) {
+        fail("WORKER_ROLE_SCOPE_FORBIDDEN", `${node.nodeId}:${scope.domain}:${scope.market}:${scope.mode}`);
+      }
       const key = `${scope.domain}:${scope.market}:${scope.mode}`;
       const existing = scopeOwners.get(key);
       if (existing && existing !== node.nodeId) fail("WORKER_OWNERSHIP_COLLISION", `${key}:${existing}:${node.nodeId}`);
