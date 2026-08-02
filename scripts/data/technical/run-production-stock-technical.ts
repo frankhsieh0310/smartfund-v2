@@ -174,7 +174,7 @@ async function main(): Promise<void> {
   const selected = await findCompletionTargets(resume?.last_symbol, MAX_SYMBOLS);
   const [activeLocks, activeRuns, histories] = await Promise.all([
     prisma.productionSchedulerLock.count({ where: { jobId: JOB_ID, expiresAt: { gt: new Date() } } }),
-    prisma.productionSchedulerRun.count({ where: { jobId: JOB_ID, status: { in: ["RUNNING", "IN_PROGRESS", "PAUSE_REQUESTED"] } } }),
+    prisma.productionSchedulerRun.count({ where: { jobId: JOB_ID, status: { in: ["RUNNING", "IN_PROGRESS", "PAUSE_REQUESTED"] }, startedAt: { gt: new Date(Date.now() - 10 * 60_000) } } }),
     prisma.stockHistory.groupBy({ by: ["stockId"], where: { stockId: { in: selected.map((s) => s.id) } }, _count: { _all: true } }),
   ]);
   const historyCount = new Map(histories.map((row) => [row.stockId, row._count._all]));
