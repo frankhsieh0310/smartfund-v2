@@ -11,11 +11,11 @@ import {
 
 type Stock = { id: string; ticker: string; yahooSymbol: string; exchange: string; isActive: boolean };
 type Candle = { date: string; open: number | null; high: number | null; low: number | null; close: number; adjustedClose: number | null; volume: number | null };
-type Market = "JPX" | "KSC";
+type Market = "JPX" | "KSC" | "KOE";
 
 const rawMarket = process.argv.find((v) => v.startsWith("--market="))?.slice(9).trim().toUpperCase();
-if (!rawMarket) throw new Error("MARKET_REQUIRED:pass --market=JPX or --market=KSC");
-if (!(["JPX", "KSC"] as string[]).includes(rawMarket)) throw new Error(`UNSUPPORTED_HISTORICAL_MARKET:${rawMarket}`);
+if (!rawMarket) throw new Error("MARKET_REQUIRED:pass --market=JPX, --market=KSC, or --market=KOE");
+if (!(["JPX", "KSC", "KOE"] as string[]).includes(rawMarket)) throw new Error(`UNSUPPORTED_HISTORICAL_MARKET:${rawMarket}`);
 const MARKET = rawMarket as Market;
 const DRY_RUN = process.argv.includes("--dry-run");
 const maxArg = process.argv.find((v) => v.startsWith("--max-symbols="))?.slice(14);
@@ -24,6 +24,7 @@ if (!Number.isSafeInteger(MAX_SYMBOLS) || MAX_SYMBOLS < 1 || MAX_SYMBOLS > 250) 
 const CONFIG: Record<Market, { jobId: string; dailyJobId: string; rawDirectory: string }> = {
   JPX: { jobId: "stock-price-jpx-historical", dailyJobId: "japan-yahoo-daily", rawDirectory: "jpx" },
   KSC: { jobId: "stock-price-ksc-historical", dailyJobId: "korea-yahoo-daily", rawDirectory: "ksc" },
+  KOE: { jobId: "stock-price-koe-historical", dailyJobId: "korea-yahoo-daily", rawDirectory: "koe" },
 };
 const JOB_ID = CONFIG[MARKET].jobId;
 const DAILY_JOB_ID = CONFIG[MARKET].dailyJobId;
