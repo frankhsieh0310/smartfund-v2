@@ -12,7 +12,15 @@
       "nodeId": "smartfund-master",
       "role": "MASTER",
       "status": "ACTIVE",
-      "assignments": []
+      "assignments": [
+        "global-roadmap",
+        "worker-assignment",
+        "railway-handoff"
+      ],
+      "scopedAssignments": [
+        { "domain": "BOND", "market": "US_TREASURY", "mode": "HISTORICAL" },
+        { "domain": "BOND", "market": "US_TREASURY", "mode": "INCREMENTAL" }
+      ]
     },
     {
       "name": "RAILWAY",
@@ -49,11 +57,36 @@
       "nodeId": "worker-02-desktop",
       "role": "HISTORICAL_WORKER",
       "status": "ACTIVE",
-      "assignment": {
-        "domain": "FINANCIAL",
-        "market": "NYSE",
-        "mode": "HISTORICAL"
-      }
+      "assignments": [
+        "simple-time-series-global-historical",
+        "simple-time-series-global-latest-canary",
+        "simple-time-series-global-validation"
+      ],
+      "scopedAssignments": [
+        { "domain": "SIMPLE_TIME_SERIES", "market": "GLOBAL_INDICES", "mode": "HISTORICAL" },
+        { "domain": "SIMPLE_TIME_SERIES", "market": "GLOBAL_INDICES", "mode": "INCREMENTAL" }
+      ],
+      "pausedAssignments": [
+        {
+          "domain": "FINANCIAL",
+          "market": "NYSE",
+          "mode": "HISTORICAL",
+          "status": "PAUSED_BY_PRIORITY_REALLOCATION",
+          "checkpoint": "EMR / 825"
+        }
+      ],
+      "authorizedQueue": [
+        "GLOBAL_INDICES",
+        "VOLATILITY",
+        "FX_EXPANSION",
+        "COMMODITY_EXPANSION",
+        "CRYPTO_EXPANSION",
+        "GOVERNMENT_YIELD_EXPANSION",
+        "POLICY_MONEY_MARKET_RATES",
+        "CREDIT_SPREADS",
+        "ECONOMIC_EXPANSION",
+        "SHIPPING_ENERGY_HOUSING_LIQUIDITY"
+      ]
     }
   ]
 }
