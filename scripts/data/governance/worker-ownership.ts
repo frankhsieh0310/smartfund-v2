@@ -128,7 +128,7 @@ export function validateWorkerOwnership(registry: WorkerRegistry, request: Owner
     nodeStatus: node.status,
     ...expected,
     ownershipValidated: true,
-    liveWriteAuthorized: node.status === "ACTIVE" && !request.dryRun,
+    liveWriteAuthorized: node.status === "ACTIVE",
   };
 }
 

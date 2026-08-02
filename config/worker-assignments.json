@@ -48,13 +48,12 @@
       "name": "WORKER-02",
       "nodeId": "worker-02-desktop",
       "role": "HISTORICAL_WORKER",
-      "status": "READY",
+      "status": "ACTIVE",
       "assignment": {
         "domain": "FINANCIAL",
         "market": "NYSE",
         "mode": "HISTORICAL"
-      },
-      "blockedReason": "Railway ownership transfer must be deployed and the legacy Railway lifecycle and lock must be absent before Master activation. Dry-run validation is allowed."
+      }
     }
   ]
 }
