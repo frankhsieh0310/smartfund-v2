@@ -222,7 +222,7 @@ async function main(): Promise<void> {
   const missing = await findMissingStocks(resume?.last_symbol, MAX_SYMBOLS);
   const [ownLocks, ownRuns, daily] = await Promise.all([
     prisma.productionSchedulerLock.count({ where: { jobId: JOB_ID, expiresAt: { gt: new Date() } } }),
-    prisma.productionSchedulerRun.count({ where: { jobId: JOB_ID, status: { in: ["RUNNING", "IN_PROGRESS", "PAUSE_REQUESTED"] } } }),
+    prisma.productionSchedulerRun.count({ where: { jobId: JOB_ID, status: { in: ["RUNNING", "IN_PROGRESS", "PAUSE_REQUESTED"] }, startedAt: { gt: new Date(Date.now() - 10 * 60_000) } } }),
     dailyWriterState(),
   ]);
   const ready = ownLocks === 0 && ownRuns === 0 && daily.activeLocks === 0 && daily.activeRuns === 0 && missing.length > 0;
