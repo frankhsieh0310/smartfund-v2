@@ -146,6 +146,23 @@ async function recordFailure(stock: Stock, error: unknown): Promise<void> {
   });
 }
 
+async function findCompletionTargets(afterTicker: string | null | undefined, limit: number): Promise<Stock[]> {
+  return prisma.$queryRawUnsafe<Stock[]>(
+    `SELECT stock.id, stock.ticker, stock.exchange, stock.is_active AS "isActive"
+       FROM stocks stock
+      WHERE stock.exchange = $1
+        AND stock.is_active = TRUE
+        AND stock.ticker > $2
+        AND EXISTS (SELECT 1 FROM stock_history history WHERE history.stock_id = stock.id OFFSET 4 LIMIT 1)
+        AND NOT EXISTS (SELECT 1 FROM stock_technical technical WHERE technical.stock_id = stock.id)
+      ORDER BY stock.ticker ASC, stock.id ASC
+      LIMIT $3`,
+    MARKET,
+    afterTicker ?? "",
+    limit,
+  );
+}
+
 async function main(): Promise<void> {
   console.log(`[STOCK_TECHNICAL] MARKET=${MARKET} MODE=${DRY_RUN ? "DRY_RUN" : "RUN"} JOB_ID=${JOB_ID} FORMULA_VERSION=${FORMULA_VERSION}`);
   const stocks = await prisma.stock.findMany({ where: { exchange: MARKET, isActive: true }, select: { id: true, ticker: true, exchange: true, isActive: true }, orderBy: [{ ticker: "asc" }, { id: "asc" }] });
@@ -154,7 +171,7 @@ async function main(): Promise<void> {
   const resume = await loadLifecycleResumeCheckpoint(prisma, JOB_ID);
   const resumeIndex = resume?.last_symbol ? stocks.findIndex((s) => s.ticker === resume.last_symbol) : -1;
   if (resume?.last_symbol && resumeIndex < 0) throw new Error(`CHECKPOINT_OUTSIDE_MARKET_SCOPE:${resume.last_symbol}`);
-  const selected = stocks.slice(resumeIndex + 1, resumeIndex + 1 + MAX_SYMBOLS);
+  const selected = await findCompletionTargets(resume?.last_symbol, MAX_SYMBOLS);
   const [activeLocks, activeRuns, histories] = await Promise.all([
     prisma.productionSchedulerLock.count({ where: { jobId: JOB_ID, expiresAt: { gt: new Date() } } }),
     prisma.productionSchedulerRun.count({ where: { jobId: JOB_ID, status: { in: ["RUNNING", "IN_PROGRESS", "PAUSE_REQUESTED"] } } }),
@@ -193,13 +210,14 @@ async function main(): Promise<void> {
       }
       if (summary.attempted % 5 === 0 || stock === selected.at(-1)) { await persistLifecycleCheckpoint(prisma, runId, summary, stock.ticker, { jobId: JOB_ID, runType: RUN_TYPE }); await heartbeatLifecycleLock(prisma, JOB_ID, owner); }
     }
-    const lastSymbol = selected.at(-1)!.ticker, remaining = stocks.length - (resumeIndex + 1 + selected.length);
-    if (remaining > 0) { await pauseLifecycleRun(prisma, runId); console.log(JSON.stringify({ status: "PAUSED_CHECKPOINTED", market: MARKET, jobId: JOB_ID, planned: selected.length, remaining, checkpoint: lastSymbol, ...summary })); return; }
+    const lastSymbol = selected.at(-1)!.ticker;
+    const hasRemaining = (await findCompletionTargets(lastSymbol, 1)).length > 0;
+    if (hasRemaining) { await pauseLifecycleRun(prisma, runId); console.log(JSON.stringify({ status: "PAUSED_CHECKPOINTED", market: MARKET, jobId: JOB_ID, planned: selected.length, remaining: "BOUNDED_SCAN_PENDING", checkpoint: lastSymbol, ...summary })); return; }
     const [coveredStocks, technicalRows] = await Promise.all([
       prisma.stock.count({ where: { exchange: MARKET, isActive: true, technical: { some: {} } } }),
       prisma.stockTechnical.count({ where: { stock: { exchange: MARKET, isActive: true } } }),
     ]);
-    const validation = { status: summary.attempted === stocks.length && summary.completed + summary.failed === stocks.length ? "PASS" : "FAIL", market: MARKET, universe: stocks.length, processed: summary.attempted, coveredStocks, technicalRows, formulaVersion: FORMULA_VERSION };
+    const validation = { status: summary.completed + summary.failed === summary.attempted ? "PASS" : "FAIL", market: MARKET, universe: stocks.length, processed: summary.attempted, coveredStocks, technicalRows, formulaVersion: FORMULA_VERSION, remainingEligibleTargets: 0 };
     await completeLifecycleRun(prisma, runId, summary, null, validation); console.log(JSON.stringify(validation));
   } catch (error) { if (runId) await failLifecycleRun(prisma, runId, error); throw error; }
   finally { if (lockHeld) await releaseLifecycleLock(prisma, JOB_ID, owner); }
