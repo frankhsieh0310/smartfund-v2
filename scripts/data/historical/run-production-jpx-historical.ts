@@ -43,10 +43,10 @@ const MARKET_STOCK_REGEX: Partial<Record<Market, string>> = {
   SHZ: "^(000|001|002|003|200|300|301)[0-9]{3}$",
 };
 const MARKET_TICKER_EXCLUSION_REGEX: Partial<Record<Market, string>> = {
-  TOR: "-(DB[A-Z]?|WT[A-Z]?|CV)$",
-  NEO: "-(DB[A-Z]?|WT[A-Z]?|CV)$",
-  VAN: "-(DB[A-Z]?|WT[A-Z]?|CV)$",
-  CNQ: "-(DB[A-Z]?|WT[A-Z]?|CV)$",
+  TOR: "-(DB[A-Z]?|WT[A-Z]?|WS[A-Z]?|CV|RT[A-Z]?|R)$",
+  NEO: "-(DB[A-Z]?|WT[A-Z]?|WS[A-Z]?|CV|RT[A-Z]?|R)$",
+  VAN: "-(DB[A-Z]?|WT[A-Z]?|WS[A-Z]?|CV|RT[A-Z]?|R)$",
+  CNQ: "-(DB[A-Z]?|WT[A-Z]?|WS[A-Z]?|CV|RT[A-Z]?|R)$",
 };
 const NON_STOCK_NAME_REGEX = /\bfund\b|etf\b|\b(bond|debenture|warrant|bitcoin|ether|crypto)\b|physical (gold|silver|uranium|platinum|palladium)/i;
 const NON_STOCK_NAME_SQL = "(^|[^[:alpha:]])fund([^[:alpha:]]|$)|etf([^[:alpha:]]|$)|(^|[^[:alpha:]])(bond|debenture|warrant|bitcoin|ether|crypto)([^[:alpha:]]|$)|physical (gold|silver|uranium|platinum|palladium)";
@@ -56,6 +56,8 @@ const RUN_TYPE = "STOCK_PRICE_HISTORICAL";
 const RAW_ROOT = path.resolve("runtime", "historical", "yahoo", CONFIG[MARKET].rawDirectory);
 const prisma = new PrismaClient({ datasources: { db: { url: process.env.DIRECT_URL ?? process.env.DATABASE_URL } } });
 const EXCLUDED_NON_STOCK_SYMBOLS = new Set<string>();
+const OFFICIAL_CNQ_STOCK_TICKERS = new Set<string>();
+let officialCnqSource: string | null = null;
 
 function stockScopeWhere() {
   return {
@@ -64,10 +66,39 @@ function stockScopeWhere() {
     ...(MARKET_STOCK_PREFIXES[MARKET]
       ? { OR: MARKET_STOCK_PREFIXES[MARKET]!.map((prefix) => ({ ticker: { startsWith: prefix } })) }
       : {}),
+    ...(MARKET === "CNQ" && OFFICIAL_CNQ_STOCK_TICKERS.size > 0
+      ? { ticker: { in: [...OFFICIAL_CNQ_STOCK_TICKERS] } }
+      : {}),
     ...(EXCLUDED_NON_STOCK_SYMBOLS.size > 0
       ? { yahooSymbol: { notIn: [...EXCLUDED_NON_STOCK_SYMBOLS] } }
       : {}),
   };
+}
+
+async function loadOfficialCnqStockUniverse(): Promise<void> {
+  if (MARKET !== "CNQ") return;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30_000);
+  try {
+    const indexResponse = await fetch("https://thecse.com/api/activity-summaries", { signal: controller.signal });
+    if (!indexResponse.ok) throw new Error(`CSE_ACTIVITY_SUMMARIES_HTTP_${indexResponse.status}`);
+    const index = await indexResponse.json() as { dailyCSE?: { contents?: string[] } };
+    const filename = index.dailyCSE?.contents?.find((value) => /^CSEListed\.Daily\.Market\.Summary\.\d{4}-\d{2}-\d{2}\.txt$/.test(value));
+    if (!filename) throw new Error("CSE_OFFICIAL_SUMMARY_NOT_FOUND");
+    const summaryResponse = await fetch(`https://market-reports-primary.thecse.com/CSEListed/Daily/Summary/${filename}`, { signal: controller.signal });
+    if (!summaryResponse.ok) throw new Error(`CSE_OFFICIAL_SUMMARY_HTTP_${summaryResponse.status}`);
+    const summary = await summaryResponse.text();
+    const tickerExclusion = new RegExp(MARKET_TICKER_EXCLUSION_REGEX.CNQ!, "i");
+    for (const line of summary.split(/\r?\n/)) {
+      const [rawName, rawSymbol] = line.split("\t");
+      if (!rawName || !rawSymbol) continue;
+      const companyName = rawName.trim(), ticker = rawSymbol.trim().replace(/\./g, "-");
+      if (!ticker || ticker === "Symbol" || NON_STOCK_NAME_REGEX.test(companyName) || tickerExclusion.test(ticker)) continue;
+      OFFICIAL_CNQ_STOCK_TICKERS.add(ticker);
+    }
+    if (OFFICIAL_CNQ_STOCK_TICKERS.size < 100) throw new Error(`MARKET_SCOPE_UNCONFIRMED:CNQ_OFFICIAL_STOCK_UNIVERSE_${OFFICIAL_CNQ_STOCK_TICKERS.size}`);
+    officialCnqSource = filename;
+  } finally { clearTimeout(timeout); }
 }
 
 async function loadExplicitNonStockSymbols(): Promise<void> {
@@ -92,7 +123,8 @@ function isWithinMarketStockScope(stock: Pick<Stock, "ticker" | "yahooSymbol" | 
   const explicitStock = !prefixes || prefixes.some((prefix) => stock.ticker.startsWith(prefix));
   const prohibitedTicker = MARKET_TICKER_EXCLUSION_REGEX[MARKET] ? new RegExp(MARKET_TICKER_EXCLUSION_REGEX[MARKET]!, "i").test(stock.ticker) : false;
   const explicitNonStock = EXCLUDED_NON_STOCK_SYMBOLS.has(stock.yahooSymbol) || NON_STOCK_NAME_REGEX.test(stock.companyName) || prohibitedTicker;
-  return stock.exchange === MARKET && stock.isActive && explicitStock && !explicitNonStock;
+  const officialCnqStock = MARKET !== "CNQ" || OFFICIAL_CNQ_STOCK_TICKERS.has(stock.ticker);
+  return stock.exchange === MARKET && stock.isActive && explicitStock && officialCnqStock && !explicitNonStock;
 }
 
 async function dailyWriterState(): Promise<{ activeLocks: number; activeRuns: number }> {
@@ -186,7 +218,7 @@ async function recordFailure(stock: Stock, error: unknown): Promise<void> {
 }
 
 async function findMissingStocks(afterTicker: string | null | undefined, limit: number): Promise<Stock[]> {
-  return prisma.$queryRawUnsafe<Stock[]>(
+  const candidates = await prisma.$queryRawUnsafe<Stock[]>(
     `SELECT stock.id, stock.ticker, stock.yahoo_symbol AS "yahooSymbol", stock.company_name AS "companyName", stock.exchange, stock.is_active AS "isActive"
        FROM stocks stock
       WHERE stock.exchange = $1
@@ -199,8 +231,7 @@ async function findMissingStocks(afterTicker: string | null | undefined, limit: 
         AND NOT EXISTS (SELECT 1 FROM assets asset WHERE asset.asset_type::text IN ('ETF', 'FUND') AND asset.code = stock.yahoo_symbol)
         AND stock.company_name !~* $6
         AND NOT EXISTS (SELECT 1 FROM stock_history history WHERE history.stock_id = stock.id OFFSET 4 LIMIT 1)
-      ORDER BY stock.ticker ASC, stock.id ASC
-      LIMIT $3`,
+      ORDER BY stock.ticker ASC, stock.id ASC`,
     MARKET,
     afterTicker ?? "",
     limit,
@@ -208,10 +239,12 @@ async function findMissingStocks(afterTicker: string | null | undefined, limit: 
     MARKET_TICKER_EXCLUSION_REGEX[MARKET] ?? null,
     NON_STOCK_NAME_SQL,
   );
+  return candidates.filter((stock) => isWithinMarketStockScope(stock)).slice(0, limit);
 }
 
 async function main(): Promise<void> {
   console.log(`[GLOBAL_STOCK_HISTORICAL] MARKET=${MARKET} MODE=${DRY_RUN ? "DRY_RUN" : "RUN"} JOB_ID=${JOB_ID}`);
+  await loadOfficialCnqStockUniverse();
   await loadExplicitNonStockSymbols();
   const universe = await prisma.stock.findMany({ where: { ...stockScopeWhere(), yahooSymbol: { notIn: ["", ...EXCLUDED_NON_STOCK_SYMBOLS] } }, select: { id: true, ticker: true, yahooSymbol: true, companyName: true, exchange: true, isActive: true }, orderBy: [{ ticker: "asc" }, { id: "asc" }] });
   if (universe.length === 0 || universe.some((s) => !isWithinMarketStockScope(s))) throw new Error(`MARKET_SCOPE_UNCONFIRMED:${MARKET}`);
@@ -228,7 +261,7 @@ async function main(): Promise<void> {
     dailyWriterState(),
   ]);
   const ready = ownLocks === 0 && ownRuns === 0 && daily.activeLocks === 0 && daily.activeRuns === 0 && missing.length > 0;
-  console.log(JSON.stringify({ status: DRY_RUN ? (ready ? "DRY_RUN_READY" : "DRY_RUN_BLOCKED") : "PREFLIGHT_READY", market: MARKET, jobId: JOB_ID, universeCount: universe.length, excludedNonStockCount: EXCLUDED_NON_STOCK_SYMBOLS.size,
+  console.log(JSON.stringify({ status: DRY_RUN ? (ready ? "DRY_RUN_READY" : "DRY_RUN_BLOCKED") : "PREFLIGHT_READY", market: MARKET, jobId: JOB_ID, universeCount: universe.length, excludedNonStockCount: EXCLUDED_NON_STOCK_SYMBOLS.size, officialUniverseSource: officialCnqSource, officialStockCount: MARKET === "CNQ" ? OFFICIAL_CNQ_STOCK_TICKERS.size : null,
     plannedCount: missing.length, plannedSymbols: missing.map((s) => s.ticker), activeLockCount: ownLocks, activeRunCount: ownRuns, dailyJobId: DAILY_JOB_ID,
     dailyActiveLockCount: daily.activeLocks, dailyActiveRunCount: daily.activeRuns, checkpoint: resume ? { lastSymbol: resume.last_symbol, processed: resume.processed, succeeded: resume.succeeded, failed: resume.failed } : null, writesPerformed: false }, null, 2));
   if (DRY_RUN) { if (!ready) process.exitCode = 2; return; }
