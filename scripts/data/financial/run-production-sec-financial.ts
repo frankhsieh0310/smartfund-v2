@@ -63,6 +63,7 @@ const INCREMENTAL = process.argv.includes("--incremental");
 const DRY_RUN = process.argv.includes("--dry-run");
 const JOB_ID = `official-financial-${MARKET.toLowerCase()}-${INCREMENTAL ? "incremental" : "historical"}`;
 const LOCK_KEY = JOB_ID;
+const CONFLICT_JOB_ID = `official-financial-${MARKET.toLowerCase()}-${INCREMENTAL ? "historical" : "incremental"}`;
 const RUN_TYPE = INCREMENTAL ? "OFFICIAL_FINANCIAL_INCREMENTAL" : "OFFICIAL_FINANCIAL_HISTORICAL";
 const TARGET_DATE = new Date(`${new Date().toISOString().slice(0, 10)}T00:00:00.000Z`);
 const maxSymbolsArg = process.argv.find((arg) => arg.startsWith("--max-symbols="))?.slice("--max-symbols=".length);
@@ -200,6 +201,19 @@ function remainingFromCheckpoint(stocks: Stock[], lastSymbol: string | null | un
   const resumeIndex = lastSymbol ? stocks.findIndex((stock) => stock.ticker === lastSymbol) : -1;
   if (lastSymbol && resumeIndex < 0) throw new Error(`CHECKPOINT_SYMBOL_OUTSIDE_MARKET_SCOPE:${MARKET}`);
   return { remaining: stocks.slice(resumeIndex + 1), resumeIndex };
+}
+
+async function conflictingWriterState(): Promise<{ activeLocks: number; activeRuns: number }> {
+  const staleBefore = new Date(Date.now() - 10 * 60_000);
+  const [activeLocks, activeRuns] = await Promise.all([
+    prisma.productionSchedulerLock.count({
+      where: { jobId: CONFLICT_JOB_ID, expiresAt: { gt: new Date() }, updatedAt: { gt: staleBefore } },
+    }),
+    prisma.productionSchedulerRun.count({
+      where: { jobId: CONFLICT_JOB_ID, status: { in: ["RUNNING", "IN_PROGRESS", "PAUSE_REQUESTED"] } },
+    }),
+  ]);
+  return { activeLocks, activeRuns };
 }
 
 function normalizedTicker(ticker: string): string {
@@ -440,7 +454,7 @@ async function runDryRun(
   resume: { last_symbol: string | null; processed: number; succeeded: number; failed: number } | null,
   selected: Stock[],
 ): Promise<void> {
-  const [lockRows, activeRuns, failureRows, invalidFactRows] = await Promise.all([
+  const [lockRows, activeRuns, failureRows, invalidFactRows, conflict] = await Promise.all([
     prisma.$queryRawUnsafe<Array<{ active: number; heartbeat_at: Date | null }>>(
       "SELECT COUNT(*) FILTER (WHERE expires_at > NOW() AND updated_at > NOW() - INTERVAL '10 minutes')::int AS active, MAX(updated_at) FILTER (WHERE expires_at > NOW() AND updated_at > NOW() - INTERVAL '10 minutes') AS heartbeat_at FROM production_scheduler_locks WHERE job_id = $1",
       LOCK_KEY,
@@ -467,9 +481,10 @@ async function runDryRun(
       MARKET,
       scope.stockIds,
     ),
+    conflictingWriterState(),
   ]);
   const activeLocks = Number(lockRows[0]?.active ?? 0);
-  const safeToStart = activeLocks === 0 && activeRuns.length === 0;
+  const safeToStart = activeLocks === 0 && activeRuns.length === 0 && conflict.activeLocks === 0 && conflict.activeRuns === 0;
   console.log(JSON.stringify({
     status: safeToStart ? "DRY_RUN_READY" : "DRY_RUN_BLOCKED",
     dryRun: true,
@@ -483,6 +498,9 @@ async function runDryRun(
     activeLockCount: activeLocks,
     activeHeartbeatAt: lockRows[0]?.heartbeat_at ?? null,
     activeRunStatuses: activeRuns.map((run) => run.status),
+    conflictingJobId: CONFLICT_JOB_ID,
+    conflictingActiveLockCount: conflict.activeLocks,
+    conflictingActiveRunCount: conflict.activeRuns,
     checkpoint: resume ? {
       lastSymbol: resume.last_symbol,
       processed: resume.processed,
@@ -515,6 +533,10 @@ async function main(): Promise<void> {
       return;
     }
 
+    const initialConflict = await conflictingWriterState();
+    if (initialConflict.activeLocks > 0 || initialConflict.activeRuns > 0) {
+      throw new Error(`CONFLICTING_ACTIVE_WRITER:${CONFLICT_JOB_ID}`);
+    }
     await recoverOrphanedLifecycleRun(prisma, JOB_ID);
     lockHeld = await acquireLifecycleLock(prisma, JOB_ID, owner);
     if (!lockHeld) {
@@ -573,8 +595,29 @@ async function main(): Promise<void> {
     const invalidFactsRemoved = await removeInvalidPointInTimeFacts(marketScope.stockIds);
     if (invalidFactsRemoved > 0) console.log(JSON.stringify({ market: MARKET, invalidFactsRemoved, validation: "PERIOD_END_NOT_AFTER_FILING_DATE" }));
     let latestPeriod: string | null = null;
+    let lastProcessedSymbol = resume?.last_symbol ?? null;
 
     for (const stock of selected) {
+      const conflict = await conflictingWriterState();
+      if (conflict.activeLocks > 0 || conflict.activeRuns > 0) {
+        if (runId && lastProcessedSymbol) {
+          await persistLifecycleCheckpoint(prisma, runId, summary, lastProcessedSymbol, {
+            jobId: JOB_ID,
+            targetTradeDate: INCREMENTAL ? TARGET_DATE : undefined,
+            runType: RUN_TYPE,
+          });
+          await pauseLifecycleRun(prisma, runId);
+        }
+        console.log(JSON.stringify({
+          status: "PAUSED_CONFLICTING_WRITER",
+          market: MARKET,
+          jobId: JOB_ID,
+          conflictingJobId: CONFLICT_JOB_ID,
+          checkpoint: lastProcessedSymbol,
+          processed: summary.attempted,
+        }));
+        return;
+      }
       summary.attempted += 1;
       try {
         const result = await processStock(stock, cikByTicker, marketScope.stockIdSet);
@@ -591,6 +634,7 @@ async function main(): Promise<void> {
         await recordFailure(stock, reason, marketScope.stockIdSet);
         console.error(JSON.stringify({ market: MARKET, ticker: stock.ticker, status: "FAILED", reason, processed: summary.attempted, universe: stocks.length }));
       }
+      lastProcessedSymbol = stock.ticker;
       if (runId && (summary.attempted % CHECKPOINT_EVERY === 0 || stock === selected.at(-1))) {
         await persistLifecycleCheckpoint(prisma, runId, summary, stock.ticker, {
           jobId: JOB_ID,
