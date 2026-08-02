@@ -16,6 +16,7 @@ import {
   releaseLifecycleLock,
   type RunSummary,
 } from "../production/run-lifecycle.ts";
+import { validateWorkerOwnershipFromEnvironment } from "../governance/worker-ownership.ts";
 
 type Market = "NASDAQ" | "NYSE" | "AMEX";
 type Stock = { id: string; ticker: string; companyName: string };
@@ -59,6 +60,7 @@ const marketArg = process.argv.find((arg) => arg.startsWith("--market="))?.slice
 if (!["NASDAQ", "NYSE", "AMEX"].includes(marketArg)) throw new Error(`UNSUPPORTED_SEC_MARKET:${marketArg}`);
 const MARKET = marketArg as Market;
 const INCREMENTAL = process.argv.includes("--incremental");
+const DRY_RUN = process.argv.includes("--dry-run");
 const JOB_ID = `official-financial-${MARKET.toLowerCase()}-${INCREMENTAL ? "incremental" : "historical"}`;
 const RUN_TYPE = INCREMENTAL ? "OFFICIAL_FINANCIAL_INCREMENTAL" : "OFFICIAL_FINANCIAL_HISTORICAL";
 const TARGET_DATE = new Date(`${new Date().toISOString().slice(0, 10)}T00:00:00.000Z`);
@@ -237,6 +239,10 @@ async function archiveJson(stock: Stock, cik: string, text: string): Promise<{ r
   return { relativePath, sha256 };
 }
 
+function inMemoryArchive(text: string): { relativePath: string; sha256: string } {
+  return { relativePath: "DRY_RUN_NOT_WRITTEN", sha256: createHash("sha256").update(text).digest("hex") };
+}
+
 function sourceDocumentUrl(cik: string, accession: string | undefined): string | null {
   if (!accession) return null;
   return `https://www.sec.gov/Archives/edgar/data/${Number(cik)}/${accession.replaceAll("-", "")}/`;
@@ -341,22 +347,24 @@ async function resolveFailure(stock: Stock): Promise<void> {
   );
 }
 
-async function removeInvalidPointInTimeFacts(): Promise<number> {
+async function removeInvalidPointInTimeFacts(marketStockIds: string[]): Promise<number> {
+  if (marketStockIds.length === 0) throw new Error(`MARKET_SCOPE_EMPTY:${MARKET}`);
   return prisma.$executeRawUnsafe(
-    "DELETE FROM stock_financial_facts WHERE source = 'SEC_EDGAR' AND filing_date IS NOT NULL AND period_end > filing_date",
+    "DELETE FROM stock_financial_facts WHERE stock_id = ANY($1::text[]) AND source = 'SEC_EDGAR' AND filing_date IS NOT NULL AND period_end > filing_date",
+    marketStockIds,
   );
 }
 
-async function processStock(stock: Stock, cikByTicker: Map<string, string>): Promise<{ facts: number; latest: string | null }> {
+async function processStock(stock: Stock, cikByTicker: Map<string, string>, dryRun: boolean): Promise<{ facts: number; latest: string | null }> {
   const cik = cikByTicker.get(normalizedTicker(stock.ticker));
   if (!cik) throw new Error("SEC_CIK_NOT_FOUND");
   const url = `https://data.sec.gov/api/xbrl/companyfacts/CIK${cik}.json`;
   const { payload, text } = await fetchJson<SecCompanyFacts>(url);
-  const archive = await archiveJson(stock, cik, text);
+  const archive = dryRun ? inMemoryArchive(text) : await archiveJson(stock, cik, text);
   const facts = normalizeCompanyFacts(stock, cik, payload, archive.sha256);
   if (!facts.length) throw new Error("SEC_NO_CANONICAL_FACTS");
-  const rows = await upsertFacts(facts);
-  await resolveFailure(stock);
+  const rows = dryRun ? facts.length : await upsertFacts(facts);
+  if (!dryRun) await resolveFailure(stock);
   return { facts: rows, latest: facts.reduce<string | null>((latest, fact) => !latest || fact.periodEnd > latest ? fact.periodEnd : latest, null) };
 }
 
@@ -377,20 +385,65 @@ function restoreSummary(details: Partial<RunSummary> | null, checkpoint: { proce
   return summary;
 }
 
+async function assertDryRunSafeStart(marketStockIds: string[]): Promise<void> {
+  if (marketStockIds.length === 0) throw new Error(`MARKET_SCOPE_EMPTY:${MARKET}`);
+  const [locks, activeRuns, crossMarketFailures] = await Promise.all([
+    prisma.$queryRawUnsafe<Array<{ owner: string }>>(
+      "SELECT owner FROM production_scheduler_locks WHERE job_id = $1 AND expires_at > NOW() AND updated_at > NOW() - INTERVAL '10 minutes'",
+      JOB_ID,
+    ),
+    prisma.$queryRawUnsafe<Array<{ id: string; status: string }>>(
+      "SELECT id, status FROM production_scheduler_runs WHERE job_id = $1 AND status IN ('RUNNING', 'IN_PROGRESS') ORDER BY started_at DESC",
+      JOB_ID,
+    ),
+    prisma.$queryRawUnsafe<Array<{ count: number }>>(
+      "SELECT COUNT(*)::int AS count FROM production_scheduler_failures WHERE job_id = $1 AND NOT (stock_id = ANY($2::text[]))",
+      JOB_ID,
+      marketStockIds,
+    ),
+  ]);
+  if (locks.length > 0) throw new Error(`ACTIVE_LOCK_EXISTS:${JOB_ID}:${locks[0].owner}`);
+  if (activeRuns.length > 0) throw new Error(`ACTIVE_LIFECYCLE_EXISTS:${JOB_ID}:${activeRuns[0].id}:${activeRuns[0].status}`);
+  if ((crossMarketFailures[0]?.count ?? 0) > 0) throw new Error(`FAILURE_QUEUE_SCOPE_VIOLATION:${JOB_ID}:${crossMarketFailures[0].count}`);
+}
+
 async function main(): Promise<void> {
-  const owner = `${process.env.RAILWAY_REPLICA_ID ?? "local"}:${process.pid}`;
+  const ownership = await validateWorkerOwnershipFromEnvironment({
+    domain: "FINANCIAL",
+    market: MARKET,
+    mode: INCREMENTAL ? "INCREMENTAL" : "HISTORICAL",
+    dryRun: DRY_RUN,
+  });
+  console.log(JSON.stringify({
+    NODE_ID: ownership.nodeId,
+    ROLE: ownership.role,
+    DOMAIN: ownership.domain,
+    MARKET: ownership.market,
+    MODE: ownership.mode,
+    OWNERSHIP_VALIDATED: ownership.ownershipValidated,
+    NODE_STATUS: ownership.nodeStatus,
+    LIVE_WRITE_AUTHORIZED: ownership.liveWriteAuthorized,
+    DRY_RUN,
+  }));
+  const owner = `${ownership.nodeId}:${process.env.RAILWAY_REPLICA_ID ?? "local"}:${process.pid}`;
   let runId: string | null = null;
   let lockHeld = false;
   let summary = createSummary();
   try {
-    await recoverOrphanedLifecycleRun(prisma, JOB_ID);
-    lockHeld = await acquireLifecycleLock(prisma, JOB_ID, owner);
-    if (!lockHeld) {
-      console.log(JSON.stringify({ status: "SKIPPED_LOCKED", market: MARKET, jobId: JOB_ID }));
-      return;
+    const marketStocks = await prisma.stock.findMany({ where: { exchange: MARKET, isActive: true }, select: { id: true, ticker: true, companyName: true }, orderBy: [{ ticker: "asc" }, { id: "asc" }] });
+    const marketStockIds = marketStocks.map((stock) => stock.id);
+    if (marketStockIds.length === 0) throw new Error(`MARKET_SCOPE_EMPTY:${MARKET}`);
+    if (DRY_RUN) {
+      await assertDryRunSafeStart(marketStockIds);
+    } else {
+      await recoverOrphanedLifecycleRun(prisma, JOB_ID);
+      lockHeld = await acquireLifecycleLock(prisma, JOB_ID, owner);
+      if (!lockHeld) {
+        console.log(JSON.stringify({ status: "SKIPPED_LOCKED", market: MARKET, jobId: JOB_ID }));
+        return;
+      }
     }
-    const [marketStocks, cikByTicker, resume, recentFilingCiks] = await Promise.all([
-      prisma.stock.findMany({ where: { exchange: MARKET, isActive: true }, select: { id: true, ticker: true, companyName: true }, orderBy: [{ ticker: "asc" }, { id: "asc" }] }),
+    const [cikByTicker, resume, recentFilingCiks] = await Promise.all([
       loadCikMap(),
       loadLifecycleResumeCheckpoint(prisma, JOB_ID, INCREMENTAL ? { targetTradeDate: TARGET_DATE, runType: RUN_TYPE } : undefined),
       INCREMENTAL ? discoverRecentFilingCiks() : Promise.resolve(null),
@@ -401,30 +454,32 @@ async function main(): Promise<void> {
           return cik ? recentFilingCiks.has(cik) : false;
         })
       : marketStocks;
-    const reconciledFailures = await prisma.$executeRawUnsafe(
+    const reconciledFailures = DRY_RUN ? 0 : await prisma.$executeRawUnsafe(
       `UPDATE production_scheduler_failures failure
           SET resolved = TRUE, resolved_at = NOW(), resolution_reason = 'SEC_FINANCIAL_FACTS_ALREADY_INGESTED'
         WHERE failure.job_id = $1 AND failure.resolved = FALSE
+          AND failure.stock_id = ANY($2::text[])
           AND EXISTS (
             SELECT 1 FROM stock_financial_facts fact
              WHERE fact.stock_id = failure.stock_id AND fact.source = 'SEC_EDGAR'
           )`,
       JOB_ID,
+      marketStockIds,
     );
     if (reconciledFailures > 0) console.log(JSON.stringify({ market: MARKET, retryRecovered: reconciledFailures, reason: "FACTS_ALREADY_INGESTED" }));
-    const invalidFactsRemoved = await removeInvalidPointInTimeFacts();
+    const invalidFactsRemoved = DRY_RUN ? 0 : await removeInvalidPointInTimeFacts(marketStockIds);
     if (invalidFactsRemoved > 0) console.log(JSON.stringify({ market: MARKET, invalidFactsRemoved, validation: "PERIOD_END_NOT_AFTER_FILING_DATE" }));
     summary = restoreSummary(resume?.details ?? null, resume);
     const resumeIndex = resume?.last_symbol ? stocks.findIndex((stock) => stock.ticker === resume.last_symbol) : -1;
     if (resume?.last_symbol && resumeIndex < 0) throw new Error(`CHECKPOINT_SYMBOL_NOT_FOUND:${resume.last_symbol}`);
     const remaining = stocks.slice(resumeIndex + 1);
     const selected = remaining.slice(0, MAX_SYMBOLS);
-    runId = await createLifecycleRun(prisma, JOB_ID, MARKET, RUN_TYPE, INCREMENTAL ? {
+    runId = DRY_RUN ? null : await createLifecycleRun(prisma, JOB_ID, MARKET, RUN_TYPE, INCREMENTAL ? {
       targetTradeDate: TARGET_DATE,
       runKey: `${JOB_ID}:${TARGET_DATE.toISOString().slice(0, 10)}`,
       universeCount: stocks.length,
     } : { universeCount: stocks.length });
-    if (INCREMENTAL) {
+    if (INCREMENTAL && runId) {
       const current = await prisma.$queryRawUnsafe<Array<{ status: string }>>("SELECT status FROM production_scheduler_runs WHERE id = $1", runId);
       if (current[0]?.status === "COMPLETED") {
         console.log(JSON.stringify({ status: "SKIPPED_COMPLETED", market: MARKET, jobId: JOB_ID, targetDate: TARGET_DATE.toISOString().slice(0, 10) }));
@@ -432,14 +487,16 @@ async function main(): Promise<void> {
       }
     }
     let latestPeriod: string | null = null;
+    let wouldUpsertFacts = 0;
 
     for (const stock of selected) {
       summary.attempted += 1;
       try {
-        const result = await processStock(stock, cikByTicker);
+        const result = await processStock(stock, cikByTicker, DRY_RUN);
         summary.completed += 1;
         summary.success += 1;
-        summary.inserted += result.facts;
+        if (DRY_RUN) wouldUpsertFacts += result.facts;
+        else summary.inserted += result.facts;
         latestPeriod = result.latest && (!latestPeriod || result.latest > latestPeriod) ? result.latest : latestPeriod;
         console.log(JSON.stringify({ market: MARKET, ticker: stock.ticker, status: "COMPLETE", facts: result.facts, latestPeriod: result.latest, processed: summary.attempted, universe: stocks.length }));
       } catch (error) {
@@ -447,7 +504,7 @@ async function main(): Promise<void> {
         summary.failed += 1;
         if (reason === "SEC_CIK_NOT_FOUND" || reason === "SEC_NO_CANONICAL_FACTS") summary.permanentUnavailable += 1;
         else summary.retryableFailure += 1;
-        await recordFailure(stock, reason);
+        if (!DRY_RUN) await recordFailure(stock, reason);
         console.error(JSON.stringify({ market: MARKET, ticker: stock.ticker, status: "FAILED", reason, processed: summary.attempted, universe: stocks.length }));
       }
       if (runId && (summary.attempted % CHECKPOINT_EVERY === 0 || stock === selected.at(-1))) {
@@ -459,7 +516,7 @@ async function main(): Promise<void> {
 
     if (resumeIndex + 1 + selected.length < stocks.length) {
       if (runId) await pauseLifecycleRun(prisma, runId);
-      console.log(JSON.stringify({ status: "PAUSED_CHECKPOINTED", market: MARKET, universe: stocks.length, ...summary, lastSymbol: selected.at(-1)?.ticker ?? resume?.last_symbol ?? null }));
+      console.log(JSON.stringify({ status: DRY_RUN ? "DRY_RUN_COMPLETE" : "PAUSED_CHECKPOINTED", market: MARKET, universe: stocks.length, ...summary, lastSymbol: selected.at(-1)?.ticker ?? resume?.last_symbol ?? null, wouldUpsertFacts: DRY_RUN ? wouldUpsertFacts : undefined, databaseWrites: DRY_RUN ? 0 : undefined }));
       return;
     }
 
@@ -486,7 +543,7 @@ async function main(): Promise<void> {
       failures: summary.failed,
     };
     if (runId) await completeLifecycleRun(prisma, runId, summary, coverage?.latest ?? null, validation);
-    console.log(JSON.stringify({ status: "COMPLETED", ...validation }));
+    console.log(JSON.stringify({ status: DRY_RUN ? "DRY_RUN_COMPLETE" : "COMPLETED", ...validation, wouldUpsertFacts: DRY_RUN ? wouldUpsertFacts : undefined, databaseWrites: DRY_RUN ? 0 : undefined }));
   } catch (error) {
     if (runId) await failLifecycleRun(prisma, runId, error);
     throw error;

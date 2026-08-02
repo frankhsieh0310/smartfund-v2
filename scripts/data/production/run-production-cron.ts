@@ -1,8 +1,8 @@
 import { spawn } from "node:child_process";
 
-function run(script: string, args: string[]): Promise<void> {
+function run(script: string, args: string[], environment: NodeJS.ProcessEnv = process.env): Promise<void> {
   return new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, ["--experimental-strip-types", script, ...args], { cwd: process.cwd(), stdio: "inherit" });
+    const child = spawn(process.execPath, ["--experimental-strip-types", script, ...args], { cwd: process.cwd(), stdio: "inherit", env: environment });
     child.once("error", reject);
     child.once("exit", (code) => code === 0 ? resolve() : reject(new Error(`${script} exited with ${code ?? "signal"}`)));
   });
@@ -13,7 +13,7 @@ async function main(): Promise<void> {
   // must never starve ETF, Macro, Bond, Index, or Volatility Daily work.
   // Each runner retains its own distributed lock and controlled provider
   // concurrency; Historical remains strictly after the Daily dispatches.
-  const financial = run("scripts/data/financial/run-production-financial.ts", []).catch((error: unknown) => {
+  const financial = run("scripts/data/financial/run-production-financial.ts", [], { ...process.env, SMARTFUND_NODE_ID: "railway-production" }).catch((error: unknown) => {
     // Financial ingestion owns an independent lifecycle. A filing-provider
     // failure must be visible, but must never cancel price/asset Daily work.
     console.error(JSON.stringify({ pipeline: "OFFICIAL_FINANCIAL", status: "FAILED", error: error instanceof Error ? error.message : String(error) }));

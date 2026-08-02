@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "policy": {
+    "scopeKey": ["domain", "market", "mode"],
+    "exclusiveOwnerPerScope": true,
+    "unknownNodesMayWrite": false,
+    "fallbackScopesForbidden": ["ALL", "US", "GLOBAL"]
+  },
+  "nodes": [
+    {
+      "name": "MASTER",
+      "nodeId": "smartfund-master",
+      "role": "MASTER",
+      "status": "ACTIVE",
+      "assignments": []
+    },
+    {
+      "name": "RAILWAY",
+      "nodeId": "railway-production",
+      "role": "PRODUCTION",
+      "status": "ACTIVE",
+      "assignments": [
+        "stock-daily",
+        "asset-daily",
+        "macro-incremental",
+        "financial-incremental",
+        "retry",
+        "scheduler"
+      ],
+      "scopedAssignments": [
+        { "domain": "FINANCIAL", "market": "NASDAQ", "mode": "INCREMENTAL" },
+        { "domain": "FINANCIAL", "market": "NYSE", "mode": "INCREMENTAL" },
+        { "domain": "FINANCIAL", "market": "AMEX", "mode": "INCREMENTAL" }
+      ]
+    },
+    {
+      "name": "WORKER-01",
+      "nodeId": "worker-01-main",
+      "role": "HISTORICAL_WORKER",
+      "status": "ACTIVE",
+      "assignment": {
+        "domain": "FINANCIAL",
+        "market": "NASDAQ",
+        "mode": "HISTORICAL"
+      }
+    },
+    {
+      "name": "WORKER-02",
+      "nodeId": "worker-02-desktop",
+      "role": "HISTORICAL_WORKER",
+      "status": "READY",
+      "assignment": {
+        "domain": "FINANCIAL",
+        "market": "NYSE",
+        "mode": "HISTORICAL"
+      },
+      "blockedReason": "Railway ownership transfer must be deployed and the legacy Railway lifecycle and lock must be absent before Master activation. Dry-run validation is allowed."
+    }
+  ]
+}
