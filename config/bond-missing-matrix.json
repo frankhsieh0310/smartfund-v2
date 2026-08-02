@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "snapshotAt": "2026-08-02T09:25:27.215Z",
+  "snapshotAt": "2026-08-02T09:53:22.430Z",
   "statusValues": [
     "COMPLETED",
     "PARTIAL",
@@ -54,8 +54,8 @@
     },
     {
       "market": "TAIWAN_GOVERNMENT",
-      "marketStatus": "IN_PROGRESS",
-      "maintenanceMode": false,
+      "marketStatus": "PRODUCTION_PARTIAL",
+      "maintenanceMode": true,
       "officialSource": "https://www.tpex.org.tw/openapi/v1/bond_ISSBD1_data",
       "sourceSnapshotDate": "2026-08-02",
       "historicalEvidence": {
@@ -66,6 +66,18 @@
         "checkpoint": "HF1404 / 197",
         "archiveReplay": "PASS"
       },
+      "productionEvidence": {
+        "commit": "34f165d",
+        "serviceId": "da046987-2773-4812-bf82-7e2ef265b44a",
+        "firstLiveDeploymentId": "2f831a29-9108-407c-be44-acea526d0bbf",
+        "firstLiveRunId": "db9249e0-4c9a-4ada-bb00-99c81fb7dfae",
+        "schedulerDeploymentId": "2e2367f9-442d-43c2-a6af-d42a68d0d090",
+        "scheduleUtc": "30 23 * * 1-5",
+        "nextScheduledRun": "2026-08-03T23:30:00.000Z",
+        "firstLiveResult": "197/197; failures=0; inserted=0; updated=0; unchanged=197",
+        "archiveReplay": "PASS",
+        "freshness": "1182/1182 measurable; official snapshot fresh=197/197"
+      },
       "layers": [
         { "layer": "Universe", "status": "COMPLETED", "denominator": 197, "numerator": 197, "coveragePercent": 100, "remaining": 0, "blocker": null, "owner": "Laptop/Master", "nextAction": "New security discovery only" },
         { "layer": "Identity", "status": "COMPLETED", "denominator": 197, "numerator": 197, "coveragePercent": 100, "remaining": 0, "blocker": null, "owner": "Laptop/Master", "nextAction": "Maintain TPEx BondCode mapping" },
@@ -75,15 +87,15 @@
         { "layer": "Freshness", "status": "COMPLETED", "denominator": 1182, "numerator": 1182, "coveragePercent": 100, "remaining": 0, "blocker": null, "owner": "Laptop/Master", "nextAction": "Validate six layers after each run" },
         { "layer": "Secondary-market historical", "status": "NOT_STARTED", "denominator": 197, "numerator": 0, "coveragePercent": 0, "remaining": 197, "blocker": null, "owner": "Laptop/Master", "nextAction": "Assess official TPEx daily government-bond transaction datasets" },
         { "layer": "Secondary-market latest", "status": "NOT_STARTED", "denominator": 197, "numerator": 0, "coveragePercent": 0, "remaining": 197, "blocker": null, "owner": "Laptop/Master", "nextAction": "Connect official TPEx market observations without substituting index/yield curve data" },
-        { "layer": "Incremental", "status": "PARTIAL", "denominator": 197, "numerator": 197, "coveragePercent": 100, "remaining": 0, "blocker": "FIRST_RAILWAY_LIVE_RUN_PENDING", "owner": "Railway Bond Production", "nextAction": "Deploy and validate first live run" },
-        { "layer": "Scheduler", "status": "PARTIAL", "denominator": 1, "numerator": 0, "coveragePercent": 0, "remaining": 1, "blocker": "RAILWAY_DEPLOY_PENDING", "owner": "Railway Bond Production", "nextAction": "Add to isolated weekday Bond maintenance schedule" },
-        { "layer": "Durable archive", "status": "PARTIAL", "denominator": 1, "numerator": 0, "coveragePercent": 0, "remaining": 1, "blocker": "LOCAL_REPLAY_PASS; RAILWAY_VOLUME_RUN_PENDING", "owner": "Railway Bond Production", "nextAction": "Verify volume archive and replay in live run" },
+        { "layer": "Incremental", "status": "COMPLETED", "denominator": 197, "numerator": 197, "coveragePercent": 100, "remaining": 0, "blocker": null, "owner": "Railway Bond Production", "nextAction": "Maintenance" },
+        { "layer": "Scheduler", "status": "COMPLETED", "denominator": 1, "numerator": 1, "coveragePercent": 100, "remaining": 0, "blocker": null, "owner": "Railway Bond Production", "nextAction": "Run with isolated Bond maintenance schedule" },
+        { "layer": "Durable archive", "status": "COMPLETED", "denominator": 1, "numerator": 1, "coveragePercent": 100, "remaining": 0, "blocker": null, "owner": "Railway Bond Production", "nextAction": "Verify replay after each live run" },
         { "layer": "Canonical DB", "status": "PARTIAL", "denominator": 4, "numerator": 1, "coveragePercent": 25, "remaining": 3, "blocker": "OWNER_APPROVED_MIGRATION_REQUIRED_FOR_DETAIL_OBSERVATION_DOCUMENT_TABLES", "owner": "Master", "nextAction": "Keep identity in securities and full terms in durable artifacts" },
         { "layer": "Failure queue", "status": "COMPLETED", "denominator": 1, "numerator": 1, "coveragePercent": 100, "remaining": 0, "blocker": null, "owner": "Railway Bond Production", "nextAction": "Non-blocking maintenance" },
         { "layer": "Retry", "status": "COMPLETED", "denominator": 1, "numerator": 1, "coveragePercent": 100, "remaining": 0, "blocker": null, "owner": "Railway Bond Production", "nextAction": "Retry open failures only" },
         { "layer": "Data lineage", "status": "COMPLETED", "denominator": 1, "numerator": 1, "coveragePercent": 100, "remaining": 0, "blocker": null, "owner": "Laptop/Master", "nextAction": "Preserve source/parser/checksum lineage" },
-        { "layer": "Production", "status": "PARTIAL", "denominator": 1, "numerator": 0, "coveragePercent": 0, "remaining": 1, "blocker": "FIRST_RAILWAY_LIVE_RUN_PENDING", "owner": "Railway Bond Production", "nextAction": "Deploy after scoped validation" },
-        { "layer": "Maintenance status", "status": "NOT_STARTED", "denominator": 1, "numerator": 0, "coveragePercent": 0, "remaining": 1, "blocker": "PRODUCTION_NOT_YET_LIVE", "owner": "Railway Bond Production", "nextAction": "Enter maintenance only after first live PASS" }
+        { "layer": "Production", "status": "COMPLETED", "denominator": 1, "numerator": 1, "coveragePercent": 100, "remaining": 0, "blocker": null, "owner": "Railway Bond Production", "nextAction": "Maintain current official issuance source" },
+        { "layer": "Maintenance status", "status": "COMPLETED", "denominator": 1, "numerator": 1, "coveragePercent": 100, "remaining": 0, "blocker": null, "owner": "Railway Bond Production", "nextAction": "Incremental, freshness, retry and new security discovery only" }
       ]
     }
   ]
