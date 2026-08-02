@@ -11,11 +11,11 @@ import {
 
 type Stock = { id: string; ticker: string; yahooSymbol: string; exchange: string; isActive: boolean };
 type Candle = { date: string; open: number | null; high: number | null; low: number | null; close: number; adjustedClose: number | null; volume: number | null };
-type Market = "JPX" | "KSC" | "KOE";
+type Market = "JPX" | "KSC" | "KOE" | "HKG";
 
 const rawMarket = process.argv.find((v) => v.startsWith("--market="))?.slice(9).trim().toUpperCase();
-if (!rawMarket) throw new Error("MARKET_REQUIRED:pass --market=JPX, --market=KSC, or --market=KOE");
-if (!(["JPX", "KSC", "KOE"] as string[]).includes(rawMarket)) throw new Error(`UNSUPPORTED_HISTORICAL_MARKET:${rawMarket}`);
+if (!rawMarket) throw new Error("MARKET_REQUIRED:pass an explicitly supported exchange");
+if (!(["JPX", "KSC", "KOE", "HKG"] as string[]).includes(rawMarket)) throw new Error(`UNSUPPORTED_HISTORICAL_MARKET:${rawMarket}`);
 const MARKET = rawMarket as Market;
 const DRY_RUN = process.argv.includes("--dry-run");
 const maxArg = process.argv.find((v) => v.startsWith("--max-symbols="))?.slice(14);
@@ -25,6 +25,7 @@ const CONFIG: Record<Market, { jobId: string; dailyJobId: string; rawDirectory: 
   JPX: { jobId: "stock-price-jpx-historical", dailyJobId: "japan-yahoo-daily", rawDirectory: "jpx" },
   KSC: { jobId: "stock-price-ksc-historical", dailyJobId: "korea-yahoo-daily", rawDirectory: "ksc" },
   KOE: { jobId: "stock-price-koe-historical", dailyJobId: "korea-yahoo-daily", rawDirectory: "koe" },
+  HKG: { jobId: "stock-price-hkg-historical", dailyJobId: "hong-kong-yahoo-daily", rawDirectory: "hkg" },
 };
 const JOB_ID = CONFIG[MARKET].jobId;
 const DAILY_JOB_ID = CONFIG[MARKET].dailyJobId;
@@ -113,19 +114,21 @@ async function recordFailure(stock: Stock, error: unknown): Promise<void> {
   });
 }
 
-async function findMissingStocks(universe: Stock[], startIndex: number, limit: number): Promise<Stock[]> {
-  const missing: Stock[] = [];
-  for (let offset = startIndex; offset < universe.length && missing.length < limit; offset += 50) {
-    const page = universe.slice(offset, offset + 50);
-    const covered = await prisma.stockHistory.groupBy({
-      by: ["stockId"],
-      where: { stockId: { in: page.map((stock) => stock.id) } },
-      _count: { _all: true },
-    });
-    const coveredIds = new Set(covered.map((row) => row.stockId));
-    missing.push(...page.filter((stock) => !coveredIds.has(stock.id)).slice(0, limit - missing.length));
-  }
-  return missing;
+async function findMissingStocks(afterTicker: string | null | undefined, limit: number): Promise<Stock[]> {
+  return prisma.$queryRawUnsafe<Stock[]>(
+    `SELECT stock.id, stock.ticker, stock.yahoo_symbol AS "yahooSymbol", stock.exchange, stock.is_active AS "isActive"
+       FROM stocks stock
+      WHERE stock.exchange = $1
+        AND stock.is_active = TRUE
+        AND stock.yahoo_symbol <> ''
+        AND stock.ticker > $2
+        AND NOT EXISTS (SELECT 1 FROM stock_history history WHERE history.stock_id = stock.id)
+      ORDER BY stock.ticker ASC, stock.id ASC
+      LIMIT $3`,
+    MARKET,
+    afterTicker ?? "",
+    limit,
+  );
 }
 
 async function main(): Promise<void> {
@@ -135,7 +138,7 @@ async function main(): Promise<void> {
   const resume = await loadLifecycleResumeCheckpoint(prisma, JOB_ID);
   const resumeIndex = resume?.last_symbol ? universe.findIndex((s) => s.ticker === resume.last_symbol) : -1;
   if (resume?.last_symbol && resumeIndex < 0) throw new Error(`CHECKPOINT_OUTSIDE_MARKET_SCOPE:${resume.last_symbol}`);
-  const missing = await findMissingStocks(universe, resumeIndex + 1, MAX_SYMBOLS);
+  const missing = await findMissingStocks(resume?.last_symbol, MAX_SYMBOLS);
   const [ownLocks, ownRuns, daily] = await Promise.all([
     prisma.productionSchedulerLock.count({ where: { jobId: JOB_ID, expiresAt: { gt: new Date() } } }),
     prisma.productionSchedulerRun.count({ where: { jobId: JOB_ID, status: { in: ["RUNNING", "IN_PROGRESS", "PAUSE_REQUESTED"] } } }),
@@ -175,8 +178,7 @@ async function main(): Promise<void> {
       lastSymbol = stock.ticker;
       if (summary.attempted % 5 === 0 || stock === missing.at(-1)) { await persistLifecycleCheckpoint(prisma, runId, summary, lastSymbol, { jobId: JOB_ID, runType: RUN_TYPE }); await heartbeatLifecycleLock(prisma, JOB_ID, owner); }
     }
-    const lastIndex = lastSymbol ? universe.findIndex((stock) => stock.ticker === lastSymbol) : resumeIndex;
-    const hasRemaining = (await findMissingStocks(universe, lastIndex + 1, 1)).length > 0;
+    const hasRemaining = (await findMissingStocks(lastSymbol, 1)).length > 0;
     if (hasRemaining) { await pauseLifecycleRun(prisma, runId); console.log(JSON.stringify({ status: "PAUSED_CHECKPOINTED", market: MARKET, jobId: JOB_ID, remaining: "BOUNDED_SCAN_PENDING", checkpoint: lastSymbol, ...summary })); return; }
     const validation = { status: summary.completed + summary.failed === summary.attempted ? "PASS" : "FAIL", market: MARKET, universe: universe.length, processed: summary.attempted, remaining: 0 };
     await completeLifecycleRun(prisma, runId, summary, null, validation); console.log(JSON.stringify(validation));

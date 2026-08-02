@@ -10,11 +10,11 @@ import {
 type Stock = { id: string; ticker: string; exchange: string; isActive: boolean };
 type Price = { date: Date; high: { toNumber(): number } | null; low: { toNumber(): number } | null; close: { toNumber(): number } };
 type Row = Record<string, string | number | null> & { id: string; date: string };
-type Market = "JPX" | "KSC" | "KOE";
+type Market = "JPX" | "KSC" | "KOE" | "HKG";
 
 const rawMarket = process.argv.find((v) => v.startsWith("--market="))?.slice(9).trim().toUpperCase();
-if (!rawMarket) throw new Error("MARKET_REQUIRED:pass --market=JPX, --market=KSC, or --market=KOE");
-if (!(["JPX", "KSC", "KOE"] as string[]).includes(rawMarket)) throw new Error(`UNSUPPORTED_TECHNICAL_MARKET:${rawMarket}`);
+if (!rawMarket) throw new Error("MARKET_REQUIRED:pass an explicitly supported exchange");
+if (!(["JPX", "KSC", "KOE", "HKG"] as string[]).includes(rawMarket)) throw new Error(`UNSUPPORTED_TECHNICAL_MARKET:${rawMarket}`);
 const MARKET = rawMarket as Market;
 const DRY_RUN = process.argv.includes("--dry-run");
 const maxArg = process.argv.find((v) => v.startsWith("--max-symbols="))?.slice(14);
@@ -178,7 +178,7 @@ async function main(): Promise<void> {
     prisma.stockHistory.groupBy({ by: ["stockId"], where: { stockId: { in: selected.map((s) => s.id) } }, _count: { _all: true } }),
   ]);
   const historyCount = new Map(histories.map((row) => [row.stockId, row._count._all]));
-  console.log(JSON.stringify({ status: DRY_RUN ? (activeLocks || activeRuns ? "DRY_RUN_BLOCKED" : "DRY_RUN_READY") : "PREFLIGHT_READY", market: MARKET, jobId: JOB_ID,
+  console.log(JSON.stringify({ status: DRY_RUN ? (activeLocks || activeRuns || selected.length === 0 ? "DRY_RUN_BLOCKED" : "DRY_RUN_READY") : "PREFLIGHT_READY", market: MARKET, jobId: JOB_ID,
     universeCount: stocks.length, plannedCount: selected.length, plannedSymbols: selected.map((s) => s.ticker), symbolsWithAtLeast5Prices: selected.filter((s) => (historyCount.get(s.id) ?? 0) >= 5).length,
     activeLockCount: activeLocks, activeRunCount: activeRuns, checkpoint: resume ? { lastSymbol: resume.last_symbol, processed: resume.processed, succeeded: resume.succeeded, failed: resume.failed } : null, writesPerformed: false }, null, 2));
   if (DRY_RUN) { if (activeLocks || activeRuns || selected.length === 0) process.exitCode = 2; return; }
