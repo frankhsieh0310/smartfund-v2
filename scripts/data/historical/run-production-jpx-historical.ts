@@ -11,11 +11,11 @@ import {
 
 type Stock = { id: string; ticker: string; yahooSymbol: string; companyName: string; exchange: string; isActive: boolean };
 type Candle = { date: string; open: number | null; high: number | null; low: number | null; close: number; adjustedClose: number | null; volume: number | null };
-type Market = "JPX" | "KSC" | "KOE" | "HKG" | "SHH" | "SHZ" | "SES" | "TOR" | "NEO" | "VAN" | "CNQ";
+type Market = "JPX" | "KSC" | "KOE" | "HKG" | "SHH" | "SHZ" | "SES" | "TOR" | "NEO" | "VAN" | "CNQ" | "PAR";
 
 const rawMarket = process.argv.find((v) => v.startsWith("--market="))?.slice(9).trim().toUpperCase();
 if (!rawMarket) throw new Error("MARKET_REQUIRED:pass an explicitly supported exchange");
-if (!(["JPX", "KSC", "KOE", "HKG", "SHH", "SHZ", "SES", "TOR", "NEO", "VAN", "CNQ"] as string[]).includes(rawMarket)) throw new Error(`UNSUPPORTED_HISTORICAL_MARKET:${rawMarket}`);
+if (!(["JPX", "KSC", "KOE", "HKG", "SHH", "SHZ", "SES", "TOR", "NEO", "VAN", "CNQ", "PAR"] as string[]).includes(rawMarket)) throw new Error(`UNSUPPORTED_HISTORICAL_MARKET:${rawMarket}`);
 const MARKET = rawMarket as Market;
 const DRY_RUN = process.argv.includes("--dry-run");
 const maxArg = process.argv.find((v) => v.startsWith("--max-symbols="))?.slice(14);
@@ -33,6 +33,7 @@ const CONFIG: Record<Market, { jobId: string; dailyJobId: string | null; rawDire
   NEO: { jobId: "stock-price-neo-historical", dailyJobId: "canada-yahoo-daily", rawDirectory: "neo" },
   VAN: { jobId: "stock-price-van-historical", dailyJobId: "canada-yahoo-daily", rawDirectory: "van" },
   CNQ: { jobId: "stock-price-cnq-historical", dailyJobId: "canada-yahoo-daily", rawDirectory: "cnq" },
+  PAR: { jobId: "stock-price-par-historical", dailyJobId: "france-yahoo-daily", rawDirectory: "par" },
 };
 const MARKET_STOCK_PREFIXES: Partial<Record<Market, readonly string[]>> = {
   SHH: ["600", "601", "603", "605", "688", "689", "900"],
@@ -57,7 +58,9 @@ const RAW_ROOT = path.resolve("runtime", "historical", "yahoo", CONFIG[MARKET].r
 const prisma = new PrismaClient({ datasources: { db: { url: process.env.DIRECT_URL ?? process.env.DATABASE_URL } } });
 const EXCLUDED_NON_STOCK_SYMBOLS = new Set<string>();
 const OFFICIAL_CNQ_STOCK_TICKERS = new Set<string>();
+const OFFICIAL_PAR_STOCK_TICKERS = new Set<string>();
 let officialCnqSource: string | null = null;
+let officialParSource: string | null = null;
 
 function stockScopeWhere() {
   return {
@@ -69,10 +72,57 @@ function stockScopeWhere() {
     ...(MARKET === "CNQ" && OFFICIAL_CNQ_STOCK_TICKERS.size > 0
       ? { ticker: { in: [...OFFICIAL_CNQ_STOCK_TICKERS] } }
       : {}),
+    ...(MARKET === "PAR" && OFFICIAL_PAR_STOCK_TICKERS.size > 0
+      ? { ticker: { in: [...OFFICIAL_PAR_STOCK_TICKERS] } }
+      : {}),
     ...(EXCLUDED_NON_STOCK_SYMBOLS.size > 0
       ? { yahooSymbol: { notIn: [...EXCLUDED_NON_STOCK_SYMBOLS] } }
       : {}),
   };
+}
+
+function parseSemicolonRow(line: string): string[] {
+  const values: string[] = [];
+  let value = "", quoted = false;
+  for (let index = 0; index < line.length; index += 1) {
+    const char = line[index]!;
+    if (char === '"') {
+      if (quoted && line[index + 1] === '"') { value += '"'; index += 1; }
+      else quoted = !quoted;
+    } else if (char === ";" && !quoted) { values.push(value); value = ""; }
+    else value += char;
+  }
+  values.push(value);
+  return values;
+}
+
+async function loadOfficialParStockUniverse(): Promise<void> {
+  if (MARKET !== "PAR") return;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30_000);
+  try {
+    const source = "https://live.euronext.com/en/product_directory/data/stocks-all-places/download?mics=XPAR";
+    const response = await fetch(source, { headers: { "User-Agent": "SmartFund Global Stock Historical" }, signal: controller.signal });
+    if (!response.ok) throw new Error(`EURONEXT_XPAR_HTTP_${response.status}`);
+    const contentType = response.headers.get("content-type") ?? "";
+    if (!contentType.toLowerCase().includes("text/csv")) throw new Error(`EURONEXT_XPAR_UNEXPECTED_CONTENT_TYPE:${contentType}`);
+    const lines = (await response.text()).split(/\r?\n/);
+    const headerIndex = lines.findIndex((line) => line.replace(/^\uFEFF/, "").startsWith("Name;ISIN;Symbol;Market;Currency;"));
+    if (headerIndex < 0) throw new Error("EURONEXT_XPAR_HEADER_NOT_FOUND");
+    const header = parseSemicolonRow(lines[headerIndex]!.replace(/^\uFEFF/, ""));
+    const nameIndex = header.indexOf("Name"), symbolIndex = header.indexOf("Symbol"), marketIndex = header.indexOf("Market");
+    if (nameIndex < 0 || symbolIndex < 0 || marketIndex < 0) throw new Error("EURONEXT_XPAR_REQUIRED_COLUMNS_MISSING");
+    const prohibited = /\b(?:bsa\d*|warrant|certificate|tracker)\b/i;
+    for (const line of lines.slice(headerIndex + 1)) {
+      if (!line.trim()) continue;
+      const row = parseSemicolonRow(line);
+      const name = row[nameIndex]?.trim() ?? "", symbol = row[symbolIndex]?.trim() ?? "", market = row[marketIndex]?.trim() ?? "";
+      if (!symbol || !market.toLowerCase().includes("paris") || NON_STOCK_NAME_REGEX.test(name) || prohibited.test(name)) continue;
+      OFFICIAL_PAR_STOCK_TICKERS.add(symbol);
+    }
+    if (OFFICIAL_PAR_STOCK_TICKERS.size < 250) throw new Error(`MARKET_SCOPE_UNCONFIRMED:PAR_OFFICIAL_STOCK_UNIVERSE_${OFFICIAL_PAR_STOCK_TICKERS.size}`);
+    officialParSource = "EURONEXT_XPAR_STOCKS_CSV";
+  } finally { clearTimeout(timeout); }
 }
 
 async function loadOfficialCnqStockUniverse(): Promise<void> {
@@ -124,7 +174,8 @@ function isWithinMarketStockScope(stock: Pick<Stock, "ticker" | "yahooSymbol" | 
   const prohibitedTicker = MARKET_TICKER_EXCLUSION_REGEX[MARKET] ? new RegExp(MARKET_TICKER_EXCLUSION_REGEX[MARKET]!, "i").test(stock.ticker) : false;
   const explicitNonStock = EXCLUDED_NON_STOCK_SYMBOLS.has(stock.yahooSymbol) || NON_STOCK_NAME_REGEX.test(stock.companyName) || prohibitedTicker;
   const officialCnqStock = MARKET !== "CNQ" || OFFICIAL_CNQ_STOCK_TICKERS.has(stock.ticker);
-  return stock.exchange === MARKET && stock.isActive && explicitStock && officialCnqStock && !explicitNonStock;
+  const officialParStock = MARKET !== "PAR" || OFFICIAL_PAR_STOCK_TICKERS.has(stock.ticker);
+  return stock.exchange === MARKET && stock.isActive && explicitStock && officialCnqStock && officialParStock && !explicitNonStock;
 }
 
 async function dailyWriterState(): Promise<{ activeLocks: number; activeRuns: number }> {
@@ -245,6 +296,7 @@ async function findMissingStocks(afterTicker: string | null | undefined, limit: 
 async function main(): Promise<void> {
   console.log(`[GLOBAL_STOCK_HISTORICAL] MARKET=${MARKET} MODE=${DRY_RUN ? "DRY_RUN" : "RUN"} JOB_ID=${JOB_ID}`);
   await loadOfficialCnqStockUniverse();
+  await loadOfficialParStockUniverse();
   await loadExplicitNonStockSymbols();
   const universe = await prisma.stock.findMany({ where: { ...stockScopeWhere(), yahooSymbol: { notIn: ["", ...EXCLUDED_NON_STOCK_SYMBOLS] } }, select: { id: true, ticker: true, yahooSymbol: true, companyName: true, exchange: true, isActive: true }, orderBy: [{ ticker: "asc" }, { id: "asc" }] });
   if (universe.length === 0 || universe.some((s) => !isWithinMarketStockScope(s))) throw new Error(`MARKET_SCOPE_UNCONFIRMED:${MARKET}`);
@@ -261,7 +313,7 @@ async function main(): Promise<void> {
     dailyWriterState(),
   ]);
   const ready = ownLocks === 0 && ownRuns === 0 && daily.activeLocks === 0 && daily.activeRuns === 0 && missing.length > 0;
-  console.log(JSON.stringify({ status: DRY_RUN ? (ready ? "DRY_RUN_READY" : "DRY_RUN_BLOCKED") : "PREFLIGHT_READY", market: MARKET, jobId: JOB_ID, universeCount: universe.length, excludedNonStockCount: EXCLUDED_NON_STOCK_SYMBOLS.size, officialUniverseSource: officialCnqSource, officialStockCount: MARKET === "CNQ" ? OFFICIAL_CNQ_STOCK_TICKERS.size : null,
+  console.log(JSON.stringify({ status: DRY_RUN ? (ready ? "DRY_RUN_READY" : "DRY_RUN_BLOCKED") : "PREFLIGHT_READY", market: MARKET, jobId: JOB_ID, universeCount: universe.length, excludedNonStockCount: EXCLUDED_NON_STOCK_SYMBOLS.size, officialUniverseSource: MARKET === "CNQ" ? officialCnqSource : MARKET === "PAR" ? officialParSource : null, officialStockCount: MARKET === "CNQ" ? OFFICIAL_CNQ_STOCK_TICKERS.size : MARKET === "PAR" ? OFFICIAL_PAR_STOCK_TICKERS.size : null,
     plannedCount: missing.length, plannedSymbols: missing.map((s) => s.ticker), activeLockCount: ownLocks, activeRunCount: ownRuns, dailyJobId: DAILY_JOB_ID,
     dailyActiveLockCount: daily.activeLocks, dailyActiveRunCount: daily.activeRuns, checkpoint: resume ? { lastSymbol: resume.last_symbol, processed: resume.processed, succeeded: resume.succeeded, failed: resume.failed } : null, writesPerformed: false }, null, 2));
   if (DRY_RUN) { if (!ready) process.exitCode = 2; return; }

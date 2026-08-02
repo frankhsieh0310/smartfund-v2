@@ -10,11 +10,11 @@ import {
 type Stock = { id: string; ticker: string; yahooSymbol: string; companyName: string; exchange: string; isActive: boolean };
 type Price = { date: Date; high: { toNumber(): number } | null; low: { toNumber(): number } | null; close: { toNumber(): number } };
 type Row = Record<string, string | number | null> & { id: string; date: string };
-type Market = "JPX" | "KSC" | "KOE" | "HKG" | "SHH" | "SHZ" | "SES" | "TOR" | "NEO" | "VAN" | "CNQ";
+type Market = "JPX" | "KSC" | "KOE" | "HKG" | "SHH" | "SHZ" | "SES" | "TOR" | "NEO" | "VAN" | "CNQ" | "PAR";
 
 const rawMarket = process.argv.find((v) => v.startsWith("--market="))?.slice(9).trim().toUpperCase();
 if (!rawMarket) throw new Error("MARKET_REQUIRED:pass an explicitly supported exchange");
-if (!(["JPX", "KSC", "KOE", "HKG", "SHH", "SHZ", "SES", "TOR", "NEO", "VAN", "CNQ"] as string[]).includes(rawMarket)) throw new Error(`UNSUPPORTED_TECHNICAL_MARKET:${rawMarket}`);
+if (!(["JPX", "KSC", "KOE", "HKG", "SHH", "SHZ", "SES", "TOR", "NEO", "VAN", "CNQ", "PAR"] as string[]).includes(rawMarket)) throw new Error(`UNSUPPORTED_TECHNICAL_MARKET:${rawMarket}`);
 const MARKET = rawMarket as Market;
 const DRY_RUN = process.argv.includes("--dry-run");
 const maxArg = process.argv.find((v) => v.startsWith("--max-symbols="))?.slice(14);
@@ -42,7 +42,9 @@ const FORMULA_VERSION = "TECHNICAL_V1";
 const prisma = new PrismaClient({ datasources: { db: { url: process.env.DIRECT_URL ?? process.env.DATABASE_URL } } });
 const EXCLUDED_NON_STOCK_SYMBOLS = new Set<string>();
 const OFFICIAL_CNQ_STOCK_TICKERS = new Set<string>();
+const OFFICIAL_PAR_STOCK_TICKERS = new Set<string>();
 let officialCnqSource: string | null = null;
+let officialParSource: string | null = null;
 
 function stockScopeWhere() {
   return {
@@ -54,10 +56,57 @@ function stockScopeWhere() {
     ...(MARKET === "CNQ" && OFFICIAL_CNQ_STOCK_TICKERS.size > 0
       ? { ticker: { in: [...OFFICIAL_CNQ_STOCK_TICKERS] } }
       : {}),
+    ...(MARKET === "PAR" && OFFICIAL_PAR_STOCK_TICKERS.size > 0
+      ? { ticker: { in: [...OFFICIAL_PAR_STOCK_TICKERS] } }
+      : {}),
     ...(EXCLUDED_NON_STOCK_SYMBOLS.size > 0
       ? { yahooSymbol: { notIn: [...EXCLUDED_NON_STOCK_SYMBOLS] } }
       : {}),
   };
+}
+
+function parseSemicolonRow(line: string): string[] {
+  const values: string[] = [];
+  let value = "", quoted = false;
+  for (let index = 0; index < line.length; index += 1) {
+    const char = line[index]!;
+    if (char === '"') {
+      if (quoted && line[index + 1] === '"') { value += '"'; index += 1; }
+      else quoted = !quoted;
+    } else if (char === ";" && !quoted) { values.push(value); value = ""; }
+    else value += char;
+  }
+  values.push(value);
+  return values;
+}
+
+async function loadOfficialParStockUniverse(): Promise<void> {
+  if (MARKET !== "PAR") return;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30_000);
+  try {
+    const source = "https://live.euronext.com/en/product_directory/data/stocks-all-places/download?mics=XPAR";
+    const response = await fetch(source, { headers: { "User-Agent": "SmartFund Global Stock Technical" }, signal: controller.signal });
+    if (!response.ok) throw new Error(`EURONEXT_XPAR_HTTP_${response.status}`);
+    const contentType = response.headers.get("content-type") ?? "";
+    if (!contentType.toLowerCase().includes("text/csv")) throw new Error(`EURONEXT_XPAR_UNEXPECTED_CONTENT_TYPE:${contentType}`);
+    const lines = (await response.text()).split(/\r?\n/);
+    const headerIndex = lines.findIndex((line) => line.replace(/^\uFEFF/, "").startsWith("Name;ISIN;Symbol;Market;Currency;"));
+    if (headerIndex < 0) throw new Error("EURONEXT_XPAR_HEADER_NOT_FOUND");
+    const header = parseSemicolonRow(lines[headerIndex]!.replace(/^\uFEFF/, ""));
+    const nameIndex = header.indexOf("Name"), symbolIndex = header.indexOf("Symbol"), marketIndex = header.indexOf("Market");
+    if (nameIndex < 0 || symbolIndex < 0 || marketIndex < 0) throw new Error("EURONEXT_XPAR_REQUIRED_COLUMNS_MISSING");
+    const prohibited = /\b(?:bsa\d*|warrant|certificate|tracker)\b/i;
+    for (const line of lines.slice(headerIndex + 1)) {
+      if (!line.trim()) continue;
+      const row = parseSemicolonRow(line);
+      const name = row[nameIndex]?.trim() ?? "", symbol = row[symbolIndex]?.trim() ?? "", market = row[marketIndex]?.trim() ?? "";
+      if (!symbol || !market.toLowerCase().includes("paris") || NON_STOCK_NAME_REGEX.test(name) || prohibited.test(name)) continue;
+      OFFICIAL_PAR_STOCK_TICKERS.add(symbol);
+    }
+    if (OFFICIAL_PAR_STOCK_TICKERS.size < 250) throw new Error(`MARKET_SCOPE_UNCONFIRMED:PAR_OFFICIAL_STOCK_UNIVERSE_${OFFICIAL_PAR_STOCK_TICKERS.size}`);
+    officialParSource = "EURONEXT_XPAR_STOCKS_CSV";
+  } finally { clearTimeout(timeout); }
 }
 
 async function loadOfficialCnqStockUniverse(): Promise<void> {
@@ -109,7 +158,8 @@ function isWithinMarketStockScope(stock: Stock): boolean {
   const prohibitedTicker = MARKET_TICKER_EXCLUSION_REGEX[MARKET] ? new RegExp(MARKET_TICKER_EXCLUSION_REGEX[MARKET]!, "i").test(stock.ticker) : false;
   const explicitNonStock = EXCLUDED_NON_STOCK_SYMBOLS.has(stock.yahooSymbol) || NON_STOCK_NAME_REGEX.test(stock.companyName) || prohibitedTicker;
   const officialCnqStock = MARKET !== "CNQ" || OFFICIAL_CNQ_STOCK_TICKERS.has(stock.ticker);
-  return stock.exchange === MARKET && stock.isActive && explicitStock && officialCnqStock && !explicitNonStock;
+  const officialParStock = MARKET !== "PAR" || OFFICIAL_PAR_STOCK_TICKERS.has(stock.ticker);
+  return stock.exchange === MARKET && stock.isActive && explicitStock && officialCnqStock && officialParStock && !explicitNonStock;
 }
 
 const finite = (value: number | null): number | null => value !== null && Number.isFinite(value) ? Number(value.toFixed(8)) : null;
@@ -261,6 +311,7 @@ async function findCompletionTargets(afterTicker: string | null | undefined, lim
 async function main(): Promise<void> {
   console.log(`[STOCK_TECHNICAL] MARKET=${MARKET} MODE=${DRY_RUN ? "DRY_RUN" : "RUN"} JOB_ID=${JOB_ID} FORMULA_VERSION=${FORMULA_VERSION}`);
   await loadOfficialCnqStockUniverse();
+  await loadOfficialParStockUniverse();
   await loadExplicitNonStockSymbols();
   const stocks = await prisma.stock.findMany({ where: stockScopeWhere(), select: { id: true, ticker: true, yahooSymbol: true, companyName: true, exchange: true, isActive: true }, orderBy: [{ ticker: "asc" }, { id: "asc" }] });
   if (stocks.length === 0) throw new Error(`MARKET_UNIVERSE_EMPTY:${MARKET}`);
@@ -276,7 +327,7 @@ async function main(): Promise<void> {
   ]);
   const historyCount = new Map(histories.map((row) => [row.stockId, row._count._all]));
   console.log(JSON.stringify({ status: DRY_RUN ? (activeLocks || activeRuns || selected.length === 0 ? "DRY_RUN_BLOCKED" : "DRY_RUN_READY") : "PREFLIGHT_READY", market: MARKET, jobId: JOB_ID,
-    universeCount: stocks.length, excludedNonStockCount: EXCLUDED_NON_STOCK_SYMBOLS.size, officialUniverseSource: officialCnqSource, officialStockCount: MARKET === "CNQ" ? OFFICIAL_CNQ_STOCK_TICKERS.size : null, plannedCount: selected.length, plannedSymbols: selected.map((s) => s.ticker), symbolsWithAtLeast5Prices: selected.filter((s) => (historyCount.get(s.id) ?? 0) >= 5).length,
+    universeCount: stocks.length, excludedNonStockCount: EXCLUDED_NON_STOCK_SYMBOLS.size, officialUniverseSource: MARKET === "CNQ" ? officialCnqSource : MARKET === "PAR" ? officialParSource : null, officialStockCount: MARKET === "CNQ" ? OFFICIAL_CNQ_STOCK_TICKERS.size : MARKET === "PAR" ? OFFICIAL_PAR_STOCK_TICKERS.size : null, plannedCount: selected.length, plannedSymbols: selected.map((s) => s.ticker), symbolsWithAtLeast5Prices: selected.filter((s) => (historyCount.get(s.id) ?? 0) >= 5).length,
     activeLockCount: activeLocks, activeRunCount: activeRuns, checkpoint: resume ? { lastSymbol: resume.last_symbol, processed: resume.processed, succeeded: resume.succeeded, failed: resume.failed } : null, writesPerformed: false }, null, 2));
   if (DRY_RUN) { if (activeLocks || activeRuns || selected.length === 0) process.exitCode = 2; return; }
   if (process.env.LIVE_WRITE_AUTHORIZED !== "true") throw new Error("LIVE_WRITE_NOT_AUTHORIZED");
