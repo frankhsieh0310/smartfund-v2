@@ -11,11 +11,11 @@ import {
 
 type Stock = { id: string; ticker: string; yahooSymbol: string; companyName: string; exchange: string; isActive: boolean };
 type Candle = { date: string; open: number | null; high: number | null; low: number | null; close: number; adjustedClose: number | null; volume: number | null };
-type Market = "JPX" | "KSC" | "KOE" | "HKG" | "SHH" | "SHZ" | "SES";
+type Market = "JPX" | "KSC" | "KOE" | "HKG" | "SHH" | "SHZ" | "SES" | "TOR" | "NEO" | "VAN" | "CNQ";
 
 const rawMarket = process.argv.find((v) => v.startsWith("--market="))?.slice(9).trim().toUpperCase();
 if (!rawMarket) throw new Error("MARKET_REQUIRED:pass an explicitly supported exchange");
-if (!(["JPX", "KSC", "KOE", "HKG", "SHH", "SHZ", "SES"] as string[]).includes(rawMarket)) throw new Error(`UNSUPPORTED_HISTORICAL_MARKET:${rawMarket}`);
+if (!(["JPX", "KSC", "KOE", "HKG", "SHH", "SHZ", "SES", "TOR", "NEO", "VAN", "CNQ"] as string[]).includes(rawMarket)) throw new Error(`UNSUPPORTED_HISTORICAL_MARKET:${rawMarket}`);
 const MARKET = rawMarket as Market;
 const DRY_RUN = process.argv.includes("--dry-run");
 const maxArg = process.argv.find((v) => v.startsWith("--max-symbols="))?.slice(14);
@@ -29,6 +29,10 @@ const CONFIG: Record<Market, { jobId: string; dailyJobId: string | null; rawDire
   SHH: { jobId: "stock-price-shh-historical", dailyJobId: "china-shanghai-yahoo-daily", rawDirectory: "shh" },
   SHZ: { jobId: "stock-price-shz-historical", dailyJobId: "china-shenzhen-yahoo-daily", rawDirectory: "shz" },
   SES: { jobId: "stock-price-ses-historical", dailyJobId: null, rawDirectory: "ses" },
+  TOR: { jobId: "stock-price-tor-historical", dailyJobId: "canada-yahoo-daily", rawDirectory: "tor" },
+  NEO: { jobId: "stock-price-neo-historical", dailyJobId: "canada-yahoo-daily", rawDirectory: "neo" },
+  VAN: { jobId: "stock-price-van-historical", dailyJobId: "canada-yahoo-daily", rawDirectory: "van" },
+  CNQ: { jobId: "stock-price-cnq-historical", dailyJobId: "canada-yahoo-daily", rawDirectory: "cnq" },
 };
 const MARKET_STOCK_PREFIXES: Partial<Record<Market, readonly string[]>> = {
   SHH: ["600", "601", "603", "605", "688", "689", "900"],
@@ -37,6 +41,12 @@ const MARKET_STOCK_PREFIXES: Partial<Record<Market, readonly string[]>> = {
 const MARKET_STOCK_REGEX: Partial<Record<Market, string>> = {
   SHH: "^(600|601|603|605|688|689|900)[0-9]{3}$",
   SHZ: "^(000|001|002|003|200|300|301)[0-9]{3}$",
+};
+const MARKET_TICKER_EXCLUSION_REGEX: Partial<Record<Market, string>> = {
+  TOR: "-(DB[A-Z]?|WT[A-Z]?|CV)$",
+  NEO: "-(DB[A-Z]?|WT[A-Z]?|CV)$",
+  VAN: "-(DB[A-Z]?|WT[A-Z]?|CV)$",
+  CNQ: "-(DB[A-Z]?|WT[A-Z]?|CV)$",
 };
 const JOB_ID = CONFIG[MARKET].jobId;
 const DAILY_JOB_ID = CONFIG[MARKET].dailyJobId;
@@ -59,25 +69,27 @@ function stockScopeWhere() {
 }
 
 async function loadExplicitNonStockSymbols(): Promise<void> {
-  if (MARKET !== "SES") return;
-  const [etfs, assets, named] = await Promise.all([
-    prisma.etf.findMany({ where: { exchange: "SES" }, select: { code: true } }),
-    prisma.asset.findMany({ where: { assetType: { in: ["ETF", "FUND"] }, code: { endsWith: ".SI" } }, select: { code: true } }),
+  const [etfs, assets, namedCandidates] = await Promise.all([
+    prisma.etf.findMany({ select: { code: true } }),
+    prisma.asset.findMany({ where: { assetType: { in: ["ETF", "FUND"] } }, select: { code: true } }),
     prisma.stock.findMany({
-      where: { exchange: "SES", OR: [{ companyName: { contains: "ETF", mode: "insensitive" } }, { companyName: { contains: "Fund", mode: "insensitive" } }] },
-      select: { yahooSymbol: true },
+      where: { exchange: MARKET },
+      select: { yahooSymbol: true, companyName: true },
     }),
   ]);
+  const tickerExclusion = MARKET_TICKER_EXCLUSION_REGEX[MARKET] ? new RegExp(MARKET_TICKER_EXCLUSION_REGEX[MARKET]!, "i") : null;
+  const named = namedCandidates.filter((row) => /\bfund\b|etf\b/i.test(row.companyName) || tickerExclusion?.test(row.yahooSymbol.replace(/\.[A-Z]+$/i, "")));
   for (const symbol of [...etfs.map((row) => row.code), ...assets.map((row) => row.code), ...named.map((row) => row.yahooSymbol)]) {
     if (symbol) EXCLUDED_NON_STOCK_SYMBOLS.add(symbol);
   }
-  if (EXCLUDED_NON_STOCK_SYMBOLS.size === 0) throw new Error("MARKET_SCOPE_UNCONFIRMED:SES_NON_STOCK_REGISTRY_EMPTY");
+  if (EXCLUDED_NON_STOCK_SYMBOLS.size === 0) throw new Error(`MARKET_SCOPE_UNCONFIRMED:${MARKET}_NON_STOCK_REGISTRY_EMPTY`);
 }
 
 function isWithinMarketStockScope(stock: Pick<Stock, "ticker" | "yahooSymbol" | "companyName" | "exchange" | "isActive">): boolean {
   const prefixes = MARKET_STOCK_PREFIXES[MARKET];
   const explicitStock = !prefixes || prefixes.some((prefix) => stock.ticker.startsWith(prefix));
-  const explicitNonStock = EXCLUDED_NON_STOCK_SYMBOLS.has(stock.yahooSymbol) || (MARKET === "SES" && /(fund|etf)/i.test(stock.companyName));
+  const prohibitedTicker = MARKET_TICKER_EXCLUSION_REGEX[MARKET] ? new RegExp(MARKET_TICKER_EXCLUSION_REGEX[MARKET]!, "i").test(stock.ticker) : false;
+  const explicitNonStock = EXCLUDED_NON_STOCK_SYMBOLS.has(stock.yahooSymbol) || /\bfund\b|etf\b/i.test(stock.companyName) || prohibitedTicker;
   return stock.exchange === MARKET && stock.isActive && explicitStock && !explicitNonStock;
 }
 
@@ -181,11 +193,10 @@ async function findMissingStocks(afterTicker: string | null | undefined, limit: 
         AND stock.yahoo_symbol <> ''
         AND stock.ticker > $2
         AND ($4::text IS NULL OR stock.ticker ~ $4)
-        AND ($5::boolean = FALSE OR (
-          NOT EXISTS (SELECT 1 FROM etfs etf WHERE etf.exchange = 'SES' AND etf.code = stock.yahoo_symbol)
-          AND NOT EXISTS (SELECT 1 FROM assets asset WHERE asset.asset_type::text IN ('ETF', 'FUND') AND asset.code = stock.yahoo_symbol)
-          AND stock.company_name !~* '(fund|etf)'
-        ))
+        AND ($5::text IS NULL OR stock.ticker !~ $5)
+        AND NOT EXISTS (SELECT 1 FROM etfs etf WHERE etf.code = stock.yahoo_symbol)
+        AND NOT EXISTS (SELECT 1 FROM assets asset WHERE asset.asset_type::text IN ('ETF', 'FUND') AND asset.code = stock.yahoo_symbol)
+        AND stock.company_name !~* '(^|[^[:alpha:]])fund([^[:alpha:]]|$)|etf([^[:alpha:]]|$)'
         AND NOT EXISTS (SELECT 1 FROM stock_history history WHERE history.stock_id = stock.id OFFSET 4 LIMIT 1)
       ORDER BY stock.ticker ASC, stock.id ASC
       LIMIT $3`,
@@ -193,7 +204,7 @@ async function findMissingStocks(afterTicker: string | null | undefined, limit: 
     afterTicker ?? "",
     limit,
     MARKET_STOCK_REGEX[MARKET] ?? null,
-    MARKET === "SES",
+    MARKET_TICKER_EXCLUSION_REGEX[MARKET] ?? null,
   );
 }
 
