@@ -73,7 +73,13 @@ async function insertCandles(stock: Stock, candles: Candle[]): Promise<number> {
   let inserted = 0;
   for (let offset = 0; offset < candles.length; offset += 2_000) {
     const result = await prisma.stockHistory.createMany({
-      data: candles.slice(offset, offset + 2_000).map((candle) => ({ id: randomUUID(), stockId: stock.id, ...candle, source: "YAHOO", sourceSymbol: stock.yahooSymbol, providerMethod: "YAHOO_CHART_API", importedAt: new Date(), updatedAt: new Date() })),
+      data: candles.slice(offset, offset + 2_000).map((candle) => ({
+        id: randomUUID(), stockId: stock.id, date: new Date(`${candle.date}T00:00:00.000Z`),
+        open: candle.open, high: candle.high, low: candle.low, close: candle.close,
+        adjustedClose: candle.adjustedClose, volume: candle.volume, source: "YAHOO",
+        sourceSymbol: stock.yahooSymbol, providerMethod: "YAHOO_CHART_API",
+        importedAt: new Date(), updatedAt: new Date(),
+      })),
       skipDuplicates: true,
     });
     inserted += result.count;
@@ -83,8 +89,16 @@ async function insertCandles(stock: Stock, candles: Candle[]): Promise<number> {
   return inserted;
 }
 
+function errorReason(error: unknown): string {
+  if (!(error instanceof Error)) return String(error).slice(0, 500);
+  const code = typeof (error as Error & { code?: unknown }).code === "string" ? (error as Error & { code: string }).code : "NO_CODE";
+  if (error.name === "PrismaClientValidationError") return `${error.name}:${code}`;
+  const message = error.message.split("\n").map((line) => line.trim()).find(Boolean) ?? error.name;
+  return `${error.name}:${code}:${message}`.slice(0, 500);
+}
+
 async function recordFailure(stock: Stock, error: unknown): Promise<void> {
-  const message = error instanceof Error ? error.message : String(error);
+  const message = errorReason(error);
   const permanent = /YAHOO_(HTTP_404|HTTP_422|NO_DATA|NO_VALID_CANDLES)/.test(message);
   await prisma.productionSchedulerFailure.upsert({
     where: { jobId_stockId: { jobId: JOB_ID, stockId: stock.id } },
@@ -151,7 +165,7 @@ async function main(): Promise<void> {
         summary.completed += 1; summary.success += 1; summary.inserted += inserted; if (inserted === 0) summary.noUpdate += 1;
         await prisma.productionSchedulerFailure.deleteMany({ where: { jobId: JOB_ID, stockId: stock.id } });
         console.log(JSON.stringify({ market: MARKET, ticker: stock.ticker, status: "COMPLETE", candles: payload.candles.length, inserted, archivePath, processed: summary.attempted }));
-      } catch (error) { summary.failed += 1; summary.retryableFailure += 1; await recordFailure(stock, error); console.error(JSON.stringify({ market: MARKET, ticker: stock.ticker, status: "FAILED", error: error instanceof Error ? error.message : String(error), processed: summary.attempted })); }
+      } catch (error) { summary.failed += 1; summary.retryableFailure += 1; await recordFailure(stock, error); console.error(JSON.stringify({ market: MARKET, ticker: stock.ticker, status: "FAILED", error: errorReason(error), processed: summary.attempted })); }
       lastSymbol = stock.ticker;
       if (summary.attempted % 5 === 0 || stock === missing.at(-1)) { await persistLifecycleCheckpoint(prisma, runId, summary, lastSymbol, { jobId: JOB_ID, runType: RUN_TYPE }); await heartbeatLifecycleLock(prisma, JOB_ID, owner); }
     }
