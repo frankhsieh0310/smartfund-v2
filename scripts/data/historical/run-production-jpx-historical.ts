@@ -76,6 +76,7 @@ async function archive(stock: Stock, raw: string): Promise<string> {
 }
 
 async function insertCandles(stock: Stock, candles: Candle[]): Promise<number> {
+  if (candles.length < 5) throw new Error(`YAHOO_INSUFFICIENT_HISTORY:${candles.length}`);
   if (await prisma.stockHistory.count({ where: { stockId: stock.id } }) > 0) return 0;
   let inserted = 0;
   for (let offset = 0; offset < candles.length; offset += 2_000) {
@@ -106,11 +107,11 @@ function errorReason(error: unknown): string {
 
 async function recordFailure(stock: Stock, error: unknown): Promise<void> {
   const message = errorReason(error);
-  const permanent = /YAHOO_(HTTP_404|HTTP_422|NO_DATA|NO_VALID_CANDLES)/.test(message);
+  const permanent = /YAHOO_(HTTP_404|HTTP_422|NO_DATA|NO_VALID_CANDLES|INSUFFICIENT_HISTORY)/.test(message);
   await prisma.productionSchedulerFailure.upsert({
     where: { jobId_stockId: { jobId: JOB_ID, stockId: stock.id } },
-    create: { jobId: JOB_ID, stockId: stock.id, symbol: stock.yahooSymbol, lastError: message, errorType: "YAHOO_HISTORICAL", classification: permanent ? "PERMANENT_UNAVAILABLE" : "RETRYABLE_FAILURE", resolved: permanent },
-    update: { symbol: stock.yahooSymbol, lastError: message, errorType: "YAHOO_HISTORICAL", classification: permanent ? "PERMANENT_UNAVAILABLE" : "RETRYABLE_FAILURE", resolved: permanent, attempts: { increment: 1 }, lastAttemptedAt: new Date() },
+    create: { jobId: JOB_ID, stockId: stock.id, symbol: stock.yahooSymbol, lastError: message, errorType: "YAHOO_HISTORICAL", classification: permanent ? "PARTIAL_SOURCE_DATA" : "RETRYABLE_FAILURE", resolved: false },
+    update: { symbol: stock.yahooSymbol, lastError: message, errorType: "YAHOO_HISTORICAL", classification: permanent ? "PARTIAL_SOURCE_DATA" : "RETRYABLE_FAILURE", resolved: false, attempts: { increment: 1 }, lastAttemptedAt: new Date() },
   });
 }
 
@@ -122,7 +123,7 @@ async function findMissingStocks(afterTicker: string | null | undefined, limit: 
         AND stock.is_active = TRUE
         AND stock.yahoo_symbol <> ''
         AND stock.ticker > $2
-        AND NOT EXISTS (SELECT 1 FROM stock_history history WHERE history.stock_id = stock.id)
+        AND NOT EXISTS (SELECT 1 FROM stock_history history WHERE history.stock_id = stock.id OFFSET 4 LIMIT 1)
       ORDER BY stock.ticker ASC, stock.id ASC
       LIMIT $3`,
     MARKET,
