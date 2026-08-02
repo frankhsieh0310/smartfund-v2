@@ -18,7 +18,7 @@ import {
 } from "../production/run-lifecycle.ts";
 
 type Market = "NASDAQ" | "NYSE" | "AMEX";
-type Stock = { id: string; ticker: string; companyName: string };
+type Stock = { id: string; ticker: string; companyName: string; exchange: string; isActive: boolean };
 type SecUnitFact = {
   start?: string;
   end?: string;
@@ -54,20 +54,26 @@ type NormalizedFact = {
   restatementVersion: string | null;
 };
 
-const prisma = new PrismaClient({ datasources: { db: { url: process.env.DIRECT_URL ?? process.env.DATABASE_URL } } });
-const marketArg = process.argv.find((arg) => arg.startsWith("--market="))?.slice("--market=".length)?.toUpperCase() ?? "NASDAQ";
+const rawMarketArg = process.argv.find((arg) => arg.startsWith("--market="))?.slice("--market=".length)?.trim();
+if (!rawMarketArg) throw new Error("MARKET_REQUIRED:pass exactly one of --market=NASDAQ, --market=NYSE, or --market=AMEX");
+const marketArg = rawMarketArg.toUpperCase();
 if (!["NASDAQ", "NYSE", "AMEX"].includes(marketArg)) throw new Error(`UNSUPPORTED_SEC_MARKET:${marketArg}`);
 const MARKET = marketArg as Market;
 const INCREMENTAL = process.argv.includes("--incremental");
+const DRY_RUN = process.argv.includes("--dry-run");
 const JOB_ID = `official-financial-${MARKET.toLowerCase()}-${INCREMENTAL ? "incremental" : "historical"}`;
+const LOCK_KEY = JOB_ID;
 const RUN_TYPE = INCREMENTAL ? "OFFICIAL_FINANCIAL_INCREMENTAL" : "OFFICIAL_FINANCIAL_HISTORICAL";
 const TARGET_DATE = new Date(`${new Date().toISOString().slice(0, 10)}T00:00:00.000Z`);
 const maxSymbolsArg = process.argv.find((arg) => arg.startsWith("--max-symbols="))?.slice("--max-symbols=".length);
-const MAX_SYMBOLS = Math.max(1, Number.parseInt(maxSymbolsArg ?? "25", 10));
+const parsedMaxSymbols = Number.parseInt(maxSymbolsArg ?? "25", 10);
+if (!Number.isSafeInteger(parsedMaxSymbols) || parsedMaxSymbols < 1) throw new Error(`INVALID_MAX_SYMBOLS:${maxSymbolsArg ?? ""}`);
+const MAX_SYMBOLS = parsedMaxSymbols;
 const CHECKPOINT_EVERY = 5;
 const REQUEST_DELAY_MS = 250;
 const REQUEST_TIMEOUT_MS = 30_000;
 const RAW_ROOT = path.resolve("runtime", "official-financial", "us", MARKET.toLowerCase());
+const prisma = new PrismaClient({ datasources: { db: { url: process.env.DIRECT_URL ?? process.env.DATABASE_URL } } });
 const SEC_HEADERS = {
   Accept: "application/json",
   "User-Agent": process.env.SEC_USER_AGENT ?? "SmartFund data platform contact@smartfund.app",
@@ -162,6 +168,38 @@ const CONCEPTS: Record<string, Array<{ namespace: "us-gaap" | "dei"; name: strin
 
 function sleep(milliseconds: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
+function assertMarketScope(stocks: Stock[]): { stockIds: string[]; stockIdSet: Set<string> } {
+  if (stocks.length === 0) throw new Error(`MARKET_UNIVERSE_EMPTY:${MARKET}`);
+  const invalid = stocks.find((stock) => !stock.id || !stock.ticker || stock.exchange !== MARKET || stock.isActive !== true);
+  if (invalid) throw new Error(`MARKET_SCOPE_UNCONFIRMED:${MARKET}`);
+  const stockIds = stocks.map((stock) => stock.id);
+  const stockIdSet = new Set(stockIds);
+  if (stockIdSet.size !== stockIds.length) throw new Error(`MARKET_SCOPE_DUPLICATE_STOCK_ID:${MARKET}`);
+  return { stockIds, stockIdSet };
+}
+
+function assertStockInScope(stock: Stock, stockIdSet: Set<string>): void {
+  if (stock.exchange !== MARKET || stock.isActive !== true || !stockIdSet.has(stock.id)) {
+    throw new Error(`STOCK_OUTSIDE_MARKET_SCOPE:${MARKET}`);
+  }
+}
+
+async function loadMarketUniverse(): Promise<{ stocks: Stock[]; stockIds: string[]; stockIdSet: Set<string> }> {
+  const stocks = await prisma.stock.findMany({
+    where: { exchange: MARKET, isActive: true },
+    select: { id: true, ticker: true, companyName: true, exchange: true, isActive: true },
+    orderBy: [{ ticker: "asc" }, { id: "asc" }],
+  });
+  const scope = assertMarketScope(stocks);
+  return { stocks, ...scope };
+}
+
+function remainingFromCheckpoint(stocks: Stock[], lastSymbol: string | null | undefined): { remaining: Stock[]; resumeIndex: number } {
+  const resumeIndex = lastSymbol ? stocks.findIndex((stock) => stock.ticker === lastSymbol) : -1;
+  if (lastSymbol && resumeIndex < 0) throw new Error(`CHECKPOINT_SYMBOL_OUTSIDE_MARKET_SCOPE:${MARKET}`);
+  return { remaining: stocks.slice(resumeIndex + 1), resumeIndex };
 }
 
 function normalizedTicker(ticker: string): string {
@@ -281,7 +319,8 @@ function normalizeCompanyFacts(stock: Stock, cik: string, payload: SecCompanyFac
   return output;
 }
 
-async function upsertFacts(facts: NormalizedFact[]): Promise<number> {
+async function upsertFacts(facts: NormalizedFact[], stockIdSet: Set<string>): Promise<number> {
+  if (facts.some((fact) => !stockIdSet.has(fact.stockId))) throw new Error(`FACTS_OUTSIDE_MARKET_SCOPE:${MARKET}`);
   let rows = 0;
   for (let offset = 0; offset < facts.length; offset += 2_000) {
     const payload = facts.slice(offset, offset + 2_000).map((fact) => ({ id: randomUUID(), ...fact }));
@@ -311,7 +350,8 @@ async function upsertFacts(facts: NormalizedFact[]): Promise<number> {
   return rows;
 }
 
-async function recordFailure(stock: Stock, reason: string): Promise<void> {
+async function recordFailure(stock: Stock, reason: string, stockIdSet: Set<string>): Promise<void> {
+  assertStockInScope(stock, stockIdSet);
   const permanent = reason === "SEC_CIK_NOT_FOUND" || reason === "SEC_NO_CANONICAL_FACTS";
   await prisma.$executeRawUnsafe(
     `INSERT INTO production_scheduler_failures
@@ -333,7 +373,8 @@ async function recordFailure(stock: Stock, reason: string): Promise<void> {
   );
 }
 
-async function resolveFailure(stock: Stock): Promise<void> {
+async function resolveFailure(stock: Stock, stockIdSet: Set<string>): Promise<void> {
+  assertStockInScope(stock, stockIdSet);
   await prisma.$executeRawUnsafe(
     "UPDATE production_scheduler_failures SET resolved = TRUE, resolved_at = NOW(), resolution_reason = 'SEC_FINANCIAL_FACTS_INGESTED' WHERE job_id = $1 AND stock_id = $2 AND resolved = FALSE",
     JOB_ID,
@@ -341,13 +382,25 @@ async function resolveFailure(stock: Stock): Promise<void> {
   );
 }
 
-async function removeInvalidPointInTimeFacts(): Promise<number> {
+async function removeInvalidPointInTimeFacts(stockIds: string[]): Promise<number> {
+  if (stockIds.length === 0) throw new Error(`MARKET_UNIVERSE_EMPTY:${MARKET}`);
   return prisma.$executeRawUnsafe(
-    "DELETE FROM stock_financial_facts WHERE source = 'SEC_EDGAR' AND filing_date IS NOT NULL AND period_end > filing_date",
+    `DELETE FROM stock_financial_facts AS fact
+      USING stocks AS stock
+      WHERE fact.stock_id = stock.id
+        AND stock.exchange = $1
+        AND stock.is_active = TRUE
+        AND fact.stock_id = ANY($2::text[])
+        AND fact.source = 'SEC_EDGAR'
+        AND fact.filing_date IS NOT NULL
+        AND fact.period_end > fact.filing_date`,
+    MARKET,
+    stockIds,
   );
 }
 
-async function processStock(stock: Stock, cikByTicker: Map<string, string>): Promise<{ facts: number; latest: string | null }> {
+async function processStock(stock: Stock, cikByTicker: Map<string, string>, stockIdSet: Set<string>): Promise<{ facts: number; latest: string | null }> {
+  assertStockInScope(stock, stockIdSet);
   const cik = cikByTicker.get(normalizedTicker(stock.ticker));
   if (!cik) throw new Error("SEC_CIK_NOT_FOUND");
   const url = `https://data.sec.gov/api/xbrl/companyfacts/CIK${cik}.json`;
@@ -355,14 +408,19 @@ async function processStock(stock: Stock, cikByTicker: Map<string, string>): Pro
   const archive = await archiveJson(stock, cik, text);
   const facts = normalizeCompanyFacts(stock, cik, payload, archive.sha256);
   if (!facts.length) throw new Error("SEC_NO_CANONICAL_FACTS");
-  const rows = await upsertFacts(facts);
-  await resolveFailure(stock);
+  const rows = await upsertFacts(facts, stockIdSet);
+  await resolveFailure(stock, stockIdSet);
   return { facts: rows, latest: facts.reduce<string | null>((latest, fact) => !latest || fact.periodEnd > latest ? fact.periodEnd : latest, null) };
 }
 
-async function loadCikMap(): Promise<Map<string, string>> {
+async function loadCikMap(stocks: Stock[]): Promise<Map<string, string>> {
+  const allowedTickers = new Set(stocks.map((stock) => normalizedTicker(stock.ticker)));
   const { payload } = await fetchJson<Record<string, { ticker: string; cik_str: number }>>("https://www.sec.gov/files/company_tickers.json");
-  return new Map(Object.values(payload).map((item) => [normalizedTicker(item.ticker), String(item.cik_str).padStart(10, "0")]));
+  return new Map(
+    Object.values(payload)
+      .map((item) => [normalizedTicker(item.ticker), String(item.cik_str).padStart(10, "0")] as const)
+      .filter(([ticker]) => allowedTickers.has(ticker)),
+  );
 }
 
 function restoreSummary(details: Partial<RunSummary> | null, checkpoint: { processed: number; succeeded: number; failed: number } | null) {
@@ -377,66 +435,149 @@ function restoreSummary(details: Partial<RunSummary> | null, checkpoint: { proce
   return summary;
 }
 
+async function runDryRun(
+  scope: { stockIds: string[] },
+  resume: { last_symbol: string | null; processed: number; succeeded: number; failed: number } | null,
+  selected: Stock[],
+): Promise<void> {
+  const [lockRows, activeRuns, failureRows, invalidFactRows] = await Promise.all([
+    prisma.$queryRawUnsafe<Array<{ active: number; heartbeat_at: Date | null }>>(
+      "SELECT COUNT(*) FILTER (WHERE expires_at > NOW() AND updated_at > NOW() - INTERVAL '10 minutes')::int AS active, MAX(updated_at) FILTER (WHERE expires_at > NOW() AND updated_at > NOW() - INTERVAL '10 minutes') AS heartbeat_at FROM production_scheduler_locks WHERE job_id = $1",
+      LOCK_KEY,
+    ),
+    prisma.$queryRawUnsafe<Array<{ status: string }>>(
+      "SELECT status FROM production_scheduler_runs WHERE job_id = $1 AND status IN ('RUNNING', 'IN_PROGRESS', 'PAUSE_REQUESTED') ORDER BY started_at DESC",
+      JOB_ID,
+    ),
+    prisma.$queryRawUnsafe<Array<{ open: number; retryable: number; permanent: number }>>(
+      "SELECT COUNT(*) FILTER (WHERE resolved = FALSE)::int AS open, COUNT(*) FILTER (WHERE resolved = FALSE AND classification = 'RETRYABLE_FAILURE')::int AS retryable, COUNT(*) FILTER (WHERE resolved = FALSE AND classification IN ('PERMANENT_UNAVAILABLE', 'PARTIAL_SOURCE_DATA'))::int AS permanent FROM production_scheduler_failures WHERE job_id = $1 AND stock_id = ANY($2::text[])",
+      JOB_ID,
+      scope.stockIds,
+    ),
+    prisma.$queryRawUnsafe<Array<{ count: number }>>(
+      `SELECT COUNT(*)::int AS count
+         FROM stock_financial_facts fact
+         JOIN stocks stock ON stock.id = fact.stock_id
+        WHERE stock.exchange = $1
+          AND stock.is_active = TRUE
+          AND fact.stock_id = ANY($2::text[])
+          AND fact.source = 'SEC_EDGAR'
+          AND fact.filing_date IS NOT NULL
+          AND fact.period_end > fact.filing_date`,
+      MARKET,
+      scope.stockIds,
+    ),
+  ]);
+  const activeLocks = Number(lockRows[0]?.active ?? 0);
+  const safeToStart = activeLocks === 0 && activeRuns.length === 0;
+  console.log(JSON.stringify({
+    status: safeToStart ? "DRY_RUN_READY" : "DRY_RUN_BLOCKED",
+    dryRun: true,
+    market: MARKET,
+    jobId: JOB_ID,
+    lockKey: LOCK_KEY,
+    runType: RUN_TYPE,
+    universeCount: scope.stockIds.length,
+    plannedCount: selected.length,
+    plannedSymbols: selected.map((stock) => stock.ticker),
+    activeLockCount: activeLocks,
+    activeHeartbeatAt: lockRows[0]?.heartbeat_at ?? null,
+    activeRunStatuses: activeRuns.map((run) => run.status),
+    checkpoint: resume ? {
+      lastSymbol: resume.last_symbol,
+      processed: resume.processed,
+      succeeded: resume.succeeded,
+      failed: resume.failed,
+    } : null,
+    failureQueue: failureRows[0] ?? { open: 0, retryable: 0, permanent: 0 },
+    invalidSecFactsInMarketScope: Number(invalidFactRows[0]?.count ?? 0),
+    writesPerformed: false,
+  }, null, 2));
+  if (!safeToStart) process.exitCode = 2;
+}
+
 async function main(): Promise<void> {
   const owner = `${process.env.RAILWAY_REPLICA_ID ?? "local"}:${process.pid}`;
   let runId: string | null = null;
   let lockHeld = false;
   let summary = createSummary();
   try {
+    console.log(`[SEC_FINANCIAL] MARKET=${MARKET} MODE=${DRY_RUN ? "DRY_RUN" : "RUN"} JOB_ID=${JOB_ID} LOCK_KEY=${LOCK_KEY}`);
+    const marketScope = await loadMarketUniverse();
+    console.log(`[SEC_FINANCIAL] MARKET=${MARKET} UNIVERSE_SYMBOLS=${marketScope.stocks.length}`);
+
+    if (DRY_RUN) {
+      const resume = await loadLifecycleResumeCheckpoint(prisma, JOB_ID, INCREMENTAL ? { targetTradeDate: TARGET_DATE, runType: RUN_TYPE } : undefined);
+      const { remaining } = remainingFromCheckpoint(marketScope.stocks, resume?.last_symbol);
+      const selected = remaining.slice(0, MAX_SYMBOLS);
+      console.log(`[SEC_FINANCIAL] MARKET=${MARKET} PLANNED_SYMBOLS=${selected.length} SYMBOLS=${selected.map((stock) => stock.ticker).join(",") || "NONE"}`);
+      await runDryRun(marketScope, resume, selected);
+      return;
+    }
+
     await recoverOrphanedLifecycleRun(prisma, JOB_ID);
     lockHeld = await acquireLifecycleLock(prisma, JOB_ID, owner);
     if (!lockHeld) {
       console.log(JSON.stringify({ status: "SKIPPED_LOCKED", market: MARKET, jobId: JOB_ID }));
       return;
     }
-    const [marketStocks, cikByTicker, resume, recentFilingCiks] = await Promise.all([
-      prisma.stock.findMany({ where: { exchange: MARKET, isActive: true }, select: { id: true, ticker: true, companyName: true }, orderBy: [{ ticker: "asc" }, { id: "asc" }] }),
-      loadCikMap(),
+    const [cikByTicker, resume, recentFilingCiks] = await Promise.all([
+      loadCikMap(marketScope.stocks),
       loadLifecycleResumeCheckpoint(prisma, JOB_ID, INCREMENTAL ? { targetTradeDate: TARGET_DATE, runType: RUN_TYPE } : undefined),
       INCREMENTAL ? discoverRecentFilingCiks() : Promise.resolve(null),
     ]);
     const stocks = recentFilingCiks
-      ? marketStocks.filter((stock) => {
+      ? marketScope.stocks.filter((stock) => {
           const cik = cikByTicker.get(normalizedTicker(stock.ticker));
           return cik ? recentFilingCiks.has(cik) : false;
         })
-      : marketStocks;
-    const reconciledFailures = await prisma.$executeRawUnsafe(
-      `UPDATE production_scheduler_failures failure
-          SET resolved = TRUE, resolved_at = NOW(), resolution_reason = 'SEC_FINANCIAL_FACTS_ALREADY_INGESTED'
-        WHERE failure.job_id = $1 AND failure.resolved = FALSE
-          AND EXISTS (
-            SELECT 1 FROM stock_financial_facts fact
-             WHERE fact.stock_id = failure.stock_id AND fact.source = 'SEC_EDGAR'
-          )`,
-      JOB_ID,
-    );
-    if (reconciledFailures > 0) console.log(JSON.stringify({ market: MARKET, retryRecovered: reconciledFailures, reason: "FACTS_ALREADY_INGESTED" }));
-    const invalidFactsRemoved = await removeInvalidPointInTimeFacts();
-    if (invalidFactsRemoved > 0) console.log(JSON.stringify({ market: MARKET, invalidFactsRemoved, validation: "PERIOD_END_NOT_AFTER_FILING_DATE" }));
-    summary = restoreSummary(resume?.details ?? null, resume);
-    const resumeIndex = resume?.last_symbol ? stocks.findIndex((stock) => stock.ticker === resume.last_symbol) : -1;
-    if (resume?.last_symbol && resumeIndex < 0) throw new Error(`CHECKPOINT_SYMBOL_NOT_FOUND:${resume.last_symbol}`);
-    const remaining = stocks.slice(resumeIndex + 1);
+      : marketScope.stocks;
+    const { remaining, resumeIndex } = remainingFromCheckpoint(stocks, resume?.last_symbol);
     const selected = remaining.slice(0, MAX_SYMBOLS);
+    console.log(`[SEC_FINANCIAL] MARKET=${MARKET} PLANNED_SYMBOLS=${selected.length} SYMBOLS=${selected.map((stock) => stock.ticker).join(",") || "NONE"}`);
+    if (selected.length === 0) throw new Error(`NO_SYMBOLS_TO_PROCESS:${MARKET}`);
+
+    summary = restoreSummary(resume?.details ?? null, resume);
     runId = await createLifecycleRun(prisma, JOB_ID, MARKET, RUN_TYPE, INCREMENTAL ? {
       targetTradeDate: TARGET_DATE,
       runKey: `${JOB_ID}:${TARGET_DATE.toISOString().slice(0, 10)}`,
       universeCount: stocks.length,
     } : { universeCount: stocks.length });
     if (INCREMENTAL) {
-      const current = await prisma.$queryRawUnsafe<Array<{ status: string }>>("SELECT status FROM production_scheduler_runs WHERE id = $1", runId);
+      const current = await prisma.$queryRawUnsafe<Array<{ status: string }>>("SELECT status FROM production_scheduler_runs WHERE id = $1 AND job_id = $2 AND exchange = $3", runId, JOB_ID, MARKET);
       if (current[0]?.status === "COMPLETED") {
         console.log(JSON.stringify({ status: "SKIPPED_COMPLETED", market: MARKET, jobId: JOB_ID, targetDate: TARGET_DATE.toISOString().slice(0, 10) }));
         return;
       }
     }
+
+    const reconciledFailures = await prisma.$executeRawUnsafe(
+      `UPDATE production_scheduler_failures failure
+          SET resolved = TRUE, resolved_at = NOW(), resolution_reason = 'SEC_FINANCIAL_FACTS_ALREADY_INGESTED'
+        WHERE failure.job_id = $1 AND failure.resolved = FALSE
+          AND failure.stock_id = ANY($2::text[])
+          AND EXISTS (
+            SELECT 1
+              FROM stock_financial_facts fact
+              JOIN stocks stock ON stock.id = fact.stock_id
+             WHERE fact.stock_id = failure.stock_id
+               AND stock.exchange = $3
+               AND stock.is_active = TRUE
+               AND fact.source = 'SEC_EDGAR'
+          )`,
+      JOB_ID,
+      marketScope.stockIds,
+      MARKET,
+    );
+    if (reconciledFailures > 0) console.log(JSON.stringify({ market: MARKET, retryRecovered: reconciledFailures, reason: "FACTS_ALREADY_INGESTED" }));
+    const invalidFactsRemoved = await removeInvalidPointInTimeFacts(marketScope.stockIds);
+    if (invalidFactsRemoved > 0) console.log(JSON.stringify({ market: MARKET, invalidFactsRemoved, validation: "PERIOD_END_NOT_AFTER_FILING_DATE" }));
     let latestPeriod: string | null = null;
 
     for (const stock of selected) {
       summary.attempted += 1;
       try {
-        const result = await processStock(stock, cikByTicker);
+        const result = await processStock(stock, cikByTicker, marketScope.stockIdSet);
         summary.completed += 1;
         summary.success += 1;
         summary.inserted += result.facts;
@@ -447,11 +588,15 @@ async function main(): Promise<void> {
         summary.failed += 1;
         if (reason === "SEC_CIK_NOT_FOUND" || reason === "SEC_NO_CANONICAL_FACTS") summary.permanentUnavailable += 1;
         else summary.retryableFailure += 1;
-        await recordFailure(stock, reason);
+        await recordFailure(stock, reason, marketScope.stockIdSet);
         console.error(JSON.stringify({ market: MARKET, ticker: stock.ticker, status: "FAILED", reason, processed: summary.attempted, universe: stocks.length }));
       }
       if (runId && (summary.attempted % CHECKPOINT_EVERY === 0 || stock === selected.at(-1))) {
-        await persistLifecycleCheckpoint(prisma, runId, summary, stock.ticker, INCREMENTAL ? { jobId: JOB_ID, targetTradeDate: TARGET_DATE, runType: RUN_TYPE } : undefined);
+        await persistLifecycleCheckpoint(prisma, runId, summary, stock.ticker, {
+          jobId: JOB_ID,
+          targetTradeDate: INCREMENTAL ? TARGET_DATE : undefined,
+          runType: RUN_TYPE,
+        });
         await heartbeatLifecycleLock(prisma, JOB_ID, owner);
       }
       await sleep(REQUEST_DELAY_MS);
@@ -467,15 +612,16 @@ async function main(): Promise<void> {
       `SELECT COUNT(DISTINCT s.id)::int AS completed, MIN(f.period_end) AS earliest, MAX(f.period_end) AS latest, COUNT(f.id)::bigint AS rows
          FROM stocks s
          JOIN stock_financial_facts f ON f.stock_id = s.id AND f.source = 'SEC_EDGAR'
-        WHERE s.exchange = $1 AND s.is_active = TRUE`,
+        WHERE s.exchange = $1 AND s.is_active = TRUE AND s.id = ANY($2::text[])`,
       MARKET,
+      marketScope.stockIds,
     );
     const coverage = coverageRows[0];
     const completed = Number(coverage?.completed ?? 0);
     const validation = {
       status: summary.attempted === stocks.length && summary.completed + summary.failed === stocks.length ? "PASS" : "FAIL",
       market: MARKET,
-      universe: INCREMENTAL ? marketStocks.length : stocks.length,
+      universe: INCREMENTAL ? marketScope.stocks.length : stocks.length,
       expectedFilers: stocks.length,
       processed: summary.attempted,
       stocksWithFinancialFacts: completed,
