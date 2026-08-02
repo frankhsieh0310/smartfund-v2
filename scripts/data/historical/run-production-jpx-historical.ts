@@ -11,19 +11,24 @@ import {
 
 type Stock = { id: string; ticker: string; yahooSymbol: string; exchange: string; isActive: boolean };
 type Candle = { date: string; open: number | null; high: number | null; low: number | null; close: number; adjustedClose: number | null; volume: number | null };
+type Market = "JPX" | "KSC";
 
 const rawMarket = process.argv.find((v) => v.startsWith("--market="))?.slice(9).trim().toUpperCase();
-if (!rawMarket) throw new Error("MARKET_REQUIRED:pass --market=JPX");
-if (rawMarket !== "JPX") throw new Error(`UNSUPPORTED_HISTORICAL_MARKET:${rawMarket}`);
-const MARKET = rawMarket;
+if (!rawMarket) throw new Error("MARKET_REQUIRED:pass --market=JPX or --market=KSC");
+if (!(["JPX", "KSC"] as string[]).includes(rawMarket)) throw new Error(`UNSUPPORTED_HISTORICAL_MARKET:${rawMarket}`);
+const MARKET = rawMarket as Market;
 const DRY_RUN = process.argv.includes("--dry-run");
 const maxArg = process.argv.find((v) => v.startsWith("--max-symbols="))?.slice(14);
 const MAX_SYMBOLS = Number.parseInt(maxArg ?? "25", 10);
 if (!Number.isSafeInteger(MAX_SYMBOLS) || MAX_SYMBOLS < 1 || MAX_SYMBOLS > 250) throw new Error(`INVALID_MAX_SYMBOLS:${maxArg ?? ""}`);
-const JOB_ID = "stock-price-jpx-historical";
-const DAILY_JOB_ID = "japan-yahoo-daily";
+const CONFIG: Record<Market, { jobId: string; dailyJobId: string; rawDirectory: string }> = {
+  JPX: { jobId: "stock-price-jpx-historical", dailyJobId: "japan-yahoo-daily", rawDirectory: "jpx" },
+  KSC: { jobId: "stock-price-ksc-historical", dailyJobId: "korea-yahoo-daily", rawDirectory: "ksc" },
+};
+const JOB_ID = CONFIG[MARKET].jobId;
+const DAILY_JOB_ID = CONFIG[MARKET].dailyJobId;
 const RUN_TYPE = "STOCK_PRICE_HISTORICAL";
-const RAW_ROOT = path.resolve("runtime", "historical", "yahoo", "jpx");
+const RAW_ROOT = path.resolve("runtime", "historical", "yahoo", CONFIG[MARKET].rawDirectory);
 const prisma = new PrismaClient({ datasources: { db: { url: process.env.DIRECT_URL ?? process.env.DATABASE_URL } } });
 
 async function dailyWriterState(): Promise<{ activeLocks: number; activeRuns: number }> {
@@ -123,7 +128,7 @@ async function findMissingStocks(universe: Stock[], startIndex: number, limit: n
 }
 
 async function main(): Promise<void> {
-  console.log(`[JPX_HISTORICAL] MARKET=${MARKET} MODE=${DRY_RUN ? "DRY_RUN" : "RUN"} JOB_ID=${JOB_ID}`);
+  console.log(`[GLOBAL_STOCK_HISTORICAL] MARKET=${MARKET} MODE=${DRY_RUN ? "DRY_RUN" : "RUN"} JOB_ID=${JOB_ID}`);
   const universe = await prisma.stock.findMany({ where: { exchange: MARKET, isActive: true, yahooSymbol: { not: "" } }, select: { id: true, ticker: true, yahooSymbol: true, exchange: true, isActive: true }, orderBy: [{ ticker: "asc" }, { id: "asc" }] });
   if (universe.length === 0 || universe.some((s) => s.exchange !== MARKET || !s.isActive)) throw new Error(`MARKET_SCOPE_UNCONFIRMED:${MARKET}`);
   const resume = await loadLifecycleResumeCheckpoint(prisma, JOB_ID);

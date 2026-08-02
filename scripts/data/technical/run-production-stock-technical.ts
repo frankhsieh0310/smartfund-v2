@@ -10,11 +10,12 @@ import {
 type Stock = { id: string; ticker: string; exchange: string; isActive: boolean };
 type Price = { date: Date; high: { toNumber(): number } | null; low: { toNumber(): number } | null; close: { toNumber(): number } };
 type Row = Record<string, string | number | null> & { id: string; date: string };
+type Market = "JPX" | "KSC";
 
 const rawMarket = process.argv.find((v) => v.startsWith("--market="))?.slice(9).trim().toUpperCase();
-if (!rawMarket) throw new Error("MARKET_REQUIRED:pass --market=JPX");
-if (rawMarket !== "JPX") throw new Error(`UNSUPPORTED_TECHNICAL_MARKET:${rawMarket}`);
-const MARKET = rawMarket;
+if (!rawMarket) throw new Error("MARKET_REQUIRED:pass --market=JPX or --market=KSC");
+if (!(["JPX", "KSC"] as string[]).includes(rawMarket)) throw new Error(`UNSUPPORTED_TECHNICAL_MARKET:${rawMarket}`);
+const MARKET = rawMarket as Market;
 const DRY_RUN = process.argv.includes("--dry-run");
 const maxArg = process.argv.find((v) => v.startsWith("--max-symbols="))?.slice(14);
 const MAX_SYMBOLS = Number.parseInt(maxArg ?? "25", 10);
