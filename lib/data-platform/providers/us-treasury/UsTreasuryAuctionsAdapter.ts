@@ -4,7 +4,7 @@ export const US_TREASURY_SOURCE_NAMESPACE = "US_TREASURY_FISCAL_DATA";
 export const US_TREASURY_AUCTIONS_ENDPOINT =
   "https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/accounting/od/auctions_query";
 export const US_TREASURY_V1_CONTRACT = {
-  version: "1.0",
+  version: "1.1",
   assetDomain: "BOND",
   market: "US_TREASURY",
   sourceNamespace: US_TREASURY_SOURCE_NAMESPACE,
@@ -42,6 +42,13 @@ export const US_TREASURY_V1_FIELDS = [
   "int_rate",
   "high_yield",
   "high_price",
+  "currently_outstanding",
+  "frn_index_determination_date",
+  "frn_index_determination_rate",
+  "high_discnt_margin",
+  "avg_med_discnt_margin",
+  "high_discnt_rate",
+  "high_investment_rate",
   "inflation_index_security",
 ] as const;
 
@@ -98,6 +105,13 @@ export type NormalizedTreasuryAuction = {
   auctionPrice: string | null;
   auctionYield: string | null;
   interestRate: string | null;
+  currentOutstandingAmount: string | null;
+  frnIndexDeterminationDate: string | null;
+  frnIndexDeterminationRate: string | null;
+  highDiscountMargin: string | null;
+  averageMedianDiscountMargin: string | null;
+  highDiscountRate: string | null;
+  highInvestmentRate: string | null;
   reopening: boolean;
   couponType: BondCouponTypeValue;
   paymentFrequency: number | null;
@@ -119,6 +133,11 @@ export type NormalizedTreasuryInstrument = {
   maturityDate: string | null;
   couponRate: string | null;
   couponType: BondCouponTypeValue;
+  couponRateAvailability: "AVAILABLE" | "NOT_APPLICABLE" | "SOURCE_NOT_PROVIDED" | "ANNOUNCED_PENDING" | "UNKNOWN";
+  currentOutstandingAmount: string | null;
+  frnReferenceRate: string | null;
+  frnReferenceRateDate: string | null;
+  frnSpread: string | null;
   paymentFrequency: number | null;
   originalIssueDate: string | null;
   isReopening: boolean;
@@ -320,6 +339,13 @@ export function normalizeTreasuryAuction(record: TreasuryRawAuction): Normalized
     auctionPrice: decimalOrNull(record.price_per100) ?? decimalOrNull(record.high_price),
     auctionYield: decimalOrNull(record.high_yield),
     interestRate: decimalOrNull(record.int_rate),
+    currentOutstandingAmount: decimalOrNull(record.currently_outstanding),
+    frnIndexDeterminationDate: dateOrNull(record.frn_index_determination_date),
+    frnIndexDeterminationRate: decimalOrNull(record.frn_index_determination_rate),
+    highDiscountMargin: decimalOrNull(record.high_discnt_margin),
+    averageMedianDiscountMargin: decimalOrNull(record.avg_med_discnt_margin),
+    highDiscountRate: decimalOrNull(record.high_discnt_rate),
+    highInvestmentRate: decimalOrNull(record.high_investment_rate),
     reopening: yes(record.reopening),
     couponType: couponType(record),
     paymentFrequency: paymentFrequency(record.int_payment_frequency),
@@ -351,6 +377,9 @@ export function buildTreasuryDataset(records: TreasuryRawAuction[], snapshotDate
     const maturityDate = latestNonNull(events, (event) => event.maturityDate);
     const type = latestNonNull(events, (event) => event.securityType) ?? "UNKNOWN";
     const term = latestNonNull(events, (event) => event.securityTerm);
+    const rate = latestNonNull(events, (event) => event.interestRate);
+    const resolvedCouponType = latestNonNull(events, (event) => event.couponType) ?? "UNKNOWN";
+    const instrumentStatus = statusFor(events, issueDate, maturityDate, snapshotDate);
     const instrument: NormalizedTreasuryInstrument = {
       sourceNamespace: US_TREASURY_SOURCE_NAMESPACE,
       officialSecurityId,
@@ -363,12 +392,25 @@ export function buildTreasuryDataset(records: TreasuryRawAuction[], snapshotDate
       currency: "USD",
       issueDate,
       maturityDate,
-      couponRate: latestNonNull(events, (event) => event.interestRate),
-      couponType: latestNonNull(events, (event) => event.couponType) ?? "UNKNOWN",
+      couponRate: rate,
+      couponType: resolvedCouponType,
+      couponRateAvailability: rate !== null
+        ? "AVAILABLE"
+        : resolvedCouponType === "ZERO_COUPON"
+          ? "NOT_APPLICABLE"
+          : resolvedCouponType === "FLOATING"
+            ? "SOURCE_NOT_PROVIDED"
+            : instrumentStatus === "ANNOUNCED"
+              ? "ANNOUNCED_PENDING"
+              : "UNKNOWN",
+      currentOutstandingAmount: latestNonNull(events, (event) => event.currentOutstandingAmount),
+      frnReferenceRate: latestNonNull(events, (event) => event.frnIndexDeterminationRate),
+      frnReferenceRateDate: latestNonNull(events, (event) => event.frnIndexDeterminationDate),
+      frnSpread: latestNonNull(events, (event) => event.highDiscountMargin ?? event.averageMedianDiscountMargin),
       paymentFrequency: latestNonNull(events, (event) => event.paymentFrequency),
       originalIssueDate: minDate(events.map((event) => event.originalIssueDate)),
       isReopening: events.some((event) => event.reopening),
-      status: statusFor(events, issueDate, maturityDate, snapshotDate),
+      status: instrumentStatus,
       sourceUpdatedAt: maxDate(events.map((event) => event.sourceUpdatedAt)),
     };
     instruments.push(instrument);

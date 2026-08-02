@@ -29,8 +29,7 @@
         "shipping-energy-housing-liquidity"
       ],
       "scopedAssignments": [
-        { "domain": "BOND", "market": "US_TREASURY", "mode": "HISTORICAL" },
-        { "domain": "BOND", "market": "US_TREASURY", "mode": "INCREMENTAL" }
+        { "domain": "BOND", "market": "US_TREASURY", "mode": "HISTORICAL" }
       ],
       "authorizedQueue": [
         "BOND",
@@ -64,6 +63,28 @@
         { "domain": "FINANCIAL", "market": "NYSE", "mode": "INCREMENTAL" },
         { "domain": "FINANCIAL", "market": "AMEX", "mode": "INCREMENTAL" }
       ]
+    },
+    {
+      "name": "RAILWAY-BOND",
+      "nodeId": "railway-bond-production",
+      "role": "PRODUCTION",
+      "status": "ACTIVE",
+      "assignments": [
+        "bond-incremental",
+        "bond-freshness",
+        "bond-retry",
+        "bond-scheduler"
+      ],
+      "scopedAssignments": [
+        { "domain": "BOND", "market": "US_TREASURY", "mode": "INCREMENTAL" }
+      ],
+      "authorizedQueue": [
+        "US_TREASURY"
+      ],
+      "failurePolicy": {
+        "singleItemFailure": "RECORD_FAILURE_ADVANCE_CHECKPOINT_CONTINUE",
+        "blockedScope": "SAVE_STATE_EXIT_WITHOUT_CROSS_DOMAIN_FALLBACK"
+      }
     },
     {
       "name": "WORKER-01",

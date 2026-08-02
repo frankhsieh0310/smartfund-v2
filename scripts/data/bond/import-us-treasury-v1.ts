@@ -2,6 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { mkdir, open, readFile, unlink, writeFile, type FileHandle } from "node:fs/promises";
 import path from "node:path";
 import { PrismaClient } from "@prisma/client";
+import { DurableFileArchive, type DurableArchiveResult, type DurableArchiveReplayResult } from "../../../lib/data-platform/archive/DurableFileArchive.ts";
 import {
   buildTreasuryDataset,
   isValidCusip,
@@ -14,6 +15,11 @@ import {
   type NormalizedTreasuryInstrument,
   type TreasuryRawPage,
 } from "../../../lib/data-platform/providers/us-treasury/UsTreasuryAuctionsAdapter.ts";
+import {
+  buildTreasuryFreshnessLedger,
+  calculateTreasuryTermsCoverage,
+} from "../../../lib/data-platform/providers/us-treasury/UsTreasuryFreshness.ts";
+import { buildUsTreasuryCoverageMatrix } from "../../../lib/data-platform/providers/us-treasury/UsTreasuryCoverage.ts";
 import { validateWorkerOwnershipFromEnvironment } from "../governance/worker-ownership.ts";
 
 const INCREMENTAL_MODE = process.argv.includes("--incremental");
@@ -149,12 +155,14 @@ async function releaseLocalLock(handle: FileHandle | null, lockPath: string): Pr
   await unlink(lockPath).catch(() => undefined);
 }
 
-function latestAuction(events: NormalizedTreasuryAuction[]): NormalizedTreasuryAuction | null {
-  return [...events].sort((left, right) => `${right.sourceUpdatedAt ?? ""}:${right.auctionDate}`.localeCompare(`${left.sourceUpdatedAt ?? ""}:${left.auctionDate}`))[0] ?? null;
+function latestAuction(events: NormalizedTreasuryAuction[], snapshotDate: string): NormalizedTreasuryAuction | null {
+  return events
+    .filter((event) => event.auctionDate <= snapshotDate)
+    .sort((left, right) => `${right.auctionDate}:${right.sourceUpdatedAt ?? ""}`.localeCompare(`${left.auctionDate}:${left.sourceUpdatedAt ?? ""}`))[0] ?? null;
 }
 
-function preview(instrument: NormalizedTreasuryInstrument, events: NormalizedTreasuryAuction[], importedAt: string): CanonicalPreview {
-  const latest = latestAuction(events);
+function preview(instrument: NormalizedTreasuryInstrument, events: NormalizedTreasuryAuction[], importedAt: string, snapshotDate: string): CanonicalPreview {
+  const latest = latestAuction(events, snapshotDate);
   return {
     id: deterministicUuid(instrument.sourceNamespace, instrument.officialSecurityId),
     source: instrument.sourceNamespace,
@@ -173,7 +181,7 @@ function preview(instrument: NormalizedTreasuryInstrument, events: NormalizedTre
     faceValue: null,
     latestAuctionPrice: latest?.auctionPrice ?? null,
     latestAuctionYield: latest?.auctionYield ?? null,
-    latestDate: latest?.sourceUpdatedAt ?? latest?.auctionDate ?? null,
+    latestDate: latest?.auctionDate ?? latest?.sourceUpdatedAt ?? null,
     rawPayloadHash: hash(events),
     importedAt,
   };
@@ -248,6 +256,13 @@ async function main(): Promise<void> {
   if (apply && !process.argv.includes("--confirm-production-write")) throw new Error("CONFIRM_PRODUCTION_WRITE_REQUIRED");
   if (apply && process.env.BOND_LIVE_WRITE_AUTHORIZED !== "true") throw new Error("BOND_LIVE_WRITE_AUTHORIZED_REQUIRED");
   const verifyIdempotency = process.argv.includes("--verify-idempotency");
+  const managedLifecycle = process.argv.includes("--managed-lifecycle");
+  const durableArchiveRequested = process.argv.includes("--durable-archive");
+  if (managedLifecycle && !INCREMENTAL_MODE) throw new Error("MANAGED_LIFECYCLE_INCREMENTAL_ONLY");
+  if (managedLifecycle && !argument("run-id")) throw new Error("MANAGED_LIFECYCLE_RUN_ID_REQUIRED");
+  if (apply && INCREMENTAL_MODE && process.env.RAILWAY_ENVIRONMENT_NAME && !durableArchiveRequested) {
+    throw new Error("RAILWAY_INCREMENTAL_DURABLE_ARCHIVE_REQUIRED");
+  }
   const expectSimulatedFailure = process.argv.includes("--expect-simulated-failure");
   const injectFailureAt = Number.parseInt(argument("inject-failure-at") ?? "0", 10);
   if (injectFailureAt > 0 && !dryRun) throw new Error("SIMULATED_FAILURE_DRY_RUN_ONLY");
@@ -265,8 +280,8 @@ async function main(): Promise<void> {
   const ownership = await validateWorkerOwnershipFromEnvironment({ domain: "BOND", market: "US_TREASURY", mode: ownershipMode, dryRun });
   if (apply && !ownership.liveWriteAuthorized) throw new Error("OWNERSHIP_LIVE_WRITE_NOT_AUTHORIZED");
 
-  const runId = randomUUID();
-  const runtimeRoot = path.resolve("runtime", "bond", "us-treasury");
+  const runId = argument("run-id") ?? randomUUID();
+  const runtimeRoot = path.resolve(process.env.BOND_RUNTIME_ROOT ?? path.join("runtime", "bond", "us-treasury"));
   const scopeLabel = INCREMENTAL_MODE ? "incremental" : fullUniverse ? "full-universe" : count <= 25 ? "canary" : `batch-${count}`;
   const outputRoot = dryRun
     ? path.resolve(argument("output-dir") ?? path.join("debug", "bond", "us-treasury-importer", `${snapshotDate}-${runId}`))
@@ -280,22 +295,24 @@ async function main(): Promise<void> {
   let lockHandle: FileHandle | null = null;
   let databaseWrites = 0;
   try {
-    const [activeLocks, activeRuns] = await Promise.all([
-      prisma.$queryRawUnsafe<Array<{ owner: string }>>(
-        "SELECT owner FROM production_scheduler_locks WHERE job_id = $1 AND expires_at > NOW() AND updated_at > NOW() - INTERVAL '10 minutes'",
-        JOB_ID,
-      ),
-      prisma.$queryRawUnsafe<Array<{ id: string; status: string }>>(
-        "SELECT id, status FROM production_scheduler_runs WHERE job_id = $1 AND status IN ('RUNNING', 'IN_PROGRESS')",
-        JOB_ID,
-      ),
-    ]);
-    if (activeLocks.length) throw new Error(`ACTIVE_BOND_LOCK:${activeLocks[0].owner}`);
-    if (activeRuns.length) throw new Error(`ACTIVE_BOND_LIFECYCLE:${activeRuns[0].id}:${activeRuns[0].status}`);
-    if (apply) {
-      lockHandle = await acquireLocalLock(lockPath, runId);
-      await writeJson(failureQueuePath, await readJson<Failure[]>(failureQueuePath, []));
+    if (!managedLifecycle) {
+      const [activeLocks, activeRuns] = await Promise.all([
+        prisma.$queryRawUnsafe<Array<{ owner: string }>>(
+          "SELECT owner FROM production_scheduler_locks WHERE job_id = $1 AND expires_at > NOW() AND updated_at > NOW() - INTERVAL '10 minutes'",
+          JOB_ID,
+        ),
+        prisma.$queryRawUnsafe<Array<{ id: string; status: string }>>(
+          "SELECT id, status FROM production_scheduler_runs WHERE job_id = $1 AND status IN ('RUNNING', 'IN_PROGRESS')",
+          JOB_ID,
+        ),
+      ]);
+      if (activeLocks.length) throw new Error(`ACTIVE_BOND_LOCK:${activeLocks[0].owner}`);
+      if (activeRuns.length) throw new Error(`ACTIVE_BOND_LIFECYCLE:${activeRuns[0].id}:${activeRuns[0].status}`);
     }
+    if (apply && !managedLifecycle) {
+      lockHandle = await acquireLocalLock(lockPath, runId);
+    }
+    if (apply) await writeJson(failureQueuePath, await readJson<Failure[]>(failureQueuePath, []));
 
     const sourcePages: Array<Omit<TreasuryRawPage, "rawText"> & { storagePath: string }> = [];
     const adapter = new UsTreasuryAuctionsAdapter();
@@ -317,8 +334,15 @@ async function main(): Promise<void> {
     const normalizedInstruments = sample.map(({ instrument }) => instrument);
     const normalizedAuctions = dataset.auctions.filter((event) => selectedSourceIds.has(event.officialSecurityId));
     const normalizedLifecycleEvents = dataset.lifecycleEvents.filter((event) => selectedSourceIds.has(event.officialSecurityId));
+    const selectedDataset = {
+      instruments: normalizedInstruments,
+      auctions: normalizedAuctions,
+      lifecycleEvents: normalizedLifecycleEvents,
+    };
+    const termsCoverage = calculateTreasuryTermsCoverage(selectedDataset);
+    const freshnessLedger = buildTreasuryFreshnessLedger(selectedDataset, snapshotDate);
     const importedAt = new Date().toISOString();
-    const rows = sample.map(({ instrument, auctions }) => preview(instrument, auctions, importedAt));
+    const rows = sample.map(({ instrument, auctions }) => preview(instrument, auctions, importedAt, snapshotDate));
     const sampleHash = hash(rows.map((row) => ({ source: row.source, sourceId: row.sourceId, rawPayloadHash: row.rawPayloadHash })));
     const invalidCusips = rows.filter((row) => !isValidCusip(row.cusip));
     const invalidDates = rows.filter((row) => row.issueDate && row.maturityDate && row.issueDate > row.maturityDate);
@@ -392,7 +416,7 @@ async function main(): Promise<void> {
       if (apply) await writeJson(checkpointPath, checkpoint);
       if (apply && (checkpoint.processed % 100 === 0 || index === remaining.length - 1)) {
         const identifierCount = rows.filter((candidate) => isValidCusip(candidate.cusip)).length;
-        const termsCount = rows.filter((candidate) => candidate.issueDate && candidate.maturityDate && (candidate.couponRate || candidate.couponType === "ZERO_COUPON")).length;
+        const termsCount = termsCoverage.termsClassified;
         const historicalCount = sample.filter((candidate) => candidate.auctions.length > 0).length;
         const latestCount = rows.filter((candidate) => candidate.latestDate !== null).length;
         console.log(JSON.stringify({
@@ -421,7 +445,7 @@ async function main(): Promise<void> {
           TERMS_COVERAGE: `${termsCount}/${rows.length}`,
           HISTORICAL_COVERAGE: `${historicalCount}/${rows.length}`,
           LATEST_COVERAGE: `${latestCount}/${rows.length}`,
-          FRESHNESS_COVERAGE: "NOT_MEASURABLE",
+          FRESHNESS_COVERAGE: `${freshnessLedger.measurable}/${freshnessLedger.denominator}`,
           ACTIVE_LOCK: true,
           ERROR_SUMMARY: checkpoint.failed === 0 ? null : `${checkpoint.failed} item failures queued`,
           NEXT_ACTION: checkpoint.processed === rows.length ? "VALIDATE_AND_IDEMPOTENCY_CHECK" : "CONTINUE_CURRENT_UNIVERSE",
@@ -446,6 +470,94 @@ async function main(): Promise<void> {
     const status = expectSimulatedFailure
       ? expectedFailurePassed ? "PASS_EXPECTED_SINGLE_FAILURE_NONBLOCKING" : "FAIL"
       : checkpoint.failed === 0 ? "PASS" : "PASS_WITH_FAILURES";
+    const artifactPaths = {
+      sourceManifest: path.join(outputRoot, "source-manifest.json"),
+      normalizedPreview: path.join(outputRoot, "normalized-preview.json"),
+      normalizedInstruments: path.join(outputRoot, "normalized-instruments.json"),
+      normalizedAuctionHistory: path.join(outputRoot, "normalized-auction-history.json"),
+      normalizedLifecycleEvents: path.join(outputRoot, "normalized-lifecycle-events.json"),
+      termsCoverage: path.join(outputRoot, "terms-coverage.json"),
+      freshnessLedger: path.join(outputRoot, "freshness-ledger.json"),
+      coverageMatrix: path.join(outputRoot, "bond-coverage-matrix.json"),
+      importReport: path.join(outputRoot, "import-report.json"),
+    };
+    await Promise.all([
+      writeJson(artifactPaths.sourceManifest, {
+        sourceNamespace: US_TREASURY_SOURCE_NAMESPACE,
+        parserVersion: US_TREASURY_V1_CONTRACT.version,
+        fetchedAt: importedAt,
+        pages: sourcePages,
+      }),
+      writeJson(artifactPaths.normalizedPreview, rows),
+      writeJson(artifactPaths.normalizedInstruments, normalizedInstruments),
+      writeJson(artifactPaths.normalizedAuctionHistory, normalizedAuctions),
+      writeJson(artifactPaths.normalizedLifecycleEvents, normalizedLifecycleEvents),
+      writeJson(artifactPaths.termsCoverage, {
+        ...termsCoverage,
+        sourceNotProvided: normalizedInstruments
+          .filter((value) => value.couponRateAvailability === "SOURCE_NOT_PROVIDED")
+          .map((value) => ({
+            officialSecurityId: value.officialSecurityId,
+            securityType: value.securityType,
+            couponRateAvailability: value.couponRateAvailability,
+            frnReferenceRate: value.frnReferenceRate,
+            frnReferenceRateDate: value.frnReferenceRateDate,
+            frnSpread: value.frnSpread,
+            reason: "FiscalData does not populate fixed int_rate for FRNs; floating reference-rate/margin fields are retained without fabrication.",
+          })),
+      }),
+      writeJson(artifactPaths.freshnessLedger, freshnessLedger),
+    ]);
+
+    let durableArchive: DurableArchiveResult | null = null;
+    let archiveReplay: DurableArchiveReplayResult | null = null;
+    if (durableArchiveRequested && apply) {
+      const archiveRoot = process.env.BOND_ARCHIVE_ROOT;
+      if (!archiveRoot) throw new Error("BOND_ARCHIVE_ROOT_REQUIRED");
+      const archive = new DurableFileArchive({
+        root: archiveRoot,
+        prefix: process.env.BOND_ARCHIVE_PREFIX ?? "bond/us-treasury/v1",
+      });
+      durableArchive = await archive.archiveRun({
+        runId,
+        sourceNamespace: US_TREASURY_SOURCE_NAMESPACE,
+        parserVersion: US_TREASURY_V1_CONTRACT.version,
+        files: [
+          ...sourcePages.map((page) => ({
+            localPath: path.join(outputRoot, page.storagePath),
+            logicalPath: `source/pages/page-${String(page.pageNumber).padStart(4, "0")}.json`,
+            contentType: "application/json",
+            sourceDocumentId: page.sourceDocumentId,
+            sourceUpdatedAt: page.recordDate,
+            fetchedAt: page.fetchedAt,
+          })),
+          { localPath: artifactPaths.sourceManifest, logicalPath: "latest/source-manifest.json", contentType: "application/json", fetchedAt: importedAt },
+          { localPath: artifactPaths.normalizedPreview, logicalPath: "latest/normalized-preview.json", contentType: "application/json", fetchedAt: importedAt },
+          { localPath: artifactPaths.normalizedInstruments, logicalPath: "latest/normalized-instruments.json", contentType: "application/json", fetchedAt: importedAt },
+          { localPath: artifactPaths.normalizedAuctionHistory, logicalPath: "latest/normalized-auction-history.json", contentType: "application/json", fetchedAt: importedAt },
+          { localPath: artifactPaths.normalizedLifecycleEvents, logicalPath: "latest/normalized-lifecycle-events.json", contentType: "application/json", fetchedAt: importedAt },
+          { localPath: artifactPaths.termsCoverage, logicalPath: "latest/terms-coverage.json", contentType: "application/json", fetchedAt: importedAt },
+          { localPath: artifactPaths.freshnessLedger, logicalPath: "latest/freshness-ledger.json", contentType: "application/json", fetchedAt: importedAt },
+        ],
+      });
+      archiveReplay = await archive.restoreAndReplay(durableArchive.manifestPath);
+    }
+
+    const productionLiveRunPassed = process.env.BOND_PRODUCTION_LIVE_RUN === "true";
+    const coverageMatrix = buildUsTreasuryCoverageMatrix({
+      dataset: selectedDataset,
+      terms: termsCoverage,
+      freshness: freshnessLedger,
+      snapshotDate,
+      archiveCompleted: durableArchive !== null && archiveReplay?.status === "PASS",
+      schedulerOnline: process.env.BOND_PRODUCTION_SCHEDULER_ONLINE === "true",
+      productionLiveRunPassed,
+      failureQueueOperational: apply,
+      retryOperational: apply,
+      lineageCompleted: durableArchive !== null && archiveReplay?.status === "PASS",
+    });
+    await writeJson(artifactPaths.coverageMatrix, coverageMatrix);
+
     const report = {
       status,
       mode: dryRun
@@ -476,6 +588,20 @@ async function main(): Promise<void> {
       historicalAuctionEventsInArchive: normalizedAuctions.length,
       lifecycleEventsInArchive: normalizedLifecycleEvents.length,
       latestAvailableDate: rows.map((row) => row.latestDate).filter((value): value is string => value !== null).sort().at(-1) ?? null,
+      latestAnnouncedAuctionDate: normalizedAuctions.map((value) => value.auctionDate).sort().at(-1) ?? null,
+      termsCoverage,
+      freshnessCoverage: {
+        measurable: freshnessLedger.measurable,
+        denominator: freshnessLedger.denominator,
+        coveragePercent: freshnessLedger.coveragePercent,
+      },
+      durableArchive,
+      archiveReplay,
+      coverageMatrix: {
+        completedLayers: coverageMatrix.completedLayers,
+        remainingLayers: coverageMatrix.remainingLayers,
+        artifact: artifactPaths.coverageMatrix,
+      },
       checkpoint: dryRun ? null : checkpointPath,
       failureQueue: dryRun ? dryRunFailures : failureQueuePath,
       unresolvedFailures,
@@ -484,14 +610,7 @@ async function main(): Promise<void> {
       writesTable: apply ? "securities" : null,
       crossDomainWrites: 0,
     };
-    await Promise.all([
-      writeJson(path.join(outputRoot, "source-manifest.json"), { sourceNamespace: US_TREASURY_SOURCE_NAMESPACE, pages: sourcePages }),
-      writeJson(path.join(outputRoot, "normalized-preview.json"), rows),
-      writeJson(path.join(outputRoot, "normalized-instruments.json"), normalizedInstruments),
-      writeJson(path.join(outputRoot, "normalized-auction-history.json"), normalizedAuctions),
-      writeJson(path.join(outputRoot, "normalized-lifecycle-events.json"), normalizedLifecycleEvents),
-      writeJson(path.join(outputRoot, "import-report.json"), report),
-    ]);
+    await writeJson(artifactPaths.importReport, report);
     console.log(JSON.stringify({ ...report, outputRoot }, null, 2));
     if (status === "FAIL") process.exitCode = 1;
   } finally {

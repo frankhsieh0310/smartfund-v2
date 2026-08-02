@@ -66,6 +66,13 @@ async function main(): Promise<void> {
     status: "PASS",
     validation: validateWorkerOwnership(registry, { nodeId: "smartfund-master", domain: "BOND", market: "US_TREASURY", mode: "HISTORICAL", dryRun: false }),
   });
+  results.push({
+    name: "railway_bond_incremental_live_write",
+    status: "PASS",
+    validation: validateWorkerOwnership(registry, { nodeId: "railway-bond-production", domain: "BOND", market: "US_TREASURY", mode: "INCREMENTAL", dryRun: false }),
+  });
+  results.push(expectError("railway_bond_stock_rejection", "WORKER_ASSIGNMENT_MISMATCH", () => validateWorkerOwnership(registry, { nodeId: "railway-bond-production", domain: "STOCK", market: "NYSE", mode: "COMPLETION", dryRun: true })));
+  results.push(expectError("master_bond_incremental_transfer", "WORKER_ASSIGNMENT_MISMATCH", () => validateWorkerOwnership(registry, { nodeId: "smartfund-master", domain: "BOND", market: "US_TREASURY", mode: "INCREMENTAL", dryRun: true })));
 
   if (results.some((result) => result.status !== "PASS")) throw new Error(`OWNERSHIP_TEST_FAILED:${JSON.stringify(results.filter((result) => result.status !== "PASS"))}`);
   console.log(JSON.stringify({ status: "PASS", stockMarkets: STOCK_MARKETS.length, results }, null, 2));
