@@ -29,11 +29,31 @@ const CONFIG: Record<Market, { jobId: string; dailyJobId: string; rawDirectory: 
   SHH: { jobId: "stock-price-shh-historical", dailyJobId: "china-shanghai-yahoo-daily", rawDirectory: "shh" },
   SHZ: { jobId: "stock-price-shz-historical", dailyJobId: "china-shenzhen-yahoo-daily", rawDirectory: "shz" },
 };
+const MARKET_STOCK_PREFIXES: Partial<Record<Market, readonly string[]>> = {
+  SHH: ["600", "601", "603", "605", "688", "689", "900"],
+  SHZ: ["000", "001", "002", "003", "200", "300", "301"],
+};
+const MARKET_STOCK_REGEX: Partial<Record<Market, string>> = {
+  SHH: "^(600|601|603|605|688|689|900)[0-9]{3}$",
+  SHZ: "^(000|001|002|003|200|300|301)[0-9]{3}$",
+};
 const JOB_ID = CONFIG[MARKET].jobId;
 const DAILY_JOB_ID = CONFIG[MARKET].dailyJobId;
 const RUN_TYPE = "STOCK_PRICE_HISTORICAL";
 const RAW_ROOT = path.resolve("runtime", "historical", "yahoo", CONFIG[MARKET].rawDirectory);
 const prisma = new PrismaClient({ datasources: { db: { url: process.env.DIRECT_URL ?? process.env.DATABASE_URL } } });
+const STOCK_SCOPE = {
+  exchange: MARKET,
+  isActive: true,
+  ...(MARKET_STOCK_PREFIXES[MARKET]
+    ? { OR: MARKET_STOCK_PREFIXES[MARKET]!.map((prefix) => ({ ticker: { startsWith: prefix } })) }
+    : {}),
+};
+
+function isWithinMarketStockScope(stock: Pick<Stock, "ticker" | "exchange" | "isActive">): boolean {
+  const prefixes = MARKET_STOCK_PREFIXES[MARKET];
+  return stock.exchange === MARKET && stock.isActive && (!prefixes || prefixes.some((prefix) => stock.ticker.startsWith(prefix)));
+}
 
 async function dailyWriterState(): Promise<{ activeLocks: number; activeRuns: number }> {
   const [activeLocks, activeRuns] = await Promise.all([
@@ -44,7 +64,7 @@ async function dailyWriterState(): Promise<{ activeLocks: number; activeRuns: nu
 }
 
 async function fetchYahoo(stock: Stock): Promise<{ candles: Candle[]; raw: string }> {
-  if (stock.exchange !== MARKET || !stock.isActive || !stock.yahooSymbol) throw new Error(`STOCK_OUTSIDE_MARKET_SCOPE:${stock.ticker}`);
+  if (!isWithinMarketStockScope(stock) || !stock.yahooSymbol) throw new Error(`STOCK_OUTSIDE_MARKET_SCOPE:${stock.ticker}`);
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 30_000);
   try {
@@ -125,22 +145,27 @@ async function findMissingStocks(afterTicker: string | null | undefined, limit: 
         AND stock.is_active = TRUE
         AND stock.yahoo_symbol <> ''
         AND stock.ticker > $2
+        AND ($4::text IS NULL OR stock.ticker ~ $4)
         AND NOT EXISTS (SELECT 1 FROM stock_history history WHERE history.stock_id = stock.id OFFSET 4 LIMIT 1)
       ORDER BY stock.ticker ASC, stock.id ASC
       LIMIT $3`,
     MARKET,
     afterTicker ?? "",
     limit,
+    MARKET_STOCK_REGEX[MARKET] ?? null,
   );
 }
 
 async function main(): Promise<void> {
   console.log(`[GLOBAL_STOCK_HISTORICAL] MARKET=${MARKET} MODE=${DRY_RUN ? "DRY_RUN" : "RUN"} JOB_ID=${JOB_ID}`);
-  const universe = await prisma.stock.findMany({ where: { exchange: MARKET, isActive: true, yahooSymbol: { not: "" } }, select: { id: true, ticker: true, yahooSymbol: true, exchange: true, isActive: true }, orderBy: [{ ticker: "asc" }, { id: "asc" }] });
-  if (universe.length === 0 || universe.some((s) => s.exchange !== MARKET || !s.isActive)) throw new Error(`MARKET_SCOPE_UNCONFIRMED:${MARKET}`);
+  const universe = await prisma.stock.findMany({ where: { ...STOCK_SCOPE, yahooSymbol: { not: "" } }, select: { id: true, ticker: true, yahooSymbol: true, exchange: true, isActive: true }, orderBy: [{ ticker: "asc" }, { id: "asc" }] });
+  if (universe.length === 0 || universe.some((s) => !isWithinMarketStockScope(s))) throw new Error(`MARKET_SCOPE_UNCONFIRMED:${MARKET}`);
   const resume = await loadLifecycleResumeCheckpoint(prisma, JOB_ID);
   const resumeIndex = resume?.last_symbol ? universe.findIndex((s) => s.ticker === resume.last_symbol) : -1;
-  if (resume?.last_symbol && resumeIndex < 0) throw new Error(`CHECKPOINT_OUTSIDE_MARKET_SCOPE:${resume.last_symbol}`);
+  const checkpointPrecedesScopedUniverse = Boolean(
+    resume?.last_symbol && MARKET_STOCK_PREFIXES[MARKET] && resume.last_symbol < universe[0]!.ticker,
+  );
+  if (resume?.last_symbol && resumeIndex < 0 && !checkpointPrecedesScopedUniverse) throw new Error(`CHECKPOINT_OUTSIDE_MARKET_SCOPE:${resume.last_symbol}`);
   const missing = await findMissingStocks(resume?.last_symbol, MAX_SYMBOLS);
   const [ownLocks, ownRuns, daily] = await Promise.all([
     prisma.productionSchedulerLock.count({ where: { jobId: JOB_ID, expiresAt: { gt: new Date() } } }),

@@ -20,10 +20,30 @@ const DRY_RUN = process.argv.includes("--dry-run");
 const maxArg = process.argv.find((v) => v.startsWith("--max-symbols="))?.slice(14);
 const MAX_SYMBOLS = Number.parseInt(maxArg ?? "25", 10);
 if (!Number.isSafeInteger(MAX_SYMBOLS) || MAX_SYMBOLS < 1 || MAX_SYMBOLS > 250) throw new Error(`INVALID_MAX_SYMBOLS:${maxArg ?? ""}`);
+const MARKET_STOCK_PREFIXES: Partial<Record<Market, readonly string[]>> = {
+  SHH: ["600", "601", "603", "605", "688", "689", "900"],
+  SHZ: ["000", "001", "002", "003", "200", "300", "301"],
+};
+const MARKET_STOCK_REGEX: Partial<Record<Market, string>> = {
+  SHH: "^(600|601|603|605|688|689|900)[0-9]{3}$",
+  SHZ: "^(000|001|002|003|200|300|301)[0-9]{3}$",
+};
 const JOB_ID = `stock-technical-${MARKET.toLowerCase()}-historical`;
 const RUN_TYPE = "STOCK_TECHNICAL_HISTORICAL";
 const FORMULA_VERSION = "TECHNICAL_V1";
 const prisma = new PrismaClient({ datasources: { db: { url: process.env.DIRECT_URL ?? process.env.DATABASE_URL } } });
+const STOCK_SCOPE = {
+  exchange: MARKET,
+  isActive: true,
+  ...(MARKET_STOCK_PREFIXES[MARKET]
+    ? { OR: MARKET_STOCK_PREFIXES[MARKET]!.map((prefix) => ({ ticker: { startsWith: prefix } })) }
+    : {}),
+};
+
+function isWithinMarketStockScope(stock: Stock): boolean {
+  const prefixes = MARKET_STOCK_PREFIXES[MARKET];
+  return stock.exchange === MARKET && stock.isActive && (!prefixes || prefixes.some((prefix) => stock.ticker.startsWith(prefix)));
+}
 
 const finite = (value: number | null): number | null => value !== null && Number.isFinite(value) ? Number(value.toFixed(8)) : null;
 
@@ -122,7 +142,7 @@ function calculate(prices: Price[]): Row[] {
 }
 
 async function upsertRows(stock: Stock, rows: Row[]): Promise<{ inserted: number; updated: number }> {
-  if (stock.exchange !== MARKET || !stock.isActive) throw new Error(`STOCK_OUTSIDE_MARKET_SCOPE:${stock.ticker}`);
+  if (!isWithinMarketStockScope(stock)) throw new Error(`STOCK_OUTSIDE_MARKET_SCOPE:${stock.ticker}`);
   if (rows.length === 0) throw new Error("INSUFFICIENT_PRICE_HISTORY");
   const existing = await prisma.stockTechnical.count({ where: { stockId: stock.id } });
   for (let offset = 0; offset < rows.length; offset += 2_000) {
@@ -153,6 +173,7 @@ async function findCompletionTargets(afterTicker: string | null | undefined, lim
       WHERE stock.exchange = $1
         AND stock.is_active = TRUE
         AND stock.ticker > $2
+        AND ($4::text IS NULL OR stock.ticker ~ $4)
         AND EXISTS (SELECT 1 FROM stock_history history WHERE history.stock_id = stock.id OFFSET 4 LIMIT 1)
         AND NOT EXISTS (SELECT 1 FROM stock_technical technical WHERE technical.stock_id = stock.id)
       ORDER BY stock.ticker ASC, stock.id ASC
@@ -160,14 +181,15 @@ async function findCompletionTargets(afterTicker: string | null | undefined, lim
     MARKET,
     afterTicker ?? "",
     limit,
+    MARKET_STOCK_REGEX[MARKET] ?? null,
   );
 }
 
 async function main(): Promise<void> {
   console.log(`[STOCK_TECHNICAL] MARKET=${MARKET} MODE=${DRY_RUN ? "DRY_RUN" : "RUN"} JOB_ID=${JOB_ID} FORMULA_VERSION=${FORMULA_VERSION}`);
-  const stocks = await prisma.stock.findMany({ where: { exchange: MARKET, isActive: true }, select: { id: true, ticker: true, exchange: true, isActive: true }, orderBy: [{ ticker: "asc" }, { id: "asc" }] });
+  const stocks = await prisma.stock.findMany({ where: STOCK_SCOPE, select: { id: true, ticker: true, exchange: true, isActive: true }, orderBy: [{ ticker: "asc" }, { id: "asc" }] });
   if (stocks.length === 0) throw new Error(`MARKET_UNIVERSE_EMPTY:${MARKET}`);
-  if (stocks.some((s) => s.exchange !== MARKET || !s.isActive)) throw new Error(`MARKET_SCOPE_UNCONFIRMED:${MARKET}`);
+  if (stocks.some((s) => !isWithinMarketStockScope(s))) throw new Error(`MARKET_SCOPE_UNCONFIRMED:${MARKET}`);
   const resume = await loadLifecycleResumeCheckpoint(prisma, JOB_ID);
   const resumeIndex = resume?.last_symbol ? stocks.findIndex((s) => s.ticker === resume.last_symbol) : -1;
   if (resume?.last_symbol && resumeIndex < 0) throw new Error(`CHECKPOINT_OUTSIDE_MARKET_SCOPE:${resume.last_symbol}`);
@@ -214,8 +236,8 @@ async function main(): Promise<void> {
     const hasRemaining = (await findCompletionTargets(lastSymbol, 1)).length > 0;
     if (hasRemaining) { await pauseLifecycleRun(prisma, runId); console.log(JSON.stringify({ status: "PAUSED_CHECKPOINTED", market: MARKET, jobId: JOB_ID, planned: selected.length, remaining: "BOUNDED_SCAN_PENDING", checkpoint: lastSymbol, ...summary })); return; }
     const [coveredStocks, technicalRows] = await Promise.all([
-      prisma.stock.count({ where: { exchange: MARKET, isActive: true, technical: { some: {} } } }),
-      prisma.stockTechnical.count({ where: { stock: { exchange: MARKET, isActive: true } } }),
+      prisma.stock.count({ where: { ...STOCK_SCOPE, technical: { some: {} } } }),
+      prisma.stockTechnical.count({ where: { stock: STOCK_SCOPE } }),
     ]);
     const validation = { status: summary.completed + summary.failed === summary.attempted ? "PASS" : "FAIL", market: MARKET, universe: stocks.length, processed: summary.attempted, coveredStocks, technicalRows, formulaVersion: FORMULA_VERSION, remainingEligibleTargets: 0 };
     await completeLifecycleRun(prisma, runId, summary, null, validation); console.log(JSON.stringify(validation));
