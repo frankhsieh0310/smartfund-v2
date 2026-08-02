@@ -7,14 +7,14 @@ import {
   releaseLifecycleLock,
 } from "../production/run-lifecycle.ts";
 
-type Stock = { id: string; ticker: string; exchange: string; isActive: boolean };
+type Stock = { id: string; ticker: string; yahooSymbol: string; companyName: string; exchange: string; isActive: boolean };
 type Price = { date: Date; high: { toNumber(): number } | null; low: { toNumber(): number } | null; close: { toNumber(): number } };
 type Row = Record<string, string | number | null> & { id: string; date: string };
-type Market = "JPX" | "KSC" | "KOE" | "HKG" | "SHH" | "SHZ";
+type Market = "JPX" | "KSC" | "KOE" | "HKG" | "SHH" | "SHZ" | "SES";
 
 const rawMarket = process.argv.find((v) => v.startsWith("--market="))?.slice(9).trim().toUpperCase();
 if (!rawMarket) throw new Error("MARKET_REQUIRED:pass an explicitly supported exchange");
-if (!(["JPX", "KSC", "KOE", "HKG", "SHH", "SHZ"] as string[]).includes(rawMarket)) throw new Error(`UNSUPPORTED_TECHNICAL_MARKET:${rawMarket}`);
+if (!(["JPX", "KSC", "KOE", "HKG", "SHH", "SHZ", "SES"] as string[]).includes(rawMarket)) throw new Error(`UNSUPPORTED_TECHNICAL_MARKET:${rawMarket}`);
 const MARKET = rawMarket as Market;
 const DRY_RUN = process.argv.includes("--dry-run");
 const maxArg = process.argv.find((v) => v.startsWith("--max-symbols="))?.slice(14);
@@ -32,17 +32,42 @@ const JOB_ID = `stock-technical-${MARKET.toLowerCase()}-historical`;
 const RUN_TYPE = "STOCK_TECHNICAL_HISTORICAL";
 const FORMULA_VERSION = "TECHNICAL_V1";
 const prisma = new PrismaClient({ datasources: { db: { url: process.env.DIRECT_URL ?? process.env.DATABASE_URL } } });
-const STOCK_SCOPE = {
-  exchange: MARKET,
-  isActive: true,
-  ...(MARKET_STOCK_PREFIXES[MARKET]
-    ? { OR: MARKET_STOCK_PREFIXES[MARKET]!.map((prefix) => ({ ticker: { startsWith: prefix } })) }
-    : {}),
-};
+const EXCLUDED_NON_STOCK_SYMBOLS = new Set<string>();
+
+function stockScopeWhere() {
+  return {
+    exchange: MARKET,
+    isActive: true,
+    ...(MARKET_STOCK_PREFIXES[MARKET]
+      ? { OR: MARKET_STOCK_PREFIXES[MARKET]!.map((prefix) => ({ ticker: { startsWith: prefix } })) }
+      : {}),
+    ...(EXCLUDED_NON_STOCK_SYMBOLS.size > 0
+      ? { yahooSymbol: { notIn: [...EXCLUDED_NON_STOCK_SYMBOLS] } }
+      : {}),
+  };
+}
+
+async function loadExplicitNonStockSymbols(): Promise<void> {
+  if (MARKET !== "SES") return;
+  const [etfs, assets, named] = await Promise.all([
+    prisma.etf.findMany({ where: { exchange: "SES" }, select: { code: true } }),
+    prisma.asset.findMany({ where: { assetType: { in: ["ETF", "FUND"] }, code: { endsWith: ".SI" } }, select: { code: true } }),
+    prisma.stock.findMany({
+      where: { exchange: "SES", OR: [{ companyName: { contains: "ETF", mode: "insensitive" } }, { companyName: { contains: "Fund", mode: "insensitive" } }] },
+      select: { yahooSymbol: true },
+    }),
+  ]);
+  for (const symbol of [...etfs.map((row) => row.code), ...assets.map((row) => row.code), ...named.map((row) => row.yahooSymbol)]) {
+    if (symbol) EXCLUDED_NON_STOCK_SYMBOLS.add(symbol);
+  }
+  if (EXCLUDED_NON_STOCK_SYMBOLS.size === 0) throw new Error("MARKET_SCOPE_UNCONFIRMED:SES_NON_STOCK_REGISTRY_EMPTY");
+}
 
 function isWithinMarketStockScope(stock: Stock): boolean {
   const prefixes = MARKET_STOCK_PREFIXES[MARKET];
-  return stock.exchange === MARKET && stock.isActive && (!prefixes || prefixes.some((prefix) => stock.ticker.startsWith(prefix)));
+  const explicitStock = !prefixes || prefixes.some((prefix) => stock.ticker.startsWith(prefix));
+  const explicitNonStock = EXCLUDED_NON_STOCK_SYMBOLS.has(stock.yahooSymbol) || (MARKET === "SES" && /(fund|etf)/i.test(stock.companyName));
+  return stock.exchange === MARKET && stock.isActive && explicitStock && !explicitNonStock;
 }
 
 const finite = (value: number | null): number | null => value !== null && Number.isFinite(value) ? Number(value.toFixed(8)) : null;
@@ -168,12 +193,17 @@ async function recordFailure(stock: Stock, error: unknown): Promise<void> {
 
 async function findCompletionTargets(afterTicker: string | null | undefined, limit: number): Promise<Stock[]> {
   return prisma.$queryRawUnsafe<Stock[]>(
-    `SELECT stock.id, stock.ticker, stock.exchange, stock.is_active AS "isActive"
+    `SELECT stock.id, stock.ticker, stock.yahoo_symbol AS "yahooSymbol", stock.company_name AS "companyName", stock.exchange, stock.is_active AS "isActive"
        FROM stocks stock
       WHERE stock.exchange = $1
         AND stock.is_active = TRUE
         AND stock.ticker > $2
         AND ($4::text IS NULL OR stock.ticker ~ $4)
+        AND ($5::boolean = FALSE OR (
+          NOT EXISTS (SELECT 1 FROM etfs etf WHERE etf.exchange = 'SES' AND etf.code = stock.yahoo_symbol)
+          AND NOT EXISTS (SELECT 1 FROM assets asset WHERE asset.asset_type::text IN ('ETF', 'FUND') AND asset.code = stock.yahoo_symbol)
+          AND stock.company_name !~* '(fund|etf)'
+        ))
         AND EXISTS (SELECT 1 FROM stock_history history WHERE history.stock_id = stock.id OFFSET 4 LIMIT 1)
         AND NOT EXISTS (SELECT 1 FROM stock_technical technical WHERE technical.stock_id = stock.id)
       ORDER BY stock.ticker ASC, stock.id ASC
@@ -182,12 +212,14 @@ async function findCompletionTargets(afterTicker: string | null | undefined, lim
     afterTicker ?? "",
     limit,
     MARKET_STOCK_REGEX[MARKET] ?? null,
+    MARKET === "SES",
   );
 }
 
 async function main(): Promise<void> {
   console.log(`[STOCK_TECHNICAL] MARKET=${MARKET} MODE=${DRY_RUN ? "DRY_RUN" : "RUN"} JOB_ID=${JOB_ID} FORMULA_VERSION=${FORMULA_VERSION}`);
-  const stocks = await prisma.stock.findMany({ where: STOCK_SCOPE, select: { id: true, ticker: true, exchange: true, isActive: true }, orderBy: [{ ticker: "asc" }, { id: "asc" }] });
+  await loadExplicitNonStockSymbols();
+  const stocks = await prisma.stock.findMany({ where: stockScopeWhere(), select: { id: true, ticker: true, yahooSymbol: true, companyName: true, exchange: true, isActive: true }, orderBy: [{ ticker: "asc" }, { id: "asc" }] });
   if (stocks.length === 0) throw new Error(`MARKET_UNIVERSE_EMPTY:${MARKET}`);
   if (stocks.some((s) => !isWithinMarketStockScope(s))) throw new Error(`MARKET_SCOPE_UNCONFIRMED:${MARKET}`);
   const resume = await loadLifecycleResumeCheckpoint(prisma, JOB_ID);
@@ -201,7 +233,7 @@ async function main(): Promise<void> {
   ]);
   const historyCount = new Map(histories.map((row) => [row.stockId, row._count._all]));
   console.log(JSON.stringify({ status: DRY_RUN ? (activeLocks || activeRuns || selected.length === 0 ? "DRY_RUN_BLOCKED" : "DRY_RUN_READY") : "PREFLIGHT_READY", market: MARKET, jobId: JOB_ID,
-    universeCount: stocks.length, plannedCount: selected.length, plannedSymbols: selected.map((s) => s.ticker), symbolsWithAtLeast5Prices: selected.filter((s) => (historyCount.get(s.id) ?? 0) >= 5).length,
+    universeCount: stocks.length, excludedNonStockCount: EXCLUDED_NON_STOCK_SYMBOLS.size, plannedCount: selected.length, plannedSymbols: selected.map((s) => s.ticker), symbolsWithAtLeast5Prices: selected.filter((s) => (historyCount.get(s.id) ?? 0) >= 5).length,
     activeLockCount: activeLocks, activeRunCount: activeRuns, checkpoint: resume ? { lastSymbol: resume.last_symbol, processed: resume.processed, succeeded: resume.succeeded, failed: resume.failed } : null, writesPerformed: false }, null, 2));
   if (DRY_RUN) { if (activeLocks || activeRuns || selected.length === 0) process.exitCode = 2; return; }
   if (process.env.LIVE_WRITE_AUTHORIZED !== "true") throw new Error("LIVE_WRITE_NOT_AUTHORIZED");
@@ -236,8 +268,8 @@ async function main(): Promise<void> {
     const hasRemaining = (await findCompletionTargets(lastSymbol, 1)).length > 0;
     if (hasRemaining) { await pauseLifecycleRun(prisma, runId); console.log(JSON.stringify({ status: "PAUSED_CHECKPOINTED", market: MARKET, jobId: JOB_ID, planned: selected.length, remaining: "BOUNDED_SCAN_PENDING", checkpoint: lastSymbol, ...summary })); return; }
     const [coveredStocks, technicalRows] = await Promise.all([
-      prisma.stock.count({ where: { ...STOCK_SCOPE, technical: { some: {} } } }),
-      prisma.stockTechnical.count({ where: { stock: STOCK_SCOPE } }),
+      prisma.stock.count({ where: { ...stockScopeWhere(), technical: { some: {} } } }),
+      prisma.stockTechnical.count({ where: { stock: stockScopeWhere() } }),
     ]);
     const validation = { status: summary.completed + summary.failed === summary.attempted ? "PASS" : "FAIL", market: MARKET, universe: stocks.length, processed: summary.attempted, coveredStocks, technicalRows, formulaVersion: FORMULA_VERSION, remainingEligibleTargets: 0 };
     await completeLifecycleRun(prisma, runId, summary, null, validation); console.log(JSON.stringify(validation));
