@@ -1,0 +1,7 @@
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "/Dockerfile.bond"
+
+[deploy]
+startCommand = "node --experimental-strip-types scripts/data/bond/run-production-us-treasury.ts"
+restartPolicyType = "NEVER"
