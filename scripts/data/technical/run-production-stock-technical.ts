@@ -34,6 +34,8 @@ const MARKET_TICKER_EXCLUSION_REGEX: Partial<Record<Market, string>> = {
   VAN: "-(DB[A-Z]?|WT[A-Z]?|CV)$",
   CNQ: "-(DB[A-Z]?|WT[A-Z]?|CV)$",
 };
+const NON_STOCK_NAME_REGEX = /\bfund\b|etf\b|\b(bond|debenture|warrant|bitcoin|ether|crypto)\b|physical (gold|silver|uranium|platinum|palladium)/i;
+const NON_STOCK_NAME_SQL = "(^|[^[:alpha:]])fund([^[:alpha:]]|$)|etf([^[:alpha:]]|$)|(^|[^[:alpha:]])(bond|debenture|warrant|bitcoin|ether|crypto)([^[:alpha:]]|$)|physical (gold|silver|uranium|platinum|palladium)";
 const JOB_ID = `stock-technical-${MARKET.toLowerCase()}-historical`;
 const RUN_TYPE = "STOCK_TECHNICAL_HISTORICAL";
 const FORMULA_VERSION = "TECHNICAL_V1";
@@ -63,7 +65,7 @@ async function loadExplicitNonStockSymbols(): Promise<void> {
     }),
   ]);
   const tickerExclusion = MARKET_TICKER_EXCLUSION_REGEX[MARKET] ? new RegExp(MARKET_TICKER_EXCLUSION_REGEX[MARKET]!, "i") : null;
-  const named = namedCandidates.filter((row) => /\bfund\b|etf\b/i.test(row.companyName) || tickerExclusion?.test(row.yahooSymbol.replace(/\.[A-Z]+$/i, "")));
+  const named = namedCandidates.filter((row) => NON_STOCK_NAME_REGEX.test(row.companyName) || tickerExclusion?.test(row.yahooSymbol.replace(/\.[A-Z]+$/i, "")));
   for (const symbol of [...etfs.map((row) => row.code), ...assets.map((row) => row.code), ...named.map((row) => row.yahooSymbol)]) {
     if (symbol) EXCLUDED_NON_STOCK_SYMBOLS.add(symbol);
   }
@@ -74,7 +76,7 @@ function isWithinMarketStockScope(stock: Stock): boolean {
   const prefixes = MARKET_STOCK_PREFIXES[MARKET];
   const explicitStock = !prefixes || prefixes.some((prefix) => stock.ticker.startsWith(prefix));
   const prohibitedTicker = MARKET_TICKER_EXCLUSION_REGEX[MARKET] ? new RegExp(MARKET_TICKER_EXCLUSION_REGEX[MARKET]!, "i").test(stock.ticker) : false;
-  const explicitNonStock = EXCLUDED_NON_STOCK_SYMBOLS.has(stock.yahooSymbol) || /\bfund\b|etf\b/i.test(stock.companyName) || prohibitedTicker;
+  const explicitNonStock = EXCLUDED_NON_STOCK_SYMBOLS.has(stock.yahooSymbol) || NON_STOCK_NAME_REGEX.test(stock.companyName) || prohibitedTicker;
   return stock.exchange === MARKET && stock.isActive && explicitStock && !explicitNonStock;
 }
 
@@ -210,7 +212,7 @@ async function findCompletionTargets(afterTicker: string | null | undefined, lim
         AND ($5::text IS NULL OR stock.ticker !~ $5)
         AND NOT EXISTS (SELECT 1 FROM etfs etf WHERE etf.code = stock.yahoo_symbol)
         AND NOT EXISTS (SELECT 1 FROM assets asset WHERE asset.asset_type::text IN ('ETF', 'FUND') AND asset.code = stock.yahoo_symbol)
-        AND stock.company_name !~* '(^|[^[:alpha:]])fund([^[:alpha:]]|$)|etf([^[:alpha:]]|$)'
+        AND stock.company_name !~* $6
         AND EXISTS (SELECT 1 FROM stock_history history WHERE history.stock_id = stock.id OFFSET 4 LIMIT 1)
         AND NOT EXISTS (SELECT 1 FROM stock_technical technical WHERE technical.stock_id = stock.id)
       ORDER BY stock.ticker ASC, stock.id ASC
@@ -220,6 +222,7 @@ async function findCompletionTargets(afterTicker: string | null | undefined, lim
     limit,
     MARKET_STOCK_REGEX[MARKET] ?? null,
     MARKET_TICKER_EXCLUSION_REGEX[MARKET] ?? null,
+    NON_STOCK_NAME_SQL,
   );
 }
 
