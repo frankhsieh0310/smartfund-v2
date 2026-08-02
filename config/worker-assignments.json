@@ -29,7 +29,8 @@
         "shipping-energy-housing-liquidity"
       ],
       "scopedAssignments": [
-        { "domain": "BOND", "market": "US_TREASURY", "mode": "HISTORICAL" }
+        { "domain": "BOND", "market": "US_TREASURY", "mode": "HISTORICAL" },
+        { "domain": "BOND", "market": "TAIWAN_GOVERNMENT", "mode": "HISTORICAL" }
       ],
       "authorizedQueue": [
         "BOND",
@@ -76,10 +77,12 @@
         "bond-scheduler"
       ],
       "scopedAssignments": [
-        { "domain": "BOND", "market": "US_TREASURY", "mode": "INCREMENTAL" }
+        { "domain": "BOND", "market": "US_TREASURY", "mode": "INCREMENTAL" },
+        { "domain": "BOND", "market": "TAIWAN_GOVERNMENT", "mode": "INCREMENTAL" }
       ],
       "authorizedQueue": [
-        "US_TREASURY"
+        "US_TREASURY",
+        "TAIWAN_GOVERNMENT"
       ],
       "failurePolicy": {
         "singleItemFailure": "RECORD_FAILURE_ADVANCE_CHECKPOINT_CONTINUE",

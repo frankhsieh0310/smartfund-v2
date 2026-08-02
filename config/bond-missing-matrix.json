@@ -1,0 +1,90 @@
+{
+  "version": 1,
+  "snapshotAt": "2026-08-02T09:25:27.215Z",
+  "statusValues": [
+    "COMPLETED",
+    "PARTIAL",
+    "BLOCKED",
+    "NOT_STARTED",
+    "NOT_APPLICABLE"
+  ],
+  "completionPolicy": {
+    "blockedByVerifiedSourceGapDoesNotStopMarket": true,
+    "completedHistoricalEntersMaintenance": true,
+    "maintenanceWork": ["INCREMENTAL", "FRESHNESS", "RETRY", "NEW_SECURITY_DISCOVERY"]
+  },
+  "markets": [
+    {
+      "market": "US_TREASURY",
+      "marketStatus": "PRODUCTION_COMPLETE",
+      "maintenanceMode": true,
+      "productionEvidence": {
+        "commit": "fc7f818",
+        "serviceId": "da046987-2773-4812-bf82-7e2ef265b44a",
+        "deploymentId": "1ebfe55a-7646-47e0-8557-5ec5fbc681cd",
+        "firstLiveDeploymentId": "a2014450-b846-4f0b-8d4b-f1aafa9bfc67",
+        "firstLiveRunId": "bfca0416-beb2-49b2-b80f-05a01e57c365",
+        "scheduleUtc": "30 23 * * 1-5",
+        "firstLiveResult": "465/465; failures=0; inserted=0; updated=0; unchanged=465",
+        "latestActualOfficialObservation": "2026-07-30",
+        "archiveReplay": "PASS"
+      },
+      "layers": [
+        { "layer": "Universe", "status": "COMPLETED", "denominator": 465, "numerator": 465, "coveragePercent": 100, "remaining": 0, "blocker": null, "owner": "Laptop/Master", "nextAction": "Maintenance discovery only" },
+        { "layer": "Identity", "status": "COMPLETED", "denominator": 465, "numerator": 465, "coveragePercent": 100, "remaining": 0, "blocker": null, "owner": "Laptop/Master", "nextAction": "Retry unresolved identifiers" },
+        { "layer": "CUSIP", "status": "COMPLETED", "denominator": 465, "numerator": 465, "coveragePercent": 100, "remaining": 0, "blocker": null, "owner": "Laptop/Master", "nextAction": "Retry unresolved identifiers" },
+        { "layer": "Terms", "status": "COMPLETED", "denominator": 465, "numerator": 465, "coveragePercent": 100, "remaining": 0, "blocker": null, "owner": "Laptop/Master", "nextAction": "Preserve official type-specific availability classification" },
+        { "layer": "Auction Historical", "status": "COMPLETED", "denominator": 465, "numerator": 465, "coveragePercent": 100, "remaining": 0, "blocker": null, "owner": "Laptop/Master", "nextAction": "Historical locked V1; do not rerun" },
+        { "layer": "Lifecycle", "status": "COMPLETED", "denominator": 465, "numerator": 465, "coveragePercent": 100, "remaining": 0, "blocker": null, "owner": "Railway Bond Production", "nextAction": "Incremental lifecycle updates" },
+        { "layer": "Latest official observation", "status": "COMPLETED", "denominator": 465, "numerator": 465, "coveragePercent": 100, "remaining": 0, "blocker": null, "owner": "Railway Bond Production", "nextAction": "Weekday incremental" },
+        { "layer": "Latest auction price", "status": "PARTIAL", "denominator": 465, "numerator": 463, "coveragePercent": 99.57, "remaining": 2, "blocker": "FUTURE_ANNOUNCEMENT_OR_RESULT_NOT_PUBLISHED", "owner": "Railway Bond Production", "nextAction": "Retry after official result" },
+        { "layer": "Latest auction yield", "status": "PARTIAL", "denominator": 465, "numerator": 405, "coveragePercent": 87.097, "remaining": 60, "blocker": "52_BILLS_NOT_APPLICABLE_AND_8_FRN_TYPE_SPECIFIC_RATE_FIELDS", "owner": "Railway Bond Production", "nextAction": "Retain type-specific official rate fields; do not fabricate yield" },
+        { "layer": "Secondary-market historical", "status": "BLOCKED", "denominator": 465, "numerator": 0, "coveragePercent": 0, "remaining": 465, "blocker": "SECONDARY_MARKET_HISTORY_BLOCKED_BY_SOURCE", "owner": "Master", "nextAction": "Require licensed FINRA TRACE Treasury product or another authorized source" },
+        { "layer": "Secondary-market latest", "status": "BLOCKED", "denominator": 465, "numerator": 0, "coveragePercent": 0, "remaining": 465, "blocker": "SECONDARY_MARKET_LATEST_BLOCKED_BY_SOURCE", "owner": "Master", "nextAction": "Do not substitute auction prices or yield curves" },
+        { "layer": "Freshness", "status": "COMPLETED", "denominator": 3255, "numerator": 3255, "coveragePercent": 100, "remaining": 0, "blocker": null, "owner": "Railway Bond Production", "nextAction": "Validate seven freshness layers per security after each run" },
+        { "layer": "Incremental", "status": "COMPLETED", "denominator": 465, "numerator": 465, "coveragePercent": 100, "remaining": 0, "blocker": null, "owner": "Railway Bond Production", "nextAction": "Maintenance" },
+        { "layer": "Scheduler", "status": "COMPLETED", "denominator": 1, "numerator": 1, "coveragePercent": 100, "remaining": 0, "blocker": null, "owner": "Railway Bond Production", "nextAction": "Run 23:30 UTC weekdays" },
+        { "layer": "Durable archive", "status": "COMPLETED", "denominator": 1, "numerator": 1, "coveragePercent": 100, "remaining": 0, "blocker": null, "owner": "Railway Bond Production", "nextAction": "Retain volume and verify replay each run" },
+        { "layer": "Canonical DB", "status": "PARTIAL", "denominator": 6, "numerator": 1, "coveragePercent": 16.667, "remaining": 5, "blocker": "OWNER_APPROVED_MIGRATION_REQUIRED_FOR_DETAIL_EVENT_TABLES", "owner": "Master", "nextAction": "Keep canonical identity in securities and details in durable artifacts pending approval" },
+        { "layer": "Failure queue", "status": "COMPLETED", "denominator": 1, "numerator": 1, "coveragePercent": 100, "remaining": 0, "blocker": null, "owner": "Railway Bond Production", "nextAction": "Non-blocking maintenance" },
+        { "layer": "Retry", "status": "COMPLETED", "denominator": 1, "numerator": 1, "coveragePercent": 100, "remaining": 0, "blocker": null, "owner": "Railway Bond Production", "nextAction": "Retry open failures only" },
+        { "layer": "Data lineage", "status": "COMPLETED", "denominator": 1, "numerator": 1, "coveragePercent": 100, "remaining": 0, "blocker": null, "owner": "Railway Bond Production", "nextAction": "Preserve source/parser/checksum lineage" },
+        { "layer": "Maintenance status", "status": "COMPLETED", "denominator": 1, "numerator": 1, "coveragePercent": 100, "remaining": 0, "blocker": null, "owner": "Railway Bond Production", "nextAction": "Incremental, freshness, retry and discovery only" }
+      ]
+    },
+    {
+      "market": "TAIWAN_GOVERNMENT",
+      "marketStatus": "IN_PROGRESS",
+      "maintenanceMode": false,
+      "officialSource": "https://www.tpex.org.tw/openapi/v1/bond_ISSBD1_data",
+      "sourceSnapshotDate": "2026-08-02",
+      "historicalEvidence": {
+        "canaryRunId": "55e6d8e8-f6e1-47f6-92a8-b14451972cf6",
+        "fullRunId": "7129d923-eef5-4db4-9c37-0a3bed0e117a",
+        "idempotencyRunId": "c5550bc5-e1a0-490d-8627-28b847016856",
+        "result": "197/197; failures=0; inserted=197; second full pass unchanged=197",
+        "checkpoint": "HF1404 / 197",
+        "archiveReplay": "PASS"
+      },
+      "layers": [
+        { "layer": "Universe", "status": "COMPLETED", "denominator": 197, "numerator": 197, "coveragePercent": 100, "remaining": 0, "blocker": null, "owner": "Laptop/Master", "nextAction": "New security discovery only" },
+        { "layer": "Identity", "status": "COMPLETED", "denominator": 197, "numerator": 197, "coveragePercent": 100, "remaining": 0, "blocker": null, "owner": "Laptop/Master", "nextAction": "Maintain TPEx BondCode mapping" },
+        { "layer": "Terms", "status": "COMPLETED", "denominator": 197, "numerator": 197, "coveragePercent": 100, "remaining": 0, "blocker": null, "owner": "Laptop/Master", "nextAction": "Incremental terms updates" },
+        { "layer": "Historical", "status": "PARTIAL", "denominator": 197, "numerator": 197, "coveragePercent": 100, "remaining": 0, "blocker": "OFFICIAL_ENDPOINT_IS_CURRENT_ISSUANCE_MASTER; PRIOR_POINT_IN_TIME_SNAPSHOTS_NOT_EXPOSED", "owner": "Laptop/Master", "nextAction": "Retain daily durable snapshots from V1 inception" },
+        { "layer": "Latest", "status": "COMPLETED", "denominator": 197, "numerator": 197, "coveragePercent": 100, "remaining": 0, "blocker": null, "owner": "Laptop/Master", "nextAction": "Daily official snapshot" },
+        { "layer": "Freshness", "status": "COMPLETED", "denominator": 1182, "numerator": 1182, "coveragePercent": 100, "remaining": 0, "blocker": null, "owner": "Laptop/Master", "nextAction": "Validate six layers after each run" },
+        { "layer": "Secondary-market historical", "status": "NOT_STARTED", "denominator": 197, "numerator": 0, "coveragePercent": 0, "remaining": 197, "blocker": null, "owner": "Laptop/Master", "nextAction": "Assess official TPEx daily government-bond transaction datasets" },
+        { "layer": "Secondary-market latest", "status": "NOT_STARTED", "denominator": 197, "numerator": 0, "coveragePercent": 0, "remaining": 197, "blocker": null, "owner": "Laptop/Master", "nextAction": "Connect official TPEx market observations without substituting index/yield curve data" },
+        { "layer": "Incremental", "status": "PARTIAL", "denominator": 197, "numerator": 197, "coveragePercent": 100, "remaining": 0, "blocker": "FIRST_RAILWAY_LIVE_RUN_PENDING", "owner": "Railway Bond Production", "nextAction": "Deploy and validate first live run" },
+        { "layer": "Scheduler", "status": "PARTIAL", "denominator": 1, "numerator": 0, "coveragePercent": 0, "remaining": 1, "blocker": "RAILWAY_DEPLOY_PENDING", "owner": "Railway Bond Production", "nextAction": "Add to isolated weekday Bond maintenance schedule" },
+        { "layer": "Durable archive", "status": "PARTIAL", "denominator": 1, "numerator": 0, "coveragePercent": 0, "remaining": 1, "blocker": "LOCAL_REPLAY_PASS; RAILWAY_VOLUME_RUN_PENDING", "owner": "Railway Bond Production", "nextAction": "Verify volume archive and replay in live run" },
+        { "layer": "Canonical DB", "status": "PARTIAL", "denominator": 4, "numerator": 1, "coveragePercent": 25, "remaining": 3, "blocker": "OWNER_APPROVED_MIGRATION_REQUIRED_FOR_DETAIL_OBSERVATION_DOCUMENT_TABLES", "owner": "Master", "nextAction": "Keep identity in securities and full terms in durable artifacts" },
+        { "layer": "Failure queue", "status": "COMPLETED", "denominator": 1, "numerator": 1, "coveragePercent": 100, "remaining": 0, "blocker": null, "owner": "Railway Bond Production", "nextAction": "Non-blocking maintenance" },
+        { "layer": "Retry", "status": "COMPLETED", "denominator": 1, "numerator": 1, "coveragePercent": 100, "remaining": 0, "blocker": null, "owner": "Railway Bond Production", "nextAction": "Retry open failures only" },
+        { "layer": "Data lineage", "status": "COMPLETED", "denominator": 1, "numerator": 1, "coveragePercent": 100, "remaining": 0, "blocker": null, "owner": "Laptop/Master", "nextAction": "Preserve source/parser/checksum lineage" },
+        { "layer": "Production", "status": "PARTIAL", "denominator": 1, "numerator": 0, "coveragePercent": 0, "remaining": 1, "blocker": "FIRST_RAILWAY_LIVE_RUN_PENDING", "owner": "Railway Bond Production", "nextAction": "Deploy after scoped validation" },
+        { "layer": "Maintenance status", "status": "NOT_STARTED", "denominator": 1, "numerator": 0, "coveragePercent": 0, "remaining": 1, "blocker": "PRODUCTION_NOT_YET_LIVE", "owner": "Railway Bond Production", "nextAction": "Enter maintenance only after first live PASS" }
+      ]
+    }
+  ]
+}

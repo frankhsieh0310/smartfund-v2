@@ -71,6 +71,17 @@ async function main(): Promise<void> {
     status: "PASS",
     validation: validateWorkerOwnership(registry, { nodeId: "railway-bond-production", domain: "BOND", market: "US_TREASURY", mode: "INCREMENTAL", dryRun: false }),
   });
+  results.push({
+    name: "master_taiwan_government_bond_live_write",
+    status: "PASS",
+    validation: validateWorkerOwnership(registry, { nodeId: "smartfund-master", domain: "BOND", market: "TAIWAN_GOVERNMENT", mode: "HISTORICAL", dryRun: false }),
+  });
+  results.push({
+    name: "railway_taiwan_government_bond_incremental_live_write",
+    status: "PASS",
+    validation: validateWorkerOwnership(registry, { nodeId: "railway-bond-production", domain: "BOND", market: "TAIWAN_GOVERNMENT", mode: "INCREMENTAL", dryRun: false }),
+  });
+  results.push(expectError("worker02_taiwan_bond_rejection", "WORKER_ASSIGNMENT_MISMATCH", () => validateWorkerOwnership(registry, { nodeId: "worker-02-desktop", domain: "BOND", market: "TAIWAN_GOVERNMENT", mode: "HISTORICAL", dryRun: true })));
   results.push(expectError("railway_bond_stock_rejection", "WORKER_ASSIGNMENT_MISMATCH", () => validateWorkerOwnership(registry, { nodeId: "railway-bond-production", domain: "STOCK", market: "NYSE", mode: "COMPLETION", dryRun: true })));
   results.push(expectError("master_bond_incremental_transfer", "WORKER_ASSIGNMENT_MISMATCH", () => validateWorkerOwnership(registry, { nodeId: "smartfund-master", domain: "BOND", market: "US_TREASURY", mode: "INCREMENTAL", dryRun: true })));
 

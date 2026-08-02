@@ -9,4 +9,4 @@ COPY . .
 RUN DATABASE_URL="postgresql://build:build@localhost:5432/build" DIRECT_URL="postgresql://build:build@localhost:5432/build" npx prisma generate
 
 # Bond production never runs migrations. Schema changes remain an owner gate.
-CMD ["node", "--experimental-strip-types", "scripts/data/bond/run-production-us-treasury.ts"]
+CMD ["node", "--experimental-strip-types", "scripts/data/bond/run-production-bond-maintenance.ts"]
