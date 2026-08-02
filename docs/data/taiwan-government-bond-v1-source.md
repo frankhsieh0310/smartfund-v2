@@ -36,3 +36,19 @@ The endpoint also supplies series/tranche, listing date/status, tenor, coupon/pa
 - The endpoint does not expose prior point-in-time versions of each master record. SmartFund therefore begins its own reproducible snapshot history from V1 ingestion; older point-in-time history remains `PARTIAL`.
 - Individual secondary-market price/yield history is a separate layer. It must not be inferred from an index or aggregate yield curve.
 - Detailed terms, market observations and source-document canonical tables remain a schema gap requiring owner-approved migration. This does not block identity ingestion, durable archive, freshness or incremental maintenance.
+
+## Secondary-market V1 evidence
+
+- Official current report index: `https://www.tpex.org.tw/web/bond/tradeinfo/govbond/GovBondDaily.php?l=zh-tw`
+- Official legacy report index: `https://hist.tpex.org.tw/HIST/BOND_TRADING_INFO/GOV_BOND/30/DYS01.HTML`
+- Report code: `BDdys01a` / legacy `DYS01` (individual-bond outright-purchase-and-sale observations).
+- Historical range archived: 2001-11-20 through 2026-07-31.
+- Reports completed: 6,127 / 6,127 checked official report dates.
+- Normalized individual-government-bond observations: 69,254.
+- Historical individual-security universe discovered: 347 unique government-bond codes.
+- Current issuance-master universe: 197; it is intentionally not used as the historical denominator.
+- Open failure queue: 0.
+- Durable archive replay: PASS.
+- Latest actual official report at the 2026-08-02 weekend snapshot: 2026-07-31; seven government bonds traded.
+- Non-government rows in the shared official daily files are excluded before normalization; 8,743 such rows were isolated in the modern segment.
+- Canonical DB writes: 0. Production has no bond market-observation table, so raw and normalized V1 history remains in the durable archive pending an owner-approved schema decision.

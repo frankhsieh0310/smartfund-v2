@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "snapshotAt": "2026-08-02T09:53:22.430Z",
+  "snapshotAt": "2026-08-02T10:40:09.035Z",
   "statusValues": [
     "COMPLETED",
     "PARTIAL",
@@ -85,8 +85,9 @@
         { "layer": "Historical", "status": "PARTIAL", "denominator": 197, "numerator": 197, "coveragePercent": 100, "remaining": 0, "blocker": "OFFICIAL_ENDPOINT_IS_CURRENT_ISSUANCE_MASTER; PRIOR_POINT_IN_TIME_SNAPSHOTS_NOT_EXPOSED", "owner": "Laptop/Master", "nextAction": "Retain daily durable snapshots from V1 inception" },
         { "layer": "Latest", "status": "COMPLETED", "denominator": 197, "numerator": 197, "coveragePercent": 100, "remaining": 0, "blocker": null, "owner": "Laptop/Master", "nextAction": "Daily official snapshot" },
         { "layer": "Freshness", "status": "COMPLETED", "denominator": 1182, "numerator": 1182, "coveragePercent": 100, "remaining": 0, "blocker": null, "owner": "Laptop/Master", "nextAction": "Validate six layers after each run" },
-        { "layer": "Secondary-market historical", "status": "NOT_STARTED", "denominator": 197, "numerator": 0, "coveragePercent": 0, "remaining": 197, "blocker": null, "owner": "Laptop/Master", "nextAction": "Assess official TPEx daily government-bond transaction datasets" },
-        { "layer": "Secondary-market latest", "status": "NOT_STARTED", "denominator": 197, "numerator": 0, "coveragePercent": 0, "remaining": 197, "blocker": null, "owner": "Laptop/Master", "nextAction": "Connect official TPEx market observations without substituting index/yield curve data" },
+        { "layer": "Secondary-market historical archive", "status": "COMPLETED", "denominator": 6127, "numerator": 6127, "coveragePercent": 100, "remaining": 0, "blocker": null, "owner": "Laptop/Master", "nextAction": "Historical V1 locked; maintain latest official daily report only", "evidence": "69,254 individual-government-bond observations; 347 historical securities; 2001-11-20 through 2026-07-31; archive replay PASS; open failures 0" },
+        { "layer": "Secondary-market latest archive", "status": "COMPLETED", "denominator": 7, "numerator": 7, "coveragePercent": 100, "remaining": 0, "blocker": null, "owner": "Laptop/Master", "nextAction": "Increment after the next TPEx report is published", "evidence": "Latest actual TPEx report 2026-07-31; seven government bonds traded; absence of other bonds means no reported trade, not missing data" },
+        { "layer": "Secondary-market incremental", "status": "PARTIAL", "denominator": 2, "numerator": 1, "coveragePercent": 50, "remaining": 1, "blocker": "CANONICAL_OBSERVATION_TABLE_NOT_AVAILABLE", "owner": "Railway Bond Production", "nextAction": "Archive/latest resume path is proven; canonical DB and Railway scheduling require an approved bond-observation table" },
         { "layer": "Incremental", "status": "COMPLETED", "denominator": 197, "numerator": 197, "coveragePercent": 100, "remaining": 0, "blocker": null, "owner": "Railway Bond Production", "nextAction": "Maintenance" },
         { "layer": "Scheduler", "status": "COMPLETED", "denominator": 1, "numerator": 1, "coveragePercent": 100, "remaining": 0, "blocker": null, "owner": "Railway Bond Production", "nextAction": "Run with isolated Bond maintenance schedule" },
         { "layer": "Durable archive", "status": "COMPLETED", "denominator": 1, "numerator": 1, "coveragePercent": 100, "remaining": 0, "blocker": null, "owner": "Railway Bond Production", "nextAction": "Verify replay after each live run" },

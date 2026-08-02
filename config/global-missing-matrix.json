@@ -477,14 +477,14 @@
       "universe": null,
       "completed": 0,
       "coveragePercent": null,
-      "production": "NOT_STARTED",
+      "production": "PARTIAL",
       "missing": [
         "Government bonds",
         "Corporate bonds",
         "Municipal/Agency bonds",
         "Convertible bonds"
       ],
-      "evidence": "No canonical individual bond universe"
+      "evidence": "Registered current individual-security universes: US Treasury 465/465 and Taiwan Government 197/197. Taiwan historical secondary universe discovered 347 securities. Global country and corporate queues remain incomplete."
     },
     {
       "order": 9,
@@ -493,14 +493,14 @@
       "universe": null,
       "completed": 0,
       "coveragePercent": null,
-      "production": "NOT_STARTED",
+      "production": "PARTIAL",
       "missing": [
         "Historical price",
         "Historical yield",
         "Duration",
         "Spread"
       ],
-      "evidence": "No canonical bond history"
+      "evidence": "Taiwan Government secondary archive: 6,127/6,127 official reports, 69,254 rows, 2001-11-20 through 2026-07-31, failure queue 0. Global bond history remains incomplete and canonical observation schema is absent."
     },
     {
       "order": 9,
