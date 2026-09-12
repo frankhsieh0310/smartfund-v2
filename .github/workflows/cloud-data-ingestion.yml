@@ -30,13 +30,19 @@ on:
     - cron: "30 10 * * 1-5" # MOPS financial incremental — 18:30 Taipei, after-hours filing check (weekdays)
     - cron: "30 14 * * 1-5" # MOPS financial incremental (2nd pass) — 22:30 Taipei, catches late filers same day
     - cron: "0 13 * * *"    # SEC EDGAR financial incremental (discovery + bounded issuer refresh) — daily
+    # FX quote (2026-09-12): Vercel Hobby rejected `0 */2 * * 1-5` outright ("Hobby accounts are
+    # limited to daily cron jobs") — same sub-daily limitation as everything else in this file, same
+    # fix. This IS the primary FX quote trigger; Vercel's own daily quote cron (vercel.json,
+    # 0 21 * * 1-5) is kept only as a safety net if this workflow ever fails to fire. Both call the
+    # same idempotent, stale-guarded route, so a same-day double-run is a safe no-op, not corruption.
+    - cron: "0 */2 * * 1-5" # FX quote (390 Yahoo-direct pairs, auto-chains 162 derived-cross) — every 2h weekdays
   workflow_dispatch:
     inputs:
       job:
         description: "Which job to run"
         type: choice
         default: all
-        options: [both, etf-price, moneydj-fund, moneydj-etf, global-etf-holdings, fund-holdings, fund-nav, consensus-ingest, consensus-aggregate, consensus-performance, consensus-flips, consensus-backfill, tw-fundamentals-refresh, global-pe-recompute, mops-financial-incremental, sec-financial-incremental, all]
+        options: [both, etf-price, moneydj-fund, moneydj-etf, global-etf-holdings, fund-holdings, fund-nav, consensus-ingest, consensus-aggregate, consensus-performance, consensus-flips, consensus-backfill, tw-fundamentals-refresh, global-pe-recompute, mops-financial-incremental, sec-financial-incremental, fx-quote, all]
 
 concurrency:
   group: cloud-data-ingestion
@@ -77,6 +83,7 @@ jobs:
             "30 10 * * 1-5") echo "job=mops-financial-incremental" >> "$GITHUB_OUTPUT" ;;
             "30 14 * * 1-5") echo "job=mops-financial-incremental" >> "$GITHUB_OUTPUT" ;;
             "0 13 * * *") echo "job=sec-financial-incremental" >> "$GITHUB_OUTPUT" ;;
+            "0 */2 * * 1-5") echo "job=fx-quote" >> "$GITHUB_OUTPUT" ;;
             *)            echo "job=${{ github.event.inputs.job || 'all' }}" >> "$GITHUB_OUTPUT" ;;
           esac
 
@@ -244,6 +251,20 @@ jobs:
                --retry 2 --retry-connrefused --retry-delay 10 \
                -H "Authorization: Bearer ${SECRET}" \
                "${BASE_URL}/api/cron/cloud-sec-financial-incremental" | tee sec-financial-incremental-response.json
+          echo
+
+      - name: FX quote (390 Yahoo-direct pairs, auto-chains 162 derived-cross)
+        if: ${{ contains(fromJSON('["fx-quote","all"]'), steps.pick.outputs.job) }}
+        run: |
+          set -euo pipefail
+          # Observed live to take up to ~250s for a full 390-pair sweep on Vercel — max-time is
+          # comfortably above that and above the route's own maxDuration (280s), so curl never hangs
+          # up on a still-running function. No retry: a partial run already checkpoints cleanly and
+          # a retry would just re-hit the same in-progress dedup window.
+          curl --fail-with-body --show-error --silent \
+               --connect-timeout 15 --max-time 320 \
+               -H "Authorization: Bearer ${SECRET}" \
+               "${BASE_URL}/api/cron/yahoo-fx?phase=quote" | tee fx-quote-response.json
           echo
 
       - name: Upload responses
