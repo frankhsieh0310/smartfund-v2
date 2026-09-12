@@ -1658,3 +1658,139 @@ enum DataSourceCategory {
   CRYPTO
   BOND
 }
+
+// FX Data Platform — canonical spot-FX tables (Yahoo-direct + derived-cross), already migrated and
+// live in the production database (see prisma/migrations/20260805120000_global_fx_platform and
+// 20260809180000_global_fx_p0_depth). This block only teaches the committed Prisma schema/client
+// about tables that already exist — it is NOT a new migration and does not change the database.
+// Scope: only the 6 models the FX cloud automation (lib/cloud-ingestion/fxUniverse.ts,
+// lib/cron/fxUpdate.ts, lib/cron/fxDerivedUpdate.ts, app/api/cron/yahoo-fx/route.ts,
+// lib/data-platform/web/fxService.ts) actually calls. No relations, no enums, no shared models —
+// verified independent of the rest of the (much larger, still-in-progress) FX schema, which
+// includes fx_forward_*, fx_metrics, fx_reference_values, fx_work_items, fx_archive_manifests,
+// fx_sources — none of those are used by this round's code and are intentionally left out.
+model FxCurrency {
+  code        String   @id
+  name        String
+  kind        String   @default("FIAT")
+  isoNumeric  String?  @map("iso_numeric")
+  minorUnits  Int?     @map("minor_units")
+  authorityId String?  @map("authority_id")
+  active      Boolean  @default(true)
+  metadata    Json?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([active, kind])
+  @@map("fx_currencies")
+}
+
+model FxPair {
+  symbol               String    @id
+  baseCurrency         String    @map("base_currency")
+  quoteCurrency        String    @map("quote_currency")
+  classification       String
+  providerSymbol       String?   @map("provider_symbol")
+  pricePrecision       Int       @default(6) @map("price_precision")
+  active               Boolean   @default(true)
+  metadata             Json?
+  displayPair          String?   @map("display_pair")
+  quoteConvention      String    @default("QUOTE_UNITS_PER_BASE") @map("quote_convention")
+  pipPrecision         Int?      @map("pip_precision")
+  deliverability       String?
+  onshoreOffshoreType  String?   @map("onshore_offshore_type")
+  source               String    @default("SMARTFUND_FX_REGISTRY")
+  verificationStatus   String    @default("DETERMINISTIC_VERIFIED") @map("verification_status")
+  classificationMethod String    @default("CONFIGURED_CURRENCY_SET_V1") @map("classification_method")
+  usdCross             Boolean   @default(false) @map("usd_cross")
+  startDate            DateTime? @map("start_date") @db.Date
+  endDate              DateTime? @map("end_date") @db.Date
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+
+  @@unique([baseCurrency, quoteCurrency])
+  @@index([classification, active])
+  @@map("fx_pairs")
+}
+
+model FxPairAlias {
+  id             String    @id @default(uuid())
+  pairSymbol     String    @map("pair_symbol")
+  provider       String
+  providerSymbol String    @map("provider_symbol")
+  providerMarket String?   @map("provider_market")
+  mappingMethod  String    @map("mapping_method")
+  invertedAlias  Boolean   @default(false) @map("inverted_alias")
+  source         String
+  verifiedAt     DateTime? @map("verified_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  @@unique([provider, providerSymbol])
+  @@index([pairSymbol])
+  @@map("fx_pair_aliases")
+}
+
+model FxCandle {
+  pairSymbol         String   @map("pair_symbol")
+  interval           String
+  openTime           DateTime @map("open_time")
+  closeTime          DateTime @map("close_time")
+  open               Decimal  @db.Decimal(30, 12)
+  high               Decimal  @db.Decimal(30, 12)
+  low                Decimal  @db.Decimal(30, 12)
+  close              Decimal  @db.Decimal(30, 12)
+  bid                Decimal? @db.Decimal(30, 12)
+  ask                Decimal? @db.Decimal(30, 12)
+  mid                Decimal? @db.Decimal(30, 12)
+  spread             Decimal? @db.Decimal(30, 12)
+  volume             Decimal? @db.Decimal(30, 8)
+  source             String
+  sourceUrl          String?  @map("source_url")
+  providerSymbol     String?  @map("provider_symbol")
+  sourceRecordId     String?  @map("source_record_id")
+  sourceType         String   @default("LEGAL_PUBLIC_MARKET") @map("source_type")
+  verificationStatus String   @default("ARCHIVE_SEMANTICS_VERIFIED") @map("verification_status")
+  archiveManifestId  String?  @map("archive_manifest_id")
+  ingestionBatch     String?  @map("ingestion_batch")
+  ingestedAt         DateTime @default(now()) @map("ingested_at")
+  observedAt         DateTime @default(now()) @map("observed_at")
+
+  @@id([pairSymbol, interval, openTime, source])
+  @@index([interval, openTime])
+  @@map("fx_candles")
+}
+
+model FxLatestQuote {
+  pairSymbol String   @id @map("pair_symbol")
+  bid        Decimal? @db.Decimal(30, 12)
+  ask        Decimal? @db.Decimal(30, 12)
+  mid        Decimal  @db.Decimal(30, 12)
+  spread     Decimal? @db.Decimal(30, 12)
+  source     String
+  quotedAt   DateTime @map("quoted_at")
+  ingestedAt DateTime @default(now()) @map("ingested_at")
+  metadata   Json?
+
+  @@index([quotedAt])
+  @@map("fx_latest_quotes")
+}
+
+model FxCoverage {
+  pairSymbol       String    @map("pair_symbol")
+  capability       String
+  interval         String    @default("")
+  status           String
+  provider         String?
+  earliestAt       DateTime? @map("earliest_at")
+  latestAt         DateTime? @map("latest_at")
+  freshnessSeconds Int?      @map("freshness_seconds")
+  rowCount         BigInt    @default(0) @map("row_count")
+  qualityStatus    String    @default("PENDING") @map("quality_status")
+  details          Json?
+  checkedAt        DateTime  @default(now()) @map("checked_at")
+
+  @@id([pairSymbol, capability, interval])
+  @@index([status, qualityStatus])
+  @@map("fx_coverage")
+}
