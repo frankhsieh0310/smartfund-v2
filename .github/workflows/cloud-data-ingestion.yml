@@ -1,0 +1,252 @@
+name: cloud-data-ingestion
+
+# Cloud-only ingestion scheduler. Vercel Functions do the work; GitHub Actions is only the clock.
+# Hobby Vercel plan cannot run sub-daily crons, so the schedule lives here instead.
+#
+# Requires repo secret: SMARTFUND_CRON_SECRET  (must equal the Vercel Production env var CRON_SECRET)
+# Scheduled workflows only run from the repository default branch.
+
+on:
+  schedule:
+    - cron: "7 * * * *"  # Fund holdings       — every hour at :07
+    - cron: "17 * * * *" # ETF price          — every hour at :17
+    - cron: "27 * * * *" # Fund NAV (SITCA)   — every hour at :27
+    - cron: "37 * * * *" # MoneyDJ fund NAV    — every hour at :37
+    - cron: "47 * * * *" # MoneyDJ ETF hold.   — every hour at :47
+    - cron: "57 * * * *" # Global ETF hold.    — every hour at :57
+    # Consensus radar (大佬觀點) — Asia/Taipei = UTC+8
+    - cron: "20 1,4,7,10,13,16,19,22 * * *" # consensus ingest — every 3h at :20 Taipei (00:20/03:20/.../21:20)
+    - cron: "30 22 * * *"                    # consensus aggregate — 06:30 Taipei (1D/7D/30D rollup)
+    - cron: "0 0 * * *"                     # consensus performance — 08:00 Taipei (1M/3M/6M accuracy, no AI)
+    - cron: "40 1,4,7,10,13,16,19,22 * * *" # consensus flips — 20min after each ingest (viewpoint-flip detect, no AI)
+    - cron: "50 23 * * *"                    # consensus backfill — 07:50 Taipei (bounded historical walk, checkpointed)
+    # Fundamentals freshness (我的分析 PE staleness fix) — Asia/Taipei = UTC+8
+    - cron: "30 8 * * 1-5"  # TW BWIBBU PE refresh — 16:30 Taipei, after TWSE/TPEx 13:30 close (weekdays only)
+    - cron: "0 */3 * * *"   # Global PE recompute — every 3h, bounded batch + checkpoint cycles the full NASDAQ/NYSE universe over a day
+    - cron: "30 10 * * 1-5" # MOPS financial incremental — 18:30 Taipei, after-hours filing check (weekdays)
+    - cron: "30 14 * * 1-5" # MOPS financial incremental (2nd pass) — 22:30 Taipei, catches late filers same day
+    - cron: "0 13 * * *"    # SEC EDGAR financial incremental (discovery + bounded issuer refresh) — daily
+  workflow_dispatch:
+    inputs:
+      job:
+        description: "Which job to run"
+        type: choice
+        default: all
+        options: [both, etf-price, moneydj-fund, moneydj-etf, global-etf-holdings, fund-holdings, fund-nav, consensus-ingest, consensus-aggregate, consensus-performance, consensus-flips, consensus-backfill, tw-fundamentals-refresh, global-pe-recompute, mops-financial-incremental, sec-financial-incremental, all]
+
+concurrency:
+  group: cloud-data-ingestion
+  cancel-in-progress: false
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      BASE_URL: https://smartfund-v2.vercel.app
+      SECRET: ${{ secrets.SMARTFUND_CRON_SECRET }}
+    steps:
+      - name: Guard — secret present
+        run: |
+          if [ -z "${SECRET}" ]; then
+            echo "::error::SMARTFUND_CRON_SECRET is not set on this repository."
+            exit 1
+          fi
+
+      - name: Select job
+        id: pick
+        run: |
+          case "${{ github.event.schedule }}" in
+            "7 * * * *")  echo "job=fund-holdings" >> "$GITHUB_OUTPUT" ;;
+            "17 * * * *") echo "job=etf-price" >> "$GITHUB_OUTPUT" ;;
+            "27 * * * *") echo "job=fund-nav" >> "$GITHUB_OUTPUT" ;;
+            "37 * * * *") echo "job=moneydj-fund" >> "$GITHUB_OUTPUT" ;;
+            "47 * * * *") echo "job=moneydj-etf" >> "$GITHUB_OUTPUT" ;;
+            "57 * * * *") echo "job=global-etf-holdings" >> "$GITHUB_OUTPUT" ;;
+            "20 1,4,7,10,13,16,19,22 * * *") echo "job=consensus-ingest" >> "$GITHUB_OUTPUT" ;;
+            "30 22 * * *") echo "job=consensus-aggregate" >> "$GITHUB_OUTPUT" ;;
+            "0 0 * * *") echo "job=consensus-performance" >> "$GITHUB_OUTPUT" ;;
+            "40 1,4,7,10,13,16,19,22 * * *") echo "job=consensus-flips" >> "$GITHUB_OUTPUT" ;;
+            "50 23 * * *") echo "job=consensus-backfill" >> "$GITHUB_OUTPUT" ;;
+            "30 8 * * 1-5") echo "job=tw-fundamentals-refresh" >> "$GITHUB_OUTPUT" ;;
+            "0 */3 * * *") echo "job=global-pe-recompute" >> "$GITHUB_OUTPUT" ;;
+            "30 10 * * 1-5") echo "job=mops-financial-incremental" >> "$GITHUB_OUTPUT" ;;
+            "30 14 * * 1-5") echo "job=mops-financial-incremental" >> "$GITHUB_OUTPUT" ;;
+            "0 13 * * *") echo "job=sec-financial-incremental" >> "$GITHUB_OUTPUT" ;;
+            *)            echo "job=${{ github.event.inputs.job || 'all' }}" >> "$GITHUB_OUTPUT" ;;
+          esac
+
+      - name: Fund holdings batch (MoneyDJ)
+        if: ${{ contains(fromJSON('["fund-holdings","all"]'), steps.pick.outputs.job) }}
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --show-error --silent \
+               --connect-timeout 15 --max-time 300 \
+               --retry 2 --retry-connrefused --retry-delay 10 \
+               -H "Authorization: Bearer ${SECRET}" \
+               "${BASE_URL}/api/cron/cloud-fund-holdings?provider=ALL" | tee fund-holdings-response.json
+          echo
+
+      - name: Fund NAV batch (SITCA)
+        if: ${{ contains(fromJSON('["fund-nav","all"]'), steps.pick.outputs.job) }}
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --show-error --silent \
+               --connect-timeout 15 --max-time 300 \
+               --retry 2 --retry-connrefused --retry-delay 10 \
+               -H "Authorization: Bearer ${SECRET}" \
+               "${BASE_URL}/api/cron/cloud-fund-nav?provider=ALL" | tee fund-nav-response.json
+          echo
+
+      - name: ETF price batch
+        if: ${{ contains(fromJSON('["etf-price","both","all"]'), steps.pick.outputs.job) }}
+        run: |
+          set -euo pipefail
+          # retry only transient network / 5xx; never hammer 403/429
+          curl --fail-with-body --show-error --silent \
+               --connect-timeout 15 --max-time 300 \
+               --retry 2 --retry-connrefused --retry-delay 10 \
+               -H "Authorization: Bearer ${SECRET}" \
+               "${BASE_URL}/api/cron/cloud-etf-price" | tee etf-price-response.json
+          echo
+
+      - name: MoneyDJ fund batch
+        if: ${{ contains(fromJSON('["moneydj-fund","both","all"]'), steps.pick.outputs.job) }}
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --show-error --silent \
+               --connect-timeout 15 --max-time 300 \
+               --retry 2 --retry-connrefused --retry-delay 10 \
+               -H "Authorization: Bearer ${SECRET}" \
+               "${BASE_URL}/api/cron/cloud-moneydj-fund" | tee moneydj-fund-response.json
+          echo
+
+      - name: MoneyDJ ETF holdings batch
+        if: ${{ contains(fromJSON('["moneydj-etf","all"]'), steps.pick.outputs.job) }}
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --show-error --silent \
+               --connect-timeout 15 --max-time 300 \
+               --retry 2 --retry-connrefused --retry-delay 10 \
+               -H "Authorization: Bearer ${SECRET}" \
+               "${BASE_URL}/api/cron/cloud-moneydj-etf" | tee moneydj-etf-response.json
+          echo
+
+      - name: Global ETF holdings batch (BlackRock / iShares)
+        if: ${{ contains(fromJSON('["global-etf-holdings","all"]'), steps.pick.outputs.job) }}
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --show-error --silent \
+               --connect-timeout 15 --max-time 300 \
+               --retry 2 --retry-connrefused --retry-delay 10 \
+               -H "Authorization: Bearer ${SECRET}" \
+               "${BASE_URL}/api/cron/cloud-global-etf-holdings?provider=ALL" | tee global-etf-holdings-response.json
+          echo
+
+      - name: Consensus ingest (whitelisted sources -> events)
+        if: ${{ contains(fromJSON('["consensus-ingest","all"]'), steps.pick.outputs.job) }}
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --show-error --silent \
+               --connect-timeout 15 --max-time 300 \
+               --retry 2 --retry-connrefused --retry-delay 10 \
+               -H "Authorization: Bearer ${SECRET}" \
+               "${BASE_URL}/api/cron/consensus-ingest" | tee consensus-ingest-response.json
+          echo
+
+      - name: Consensus aggregate (1D / 7D / 30D rollup)
+        if: ${{ contains(fromJSON('["consensus-aggregate","all"]'), steps.pick.outputs.job) }}
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --show-error --silent \
+               --connect-timeout 15 --max-time 300 \
+               --retry 2 --retry-connrefused --retry-delay 10 \
+               -H "Authorization: Bearer ${SECRET}" \
+               "${BASE_URL}/api/cron/consensus-aggregate" | tee consensus-aggregate-response.json
+          echo
+
+      - name: Consensus performance (1M / 3M / 6M historical accuracy)
+        if: ${{ contains(fromJSON('["consensus-performance","all"]'), steps.pick.outputs.job) }}
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --show-error --silent \
+               --connect-timeout 15 --max-time 300 \
+               --retry 2 --retry-connrefused --retry-delay 10 \
+               -H "Authorization: Bearer ${SECRET}" \
+               "${BASE_URL}/api/cron/consensus-performance" | tee consensus-performance-response.json
+          echo
+
+      - name: Consensus flips (viewpoint-flip detection)
+        if: ${{ contains(fromJSON('["consensus-flips","all"]'), steps.pick.outputs.job) }}
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --show-error --silent \
+               --connect-timeout 15 --max-time 300 \
+               --retry 2 --retry-connrefused --retry-delay 10 \
+               -H "Authorization: Bearer ${SECRET}" \
+               "${BASE_URL}/api/cron/consensus-flips" | tee consensus-flips-response.json
+          echo
+
+      - name: Consensus backfill (bounded historical walk)
+        if: ${{ contains(fromJSON('["consensus-backfill","all"]'), steps.pick.outputs.job) }}
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --show-error --silent \
+               --connect-timeout 15 --max-time 300 \
+               --retry 2 --retry-connrefused --retry-delay 10 \
+               -H "Authorization: Bearer ${SECRET}" \
+               "${BASE_URL}/api/cron/consensus-backfill?days=180" | tee consensus-backfill-response.json
+          echo
+
+      - name: TW fundamentals refresh (BWIBBU PE, full market batch)
+        if: ${{ contains(fromJSON('["tw-fundamentals-refresh","all"]'), steps.pick.outputs.job) }}
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --show-error --silent \
+               --connect-timeout 15 --max-time 60 \
+               --retry 2 --retry-connrefused --retry-delay 10 \
+               -H "Authorization: Bearer ${SECRET}" \
+               "${BASE_URL}/api/cron/cloud-tw-fundamentals-refresh" | tee tw-fundamentals-refresh-response.json
+          echo
+
+      - name: Global PE recompute (DB-side, bounded batch)
+        if: ${{ contains(fromJSON('["global-pe-recompute","all"]'), steps.pick.outputs.job) }}
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --show-error --silent \
+               --connect-timeout 15 --max-time 60 \
+               --retry 2 --retry-connrefused --retry-delay 10 \
+               -H "Authorization: Bearer ${SECRET}" \
+               "${BASE_URL}/api/cron/cloud-global-pe-recompute" | tee global-pe-recompute-response.json
+          echo
+
+      - name: MOPS financial incremental (TWSE/TPEx, recent quarters only)
+        if: ${{ contains(fromJSON('["mops-financial-incremental","all"]'), steps.pick.outputs.job) }}
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --show-error --silent \
+               --connect-timeout 15 --max-time 110 \
+               --retry 2 --retry-connrefused --retry-delay 10 \
+               -H "Authorization: Bearer ${SECRET}" \
+               "${BASE_URL}/api/cron/cloud-mops-financial-incremental" | tee mops-financial-incremental-response.json
+          echo
+
+      - name: SEC EDGAR financial incremental (discovery + bounded issuer refresh)
+        if: ${{ contains(fromJSON('["sec-financial-incremental","all"]'), steps.pick.outputs.job) }}
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --show-error --silent \
+               --connect-timeout 15 --max-time 110 \
+               --retry 2 --retry-connrefused --retry-delay 10 \
+               -H "Authorization: Bearer ${SECRET}" \
+               "${BASE_URL}/api/cron/cloud-sec-financial-incremental" | tee sec-financial-incremental-response.json
+          echo
+
+      - name: Upload responses
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ingestion-responses-${{ github.run_id }}
+          path: "*-response.json"
+          if-no-files-found: ignore
+          retention-days: 7
