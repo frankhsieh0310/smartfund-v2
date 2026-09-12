@@ -14,12 +14,16 @@ on:
     - cron: "37 * * * *" # MoneyDJ fund NAV    — every hour at :37
     - cron: "47 * * * *" # MoneyDJ ETF hold.   — every hour at :47
     - cron: "57 * * * *" # Global ETF hold.    — every hour at :57
-    # Consensus radar (大佬觀點) — Asia/Taipei = UTC+8
-    - cron: "20 1,4,7,10,13,16,19,22 * * *" # consensus ingest — every 3h at :20 Taipei (00:20/03:20/.../21:20)
-    - cron: "30 22 * * *"                    # consensus aggregate — 06:30 Taipei (1D/7D/30D rollup)
-    - cron: "0 0 * * *"                     # consensus performance — 08:00 Taipei (1M/3M/6M accuracy, no AI)
-    - cron: "40 1,4,7,10,13,16,19,22 * * *" # consensus flips — 20min after each ingest (viewpoint-flip detect, no AI)
-    - cron: "50 23 * * *"                    # consensus backfill — 07:50 Taipei (bounded historical walk, checkpointed)
+    # Consensus radar (大佬觀點) is intentionally NOT scheduled here. It already has its own Vercel Cron
+    # (vercel.json: /api/workflows/bootstrap?workflow=consensus, daily 20 16 * * *) driving a Durable
+    # Workflow (app/workflows/consensus-cycle.ts) that self-paces 8 ingest passes 3h apart and internally
+    # calls consensus-ingest / -reprocess / -flips / -push each pass, plus -backfill / -aggregate /
+    # -performance once per cycle — i.e. every endpoint below already runs on schedule via Vercel. Found
+    # during a scheduler audit that this workflow file, before being committed here, would have doubled
+    # up on all of them the moment GitHub Actions started running (each endpoint's hour/day-bucketed
+    # run_key makes a second same-window call a safe no-op, not corruption — but still pointless). Kept
+    # as workflow_dispatch-only options below (job=consensus-ingest etc.) for manual/fallback use, not on
+    # the automatic schedule, so Vercel Workflow stays the one PRIMARY trigger for this domain.
     # Fundamentals freshness (我的分析 PE staleness fix) — Asia/Taipei = UTC+8
     - cron: "30 8 * * 1-5"  # TW BWIBBU PE refresh — 16:30 Taipei, after TWSE/TPEx 13:30 close (weekdays only)
     - cron: "0 */3 * * *"   # Global PE recompute — every 3h, bounded batch + checkpoint cycles the full NASDAQ/NYSE universe over a day
