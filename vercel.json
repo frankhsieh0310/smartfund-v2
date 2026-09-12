@@ -1,0 +1,15 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
+    { "path": "/api/workflows/bootstrap?workflow=poc", "schedule": "0 5 * * *" },
+    { "path": "/api/workflows/bootstrap?workflow=consensus", "schedule": "20 16 * * *" },
+    { "path": "/api/workflows/bootstrap?workflow=yahoo-etf-full-sweep", "schedule": "0 3 * * *" },
+    { "path": "/api/workflows/bootstrap?workflow=yahoo-etf-enrich-repair", "schedule": "30 3 * * *" },
+    { "path": "/api/workflows/bootstrap?workflow=yahoo-fund-full-sweep", "schedule": "0 4 * * *" },
+    { "path": "/api/workflows/bootstrap?workflow=yahoo-fund-enrich-repair", "schedule": "30 4 * * *" },
+    { "path": "/api/workflows/bootstrap?workflow=yahoo-etf-distribution-backfill", "schedule": "0 5 * * 0" },
+    { "path": "/api/cron/yahoo-fx?phase=quote", "schedule": "0 21 * * 1-5" },
+    { "path": "/api/cron/yahoo-fx?phase=history", "schedule": "30 21 * * 1-5" },
+    { "path": "/api/cron/yahoo-fx?phase=discovery", "schedule": "0 6 * * 0" }
+  ]
+}

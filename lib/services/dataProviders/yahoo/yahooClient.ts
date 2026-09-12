@@ -239,6 +239,62 @@ export async function fetchYahooQuotes(symbols: string[]): Promise<YahooQuoteRes
   }));
 }
 
+export interface YahooFxSparkResult {
+  requestedSymbol: string; // symbol we asked for, e.g. "USDJPY=X"
+  canonicalSymbol: string | null; // symbol Yahoo echoes back in meta (can differ, e.g. "JPY=X")
+  currency: string | null;
+  regularMarketPrice: number | null;
+  previousClose: number | null;
+  regularMarketTime: Date | null; // latest observation timestamp
+  ok: boolean;
+}
+
+// FX-only multi-symbol batch (2026-09-12 PoC-validated): v7/finance/spark accepts a comma-joined
+// symbol list and returns one entry per symbol in a SINGLE request — this is what lets the FX
+// updater do "bounded batch of ~20 pairs -> 1 HTTP call" instead of one call per pair. Confirmed
+// live: works without crumb/cookie auth (unlike v7/finance/quote, which now 401s), returns
+// meta.regularMarketPrice, meta.chartPreviousClose and a timestamp series per symbol.
+export async function fetchYahooFxSpark(symbols: string[], range: string = "5d"): Promise<YahooFxSparkResult[]> {
+  if (symbols.length === 0) return [];
+  await sleep(REQUEST_DELAY_MS);
+
+  const url = `https://query1.finance.yahoo.com/v7/finance/spark?symbols=${symbols.map(encodeURIComponent).join(",")}&range=${range}&interval=1d`;
+
+  let res: Response;
+  try {
+    // 2026-09-12 reliability fix: without a timeout, a stalled Yahoo connection can hang this call
+    // (and everything awaiting it) indefinitely — observed live during full-universe validation.
+    res = await fetch(url, { headers: COMMON_HEADERS, signal: AbortSignal.timeout(15_000) });
+  } catch (err) {
+    console.error("[YahooClient] FX spark fetch failed:", err);
+    return symbols.map((s) => ({ requestedSymbol: s, canonicalSymbol: null, currency: null, regularMarketPrice: null, previousClose: null, regularMarketTime: null, ok: false }));
+  }
+  if (!res.ok) {
+    console.error(`[YahooClient] FX spark non-200: ${res.status}`);
+    return symbols.map((s) => ({ requestedSymbol: s, canonicalSymbol: null, currency: null, regularMarketPrice: null, previousClose: null, regularMarketTime: null, ok: false }));
+  }
+
+  const json = await res.json();
+  const results: Array<{ symbol: string; response?: Array<{ meta?: Record<string, unknown> }> }> = json?.spark?.result ?? [];
+  const bySymbol = new Map(results.map((r) => [r.symbol, r.response?.[0]?.meta]));
+
+  return symbols.map((requested) => {
+    // Yahoo keys the result by the REQUESTED symbol even when meta.symbol is a canonicalized
+    // alias (e.g. requesting "USDJPY=X" comes back keyed "USDJPY=X" but meta.symbol="JPY=X").
+    const meta = bySymbol.get(requested) as { symbol?: string; currency?: string; regularMarketPrice?: number; chartPreviousClose?: number; regularMarketTime?: number } | undefined;
+    if (!meta) return { requestedSymbol: requested, canonicalSymbol: null, currency: null, regularMarketPrice: null, previousClose: null, regularMarketTime: null, ok: false };
+    return {
+      requestedSymbol: requested,
+      canonicalSymbol: meta.symbol ?? null,
+      currency: meta.currency ?? null,
+      regularMarketPrice: meta.regularMarketPrice ?? null,
+      previousClose: meta.chartPreviousClose ?? null,
+      regularMarketTime: meta.regularMarketTime ? new Date(meta.regularMarketTime * 1000) : null,
+      ok: meta.regularMarketPrice != null,
+    };
+  });
+}
+
 /**
  * Incremental Chart API variant.  Unlike `fetchYahooChart(range)`, this only
  * requests the supplied UTC window so daily market jobs never re-download a
