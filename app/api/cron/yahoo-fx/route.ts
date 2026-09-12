@@ -47,16 +47,19 @@ export const dynamic = "force-dynamic";
 
 const TIME_BUDGET_MS = 240_000; // leaves headroom under maxDuration=280s for the final response
 
-// 2026-09-12 history hotfix: a single 20-pair updateFxHistory() call was observed live to take
+// 2026-09-12 history hotfix (round 2): a 20-pair updateFxHistory() call was observed live to take
 // long enough on Vercel's network (per-pair Yahoo chart fetch is far slower there than locally)
-// that ONE batch alone could exceed the whole function's maxDuration — the outer while loop's
-// TIME_BUDGET_MS check only runs BETWEEN calls, so it never got a chance to stop cleanly, and the
-// run was hard-killed mid-batch with no checkpoint write and no finishRun. Fix: small batches
-// (3-5 pairs, keeps a single call fast) + checkpoint written after EVERY batch (not just at the
-// end) + a tighter, proactively-checked deadline. Quote is untouched — it already completes a
-// 20-pair spark batch in one HTTP call, nothing like this risk applies there.
-const HISTORY_BATCH_SIZE = 4;
-const HISTORY_MAX_SAFE_RUNTIME_MS = 220_000;
+// that ONE batch alone could exceed the whole function's maxDuration. First fix (4 pairs/batch +
+// per-batch checkpoint) was deployed and re-tested live: STILL orphaned with zero checkpoint
+// progress after 230s+ — the very first 4-pair call itself didn't return before the deadline, so
+// the per-batch checkpoint write (which only runs AFTER a call returns) never got a chance to fire
+// even once. Dropping to the most conservative safe step per the prescribed remedy order (batch
+// size first) — 2 pairs/batch — plus a tighter proactive deadline, so a slow call is caught sooner
+// and the loop still gets multiple chances to checkpoint within one invocation. Quote is untouched
+// — it already completes a 20-pair spark batch in one HTTP call, nothing like this risk applies
+// there (confirmed live: 390/390 attempted, 0 failed, in ~142s, well inside budget).
+const HISTORY_BATCH_SIZE = 2;
+const HISTORY_MAX_SAFE_RUNTIME_MS = 180_000;
 
 async function validateAllPairs(): Promise<{ validation: Record<string, { ok: boolean; canonicalSymbol: string | null }>; validatedPairs: number }> {
   const aliases = await prisma.fxPairAlias.findMany({ where: { provider: { in: ["YAHOO_CHART", "YAHOO", "YAHOO-FINANCE2"] } }, orderBy: { provider: "asc" }, select: { pairSymbol: true, provider: true, providerSymbol: true } });
