@@ -47,6 +47,17 @@ export const dynamic = "force-dynamic";
 
 const TIME_BUDGET_MS = 240_000; // leaves headroom under maxDuration=280s for the final response
 
+// 2026-09-12 history hotfix: a single 20-pair updateFxHistory() call was observed live to take
+// long enough on Vercel's network (per-pair Yahoo chart fetch is far slower there than locally)
+// that ONE batch alone could exceed the whole function's maxDuration — the outer while loop's
+// TIME_BUDGET_MS check only runs BETWEEN calls, so it never got a chance to stop cleanly, and the
+// run was hard-killed mid-batch with no checkpoint write and no finishRun. Fix: small batches
+// (3-5 pairs, keeps a single call fast) + checkpoint written after EVERY batch (not just at the
+// end) + a tighter, proactively-checked deadline. Quote is untouched — it already completes a
+// 20-pair spark batch in one HTTP call, nothing like this risk applies there.
+const HISTORY_BATCH_SIZE = 4;
+const HISTORY_MAX_SAFE_RUNTIME_MS = 220_000;
+
 async function validateAllPairs(): Promise<{ validation: Record<string, { ok: boolean; canonicalSymbol: string | null }>; validatedPairs: number }> {
   const aliases = await prisma.fxPairAlias.findMany({ where: { provider: { in: ["YAHOO_CHART", "YAHOO", "YAHOO-FINANCE2"] } }, orderBy: { provider: "asc" }, select: { pairSymbol: true, provider: true, providerSymbol: true } });
   const preferOrder = ["YAHOO_CHART", "YAHOO", "YAHOO-FINANCE2"];
@@ -193,19 +204,30 @@ export async function GET(request: Request) {
       await finishRun(runId, JOB, "YAHOO", started, { status: failedPairs.length > 0 && updatedPairs === 0 ? "PARTIAL" : "COMPLETED", attempted: requestedPairs, completed: updatedPairs, inserted: 0, updated: updatedPairs, failed: failedPairs.length, retryableFailures: failedPairs.length, checkpointAfter: { ...cpAfter, updatedAt: new Date().toISOString() }, details: { slices, wrapped, staleSkipped, noNewData, derived } });
       return Response.json({ ok: true, task: "yahoo-fx", phase, requestedPairs, resolvedPairs, updatedPairs, staleSkipped, noNewData, failedPairs, wrapped, slices, derived });
     } else {
+      // History-specific small batch + per-batch checkpoint (see HISTORY_BATCH_SIZE comment above).
+      // `batch` query param is ignored here on purpose — history's safe batch size is a property of
+      // Yahoo chart latency, not something a caller should override upward.
       let requestedPairs = 0, updatedPairs = 0, rowsWritten = 0;
       const failedPairs: Array<{ symbol: string; reason: string }> = [];
       let wrapped = false, slices = 0;
-      while (Date.now() - started < TIME_BUDGET_MS) {
-        const r = await updateFxHistory(cursor, batch, scope);
+      while (Date.now() - started < HISTORY_MAX_SAFE_RUNTIME_MS) {
+        const r = await updateFxHistory(cursor, HISTORY_BATCH_SIZE, scope);
         requestedPairs += r.requestedPairs; updatedPairs += r.updatedPairs; rowsWritten += r.rowsWritten;
         failedPairs.push(...r.failedPairs);
         cursor = r.lastSymbol; slices++;
+        // Checkpoint after EVERY batch — a kill on a LATER batch must never lose progress already
+        // made and durably written to fx_candles by this invocation.
+        const cpAfter = { lastSymbol: r.wrapped ? null : cursor, processed: (cpBefore?.processed ?? 0) + requestedPairs, succeeded: (cpBefore?.succeeded ?? 0) + updatedPairs, failed: failedPairs.length };
+        await writeCheckpoint(JOB, cpKey, runId, cpAfter);
         if (r.wrapped) { wrapped = true; break; }
+        if (Date.now() - started >= HISTORY_MAX_SAFE_RUNTIME_MS) break; // no time left for another batch — stop cleanly instead of risking a kill mid-batch
       }
       const cpAfter = { lastSymbol: wrapped ? null : cursor, processed: (cpBefore?.processed ?? 0) + requestedPairs, succeeded: (cpBefore?.succeeded ?? 0) + updatedPairs, failed: failedPairs.length };
-      await writeCheckpoint(JOB, cpKey, runId, cpAfter);
-      await finishRun(runId, JOB, "YAHOO", started, { status: failedPairs.length > 0 && updatedPairs === 0 ? "PARTIAL" : "COMPLETED", attempted: requestedPairs, completed: updatedPairs, inserted: rowsWritten, updated: 0, failed: failedPairs.length, retryableFailures: failedPairs.length, checkpointAfter: { ...cpAfter, updatedAt: new Date().toISOString() }, details: { slices, wrapped } });
+      // A slice that completed cleanly (whether or not the full 390-pair universe wrapped this
+      // invocation) is a normal, successful run — progress lives in the checkpoint, not in whether
+      // this one call finished the whole universe. Reuses the existing COMPLETED/PARTIAL states,
+      // no new status introduced.
+      await finishRun(runId, JOB, "YAHOO", started, { status: failedPairs.length > 0 && updatedPairs === 0 && rowsWritten === 0 ? "PARTIAL" : "COMPLETED", attempted: requestedPairs, completed: updatedPairs, inserted: rowsWritten, updated: 0, failed: failedPairs.length, retryableFailures: failedPairs.length, checkpointAfter: { ...cpAfter, updatedAt: new Date().toISOString() }, details: { slices, wrapped, batchSize: HISTORY_BATCH_SIZE } });
       return Response.json({ ok: true, task: "yahoo-fx", phase, requestedPairs, updatedPairs, rowsWritten, failedPairs, wrapped, slices });
     }
   } catch (e) {
