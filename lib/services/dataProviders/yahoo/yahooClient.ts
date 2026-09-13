@@ -75,58 +75,113 @@ const COMMON_HEADERS = {
 // ══════════════════════════════════════════════════════════════
 let cachedCookie: string | null = null;
 let cachedCrumb: string | null = null;
+let cachedAuthAtMs: number | null = null;
+
+// 2026-09-11 cloud-reliability fix (isolated recovery extraction, 2026-09-13 — required by the
+// yahoo-etf-full-sweep / yahoo-fund-full-sweep / yahoo-etf-distribution-backfill /
+// yahoo-etf-enrich-repair workflow endpoints via lib/yahoo/productSession.ts; does not touch
+// fetchYahooFxSpark/fetchYahooChartPeriod, which FX/Index/Crypto use and never needed crumb
+// auth): `Headers.get("set-cookie")` returns (or silently drops) only one Set-Cookie response
+// header — fc.yahoo.com can set more than one cookie, and Yahoo's crumb/quoteSummary endpoints
+// want the full jar (an "A3" cookie in particular), not just whichever single header a naive
+// `.get()` happens to return. `Headers.getSetCookie()` (Node >=18.14, the runtime Vercel
+// functions run) exposes every raw Set-Cookie line distinctly — prefer it and fall back to
+// `.get()` only where it's unavailable.
+function collectSetCookies(headers: Headers): string[] {
+  const anyHeaders = headers as Headers & { getSetCookie?: () => string[] };
+  if (typeof anyHeaders.getSetCookie === "function") {
+    const all = anyHeaders.getSetCookie();
+    if (all.length) return all;
+  }
+  const single = headers.get("set-cookie");
+  return single ? [single] : [];
+}
+
+// Diagnostic-only counters (never a cookie/crumb value) — lets callers report WHY a session failed
+// to acquire without re-plumbing return types through every call site.
+export const authDiag = {
+  lastCookiePresent: false,
+  lastCrumbPresent: false,
+  lastAcquireMs: 0,
+  lastFailureReason: null as string | null,
+};
 
 async function fetchCrumbAndCookie(): Promise<{ cookie: string; crumb: string } | null> {
-  try {
-    // Step 1：拿 session cookie
-    const cookieRes = await fetch("https://fc.yahoo.com/", {
-      headers: COMMON_HEADERS,
-      redirect: "manual",
-    });
-    const setCookie = cookieRes.headers.get("set-cookie");
-    if (!setCookie) {
-      console.error("[YahooClient] 無法取得 session cookie");
-      return null;
-    }
-    const cookie = setCookie.split(";")[0];
+  const t0 = Date.now();
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      // Step 1：拿 session cookie（合併所有 Set-Cookie，不只取第一個）
+      const cookieRes = await fetch("https://fc.yahoo.com/", {
+        headers: COMMON_HEADERS,
+        redirect: "manual",
+        signal: AbortSignal.timeout(15_000),
+      });
+      const cookies = collectSetCookies(cookieRes.headers);
+      if (!cookies.length) {
+        authDiag.lastFailureReason = "NO_SET_COOKIE";
+        if (attempt === 0) continue;
+        console.error("[YahooClient] 無法取得 session cookie");
+        return null;
+      }
+      const cookie = cookies.map((c) => c.split(";")[0]).join("; ");
 
-    // Step 2：用 cookie 換 crumb
-    const crumbRes = await fetch("https://query2.finance.yahoo.com/v1/test/getcrumb", {
-      headers: { ...COMMON_HEADERS, Cookie: cookie },
-    });
-    if (!crumbRes.ok) {
-      console.error(`[YahooClient] 取得 crumb 失敗: ${crumbRes.status}`);
-      return null;
-    }
-    const crumb = await crumbRes.text();
-    if (!crumb || crumb.includes("<html")) {
-      console.error("[YahooClient] crumb 回應格式異常:", crumb.slice(0, 200));
-      return null;
-    }
+      // Step 2：用完整 cookie jar 換 crumb
+      const crumbRes = await fetch("https://query2.finance.yahoo.com/v1/test/getcrumb", {
+        headers: { ...COMMON_HEADERS, Cookie: cookie },
+        signal: AbortSignal.timeout(15_000),
+      });
+      if (!crumbRes.ok) {
+        authDiag.lastFailureReason = `GETCRUMB_HTTP_${crumbRes.status}`;
+        if (attempt === 0) continue;
+        console.error(`[YahooClient] 取得 crumb 失敗: ${crumbRes.status}`);
+        return null;
+      }
+      const crumb = await crumbRes.text();
+      if (!crumb || crumb.includes("<html")) {
+        authDiag.lastFailureReason = "CRUMB_MALFORMED";
+        if (attempt === 0) continue;
+        console.error("[YahooClient] crumb 回應格式異常:", crumb.slice(0, 200));
+        return null;
+      }
 
-    return { cookie, crumb };
-  } catch (err) {
-    console.error("[YahooClient] 取得 crumb/cookie 失敗:", err);
-    return null;
+      authDiag.lastFailureReason = null;
+      return { cookie, crumb };
+    } catch (err) {
+      authDiag.lastFailureReason = err instanceof Error && err.name === "TimeoutError" ? "TIMEOUT" : "NETWORK_ERROR";
+      if (attempt === 0) continue;
+      console.error("[YahooClient] 取得 crumb/cookie 失敗:", err);
+      return null;
+    }
   }
+  return null;
 }
 
 async function getAuth(): Promise<{ cookie: string; crumb: string } | null> {
   if (cachedCookie && cachedCrumb) {
+    authDiag.lastCookiePresent = true;
+    authDiag.lastCrumbPresent = true;
     return { cookie: cachedCookie, crumb: cachedCrumb };
   }
   const auth = await fetchCrumbAndCookie();
   if (auth) {
     cachedCookie = auth.cookie;
     cachedCrumb = auth.crumb;
+    cachedAuthAtMs = Date.now();
   }
+  authDiag.lastCookiePresent = !!auth?.cookie;
+  authDiag.lastCrumbPresent = !!auth?.crumb;
   return auth;
+}
+
+export function authAgeSeconds(): number | null {
+  return cachedAuthAtMs ? Math.round((Date.now() - cachedAuthAtMs) / 1000) : null;
 }
 
 // 401 時清快取，下次呼叫會重新取得，避免一直拿過期的 crumb 重試。
 function invalidateAuth() {
   cachedCookie = null;
   cachedCrumb = null;
+  cachedAuthAtMs = null;
 }
 
 // Yahoo Chart API 需要 range + interval 參數。range=10y 涵蓋足夠的
