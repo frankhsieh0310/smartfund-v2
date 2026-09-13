@@ -1794,3 +1794,97 @@ model FxCoverage {
   @@index([status, qualityStatus])
   @@map("fx_coverage")
 }
+
+// Global Index Data Platform — minimal isolated extraction (2026-09-13) of ONLY the 3 models the
+// Yahoo-direct index quote/history cron needs, out of the full already-live canonical Index schema
+// (production runs additional GlobalIndex* models — Coverage, WorkItem, Alias, Snapshot's sibling
+// Methodology/Constituent/Event/Analytic, plus BondIndexObservation — none of which this pipeline
+// reads or writes, so they're intentionally left out of this clean branch to keep the patch
+// minimal). GlobalIndexRegistry's production definition also carries a relation into
+// OptionContract (`optionContracts OptionContract[] @relation("OptionIndexUnderlying")`); a
+// targeted grep across app/, lib/ and scripts/ (tracked and dirty working tree) found zero code
+// using that relation, so it is deliberately omitted here — Options stays completely untouched
+// (its own schema, code and DB relation are unaffected; this only affects what this ONE clean
+// branch's Prisma Client exposes, never the production DB itself). Field-for-field identical to
+// the production definition otherwise. NO migration, NO db push — these tables and their data
+// already exist in production; this patch only lets an isolated branch's Prisma Client see them.
+model GlobalIndexRegistry {
+  id                 String    @id
+  name               String
+  symbol             String
+  country            String?
+  region             String
+  provider           String
+  exchange           String?
+  currency           String?
+  timezone           String
+  returnType         String    @map("return_type")
+  methodologyUrl     String?   @map("methodology_url")
+  sourceLineage      Json      @map("source_lineage")
+  launchDate         DateTime? @map("launch_date") @db.Date
+  baseDate           DateTime? @map("base_date") @db.Date
+  baseValue          Decimal?  @map("base_value") @db.Decimal(24, 6)
+  active             Boolean   @default(true)
+  licensingStatus    String    @map("licensing_status")
+  officialSource     Boolean   @default(false) @map("official_source")
+  updateFrequency    String    @map("update_frequency")
+  displayName        String?   @map("display_name")
+  providerExternalId String?   @map("provider_external_id")
+  officialSourceUrl  String?   @map("official_source_url")
+  indexType          String    @default("OTHER") @map("index_type")
+  verificationStatus String    @default("UNVERIFIED") @map("verification_status")
+  terminatedAt       DateTime? @map("terminated_at") @db.Date
+  metadata           Json?
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  @@unique([symbol, returnType, currency])
+  @@index([region, active])
+  @@map("global_index_registry")
+}
+
+model GlobalIndexCandle {
+  indexId            String   @map("index_id")
+  interval           String
+  timestamp          DateTime
+  open               Decimal  @db.Decimal(30, 10)
+  high               Decimal  @db.Decimal(30, 10)
+  low                Decimal  @db.Decimal(30, 10)
+  close              Decimal  @db.Decimal(30, 10)
+  volume             Decimal? @db.Decimal(30, 4)
+  timezone           String
+  session            String
+  source             String
+  completeness       String
+  qualityStatus      String   @map("quality_status")
+  sourcePayload      Json?    @map("source_payload")
+  sourceRecordId     String?  @map("source_record_id")
+  sourceUrl          String?  @map("source_url")
+  sourceType         String   @default("SUPPLEMENTAL") @map("source_type")
+  verificationStatus String   @default("UNVERIFIED") @map("verification_status")
+  licenseStatus      String   @default("SUPPLEMENTAL_UNVERIFIED") @map("license_status")
+  currency           String?
+  ingestedAt         DateTime @default(now()) @map("ingested_at")
+
+  @@id([indexId, interval, timestamp, source])
+  @@index([interval, timestamp])
+  @@map("global_index_candles")
+}
+
+model GlobalIndexSnapshot {
+  indexId            String   @id @map("index_id")
+  currentLevel       Decimal  @map("current_level") @db.Decimal(30, 10)
+  previousClose      Decimal? @map("previous_close") @db.Decimal(30, 10)
+  change             Decimal? @db.Decimal(30, 10)
+  changePercent      Decimal? @map("change_percent") @db.Decimal(20, 8)
+  high52Week         Decimal? @map("high_52_week") @db.Decimal(30, 10)
+  low52Week          Decimal? @map("low_52_week") @db.Decimal(30, 10)
+  asOfDate           DateTime @map("as_of_date")
+  source             String
+  freshnessStatus    String   @map("freshness_status")
+  verificationStatus String   @map("verification_status")
+  licenseStatus      String   @map("license_status")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  @@map("global_index_snapshots")
+}
