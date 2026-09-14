@@ -36,13 +36,17 @@ on:
     # 0 21 * * 1-5) is kept only as a safety net if this workflow ever fails to fire. Both call the
     # same idempotent, stale-guarded route, so a same-day double-run is a safe no-op, not corruption.
     - cron: "0 */2 * * 1-5" # FX quote (390 Yahoo-direct pairs, auto-chains 162 derived-cross) — every 2h weekdays
+    # Crypto: bounded rolling slices, seven days/week. Shared concurrency queues jobs.
+    - cron: "2,17,32,47 * * * *" # quote: every 15m
+    - cron: "9,39 * * * *"      # marketcap: every 30m, max 250 markets
+    - cron: "23 */2 * * *"      # history: every 2h, existing small batches
   workflow_dispatch:
     inputs:
       job:
         description: "Which job to run"
         type: choice
         default: all
-        options: [both, etf-price, moneydj-fund, moneydj-etf, global-etf-holdings, fund-holdings, fund-nav, consensus-ingest, consensus-aggregate, consensus-performance, consensus-flips, consensus-backfill, tw-fundamentals-refresh, global-pe-recompute, mops-financial-incremental, sec-financial-incremental, fx-quote, all]
+        options: [both, etf-price, moneydj-fund, moneydj-etf, global-etf-holdings, fund-holdings, fund-nav, consensus-ingest, consensus-aggregate, consensus-performance, consensus-flips, consensus-backfill, tw-fundamentals-refresh, global-pe-recompute, mops-financial-incremental, sec-financial-incremental, fx-quote, crypto-quote, crypto-marketcap, crypto-history, all]
 
 concurrency:
   group: cloud-data-ingestion
@@ -67,6 +71,9 @@ jobs:
         id: pick
         run: |
           case "${{ github.event.schedule }}" in
+            "2,17,32,47 * * * *") echo "job=crypto-quote" >> "$GITHUB_OUTPUT" ;;
+            "9,39 * * * *") echo "job=crypto-marketcap" >> "$GITHUB_OUTPUT" ;;
+            "23 */2 * * *") echo "job=crypto-history" >> "$GITHUB_OUTPUT" ;;
             "7 * * * *")  echo "job=fund-holdings" >> "$GITHUB_OUTPUT" ;;
             "17 * * * *") echo "job=etf-price" >> "$GITHUB_OUTPUT" ;;
             "27 * * * *") echo "job=fund-nav" >> "$GITHUB_OUTPUT" ;;
@@ -266,6 +273,24 @@ jobs:
                -H "Authorization: Bearer ${SECRET}" \
                "${BASE_URL}/api/cron/yahoo-fx?phase=quote" | tee fx-quote-response.json
           echo
+
+      - name: Crypto bounded slice
+        # Keep legacy all/both semantics unchanged; manual Crypto runs select a phase explicitly.
+        if: ${{ startsWith(steps.pick.outputs.job, 'crypto-') }}
+        env:
+          CRYPTO_JOB: ${{ steps.pick.outputs.job }}
+          CRYPTO_INVOCATION_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          phase="${CRYPTO_JOB#crypto-}"
+          case "$phase" in quote|marketcap|history) ;; *) exit 1 ;; esac
+          curl --fail-with-body --show-error --silent \
+               --connect-timeout 15 --max-time 320 \
+               -H "Authorization: Bearer ${SECRET}" \
+               -H "x-crypto-invocation-id: ${CRYPTO_INVOCATION_ID}" \
+               "${BASE_URL}/api/cron/yahoo-crypto?phase=${phase}" | tee "crypto-${phase}-response.json"
+          # A 200 PARTIAL response must not hide provider/symbol failures in Actions.
+          jq -e '.ok == true and ((.failedMarkets // []) | length == 0)' "crypto-${phase}-response.json" >/dev/null
 
       - name: Upload responses
         if: always()
