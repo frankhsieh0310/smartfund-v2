@@ -75,58 +75,109 @@ const COMMON_HEADERS = {
 // ══════════════════════════════════════════════════════════════
 let cachedCookie: string | null = null;
 let cachedCrumb: string | null = null;
+let cachedAuthAtMs: number | null = null;
+
+// 2026-09-11 cloud-reliability fix: `Headers.get("set-cookie")` returns (or silently drops) only
+// one Set-Cookie response header — fc.yahoo.com can set more than one cookie, and Yahoo's
+// crumb/quoteSummary endpoints want the full jar (an "A3" cookie in particular), not just whichever
+// single header a naive `.get()` happens to return. `Headers.getSetCookie()` (Node >=18.14, the
+// runtime Vercel functions run) exposes every raw Set-Cookie line distinctly — prefer it and fall
+// back to `.get()` only where it's unavailable.
+function collectSetCookies(headers: Headers): string[] {
+  const anyHeaders = headers as Headers & { getSetCookie?: () => string[] };
+  if (typeof anyHeaders.getSetCookie === "function") {
+    const all = anyHeaders.getSetCookie();
+    if (all.length) return all;
+  }
+  const single = headers.get("set-cookie");
+  return single ? [single] : [];
+}
+
+// Diagnostic-only counters (never a cookie/crumb value) — lets callers report WHY a session failed
+// to acquire without re-plumbing return types through every call site.
+export const authDiag = {
+  lastCookiePresent: false,
+  lastCrumbPresent: false,
+  lastAcquireMs: 0,
+  lastFailureReason: null as string | null,
+};
 
 async function fetchCrumbAndCookie(): Promise<{ cookie: string; crumb: string } | null> {
-  try {
-    // Step 1：拿 session cookie
-    const cookieRes = await fetch("https://fc.yahoo.com/", {
-      headers: COMMON_HEADERS,
-      redirect: "manual",
-    });
-    const setCookie = cookieRes.headers.get("set-cookie");
-    if (!setCookie) {
-      console.error("[YahooClient] 無法取得 session cookie");
-      return null;
-    }
-    const cookie = setCookie.split(";")[0];
+  const t0 = Date.now();
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      // Step 1：拿 session cookie（合併所有 Set-Cookie，不只取第一個）
+      const cookieRes = await fetch("https://fc.yahoo.com/", {
+        headers: COMMON_HEADERS,
+        redirect: "manual",
+        signal: AbortSignal.timeout(15_000),
+      });
+      const cookies = collectSetCookies(cookieRes.headers);
+      if (!cookies.length) {
+        authDiag.lastFailureReason = "NO_SET_COOKIE";
+        if (attempt === 0) continue;
+        console.error("[YahooClient] 無法取得 session cookie");
+        return null;
+      }
+      const cookie = cookies.map((c) => c.split(";")[0]).join("; ");
 
-    // Step 2：用 cookie 換 crumb
-    const crumbRes = await fetch("https://query2.finance.yahoo.com/v1/test/getcrumb", {
-      headers: { ...COMMON_HEADERS, Cookie: cookie },
-    });
-    if (!crumbRes.ok) {
-      console.error(`[YahooClient] 取得 crumb 失敗: ${crumbRes.status}`);
-      return null;
-    }
-    const crumb = await crumbRes.text();
-    if (!crumb || crumb.includes("<html")) {
-      console.error("[YahooClient] crumb 回應格式異常:", crumb.slice(0, 200));
-      return null;
-    }
+      // Step 2：用完整 cookie jar 換 crumb
+      const crumbRes = await fetch("https://query2.finance.yahoo.com/v1/test/getcrumb", {
+        headers: { ...COMMON_HEADERS, Cookie: cookie },
+        signal: AbortSignal.timeout(15_000),
+      });
+      if (!crumbRes.ok) {
+        authDiag.lastFailureReason = `GETCRUMB_HTTP_${crumbRes.status}`;
+        if (attempt === 0) continue;
+        console.error(`[YahooClient] 取得 crumb 失敗: ${crumbRes.status}`);
+        return null;
+      }
+      const crumb = await crumbRes.text();
+      if (!crumb || crumb.includes("<html")) {
+        authDiag.lastFailureReason = "CRUMB_MALFORMED";
+        if (attempt === 0) continue;
+        console.error("[YahooClient] crumb 回應格式異常:", crumb.slice(0, 200));
+        return null;
+      }
 
-    return { cookie, crumb };
-  } catch (err) {
-    console.error("[YahooClient] 取得 crumb/cookie 失敗:", err);
-    return null;
+      authDiag.lastFailureReason = null;
+      return { cookie, crumb };
+    } catch (err) {
+      authDiag.lastFailureReason = err instanceof Error && err.name === "TimeoutError" ? "TIMEOUT" : "NETWORK_ERROR";
+      if (attempt === 0) continue;
+      console.error("[YahooClient] 取得 crumb/cookie 失敗:", err);
+      return null;
+    }
   }
+  return null;
 }
 
 async function getAuth(): Promise<{ cookie: string; crumb: string } | null> {
   if (cachedCookie && cachedCrumb) {
+    authDiag.lastCookiePresent = true;
+    authDiag.lastCrumbPresent = true;
     return { cookie: cachedCookie, crumb: cachedCrumb };
   }
   const auth = await fetchCrumbAndCookie();
   if (auth) {
     cachedCookie = auth.cookie;
     cachedCrumb = auth.crumb;
+    cachedAuthAtMs = Date.now();
   }
+  authDiag.lastCookiePresent = !!auth?.cookie;
+  authDiag.lastCrumbPresent = !!auth?.crumb;
   return auth;
+}
+
+export function authAgeSeconds(): number | null {
+  return cachedAuthAtMs ? Math.round((Date.now() - cachedAuthAtMs) / 1000) : null;
 }
 
 // 401 時清快取，下次呼叫會重新取得，避免一直拿過期的 crumb 重試。
 function invalidateAuth() {
   cachedCookie = null;
   cachedCrumb = null;
+  cachedAuthAtMs = null;
 }
 
 // Yahoo Chart API 需要 range + interval 參數。range=10y 涵蓋足夠的
@@ -237,6 +288,62 @@ export async function fetchYahooQuotes(symbols: string[]): Promise<YahooQuoteRes
     quoteType: r.quoteType ?? null,
     regularMarketPrice: r.regularMarketPrice ?? null,
   }));
+}
+
+export interface YahooFxSparkResult {
+  requestedSymbol: string; // symbol we asked for, e.g. "USDJPY=X"
+  canonicalSymbol: string | null; // symbol Yahoo echoes back in meta (can differ, e.g. "JPY=X")
+  currency: string | null;
+  regularMarketPrice: number | null;
+  previousClose: number | null;
+  regularMarketTime: Date | null; // latest observation timestamp
+  ok: boolean;
+}
+
+// FX-only multi-symbol batch (2026-09-12 PoC-validated): v7/finance/spark accepts a comma-joined
+// symbol list and returns one entry per symbol in a SINGLE request — this is what lets the FX
+// updater do "bounded batch of ~20 pairs -> 1 HTTP call" instead of one call per pair. Confirmed
+// live: works without crumb/cookie auth (unlike v7/finance/quote, which now 401s), returns
+// meta.regularMarketPrice, meta.chartPreviousClose and a timestamp series per symbol.
+export async function fetchYahooFxSpark(symbols: string[], range: string = "5d"): Promise<YahooFxSparkResult[]> {
+  if (symbols.length === 0) return [];
+  await sleep(REQUEST_DELAY_MS);
+
+  const url = `https://query1.finance.yahoo.com/v7/finance/spark?symbols=${symbols.map(encodeURIComponent).join(",")}&range=${range}&interval=1d`;
+
+  let res: Response;
+  try {
+    // 2026-09-12 reliability fix: without a timeout, a stalled Yahoo connection can hang this call
+    // (and everything awaiting it) indefinitely — observed live during full-universe validation.
+    res = await fetch(url, { headers: COMMON_HEADERS, signal: AbortSignal.timeout(15_000) });
+  } catch (err) {
+    console.error("[YahooClient] FX spark fetch failed:", err);
+    return symbols.map((s) => ({ requestedSymbol: s, canonicalSymbol: null, currency: null, regularMarketPrice: null, previousClose: null, regularMarketTime: null, ok: false }));
+  }
+  if (!res.ok) {
+    console.error(`[YahooClient] FX spark non-200: ${res.status}`);
+    return symbols.map((s) => ({ requestedSymbol: s, canonicalSymbol: null, currency: null, regularMarketPrice: null, previousClose: null, regularMarketTime: null, ok: false }));
+  }
+
+  const json = await res.json();
+  const results: Array<{ symbol: string; response?: Array<{ meta?: Record<string, unknown> }> }> = json?.spark?.result ?? [];
+  const bySymbol = new Map(results.map((r) => [r.symbol, r.response?.[0]?.meta]));
+
+  return symbols.map((requested) => {
+    // Yahoo keys the result by the REQUESTED symbol even when meta.symbol is a canonicalized
+    // alias (e.g. requesting "USDJPY=X" comes back keyed "USDJPY=X" but meta.symbol="JPY=X").
+    const meta = bySymbol.get(requested) as { symbol?: string; currency?: string; regularMarketPrice?: number; chartPreviousClose?: number; regularMarketTime?: number } | undefined;
+    if (!meta) return { requestedSymbol: requested, canonicalSymbol: null, currency: null, regularMarketPrice: null, previousClose: null, regularMarketTime: null, ok: false };
+    return {
+      requestedSymbol: requested,
+      canonicalSymbol: meta.symbol ?? null,
+      currency: meta.currency ?? null,
+      regularMarketPrice: meta.regularMarketPrice ?? null,
+      previousClose: meta.chartPreviousClose ?? null,
+      regularMarketTime: meta.regularMarketTime ? new Date(meta.regularMarketTime * 1000) : null,
+      ok: meta.regularMarketPrice != null,
+    };
+  });
 }
 
 /**
