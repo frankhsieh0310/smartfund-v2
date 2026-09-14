@@ -236,17 +236,34 @@ export async function updateCryptoMarketCapSupply(symbols?: string[]) {
     : [];
   let updated = 0, failed = 0;
   const now = new Date();
+  const rowsToWrite: Array<{ assetId: string; marketCap: number | null; circulatingSupply: number | null }> = [];
   for (const m of markets) {
     const q = bySymbol.get(m.providerSymbol);
     const marketCap = q?.marketCap != null ? Number(q.marketCap) : null;
     const circulatingSupply = q?.circulatingSupply != null ? Number(q.circulatingSupply) : null;
     if (marketCap == null && circulatingSupply == null) { failed++; continue; }
-    await prisma.cryptoMarketCapSupply.upsert({
-      where: { assetId_observedAt: { assetId: m.baseAssetId, observedAt: now } },
-      create: { assetId: m.baseAssetId, observedAt: now, marketCap, circulatingSupply, source: "YAHOO_SCREENER", freshnessStatus: "CURRENT" },
-      update: { marketCap, circulatingSupply, freshnessStatus: "CURRENT" },
-    });
-    updated++;
+    rowsToWrite.push({ assetId: m.baseAssetId, marketCap, circulatingSupply });
+  }
+
+  // Batched raw upsert (one round trip per chunk) instead of one upsert() per row — sequential
+  // per-row upserts here (up to 250/call) were slow enough to trigger a platform function timeout
+  // on the very first production trigger of this phase (live-confirmed 2026-09-14).
+  const CHUNK = 200;
+  for (let i = 0; i < rowsToWrite.length; i += CHUNK) {
+    const chunk = rowsToWrite.slice(i, i + CHUNK);
+    const values = chunk.map((_, idx) => `($${idx * 4 + 1}, $${idx * 4 + 2}::timestamptz, $${idx * 4 + 3}, $${idx * 4 + 4}, 'YAHOO_SCREENER', 'CURRENT')`).join(",");
+    const params = chunk.flatMap((r) => [r.assetId, now.toISOString(), r.marketCap, r.circulatingSupply]);
+    await prisma.$executeRawUnsafe(
+      `INSERT INTO crypto_market_cap_supply (asset_id, observed_at, market_cap, circulating_supply, source, freshness_status)
+       VALUES ${values}
+       ON CONFLICT (asset_id, observed_at) DO UPDATE SET
+         market_cap = EXCLUDED.market_cap,
+         circulating_supply = EXCLUDED.circulating_supply,
+         freshness_status = EXCLUDED.freshness_status,
+         updated_at = CURRENT_TIMESTAMP`,
+      ...params,
+    );
+    updated += chunk.length;
   }
   return { updated, failed };
 }
