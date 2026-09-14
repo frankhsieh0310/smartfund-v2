@@ -3,8 +3,8 @@
   "note": "Phase D database ownership manifest. A live table with no Prisma model is not automatically an error — see OWNER_CLASS. Consumed by scripts/recovery/production-gate.mjs.",
   "summary": {
     "prisma_owned": 263,
-    "raw_sql_owned": 26,
-    "ingestion_owned": 147,
+    "raw_sql_owned": 25,
+    "ingestion_owned": 148,
     "legacy": 0,
     "unknown": 27
   },
@@ -296,7 +296,6 @@
     "consensus_viewpoint_flips",
     "fund_master",
     "holdings_by_master",
-    "insider_owners",
     "insider_ownership_eligible_issuers",
     "political_persons",
     "political_transactions"
@@ -395,6 +394,7 @@
     "global_volatility_index_detail",
     "insider_issuer_relationships",
     "insider_owner_aliases",
+    "insider_owners",
     "insider_ownership_changes",
     "insider_ownership_denominators",
     "insider_ownership_issuer_coverage",
@@ -1142,9 +1142,9 @@
       "confidence": "HIGH"
     },
     "consensus_agreement_accuracy": {
-      "owner_class": "RAW_SQL_OWNED",
+      "owner_class": "INGESTION_OWNED",
       "has_prisma_model": false,
-      "read_by_runtime": true,
+      "read_by_runtime": false,
       "written_by_runtime": false,
       "read_by_ingestion": true,
       "written_by_ingestion": true,
@@ -4490,7 +4490,6 @@
       "read_by_ingestion": true,
       "written_by_ingestion": true,
       "source_files": [
-        "app/api/mobile/insider-trades/route.ts",
         "scripts/data/insider/run-global-insider.ts",
         "scripts/data/insider-ownership/run-global-insider-ownership-snapshots.ts",
         "scripts/data/insider-ownership/run-global-insider-ownership.ts"

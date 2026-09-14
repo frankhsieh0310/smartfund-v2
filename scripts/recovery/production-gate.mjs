@@ -20,6 +20,7 @@
 import { readFileSync, existsSync } from "node:fs";
 import { execSync } from "node:child_process";
 import path from "node:path";
+import { validateDatabaseOwnership } from "./production-gate-ownership.mjs";
 
 const args = process.argv.slice(2);
 const argVal = (name) => {
@@ -133,15 +134,15 @@ if (!existsSync(ownershipManifestPath)) {
   // model name itself counts as the table name when there's no explicit @@map
   for (const m of schemaSrc.matchAll(/model\s+(\w+)\s*\{/g)) modeledTables.add(m[1]);
 
-  const prismaOwnedMissingModel = (ownership.prisma_owned ?? []).filter((t) => !modeledTables.has(t));
-  const rawSqlMissingSource = (ownership.raw_sql_owned ?? []).filter((t) => {
-    const info = ownership.tables?.[t];
-    return !info || (!info.read_by_runtime && !info.written_by_runtime);
-  });
-  const productionCriticalUnknown = (ownership.unknown ?? []).filter((t) => {
-    const info = ownership.tables?.[t];
-    return info && (info.read_by_runtime || info.written_by_runtime);
-  });
+  const sourceFileValid = (sourceFile, table) => {
+    const normalized = sourceFile.replaceAll("\\", "/");
+    if (!trackedFiles.has(normalized) || !existsSync(normalized)) return false;
+    const source = readFileSync(normalized, "utf8");
+    const escapedTable = table.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return new RegExp(`(^|[^A-Za-z0-9_])${escapedTable}([^A-Za-z0-9_]|$)`).test(source);
+  };
+  const { prismaOwnedMissingModel, rawSqlMissingSource, productionCriticalUnknown } =
+    validateDatabaseOwnership({ ownership, modeledTables, sourceFileValid });
 
   const problems = [];
   if (prismaOwnedMissingModel.length > 0) problems.push(`PRISMA_OWNED tables with no model: ${prismaOwnedMissingModel.join(", ")}`);
