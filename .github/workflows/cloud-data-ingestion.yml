@@ -36,10 +36,9 @@ on:
     # 0 21 * * 1-5) is kept only as a safety net if this workflow ever fails to fire. Both call the
     # same idempotent, stale-guarded route, so a same-day double-run is a safe no-op, not corruption.
     - cron: "0 */2 * * 1-5" # FX quote (390 Yahoo-direct pairs, auto-chains 162 derived-cross) — every 2h weekdays
-    # Crypto: bounded rolling slices, seven days/week. Shared concurrency queues jobs.
-    - cron: "2,17,32,47 * * * *" # quote: every 15m
-    - cron: "9,39 * * * *"      # marketcap: every 30m, max 250 markets
-    - cron: "23 */2 * * *"      # history: every 2h, existing small batches
+    # Crypto: daily bounded history and marketcap slices (UTC); quote is manual only.
+    - cron: "39 0 * * *"        # marketcap: daily 08:39 Taipei, max 250 markets
+    - cron: "23 0 * * *"        # history: daily 08:23 Taipei, existing small batches
   workflow_dispatch:
     inputs:
       job:
@@ -71,9 +70,8 @@ jobs:
         id: pick
         run: |
           case "${{ github.event.schedule }}" in
-            "2,17,32,47 * * * *") echo "job=crypto-quote" >> "$GITHUB_OUTPUT" ;;
-            "9,39 * * * *") echo "job=crypto-marketcap" >> "$GITHUB_OUTPUT" ;;
-            "23 */2 * * *") echo "job=crypto-history" >> "$GITHUB_OUTPUT" ;;
+            "39 0 * * *") echo "job=crypto-marketcap" >> "$GITHUB_OUTPUT" ;;
+            "23 0 * * *") echo "job=crypto-history" >> "$GITHUB_OUTPUT" ;;
             "7 * * * *")  echo "job=fund-holdings" >> "$GITHUB_OUTPUT" ;;
             "17 * * * *") echo "job=etf-price" >> "$GITHUB_OUTPUT" ;;
             "27 * * * *") echo "job=fund-nav" >> "$GITHUB_OUTPUT" ;;
