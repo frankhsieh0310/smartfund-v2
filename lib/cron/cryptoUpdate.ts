@@ -97,9 +97,11 @@ export type CryptoQuoteBatchResult = {
 // crypto symbols is the same 20/request as FX and Index (21+ symbols in one call returns HTTP
 // 400 regardless of validity).
 export async function updateCryptoQuotes(cursor: string | null, batchSize = 20, symbols?: string[]): Promise<CryptoQuoteBatchResult> {
-  const scope = symbols ?? CORE_CRYPTO_SYMBOLS;
+  // No explicit symbols -> drive from the full active "yahoo" universe already in crypto_markets
+  // (mirrors FX's getActiveYahooDirectPairSymbols() DB-driven scope), not the original 16-symbol
+  // targeted-validation constant.
   const rows = await prisma.cryptoMarket.findMany({
-    where: { exchangeId: YAHOO_EXCHANGE_ID, active: true, providerSymbol: { in: scope }, ...(cursor ? { id: { gt: cursor } } : {}) },
+    where: { exchangeId: YAHOO_EXCHANGE_ID, active: true, ...(symbols ? { providerSymbol: { in: symbols } } : {}), ...(cursor ? { id: { gt: cursor } } : {}) },
     orderBy: { id: "asc" },
     take: batchSize,
     select: { id: true, providerSymbol: true },
@@ -159,9 +161,9 @@ export type CryptoHistoryBatchResult = {
 // here is a fixed calendar-day bucket exactly as Yahoo's own chart API already returns it — no
 // weekday/holiday filtering is applied anywhere in this function.
 export async function updateCryptoHistory(cursor: string | null, batchSize = 2, symbols?: string[]): Promise<CryptoHistoryBatchResult> {
-  const scope = symbols ?? CORE_CRYPTO_SYMBOLS;
+  // Same DB-driven default scope as updateCryptoQuotes above.
   const rows = await prisma.cryptoMarket.findMany({
-    where: { exchangeId: YAHOO_EXCHANGE_ID, active: true, providerSymbol: { in: scope }, ...(cursor ? { id: { gt: cursor } } : {}) },
+    where: { exchangeId: YAHOO_EXCHANGE_ID, active: true, ...(symbols ? { providerSymbol: { in: symbols } } : {}), ...(cursor ? { id: { gt: cursor } } : {}) },
     orderBy: { id: "asc" },
     take: batchSize,
     select: { id: true, providerSymbol: true },
@@ -217,15 +219,19 @@ export async function updateCryptoHistory(cursor: string | null, batchSize = 2, 
 // endpoint observed to return marketCap/circulatingSupply/totalSupply — Spark's meta does not
 // include them (live-confirmed 2026-09-13). Intentionally separate from the OHLC candle table
 // (Step 13) and run far less often than quotes since this data moves slowly.
-export async function updateCryptoMarketCapSupply(symbols: string[] = CORE_CRYPTO_SYMBOLS) {
+export async function updateCryptoMarketCapSupply(symbols?: string[]) {
   const url = "https://query2.finance.yahoo.com/v1/finance/screener/predefined/saved?formatted=false&lang=en-US&region=US&scrIds=all_cryptocurrencies_us&count=250&offset=0";
   const res = await fetch(url, { headers: { "user-agent": "SmartFund-Crypto/1.0" }, signal: AbortSignal.timeout(20_000) });
-  if (!res.ok) return { updated: 0, failed: symbols.length, error: `HTTP_${res.status}` };
+  if (!res.ok) return { updated: 0, failed: symbols?.length ?? 0, error: `HTTP_${res.status}` };
   const body = (await res.json()) as { finance?: { result?: Array<{ quotes?: Array<Record<string, unknown>> }> } };
   const quotes = body.finance?.result?.[0]?.quotes ?? [];
   const bySymbol = new Map(quotes.map((q) => [q.symbol as string, q]));
 
-  const markets = await prisma.cryptoMarket.findMany({ where: { exchangeId: YAHOO_EXCHANGE_ID, providerSymbol: { in: symbols } }, select: { baseAssetId: true, providerSymbol: true } });
+  // This endpoint itself caps at 250 results (page-1-only, no genuine pagination — see the
+  // full-universe discovery notes), so the default (no explicit symbols) matches against the
+  // full active Yahoo universe rather than the original 16-symbol constant; only markets Yahoo's
+  // top-250-by-market-cap screener actually returned will get updated either way.
+  const markets = await prisma.cryptoMarket.findMany({ where: { exchangeId: YAHOO_EXCHANGE_ID, active: true, ...(symbols ? { providerSymbol: { in: symbols } } : {}) }, select: { baseAssetId: true, providerSymbol: true } });
   let updated = 0, failed = 0;
   const now = new Date();
   for (const m of markets) {
