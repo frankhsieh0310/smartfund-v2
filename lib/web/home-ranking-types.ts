@@ -1,0 +1,3 @@
+export type HomeRankItem = { id:string;code:string;name:string;href:string;value:number|null;metric:number|null;metricLabel:string;currency:string|null;asOfDate:string|null;lastUpdated:string|null;trend:number[] };
+export type HomeRankGroup = { label:string;asOfDate:string|null;items:HomeRankItem[];comparableCount?:number;totalCount?:number;note?:string };
+export type HomeRankData = { stocks:{primary:HomeRankGroup;secondary:HomeRankGroup};etfs:{primary:HomeRankGroup;secondary:HomeRankGroup};funds:{primary:HomeRankGroup;secondary:HomeRankGroup} };
