@@ -42,7 +42,7 @@ type ReadyRow = { id: string; latest_date: Date | null; history_ready: boolean }
 export async function getEtfList(query: EtfListQuery = {}): Promise<ServiceResponse<EtfListItem[]>> {
   const { page, pageSize, skip } = normalizePagination(query.page, query.pageSize);
   const term = query.query?.trim();
-  const direction = query.direction === "desc" ? "desc" : "asc";
+  const direction: Prisma.SortOrder = query.direction === "desc" ? "desc" : "asc";
   const where = {
     isActive: true,
     ...(query.exchange ? { exchange: query.exchange } : {}),
@@ -110,7 +110,7 @@ export async function getEtfDetail(code: string): Promise<ServiceResponse<{ iden
   const latestValue = numberOrNull(latest?.price ?? latest?.nav ?? row.latestPrice ?? row.latestNav);
   const previousValue = numberOrNull(previous?.price ?? previous?.nav);
   const change = latestValue != null && previousValue != null ? latestValue - previousValue : null;
-  const changePercent = change != null && previousValue !== 0 ? (change / previousValue) * 100 : null;
+  const changePercent = change != null && previousValue != null && previousValue !== 0 ? (change / previousValue) * 100 : null;
   const latestHolding = await prisma.holding.findFirst({ where: { etfId: row.id }, orderBy: [{ asOfDate: "desc" }, { rank: "asc" }], select: { asOfDate: true } });
   const holdings = latestHolding ? await prisma.holding.findMany({ where: { etfId: row.id, asOfDate: latestHolding.asOfDate }, orderBy: { rank: "asc" }, select: { holdingName: true, ticker: true, weight: true, sector: true, assetType: true } }) : [];
   const allocation = <T extends string>(keyFor: (holding: typeof holdings[number]) => T | null) => [...holdings.reduce((values, holding) => { const label = keyFor(holding); const weight = numberOrNull(holding.weight); if (label && weight != null) values.set(label, (values.get(label) ?? 0) + weight); return values; }, new Map<T, number>())].map(([label, weight]) => ({ label, weight })).sort((left, right) => right.weight - left.weight);

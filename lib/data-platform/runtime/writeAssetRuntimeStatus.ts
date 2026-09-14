@@ -66,7 +66,6 @@ export type AssetRuntimeStatus = {
   WAITING_DEPENDENCIES?: number;
   BLOCKED_GAPS?: number;
   DB_POOL_STATUS?: string | null;
-  DB_POOL_STATUS?: string | null;
   POSITIONING_RECOVERY_STATUS?: string | null;
 };
 

@@ -26,13 +26,14 @@ export interface FundListItem {
   category: string | null;
   riskLevel: number | null;
   freshnessStatus: ReturnType<typeof freshnessStatus>;
+  publicReady: boolean;
   source: string | null;
 }
 
 export async function getFundList(query: FundListQuery = {}): Promise<ServiceResponse<FundListItem[]>> {
   const { page, pageSize, skip } = normalizePagination(query.page, query.pageSize);
   const term = query.query?.trim();
-  const direction = query.direction === "desc" ? "desc" : "asc";
+  const direction: Prisma.SortOrder = query.direction === "desc" ? "desc" : "asc";
   const where = {
     isActive: true,
     ...(query.company ? { company: query.company } : {}),
@@ -149,7 +150,7 @@ export async function getFundDetail(identifier: string, relationLimit = 20, rang
   const documentLatest = documents[0];
   const classificationLatest = classifications[0];
   const shareLatest = shareClasses[0];
-  const fees = shareClasses.map((shareClass) => ({ shareClass: shareClass.shareClassName, managementFee: numberOrNull(shareClass.managementFee), ongoingCharges: numberOrNull(shareClass.ongoingCharges), ter: numberOrNull(shareClass.ter), salesChargeFront: numberOrNull(shareClass.salesChargeFront), salesChargeBack: numberOrNull(shareClass.salesChargeBack), performanceFee: numberOrNull(shareClass.performanceFee), minimumInitialInvestment: numberOrNull(shareClass.minimumInitialInvestment), distributionFrequency: shareClass.distributionFrequency ?? row.distributionFreq, hedgingTerms: shareClass.hedged === null ? null : shareClass.hedged ? shareClass.hedgedCurrency ? `HEDGED_${shareClass.hedgedCurrency}` : "HEDGED" : "UNHEDGED", source: shareClass.termsSource ?? shareClass.source, asOfDate: isoOrNull(shareClass.termsAsOfDate) }));
+  const fees: FundDetailData["feesTerms"]["data"] = shareClasses.map((shareClass) => ({ shareClass: shareClass.shareClassName, managementFee: numberOrNull(shareClass.managementFee), ongoingCharges: numberOrNull(shareClass.ongoingCharges), ter: numberOrNull(shareClass.ter), salesChargeFront: numberOrNull(shareClass.salesChargeFront), salesChargeBack: numberOrNull(shareClass.salesChargeBack), performanceFee: numberOrNull(shareClass.performanceFee), minimumInitialInvestment: numberOrNull(shareClass.minimumInitialInvestment), distributionFrequency: shareClass.distributionFrequency ?? row.distributionFreq, hedgingTerms: shareClass.hedged === null ? null : shareClass.hedged ? shareClass.hedgedCurrency ? `HEDGED_${shareClass.hedgedCurrency}` : "HEDGED" : "UNHEDGED", source: shareClass.termsSource ?? shareClass.source, asOfDate: isoOrNull(shareClass.termsAsOfDate) }));
   if (!fees.length && (row.expenseRatio !== null || row.distributionFreq)) fees.push({ shareClass: row.name, managementFee: null, ongoingCharges: null, ter: numberOrNull(row.expenseRatio), salesChargeFront: null, salesChargeBack: null, performanceFee: null, minimumInitialInvestment: null, distributionFrequency: row.distributionFreq, hedgingTerms: null, source, asOfDate: isoOrNull(row.latestNavDate) });
   const classificationAssetClass = classifications.find((item) => /ASSET.CLASS/i.test(item.classificationType))?.classificationValue ?? classifications.find((item) => /ASSET.CLASS/i.test(item.classificationType))?.classificationName ?? null;
   const chronologicalHistory = historyRows.toReversed();

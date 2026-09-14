@@ -9,7 +9,7 @@ interface IndustryChainSeed {
   id: string;
   name: string;
   nodes: IndustryNode[];
-  stageNodeIds: Record<ChainStage, string[]>;
+  stageNodeIds: Record<Exclude<ChainStage, "UNSPECIFIED">, string[]>;
   memberships: IndustryChainMembership[];
 }
 

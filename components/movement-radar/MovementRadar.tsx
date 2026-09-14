@@ -40,7 +40,7 @@ export function MovementRadar() {
   );
 }
 
-function SectionTitle({ children, right }: { children: string; right?: string }) {
+function SectionTitle({ children, right }: { children: React.ReactNode; right?: string }) {
   return <div className="mb-2 mt-8 flex items-center justify-between border-b border-white/[0.08] pb-2 first:mt-0">
     <h2 className="text-[17px] font-black">{children}</h2>
     {right ? <span className="text-[12px] text-slate-400">{right}</span> : null}
@@ -52,7 +52,7 @@ function Card({ children }: { children: React.ReactNode }) {
 function Row({ children }: { children: React.ReactNode }) {
   return <div className="flex items-center justify-between gap-4 border-b border-white/[0.06] px-4 py-3 text-[13px] last:border-b-0">{children}</div>;
 }
-function Note({ children }: { children: string }) {
+function Note({ children }: { children: React.ReactNode }) {
   return <p className="rounded-lg border-l-[3px] border-[#e9be6e] bg-[#0e2438] px-4 py-3 text-[13px] leading-6 text-slate-300">{children}</p>;
 }
 function EmptyStatePanel({ title, note, building, sections }: { title: string; note: string; building: string; sections: string[] }) {
