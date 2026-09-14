@@ -1,0 +1,2 @@
+import { isAuthorizedCron, unauthorizedCron } from "@/lib/cron/authorize";
+export async function GET(request: Request) { if (!isAuthorizedCron(request)) return unauthorizedCron(); return Response.json({ok:true,task:"final-update",mode:"BATCH_ORCHESTRATION_SKELETON",batches:[{task:"institutional-retry",route:"/api/cron/institutional-update",ready:true},{task:"etf-holdings",ready:false,status:"BATCH_ADAPTER_REQUIRED"},{task:"fund-nav",ready:false,status:"BATCH_ADAPTER_REQUIRED"},{task:"fund-holdings",ready:false,status:"BATCH_ADAPTER_REQUIRED"}]}); }
