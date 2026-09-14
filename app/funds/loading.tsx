@@ -1,0 +1,3 @@
+export default function FundsLoading() {
+  return <main className="min-h-screen bg-[#040a18] px-6 pb-20 pt-32 text-white"><div className="mx-auto max-w-[1600px]"><div className="h-10 w-64 animate-pulse rounded-lg bg-white/[0.06]" /><div className="mt-4 h-5 w-96 max-w-full animate-pulse rounded bg-white/[0.04]" /><div className="mt-10 h-24 animate-pulse rounded-2xl border border-white/[0.07] bg-white/[0.025]" /><div className="mt-5 h-[420px] animate-pulse rounded-2xl border border-white/[0.07] bg-white/[0.02]" /></div></main>;
+}
