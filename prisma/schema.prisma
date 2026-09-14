@@ -169,6 +169,7 @@ model Asset {
   fund             Fund?
   holdings         Holding[]
   searchIndex      SearchIndex?
+  etfHoldingSnapshots EtfHoldingSnapshot[]
 
   @@index([assetType])
   @@index([code])
@@ -253,6 +254,7 @@ model Etf {
   performances     EtfPerformance[]
   asset            Asset?              @relation(fields: [assetId], references: [id])
   holdings         Holding[]
+  holdingSnapshots EtfHoldingSnapshot[]
 
   @@index([code])
   @@index([region, sector])
@@ -300,6 +302,17 @@ model EtfHistory {
   price         Decimal? @db.Decimal(14, 4)
   premium       Decimal? @db.Decimal(8, 4)
   volume        Decimal? @db.Decimal(20, 0)
+  // 2026-09-13 isolated recovery extraction: these columns already exist on production etf_history
+  // (written by cloud-etf-price, whose route.ts was never committed) — this clean branch's model
+  // simply predates them. Additive-only field mapping, no migration/db push needed.
+  open          Decimal?  @db.Decimal(24, 8)
+  high          Decimal?  @db.Decimal(24, 8)
+  low           Decimal?  @db.Decimal(24, 8)
+  close         Decimal?  @db.Decimal(24, 8)
+  adjustedClose Decimal?  @map("adjusted_close") @db.Decimal(24, 8)
+  source        String?
+  sourceUrl     String?   @map("source_url")
+  knownAt       DateTime? @map("known_at")
   aum           Decimal? @db.Decimal(18, 2)
   dividendYield Decimal? @map("dividend_yield") @db.Decimal(8, 4)
   return1m      Decimal? @map("return_1m") @db.Decimal(8, 4)
@@ -1887,4 +1900,84 @@ model GlobalIndexSnapshot {
   updatedAt          DateTime @updatedAt @map("updated_at")
 
   @@map("global_index_snapshots")
+}
+
+// Isolated recovery extraction (2026-09-13): the 2 models cloud-fund-holdings /
+// cloud-global-etf-holdings / cloud-moneydj-etf need. Field-for-field identical to the production
+// definitions; additive-only, no migration/db push — these tables and data already exist in
+// production, this patch only lets this clean branch's Prisma Client see them.
+model EtfHoldingSnapshot {
+  id                 String          @id @db.Uuid
+  etfId              String          @map("etf_id")
+  effectiveDate      DateTime?       @map("effective_date") @db.Date
+  reportDate         DateTime?       @map("report_date") @db.Date
+  publicationDate    DateTime?       @map("publication_date")
+  issuerId           String?         @map("issuer_id")
+  source             String
+  sourceType         String          @map("source_type")
+  sourceUrl          String          @map("source_url")
+  sourceRecordId     String?         @map("source_record_id")
+  retrievedAt        DateTime        @map("retrieved_at")
+  checksum           String
+  sourceRowCount     Int             @map("source_row_count")
+  parsedRowCount     Int             @map("parsed_row_count")
+  canonicalRowCount  Int             @map("canonical_row_count")
+  verificationStatus String          @map("verification_status")
+  licenseStatus      String          @map("license_status")
+  completenessStatus String          @map("completeness_status")
+  qualityStatus      String          @map("quality_status")
+  qualityMetrics     Json?           @map("quality_metrics")
+  parserVersion      String          @map("parser_version")
+  archiveLineage     Json            @map("archive_lineage")
+  createdAt          DateTime        @default(now()) @map("created_at")
+  etf                Etf             @relation(fields: [etfId], references: [id])
+  rows               EtfHoldingRow[]
+  Asset              Asset?          @relation(fields: [assetId], references: [id])
+  assetId            String?
+
+  @@unique([etfId, effectiveDate, sourceUrl, checksum])
+  @@index([etfId, effectiveDate])
+  @@map("etf_holding_snapshots")
+}
+
+model EtfHoldingRow {
+  id                 String             @id @db.Uuid
+  snapshotId         String             @map("snapshot_id") @db.Uuid
+  etfId              String             @map("etf_id")
+  effectiveDate      DateTime?          @map("effective_date") @db.Date
+  holdingType        String             @map("holding_type")
+  securityId         String?            @map("security_id")
+  holdingName        String             @map("holding_name")
+  ticker             String?
+  isin               String?
+  cusip              String?
+  sedol              String?
+  figi               String?
+  quantity           Decimal?           @db.Decimal(38, 10)
+  price              Decimal?           @db.Decimal(38, 10)
+  marketValue        Decimal?           @map("market_value") @db.Decimal(38, 8)
+  weight             Decimal?           @db.Decimal(14, 8)
+  currency           String?
+  country            String?
+  sector             String?
+  industry           String?
+  assetClass         String?            @map("asset_class")
+  coupon             Decimal?           @db.Decimal(14, 8)
+  maturityDate       DateTime?          @map("maturity_date") @db.Date
+  creditRating       String?            @map("credit_rating")
+  notional           Decimal?           @db.Decimal(38, 8)
+  sourceRowId        String             @map("source_row_id")
+  verificationStatus String             @map("verification_status")
+  qualityStatus      String             @map("quality_status")
+  rawRow             Json?              @map("raw_row")
+  createdAt          DateTime           @default(now()) @map("created_at")
+  snapshot           EtfHoldingSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+
+  @@unique([snapshotId, sourceRowId])
+  @@index([etfId, effectiveDate])
+  @@index([securityId])
+  @@index([isin])
+  @@index([cusip])
+  @@index([sedol])
+  @@map("etf_holdings")
 }
