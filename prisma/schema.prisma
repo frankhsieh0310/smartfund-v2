@@ -1981,3 +1981,168 @@ model EtfHoldingRow {
   @@index([sedol])
   @@map("etf_holdings")
 }
+
+// Global Crypto Data Platform — minimal isolated extraction (2026-09-13) of the 7 models the
+// Yahoo-direct crypto quote/history cron needs, out of the full already-live canonical Crypto
+// schema. Production also has CryptoNetwork, CryptoDerivativeAssetReference,
+// CryptoProviderAssetAlias, CryptoMetric, CryptoWorkItem and CryptoAnalytic — none of which this
+// pipeline reads or writes, so they're left out to keep the patch minimal (same pattern as the
+// Index schema patch). Unlike GlobalIndexRegistry, none of these Crypto models carry a `@relation`
+// field into anything outside this block (confirmed via a targeted grep of the full schema for
+// "relation.*Crypto" — zero matches), so there is no dependency-closure concern here at all.
+// Field-for-field identical to the production definitions. NO migration, NO db push — these
+// tables and their data (19 assets, 41 markets, 44k+ candles from an existing multi-exchange
+// Binance/Coinbase/Kraken/etc. pipeline) already exist in production; this patch only lets this
+// isolated branch's Prisma Client see them. The new Yahoo pipeline adds a NEW CryptoExchange row
+// (id="yahoo") and NEW CryptoMarket rows alongside the existing exchange rows — it never touches
+// the existing Binance/Coinbase/Kraken/etc. markets, candles, or snapshots.
+model CryptoAsset {
+  id                  String    @id
+  name                String
+  symbol              String
+  networkId           String?   @map("network_id")
+  contractAddress     String?   @map("contract_address")
+  decimals            Int?
+  genesisAt           DateTime? @map("genesis_at")
+  active              Boolean   @default(true)
+  wrappedAssetId      String?   @map("wrapped_asset_id")
+  stablecoin          Boolean   @default(false)
+  officialUrl         String    @map("official_url")
+  sourceUrl           String    @map("source_url")
+  metadata            Json?
+  providerExternalId  String?   @map("provider_external_id")
+  assetType           String?   @map("asset_type")
+  taxonomy            String?
+  primaryQuoteAssetId String?   @map("primary_quote_asset_id")
+  primaryMarketId     String?   @map("primary_market_id")
+  tokenStandard       String?   @map("token_standard")
+  identitySource      String?   @map("identity_source")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  @@unique([networkId, contractAddress])
+  @@index([symbol, active])
+  @@map("crypto_assets")
+}
+
+model CryptoExchange {
+  id           String   @id
+  name         String
+  officialUrl  String   @map("official_url")
+  apiUrl       String?  @map("api_url")
+  jurisdiction String?
+  active       Boolean  @default(true)
+  spot         Boolean  @default(false)
+  derivatives  Boolean  @default(false)
+  sourceUrl    String   @map("source_url")
+  metadata     Json?
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("crypto_exchanges")
+}
+
+model CryptoMarket {
+  id             String   @id
+  exchangeId     String   @map("exchange_id")
+  baseAssetId    String   @map("base_asset_id")
+  quoteAssetId   String?  @map("quote_asset_id")
+  providerSymbol String   @map("provider_symbol")
+  marketType     String   @map("market_type")
+  active         Boolean  @default(true)
+  metadata       Json?
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@unique([exchangeId, providerSymbol, marketType])
+  @@index([baseAssetId, marketType])
+  @@map("crypto_markets")
+}
+
+model CryptoCandle {
+  marketId        String   @map("market_id")
+  interval        String
+  openTime        DateTime @map("open_time")
+  closeTime       DateTime @map("close_time")
+  open            Decimal  @db.Decimal(38, 18)
+  high            Decimal  @db.Decimal(38, 18)
+  low             Decimal  @db.Decimal(38, 18)
+  close           Decimal  @db.Decimal(38, 18)
+  volume          Decimal  @db.Decimal(38, 18)
+  quoteVolume     Decimal? @map("quote_volume") @db.Decimal(38, 18)
+  trades          BigInt?
+  source          String
+  sourcePayload   Json?    @map("source_payload")
+  sourceRecordId  String?  @map("source_record_id")
+  freshnessStatus String   @default("UNKNOWN") @map("freshness_status")
+  observedAt      DateTime @default(now()) @map("observed_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@id([marketId, interval, openTime])
+  @@index([interval, openTime])
+  @@map("crypto_candles")
+}
+
+model CryptoCoverage {
+  assetId          String    @map("asset_id")
+  exchangeId       String    @default("") @map("exchange_id")
+  capability       String
+  status           String
+  provider         String?
+  earliestAt       DateTime? @map("earliest_at")
+  latestAt         DateTime? @map("latest_at")
+  freshnessSeconds Int?      @map("freshness_seconds")
+  rowCount         BigInt    @default(0) @map("row_count")
+  qualityStatus    String    @default("PENDING") @map("quality_status")
+  details          Json?
+  checkedAt        DateTime  @default(now()) @map("checked_at")
+
+  @@id([assetId, exchangeId, capability])
+  @@index([status, qualityStatus])
+  @@map("crypto_coverage")
+}
+
+model CryptoMarketSnapshot {
+  marketId         String   @map("market_id")
+  observedAt       DateTime @map("observed_at")
+  price            Decimal  @db.Decimal(38, 18)
+  quoteCurrency    String   @map("quote_currency")
+  volume24h        Decimal? @map("volume_24h") @db.Decimal(38, 18)
+  change24h        Decimal? @map("change_24h") @db.Decimal(38, 18)
+  changePercent24h Decimal? @map("change_percent_24h") @db.Decimal(20, 10)
+  bid              Decimal? @db.Decimal(38, 18)
+  ask              Decimal? @db.Decimal(38, 18)
+  spread           Decimal? @db.Decimal(38, 18)
+  source           String
+  sourceRecordId   String?  @map("source_record_id")
+  freshnessStatus  String   @map("freshness_status")
+  sourcePayload    Json?    @map("source_payload")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@id([marketId, observedAt])
+  @@index([observedAt])
+  @@map("crypto_market_snapshots")
+}
+
+model CryptoMarketCapSupply {
+  assetId               String   @map("asset_id")
+  observedAt            DateTime @map("observed_at")
+  marketCap             Decimal? @map("market_cap") @db.Decimal(38, 8)
+  fullyDilutedValuation Decimal? @map("fully_diluted_valuation") @db.Decimal(38, 8)
+  circulatingSupply     Decimal? @map("circulating_supply") @db.Decimal(38, 8)
+  totalSupply           Decimal? @map("total_supply") @db.Decimal(38, 8)
+  maxSupply             Decimal? @map("max_supply") @db.Decimal(38, 8)
+  marketCapRank         Int?     @map("market_cap_rank")
+  source                String
+  sourceRecordId        String?  @map("source_record_id")
+  freshnessStatus       String   @map("freshness_status")
+  sourcePayload         Json?    @map("source_payload")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  @@id([assetId, observedAt])
+  @@index([observedAt])
+  @@map("crypto_market_cap_supply")
+}
