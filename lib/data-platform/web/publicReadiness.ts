@@ -20,8 +20,10 @@ export async function isPublicReadyAsset(assetType:string,identifier:string){
     const identity=await prisma.stock.findUnique({where:{yahooSymbol:normalized},select:{id:true}})
       ??await prisma.stock.findUnique({where:{id:key},select:{id:true}})
       ??await prisma.stock.findFirst({where:{ticker:normalized},select:{id:true}});
-    const row=identity?await prisma.stock.findUnique({where:{id:identity.id},select:{isActive:true,latestClose:true,latestDate:true,_count:{select:{history:true}}}}):null;
-    return Boolean(row?.isActive&&row.latestClose!=null&&row.latestDate&&row._count.history>=PUBLIC_HISTORY_MIN_ROWS&&freshnessStatus(row.latestDate,"MARKET_DAY")==="CURRENT");
+    const row=identity?await prisma.stock.findUnique({where:{id:identity.id},select:{isActive:true,latestClose:true,latestDate:true,history:{orderBy:{date:"desc"},take:1,select:{date:true}},_count:{select:{history:true}}}}):null;
+    const sourceDate=row?.history[0]?.date;
+    const sourceDateCurrent=Boolean(row?.latestDate&&sourceDate&&row.latestDate.toISOString().slice(0,10)===sourceDate.toISOString().slice(0,10));
+    return Boolean(row?.isActive&&row.latestClose!=null&&row.latestDate&&row._count.history>=PUBLIC_HISTORY_MIN_ROWS&&sourceDateCurrent);
   }
   if(type==="ETF"){
     const row=await prisma.etf.findFirst({where:{isActive:true,OR:[{id:key},{code:{equals:key,mode:"insensitive"}}]},select:{latestPrice:true,latestNav:true,history:{orderBy:{date:"desc"},take:PUBLIC_HISTORY_MIN_ROWS,select:{date:true}}}});
