@@ -16,10 +16,7 @@
 //   updateCryptoHistory() — v8/finance/chart per market, incremental from last known candle ->
 //                           crypto_candles (idempotent upsert, raw Yahoo timestamp — NOT
 //                           midnight-normalized, learned live from the Index pipeline's own bug).
-//   updateCryptoMarketCapSupply() — Yahoo's crypto screener endpoint (one call already returns
-//                           marketCap + circulatingSupply + totalSupply for many symbols at once)
-//                           -> crypto_market_cap_supply. Run far less often than quotes: this
-//                           data moves slowly and the screener payload is heavier.
+//   Marketcap continuation lives in cryptoMarketcap.ts (DB keyset + bounded Yahoo quote).
 //
 // Writes ONLY crypto_* tables, and only Yahoo-owned rows within them. Never touches fx/index/
 // stock/etf/fund tables or the existing multi-exchange crypto ingestion scripts.
@@ -213,57 +210,4 @@ export async function updateCryptoHistory(cursor: string | null, batchSize = 2, 
   }
 
   return { requestedMarkets: rows.length, updatedMarkets, rowsWritten, failedMarkets, lastId: wrapped ? null : rows.at(-1)!.id, wrapped };
-}
-
-// Phase 3: market cap / supply. Uses Yahoo's crypto screener (NOT Spark) since that's the only
-// endpoint observed to return marketCap/circulatingSupply/totalSupply — Spark's meta does not
-// include them (live-confirmed 2026-09-13). Intentionally separate from the OHLC candle table
-// (Step 13) and run far less often than quotes since this data moves slowly.
-export async function updateCryptoMarketCapSupply(symbols?: string[]) {
-  const url = "https://query2.finance.yahoo.com/v1/finance/screener/predefined/saved?formatted=false&lang=en-US&region=US&scrIds=all_cryptocurrencies_us&count=250&offset=0";
-  const res = await fetch(url, { headers: { "user-agent": "SmartFund-Crypto/1.0" }, signal: AbortSignal.timeout(20_000) });
-  if (!res.ok) return { updated: 0, failed: symbols?.length ?? 0, error: `HTTP_${res.status}` };
-  const body = (await res.json()) as { finance?: { result?: Array<{ quotes?: Array<Record<string, unknown>> }> } };
-  const quotes = body.finance?.result?.[0]?.quotes ?? [];
-  const bySymbol = new Map(quotes.map((q) => [q.symbol as string, q]));
-
-  // This endpoint itself caps at 250 results (page-1-only, no genuine pagination — see the
-  // full-universe discovery notes). Look up only the markets the screener actually returned
-  // (bounded by its own 250 cap) rather than scanning the full active universe every call.
-  const candidateSymbols = symbols ?? Array.from(bySymbol.keys());
-  const markets = candidateSymbols.length
-    ? await prisma.cryptoMarket.findMany({ where: { exchangeId: YAHOO_EXCHANGE_ID, active: true, providerSymbol: { in: candidateSymbols } }, select: { baseAssetId: true, providerSymbol: true } })
-    : [];
-  let updated = 0, failed = 0;
-  const now = new Date();
-  const rowsToWrite: Array<{ assetId: string; marketCap: number | null; circulatingSupply: number | null }> = [];
-  for (const m of markets) {
-    const q = bySymbol.get(m.providerSymbol);
-    const marketCap = q?.marketCap != null ? Number(q.marketCap) : null;
-    const circulatingSupply = q?.circulatingSupply != null ? Number(q.circulatingSupply) : null;
-    if (marketCap == null && circulatingSupply == null) { failed++; continue; }
-    rowsToWrite.push({ assetId: m.baseAssetId, marketCap, circulatingSupply });
-  }
-
-  // Batched raw upsert (one round trip per chunk) instead of one upsert() per row — sequential
-  // per-row upserts here (up to 250/call) were slow enough to trigger a platform function timeout
-  // on the very first production trigger of this phase (live-confirmed 2026-09-14).
-  const CHUNK = 200;
-  for (let i = 0; i < rowsToWrite.length; i += CHUNK) {
-    const chunk = rowsToWrite.slice(i, i + CHUNK);
-    const values = chunk.map((_, idx) => `($${idx * 4 + 1}, $${idx * 4 + 2}::timestamptz, $${idx * 4 + 3}, $${idx * 4 + 4}, 'YAHOO_SCREENER', 'CURRENT')`).join(",");
-    const params = chunk.flatMap((r) => [r.assetId, now.toISOString(), r.marketCap, r.circulatingSupply]);
-    await prisma.$executeRawUnsafe(
-      `INSERT INTO crypto_market_cap_supply (asset_id, observed_at, market_cap, circulating_supply, source, freshness_status)
-       VALUES ${values}
-       ON CONFLICT (asset_id, observed_at) DO UPDATE SET
-         market_cap = EXCLUDED.market_cap,
-         circulating_supply = EXCLUDED.circulating_supply,
-         freshness_status = EXCLUDED.freshness_status,
-         updated_at = CURRENT_TIMESTAMP`,
-      ...params,
-    );
-    updated += chunk.length;
-  }
-  return { updated, failed };
 }

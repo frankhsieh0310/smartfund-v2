@@ -7,16 +7,14 @@
 //                                              crypto_market_snapshots (stale-guarded, 24/7).
 //   /api/cron/yahoo-crypto?phase=history   -> Yahoo Chart per-market incremental ->
 //                                              crypto_candles (idempotent upsert).
-//   /api/cron/yahoo-crypto?phase=marketcap -> DB-keyset slice (max 250) -> Yahoo quote -> crypto_market_cap_supply.
+//   /api/cron/yahoo-crypto?phase=marketcap -> Yahoo crypto screener -> crypto_market_cap_supply.
 //
 // Run-logged (production_scheduler_runs) and checkpointed (production_scheduler_checkpoints),
 // reusing lib/cloud-ingestion/runContext.ts exactly as yahoo-fx/yahoo-index already do.
 
 import { isAuthorizedCron, unauthorizedCron } from "@/lib/cron/authorize";
 import { beginRun, finishRun, readCheckpoint, writeCheckpoint } from "@/lib/cloud-ingestion/runContext";
-import { updateCryptoQuotes, updateCryptoHistory, ensureYahooCryptoUniverse, CORE_CRYPTO_SYMBOLS } from "@/lib/cron/cryptoUpdate";
-
-import { cryptoRunKey, runMarketcapSlice, withCryptoLease } from "@/lib/cron/cryptoMarketcap";
+import { updateCryptoQuotes, updateCryptoHistory, updateCryptoMarketCapSupply, ensureYahooCryptoUniverse, CORE_CRYPTO_SYMBOLS } from "@/lib/cron/cryptoUpdate";
 
 export const runtime = "nodejs";
 export const maxDuration = 280;
@@ -27,17 +25,6 @@ const HISTORY_BATCH_SIZE = 2;
 const HISTORY_MAX_SAFE_RUNTIME_MS = 180_000;
 
 export async function GET(request: Request) {
-  if (!isAuthorizedCron(request)) return unauthorizedCron();
-  const phase = (new URL(request.url).searchParams.get("phase") ?? "quote").toLowerCase();
-  if (!["quote", "marketcap", "history"].includes(phase)) return handleCryptoRequest(request);
-  const invocation = request.headers.get("x-crypto-invocation-id");
-  if (invocation && !/^[A-Za-z0-9_-]{1,80}$/.test(invocation)) return Response.json({ ok: false, error: "INVALID_INVOCATION_ID" }, { status: 400 });
-  return withCryptoLease(phase, owner => phase === "marketcap"
-    ? runMarketcapSlice(owner, invocation)
-    : handleCryptoRequest(request));
-}
-
-async function handleCryptoRequest(request: Request) {
   if (!isAuthorizedCron(request)) return unauthorizedCron();
   const url = new URL(request.url);
   const phase = (url.searchParams.get("phase") ?? "quote").toLowerCase();
@@ -59,13 +46,27 @@ async function handleCryptoRequest(request: Request) {
     }
   }
 
+  if (phase === "marketcap") {
+    const runKey = `yahoo-crypto-marketcap:${new Date().toISOString().slice(0, 10)}`;
+    const { runId, skipped } = await beginRun({ jobName: JOB, provider: "YAHOO", runKey, universeCount: 0, batchSize: 0, checkpointBefore: null });
+    if (skipped) return Response.json({ ok: true, task: "yahoo-crypto", phase, skipped: true });
+    try {
+      const result = await updateCryptoMarketCapSupply();
+      await finishRun(runId, JOB, "YAHOO", started, { status: "COMPLETED", attempted: result.updated + result.failed, completed: result.updated, inserted: 0, updated: result.updated, failed: result.failed, retryableFailures: result.failed, checkpointAfter: null, details: result });
+      return Response.json({ ok: true, task: "yahoo-crypto", phase, ...result });
+    } catch (e) {
+      await finishRun(runId, JOB, "YAHOO", started, { status: "FAILED", attempted: 0, completed: 0, inserted: 0, updated: 0, failed: 1, retryableFailures: 1, checkpointAfter: null, error: (e as Error).message });
+      return Response.json({ ok: false, task: "yahoo-crypto", phase, error: (e as Error).message }, { status: 500 });
+    }
+  }
+
   if (phase !== "quote" && phase !== "history") {
     return Response.json({ ok: false, task: "yahoo-crypto", error: `Unknown phase: ${phase}. Use bootstrap|quote|history|marketcap.` }, { status: 400 });
   }
 
   const scope = url.searchParams.get("scope") === "smoke" ? CORE_CRYPTO_SYMBOLS.slice(0, 5) : undefined;
   const cpKey = `yahoo-crypto-${phase}${scope ? "-smoke" : ""}`;
-  const runKey = phase === "quote" ? cryptoRunKey(cpKey.slice("yahoo-crypto-".length), started, request.headers.get("x-crypto-invocation-id")) : `${cpKey}:${new Date().toISOString().slice(0, 13)}`;
+  const runKey = `${cpKey}:${new Date().toISOString().slice(0, 13)}`;
   const cpBefore = await readCheckpoint(cpKey);
   const { runId, skipped } = await beginRun({ jobName: JOB, provider: "YAHOO", runKey, universeCount: 0, batchSize: batch, checkpointBefore: cpBefore });
   if (skipped) return Response.json({ ok: true, task: "yahoo-crypto", phase, skipped: true });
