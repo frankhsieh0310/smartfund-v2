@@ -228,10 +228,12 @@ export async function updateCryptoMarketCapSupply(symbols?: string[]) {
   const bySymbol = new Map(quotes.map((q) => [q.symbol as string, q]));
 
   // This endpoint itself caps at 250 results (page-1-only, no genuine pagination — see the
-  // full-universe discovery notes), so the default (no explicit symbols) matches against the
-  // full active Yahoo universe rather than the original 16-symbol constant; only markets Yahoo's
-  // top-250-by-market-cap screener actually returned will get updated either way.
-  const markets = await prisma.cryptoMarket.findMany({ where: { exchangeId: YAHOO_EXCHANGE_ID, active: true, ...(symbols ? { providerSymbol: { in: symbols } } : {}) }, select: { baseAssetId: true, providerSymbol: true } });
+  // full-universe discovery notes). Look up only the markets the screener actually returned
+  // (bounded by its own 250 cap) rather than scanning the full active universe every call.
+  const candidateSymbols = symbols ?? Array.from(bySymbol.keys());
+  const markets = candidateSymbols.length
+    ? await prisma.cryptoMarket.findMany({ where: { exchangeId: YAHOO_EXCHANGE_ID, active: true, providerSymbol: { in: candidateSymbols } }, select: { baseAssetId: true, providerSymbol: true } })
+    : [];
   let updated = 0, failed = 0;
   const now = new Date();
   for (const m of markets) {
