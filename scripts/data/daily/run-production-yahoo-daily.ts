@@ -91,10 +91,9 @@ function candleKey(candle: YahooCandle, timezone: string): string {
 }
 
 function validDailyCandle(candle: YahooCandle): boolean {
-  return candle.open !== null && candle.high !== null && candle.low !== null && candle.close !== null
-    && candle.adjClose !== null && candle.volume !== null
-    && candle.open > 0 && candle.high > 0 && candle.low > 0 && candle.close > 0 && candle.adjClose > 0
-    && candle.high >= candle.low && candle.volume >= 0;
+  return [candle.open, candle.high, candle.low, candle.close, candle.volume].every((value) => value !== null && Number.isFinite(value))
+    && candle.open! > 0 && candle.high! > 0 && candle.low! > 0 && candle.close! > 0
+    && candle.high! >= candle.low! && candle.volume! >= 0;
 }
 
 function validateProviderMetadata(chart: YahooChart, job: ExchangeCalendarJob, targetTradeDate: string): void {
@@ -174,23 +173,23 @@ function httpStatus(error: unknown): number | null {
 
 async function providerReady(job: ExchangeCalendarJob, targetTradeDate: string): Promise<{ ready: boolean; providerLatestDate: string | null; reason: string | null }> {
   const latestDates: string[] = [];
+  const failures: string[] = [];
   for (const symbol of job.providerProbeSymbols) {
     try {
       const chart = await fetchYahooChart(symbol, addCalendarDays(targetTradeDate, -10), addCalendarDays(targetTradeDate, 2));
       validateProviderMetadata(chart, job, targetTradeDate);
-      const valid = chart.candles.filter(validDailyCandle);
+      // The calendar bounds completed sessions; the observed candle supplies the actual date.
+      const valid = chart.candles.filter((candle) => validDailyCandle(candle) && candleKey(candle, job.timezone) <= targetTradeDate);
       const latest = valid.at(-1);
-      if (!latest) return { ready: false, providerLatestDate: null, reason: `PROBE_EMPTY:${symbol}` };
+      if (!latest) { failures.push(`PROBE_EMPTY:${symbol}`); continue; }
       const latestDate = candleKey(latest, job.timezone);
       latestDates.push(latestDate);
-      const target = valid.find((candle) => candleKey(candle, job.timezone) === targetTradeDate);
-      if (!target) return { ready: false, providerLatestDate: latestDate, reason: `PROBE_TARGET_MISSING:${symbol}` };
     } catch (error) {
-      return { ready: false, providerLatestDate: latestDates.at(-1) ?? null, reason: error instanceof Error ? error.message : String(error) };
+      failures.push(error instanceof Error ? error.message : String(error));
     }
   }
   const providerLatestDate = latestDates.sort().at(-1) ?? null;
-  return { ready: latestDates.every((value) => value >= targetTradeDate), providerLatestDate, reason: null };
+  return { ready: providerLatestDate !== null, providerLatestDate, reason: providerLatestDate ? null : failures.join("; ") || "PROBE_EMPTY" };
 }
 
 async function recordProviderProbe(job: ExchangeCalendarJob, targetTradeDate: string, probe: Awaited<ReturnType<typeof providerReady>>): Promise<void> {
@@ -227,6 +226,47 @@ async function retryDue(jobId: string, targetTradeDate: string): Promise<boolean
     targetTradeDate,
   );
   return Boolean(rows[0]?.due);
+}
+
+function sourceAction(sourceDate: string, dbCurrentDate: string | null, primaryCompleted: boolean, repairDue: boolean): "NOOP" | "PRIMARY" | "RETRY" {
+  if (repairDue) return "RETRY";
+  if (dbCurrentDate && sourceDate <= dbCurrentDate) return "NOOP";
+  // A completed pass with deferred/non-retryable failures must not become another full pass.
+  return primaryCompleted ? "NOOP" : "PRIMARY";
+}
+
+async function marketCurrentDate(job: ExchangeCalendarJob): Promise<string | null> {
+  const rows = await prisma.$queryRawUnsafe<Array<{ current_date: string | null }>>(
+    `SELECT CASE WHEN COUNT(*)>0 AND COUNT(*)=COUNT(h.date)
+      THEN MIN(h.date)::text ELSE NULL END AS current_date
+     FROM stocks s LEFT JOIN stock_history h ON h.stock_id=s.id AND h.date=s.latest_date
+       AND h.open>0 AND h.high>=h.low AND h.low>0 AND h.close>0 AND h.volume>=0
+       AND h.close=s.latest_close
+     WHERE s.is_active=TRUE AND s.exchange=ANY($1::text[]) AND s.country=$2`, job.exchanges, job.country,
+  );
+  return rows[0]?.current_date ?? null;
+}
+
+async function queueIncompleteEod(job: ExchangeCalendarJob, sourceDate: string): Promise<void> {
+  // A completed historical run marker is not proof that canonical rows are still complete.
+  // Put only missing/incomplete rows into the existing repair ledger; never reset its attempts.
+  await prisma.$executeRawUnsafe(
+    `INSERT INTO production_scheduler_failures
+      (job_id,stock_id,symbol,attempts,last_error,error_type,first_failed_at,last_attempted_at,next_retry_at,classification,resolved,target_trade_date,provider_latest_date)
+     SELECT $1,s.id,s.yahoo_symbol,0,'CANONICAL_EOD_INCOMPLETE','VALIDATION_ERROR',NOW(),NOW(),NOW(),'RETRYABLE_FAILURE',FALSE,$4::date,$4::date
+     FROM stocks s LEFT JOIN stock_history h ON h.stock_id=s.id AND h.date=$4::date
+     WHERE s.is_active=TRUE AND s.exchange=ANY($2::text[]) AND s.country=$3 AND COALESCE(s.yahoo_symbol,'')<>''
+       AND NOT COALESCE(h.open>0 AND h.high>=h.low AND h.low>0 AND h.close>0 AND h.volume>=0
+         AND (s.latest_date>$4::date OR (s.latest_date=$4::date AND s.latest_close=h.close)),FALSE)
+     ON CONFLICT(job_id,stock_id) DO UPDATE SET
+       last_error=EXCLUDED.last_error,error_type=EXCLUDED.error_type,last_attempted_at=NOW(),
+       next_retry_at=COALESCE(production_scheduler_failures.next_retry_at,NOW()),
+       resolved=FALSE,resolved_at=NULL,resolution_reason=NULL,
+       target_trade_date=EXCLUDED.target_trade_date,provider_latest_date=EXCLUDED.provider_latest_date
+     WHERE production_scheduler_failures.classification='RETRYABLE_FAILURE'
+       AND (production_scheduler_failures.resolved=TRUE OR production_scheduler_failures.target_trade_date<EXCLUDED.target_trade_date)`,
+    job.id, job.exchanges, job.country, sourceDate,
+  );
 }
 
 async function recordFailure(job: ExchangeCalendarJob, stock: StockTask, targetTradeDate: string, providerLatestDate: string | null, error: unknown): Promise<"PERMANENT_UNAVAILABLE" | "RETRYABLE_FAILURE"> {
@@ -292,29 +332,43 @@ async function stockTasks(job: ExchangeCalendarJob, runType: RunType, targetTrad
   });
 }
 
-async function processStock(job: ExchangeCalendarJob, stock: StockTask, targetTradeDate: string, providerLatestDate: string | null): Promise<TaskOutcome> {
+async function processStock(job: ExchangeCalendarJob, stock: StockTask, targetTradeDate: string, providerLatestDate: string | null, revalidate = false): Promise<TaskOutcome> {
   try {
+    const date = utcDate(targetTradeDate);
+    const existing = await prisma.stockHistory.findUnique({
+      where: { stockId_date: { stockId: stock.id, date } },
+      select: { id: true, open: true, high: true, low: true, close: true, volume: true, source: true, sourceSymbol: true },
+    });
+    const trustedSource = existing && ((existing.source === "YAHOO" && existing.sourceSymbol === stock.yahooSymbol)
+      || (job.country === "TW" && ["TWSE_OFFICIAL", "TPEX_OFFICIAL"].includes(existing.source ?? "")));
+    const alreadyComplete = Boolean(existing && trustedSource && validDailyCandle({
+      date, open: existing.open === null ? null : Number(existing.open), high: existing.high === null ? null : Number(existing.high),
+      low: existing.low === null ? null : Number(existing.low), close: existing.close === null ? null : Number(existing.close),
+      volume: existing.volume === null ? null : Number(existing.volume), adjClose: null,
+    }));
+    const officialTaiwan = job.country === "TW" && ["TWSE_OFFICIAL", "TPEX_OFFICIAL"].includes(existing?.source ?? "");
+    if (alreadyComplete && existing && (!revalidate || officialTaiwan)) {
+      // Reconcile a previous interrupted latest-state write without another provider request.
+      await prisma.stock.updateMany({ where: { id: stock.id, OR: [{ latestDate: null }, { latestDate: { lte: date } }] }, data: { latestDate: date, latestClose: existing.close } });
+      await prisma.$executeRawUnsafe("UPDATE production_scheduler_failures SET resolved=TRUE,resolved_at=NOW(),resolution_reason='ALREADY_CURRENT',next_retry_at=NULL WHERE job_id=$1 AND stock_id=$2 AND resolved=FALSE AND target_trade_date<=$3", job.id, stock.id, date);
+      return { completed: 1, inserted: 0, updated: 0, failed: 0, success: 0, noUpdate: 1, permanentUnavailable: 0, retryableFailure: 0, upToProviderLatest: providerLatestDate === targetTradeDate ? 1 : 0 };
+    }
     const chart = await fetchYahooChart(stock.yahooSymbol, addCalendarDays(targetTradeDate, -10), addCalendarDays(targetTradeDate, 2));
     validateProviderMetadata(chart, job, targetTradeDate);
     const providerLatest = chart.candles.filter(validDailyCandle).map((row) => candleKey(row, job.timezone)).sort().at(-1) ?? null;
     const candle = chart.candles.find((row) => candleKey(row, job.timezone) === targetTradeDate);
     if (!candle) throw new YahooRequestError(`YAHOO_NO_TARGET_CANDLE:${targetTradeDate}:${providerLatest ?? "NONE"}`);
     if (!validDailyCandle(candle)) throw new YahooRequestError(`INVALID_OHLCV:${targetTradeDate}`);
-    const date = utcDate(targetTradeDate);
-    const existing = await prisma.stockHistory.findUnique({
-      where: { stockId_date: { stockId: stock.id, date } },
-      select: { id: true, open: true, high: true, low: true, close: true, adjustedClose: true, volume: true },
-    });
-    const alreadyComplete = Boolean(existing?.open && existing.high && existing.low && existing.close && existing.adjustedClose && existing.volume !== null);
+    const adjustedClose = candle.adjClose !== null && Number.isFinite(candle.adjClose) && candle.adjClose > 0 ? candle.adjClose : null;
     await prisma.stockHistory.upsert({
       where: { stockId_date: { stockId: stock.id, date } },
       create: {
         stockId: stock.id, date, open: candle.open!, high: candle.high!, low: candle.low!, close: candle.close!,
-        adjustedClose: candle.adjClose!, volume: candle.volume!, source: "YAHOO", sourceSymbol: stock.yahooSymbol,
+        adjustedClose, volume: candle.volume!, source: "YAHOO", sourceSymbol: stock.yahooSymbol,
         providerMethod: "YAHOO_CHART_API", importedAt: new Date(), updatedAt: new Date(),
       },
       update: {
-        open: candle.open!, high: candle.high!, low: candle.low!, close: candle.close!, adjustedClose: candle.adjClose!,
+        open: candle.open!, high: candle.high!, low: candle.low!, close: candle.close!, adjustedClose: adjustedClose ?? undefined,
         volume: candle.volume!, source: "YAHOO", sourceSymbol: stock.yahooSymbol,
         providerMethod: "YAHOO_CHART_API", updatedAt: new Date(),
       },
@@ -334,8 +388,8 @@ async function processStock(job: ExchangeCalendarJob, stock: StockTask, targetTr
       inserted: existing ? 0 : 1,
       updated: existing ? 1 : 0,
       failed: 0,
-      success: alreadyComplete ? 0 : 1,
-      noUpdate: alreadyComplete ? 1 : 0,
+      success: 1,
+      noUpdate: 0,
       permanentUnavailable: 0,
       retryableFailure: 0,
       upToProviderLatest: providerLatestDate === targetTradeDate ? 1 : 0,
@@ -405,7 +459,7 @@ async function execute(job: ExchangeCalendarJob, targetTradeDate: string, runTyp
     for (let offset = 0; offset < tasks.length; offset += CONCURRENCY) {
       const batch = tasks.slice(offset, offset + CONCURRENCY);
       const attemptedBeforeBatch = summary.attempted;
-      const outcomes = await Promise.all(batch.map((stock) => processStock(job, stock, targetTradeDate, providerLatestDate)));
+      const outcomes = await Promise.all(batch.map((stock) => processStock(job, stock, targetTradeDate, providerLatestDate, runType === "RETRY")));
       outcomes.forEach((outcome) => addOutcome(summary, outcome));
       lastSymbol = batch.at(-1)?.yahooSymbol ?? lastSymbol;
       if (Math.floor(attemptedBeforeBatch / CHECKPOINT_EVERY) < Math.floor(summary.attempted / CHECKPOINT_EVERY) || offset + batch.length === tasks.length) {
@@ -483,7 +537,7 @@ async function verifyLatestTradeDate(job: ExchangeCalendarJob, targetTradeDate: 
   const rows = await prisma.$queryRawUnsafe<Array<{ universe: number; master_target: number; valid_target: number; database_latest_date: Date | null }>>(
     `SELECT COUNT(DISTINCT s.id)::int AS universe,
       COUNT(DISTINCT s.id) FILTER (WHERE s.latest_date=$3::date)::int AS master_target,
-      COUNT(DISTINCT s.id) FILTER (WHERE h.date=$3::date AND h.open>0 AND h.high>=h.low AND h.low>0 AND h.close>0 AND h.adjusted_close>0 AND h.volume>=0 AND h.source='YAHOO')::int AS valid_target,
+      COUNT(DISTINCT s.id) FILTER (WHERE h.date=$3::date AND h.open>0 AND h.high>=h.low AND h.low>0 AND h.close>0 AND h.volume>=0 AND h.source='YAHOO')::int AS valid_target,
       MAX(s.latest_date) AS database_latest_date
      FROM stocks s LEFT JOIN stock_history h ON h.stock_id=s.id AND h.date=$3::date
      WHERE s.exchange=ANY($1::text[]) AND s.country=$2 AND s.is_active=TRUE`,
@@ -532,6 +586,16 @@ async function dispatcher(): Promise<void> {
   if (marketClock("UTC", now).date > registry.calendarValidThrough) throw new Error(`CALENDAR_SYNC_REQUIRED:${registry.calendarValidThrough}`);
   const jobs = registry.jobs.filter((job) => job.schedulerEnabled && (!selectedJob || job.id === selectedJob));
   if (selectedJob && jobs.length !== 1) throw new Error(`UNKNOWN_JOB:${selectedJob}`);
+  if (action === "verify-latest") {
+    // Read-only verification: no lifecycle/lock/checkpoint/run-log mutations.
+    for (const job of jobs) {
+      const probe = await providerReady(job, latestClosedTradingDate(job, now));
+      console.log(JSON.stringify({ country: job.country, ...probe, ...(probe.providerLatestDate
+        ? await verifyLatestTradeDate(job, probe.providerLatestDate)
+        : { jobId: job.id, status: "SOURCE_UNAVAILABLE" }) }));
+    }
+    return;
+  }
   if (["pause", "cancel-stale", "verify", "rebuild-checkpoint", "resume", "retry"].includes(action) && !selectedJob) {
     throw new Error(`ACTION_REQUIRES_JOB:${action}`);
   }
@@ -568,12 +632,22 @@ async function dispatcher(): Promise<void> {
     const completed = await completedForTarget(job.id, targetTradeDate);
     if (completed && !(selectedJob && action === "retry")) {
       if (await retryDue(job.id, targetTradeDate)) decisions.push({ job, targetTradeDate, dueAt, runType: "RETRY", reason: "FAILURE_RETRY_DUE" });
-      else skipped.push({ jobId: job.id, status: "SKIPPED_COMPLETED", targetTradeDate });
+      else {
+        const current = await marketCurrentDate(job);
+        if (!current || current < targetTradeDate) decisions.push({ job, targetTradeDate, dueAt, runType: "RETRY", reason: "CANONICAL_EOD_REPAIR_CHECK" });
+        else skipped.push({ jobId: job.id, status: "SKIPPED_COMPLETED", targetTradeDate });
+      }
       continue;
     }
     decisions.push({ job, targetTradeDate, dueAt, runType: selectedJob ? (action === "retry" ? "RETRY" : selectedRunType) : "PRIMARY", reason: action === "resume" ? "OPERATOR_RESUME" : "MARKET_CLOSE_DUE" });
   }
-  decisions.sort((a, b) => a.dueAt.getTime() - b.dueAt.getTime());
+  // A retry backlog must not starve a newer market-close PRIMARY run. Without
+  // this priority, the bounded dispatcher can spend every slot on old retries
+  // while otherwise healthy histories (for example NASDAQ) remain stale.
+  decisions.sort((a, b) => {
+    const runPriority = (value: RunType) => value === "PRIMARY" ? 0 : 1;
+    return runPriority(a.runType) - runPriority(b.runType) || a.dueAt.getTime() - b.dueAt.getTime();
+  });
   if (planOnly) {
     console.log(JSON.stringify({ at: now.toISOString(), mode: "PLAN", decisions, skipped, staleCleanup }, null, 2));
     return;
@@ -599,7 +673,16 @@ async function dispatcher(): Promise<void> {
       return { jobId: decision.job.id, targetTradeDate: decision.targetTradeDate, status: "PROVIDER_NOT_READY", providerLatestDate: probe.providerLatestDate, reason: probe.reason };
     }
     try {
-      return await execute(decision.job, decision.targetTradeDate, decision.runType, probe.providerLatestDate);
+      const sourceDate = probe.providerLatestDate!;
+      const [dbCurrentDate, completed] = await Promise.all([
+        marketCurrentDate(decision.job), completedForTarget(decision.job.id, sourceDate),
+      ]);
+      if (completed && (!dbCurrentDate || dbCurrentDate < sourceDate)) await queueIncompleteEod(decision.job, sourceDate);
+      const repairDue = await retryDue(decision.job.id, sourceDate);
+      const next = sourceAction(sourceDate, dbCurrentDate, completed, repairDue);
+      if (next === "NOOP") return { jobId: decision.job.id, status: "NOOP", providerLatestDate: sourceDate, dbCurrentDate };
+      const runType = next;
+      return await execute(decision.job, sourceDate, runType, sourceDate);
     } catch (error) {
       return { jobId: decision.job.id, targetTradeDate: decision.targetTradeDate, status: "FAILED", error: error instanceof Error ? error.message : String(error) };
     }
