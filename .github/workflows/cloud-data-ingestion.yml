@@ -39,13 +39,19 @@ on:
     # Crypto: daily bounded history and marketcap slices (UTC); quote is manual only.
     - cron: "39 0 * * *"        # marketcap: daily 08:39 Taipei, max 250 markets
     - cron: "23 0 * * *"        # history: daily 08:23 Taipei, existing small batches
+    # Global Index history: daily incremental, same 00:xx UTC slot family as the crypto jobs above
+    # (00:26, between crypto-history and crypto-marketcap) — well after every major market's close
+    # (US ~20:00-21:00 UTC is the latest of the 16 major indices) so Yahoo's daily candle is already
+    # finalized by the time this fires. Market-level job over the existing 52-index registry, not
+    # per-index; checkpoint/resume + per-index failure isolation already live in the route itself.
+    - cron: "26 0 * * *"        # index history: daily 08:26 Taipei, existing checkpointed batches
   workflow_dispatch:
     inputs:
       job:
         description: "Which job to run"
         type: choice
         default: all
-        options: [both, etf-price, moneydj-fund, moneydj-etf, global-etf-holdings, fund-holdings, fund-nav, consensus-ingest, consensus-aggregate, consensus-performance, consensus-flips, consensus-backfill, tw-fundamentals-refresh, global-pe-recompute, mops-financial-incremental, sec-financial-incremental, fx-quote, crypto-quote, crypto-marketcap, crypto-history, all]
+        options: [both, etf-price, moneydj-fund, moneydj-etf, global-etf-holdings, fund-holdings, fund-nav, consensus-ingest, consensus-aggregate, consensus-performance, consensus-flips, consensus-backfill, tw-fundamentals-refresh, global-pe-recompute, mops-financial-incremental, sec-financial-incremental, fx-quote, crypto-quote, crypto-marketcap, crypto-history, index-history, all]
 
 concurrency:
   group: cloud-data-ingestion
@@ -72,6 +78,7 @@ jobs:
           case "${{ github.event.schedule }}" in
             "39 0 * * *") echo "job=crypto-marketcap" >> "$GITHUB_OUTPUT" ;;
             "23 0 * * *") echo "job=crypto-history" >> "$GITHUB_OUTPUT" ;;
+            "26 0 * * *") echo "job=index-history" >> "$GITHUB_OUTPUT" ;;
             "7 * * * *")  echo "job=fund-holdings" >> "$GITHUB_OUTPUT" ;;
             "17 * * * *") echo "job=etf-price" >> "$GITHUB_OUTPUT" ;;
             "27 * * * *") echo "job=fund-nav" >> "$GITHUB_OUTPUT" ;;
@@ -270,6 +277,16 @@ jobs:
                --connect-timeout 15 --max-time 320 \
                -H "Authorization: Bearer ${SECRET}" \
                "${BASE_URL}/api/cron/yahoo-fx?phase=quote" | tee fx-quote-response.json
+          echo
+
+      - name: Index history (52-index registry, incremental, checkpointed)
+        if: ${{ contains(fromJSON('["index-history","all"]'), steps.pick.outputs.job) }}
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --show-error --silent \
+               --connect-timeout 15 --max-time 300 \
+               -H "Authorization: Bearer ${SECRET}" \
+               "${BASE_URL}/api/cron/yahoo-index?phase=history" | tee index-history-response.json
           echo
 
       - name: Crypto bounded slice
