@@ -3,7 +3,40 @@
   "assets": {
     "STOCK": { "providerAdapter": "YAHOO_CHART" },
     "ETF": { "providerAdapter": "YAHOO_CHART" },
-    "MARKET_INDEX": { "providerAdapter": "YAHOO_CHART" },
+    "MARKET_INDEX": {
+      "providerAdapter": "YAHOO_CHART",
+      "instrumentMappings": {
+        "AEX": "^AEX",
+        "ASX200": "^AXJO",
+        "BVSP": "^BVSP",
+        "CAC40": "^FCHI",
+        "DJI": "^DJI",
+        "FTSE100": "^FTSE",
+        "GSPC": "^GSPC",
+        "GSPTSE": "^GSPTSE",
+        "HSI": "^HSI",
+        "IBEX35": "^IBEX",
+        "IXIC": "^IXIC",
+        "JKSE": "^JKSE",
+        "KQ11": "^KQ11",
+        "KS11": "^KS11",
+        "MXX": "^MXX",
+        "N225": "^N225",
+        "NIFTY50": "^NSEI",
+        "NYA": "^NYA",
+        "RUT": "^RUT",
+        "SENSEX": "^BSESN",
+        "SOX": "^SOX",
+        "SSEC": "000001.SS",
+        "SSMI": "^SSMI",
+        "STOXX50E": "^STOXX50E",
+        "SZSE": "399001.SZ",
+        "TAIEX": "^TWII"
+      },
+      "instrumentProviders": {
+        "TOPIX": "JPX_TOPIX"
+      }
+    },
     "BOND_YIELD": {
       "providerAdapter": "FRED",
       "instrumentMappings": {
@@ -14,7 +47,12 @@
         "US30Y": "DGS30"
       }
     },
-    "VOLATILITY": { "providerAdapter": "YAHOO_CHART" },
+    "VOLATILITY": {
+      "providerAdapter": "YAHOO_CHART",
+      "instrumentMappings": {
+        "VIX": "^VIX"
+      }
+    },
     "COMMODITY": {
       "providerAdapter": "YAHOO_CHART",
       "instrumentMappings": {
@@ -65,6 +103,6 @@
         "XRP": "XRP-USD"
       }
     },
-    "MACRO": { "providerAdapters": ["FRED", "ECB", "IMF", "OECD", "WORLD_BANK"] }
+    "MACRO": { "providerAdapters": ["FRED", "ECB", "IMF", "OECD", "World Bank"] }
   }
 }

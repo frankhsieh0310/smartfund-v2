@@ -1,0 +1,107 @@
+{
+  "source": {
+    "id": "BIS_SDMX",
+    "name": "Bank for International Settlements",
+    "official": true,
+    "baseUrl": "https://stats.bis.org/api/v2",
+    "format": "SDMX_2_1_CSV",
+    "registryReuse": "runtime/economic/constitution/official-sources.json#GLOBAL_BIS",
+    "sharedConsumers": ["FIXED_INCOME", "FX", "MACRO"]
+  },
+  "ownership": {
+    "writer": "SHARED_BIS_OFFICIAL_NODE_WORKER",
+    "desktopAllowed": true,
+    "railwayOwnedScopesUntouched": ["US_TREASURY"]
+  },
+  "database": {
+    "poolMode": "SUPABASE_TRANSACTION_POOLING_6543_PGBOUNCER",
+    "maxConcurrency": 1,
+    "boundedBatchSize": 25,
+    "maxRetries": 3
+  },
+  "canary": {
+    "dataflow": "WS_CBPOL",
+    "version": "1.0",
+    "key": "D.US",
+    "canonicalSeriesId": "WS_CBPOL:D.US",
+    "country": "US",
+    "currency": "USD",
+    "frequency": "DAILY",
+    "unit": "Percent per annum",
+    "maxObservations": 5
+  },
+  "fxTurnoverCanary": {
+    "dataflow": "WS_DER_OTC_TOV",
+    "version": "1.0",
+    "key": "A.U.H.B.5J.A.5J.A.TO1.TO1.A.A.3.C",
+    "canonicalSeriesId": "WS_DER_OTC_TOV:A.U.H.B.5J.A.5J.A.TO1.TO1.A.A.3.C",
+    "country": "GLOBAL",
+    "currency": "ALL",
+    "frequency": "ANNUAL",
+    "unit": "BIS_REPORTED",
+    "maxObservations": 3,
+    "checkpoint": "runtime/bis/fx-turnover-checkpoint.json",
+    "ordinaryLifecycle": "SHARED_BIS_OFFICIAL_NODE_WORKER",
+    "remainingCoverageMode": "BOUNDED_SDMX_DATASET_CURSOR"
+  },
+  "otcFxDerivativesCanary": {
+    "dataflow": "WS_OTC_DERIV2",
+    "version": "1.0",
+    "key": "H.A.C.B.5J.A.5J.A.USD.TO1.A.A.3.C",
+    "canonicalSeriesId": "WS_OTC_DERIV2:H.A.C.B.5J.A.5J.A.USD.TO1.A.A.3.C",
+    "country": "GLOBAL",
+    "currency": "USD",
+    "frequency": "ANNUAL",
+    "sourceFrequency": "HALF_YEARLY",
+    "unit": "BIS_REPORTED",
+    "maxObservations": 3,
+    "checkpoint": "runtime/bis/otc-fx-derivatives-checkpoint.json",
+    "ordinaryLifecycle": "SHARED_BIS_OFFICIAL_NODE_WORKER",
+    "remainingCoverageMode": "BOUNDED_SDMX_DATASET_CURSOR"
+  },
+  "internationalBankingCanary": {
+    "dataflow": "WS_LBS_D_PUB",
+    "version": "1.0",
+    "key": "Q.S.C.A.USD.A.5J.A.5A.A.5J.N",
+    "canonicalSeriesId": "WS_LBS_D_PUB:Q.S.C.A.USD.A.5J.A.5A.A.5J.N",
+    "country": "GLOBAL",
+    "currency": "USD",
+    "frequency": "QUARTERLY",
+    "unit": "BIS_REPORTED",
+    "maxObservations": 3,
+    "checkpoint": "runtime/bis/international-banking-checkpoint.json",
+    "ordinaryLifecycle": "SHARED_BIS_OFFICIAL_NODE_WORKER",
+    "remainingCoverageMode": "BOUNDED_SDMX_DATASET_CURSOR"
+  },
+  "globalLiquidityCanary": {
+    "dataflow": "WS_GLI",
+    "version": "1.0",
+    "key": "Q.USD.3P.N.A.I.B.USD",
+    "canonicalSeriesId": "WS_GLI:Q.USD.3P.N.A.I.B.USD",
+    "country": "GLOBAL_EX_US_RESIDENTS",
+    "currency": "USD",
+    "frequency": "QUARTERLY",
+    "unit": "USD",
+    "maxObservations": 3,
+    "checkpoint": "runtime/bis/global-liquidity-checkpoint.json",
+    "ordinaryLifecycle": "SHARED_BIS_OFFICIAL_NODE_WORKER",
+    "remainingCoverageMode": "BOUNDED_SDMX_DATASET_CURSOR"
+  },
+  "datasetQueue": [
+    {"dataflow":"WS_DEBT_SEC2_PUB","domain":"DEBT_SECURITIES","routes":["FIXED_INCOME"],"state":"PENDING_DISCOVERY"},
+    {"dataflow":"WS_NA_SEC_DSS","domain":"DEBT_SECURITIES","routes":["FIXED_INCOME"],"state":"PENDING_DISCOVERY"},
+    {"dataflow":"WS_CBS_PUB","domain":"INTERNATIONAL_BANKING","routes":["FIXED_INCOME","FX","MACRO"],"state":"PENDING_DISCOVERY"},
+    {"dataflow":"WS_LBS_D_PUB","domain":"INTERNATIONAL_BANKING_AND_CROSS_BORDER_FLOWS","routes":["FIXED_INCOME","FX","MACRO"],"state":"AUTO_CONTINUING","worker":"SHARED_BIS_OFFICIAL_NODE_WORKER","checkpoint":"runtime/bis/international-banking-checkpoint.json","resumeMode":"BOUNDED_SDMX_DATASET_CURSOR","maxDbConcurrency":1},
+    {"dataflow":"WS_TC","domain":"CREDIT","routes":["FIXED_INCOME","MACRO"],"state":"PENDING_DISCOVERY"},
+    {"dataflow":"WS_CREDIT_GAP","domain":"CREDIT_TO_GDP_GAP","routes":["FIXED_INCOME","MACRO"],"state":"PENDING_DISCOVERY"},
+    {"dataflow":"WS_DSR","domain":"DEBT_SERVICE_RATIO","routes":["FIXED_INCOME","MACRO"],"state":"PENDING_DISCOVERY"},
+    {"dataflow":"WS_GLI","domain":"GLOBAL_LIQUIDITY","routes":["FIXED_INCOME","FX","MACRO"],"state":"AUTO_CONTINUING","worker":"SHARED_BIS_OFFICIAL_NODE_WORKER","checkpoint":"runtime/bis/global-liquidity-checkpoint.json","resumeMode":"BOUNDED_SDMX_DATASET_CURSOR","maxDbConcurrency":1},
+    {"dataflow":"WS_EER","domain":"EFFECTIVE_EXCHANGE_RATES","routes":["FX","MACRO"],"state":"PENDING_DISCOVERY"},
+    {"dataflow":"WS_DER_OTC_TOV","domain":"FX_AND_OTC_TURNOVER","routes":["FIXED_INCOME","FX","MACRO"],"state":"AUTO_CONTINUING","worker":"SHARED_BIS_OFFICIAL_NODE_WORKER","checkpoint":"runtime/bis/fx-turnover-checkpoint.json","resumeMode":"BOUNDED_SDMX_DATASET_CURSOR","maxDbConcurrency":1},
+    {"dataflow":"WS_OTC_DERIV2","domain":"OTC_DERIVATIVES","routes":["FIXED_INCOME","FX","MACRO"],"state":"AUTO_CONTINUING","worker":"SHARED_BIS_OFFICIAL_NODE_WORKER","checkpoint":"runtime/bis/otc-fx-derivatives-checkpoint.json","resumeMode":"BOUNDED_SDMX_DATASET_CURSOR","maxDbConcurrency":1},
+    {"dataflow":"WS_XTD_DERIV","domain":"EXCHANGE_TRADED_DERIVATIVES","routes":["FIXED_INCOME","FX","MACRO"],"state":"PENDING_DISCOVERY"},
+    {"dataflow":"WS_CPP","domain":"COMMERCIAL_PROPERTY_PRICES","routes":["MACRO"],"state":"PENDING_DISCOVERY"},
+    {"dataflow":"WS_SPP","domain":"RESIDENTIAL_PROPERTY_PRICES","routes":["MACRO"],"state":"PENDING_DISCOVERY"},
+    {"dataflow":"WS_CBTA","domain":"CENTRAL_BANK_TOTAL_ASSETS","routes":["FIXED_INCOME","FX","MACRO"],"state":"PENDING_DISCOVERY"}
+  ]
+}

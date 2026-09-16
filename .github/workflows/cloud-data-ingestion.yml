@@ -76,13 +76,19 @@ on:
     - cron: "5 16 * * 1-5"      # Index: Russia (RTSI.ME) — nominal MOEX close ~15:50 UTC (source frozen since 2022, expect NOOP)
     - cron: "50 16 * * 1-5"     # Index: Europe (^GDAXI, ^FTSE, ^FCHI) — latest winter close 16:30-16:35 UTC
     - cron: "15 21 * * 1-5"     # Index: US (^DJI, ^GSPC, ^IXIC, ^SOX) — latest winter close 21:00 UTC
+    # Macro/BIS: single daily source-level check (see the separate macro-bis-daily job below —
+    # this is a different job shape, not the curl-only `ingest` job above, since it needs to run
+    # the existing Node scripts directly rather than call an already-deployed Vercel route).
+    # Official statistical releases have no fixed market-close time; once/day is sufficient and
+    # each script's own source-state comparison NOOPs when nothing changed.
+    - cron: "10 5 * * *"        # Macro/BIS daily source check, all days (safe NOOP on non-release days)
   workflow_dispatch:
     inputs:
       job:
         description: "Which job to run"
         type: choice
         default: all
-        options: [both, etf-price, moneydj-fund, moneydj-etf, global-etf-holdings, fund-holdings, fund-nav, consensus-ingest, consensus-aggregate, consensus-performance, consensus-flips, consensus-backfill, tw-fundamentals-refresh, global-pe-recompute, mops-financial-incremental, sec-financial-incremental, fx-quote, crypto-quote, crypto-marketcap, crypto-history, index-history, index-japan, index-korea, index-china, index-philippines, index-hongkong, index-sea, index-india, index-russia, index-europe, index-us, commodity-cbot, commodity-comex-nymex, commodity-livestock, commodity-ice, all]
+        options: [both, etf-price, moneydj-fund, moneydj-etf, global-etf-holdings, fund-holdings, fund-nav, consensus-ingest, consensus-aggregate, consensus-performance, consensus-flips, consensus-backfill, tw-fundamentals-refresh, global-pe-recompute, mops-financial-incremental, sec-financial-incremental, fx-quote, crypto-quote, crypto-marketcap, crypto-history, index-history, index-japan, index-korea, index-china, index-philippines, index-hongkong, index-sea, index-india, index-russia, index-europe, index-us, commodity-cbot, commodity-comex-nymex, commodity-livestock, commodity-ice, macro-bis-daily, all]
 
 concurrency:
   group: cloud-data-ingestion
@@ -500,3 +506,64 @@ jobs:
           path: "*-response.json"
           if-no-files-found: ignore
           retention-days: 7
+
+  # Macro/BIS single source-level owner. A different job shape from `ingest` above (which only
+  # curls already-deployed Vercel routes): this decouples the existing Macro/BIS automation from
+  # the Railway `run-production-cron.ts` monolith (currently Failed, and bundles Stock/ETF/
+  # Financial/Earnings/legacy work this round must not touch) by running the SAME existing,
+  # unmodified scripts directly on the Actions runner instead — no parser rewrite, no schema
+  # change, no new engine. Each script keeps its own DB-backed lifecycle lock
+  # (production_scheduler_locks/runs/checkpoints, the identical framework Railway itself used),
+  # so even if Railway is later restored, both owners can never write concurrently: the lock is a
+  # single row in Postgres, not a per-machine concept.
+  #
+  # Reused as-is: scripts/data/daily/run-production-macro-daily.ts (FRED, ECB, IMF, OECD, World
+  # Bank — configured via config/asset-provider-registry.json's MACRO.providerAdapters, one
+  # process, source-state-driven, NOOPs on unchanged series, per-series failure isolation),
+  # scripts/data/bis/run-shared-bis-official.ts --resume (BIS, same lifecycle lock family), and
+  # scripts/data/economic-indicators/ingest-taiwan-cbc-official.ts (CBC Taiwan — previously
+  # orphaned with zero scheduler; its own checksum-gated upsert already made it safe to include
+  # here as a third step in the same single owner, not a new per-indicator scheduler).
+  #
+  # Requires repo secrets: DATABASE_URL (direct Postgres connection — new requirement, this job is
+  # the first to need one since every other job here only calls Vercel routes) and, optionally,
+  # FRED_API_KEY (its adapter already degrades to a graceful no-op via BLOCKED_AUTH handling if
+  # absent, so this job does not fail without it — but FRED simply won't sync until it's set).
+  macro-bis-daily:
+    if: ${{ github.event.schedule == '10 5 * * *' || github.event.inputs.job == 'macro-bis-daily' || github.event.inputs.job == 'all' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    concurrency:
+      group: macro-bis-daily
+      cancel-in-progress: false
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+    steps:
+      - name: Guard — DATABASE_URL present
+        run: |
+          if [ -z "${DATABASE_URL}" ]; then
+            echo "::error::DATABASE_URL is not set on this repository — required for the Macro/BIS owner to run directly on the Actions runner."
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - run: npm ci
+
+      - run: npx prisma generate
+
+      - name: Macro daily (FRED, ECB, IMF, OECD, World Bank)
+        continue-on-error: true
+        run: node --experimental-strip-types scripts/data/daily/run-production-macro-daily.ts
+
+      - name: BIS shared official
+        continue-on-error: true
+        run: node --experimental-strip-types scripts/data/bis/run-shared-bis-official.ts --resume
+
+      - name: CBC Taiwan official
+        run: node --experimental-strip-types scripts/data/economic-indicators/ingest-taiwan-cbc-official.ts
