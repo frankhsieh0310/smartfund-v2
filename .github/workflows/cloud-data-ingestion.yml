@@ -45,11 +45,19 @@ on:
     # finalized by the time this fires. Market-level job over the existing 52-index registry, not
     # per-index; checkpoint/resume + per-index failure isolation already live in the route itself.
     - cron: "26 0 * * *"        # index history: daily 08:26 Taipei, existing checkpointed batches
-    # Commodity Core Universe (18 fixed roots: energy/metals/agriculture/livestock): ONE
-    # market-level daily trigger, same 00:xx UTC slot family as the crypto/index jobs above. Not
-    # per-symbol — the route itself loops the whole 18-root list with checkpoint/resume and
-    # per-root failure isolation, mirroring the Index/Crypto pattern exactly.
-    - cron: "32 0 * * *"        # commodity history: daily 08:32 Taipei, bounded incremental batches
+    # Commodity Core Universe (18 fixed roots): one trigger per EXCHANGE-GROUP close, not per
+    # symbol and not a single all-18 sweep (different commodity groups settle at very different
+    # times of day, so one shared time either fires too early for some or unnecessarily late for
+    # others). Same single logical owner (yahoo-commodity route + one engine) as before — grouping
+    # only changes the schedule, not the pipeline. Each time is the LATEST possible UTC settlement
+    # across that group's real exchange (i.e. winter/non-DST US offset, later in UTC than summer)
+    # plus a 20-30min buffer, so a group never fires before its own settlement in either DST state.
+    # Weekdays only; the route's own finalized-candle guard (reject high==low / zero-volume
+    # placeholder bars) is the second line of defense against an in-progress session.
+    - cron: "40 19 * * 1-5"     # Commodity: CBOT (Corn/Wheat/Soybeans/Soybean Oil) — day-session settle ~1:20pm CT = 19:20 UTC winter
+    - cron: "0 20 * * 1-5"      # Commodity: COMEX/NYMEX (WTI, Nat Gas, Gold, Silver, Copper, Platinum, Palladium) — settle 1:30-2:30pm ET = 18:30-19:30 UTC winter
+    - cron: "20 20 * * 1-5"     # Commodity: CME Livestock (Live Cattle, Lean Hogs) — Chicago settle ~1-2pm CT = 19:00-20:00 UTC winter
+    - cron: "0 21 * * 1-5"      # Commodity: ICE (Coffee, Cocoa, Sugar, Cotton, Brent) — NY softs ~1-2pm ET + ICE Europe Brent, safe latest bound
     # Yahoo Taiwan "international index" page (22 fixed symbols): one trigger per MARKET close,
     # not per index. Each time is picked at/after that market's LATEST possible UTC close (i.e. its
     # winter/non-DST offset, which is later in UTC than its summer/DST offset) plus a 10-20min
@@ -74,7 +82,7 @@ on:
         description: "Which job to run"
         type: choice
         default: all
-        options: [both, etf-price, moneydj-fund, moneydj-etf, global-etf-holdings, fund-holdings, fund-nav, consensus-ingest, consensus-aggregate, consensus-performance, consensus-flips, consensus-backfill, tw-fundamentals-refresh, global-pe-recompute, mops-financial-incremental, sec-financial-incremental, fx-quote, crypto-quote, crypto-marketcap, crypto-history, index-history, index-japan, index-korea, index-china, index-philippines, index-hongkong, index-sea, index-india, index-russia, index-europe, index-us, commodity-history, all]
+        options: [both, etf-price, moneydj-fund, moneydj-etf, global-etf-holdings, fund-holdings, fund-nav, consensus-ingest, consensus-aggregate, consensus-performance, consensus-flips, consensus-backfill, tw-fundamentals-refresh, global-pe-recompute, mops-financial-incremental, sec-financial-incremental, fx-quote, crypto-quote, crypto-marketcap, crypto-history, index-history, index-japan, index-korea, index-china, index-philippines, index-hongkong, index-sea, index-india, index-russia, index-europe, index-us, commodity-cbot, commodity-comex-nymex, commodity-livestock, commodity-ice, all]
 
 concurrency:
   group: cloud-data-ingestion
@@ -102,7 +110,10 @@ jobs:
             "39 0 * * *") echo "job=crypto-marketcap" >> "$GITHUB_OUTPUT" ;;
             "23 0 * * *") echo "job=crypto-history" >> "$GITHUB_OUTPUT" ;;
             "26 0 * * *") echo "job=index-history" >> "$GITHUB_OUTPUT" ;;
-            "32 0 * * *") echo "job=commodity-history" >> "$GITHUB_OUTPUT" ;;
+            "40 19 * * 1-5") echo "job=commodity-cbot" >> "$GITHUB_OUTPUT" ;;
+            "0 20 * * 1-5") echo "job=commodity-comex-nymex" >> "$GITHUB_OUTPUT" ;;
+            "20 20 * * 1-5") echo "job=commodity-livestock" >> "$GITHUB_OUTPUT" ;;
+            "0 21 * * 1-5") echo "job=commodity-ice" >> "$GITHUB_OUTPUT" ;;
             "20 6 * * 1-5") echo "job=index-japan" >> "$GITHUB_OUTPUT" ;;
             "45 6 * * 1-5") echo "job=index-korea" >> "$GITHUB_OUTPUT" ;;
             "20 7 * * 1-5") echo "job=index-china" >> "$GITHUB_OUTPUT" ;;
@@ -323,14 +334,44 @@ jobs:
                "${BASE_URL}/api/cron/yahoo-index?phase=history" | tee index-history-response.json
           echo
 
-      - name: Commodity history (18-root Core Universe, incremental, checkpointed)
-        if: ${{ contains(fromJSON('["commodity-history","all"]'), steps.pick.outputs.job) }}
+      - name: Commodity — CBOT close (Corn, Wheat, Soybeans, Soybean Oil)
+        if: ${{ contains(fromJSON('["commodity-cbot","all"]'), steps.pick.outputs.job) }}
         run: |
           set -euo pipefail
           curl --fail-with-body --show-error --silent \
                --connect-timeout 15 --max-time 200 \
                -H "Authorization: Bearer ${SECRET}" \
-               "${BASE_URL}/api/cron/yahoo-commodity?phase=history" | tee commodity-history-response.json
+               "${BASE_URL}/api/cron/yahoo-commodity?phase=history&group=cbot&symbols=ZC=F,ZW=F,ZS=F,ZL=F" | tee commodity-cbot-response.json
+          echo
+
+      - name: Commodity — COMEX/NYMEX close (WTI, Nat Gas, Gold, Silver, Copper, Platinum, Palladium)
+        if: ${{ contains(fromJSON('["commodity-comex-nymex","all"]'), steps.pick.outputs.job) }}
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --show-error --silent \
+               --connect-timeout 15 --max-time 220 \
+               -H "Authorization: Bearer ${SECRET}" \
+               "${BASE_URL}/api/cron/yahoo-commodity?phase=history&group=comex-nymex&symbols=CL=F,NG=F,GC=F,SI=F,HG=F,PL=F,PA=F" | tee commodity-comex-nymex-response.json
+          echo
+
+      - name: Commodity — CME Livestock close (Live Cattle, Lean Hogs)
+        if: ${{ contains(fromJSON('["commodity-livestock","all"]'), steps.pick.outputs.job) }}
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --show-error --silent \
+               --connect-timeout 15 --max-time 150 \
+               -H "Authorization: Bearer ${SECRET}" \
+               "${BASE_URL}/api/cron/yahoo-commodity?phase=history&group=livestock&symbols=LE=F,HE=F" | tee commodity-livestock-response.json
+          echo
+
+      - name: Commodity — ICE close (Coffee, Cocoa, Sugar, Cotton, Brent)
+        if: ${{ contains(fromJSON('["commodity-ice","all"]'), steps.pick.outputs.job) }}
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --show-error --silent \
+               --connect-timeout 15 --max-time 200 \
+               -H "Authorization: Bearer ${SECRET}" \
+               "${BASE_URL}/api/cron/yahoo-commodity?phase=history&group=ice&symbols=KC=F,CC=F,SB=F,CT=F,BZ=F" | tee commodity-ice-response.json
           echo
 
       - name: Index — Japan market close (^N225)
