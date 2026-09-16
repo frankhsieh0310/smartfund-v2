@@ -39,8 +39,19 @@ export async function GET(request: Request) {
     return Response.json({ ok: false, task: "yahoo-index", error: `Unknown phase: ${phase}. Use quote|history.` }, { status: 400 });
   }
 
-  const scope = url.searchParams.get("scope") === "smoke" ? CORE_INDEX_SYMBOLS.slice(0, 5) : undefined;
-  const cpKey = `yahoo-index-${phase}${scope ? "-smoke" : ""}`;
+  // Market-scoped callers (per-market-close GitHub Actions triggers) pass both `market` (a short
+  // label giving that group its own checkpoint/run-key namespace, e.g. "us", "japan") and
+  // `symbols` (explicit comma-separated Yahoo tickers for that market's index subset) so each
+  // market's cursor never interleaves with the default full-registry sweep's cursor.
+  const market = url.searchParams.get("market");
+  const explicitSymbols = url.searchParams.get("symbols");
+  const scope = explicitSymbols
+    ? explicitSymbols.split(",").map((s) => s.trim()).filter(Boolean)
+    : url.searchParams.get("scope") === "smoke"
+      ? CORE_INDEX_SYMBOLS.slice(0, 5)
+      : undefined;
+  const scopeKey = market ? `-market:${market}` : scope ? "-smoke" : "";
+  const cpKey = `yahoo-index-${phase}${scopeKey}`;
   const runKey = `${cpKey}:${new Date().toISOString().slice(0, 13)}`;
   const cpBefore = await readCheckpoint(cpKey);
   const { runId, skipped } = await beginRun({ jobName: JOB, provider: "YAHOO", runKey, universeCount: 0, batchSize: batch, checkpointBefore: cpBefore });
