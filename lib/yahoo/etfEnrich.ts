@@ -135,31 +135,12 @@ async function writeEtfEnrichData(
       [input.etfId, md.nameEn, md.category, md.currency, md.inception, md.nav, md.aum, md.expense, md.yield, md.beta],
     );
   }
-  // NAV must carry its own as-of date, distinct from market_close_date — never the ingestion
-  // clock. Yahoo's quoteSummary navPrice doesn't carry an explicit as-of timestamp for ETFs, but
-  // an ETF's official NAV is published once per completed trading session, dated to that same
-  // session's close (the convention Yahoo/every issuer site itself displays NAV under). So the
-  // NAV's source date is this ETF's own latest recorded market-close date — a real, source-driven
-  // date already captured by the market-price writer (run-global-etf-latest.ts /
-  // lib/yahoo/etfHistory.ts), never "today". If no market-close row exists yet for this ETF, NAV
-  // is skipped rather than guessing a date.
-  if (md.nav != null) {
-    const latestClose = await query(
-      `SELECT date::text AS date FROM etf_history WHERE etf_id = $1 AND price IS NOT NULL ORDER BY date DESC LIMIT 1`,
-      [input.etfId],
-    );
-    const navDate: string | null = latestClose[0]?.date ?? null;
-    if (navDate) {
-      await query(
-        `INSERT INTO etf_history (id, etf_id, date, nav, source, source_url, known_at)
-         VALUES (gen_random_uuid()::text, $1, $2::date, $3, 'YAHOO_QUOTE_SUMMARY', $4, $5::timestamptz)
-         ON CONFLICT (etf_id, date) DO UPDATE SET
-           nav = EXCLUDED.nav, known_at = GREATEST(etf_history.known_at, EXCLUDED.known_at)
-         WHERE etf_history.nav IS DISTINCT FROM EXCLUDED.nav`,
-        [input.etfId, navDate, md.nav, srcUrl, retrievedAt],
-      );
-    }
-  }
+  // Confirmed via the actual quoteSummary payload (summaryDetail.navPrice is a bare {raw,fmt}
+  // number with no companion as-of field anywhere in the response, and price.regularMarketTime is
+  // the MARKET price's own timestamp, not NAV's) that Yahoo does not expose a NAV-specific source
+  // date for ETPs through this endpoint. Per the no-fabrication rule, latest_nav above is the only
+  // NAV write here — no dated etf_history row is created from this source, since any date we could
+  // attach (market-close date, today, ingestion time) would not be NAV's own source date.
 
   // 2) performance -> etf_performances + etfs trailing returns
   const trailing = perf.trailingReturns ?? {};
