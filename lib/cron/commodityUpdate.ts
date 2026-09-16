@@ -82,7 +82,16 @@ export async function updateCommodityHistory(cursor: string | null, batchSize = 
         fetchYahooChartPeriod(root.yahooSymbol, Math.floor(from.getTime() / 1000), Math.floor(to.getTime() / 1000)),
         new Promise<null>((resolve) => setTimeout(() => resolve(null), 20_000)),
       ]);
-      const candles = (chart?.candles ?? []).filter((c) => c.close != null && c.close > 0 && c.high != null && c.low != null && c.open != null);
+      // Reject non-finalized/placeholder bars, not just missing fields: a session still in
+      // progress (or a not-yet-updated duplicate of the prior close) typically shows zero
+      // aggregated volume or a flat high==low with no real trading range. Combined with each
+      // caller only firing after that exchange group's real settlement (the route's `group`
+      // param), this is the finalized-candle check — never a live/in-progress bar mistaken for
+      // the official daily close.
+      const candles = (chart?.candles ?? []).filter((c) =>
+        c.close != null && c.close > 0 && c.high != null && c.low != null && c.open != null &&
+        c.high !== c.low && !(c.volume != null && c.volume === 0)
+      );
       if (!candles.length) { failedRoots.push({ rootId: root.rootId, symbol: root.yahooSymbol, reason: "NO_CANDLES" }); continue; }
 
       const cursorTime = latestDate ? latestDate.getTime() : null;

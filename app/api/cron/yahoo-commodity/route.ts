@@ -14,7 +14,7 @@
 
 import { isAuthorizedCron, unauthorizedCron } from "@/lib/cron/authorize";
 import { beginRun, finishRun, readCheckpoint, writeCheckpoint } from "@/lib/cloud-ingestion/runContext";
-import { updateCommodityHistory } from "@/lib/cron/commodityUpdate";
+import { updateCommodityHistory, CORE_COMMODITY_ROOTS } from "@/lib/cron/commodityUpdate";
 
 export const runtime = "nodejs";
 export const maxDuration = 280;
@@ -34,7 +34,16 @@ export async function GET(request: Request) {
     return Response.json({ ok: false, task: "yahoo-commodity", error: `Unknown phase: ${phase}. Use history.` }, { status: 400 });
   }
 
-  const cpKey = "yahoo-commodity-history";
+  // Market-close-scoped callers (per-exchange-group GitHub Actions triggers) pass both `group` (a
+  // short label giving that exchange group its own checkpoint/run-key namespace, e.g.
+  // "comex-nymex", "cbot") and `symbols` (explicit comma-separated Yahoo tickers for that group)
+  // so each group's cursor never interleaves with the default full-universe sweep's cursor.
+  const group = url.searchParams.get("group");
+  const explicitSymbols = url.searchParams.get("symbols");
+  const scope = explicitSymbols
+    ? CORE_COMMODITY_ROOTS.filter((r) => explicitSymbols.split(",").map((s) => s.trim()).includes(r.yahooSymbol))
+    : undefined;
+  const cpKey = group ? `yahoo-commodity-history-group:${group}` : "yahoo-commodity-history";
   const runKey = `${cpKey}:${new Date().toISOString().slice(0, 13)}`;
   const cpBefore = await readCheckpoint(cpKey);
   const { runId, skipped } = await beginRun({ jobName: JOB, provider: "YAHOO", runKey, universeCount: 0, batchSize: HISTORY_BATCH_SIZE, checkpointBefore: cpBefore });
@@ -46,7 +55,7 @@ export async function GET(request: Request) {
     const failedRoots: Array<{ rootId: string; symbol: string; reason: string }> = [];
     let wrapped = false, slices = 0;
     while (Date.now() - started < HISTORY_MAX_SAFE_RUNTIME_MS) {
-      const r = await updateCommodityHistory(cursor, HISTORY_BATCH_SIZE);
+      const r = await updateCommodityHistory(cursor, HISTORY_BATCH_SIZE, scope);
       requestedRoots += r.requestedRoots; updatedRoots += r.updatedRoots; rowsWritten += r.rowsWritten;
       failedRoots.push(...r.failedRoots);
       cursor = r.lastId; slices++;
