@@ -39,6 +39,8 @@ export interface UnifiedSearchResult {
   provenance: Provenance;
   detailHref: string | null;
   publicReady: boolean;
+  fundCategory: string | null;
+  fundSubcategory: string | null;
 }
 
 export interface GlobalSearchResponse {
@@ -47,7 +49,7 @@ export interface GlobalSearchResponse {
   error: null;
 }
 
-type SearchableRow = { publicReady?: boolean; identity: { assetType: SearchAssetType; id: string; symbol: string; name: string; displayName: string; currency: string | null; market: string | null; country: string | null }; metrics: { priceOrNav: number | null; changePercent: number | null; asOfDate: string | null }; freshnessStatus?: FreshnessStatus; source?: string | null };
+type SearchableRow = { publicReady?: boolean; identity: { assetType: SearchAssetType; id: string; symbol: string; name: string; displayName: string; currency: string | null; market: string | null; country: string | null }; metrics: { priceOrNav: number | null; changePercent: number | null; asOfDate: string | null }; freshnessStatus?: FreshnessStatus; source?: string | null; fundCategory?: string | null; fundSubcategory?: string | null };
 type DomainPayload = { data: SearchableRow[] | null; meta: { freshnessStatus: FreshnessStatus; source: string | null; asOfDate: string | null; lastUpdated: string | null; coverageStatus: CoverageStatus; provenance: Provenance } };
 
 const identityPayload = (data: SearchableRow[], source: string | null = null): DomainPayload => ({
@@ -165,7 +167,7 @@ export async function globalSearch(input: { query: string; type?: SearchType; li
       const source = row.source ?? response.meta.source;
       const asOfDate = row.metrics.asOfDate ?? response.meta.asOfDate;
       const provenance = buildProvenance({ source, sourceRecordId: row.identity.id, asOfDate, lastUpdated: response.meta.lastUpdated });
-      const effectiveFreshness=row.freshnessStatus ?? response.meta.freshnessStatus; const publicReady=row.publicReady ?? (["STOCK","ETF"].includes(assetType) && row.metrics.priceOrNav !== null && Boolean(asOfDate) && response.meta.coverageStatus === "FULL" && !["UNKNOWN","UNAVAILABLE","STALE"].includes(effectiveFreshness)); results.push({ assetType, canonicalId: row.identity.id, symbolOrCode: row.identity.symbol || null, name: row.identity.name, displayName: localizedNameZhTw(row.identity.symbol, row.identity.displayName), market: row.identity.market, exchange: row.identity.market, country: row.identity.country, currency: row.identity.currency, latestValue: row.metrics.priceOrNav, changePercent: row.metrics.changePercent, asOfDate, lastUpdated: provenance.lastUpdated, freshnessStatus: effectiveFreshness, coverageStatus: response.meta.coverageStatus, source, provenance, publicReady, detailHref: publicReady ? hrefFor(assetType, row.identity.symbol) : null });
+      const effectiveFreshness=row.freshnessStatus ?? response.meta.freshnessStatus; const publicReady=row.publicReady ?? (["STOCK","ETF"].includes(assetType) && row.metrics.priceOrNav !== null && Boolean(asOfDate) && response.meta.coverageStatus === "FULL" && !["UNKNOWN","UNAVAILABLE","STALE"].includes(effectiveFreshness)); results.push({ assetType, canonicalId: row.identity.id, symbolOrCode: row.identity.symbol || null, name: row.identity.name, displayName: localizedNameZhTw(row.identity.symbol, row.identity.displayName), market: row.identity.market, exchange: row.identity.market, country: row.identity.country, currency: row.identity.currency, latestValue: row.metrics.priceOrNav, changePercent: row.metrics.changePercent, asOfDate, lastUpdated: provenance.lastUpdated, freshnessStatus: effectiveFreshness, coverageStatus: response.meta.coverageStatus, source, provenance, publicReady, detailHref: publicReady ? hrefFor(assetType, row.identity.symbol) : null, fundCategory: row.fundCategory ?? null, fundSubcategory: row.fundSubcategory ?? null });
     }
   }
   if (failedDomains.length === types.length) throw new WebDataError("DATA_UNAVAILABLE", "Canonical search domains are temporarily unavailable.");

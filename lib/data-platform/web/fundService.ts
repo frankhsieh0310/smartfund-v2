@@ -5,6 +5,7 @@ import { freshnessStatus } from "./freshness.ts";
 import { normalizePagination, paginationMeta } from "./pagination.ts";
 import { buildProvenance } from "./provenance.ts";
 import { isoOrNull, numberOrNull, type CanonicalIdentity, type HistoryQuery, type ListQuery, type Provenance, type ResponseMeta, type ServiceResponse, type SummaryMetrics } from "./types.ts";
+import { mapFundMainCategory, type FundMainCategory } from "./fundCategoryMapping.ts";
 
 const fundIdentity = (row: { id: string; code: string | null; isin: string | null; name: string; currency: string; domicile: string | null; region: string | null }): CanonicalIdentity => ({ assetType: "FUND", id: row.id, symbol: row.code ?? row.isin ?? row.id, name: row.name, displayName: row.name, currency: row.currency, market: row.domicile, country: row.region ?? row.domicile });
 const fundMetrics = (row: { latestNav: unknown; currency: string; latestNavDate: Date | null; return1y: unknown }): SummaryMetrics => ({ priceOrNav: numberOrNull(row.latestNav), change: null, changePercent: null, currency: row.currency, asOfDate: isoOrNull(row.latestNavDate), performance1M: null, performance3M: null, performance1Y: numberOrNull(row.return1y) });
@@ -24,6 +25,8 @@ export interface FundListItem {
   metrics: SummaryMetrics;
   company: string;
   category: string | null;
+  fundCategory: FundMainCategory;
+  fundSubcategory: string | null;
   riskLevel: number | null;
   freshnessStatus: ReturnType<typeof freshnessStatus>;
   publicReady: boolean;
@@ -57,7 +60,7 @@ export async function getFundList(query: FundListQuery = {}): Promise<ServiceRes
   const updated = rows.reduce<Date | null>((value, row) => !value || row.updatedAt > value ? row.updatedAt : value, null);
   const source = rows.length === 1 ? rows[0].lastNavSource ?? rows[0].dataSource ?? rows[0].dataProvider : "MULTIPLE_VERIFIED_PROVIDERS";
   const provenance = buildProvenance({ source, asOfDate: latest, lastUpdated: updated });
-  return { data: rows.map((row) => ({ identity: fundIdentity(row), isin: row.isin, metrics: fundMetrics(row), company: row.company, category: row.category, riskLevel: row.riskLevel, freshnessStatus: freshnessStatus(row.latestNavDate, "PUBLICATION_AWARE"), publicReady: row.latestNav != null && row.latestNavDate != null && readyByFund.get(row.id) === true && !["STALE","UNKNOWN","UNAVAILABLE"].includes(freshnessStatus(row.latestNavDate, "PUBLICATION_AWARE")), source: row.lastNavSource ?? row.dataSource ?? row.dataProvider })), meta: { asOfDate: provenance.asOfDate, lastUpdated: provenance.lastUpdated, freshnessStatus: freshnessStatus(latest, "PUBLICATION_AWARE"), source, provenance, coverageStatus: "PARTIAL_CURRENT" }, pagination: paginationMeta(page, pageSize, total), error: null };
+  return { data: rows.map((row) => ({ identity: fundIdentity(row), isin: row.isin, metrics: fundMetrics(row), company: row.company, category: row.category, fundCategory: mapFundMainCategory(row.category), fundSubcategory: row.category, riskLevel: row.riskLevel, freshnessStatus: freshnessStatus(row.latestNavDate, "PUBLICATION_AWARE"), publicReady: row.latestNav != null && row.latestNavDate != null && readyByFund.get(row.id) === true && !["STALE","UNKNOWN","UNAVAILABLE"].includes(freshnessStatus(row.latestNavDate, "PUBLICATION_AWARE")), source: row.lastNavSource ?? row.dataSource ?? row.dataProvider })), meta: { asOfDate: provenance.asOfDate, lastUpdated: provenance.lastUpdated, freshnessStatus: freshnessStatus(latest, "PUBLICATION_AWARE"), source, provenance, coverageStatus: "PARTIAL_CURRENT" }, pagination: paginationMeta(page, pageSize, total), error: null };
 }
 
 export async function getFundFilterOptions(): Promise<{ companies: string[]; currencies: string[]; categories: string[]; riskLevels: number[] }> {
@@ -92,6 +95,8 @@ export interface FundDetailData {
   company: string | null;
   assetClass: string | null;
   category: string | null;
+  fundCategory: FundMainCategory;
+  fundSubcategory: string | null;
   riskRating: number | null;
   nav: FundSection<{ value: number | null; currency: string | null; date: string | null }>;
   history: FundSection<Array<{ date: string; nav: number | null }>> & { range: FundDetailRange; maxPoints: number };
@@ -158,7 +163,7 @@ export async function getFundDetail(identifier: string, relationLimit = 20, rang
     ? chronologicalHistory
     : Array.from({ length: FUND_DETAIL_LIMITS.history }, (_, index) => chronologicalHistory[Math.round(index * (chronologicalHistory.length - 1) / (FUND_DETAIL_LIMITS.history - 1))]);
   const data: FundDetailData = {
-    identity: { ...fundIdentity(row), isin: row.isin, code: row.code }, company: row.company.trim() || null, assetClass: classificationAssetClass, category: row.category, riskRating: row.riskLevel,
+    identity: { ...fundIdentity(row), isin: row.isin, code: row.code }, company: row.company.trim() || null, assetClass: classificationAssetClass, category: row.category, fundCategory: mapFundMainCategory(row.category), fundSubcategory: row.category, riskRating: row.riskLevel,
     nav: { coverage: row.latestNav === null ? "UNAVAILABLE" : "AVAILABLE", data: { value: numberOrNull(row.latestNav), currency: row.currency, date: isoOrNull(row.latestNavDate) }, provenance },
     history: { coverage: sectionCoverage(historyRows.length, historyRows.length < 2), range, maxPoints: FUND_DETAIL_LIMITS.history, data: sampledHistory.map((item) => ({ date: item.date.toISOString(), nav: numberOrNull(item.nav) })), provenance: historyProvenance },
     performance: { coverage: latestReturns && [latestReturns.return1m, latestReturns.return3m, latestReturns.return6m, latestReturns.returnYtd, latestReturns.return1y, latestReturns.return3y, latestReturns.return5y].some((value) => value !== null) ? "AVAILABLE" : "UNAVAILABLE", data: { return1M: numberOrNull(latestReturns?.return1m), return3M: numberOrNull(latestReturns?.return3m), return6M: numberOrNull(latestReturns?.return6m), returnYtd: numberOrNull(latestReturns?.returnYtd), return1Y: numberOrNull(latestReturns?.return1y), return3YAnnualized: numberOrNull(latestReturns?.return3y), return5YAnnualized: numberOrNull(latestReturns?.return5y), semantics: "NAV_RETURN" }, provenance: performanceProvenance },
