@@ -135,6 +135,31 @@ async function writeEtfEnrichData(
       [input.etfId, md.nameEn, md.category, md.currency, md.inception, md.nav, md.aum, md.expense, md.yield, md.beta],
     );
   }
+  // NAV must carry its own as-of date, distinct from market_close_date — never the ingestion
+  // clock. Yahoo's quoteSummary navPrice doesn't carry an explicit as-of timestamp for ETFs, but
+  // an ETF's official NAV is published once per completed trading session, dated to that same
+  // session's close (the convention Yahoo/every issuer site itself displays NAV under). So the
+  // NAV's source date is this ETF's own latest recorded market-close date — a real, source-driven
+  // date already captured by the market-price writer (run-global-etf-latest.ts /
+  // lib/yahoo/etfHistory.ts), never "today". If no market-close row exists yet for this ETF, NAV
+  // is skipped rather than guessing a date.
+  if (md.nav != null) {
+    const latestClose = await query(
+      `SELECT date::text AS date FROM etf_history WHERE etf_id = $1 AND price IS NOT NULL ORDER BY date DESC LIMIT 1`,
+      [input.etfId],
+    );
+    const navDate: string | null = latestClose[0]?.date ?? null;
+    if (navDate) {
+      await query(
+        `INSERT INTO etf_history (id, etf_id, date, nav, source, source_url, known_at)
+         VALUES (gen_random_uuid()::text, $1, $2::date, $3, 'YAHOO_QUOTE_SUMMARY', $4, $5::timestamptz)
+         ON CONFLICT (etf_id, date) DO UPDATE SET
+           nav = EXCLUDED.nav, known_at = GREATEST(etf_history.known_at, EXCLUDED.known_at)
+         WHERE etf_history.nav IS DISTINCT FROM EXCLUDED.nav`,
+        [input.etfId, navDate, md.nav, srcUrl, retrievedAt],
+      );
+    }
+  }
 
   // 2) performance -> etf_performances + etfs trailing returns
   const trailing = perf.trailingReturns ?? {};
@@ -189,7 +214,7 @@ async function writeEtfEnrichData(
            (id, etf_id, effective_date, report_date, source, source_type, source_url, source_record_id, retrieved_at,
             checksum, source_row_count, parsed_row_count, canonical_row_count, verification_status, license_status,
             completeness_status, quality_status, quality_metrics, parser_version, archive_lineage)
-         VALUES (gen_random_uuid(), $1, NULL, NULL, 'YAHOO_QUOTE_SUMMARY', 'PROVIDER_OBSERVATION', $2, $3, $4,
+         VALUES (gen_random_uuid(), $1, NULL, NULL, 'YAHOO_QUOTE_SUMMARY', 'PROVIDER_OBSERVATION', $2, $3, $4::timestamptz,
             $5, $6, $6, $6, 'SOURCE_PARSED', 'TERMS_REVIEW_REQUIRED', 'TOP_HOLDINGS_ONLY', 'PARTIAL_DATE_UNKNOWN',
             $7::jsonb, 'yahoo-top-holdings-v2', $8::jsonb)
          RETURNING id::text`,
@@ -222,7 +247,7 @@ async function writeEtfEnrichData(
     for (const s of sectors) {
       await query(
         `INSERT INTO etf_sector_allocations (id, etf_id, observation_date, sector_name, weight, source, source_url, retrieved_at, created_at, updated_at)
-         VALUES (gen_random_uuid(), $1, $2::date, $3, $4, 'YAHOO_QUOTE_SUMMARY', $5, $6, NOW(), NOW())
+         VALUES (gen_random_uuid(), $1, $2::date, $3, $4, 'YAHOO_QUOTE_SUMMARY', $5, $6::timestamptz, NOW(), NOW())
          ON CONFLICT (etf_id, observation_date, source, sector_name) DO UPDATE SET
            weight = EXCLUDED.weight, source_url = EXCLUDED.source_url, retrieved_at = EXCLUDED.retrieved_at, updated_at = NOW()`,
         [input.etfId, d, s.name, s.weight, srcUrl, retrievedAt],
@@ -238,7 +263,7 @@ async function writeEtfEnrichData(
     for (const cr of ratings) {
       await query(
         `INSERT INTO etf_credit_rating_allocations (id, etf_id, observation_date, credit_rating, weight, source, source_url, retrieved_at, created_at, updated_at)
-         VALUES (gen_random_uuid(), $1, $2::date, $3, $4, 'YAHOO_QUOTE_SUMMARY', $5, $6, NOW(), NOW())
+         VALUES (gen_random_uuid(), $1, $2::date, $3, $4, 'YAHOO_QUOTE_SUMMARY', $5, $6::timestamptz, NOW(), NOW())
          ON CONFLICT (etf_id, observation_date, source, credit_rating) DO UPDATE SET
            weight = EXCLUDED.weight, source_url = EXCLUDED.source_url, retrieved_at = EXCLUDED.retrieved_at, updated_at = NOW()`,
         [input.etfId, d, cr.name, cr.weight, srcUrl, retrievedAt],
