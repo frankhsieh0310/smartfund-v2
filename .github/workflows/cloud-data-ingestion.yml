@@ -82,13 +82,30 @@ on:
     # Official statistical releases have no fixed market-close time; once/day is sufficient and
     # each script's own source-state comparison NOOPs when nothing changed.
     - cron: "10 5 * * *"        # Macro/BIS daily source check, all days (safe NOOP on non-release days)
+    # US 8:30am ET release window (NFP/CPI/PPI/GDP/PCE — BLS+BEA+Census core releases, verified via
+    # economic_calendar_agencies + economic_calendar_us_core_series, both mapping_state=VERIFIED).
+    # This is the one release-family group with a reliable, structural release TIME (all of these
+    # agencies publish at the exact same 8:30am ET, mandated by OMB Statistical Policy Directive —
+    # a fixed clock convention, not a per-event calendar guess); the actual event DATE still comes
+    # from whichever weekday it lands on, which this does not need to know — checking on a non-
+    # release day is a safe NOOP. 13:30 UTC is 8:30am EST (winter) and 9:30am EDT (summer) — i.e.
+    # never BEFORE the actual release in either DST state, only up to 1h after in summer. Bounded
+    # retry (T+0/10/20/40) by simply re-invoking the same idempotent, source-state-driven script —
+    # no new retry-loop code; the daily safety sweep above remains the final catch-all for anything
+    # still delayed past this window. Only FRED is filtered here (--providers=FRED) since that is
+    # this codebase's existing adapter for these series — same script, same writer, same owner as
+    # the daily sweep, not a second one.
+    - cron: "30 13 * * 1-5"     # US release window: check 1 (T+0)
+    - cron: "40 13 * * 1-5"     # US release window: check 2 (T+10)
+    - cron: "50 13 * * 1-5"     # US release window: check 3 (T+20)
+    - cron: "10 14 * * 1-5"     # US release window: check 4 (T+40, final bounded retry)
   workflow_dispatch:
     inputs:
       job:
         description: "Which job to run"
         type: choice
         default: all
-        options: [both, etf-price, moneydj-fund, moneydj-etf, global-etf-holdings, fund-holdings, fund-nav, consensus-ingest, consensus-aggregate, consensus-performance, consensus-flips, consensus-backfill, tw-fundamentals-refresh, global-pe-recompute, mops-financial-incremental, sec-financial-incremental, fx-quote, crypto-quote, crypto-marketcap, crypto-history, index-history, index-japan, index-korea, index-china, index-philippines, index-hongkong, index-sea, index-india, index-russia, index-europe, index-us, commodity-cbot, commodity-comex-nymex, commodity-livestock, commodity-ice, macro-bis-daily, all]
+        options: [both, etf-price, moneydj-fund, moneydj-etf, global-etf-holdings, fund-holdings, fund-nav, consensus-ingest, consensus-aggregate, consensus-performance, consensus-flips, consensus-backfill, tw-fundamentals-refresh, global-pe-recompute, mops-financial-incremental, sec-financial-incremental, fx-quote, crypto-quote, crypto-marketcap, crypto-history, index-history, index-japan, index-korea, index-china, index-philippines, index-hongkong, index-sea, index-india, index-russia, index-europe, index-us, commodity-cbot, commodity-comex-nymex, commodity-livestock, commodity-ice, macro-bis-daily, macro-release-window-us, all]
 
 concurrency:
   group: cloud-data-ingestion
@@ -567,3 +584,44 @@ jobs:
 
       - name: CBC Taiwan official
         run: node --experimental-strip-types scripts/data/economic-indicators/ingest-taiwan-cbc-official.ts
+
+  # Release-aware trigger for the one release-family group with a reliable, verified official
+  # release TIME (see the schedule comment above): US BLS/BEA/Census core releases (NFP, CPI, PPI,
+  # GDP, PCE), all via the FRED adapter already used by macro-bis-daily. This is a release
+  # WATCHER, not a second writer: it calls the exact same existing, unmodified
+  # run-production-macro-daily.ts script (same DB-backed lifecycle lock, same source-state/NOOP
+  # logic, same canonical writer) with --providers=FRED, so a still-stale source at any given
+  # check is a harmless no-op, never a guessed or duplicated write. Four cron entries at this
+  # single trigger time implement bounded retry (T+0/10/20/40) with zero new retry-loop code — one
+  # source-level updater, still checked as a whole (not per-indicator); the existing
+  # macro-bis-daily daily safety sweep above remains the final catch-all for delayed releases.
+  macro-release-window-us:
+    if: ${{ contains(fromJSON('["30 13 * * 1-5","40 13 * * 1-5","50 13 * * 1-5","10 14 * * 1-5"]'), github.event.schedule) || github.event.inputs.job == 'macro-release-window-us' || github.event.inputs.job == 'all' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: macro-bis-daily
+      cancel-in-progress: false
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+    steps:
+      - name: Guard — DATABASE_URL present
+        run: |
+          if [ -z "${DATABASE_URL}" ]; then
+            echo "::error::DATABASE_URL is not set on this repository."
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - run: npm ci
+
+      - run: npx prisma generate
+
+      - name: FRED release-window check (NFP/CPI/PPI/GDP/PCE)
+        run: node --experimental-strip-types scripts/data/daily/run-production-macro-daily.ts --providers=FRED
