@@ -45,13 +45,31 @@ on:
     # finalized by the time this fires. Market-level job over the existing 52-index registry, not
     # per-index; checkpoint/resume + per-index failure isolation already live in the route itself.
     - cron: "26 0 * * *"        # index history: daily 08:26 Taipei, existing checkpointed batches
+    # Yahoo Taiwan "international index" page (22 fixed symbols): one trigger per MARKET close,
+    # not per index. Each time is picked at/after that market's LATEST possible UTC close (i.e. its
+    # winter/non-DST offset, which is later in UTC than its summer/DST offset) plus a 10-20min
+    # buffer for Yahoo to finalize the daily bar — so a market never fires before its own close in
+    # either DST state. Weekdays only (Mon-Fri UTC always lines up with the local trading weekday
+    # for every zone below, since none of these trigger times cross UTC midnight relative to the
+    # local session). Same idempotent/checkpointed route as the sweep above; Yahoo's own state
+    # (no new candle -> NOOP) handles exchange holidays without a holiday calendar here.
+    - cron: "20 6 * * 1-5"      # Index: Japan (^N225) — close 15:00 JST = 06:00 UTC
+    - cron: "45 6 * * 1-5"      # Index: Korea (^KS11) — close 15:30 KST = 06:30 UTC
+    - cron: "20 7 * * 1-5"      # Index: China A/B shares (SSE+SZSE, 6 symbols) — close 15:00 CST = 07:00 UTC
+    - cron: "45 7 * * 1-5"      # Index: Philippines (PSEI.PS) — close 15:30 PHT = 07:30 UTC
+    - cron: "25 8 * * 1-5"      # Index: Hong Kong (^HSI) — close 16:10 HKT = 08:10 UTC
+    - cron: "15 9 * * 1-5"      # Index: SE Asia (^JKSE, ^KLSE, ^STI) — close 09:00 UTC (all three coincide)
+    - cron: "15 10 * * 1-5"     # Index: India (^BSESN) — close 15:30 IST = 10:00 UTC
+    - cron: "5 16 * * 1-5"      # Index: Russia (RTSI.ME) — nominal MOEX close ~15:50 UTC (source frozen since 2022, expect NOOP)
+    - cron: "50 16 * * 1-5"     # Index: Europe (^GDAXI, ^FTSE, ^FCHI) — latest winter close 16:30-16:35 UTC
+    - cron: "15 21 * * 1-5"     # Index: US (^DJI, ^GSPC, ^IXIC, ^SOX) — latest winter close 21:00 UTC
   workflow_dispatch:
     inputs:
       job:
         description: "Which job to run"
         type: choice
         default: all
-        options: [both, etf-price, moneydj-fund, moneydj-etf, global-etf-holdings, fund-holdings, fund-nav, consensus-ingest, consensus-aggregate, consensus-performance, consensus-flips, consensus-backfill, tw-fundamentals-refresh, global-pe-recompute, mops-financial-incremental, sec-financial-incremental, fx-quote, crypto-quote, crypto-marketcap, crypto-history, index-history, all]
+        options: [both, etf-price, moneydj-fund, moneydj-etf, global-etf-holdings, fund-holdings, fund-nav, consensus-ingest, consensus-aggregate, consensus-performance, consensus-flips, consensus-backfill, tw-fundamentals-refresh, global-pe-recompute, mops-financial-incremental, sec-financial-incremental, fx-quote, crypto-quote, crypto-marketcap, crypto-history, index-history, index-japan, index-korea, index-china, index-philippines, index-hongkong, index-sea, index-india, index-russia, index-europe, index-us, all]
 
 concurrency:
   group: cloud-data-ingestion
@@ -79,6 +97,16 @@ jobs:
             "39 0 * * *") echo "job=crypto-marketcap" >> "$GITHUB_OUTPUT" ;;
             "23 0 * * *") echo "job=crypto-history" >> "$GITHUB_OUTPUT" ;;
             "26 0 * * *") echo "job=index-history" >> "$GITHUB_OUTPUT" ;;
+            "20 6 * * 1-5") echo "job=index-japan" >> "$GITHUB_OUTPUT" ;;
+            "45 6 * * 1-5") echo "job=index-korea" >> "$GITHUB_OUTPUT" ;;
+            "20 7 * * 1-5") echo "job=index-china" >> "$GITHUB_OUTPUT" ;;
+            "45 7 * * 1-5") echo "job=index-philippines" >> "$GITHUB_OUTPUT" ;;
+            "25 8 * * 1-5") echo "job=index-hongkong" >> "$GITHUB_OUTPUT" ;;
+            "15 9 * * 1-5") echo "job=index-sea" >> "$GITHUB_OUTPUT" ;;
+            "15 10 * * 1-5") echo "job=index-india" >> "$GITHUB_OUTPUT" ;;
+            "5 16 * * 1-5") echo "job=index-russia" >> "$GITHUB_OUTPUT" ;;
+            "50 16 * * 1-5") echo "job=index-europe" >> "$GITHUB_OUTPUT" ;;
+            "15 21 * * 1-5") echo "job=index-us" >> "$GITHUB_OUTPUT" ;;
             "7 * * * *")  echo "job=fund-holdings" >> "$GITHUB_OUTPUT" ;;
             "17 * * * *") echo "job=etf-price" >> "$GITHUB_OUTPUT" ;;
             "27 * * * *") echo "job=fund-nav" >> "$GITHUB_OUTPUT" ;;
@@ -287,6 +315,106 @@ jobs:
                --connect-timeout 15 --max-time 300 \
                -H "Authorization: Bearer ${SECRET}" \
                "${BASE_URL}/api/cron/yahoo-index?phase=history" | tee index-history-response.json
+          echo
+
+      - name: Index — Japan market close (^N225)
+        if: ${{ contains(fromJSON('["index-japan","all"]'), steps.pick.outputs.job) }}
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --show-error --silent \
+               --connect-timeout 15 --max-time 120 \
+               -H "Authorization: Bearer ${SECRET}" \
+               "${BASE_URL}/api/cron/yahoo-index?phase=history&market=japan&symbols=%5EN225" | tee index-japan-response.json
+          echo
+
+      - name: Index — Korea market close (^KS11)
+        if: ${{ contains(fromJSON('["index-korea","all"]'), steps.pick.outputs.job) }}
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --show-error --silent \
+               --connect-timeout 15 --max-time 120 \
+               -H "Authorization: Bearer ${SECRET}" \
+               "${BASE_URL}/api/cron/yahoo-index?phase=history&market=korea&symbols=%5EKS11" | tee index-korea-response.json
+          echo
+
+      - name: Index — China A/B shares market close (SSE+SZSE)
+        if: ${{ contains(fromJSON('["index-china","all"]'), steps.pick.outputs.job) }}
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --show-error --silent \
+               --connect-timeout 15 --max-time 150 \
+               -H "Authorization: Bearer ${SECRET}" \
+               "${BASE_URL}/api/cron/yahoo-index?phase=history&market=china&symbols=000001.SS,000002.SS,000003.SS,399001.SZ,399107.SZ,399108.SZ" | tee index-china-response.json
+          echo
+
+      - name: Index — Philippines market close (PSEI.PS)
+        if: ${{ contains(fromJSON('["index-philippines","all"]'), steps.pick.outputs.job) }}
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --show-error --silent \
+               --connect-timeout 15 --max-time 120 \
+               -H "Authorization: Bearer ${SECRET}" \
+               "${BASE_URL}/api/cron/yahoo-index?phase=history&market=philippines&symbols=PSEI.PS" | tee index-philippines-response.json
+          echo
+
+      - name: Index — Hong Kong market close (^HSI)
+        if: ${{ contains(fromJSON('["index-hongkong","all"]'), steps.pick.outputs.job) }}
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --show-error --silent \
+               --connect-timeout 15 --max-time 120 \
+               -H "Authorization: Bearer ${SECRET}" \
+               "${BASE_URL}/api/cron/yahoo-index?phase=history&market=hongkong&symbols=%5EHSI" | tee index-hongkong-response.json
+          echo
+
+      - name: Index — SE Asia market close (^JKSE, ^KLSE, ^STI)
+        if: ${{ contains(fromJSON('["index-sea","all"]'), steps.pick.outputs.job) }}
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --show-error --silent \
+               --connect-timeout 15 --max-time 150 \
+               -H "Authorization: Bearer ${SECRET}" \
+               "${BASE_URL}/api/cron/yahoo-index?phase=history&market=sea&symbols=%5EJKSE,%5EKLSE,%5ESTI" | tee index-sea-response.json
+          echo
+
+      - name: Index — India market close (^BSESN)
+        if: ${{ contains(fromJSON('["index-india","all"]'), steps.pick.outputs.job) }}
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --show-error --silent \
+               --connect-timeout 15 --max-time 120 \
+               -H "Authorization: Bearer ${SECRET}" \
+               "${BASE_URL}/api/cron/yahoo-index?phase=history&market=india&symbols=%5EBSESN" | tee index-india-response.json
+          echo
+
+      - name: Index — Russia market close (RTSI.ME, source frozen since 2022 — expect NOOP)
+        if: ${{ contains(fromJSON('["index-russia","all"]'), steps.pick.outputs.job) }}
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --show-error --silent \
+               --connect-timeout 15 --max-time 120 \
+               -H "Authorization: Bearer ${SECRET}" \
+               "${BASE_URL}/api/cron/yahoo-index?phase=history&market=russia&symbols=RTSI.ME" | tee index-russia-response.json
+          echo
+
+      - name: Index — Europe market close (^GDAXI, ^FTSE, ^FCHI)
+        if: ${{ contains(fromJSON('["index-europe","all"]'), steps.pick.outputs.job) }}
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --show-error --silent \
+               --connect-timeout 15 --max-time 150 \
+               -H "Authorization: Bearer ${SECRET}" \
+               "${BASE_URL}/api/cron/yahoo-index?phase=history&market=europe&symbols=%5EGDAXI,%5EFTSE,%5EFCHI" | tee index-europe-response.json
+          echo
+
+      - name: Index — US market close (^DJI, ^GSPC, ^IXIC, ^SOX)
+        if: ${{ contains(fromJSON('["index-us","all"]'), steps.pick.outputs.job) }}
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --show-error --silent \
+               --connect-timeout 15 --max-time 150 \
+               -H "Authorization: Bearer ${SECRET}" \
+               "${BASE_URL}/api/cron/yahoo-index?phase=history&market=us&symbols=%5EDJI,%5EGSPC,%5EIXIC,%5ESOX" | tee index-us-response.json
           echo
 
       - name: Crypto bounded slice
