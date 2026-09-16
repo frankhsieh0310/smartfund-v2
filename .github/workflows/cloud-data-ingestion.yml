@@ -45,6 +45,11 @@ on:
     # finalized by the time this fires. Market-level job over the existing 52-index registry, not
     # per-index; checkpoint/resume + per-index failure isolation already live in the route itself.
     - cron: "26 0 * * *"        # index history: daily 08:26 Taipei, existing checkpointed batches
+    # Commodity Core Universe (18 fixed roots: energy/metals/agriculture/livestock): ONE
+    # market-level daily trigger, same 00:xx UTC slot family as the crypto/index jobs above. Not
+    # per-symbol — the route itself loops the whole 18-root list with checkpoint/resume and
+    # per-root failure isolation, mirroring the Index/Crypto pattern exactly.
+    - cron: "32 0 * * *"        # commodity history: daily 08:32 Taipei, bounded incremental batches
     # Yahoo Taiwan "international index" page (22 fixed symbols): one trigger per MARKET close,
     # not per index. Each time is picked at/after that market's LATEST possible UTC close (i.e. its
     # winter/non-DST offset, which is later in UTC than its summer/DST offset) plus a 10-20min
@@ -69,7 +74,7 @@ on:
         description: "Which job to run"
         type: choice
         default: all
-        options: [both, etf-price, moneydj-fund, moneydj-etf, global-etf-holdings, fund-holdings, fund-nav, consensus-ingest, consensus-aggregate, consensus-performance, consensus-flips, consensus-backfill, tw-fundamentals-refresh, global-pe-recompute, mops-financial-incremental, sec-financial-incremental, fx-quote, crypto-quote, crypto-marketcap, crypto-history, index-history, index-japan, index-korea, index-china, index-philippines, index-hongkong, index-sea, index-india, index-russia, index-europe, index-us, all]
+        options: [both, etf-price, moneydj-fund, moneydj-etf, global-etf-holdings, fund-holdings, fund-nav, consensus-ingest, consensus-aggregate, consensus-performance, consensus-flips, consensus-backfill, tw-fundamentals-refresh, global-pe-recompute, mops-financial-incremental, sec-financial-incremental, fx-quote, crypto-quote, crypto-marketcap, crypto-history, index-history, index-japan, index-korea, index-china, index-philippines, index-hongkong, index-sea, index-india, index-russia, index-europe, index-us, commodity-history, all]
 
 concurrency:
   group: cloud-data-ingestion
@@ -97,6 +102,7 @@ jobs:
             "39 0 * * *") echo "job=crypto-marketcap" >> "$GITHUB_OUTPUT" ;;
             "23 0 * * *") echo "job=crypto-history" >> "$GITHUB_OUTPUT" ;;
             "26 0 * * *") echo "job=index-history" >> "$GITHUB_OUTPUT" ;;
+            "32 0 * * *") echo "job=commodity-history" >> "$GITHUB_OUTPUT" ;;
             "20 6 * * 1-5") echo "job=index-japan" >> "$GITHUB_OUTPUT" ;;
             "45 6 * * 1-5") echo "job=index-korea" >> "$GITHUB_OUTPUT" ;;
             "20 7 * * 1-5") echo "job=index-china" >> "$GITHUB_OUTPUT" ;;
@@ -315,6 +321,16 @@ jobs:
                --connect-timeout 15 --max-time 300 \
                -H "Authorization: Bearer ${SECRET}" \
                "${BASE_URL}/api/cron/yahoo-index?phase=history" | tee index-history-response.json
+          echo
+
+      - name: Commodity history (18-root Core Universe, incremental, checkpointed)
+        if: ${{ contains(fromJSON('["commodity-history","all"]'), steps.pick.outputs.job) }}
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --show-error --silent \
+               --connect-timeout 15 --max-time 200 \
+               -H "Authorization: Bearer ${SECRET}" \
+               "${BASE_URL}/api/cron/yahoo-commodity?phase=history" | tee commodity-history-response.json
           echo
 
       - name: Index — Japan market close (^N225)
