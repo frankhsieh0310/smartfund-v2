@@ -37,6 +37,11 @@ export interface YahooChartResult {
   instrumentType: string | null;
   httpStatus: number;
   contentType: string | null;
+  // Yahoo's own authoritative session-end timestamp for the exchange's current trading day
+  // (result.meta.currentTradingPeriod.regular.end). Lets a caller distinguish an in-progress
+  // intraday candle from a genuinely completed daily close without a separate exchange-calendar
+  // system. Optional/additive — existing consumers that don't read it are unaffected.
+  regularSessionEndsAt?: Date | null;
   candles: YahooChartCandle[];
 }
 
@@ -377,6 +382,7 @@ export async function fetchYahooChartPeriod(
   const timestamps: number[] = result.timestamp ?? [];
   const quote = result.indicators?.quote?.[0] ?? {};
   const adjClose = result.indicators?.adjclose?.[0]?.adjclose ?? [];
+  const regularSessionEnd = result.meta?.currentTradingPeriod?.regular?.end;
   return {
     symbol,
     currency: result.meta?.currency ?? null,
@@ -385,6 +391,7 @@ export async function fetchYahooChartPeriod(
     instrumentType: result.meta?.instrumentType ?? null,
     httpStatus: res.status,
     contentType: res.headers.get("content-type"),
+    regularSessionEndsAt: typeof regularSessionEnd === "number" ? new Date(regularSessionEnd * 1000) : null,
     candles: timestamps.map((ts, i) => ({
       date: new Date(ts * 1000),
       open: quote.open?.[i] ?? null,

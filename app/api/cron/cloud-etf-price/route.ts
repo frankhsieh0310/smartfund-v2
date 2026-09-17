@@ -30,6 +30,11 @@ const CHECKPOINT_KEY = "cloud-etf-price:ROLLING";
 const DEFAULT_BATCH = 1000;
 const MAX_BATCH = 1500;
 const DAY = 86_400_000;
+// Bounds re-checking an ETF to roughly this route's own existing cadence (hourly), so a same-day
+// Yahoo close revision gets picked up on the next natural cycle instead of being permanently
+// skipped for the rest of the UTC calendar day. This is not a new schedule — it's the same
+// checkpoint/batch loop revisiting sooner. See freshness gate below.
+const FRESHNESS_WINDOW_MS = 55 * 60_000;
 
 const dateKey = (value: Date) => value.toISOString().slice(0, 10);
 const utcDate = (value: Date) => new Date(`${dateKey(value)}T00:00:00.000Z`);
@@ -48,7 +53,6 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const batch = Math.min(MAX_BATCH, Math.max(1, Number(url.searchParams.get("batch") ?? DEFAULT_BATCH)));
   const startedMs = Date.now();
-  const todayUtc = utcDate(new Date());
 
   const universeCount = await prisma.etf.count({ where: { isActive: true, dataSource: { not: null } } });
   const before = await readCheckpoint(CHECKPOINT_KEY);
@@ -73,7 +77,7 @@ export async function GET(request: Request) {
     where: { isActive: true, dataSource: { not: null }, id: { gt: cursor } },
     orderBy: { id: "asc" },
     take: batch,
-    select: { id: true, dataSource: true, priceUpdatedAt: true },
+    select: { id: true, dataSource: true, priceUpdatedAt: true, latestPrice: true },
   });
   if (candidates.length === 0 && cursor !== "") {
     wrapped = true;
@@ -82,7 +86,7 @@ export async function GET(request: Request) {
       where: { isActive: true, dataSource: { not: null } },
       orderBy: { id: "asc" },
       take: batch,
-      select: { id: true, dataSource: true, priceUpdatedAt: true },
+      select: { id: true, dataSource: true, priceUpdatedAt: true, latestPrice: true },
     });
   }
 
@@ -99,8 +103,10 @@ export async function GET(request: Request) {
 
   for (const etf of candidates) {
     lastId = etf.id;
-    // current/fresh row skip — already updated today
-    if (etf.priceUpdatedAt && utcDate(etf.priceUpdatedAt).getTime() >= todayUtc.getTime()) {
+    // Recency skip only — NOT "already updated today". A same-UTC-day gate would permanently miss
+    // a Yahoo close revision published after this ETF's first update of the day; bounding by a
+    // short recency window instead lets the next natural cycle re-check it.
+    if (etf.priceUpdatedAt && Date.now() - etf.priceUpdatedAt.getTime() < FRESHNESS_WINDOW_MS) {
       freshSkipped++;
       continue;
     }
@@ -122,13 +128,28 @@ export async function GET(request: Request) {
         continue;
       }
       const candles = response.candles.filter((row) => row.close != null && row.close > 0);
-      const latest = candles.at(-1);
-      if (!latest) {
+      const rawLatest = candles.at(-1);
+      if (!rawLatest) {
         // valid empty series (delisted / no trading) — not a failure, leave existing row intact
         staleSkipped++;
         continue;
       }
-      for (const row of candles) {
+      // Yahoo appends a live/in-progress candle for the session that's still open before it
+      // closes. Only trust the most recent candle as a genuinely completed close once Yahoo's own
+      // session-end timestamp has passed; otherwise treat it as still-forming and fall back to the
+      // previous (always-final) candle for canonical writes. Everything strictly before that is
+      // already-settled history regardless.
+      const sourceDayCompleted = response.regularSessionEndsAt
+        ? Date.now() >= response.regularSessionEndsAt.getTime()
+        : utcDate(rawLatest.date).getTime() < utcDate(new Date()).getTime();
+      const writableCandles = sourceDayCompleted ? candles : candles.slice(0, -1);
+      const latest = writableCandles.at(-1);
+      if (!latest) {
+        // only an in-progress candle is available this cycle — nothing safe to write yet
+        staleSkipped++;
+        continue;
+      }
+      for (const row of writableCandles) {
         await prisma.etfHistory.upsert({
           where: { etfId_date: { etfId: etf.id, date: utcDate(row.date) } },
           create: {
@@ -191,11 +212,20 @@ export async function GET(request: Request) {
           return3y: periodReturn(points, 1096),
         },
       });
-      inserted += candles.length;
+      inserted += writableCandles.length;
 
-      // Master row: only move forward. Never let a stale provider date overwrite a newer DB value.
+      // Master row: advance to a newer completed day, OR — Yahoo is the source of truth — accept
+      // a same-day revision when the completed close for the SAME date actually changed. Never
+      // overwrite with a stale/earlier provider date.
       const providerDate = utcDate(latest.date);
-      if (!etf.priceUpdatedAt || providerDate.getTime() > utcDate(etf.priceUpdatedAt).getTime()) {
+      const priorPrice = etf.latestPrice != null ? Number(etf.latestPrice) : null;
+      const isNewerDay = !etf.priceUpdatedAt || providerDate.getTime() > utcDate(etf.priceUpdatedAt).getTime();
+      const isSameDayRevision =
+        !!etf.priceUpdatedAt &&
+        providerDate.getTime() === utcDate(etf.priceUpdatedAt).getTime() &&
+        priorPrice !== null &&
+        latest.close !== priorPrice;
+      if (isNewerDay || isSameDayRevision) {
         await prisma.etf.update({
           where: { id: etf.id },
           data: { latestPrice: latest.close, priceUpdatedAt: providerDate },
