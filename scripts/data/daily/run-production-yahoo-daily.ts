@@ -573,7 +573,11 @@ async function dispatcher(): Promise<void> {
     }
     decisions.push({ job, targetTradeDate, dueAt, runType: selectedJob ? (action === "retry" ? "RETRY" : selectedRunType) : "PRIMARY", reason: action === "resume" ? "OPERATOR_RESUME" : "MARKET_CLOSE_DUE" });
   }
-  decisions.sort((a, b) => a.dueAt.getTime() - b.dueAt.getTime());
+  // PRIMARY (first attempt at a market's fresh close data) must never queue behind RETRY (repair of
+  // an already-mostly-succeeded market's residual failures) — a RETRY that legitimately runs for
+  // hours must not delay some other market's brand-new source data. Sorting by runType before dueAt
+  // is generic across all markets (no market name is ever referenced here).
+  decisions.sort((a, b) => (a.runType === "PRIMARY" ? 0 : 1) - (b.runType === "PRIMARY" ? 0 : 1) || a.dueAt.getTime() - b.dueAt.getTime());
   if (planOnly) {
     console.log(JSON.stringify({ at: now.toISOString(), mode: "PLAN", decisions, skipped, staleCleanup }, null, 2));
     return;
@@ -587,7 +591,29 @@ async function dispatcher(): Promise<void> {
   const available = Math.max(0, maxConcurrent - active.length);
   const maxNew = selectedJob ? 1 : Math.min(registry.maxNewMarketJobsPerDispatch ?? 1, available);
   const activeIds = new Set(active.map((row) => row.job_id));
-  const selected = decisions.filter((decision) => !activeIds.has(decision.job.id)).slice(0, maxNew);
+  // Reserved capacity: RETRY may never occupy more than MAX_RETRY_SLOTS of the concurrency budget,
+  // so at least one slot always stays available for a due PRIMARY. This only gates NEW admissions —
+  // an already-running RETRY is never preempted/killed.
+  const MAX_RETRY_SLOTS = 2;
+  const activeRunTypes = active.length
+    ? await prisma.$queryRawUnsafe<Array<{ job_id: string; run_type: string }>>(
+        "SELECT DISTINCT ON (job_id) job_id, run_type FROM production_scheduler_runs WHERE job_id=ANY($1::text[]) AND status='IN_PROGRESS' ORDER BY job_id, started_at DESC",
+        active.map((row) => row.job_id),
+      )
+    : [];
+  let retrySlotsRemaining = Math.max(0, MAX_RETRY_SLOTS - activeRunTypes.filter((row) => row.run_type === "RETRY").length);
+  let newSlotsRemaining = maxNew;
+  const selected: typeof decisions = [];
+  for (const decision of decisions) {
+    if (activeIds.has(decision.job.id)) continue;
+    if (newSlotsRemaining <= 0) break;
+    if (decision.runType === "RETRY") {
+      if (retrySlotsRemaining <= 0) continue;
+      retrySlotsRemaining -= 1;
+    }
+    selected.push(decision);
+    newSlotsRemaining -= 1;
+  }
   for (const decision of decisions) {
     if (activeIds.has(decision.job.id)) skipped.push({ jobId: decision.job.id, status: "RUNNING", targetTradeDate: decision.targetTradeDate });
     else if (!selected.includes(decision)) skipped.push({ jobId: decision.job.id, status: "QUEUED", targetTradeDate: decision.targetTradeDate });
