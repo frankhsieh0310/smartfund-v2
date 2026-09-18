@@ -27,6 +27,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     coverageDepth: view.coverage.coverage_depth,
     isFullHoldings: view.coverage.is_full_holdings,
     holdingCount: view.coverage.holding_count,
+    presentRowCount: view.presentRowCount,
+    declaredCount: view.declaredCount,
     // Explicit, always-present flag — never rely on the client inferring incompleteness from the
     // depth label alone.
     incompleteDataWarning: !view.coverage.is_full_holdings,

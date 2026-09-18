@@ -27,6 +27,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       previousDate: diff.previousDate,
       latestDate: diff.latestDate,
       added: [], increased: [], decreased: [], removed: [],
+      newlyDisclosed: [], noLongerDisclosed: [], comparability: null,
     });
   }
 
@@ -43,6 +44,11 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     previousDate: diff.previousDate, // source-effective date, not fetch time
     latestDate: diff.latestDate,
     added, increased, decreased, removed,
+    // Only populated when the two periods are not FULL vs FULL: positions in just one period that cannot be
+    // proven bought/sold (they may sit outside a truncated list). Never counted as added/removed.
+    newlyDisclosed: diff.newlyDisclosed,
+    noLongerDisclosed: diff.noLongerDisclosed,
+    comparability: diff.comparability,
     summary: { addedCount: added.length, increasedCount: increased.length, decreasedCount: decreased.length, removedCount: removed.length },
   });
 }
