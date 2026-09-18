@@ -1,0 +1,3 @@
+export default function Loading() {
+  return <main className="min-h-screen bg-[#040a18] px-4 pb-16 pt-28 text-white sm:px-8"><div className="mx-auto max-w-[1500px] animate-pulse"><div className="h-6 w-36 rounded bg-white/10" /><div className="mt-5 h-12 max-w-xl rounded bg-white/10" /><div className="mt-3 h-5 max-w-md rounded bg-white/[0.06]" /><div className="mt-10 grid gap-4 md:grid-cols-3">{[0, 1, 2].map((item) => <div key={item} className="h-32 rounded-2xl border border-white/[0.07] bg-white/[0.025]" />)}</div><div className="mt-6 h-80 rounded-2xl border border-white/[0.07] bg-white/[0.025]" /></div></main>;
+}
