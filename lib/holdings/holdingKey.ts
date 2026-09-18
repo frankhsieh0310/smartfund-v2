@@ -34,3 +34,19 @@ export function mergeByCanonicalKey<T extends { key: string; name: string; weigh
   }
   return [...out.values()];
 }
+
+/**
+ * Re-keys a product's positions on the normalized holding NAME and merges same-name rows inside that one
+ * product (e.g. two share classes of one issuer). Lets ticker-keyed ETFs and name-keyed funds be
+ * aggregated together without a product ever appearing as its own overlap partner.
+ */
+export function rekeyByNormalizedName<T extends { name: string; weightPct: number }>(holdings: T[]): Array<{ key: string; name: string; weightPct: number }> {
+  const byName = new Map<string, { key: string; name: string; weightPct: number }>();
+  for (const h of holdings) {
+    const key = normalizeHoldingName(h.name);
+    const cur = byName.get(key);
+    if (cur) cur.weightPct += h.weightPct;
+    else byName.set(key, { key, name: h.name, weightPct: h.weightPct });
+  }
+  return [...byName.values()];
+}

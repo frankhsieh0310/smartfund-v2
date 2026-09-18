@@ -6,7 +6,7 @@
 import type { PrismaClient } from "@prisma/client";
 import { computeConcentration } from "./concentration";
 import type { CoverageDepth } from "./coverageDepth";
-import { normalizeHoldingName } from "./holdingKey";
+import { rekeyByNormalizedName } from "./holdingKey";
 import { aggregateLookThroughExposure, summarizeOverlap, type ProductHoldings } from "./holdingsAnalysis";
 import {
   getEtfHoldingsAsOf,
@@ -138,18 +138,7 @@ async function loadHoldingsBundle(prisma: PrismaClient, ref: CompareRef) {
  * still be compared; overlapWeightPct = sum over shared positions of min(weight in A, weight in B).
  */
 export function pairOverlap(a: ProductHoldings, b: ProductHoldings) {
-  // Re-key on name, then merge same-name rows inside ONE product (e.g. two share classes of one issuer)
-  // so a product can never appear as its own overlap partner.
-  const rekey = (p: ProductHoldings): ProductHoldings => {
-    const byName = new Map<string, { key: string; name: string; weightPct: number }>();
-    for (const h of p.holdings) {
-      const key = normalizeHoldingName(h.name);
-      const cur = byName.get(key);
-      if (cur) cur.weightPct += h.weightPct;
-      else byName.set(key, { key, name: h.name, weightPct: h.weightPct });
-    }
-    return { ...p, holdings: [...byName.values()] };
-  };
+  const rekey = (p: ProductHoldings): ProductHoldings => ({ ...p, holdings: rekeyByNormalizedName(p.holdings) });
   const exposure = aggregateLookThroughExposure(
     [
       { productId: a.productId, allocationPct: 50 },
