@@ -362,7 +362,7 @@ jobs:
         run: |
           set -euo pipefail
           curl --fail-with-body --show-error --silent \
-               --connect-timeout 15 --max-time 200 \
+               --connect-timeout 15 --max-time 300 \
                -H "Authorization: Bearer ${SECRET}" \
                "${BASE_URL}/api/cron/yahoo-commodity?phase=history&group=cbot&symbols=ZC=F,ZW=F,ZS=F,ZL=F" | tee commodity-cbot-response.json
           echo
@@ -372,7 +372,7 @@ jobs:
         run: |
           set -euo pipefail
           curl --fail-with-body --show-error --silent \
-               --connect-timeout 15 --max-time 220 \
+               --connect-timeout 15 --max-time 300 \
                -H "Authorization: Bearer ${SECRET}" \
                "${BASE_URL}/api/cron/yahoo-commodity?phase=history&group=comex-nymex&symbols=CL=F,NG=F,GC=F,SI=F,HG=F,PL=F,PA=F" | tee commodity-comex-nymex-response.json
           echo
@@ -382,7 +382,7 @@ jobs:
         run: |
           set -euo pipefail
           curl --fail-with-body --show-error --silent \
-               --connect-timeout 15 --max-time 150 \
+               --connect-timeout 15 --max-time 300 \
                -H "Authorization: Bearer ${SECRET}" \
                "${BASE_URL}/api/cron/yahoo-commodity?phase=history&group=livestock&symbols=LE=F,HE=F" | tee commodity-livestock-response.json
           echo
@@ -392,7 +392,7 @@ jobs:
         run: |
           set -euo pipefail
           curl --fail-with-body --show-error --silent \
-               --connect-timeout 15 --max-time 200 \
+               --connect-timeout 15 --max-time 300 \
                -H "Authorization: Bearer ${SECRET}" \
                "${BASE_URL}/api/cron/yahoo-commodity?phase=history&group=ice&symbols=KC=F,CC=F,SB=F,CT=F,BZ=F" | tee commodity-ice-response.json
           echo
