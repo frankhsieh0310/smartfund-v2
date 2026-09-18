@@ -2,6 +2,47 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { isPublicReadyAsset } from "@/lib/data-platform/web/publicReadiness";
 import { UniversalAssetDetail, type DetailData, type HistoryPoint, type Metric } from "@/components/asset/UniversalAssetDetail";
+import { HoldingsTablePanel, ConcentrationPanel, HoldingsDiffPanel, type HoldingsTableApiResponse, type ConcentrationApiResponse, type HoldingsDiffApiResponse } from "@/components/holdings/HoldingsAnalysisPanels";
+import { computeConcentration } from "@/lib/holdings/concentration";
+import { getEtfHoldingsTableAsOf, getEtfHoldingsDiffLatestVsPrevious } from "@/lib/holdings/holdingsQueries";
+
+// Read-only, additive to the existing detail data fetch above — a failure here must never affect
+// whether the page itself renders (see the separate try/catch from the main `data` fetch).
+async function loadEtfHoldingsPanels(etfId: string): Promise<{ table: HoldingsTableApiResponse; concentration: ConcentrationApiResponse; diff: HoldingsDiffApiResponse } | null> {
+  try {
+    const [table, diff] = await Promise.all([
+      getEtfHoldingsTableAsOf(prisma, etfId),
+      getEtfHoldingsDiffLatestVsPrevious(prisma, etfId),
+    ]);
+    if (!table.rows.length) return null; // no holdings snapshot yet — skip the section entirely
+    const concentration = computeConcentration(table.rows);
+    return {
+      table: {
+        ok: true, productType: "ETF", productId: table.productId, asOfDate: table.asOfDate, source: table.source,
+        coverageDepth: table.coverage.coverage_depth, isFullHoldings: table.coverage.is_full_holdings,
+        holdingCount: table.coverage.holding_count, incompleteDataWarning: !table.coverage.is_full_holdings,
+        rows: table.rows.map((r) => ({ key: r.key, name: r.name, ticker: r.ticker, weightPct: r.weightPct, sector: r.sector ?? null, country: r.country ?? null })),
+      },
+      concentration: {
+        ok: true, productType: "ETF", productId: table.productId, asOfDate: table.asOfDate,
+        coverageDepth: table.coverage.coverage_depth, isFullHoldings: table.coverage.is_full_holdings,
+        basisNote: table.coverage.is_full_holdings ? "基於完整持股計算" : "依目前可取得持股計算（非完整持股，實際集中度可能不同）",
+        top10Pct: concentration.top10Pct, top20Pct: concentration.top20Pct, largestHolding: concentration.largestHolding,
+        sectorConcentration: concentration.sectorConcentration, countryConcentration: concentration.countryConcentration,
+      },
+      diff: {
+        ok: true, productType: "ETF", productId: diff.productId, hasEnoughHistory: diff.hasEnoughHistory,
+        previousDate: diff.previousDate, latestDate: diff.latestDate,
+        added: diff.entries.filter((e) => e.change === "ADDED"),
+        increased: diff.entries.filter((e) => e.change === "INCREASED"),
+        decreased: diff.entries.filter((e) => e.change === "DECREASED"),
+        removed: diff.entries.filter((e) => e.change === "REMOVED"),
+      },
+    };
+  } catch {
+    return null;
+  }
+}
 
 const fmt = (value: unknown, suffix = "") => value == null ? "—" : `${Number(value).toLocaleString(undefined, { maximumFractionDigits: 4 })}${suffix}`;
 const dateText = (value: Date | null | undefined) => value ? value.toISOString().slice(0, 10) : undefined;
@@ -11,9 +52,11 @@ export default async function EtfDetailPage({ params }: { params: Promise<{ code
   const { code } = await params;
   if (!await isPublicReadyAsset("ETF", decodeURIComponent(code))) notFound();
   let data: DetailData | null = null;
+  let etfId: string | null = null;
   try {
     const etf = await prisma.etf.findUnique({ where: { code: decodeURIComponent(code) }, include: { history: { where: { price: { not: null } }, orderBy: { date: "desc" }, take: 5000 }, holdings: { orderBy: { rank: "asc" }, take: 10 }, _count: { select: { holdings: true } } } });
     if (etf) {
+      etfId = etf.id;
       const latestRow = etf.history[0];
       const previousRow = etf.history[1];
       const allHistory: HistoryPoint[] = etf.history.toReversed().map((row) => ({ date: row.date.toISOString().slice(0, 10), value: Number(row.price) })).filter((row) => Number.isFinite(row.value));
@@ -27,6 +70,18 @@ export default async function EtfDetailPage({ params }: { params: Promise<{ code
     }
   } catch { data = null; }
   if (!data) notFound();
-  return <UniversalAssetDetail data={data} requestedCode={decodeURIComponent(code)} assetType="ETF"/>;
+  const panels = etfId ? await loadEtfHoldingsPanels(etfId) : null;
+  return (
+    <>
+      <UniversalAssetDetail data={data} requestedCode={decodeURIComponent(code)} assetType="ETF"/>
+      {panels && (
+        <div className="mx-auto max-w-[1500px] px-6 pb-10 md:px-10">
+          <HoldingsTablePanel data={panels.table} />
+          <ConcentrationPanel data={panels.concentration} />
+          <HoldingsDiffPanel data={panels.diff} />
+        </div>
+      )}
+    </>
+  );
 }
 

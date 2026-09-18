@@ -2,8 +2,49 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getFundDetail, type FundDetailData, type FundDetailRange, type FundSectionCoverage } from "../../../lib/data-platform/web/fundService.ts";
 import { WebDataError } from "../../../lib/data-platform/web/errors.ts";
+import { prisma } from "../../../lib/prisma.ts";
+import { HoldingsTablePanel, ConcentrationPanel, HoldingsDiffPanel, type HoldingsTableApiResponse, type ConcentrationApiResponse, type HoldingsDiffApiResponse } from "../../../components/holdings/HoldingsAnalysisPanels.tsx";
+import { computeConcentration } from "../../../lib/holdings/concentration.ts";
+import { getFundHoldingsTableAsOf, getFundHoldingsDiffLatestVsPrevious } from "../../../lib/holdings/holdingsQueries.ts";
 
 export const dynamic = "force-dynamic";
+
+// Read-only, additive — a failure here must never affect whether the rest of the page renders.
+async function loadFundHoldingsPanels(fundId: string): Promise<{ table: HoldingsTableApiResponse; concentration: ConcentrationApiResponse; diff: HoldingsDiffApiResponse } | null> {
+  try {
+    const [table, diff] = await Promise.all([
+      getFundHoldingsTableAsOf(prisma, fundId),
+      getFundHoldingsDiffLatestVsPrevious(prisma, fundId),
+    ]);
+    if (!table.rows.length) return null;
+    const concentration = computeConcentration(table.rows);
+    return {
+      table: {
+        ok: true, productType: "FUND", productId: table.productId, asOfDate: table.asOfDate, source: table.source,
+        coverageDepth: table.coverage.coverage_depth, isFullHoldings: table.coverage.is_full_holdings,
+        holdingCount: table.coverage.holding_count, incompleteDataWarning: !table.coverage.is_full_holdings,
+        rows: table.rows.map((r) => ({ key: r.key, name: r.name, ticker: r.ticker, weightPct: r.weightPct, sector: r.sector ?? null, country: r.country ?? null })),
+      },
+      concentration: {
+        ok: true, productType: "FUND", productId: table.productId, asOfDate: table.asOfDate,
+        coverageDepth: table.coverage.coverage_depth, isFullHoldings: table.coverage.is_full_holdings,
+        basisNote: table.coverage.is_full_holdings ? "基於完整持股計算" : "依目前可取得持股計算（非完整持股，實際集中度可能不同）",
+        top10Pct: concentration.top10Pct, top20Pct: concentration.top20Pct, largestHolding: concentration.largestHolding,
+        sectorConcentration: concentration.sectorConcentration, countryConcentration: concentration.countryConcentration,
+      },
+      diff: {
+        ok: true, productType: "FUND", productId: diff.productId, hasEnoughHistory: diff.hasEnoughHistory,
+        previousDate: diff.previousDate, latestDate: diff.latestDate,
+        added: diff.entries.filter((e) => e.change === "ADDED"),
+        increased: diff.entries.filter((e) => e.change === "INCREASED"),
+        decreased: diff.entries.filter((e) => e.change === "DECREASED"),
+        removed: diff.entries.filter((e) => e.change === "REMOVED"),
+      },
+    };
+  } catch {
+    return null;
+  }
+}
 
 const ranges: FundDetailRange[] = ["1M", "3M", "6M", "1Y", "3Y", "5Y", "MAX"];
 const date = (value: string | null) => value ? new Intl.DateTimeFormat("zh-TW", { dateStyle: "medium" }).format(new Date(value)) : "—";
@@ -23,6 +64,7 @@ export default async function FundDetailPage({ params, searchParams }: { params:
   const fund = response.data;
   if (!fund) return <ErrorState />;
   const history = fund.history.data;
+  const panels = await loadFundHoldingsPanels(fund.identity.id);
   return <main className="min-h-screen overflow-x-hidden bg-[#040a18] pb-20 text-slate-200 [&_section]:min-w-0">
     <Header />
     <div className="mx-auto max-w-[1500px] px-4 pt-28 sm:px-8">
@@ -51,6 +93,13 @@ export default async function FundDetailPage({ params, searchParams }: { params:
       </section>
       <Panel title="最新持倉" section={fund.holdings} footer className="mt-6"><p className="mb-4 text-xs text-slate-500">報告日：{date(fund.holdings.data.reportDate)}</p>{fund.holdings.data.items.length ? <div className="overflow-x-auto"><table className="min-w-[760px] w-full text-left text-xs"><thead className="text-slate-500"><tr><th className="px-3 py-3">持倉</th><th className="px-3 py-3">Security ID</th><th className="px-3 py-3 text-right">權重</th><th className="px-3 py-3 text-right">市值</th><th className="px-3 py-3">幣別</th></tr></thead><tbody>{fund.holdings.data.items.map((item, index) => <tr key={`${item.securityId}-${index}`} className="border-t border-white/[0.06]"><td className="px-3 py-3 text-white">{text(item.holdingName)}</td><td className="px-3 py-3 font-mono text-slate-500">{text(item.securityId)}</td><td className="px-3 py-3 text-right">{percent(item.weight)}</td><td className="px-3 py-3 text-right">{number(item.marketValue)}</td><td className="px-3 py-3">{text(item.currency)}</td></tr>)}</tbody></table></div> : <Empty title="尚無 holdings 資料" />}</Panel>
       <Panel title="Fund Flows" section={fund.flows} footer className="mt-6"><Empty title="來源準備中" detail="SOURCE_PENDING；目前不以零值或推估值呈現。" /></Panel>
+      {panels && (
+        <>
+          <HoldingsTablePanel data={panels.table} />
+          <ConcentrationPanel data={panels.concentration} />
+          <HoldingsDiffPanel data={panels.diff} />
+        </>
+      )}
     </div>
   </main>;
 }

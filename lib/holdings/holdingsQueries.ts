@@ -52,7 +52,7 @@ export async function getEtfHoldingsAsOf(
   const rows = await query(
     prisma,
     `SELECT COALESCE(security_id, ticker, holding_name) AS key, holding_name AS name, weight::float AS weight
-       FROM etf_holding_rows WHERE snapshot_id = $1 AND weight IS NOT NULL`,
+       FROM etf_holdings WHERE snapshot_id = $1::uuid AND weight IS NOT NULL`,
     [snapshot.id],
   );
   const holdings: HoldingRow[] = rows.map((r) => ({ key: r.key, name: r.name, weightPct: Number(r.weight) }));
@@ -124,7 +124,7 @@ export async function getEtfHoldingsTableAsOf(
     prisma,
     `SELECT COALESCE(security_id, ticker, holding_name) AS key, holding_name AS name, ticker,
             weight::float AS weight, sector, country
-       FROM etf_holding_rows WHERE snapshot_id = $1 AND weight IS NOT NULL
+       FROM etf_holdings WHERE snapshot_id = $1::uuid AND weight IS NOT NULL
        ORDER BY weight DESC`,
     [snapshot.id],
   )) as Array<{ key: string; name: string; ticker: string | null; weight: number; sector: string | null; country: string | null }>;
