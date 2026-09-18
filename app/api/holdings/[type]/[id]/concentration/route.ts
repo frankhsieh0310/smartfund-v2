@@ -8,11 +8,16 @@ import { prisma } from "@/lib/prisma";
 import { computeConcentration } from "@/lib/holdings/concentration";
 import { getEtfHoldingsTableAsOf, getFundHoldingsTableAsOf } from "@/lib/holdings/holdingsQueries";
 
+// Same cross-origin allowance as app/api/mobile/assets/[assetId]/route.ts — this route is read
+// by the SmartMatch mobile app from a different origin (Expo web / native), not just this web app.
+const corsHeaders = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET, OPTIONS", "Access-Control-Allow-Headers": "Content-Type, Authorization" };
+export function OPTIONS() { return new Response(null, { status: 204, headers: corsHeaders }); }
+
 export async function GET(request: NextRequest, { params }: { params: Promise<{ type: string; id: string }> }) {
   const { type, id } = await params;
   const kind = type.toLowerCase();
   if (kind !== "etf" && kind !== "fund") {
-    return NextResponse.json({ ok: false, error: "INVALID_TYPE — expected 'etf' or 'fund'" }, { status: 400 });
+    return NextResponse.json({ ok: false, error: "INVALID_TYPE — expected 'etf' or 'fund'" }, { status: 400, headers: corsHeaders });
   }
   const asOfDate = request.nextUrl.searchParams.get("asOfDate") ?? undefined;
 
@@ -38,5 +43,5 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     largestHolding: concentration.largestHolding,
     sectorConcentration: concentration.sectorConcentration,
     countryConcentration: concentration.countryConcentration,
-  });
+  }, { headers: corsHeaders });
 }
