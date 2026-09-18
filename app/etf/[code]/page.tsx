@@ -54,7 +54,7 @@ export default async function EtfDetailPage({ params }: { params: Promise<{ code
   let data: DetailData | null = null;
   let etfId: string | null = null;
   try {
-    const etf = await prisma.etf.findUnique({ where: { code: decodeURIComponent(code) }, include: { history: { where: { price: { not: null } }, orderBy: { date: "desc" }, take: 5000 }, holdings: { orderBy: { rank: "asc" }, take: 10 }, _count: { select: { holdings: true } } } });
+    const etf = await prisma.etf.findUnique({ where: { code: decodeURIComponent(code) }, include: { history: { where: { price: { not: null } }, orderBy: { date: "desc" }, take: 5000 } } });
     if (etf) {
       etfId = etf.id;
       const latestRow = etf.history[0];
@@ -65,8 +65,25 @@ export default async function EtfDetailPage({ params }: { params: Promise<{ code
       const change = latest != null && Number.isFinite(latest) && previous != null ? latest - previous : null;
       const sameDateNav = latestRow?.nav ?? null;
       const sameDatePremium = latestRow?.price != null && sameDateNav != null ? ((Number(latestRow.price) / Number(sameDateNav)) - 1) * 100 : null;
-      const related = etf.holdings.map((holding) => ({ label: `${holding.rank}. ${holding.holdingName}${holding.holdingCode ? ` (${holding.holdingCode})` : ""}`, value: `${Number(holding.weight).toFixed(2)}%${holding.sector ? `・${holding.sector}` : ""}${holding.country ? `・${holding.country}` : ""}` }));
-      data = { type: "ETF", code: etf.code, name: etf.name, officialName: etf.nameEn ?? undefined, exchange: etf.exchange ?? undefined, region: etf.region ?? undefined, currency: etf.currency, isin: etf.isin ?? undefined, summary: [metric("最新價格", latest), metric("NAV（同期）", sameDateNav), metric("Premium / Discount（同期）", sameDatePremium, "%"), { label: "漲跌 / 漲跌幅", value: change == null || !previous ? "—" : `${fmt(change)} / ${((change / previous) * 100).toFixed(2)}%` }], performance: [metric("1M", etf.return1m, "%"), metric("3M", etf.return3m, "%"), metric("6M", etf.return6m, "%"), metric("YTD", etf.returnYtd, "%"), metric("1Y", etf.return1y, "%"), metric("3Y", etf.return3y, "%"), metric("5Y", etf.return5y, "%")], risk: [metric("Volatility", etf.volatility1y, "%"), metric("Beta", etf.beta), metric("Max Drawdown", etf.maxDrawdown, "%"), metric("Sharpe", etf.sharpe1y)], keyData: [metric("NAV", etf.latestNav), metric("AUM", etf.aum), metric("Expense Ratio", etf.expenseRatio, "%"), metric("Dividend Yield", etf.dividendYield, "%"), { label: "Issuer", value: etf.provider }, { label: "Asset Class", value: etf.category ?? "—" }, { label: "Benchmark", value: etf.benchmark ?? "—" }, { label: "Holdings Count", value: etf._count.holdings ? String(etf._count.holdings) : "—" }, metric("Premium / Discount", sameDatePremium, "%")], relatedData: related, history: allHistory, priceDate: dateText(latestRow?.date ?? etf.priceUpdatedAt), source: etf.dataProvider ?? etf.provider, lastUpdated: dateText(etf.updatedAt), updatedAt: dateText(etf.priceUpdatedAt ?? etf.updatedAt), frequency: "依既有 ETF Canonical Data 更新" };
+      // "相關資產" must reflect a single canonical snapshot (the latest as_of_date), never a
+      // rank-only ordering across every historical snapshot — that previously produced repeated
+      // rank-1 rows (e.g. multiple 台積電 entries) from different ingestion dates.
+      const latestHoldingAgg = await prisma.holding.aggregate({ where: { etfId: etf.id, assetType: "ETF" }, _max: { asOfDate: true } });
+      const holdingsAsOfDate = latestHoldingAgg._max.asOfDate;
+      const holdingsAtLatestDate = holdingsAsOfDate
+        ? await prisma.holding.findMany({ where: { etfId: etf.id, assetType: "ETF", asOfDate: holdingsAsOfDate }, orderBy: { rank: "asc" } })
+        : [];
+      const seenHoldingKeys = new Set<string>();
+      const dedupedHoldings: typeof holdingsAtLatestDate = [];
+      for (const holding of holdingsAtLatestDate) {
+        const key = holding.securityId ?? holding.holdingCode ?? holding.holdingName;
+        if (seenHoldingKeys.has(key)) continue;
+        seenHoldingKeys.add(key);
+        dedupedHoldings.push(holding);
+      }
+      const holdingsCount = dedupedHoldings.length;
+      const related = dedupedHoldings.slice(0, 10).map((holding) => ({ label: `${holding.rank}. ${holding.holdingName}${holding.holdingCode ? ` (${holding.holdingCode})` : ""}`, value: `${Number(holding.weight).toFixed(2)}%${holding.sector ? `・${holding.sector}` : ""}${holding.country ? `・${holding.country}` : ""}` }));
+      data = { type: "ETF", code: etf.code, name: etf.name, officialName: etf.nameEn ?? undefined, exchange: etf.exchange ?? undefined, region: etf.region ?? undefined, currency: etf.currency, isin: etf.isin ?? undefined, summary: [metric("最新價格", latest), metric("NAV（同期）", sameDateNav), metric("Premium / Discount（同期）", sameDatePremium, "%"), { label: "漲跌 / 漲跌幅", value: change == null || !previous ? "—" : `${fmt(change)} / ${((change / previous) * 100).toFixed(2)}%` }], performance: [metric("1M", etf.return1m, "%"), metric("3M", etf.return3m, "%"), metric("6M", etf.return6m, "%"), metric("YTD", etf.returnYtd, "%"), metric("1Y", etf.return1y, "%"), metric("3Y", etf.return3y, "%"), metric("5Y", etf.return5y, "%")], risk: [metric("Volatility", etf.volatility1y, "%"), metric("Beta", etf.beta), metric("Max Drawdown", etf.maxDrawdown, "%"), metric("Sharpe", etf.sharpe1y)], keyData: [metric("NAV", etf.latestNav), metric("AUM", etf.aum), metric("Expense Ratio", etf.expenseRatio, "%"), metric("Dividend Yield", etf.dividendYield, "%"), { label: "Issuer", value: etf.provider }, { label: "Asset Class", value: etf.category ?? "—" }, { label: "Benchmark", value: etf.benchmark ?? "—" }, { label: "Holdings Count", value: holdingsCount ? String(holdingsCount) : "—" }, metric("Premium / Discount", sameDatePremium, "%")], relatedData: related, history: allHistory, priceDate: dateText(latestRow?.date ?? etf.priceUpdatedAt), source: etf.dataProvider ?? etf.provider, lastUpdated: dateText(etf.updatedAt), updatedAt: dateText(etf.priceUpdatedAt ?? etf.updatedAt), frequency: "依既有 ETF Canonical Data 更新" };
     }
   } catch { data = null; }
   if (!data) notFound();
