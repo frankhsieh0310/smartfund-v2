@@ -50,6 +50,12 @@ export async function fetchMoneydjDisclosure(moneydjCode: string): Promise<Money
   const text = $("body").text();
   const date = text.match(/資料月份：\s*(\d{4}\/\d{2}\/\d{2})/)?.[1]?.replaceAll("/", "-");
   if (!date) throw new Error("MONEYDJ_DISCLOSURE_DATE_MISSING");
+  // 2026-09-18 fix: a disclosed holdings date is always a past reporting period, never a future one —
+  // confirmed one filing (fund_id 1608ffc8..., 10 rows) previously landed as_of_date=2028-07-31, a
+  // 2-year-future value with no plausible source explanation, uncaught because this regex extraction
+  // had no sanity bound at all. A small forward buffer covers legitimate month-end publish timing.
+  const maxPlausibleDate = new Date(Date.now() + 30 * 86_400_000).toISOString().slice(0, 10);
+  if (date > maxPlausibleDate) throw new Error(`MONEYDJ_DISCLOSURE_DATE_IMPLAUSIBLE_FUTURE:${date}`);
 
   const holdings: DisclosedHolding[] = [];
   $("tr").each((_, row) => {

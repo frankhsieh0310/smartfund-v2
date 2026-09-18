@@ -249,6 +249,7 @@ model Etf {
   stdDev              Decimal?                @map("std_dev") @db.Decimal(8, 4)
   maxDrawdown         Decimal?                @map("max_drawdown") @db.Decimal(8, 4)
   priceUpdatedAt      DateTime?               @map("price_updated_at")
+  distributionCheckedAt DateTime?             @map("distribution_checked_at")
   assetId             String?                 @unique @map("asset_id")
   dataProvider        String?                 @map("data_provider")
   dataSource          String?                 @map("data_source")
