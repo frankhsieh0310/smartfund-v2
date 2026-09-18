@@ -5,6 +5,7 @@ import { searchFunds } from "./fundService.ts";
 import { searchFx } from "./fxService.ts";
 import { searchIndices } from "./indexService.ts";
 import { searchStocks } from "./stockService.ts";
+import { primaryListingSymbolsFor } from "./primaryListingAliases.ts";
 import { prisma } from "../../prisma.ts";
 import { listGovernmentYieldSeries } from "../../services/governmentYieldService.ts";
 import { buildProvenance } from "./provenance.ts";
@@ -113,6 +114,7 @@ const rank = (row: UnifiedSearchResult, query: string) => {
   const taiwanIdentity = row.country === "TW" || /taiwan|twse|tpex/i.test(`${row.country ?? ""} ${row.market ?? ""} ${row.exchange ?? ""}`);
   const tsmcAlias = ["台積電", "台灣積體電路", "tsmc"].includes(rawTerm);
   if ((taiwanBareCode && taiwanSymbol && rawSymbol.replace(/\.(tw|two)$/i, "") === rawTerm) || (tsmcAlias && rawSymbol === "2330.tw")) return -2;
+  if (row.assetType === "STOCK" && primaryListingSymbolsFor(query).some((symbol) => symbol.toLocaleLowerCase("en-US") === rawSymbol)) return -1;
   if (rawSymbol === rawTerm) return 0;
   if (symbol === term) return 1;
   if (taiwanBareCode && taiwanIdentity && symbol.startsWith(term)) return 1;
@@ -129,11 +131,26 @@ const domainTieRank = (row: UnifiedSearchResult, query: string) => normalize(que
 // name (e.g. "Microsoft" was surfacing an LSE cross-listing ahead of NASDAQ:MSFT). Same primary-exchange
 // set already used by current-market-data's own ORDER BY CASE — kept consistent rather than inventing a
 // second convention. ETF/FUND/etc. results are unaffected (they don't have this multi-listing problem).
-const PRIMARY_STOCK_EXCHANGES = new Set(["NASDAQ", "NYSE", "TWSE", "TPEx", "TPEX"]);
-const primaryListingRank = (row: UnifiedSearchResult) => row.assetType !== "STOCK" ? 0 : PRIMARY_STOCK_EXCHANGES.has(row.exchange ?? "") ? 0 : 1;
+const PRIMARY_STOCK_EXCHANGES = new Set(["NASDAQ", "NYSE", "TWSE", "TPEx", "TPEX", "KSC", "JPX", "HKG", "AMS", "SHH", "SHZ", "ASX", "TOR", "EBS", "STO", "SES"]);
+// Tiers: 0 primary exchange, 1 other exchange, 2 ADR / depositary receipt, 3 SPAC.
+const primaryListingRank = (row: UnifiedSearchResult) => {
+  if (row.assetType !== "STOCK") return 0;
+  const name = `${row.name} ${row.displayName}`;
+  if (/SPAC|acquisition corp/i.test(name)) return 3;
+  if (/depositary (shares|receipt)|ADR|CDR/i.test(name)) return 2;
+  return PRIMARY_STOCK_EXCHANGES.has(row.exchange ?? "") ? 0 : 1;
+};
 
 const runners: Record<SearchAssetType, (query: string) => Promise<DomainPayload>> = {
-  STOCK: (query) => searchStocks(query, { page: 1, pageSize: MAX_CANDIDATES_PER_DOMAIN }) as Promise<DomainPayload>,
+  STOCK: async (query) => {
+    const main = await searchStocks(query, { page: 1, pageSize: MAX_CANDIDATES_PER_DOMAIN }) as unknown as DomainPayload;
+    const aliasSymbols = primaryListingSymbolsFor(query);
+    if (!aliasSymbols.length) return main;
+    const extra = await Promise.all(aliasSymbols.map((symbol) => searchStocks(symbol, { page: 1, pageSize: 5 }) as unknown as Promise<DomainPayload>));
+    const seen = new Set((main.data ?? []).map((row) => row.identity.id));
+    const injected = extra.flatMap((payload) => payload.data ?? []).filter((row) => aliasSymbols.includes(row.identity.symbol) && !seen.has(row.identity.id));
+    return { ...main, data: [...injected, ...(main.data ?? [])] };
+  },
   ETF: (query) => searchEtfs(query, { page: 1, pageSize: MAX_PER_DOMAIN }) as Promise<DomainPayload>,
   FUND: (query) => searchFunds(query, { page: 1, pageSize: MAX_PER_DOMAIN }) as Promise<DomainPayload>,
   INDEX: (query) => searchIndices(query, { page: 1, pageSize: MAX_CANDIDATES_PER_DOMAIN }) as Promise<DomainPayload>,
