@@ -5,6 +5,7 @@ import type { PrismaClient } from "@prisma/client";
 import { classifyHoldingsCoverage, type HoldingsCoverage } from "./coverageDepth";
 import type { HoldingRowWithMeta } from "./concentration";
 import { applyComparability, assessDiffComparability, type DiffComparability, type SnapshotDepth } from "./diffComparability";
+import { mergeByCanonicalKey } from "./holdingKey";
 import { diffHoldingsSnapshots, type HoldingRow, type HoldingsDiffEntry, type ProductHoldings } from "./holdingsAnalysis";
 
 const query = (prisma: PrismaClient, sql: string, params: unknown[] = []) =>
@@ -82,7 +83,7 @@ async function loadEtfHoldings(prisma: PrismaClient, etfId: string, effectiveDat
        FROM etf_holdings WHERE snapshot_id = $1::uuid AND weight IS NOT NULL`,
     [snapshot.id],
   );
-  const holdings: HoldingRow[] = rows.map((r) => ({ key: r.key, name: r.name, weightPct: Number(r.weight) }));
+  const holdings: HoldingRow[] = mergeByCanonicalKey(rows.map((r) => ({ key: r.key, name: r.name, weightPct: Number(r.weight) })));
   const coverage = classifyHoldingsCoverage({ source: snapshot.source, holdingCount: snapshot.canonical_row_count ?? holdings.length });
   return { productId: etfId, asOfDate: snapshot.effective_date, holdings, source: snapshot.source, declaredCount: snapshot.canonical_row_count, coverage };
 }
@@ -185,7 +186,7 @@ async function loadFundHoldings(prisma: PrismaClient, fundId: string, asOfDate?:
       ORDER BY weight DESC`,
     [fundId, targetDate, source],
   );
-  const holdings: HoldingRow[] = rows.map((r) => ({ key: r.key, name: r.name, weightPct: Number(r.weight) }));
+  const holdings: HoldingRow[] = mergeByCanonicalKey(rows.map((r) => ({ key: r.key, name: r.name, weightPct: Number(r.weight) })));
   const tableRows: HoldingsTableRow[] = rows.map((r) => ({ key: r.key, name: r.name, ticker: r.ticker, weightPct: Number(r.weight), sector: r.sector, country: r.country }));
   const coverage = classifyHoldingsCoverage({ source, holdingCount: holdings.length });
   return { productId: fundId, asOfDate: targetDate, holdings, tableRows, source, coverage };
