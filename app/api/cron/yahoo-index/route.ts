@@ -26,6 +26,11 @@ const TIME_BUDGET_MS = 240_000;
 // checkpoints after every small batch rather than betting the whole invocation on one big batch.
 const HISTORY_BATCH_SIZE = 2;
 const HISTORY_MAX_SAFE_RUNTIME_MS = 180_000;
+// Hard runtime guard for the history phase. maxDuration is 280s; a new index is only STARTED while at
+// least HISTORY_MIN_REMAINING_PER_INDEX_MS remain before HISTORY_DEADLINE_MS (Yahoo call is capped at 20s,
+// the batched write is a few statements), so the run always reaches finishRun() and never dangles IN_PROGRESS.
+const HISTORY_DEADLINE_MS = 250_000;
+const HISTORY_MIN_REMAINING_PER_INDEX_MS = 30_000;
 
 export async function GET(request: Request) {
   if (!isAuthorizedCron(request)) return unauthorizedCron();
@@ -78,20 +83,25 @@ export async function GET(request: Request) {
     } else {
       let requestedIndexes = 0, updatedIndexes = 0, rowsWritten = 0;
       const failedIndexes: Array<{ id: string; symbol: string; reason: string }> = [];
-      let wrapped = false, slices = 0;
+      let wrapped = false, slices = 0, budgetStopped = false;
+      const timings: Array<Record<string, unknown>> = [];
       while (Date.now() - started < HISTORY_MAX_SAFE_RUNTIME_MS) {
-        const r = await updateIndexHistory(cursor, HISTORY_BATCH_SIZE, scope);
+        const r = await updateIndexHistory(cursor, HISTORY_BATCH_SIZE, scope, { deadlineAt: started + HISTORY_DEADLINE_MS, minRemainingMs: HISTORY_MIN_REMAINING_PER_INDEX_MS });
         requestedIndexes += r.requestedIndexes; updatedIndexes += r.updatedIndexes; rowsWritten += r.rowsWritten;
         failedIndexes.push(...r.failedIndexes);
         cursor = r.lastId; slices++;
         const cpAfter = { lastSymbol: r.wrapped ? null : cursor, processed: (cpBefore?.processed ?? 0) + requestedIndexes, succeeded: (cpBefore?.succeeded ?? 0) + updatedIndexes, failed: failedIndexes.length };
+        const cpStart = Date.now();
         await writeCheckpoint(JOB, cpKey, runId, cpAfter);
+        const checkpoint_ms = Date.now() - cpStart;
+        for (const t of r.timings) { const line = { ...t, checkpoint_ms }; timings.push(line); console.log(JSON.stringify({ evt: "yahoo-index-history", market, ...line })); }
+        if (r.budgetStopped) { budgetStopped = true; break; }
         if (r.wrapped) { wrapped = true; break; }
         if (Date.now() - started >= HISTORY_MAX_SAFE_RUNTIME_MS) break;
       }
       const cpAfter = { lastSymbol: wrapped ? null : cursor, processed: (cpBefore?.processed ?? 0) + requestedIndexes, succeeded: (cpBefore?.succeeded ?? 0) + updatedIndexes, failed: failedIndexes.length };
-      await finishRun(runId, JOB, "YAHOO", started, { status: failedIndexes.length > 0 && updatedIndexes === 0 && rowsWritten === 0 ? "PARTIAL" : "COMPLETED", attempted: requestedIndexes, completed: updatedIndexes, inserted: rowsWritten, updated: 0, failed: failedIndexes.length, retryableFailures: failedIndexes.length, checkpointAfter: { ...cpAfter, updatedAt: new Date().toISOString() }, details: { slices, wrapped, batchSize: HISTORY_BATCH_SIZE } });
-      return Response.json({ ok: true, task: "yahoo-index", phase, requestedIndexes, updatedIndexes, rowsWritten, failedIndexes, wrapped, slices });
+      await finishRun(runId, JOB, "YAHOO", started, { status: budgetStopped || (failedIndexes.length > 0 && updatedIndexes === 0 && rowsWritten === 0) ? "PARTIAL" : "COMPLETED", attempted: requestedIndexes, completed: updatedIndexes, inserted: rowsWritten, updated: 0, failed: failedIndexes.length, retryableFailures: failedIndexes.length, checkpointAfter: { ...cpAfter, updatedAt: new Date().toISOString() }, details: { slices, wrapped, batchSize: HISTORY_BATCH_SIZE, budgetStopped, timings } });
+      return Response.json({ ok: true, task: "yahoo-index", phase, requestedIndexes, updatedIndexes, rowsWritten, failedIndexes, wrapped, slices, budgetStopped });
     }
   } catch (e) {
     await finishRun(runId, JOB, "YAHOO", started, { status: "FAILED", attempted: 0, completed: 0, inserted: 0, updated: 0, failed: 1, retryableFailures: 1, checkpointAfter: cpBefore, error: (e as Error).message });

@@ -16,6 +16,7 @@
 // one — no new Yahoo client code needed).
 
 import { prisma } from "@/lib/prisma";
+import { buildCandleUpsertStatements, hasBudgetForIndex, type HistoryCandle } from "@/lib/cron/indexHistoryWrite";
 import { fetchYahooFxSpark, fetchYahooChartPeriod } from "@/lib/services/dataProviders/yahoo/yahooClient";
 
 // 2026-09-13 validation round: every existing global_index_registry row (166 total) checked
@@ -107,6 +108,8 @@ export async function updateIndexQuotes(cursor: string | null, batchSize = 20, s
   return { requestedIndexes: rows.length, updatedIndexes, staleSkipped, noNewData, failedIndexes, lastId: wrapped ? null : rows.at(-1)!.id, wrapped };
 }
 
+export type IndexHistoryTiming = { symbol: string; fetch_ms: number; parse_ms: number; write_ms: number; candles: number; statements: number };
+
 export type IndexHistoryBatchResult = {
   requestedIndexes: number;
   updatedIndexes: number;
@@ -114,45 +117,71 @@ export type IndexHistoryBatchResult = {
   failedIndexes: Array<{ id: string; symbol: string; reason: string }>;
   lastId: string | null;
   wrapped: boolean;
+  /** true when the loop stopped BEFORE starting an index because the runtime budget was too low; lastId is then the last index actually processed */
+  budgetStopped: boolean;
+  timings: IndexHistoryTiming[];
+};
+
+export type IndexHistoryOptions = {
+  /** absolute epoch-ms after which no NEW index may start unless minRemainingMs is still available */
+  deadlineAt?: number;
+  /** runtime needed to safely start one more index (Yahoo call is capped at 20s + write) */
+  minRemainingMs?: number;
+  /** DB client; defaults to the shared prisma client (tests / diagnostics may pass a transaction client) */
+  db?: Pick<typeof prisma, "globalIndexRegistry" | "globalIndexCandle" | "$executeRawUnsafe">;
 };
 
 // Phase 2: daily history. Per index, incremental from the last known global_index_candles row
 // (initial backfill ~1y; every rerun after that only asks Yahoo for [lastKnownDate - 3d, now], same
 // padding-and-filter approach as the FX/stock/ETF price crons, so a same-day rerun never
 // duplicates rows — the compound primary key (indexId, interval, timestamp, source) makes the
-// upsert naturally idempotent).
-export async function updateIndexHistory(cursor: string | null, batchSize = 2, symbols?: string[]): Promise<IndexHistoryBatchResult> {
+// upsert naturally idempotent). Candles of one index are written with ONE batched INSERT ... ON
+// CONFLICT per chunk (see indexHistoryWrite.ts) instead of one round trip per candle.
+export async function updateIndexHistory(cursor: string | null, batchSize = 2, symbols?: string[], options: IndexHistoryOptions = {}): Promise<IndexHistoryBatchResult> {
+  const db = options.db ?? prisma;
+  const minRemainingMs = options.minRemainingMs ?? 30_000;
   const scope = symbols ?? CORE_INDEX_SYMBOLS;
-  const rows = await prisma.globalIndexRegistry.findMany({
+  const rows = await db.globalIndexRegistry.findMany({
     where: { active: true, symbol: { in: scope }, ...(cursor ? { id: { gt: cursor } } : {}) },
     orderBy: { id: "asc" },
     take: batchSize,
     select: { id: true, symbol: true, timezone: true, currency: true },
   });
-  const wrapped = rows.length < batchSize;
-  if (rows.length === 0) return { requestedIndexes: 0, updatedIndexes: 0, rowsWritten: 0, failedIndexes: [], lastId: null, wrapped: true };
+  const fullBatch = rows.length >= batchSize;
+  if (rows.length === 0) return { requestedIndexes: 0, updatedIndexes: 0, rowsWritten: 0, failedIndexes: [], lastId: null, wrapped: true, budgetStopped: false, timings: [] };
 
-  let updatedIndexes = 0, rowsWritten = 0;
+  let updatedIndexes = 0, rowsWritten = 0, processed = 0;
+  let budgetStopped = false;
   const failedIndexes: Array<{ id: string; symbol: string; reason: string }> = [];
+  const timings: IndexHistoryTiming[] = [];
 
   for (const row of rows) {
+    // Safe stop: never START an index the remaining runtime cannot finish. Indexes already completed keep their
+    // checkpoint (the route writes it from lastId), and the route still finishes the run log — no dangling IN_PROGRESS.
+    if (!hasBudgetForIndex(Date.now(), options.deadlineAt, minRemainingMs)) { budgetStopped = true; break; }
+    processed++;
+    const timing: IndexHistoryTiming = { symbol: row.symbol, fetch_ms: 0, parse_ms: 0, write_ms: 0, candles: 0, statements: 0 };
     try {
-      const latestCandle = await prisma.globalIndexCandle.findFirst({
+      const latestCandle = await db.globalIndexCandle.findFirst({
         where: { indexId: row.id, interval: "1d" },
         orderBy: { timestamp: "desc" },
         select: { timestamp: true },
       });
       const from = latestCandle ? new Date(latestCandle.timestamp.getTime() - 3 * DAY_MS) : new Date(Date.now() - 366 * DAY_MS);
       const to = new Date(Date.now() + DAY_MS);
+      const fetchStart = Date.now();
+      // fetch_ms = fetchYahooChartPeriod (network + JSON decode), which is capped at 20s here
       const chart = await Promise.race([
         fetchYahooChartPeriod(row.symbol, Math.floor(from.getTime() / 1000), Math.floor(to.getTime() / 1000)),
         new Promise<null>((resolve) => setTimeout(() => resolve(null), 20_000)),
       ]);
+      timing.fetch_ms = Date.now() - fetchStart;
+      const parseStart = Date.now();
       const candles = (chart?.candles ?? []).filter((c) => c.close != null && c.close > 0 && c.high != null && c.low != null && c.open != null);
-      if (!candles.length) { failedIndexes.push({ id: row.id, symbol: row.symbol, reason: "NO_CANDLES" }); continue; }
+      if (!candles.length) { timing.parse_ms = Date.now() - parseStart; timings.push(timing); failedIndexes.push({ id: row.id, symbol: row.symbol, reason: "NO_CANDLES" }); continue; }
 
       const cursorTime = latestCandle?.timestamp.getTime() ?? null;
-      let wrote = 0;
+      const toWrite: HistoryCandle[] = [];
       for (const c of candles) {
         // Use Yahoo's raw bar timestamp as-is (matches the pre-existing global_index_candles
         // convention set by the legacy script — actual session-close time, e.g. 13:30:00Z for US
@@ -164,25 +193,26 @@ export async function updateIndexHistory(cursor: string | null, batchSize = 2, s
         // Forward-only for history too: never rewrite a day strictly before what we already have
         // beyond the 3-day revision-reabsorb window; same-day/future upserts stay idempotent.
         if (cursorTime != null && timestamp.getTime() < cursorTime - 3 * DAY_MS) continue;
-        await prisma.globalIndexCandle.upsert({
-          where: { indexId_interval_timestamp_source: { indexId: row.id, interval: "1d", timestamp, source: "YAHOO_CHART" } },
-          create: {
-            indexId: row.id, interval: "1d", timestamp, open: c.open!, high: c.high!, low: c.low!, close: c.close!,
-            volume: c.volume != null ? c.volume : null, timezone: row.timezone ?? "UTC", session: "REGULAR",
-            source: "YAHOO_CHART", completeness: "SOURCE_REPORTED", qualityStatus: "PASS",
-            sourceType: "SUPPLEMENTAL", verificationStatus: "UNVERIFIED", licenseStatus: "SUPPLEMENTAL_UNVERIFIED",
-            currency: row.currency, sourceUrl: `https://query1.finance.yahoo.com/v8/finance/chart/${row.symbol}`,
-          },
-          update: { open: c.open!, high: c.high!, low: c.low!, close: c.close!, volume: c.volume != null ? c.volume : null },
-        });
-        wrote++;
+        toWrite.push({ timestamp, open: c.open!, high: c.high!, low: c.low!, close: c.close!, volume: c.volume != null ? c.volume : null });
       }
-      rowsWritten += wrote;
+      const statements = buildCandleUpsertStatements({ indexId: row.id, timezone: row.timezone ?? "UTC", currency: row.currency, symbol: row.symbol }, toWrite);
+      timing.parse_ms = Date.now() - parseStart;
+
+      const writeStart = Date.now();
+      for (const s of statements) await db.$executeRawUnsafe(s.sql, ...s.params);
+      timing.write_ms = Date.now() - writeStart;
+      timing.candles = toWrite.length;
+      timing.statements = statements.length;
+      rowsWritten += toWrite.length;
       updatedIndexes++;
+      timings.push(timing);
     } catch (error) {
+      timings.push(timing);
       failedIndexes.push({ id: row.id, symbol: row.symbol, reason: String(error) });
     }
   }
 
-  return { requestedIndexes: rows.length, updatedIndexes, rowsWritten, failedIndexes, lastId: wrapped ? null : rows.at(-1)!.id, wrapped };
+  const wrapped = !budgetStopped && !fullBatch;
+  const lastProcessed = processed > 0 ? rows[processed - 1].id : cursor;
+  return { requestedIndexes: processed, updatedIndexes, rowsWritten, failedIndexes, lastId: wrapped ? null : lastProcessed, wrapped, budgetStopped, timings };
 }
