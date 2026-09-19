@@ -25,6 +25,11 @@ export const dynamic = "force-dynamic";
 
 const query = (sql: string, params: unknown[]) => prisma.$queryRawUnsafe(sql, ...params) as Promise<any[]>;
 const TIME_BUDGET_MS = 240_000;
+// Bounded concurrency window for the per-symbol Yahoo fetch + DB write. Safe because
+// mastersHoldingsWrittenThisRun's check-then-add in ingestUsFundShareClass has no `await` between
+// them, so it stays atomic across interleaved concurrent calls even without a lock. Each item keeps
+// its own try/catch (see runOne below) so one fund failing never drops the rest of its chunk.
+const SWEEP_CONCURRENCY = 5;
 const JOB = "YAHOO_FUND_FULL_SWEEP";
 const DISCOVERY_JOB = "YAHOO_FUND_UNIVERSE_DISCOVERY";
 const REPAIR_JOB = "YAHOO_FUND_ENRICH_REPAIR";
@@ -123,15 +128,17 @@ export async function GET(request: Request) {
 
     let attempted = 0, coreOk = 0, navHistoryOk = 0, holdingsOk = 0, morningstarOk = 0, failed = 0;
     let navRows = 0, distRows = 0, holdRows = 0, scIns = 0, scUpd = 0, mCreated = 0, mLinked = 0;
-    for (const sym of slice) {
-      if (Date.now() - started > TIME_BUDGET_MS) break;
-      attempted++;
+
+    // One symbol's full fetch+write, isolated: a throw here is caught locally and counted as a
+    // failure, never rejecting the Promise.all for its chunk siblings — same failure-isolation
+    // contract as the original sequential try/catch, just per-concurrent-item instead of per-loop.
+    async function runOne(sym: string): Promise<void> {
       try {
         const rec = await enrichFundFromYahoo(sym, stats);
         if (!rec) {
           failed++;
           await recordCoreOutcome(sym, false, stats.lastFailure);
-          continue;
+          return;
         }
         const r = await ingestUsFundShareClass(query, rec, mastersHoldingsWrittenThisRun);
         if (r.coreOk) {
@@ -149,6 +156,13 @@ export async function GET(request: Request) {
         failed++;
         await recordCoreOutcome(sym, false, "EXCEPTION");
       }
+    }
+
+    for (let i = 0; i < slice.length; i += SWEEP_CONCURRENCY) {
+      if (Date.now() - started > TIME_BUDGET_MS) break;
+      const chunk = slice.slice(i, i + SWEEP_CONCURRENCY);
+      attempted += chunk.length;
+      await Promise.all(chunk.map((sym) => runOne(sym)));
       await sleep(500);
     }
 
@@ -170,7 +184,7 @@ export async function GET(request: Request) {
       rate_limited: stats.rateLimited, crumb_refresh: stats.crumbRefresh, enrich_failures: stats.failures ?? {},
       auth_cookie_present: authDiag.lastCookiePresent, auth_crumb_present: authDiag.lastCrumbPresent,
       universe_size: symbols.length, index_before: startIdx, index_after: cpAfter.lastSymbol, wrapped,
-      concurrency: 1, runtime_ms: Date.now() - started,
+      concurrency: SWEEP_CONCURRENCY, runtime_ms: Date.now() - started,
     };
     await finishRun(runId, JOB, "YAHOO", started, {
       status: failed > 0 && coreOk === 0 ? "PARTIAL" : "COMPLETED",

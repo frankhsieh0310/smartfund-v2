@@ -49,10 +49,26 @@ export async function GET(request: Request) {
   if (skipped) return Response.json({ ok: true, task: "yahoo-etf-enrich-repair", skipped: true, reason: "DUPLICATE_RUN_KEY" });
 
   try {
+    // Symbol correction reuses the same TWSE/TPEx -> .TW/.TWO mapping already established in
+    // app/api/cron/yahoo-etf/route.ts and run-etf-yahoo-product-modules.ts — exchange-level, not a
+    // per-symbol hardcode. Confirmed root cause: 81 Taiwan ETF failures were seeded with a bare
+    // code (no Yahoo suffix), so every repair attempt hit an unresolvable Yahoo symbol regardless
+    // of retries. classification IS DISTINCT FROM 'NOT_AVAILABLE' stops re-queuing items already
+    // marked not-available by the full sweep, whether or not `resolved` was also set on them —
+    // without that, a NOT_AVAILABLE-but-unresolved row re-enters this queue forever.
     const queueRows = (await query(
-      `SELECT stock_id, symbol, attempts FROM production_scheduler_failures
-        WHERE job_id = $1 AND resolved = false AND (next_retry_at IS NULL OR next_retry_at <= NOW())
-        ORDER BY last_attempted_at ASC
+      `SELECT f.stock_id,
+              CASE
+                WHEN e.exchange = 'TWSE' AND f.symbol !~ '\\.(TW|TWO)$' THEN f.symbol || '.TW'
+                WHEN e.exchange = 'TPEx' AND f.symbol !~ '\\.(TW|TWO)$' THEN f.symbol || '.TWO'
+                ELSE f.symbol
+              END AS symbol,
+              f.attempts
+         FROM production_scheduler_failures f
+         LEFT JOIN etfs e ON e.id::text = f.stock_id
+        WHERE f.job_id = $1 AND f.resolved = false AND f.classification IS DISTINCT FROM 'NOT_AVAILABLE'
+          AND (f.next_retry_at IS NULL OR f.next_retry_at <= NOW())
+        ORDER BY f.last_attempted_at ASC
         LIMIT $2`,
       [JOB, batch],
     )) as Array<{ stock_id: string; symbol: string; attempts: number }>;

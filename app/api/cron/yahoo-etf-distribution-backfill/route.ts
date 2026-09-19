@@ -43,12 +43,16 @@ const WIDE_WINDOW_SECONDS = 450 * 86_400; // ~15 months of headroom for annual-f
 // Acceptance-test / high-liquidity ETFs get covered first so this doesn't wait on id order.
 const PRIORITY_SYMBOLS = ["SPY", "QQQ", "BND", "HYG", "SCHD", "VYM", "AGG", "VOO", "VTI", "GLD", "IEMG", "XLK", "IVV", "VNQ", "LQD"];
 
+// An ETF with distribution_checked_at set was already scanned this era and confirmed to have zero
+// distribution events (a real, legitimate outcome for a non-paying ETF) — excluding it here is what
+// stops the candidate query from re-selecting the same confirmed-empty ETFs every session.
 async function countRemaining(): Promise<number> {
   return (
     await query(
       `SELECT count(*)::int n FROM etfs e
         WHERE e.is_active = true AND EXISTS (SELECT 1 FROM etf_history h WHERE h.etf_id = e.id LIMIT 1)
-          AND NOT EXISTS (SELECT 1 FROM etf_distribution_events d WHERE d.etf_id = e.id LIMIT 1)`,
+          AND NOT EXISTS (SELECT 1 FROM etf_distribution_events d WHERE d.etf_id = e.id LIMIT 1)
+          AND e.distribution_checked_at IS NULL`,
       [],
     )
   )[0]?.n ?? 0;
@@ -83,6 +87,7 @@ export async function GET(request: Request) {
           AND e.data_source ~ '^[A-Za-z0-9.^=-]{1,15}$'
           AND EXISTS (SELECT 1 FROM etf_history h WHERE h.etf_id = e.id LIMIT 1)
           AND NOT EXISTS (SELECT 1 FROM etf_distribution_events d WHERE d.etf_id = e.id LIMIT 1)
+          AND e.distribution_checked_at IS NULL
         ORDER BY (CASE WHEN e.code = ANY($1) THEN 0 ELSE 1 END), e.id
         LIMIT $2`,
       [PRIORITY_SYMBOLS, batch],
@@ -97,7 +102,14 @@ export async function GET(request: Request) {
         const period1 = Math.floor((Date.now() - WIDE_WINDOW_SECONDS * 1000) / 1000);
         const chart = await fetchChartFull(e.data_source, { period1 });
         if (!chart) { failed++; continue; }
-        if (!chart.dividends.length) { noEvents++; ok++; continue; }
+        if (!chart.dividends.length) {
+          noEvents++;
+          ok++;
+          // Permanent "confirmed empty" marker — this ETF genuinely has no distributions in the
+          // scanned window, so it must not be re-selected as a candidate every future session.
+          await query(`UPDATE etfs SET distribution_checked_at = NOW() WHERE id = $1`, [e.id]);
+          continue;
+        }
         for (const d of chart.dividends) {
           if (Date.now() - started > TIME_BUDGET_MS) break outer; // a single long-history ETF must never blow the budget
           if (!(d.amount > 0) || !d.date) continue;
