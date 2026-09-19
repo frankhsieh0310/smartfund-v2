@@ -25,8 +25,21 @@
 import { isAuthorizedCron, unauthorizedCron } from "@/lib/cron/authorize";
 import { prisma } from "@/lib/prisma";
 import { beginRun, finishRun, readCheckpoint, writeCheckpoint } from "@/lib/cloud-ingestion/runContext";
-import { fetchChartFull, sleep } from "@/lib/yahoo/productSession";
+import { sleep } from "@/lib/yahoo/productSession";
+import { fetchDividendHistory, type DividendFetchOutcome } from "@/lib/yahoo/distributionFetch";
+import { TW_UNIVERSE_SQL, bulkUpsertEvents, syncTwUpcomingExDates, twProgress, yahooSymbolFor, type EventRow } from "@/lib/yahoo/twEtfDistribution";
 
+// 2026-09-19 Release Data P0 — ONE pipeline, market-prioritised (no per-symbol jobs):
+//   universe (DB metadata)  ->  batch of candidates  ->  fetch in bounded-concurrency chunks  ->  normalize
+//   ->  ONE bulk upsert per chunk  ->  mark checked_at for finished symbols (checkpoint = DB state)  ->  next chunk.
+// * Taiwan ETFs (region/exchange/.TW|.TWO metadata) are tier 0 and are scanned for FULL history (period1=0) whenever
+//   distribution_checked_at IS NULL, even if a few events already exist (the daily sweep only ever adds new ones).
+// * Outcomes are split: COVERED (events), EMPTY (source answered, no dividends), NOT_AVAILABLE (source has no such
+//   symbol) — all three are terminal and stamp checked_at; FAILED (429/5xx/timeout/network) is NOT stamped, so only
+//   those are retried on the next run. A failed symbol never aborts its chunk, and a failed chunk write never undoes
+//   earlier chunks.
+// * Once history is complete, ongoing new distributions arrive from the daily ETF full sweep (events=div on every
+//   price update); this job additionally imports OFFICIAL upcoming ex-dates (TWSE/TPEx announcement tables) each run.
 export const runtime = "nodejs";
 export const maxDuration = 300;
 export const dynamic = "force-dynamic";
@@ -41,27 +54,26 @@ const CHECKPOINT_KEY = "yahoo-etf-distribution-backfill";
 const LOCK_WINDOW_MINUTES = 6;
 const WIDE_WINDOW_SECONDS = 450 * 86_400; // ~15 months of headroom for annual-frequency inference
 // Acceptance-test / high-liquidity ETFs get covered first so this doesn't wait on id order.
+const CONCURRENCY = 10; // parallel Yahoo chart requests per chunk; one bulk DB write per chunk
 const PRIORITY_SYMBOLS = ["SPY", "QQQ", "BND", "HYG", "SCHD", "VYM", "AGG", "VOO", "VTI", "GLD", "IEMG", "XLK", "IVV", "VNQ", "LQD"];
 
 // An ETF with distribution_checked_at set was already scanned this era and confirmed to have zero
 // distribution events (a real, legitimate outcome for a non-paying ETF) — excluding it here is what
 // stops the candidate query from re-selecting the same confirmed-empty ETFs every session.
+const CANDIDATE_WHERE = `e.is_active = true AND e.distribution_checked_at IS NULL AND (
+    ${TW_UNIVERSE_SQL}
+    OR (e.data_source ~ '^[A-Za-z0-9.^=-]{1,15}$'
+        AND EXISTS (SELECT 1 FROM etf_history h WHERE h.etf_id = e.id LIMIT 1)
+        AND NOT EXISTS (SELECT 1 FROM etf_distribution_events d WHERE d.etf_id = e.id LIMIT 1)))`;
+
 async function countRemaining(): Promise<number> {
-  return (
-    await query(
-      `SELECT count(*)::int n FROM etfs e
-        WHERE e.is_active = true AND EXISTS (SELECT 1 FROM etf_history h WHERE h.etf_id = e.id LIMIT 1)
-          AND NOT EXISTS (SELECT 1 FROM etf_distribution_events d WHERE d.etf_id = e.id LIMIT 1)
-          AND e.distribution_checked_at IS NULL`,
-      [],
-    )
-  )[0]?.n ?? 0;
+  return (await query(`SELECT count(*)::int n FROM etfs e WHERE ${CANDIDATE_WHERE}`, []))[0]?.n ?? 0;
 }
 
 export async function GET(request: Request) {
   if (!isAuthorizedCron(request)) return unauthorizedCron();
   const url = new URL(request.url);
-  const batch = Math.min(80, Math.max(10, Number(url.searchParams.get("batch")) || 50));
+  const batch = Math.min(200, Math.max(10, Number(url.searchParams.get("batch")) || 100));
   const started = Date.now();
 
   const inFlight = await query(
@@ -80,53 +92,56 @@ export async function GET(request: Request) {
   if (skipped) return Response.json({ ok: true, task: "yahoo-etf-distribution-backfill", skipped: true, reason: "DUPLICATE_RUN_KEY", scan_complete: false });
 
   try {
+    // Official upcoming ex-dates (2 HTTP calls for ALL listed securities; failures are reported, never fatal).
+    const upcoming = await syncTwUpcomingExDates(query).catch((e) => ({ error: (e as Error).message }));
+
     const candidates = (await query(
-      `SELECT e.id::text, e.code, e.data_source
+      `SELECT e.id::text AS id, e.code, e.data_source, e.exchange, (${TW_UNIVERSE_SQL}) AS is_tw
          FROM etfs e
-        WHERE e.is_active = true
-          AND e.data_source ~ '^[A-Za-z0-9.^=-]{1,15}$'
-          AND EXISTS (SELECT 1 FROM etf_history h WHERE h.etf_id = e.id LIMIT 1)
-          AND NOT EXISTS (SELECT 1 FROM etf_distribution_events d WHERE d.etf_id = e.id LIMIT 1)
-          AND e.distribution_checked_at IS NULL
-        ORDER BY (CASE WHEN e.code = ANY($1) THEN 0 ELSE 1 END), e.id
+        WHERE ${CANDIDATE_WHERE}
+        ORDER BY (CASE WHEN ${TW_UNIVERSE_SQL} THEN 0 WHEN e.code = ANY($1) THEN 1 ELSE 2 END), e.id
         LIMIT $2`,
       [PRIORITY_SYMBOLS, batch],
-    )) as Array<{ id: string; code: string; data_source: string }>;
+    )) as Array<{ id: string; code: string; data_source: string | null; exchange: string | null; is_tw: boolean }>;
 
-    let attempted = 0, ok = 0, failed = 0, eventsWritten = 0, noEvents = 0, lastId: string | null = null;
-    outer: for (const e of candidates) {
+    let attempted = 0, covered = 0, empty = 0, notAvailable = 0, failed = 0, inserted = 0, updated = 0, lastId: string | null = null;
+    const failedReasons: Record<string, number> = {};
+    for (let i = 0; i < candidates.length; i += CONCURRENCY) {
       if (Date.now() - started > TIME_BUDGET_MS) break;
-      attempted++;
-      lastId = e.id;
+      const chunk = candidates.slice(i, i + CONCURRENCY);
+      const outcomes: Array<{ e: (typeof chunk)[number]; o: DividendFetchOutcome }> = await Promise.all(
+        chunk.map(async (e) => {
+          const symbol = e.is_tw ? yahooSymbolFor(e) : (e.data_source as string);
+          // Taiwan: full history. Everything else keeps the existing ~15-month window.
+          const period1 = e.is_tw ? 0 : Math.floor((Date.now() - WIDE_WINDOW_SECONDS * 1000) / 1000);
+          return { e, o: await fetchDividendHistory(symbol, { period1 }) };
+        }),
+      );
+      attempted += chunk.length;
+      lastId = chunk[chunk.length - 1].id;
+      const rows: EventRow[] = [];
+      const terminal: string[] = [];
+      for (const { e, o } of outcomes) {
+        if (o.kind === "FAILED") { failed++; failedReasons[o.reason] = (failedReasons[o.reason] ?? 0) + 1; continue; }
+        terminal.push(e.id);
+        if (o.kind === "NOT_AVAILABLE") { notAvailable++; continue; }
+        if (!o.events.length) { empty++; continue; }
+        covered++;
+        for (const d of o.events) rows.push({ etfId: e.id, exDate: d.exDate, amount: d.amount, currency: o.currency ?? (e.is_tw ? "TWD" : "USD"), source: "YAHOO_CHART", sourceRecordId: `YAHOO:${o.symbol}:${d.exDate}` });
+      }
       try {
-        const period1 = Math.floor((Date.now() - WIDE_WINDOW_SECONDS * 1000) / 1000);
-        const chart = await fetchChartFull(e.data_source, { period1 });
-        if (!chart) { failed++; continue; }
-        if (!chart.dividends.length) {
-          noEvents++;
-          ok++;
-          // Permanent "confirmed empty" marker — this ETF genuinely has no distributions in the
-          // scanned window, so it must not be re-selected as a candidate every future session.
-          await query(`UPDATE etfs SET distribution_checked_at = NOW() WHERE id = $1`, [e.id]);
-          continue;
-        }
-        for (const d of chart.dividends) {
-          if (Date.now() - started > TIME_BUDGET_MS) break outer; // a single long-history ETF must never blow the budget
-          if (!(d.amount > 0) || !d.date) continue;
-          const r = await query(
-            `INSERT INTO etf_distribution_events
-               (id, etf_id, share_class_id, ex_date, effective_date, amount, currency, source, source_record_id, verification_status, imported_at, created_at, updated_at)
-             VALUES (gen_random_uuid(), $1, 'PRIMARY', $2::date, $2::date, $3, $4, 'YAHOO_CHART', $5, 'SOURCE_PARSED', NOW(), NOW(), NOW())
-             ON CONFLICT (etf_id, share_class_id, ex_date, source, source_record_id) DO NOTHING
-             RETURNING 1`,
-            [e.id, d.date, d.amount, chart.currency ?? "USD", `YAHOO:${e.data_source}:${d.date}`],
-          );
-          eventsWritten += r.length;
-        }
-        ok++;
-      } catch { failed++; }
-      await sleep(400);
+        const w = await bulkUpsertEvents(query, rows);
+        inserted += w.inserted; updated += w.updated;
+        if (terminal.length) await query(`UPDATE etfs SET distribution_checked_at = NOW() WHERE id::text = ANY($1::text[])`, [terminal]);
+      } catch {
+        // chunk write failed: nothing was stamped, so these symbols are simply retried next run; earlier chunks stay committed.
+        failed += terminal.length; failedReasons.DB_WRITE = (failedReasons.DB_WRITE ?? 0) + terminal.length;
+      }
+      await sleep(150);
     }
+    const ok = attempted - failed;
+    const eventsWritten = inserted;
+    const noEvents = empty;
 
     const remaining = await countRemaining();
     // 3: true completion means nothing left to scan — NOT "this batch wrote 0 rows" (plenty of ETFs
@@ -143,12 +158,14 @@ export async function GET(request: Request) {
 
     const details = {
       trigger: "CLOUD_SCHEDULED", attempted, succeeded: ok, failed, no_events: noEvents, events_written: eventsWritten,
+      covered, empty, not_available: notAvailable, events_updated: updated, failed_reasons: failedReasons, concurrency: CONCURRENCY, upcoming_ex_dates: upcoming,
+      tw_progress: await twProgress(query).catch(() => null),
       remaining, scan_complete: scanComplete, wrapped: scanComplete,
       checkpoint_before: cpBefore, checkpoint_after: cpAfter, runtime_ms: Date.now() - started,
     };
     await finishRun(runId, JOB, "YAHOO", started, {
       status: attempted > 0 && ok === 0 ? "PARTIAL" : "COMPLETED",
-      attempted, completed: ok, inserted: eventsWritten, updated: 0, failed, retryableFailures: failed,
+      attempted, completed: ok, inserted: eventsWritten, updated, failed, retryableFailures: failed,
       checkpointAfter: { ...cpAfter, updatedAt: new Date().toISOString() }, details,
     });
     return Response.json({ ok: true, task: "yahoo-etf-distribution-backfill", ...details });

@@ -14,8 +14,8 @@ export async function etfDistributionBackfillCycle(input: EtfDistributionBackfil
   // 2026-09-11 fix: default batch lowered (50->35) as extra headroom alongside the endpoint's own
   // tightened internal deadline (see route.ts) — smaller slices, less chance any one of them runs
   // long enough to hit the workflow step's own fetch timeout.
-  const batch = input.batch ?? 35;
-  const gapMs = (input.gapSeconds ?? 20) * 1000;
+  const batch = input.batch ?? 120; // 2026-09-19: chunks of 10 concurrent fetches + one bulk write each (was 35 serial)
+  const gapMs = (input.gapSeconds ?? 5) * 1000;
   const maxSlices = input.maxSlices ?? 300;
 
   let done = false;

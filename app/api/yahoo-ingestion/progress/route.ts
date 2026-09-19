@@ -5,6 +5,7 @@
 // no cookie/crumb/PII, no start/stop/reset affordance exists in this file at all.
 
 import { prisma } from "@/lib/prisma";
+import { twProgress } from "@/lib/yahoo/twEtfDistribution";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -246,7 +247,19 @@ async function distributionBackfillSection() {
   const status = workflowHealth(processed, totalUniverse, latest, now);
   const eta = computeRollingEta(remaining, runRows, now, status);
 
+  // Unified Taiwan-ETF view of the SAME pipeline (DB-derived; no per-symbol state).
+  const tw = await twProgress(query).catch(() => null);
+  const lastOk = runRows.find((r) => r.status === "COMPLETED");
+  const lastTwDetails = runRows.find((r) => r.details?.tw_progress)?.details ?? null;
   return {
+    tw_etf_distribution: tw && {
+      ...tw,
+      TW_ETF_FAILED_LAST_RUN: lastTwDetails ? Number(lastTwDetails.failed ?? 0) : null, // failed = retryable only; never includes EMPTY / NOT_AVAILABLE
+      LAST_CHECKPOINT: cpBefore?.updated_at ?? null,
+      LAST_SUCCESSFUL_RUN: lastOk?.completed_at ?? lastOk?.started_at ?? null,
+      NEXT_RUN: "daily 05:00 UTC (vercel cron → yahoo-etf-distribution-backfill workflow)",
+      UPCOMING_EX_DATES_LAST_SYNC: lastTwDetails?.upcoming_ex_dates ?? null,
+    },
     total_target: totalUniverse,
     processed,
     succeeded,

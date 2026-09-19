@@ -71,10 +71,14 @@ export async function buildCalendar(prisma: PrismaClient, month: string, items: 
     for (const r of await query(prisma, `SELECT id::text AS id, name, code FROM funds WHERE id::text = ANY($1::text[])`, [fundIds])) profiles.set(`FUND:${r.id}`, { name: r.name, ticker: r.code });
   }
   const scopesOf = new Map(items.map((i) => [`${i.kind}:${i.id}`, i.scopes]));
+  const seen = new Set<string>(); // the same ex/pay date may be reported by two sources (e.g. Yahoo + an official notice): show it once
   const push = (kind: CalendarKind, id: string, type: CalendarEventType, date: string, amount: number | null = null, currency: string | null = null) => {
     const key = `${kind}:${id}`;
     const p = profiles.get(key);
     if (!p || !scopesOf.has(key) || !date) return; // unknown product / not one of the user's products / no source date
+    const dedupeKey = `${key}|${type}|${date.slice(0, 10)}`;
+    if (seen.has(dedupeKey)) return;
+    seen.add(dedupeKey);
     events.push({ date: date.slice(0, 10), type, assetType: kind, assetId: id, name: p.name, ticker: p.ticker, scopes: scopesOf.get(key)!, amount, currency });
   };
 

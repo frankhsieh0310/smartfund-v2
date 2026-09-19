@@ -8,6 +8,7 @@ import { computeConcentration } from "./concentration";
 import type { CoverageDepth } from "./coverageDepth";
 import { rekeyByNormalizedName, normalizeHoldingName } from "./holdingKey";
 import { aggregateLookThroughExposure, summarizeOverlap, type ProductHoldings } from "./holdingsAnalysis";
+import { loadEtfSectorAllocations, sectorLabel, type SectorAllocation } from "./sectorAllocation";
 import { getEtfHoldingsTableAsOf, getFundHoldingsTableAsOf, type HoldingsTableRow } from "./holdingsQueries";
 
 export const MAX_PORTFOLIO_ITEMS = 10;
@@ -71,7 +72,12 @@ export function computeWeights(items: PortfolioInputItem[], mode: PortfolioMode)
   };
 }
 
-export function analyzePortfolio(products: LoadedProduct[], mode: PortfolioMode, weightInfo: Omit<ReturnType<typeof computeWeights>, "weights">) {
+export function analyzePortfolio(
+  products: LoadedProduct[],
+  mode: PortfolioMode,
+  weightInfo: Omit<ReturnType<typeof computeWeights>, "weights">,
+  sectorAlloc: Map<string, SectorAllocation> = new Map(), // key: LoadedProduct.ref
+) {
   const label = (p: LoadedProduct) => p.code ?? p.name ?? p.id.slice(0, 6);
   const included = products.filter((p) => p.found && p.rows.length > 0);
   const excluded = products.filter((p) => !included.includes(p));
@@ -110,23 +116,71 @@ export function analyzePortfolio(products: LoadedProduct[], mode: PortfolioMode,
   const overlapSummary = summarizeOverlap(exposure);
   const duplicateExposurePct = round(shared.reduce((s, e) => s + e.effectiveWeightPct, 0));
 
-  // ---- sector / country: existing per-product buckets, weighted by portfolio allocation ----
-  const bucketExposure = (field: "sectorConcentration" | "countryConcentration") => {
-    const totals = new Map<string, number>();
-    for (const p of included) {
-      for (const b of computeConcentration(p.rows)[field]) {
-        totals.set(b.label, (totals.get(b.label) ?? 0) + (p.weightPct / 100) * b.weightPct);
+  // ---- sector: ETF product-level allocation x portfolio weight (etf_sector_allocations). Never guessed. ----
+  const rankBuckets = (totals: Map<string, number>, labelOf: (k: string) => string) =>
+    [...totals.entries()].map(([key, exposurePct]) => ({ key, label: labelOf(key), exposurePct: round(exposurePct) })).sort((a, b) => b.exposurePct - a.exposurePct);
+  const sectorTotals = new Map<string, number>();
+  const sectorCoverage = products.map((p) => {
+    const alloc = p.kind === "ETF" && p.found ? sectorAlloc.get(p.ref) : undefined;
+    if (alloc) for (const b of alloc.buckets) sectorTotals.set(b.key, (sectorTotals.get(b.key) ?? 0) + (p.weightPct / 100) * b.weightPct);
+    return {
+      ref: p.ref, label: label(p), weightPct: round(p.weightPct, 4),
+      status: !p.found ? "NOT_FOUND" : alloc ? "COVERED" : p.kind === "FUND" ? "FUND_SECTOR_UNAVAILABLE" : "NO_SECTOR_ALLOCATION",
+      asOfDate: alloc?.asOfDate ?? null, source: alloc?.source ?? null,
+      sectorCoveredPct: alloc ? round(alloc.coveredPct) : null,
+      contributesPortfolioPct: alloc ? round((p.weightPct / 100) * alloc.coveredPct) : 0,
+    };
+  });
+  const sectorAll = rankBuckets(sectorTotals, sectorLabel);
+  const sectorClassifiedPct = round(sectorAll.reduce((t, b) => t + b.exposurePct, 0));
+  const sectorUncovered = round(Math.max(0, weightInfo.totalWeightPct - sectorClassifiedPct));
+  const sector = {
+    hasClassifiedData: sectorAll.length > 0,
+    largest: sectorAll[0] ?? null,
+    top3: sectorAll.slice(0, 3),
+    all: sectorAll,
+    calculatedPct: sectorClassifiedPct,
+    uncoveredPct: sectorUncovered,
+    unclassifiedPct: sectorUncovered,
+    coveredProductCount: sectorCoverage.filter((c) => c.status === "COVERED").length,
+    uncoveredProducts: sectorCoverage.filter((c) => c.status !== "COVERED"),
+    sourceCoverage: sectorCoverage,
+    basisNote: "產業曝險 = 各 ETF 的投組權重 × 該 ETF 公布的產業配置；沒有產業配置資料的商品列為未涵蓋，不推測。",
+  };
+
+  // ---- country: only real per-holding country values from the looked-through holdings ----
+  const countryTotals = new Map<string, number>();
+  const countryCoverage = products.map((p) => {
+    const isIncluded = included.includes(p);
+    let classified = 0;
+    if (isIncluded) {
+      for (const b of computeConcentration(p.rows).countryConcentration) {
+        if (b.label === UNCLASSIFIED) continue;
+        classified += b.weightPct;
+        countryTotals.set(b.label, (countryTotals.get(b.label) ?? 0) + (p.weightPct / 100) * b.weightPct);
       }
     }
-    const all = [...totals.entries()].map(([label, exposurePct]) => ({ label, exposurePct: round(exposurePct) })).sort((a, b) => b.exposurePct - a.exposurePct);
-    const classified = all.filter((b) => b.label !== UNCLASSIFIED);
     return {
-      hasClassifiedData: classified.length > 0,
-      largest: classified[0] ?? null,
-      top3: classified.slice(0, 3),
-      unclassifiedPct: all.find((b) => b.label === UNCLASSIFIED)?.exposurePct ?? 0,
-      all,
+      ref: p.ref, label: label(p), weightPct: round(p.weightPct, 4),
+      status: !isIncluded ? "NO_HOLDINGS" : classified > 0 ? "COVERED" : "NO_COUNTRY_DATA",
+      countryCoveredPct: isIncluded ? round(classified) : null,
+      contributesPortfolioPct: round((p.weightPct / 100) * classified),
     };
+  });
+  const countryAll = rankBuckets(countryTotals, (k) => k);
+  const countryClassifiedPct = round(countryAll.reduce((t, b) => t + b.exposurePct, 0));
+  const countryUncovered = round(Math.max(0, weightInfo.totalWeightPct - countryClassifiedPct));
+  const country = {
+    hasClassifiedData: countryAll.length > 0,
+    largest: countryAll[0] ?? null,
+    top3: countryAll.slice(0, 3),
+    all: countryAll,
+    calculatedPct: countryClassifiedPct,
+    uncoveredPct: countryUncovered,
+    unclassifiedPct: countryUncovered,
+    coveredProductCount: countryCoverage.filter((c) => c.status === "COVERED").length,
+    sourceCoverage: countryCoverage,
+    basisNote: "國家曝險僅計入持股資料中有標示國家的部分；未標示者列為未涵蓋，不推測。",
   };
   const lookedThroughPct = round(included.reduce((s, p) => s + (p.weightPct / 100) * p.rows.reduce((t, r) => t + r.weightPct, 0), 0));
 
@@ -161,8 +215,8 @@ export function analyzePortfolio(products: LoadedProduct[], mode: PortfolioMode,
       shareOfLookedThroughPct: overlapSummary.overlapPct,
       top10: shared.slice(0, 10).map(toStock),
     },
-    sector: bucketExposure("sectorConcentration"),
-    country: bucketExposure("countryConcentration"),
+    sector,
+    country,
   };
 }
 
@@ -187,5 +241,9 @@ export async function buildPortfolioAnalysis(prisma: PrismaClient, items: Portfo
       };
     }),
   );
-  return analyzePortfolio(products, mode, weightInfo);
+  const etfIds = products.filter((p) => p.kind === "ETF" && p.found).map((p) => p.id);
+  const alloc = await loadEtfSectorAllocations(prisma, etfIds);
+  const byRef = new Map<string, SectorAllocation>();
+  for (const p of products) { const a = alloc.get(p.id); if (a && p.kind === "ETF") byRef.set(p.ref, a); }
+  return analyzePortfolio(products, mode, weightInfo, byRef);
 }
