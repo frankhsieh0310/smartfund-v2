@@ -43,9 +43,10 @@ export function parseChartDividends(symbol: string, status: number, body: any): 
   return { kind: "OK", symbol, currency: res.meta?.currency ?? null, events };
 }
 
-export async function fetchDividendHistory(symbol: string, opts: { period1: number }): Promise<DividendFetchOutcome> {
+/** interval "1mo" returns the identical dividend events with ~15x less payload (verified on funds); use it for full-history scans. */
+export async function fetchDividendHistory(symbol: string, opts: { period1: number; interval?: "1d" | "1mo" }): Promise<DividendFetchOutcome> {
   const p2 = Math.floor((Date.now() + 86_400_000) / 1000);
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?period1=${opts.period1}&period2=${p2}&interval=1d&events=div`;
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?period1=${opts.period1}&period2=${p2}&interval=${opts.interval ?? "1d"}&events=div`;
   try {
     const r = await fetch(url, { headers: { "user-agent": UA, accept: "application/json" }, signal: AbortSignal.timeout(30_000) });
     let body: any = null;

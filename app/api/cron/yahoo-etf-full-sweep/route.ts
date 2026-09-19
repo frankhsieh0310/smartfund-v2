@@ -18,6 +18,15 @@ import { beginRun, finishRun, readCheckpoint, writeCheckpoint } from "@/lib/clou
 import { enrichEtfProduct } from "@/lib/yahoo/etfEnrich";
 import { ingestEtfHistory } from "@/lib/yahoo/etfHistory";
 import { sleep, newRateStats, authDiag, authAgeSeconds } from "@/lib/yahoo/productSession";
+import { TW_UNIVERSE_SQL, yahooSymbolFor } from "@/lib/yahoo/twEtfDistribution";
+
+// 2026-09-19 Release Data P0 — market priority WITHOUT a second scheduler: every lap of this same sweep now walks
+// tier 0 (Taiwan ETFs, from DB metadata) first, then tier 1 (everything else), each tier in id order. The checkpoint
+// cursor is "<tier>:<id>". A legacy plain-id cursor (pre-tier) restarts the lap so Taiwan is visited first.
+const parseCursor = (raw: string | null): { tier: number; id: string } | null => {
+  const m = raw?.match(/^([01]):(.+)$/);
+  return m ? { tier: Number(m[1]), id: m[2] } : null;
+};
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -86,34 +95,41 @@ export async function GET(request: Request) {
   if (skipped) return Response.json({ ok: true, task: "yahoo-etf-full-sweep", skipped: true, reason: "DUPLICATE_RUN_KEY" });
 
   try {
-    const cursor = cpBefore?.lastSymbol ?? null;
+    const cursor = parseCursor(cpBefore?.lastSymbol ?? null);
     const rows = (await query(
-      `SELECT id::text, code, data_source,
-              CASE WHEN data_source ~ '^[A-Za-z0-9.^=-]{1,15}$' THEN data_source
-                   WHEN code ~ '^[A-Za-z0-9.^=-]{1,15}$' THEN code ELSE NULL END AS symbol
-         FROM etfs
-        WHERE is_active = true AND ($1::text IS NULL OR id > $1)
-        ORDER BY id
-        LIMIT $2`,
-      [cursor, batch],
-    )) as Array<{ id: string; code: string; data_source: string | null; symbol: string | null }>;
+      `SELECT t.id, t.code, t.data_source, t.exchange, t.tier,
+              CASE WHEN t.data_source ~ '^[A-Za-z0-9.^=-]{1,15}$' THEN t.data_source
+                   WHEN t.code ~ '^[A-Za-z0-9.^=-]{1,15}$' THEN t.code ELSE NULL END AS symbol
+         FROM (SELECT e.id::text AS id, e.code, e.data_source, e.exchange,
+                      (CASE WHEN ${TW_UNIVERSE_SQL} THEN 0 ELSE 1 END) AS tier
+                 FROM etfs e WHERE e.is_active = true) t
+        WHERE ($1::int IS NULL OR (t.tier, t.id) > ($1::int, $2::text))
+        ORDER BY t.tier, t.id
+        LIMIT $3`,
+      [cursor?.tier ?? null, cursor?.id ?? null, batch],
+    )) as Array<{ id: string; code: string; data_source: string | null; exchange: string | null; tier: number; symbol: string | null }>;
 
     // Enrich concurrency is (and always has been) 1 — this loop is strictly sequential, one
     // ingestEtfHistory + one enrichEtfProduct call at a time. The cloud enrich-success-rate problem
     // was never a concurrency/rate-limit issue (rate_limited stayed 0) — see productSession.ts's
     // fetchQuoteSummary fix (403-as-retryable, real cookie capture) and the module split below.
     let attempted = 0, histOk = 0, enrichCoreOk = 0, holdingsOk = 0, histRows = 0, holdRows = 0, perfRows = 0, distEvents = 0, failed = 0, noSym = 0;
-    let lastId: string | null = cursor;
+    let lastId: string | null = cpBefore?.lastSymbol && cursor ? cpBefore.lastSymbol : null;
+    let twTier = 0, writeFailed = 0;
     for (const e of rows) {
       if (Date.now() - started > TIME_BUDGET_MS) break;
-      lastId = e.id;
+      lastId = `${e.tier}:${e.id}`;
+      if (e.tier === 0) twTier++;
       attempted++;
       const sym = (e.symbol ?? "").trim();
       if (!SYMBOL_RE.test(sym)) { noSym++; continue; }
       try {
         const h = await ingestEtfHistory(query, { etfId: e.id, symbol: sym });
         if (h.ok) { histOk++; histRows += h.rowsWritten; distEvents += h.distributionEvents; } else failed++;
-        const p = await enrichEtfProduct(query, { etfId: e.id, symbol: sym }, stats);
+        // Taiwan ETFs whose data_source has no Yahoo suffix (e.g. 006208) need the derived .TW/.TWO symbol for quoteSummary.
+        const enrichSym = e.tier === 0 ? yahooSymbolFor(e) : sym;
+        const p = await enrichEtfProduct(query, { etfId: e.id, symbol: enrichSym }, stats);
+        if (p.error?.startsWith("WRITE_FAILED")) writeFailed++; // never swallow enrich write errors silently again
         if (p.coreOk) { enrichCoreOk++; perfRows += p.performanceWritten; } else failed++;
         if (p.holdingsOk) { holdingsOk++; holdRows += p.holdingsWritten; }
         await recordEnrichOutcome(e.id, sym, p.coreOk, p.coreOk ? undefined : stats.lastFailure, null);
@@ -134,7 +150,7 @@ export async function GET(request: Request) {
     const details = {
       trigger: "CLOUD_SCHEDULED", attempted,
       history_ok: histOk, enrich_core_ok: enrichCoreOk, holdings_ok: holdingsOk,
-      failed, no_symbol: noSym,
+      failed, no_symbol: noSym, tw_tier_processed: twTier, enrich_write_failed: writeFailed,
       history_rows: histRows, holdings_rows: holdRows, performance_rows: perfRows, distribution_rows: distEvents,
       rate_limited: stats.rateLimited, crumb_refresh: stats.crumbRefresh, enrich_failures: stats.failures ?? {},
       auth_cookie_present: authDiag.lastCookiePresent, auth_crumb_present: authDiag.lastCrumbPresent,

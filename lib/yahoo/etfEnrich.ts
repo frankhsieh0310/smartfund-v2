@@ -189,7 +189,7 @@ async function writeEtfEnrichData(
            (id, etf_id, effective_date, report_date, source, source_type, source_url, source_record_id, retrieved_at,
             checksum, source_row_count, parsed_row_count, canonical_row_count, verification_status, license_status,
             completeness_status, quality_status, quality_metrics, parser_version, archive_lineage)
-         VALUES (gen_random_uuid(), $1, NULL, NULL, 'YAHOO_QUOTE_SUMMARY', 'PROVIDER_OBSERVATION', $2, $3, $4,
+         VALUES (gen_random_uuid(), $1, NULL, NULL, 'YAHOO_QUOTE_SUMMARY', 'PROVIDER_OBSERVATION', $2, $3, $4::timestamptz,
             $5, $6, $6, $6, 'SOURCE_PARSED', 'TERMS_REVIEW_REQUIRED', 'TOP_HOLDINGS_ONLY', 'PARTIAL_DATE_UNKNOWN',
             $7::jsonb, 'yahoo-top-holdings-v2', $8::jsonb)
          RETURNING id::text`,
@@ -222,7 +222,7 @@ async function writeEtfEnrichData(
     for (const s of sectors) {
       await query(
         `INSERT INTO etf_sector_allocations (id, etf_id, observation_date, sector_name, weight, source, source_url, retrieved_at, created_at, updated_at)
-         VALUES (gen_random_uuid(), $1, $2::date, $3, $4, 'YAHOO_QUOTE_SUMMARY', $5, $6, NOW(), NOW())
+         VALUES (gen_random_uuid(), $1, $2::date, $3, $4, 'YAHOO_QUOTE_SUMMARY', $5, $6::timestamptz, NOW(), NOW())
          ON CONFLICT (etf_id, observation_date, source, sector_name) DO UPDATE SET
            weight = EXCLUDED.weight, source_url = EXCLUDED.source_url, retrieved_at = EXCLUDED.retrieved_at, updated_at = NOW()`,
         [input.etfId, d, s.name, s.weight, srcUrl, retrievedAt],
@@ -238,7 +238,7 @@ async function writeEtfEnrichData(
     for (const cr of ratings) {
       await query(
         `INSERT INTO etf_credit_rating_allocations (id, etf_id, observation_date, credit_rating, weight, source, source_url, retrieved_at, created_at, updated_at)
-         VALUES (gen_random_uuid(), $1, $2::date, $3, $4, 'YAHOO_QUOTE_SUMMARY', $5, $6, NOW(), NOW())
+         VALUES (gen_random_uuid(), $1, $2::date, $3, $4, 'YAHOO_QUOTE_SUMMARY', $5, $6::timestamptz, NOW(), NOW())
          ON CONFLICT (etf_id, observation_date, source, credit_rating) DO UPDATE SET
            weight = EXCLUDED.weight, source_url = EXCLUDED.source_url, retrieved_at = EXCLUDED.retrieved_at, updated_at = NOW()`,
         [input.etfId, d, cr.name, cr.weight, srcUrl, retrievedAt],

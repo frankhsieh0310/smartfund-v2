@@ -5,7 +5,8 @@
 // no cookie/crumb/PII, no start/stop/reset affordance exists in this file at all.
 
 import { prisma } from "@/lib/prisma";
-import { twProgress } from "@/lib/yahoo/twEtfDistribution";
+import { twProgress, twSectorProgress } from "@/lib/yahoo/twEtfDistribution";
+import { fundDistributionProgress as fundShareClassDistributionProgress } from "@/lib/yahoo/fundDistribution";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -354,7 +355,21 @@ export async function GET() {
   }
   const mastersCreated = Number((await query(`SELECT count(*)::int n FROM fund_master WHERE provider_master_key LIKE 'YAHOO:%'`))[0]?.n ?? 0);
 
+  const [twSector, fundShareClassDist, lastFundOk, lastEtfSweepOk] = await Promise.all([
+    twSectorProgress(query).catch(() => null),
+    fundShareClassDistributionProgress(query).catch(() => null),
+    query(`SELECT completed_at, details FROM production_scheduler_runs WHERE job_id = 'YAHOO_FUND_FULL_SWEEP' AND status = 'COMPLETED' ORDER BY started_at DESC LIMIT 1`),
+    query(`SELECT completed_at, details FROM production_scheduler_runs WHERE job_id = 'YAHOO_ETF_FULL_SWEEP' AND status = 'COMPLETED' ORDER BY started_at DESC LIMIT 1`),
+  ]);
+
   return Response.json({
+    TW_ETF_SECTOR: twSector && { ...twSector, LAST_SWEEP_RUN: lastEtfSweepOk[0]?.completed_at ?? null, ENRICH_WRITE_FAILED_LAST_RUN: lastEtfSweepOk[0]?.details?.enrich_write_failed ?? null },
+    FUND_DISTRIBUTION_SHARE_CLASS: fundShareClassDist && {
+      ...fundShareClassDist,
+      SCAN_FAILED_LAST_RUN: lastFundOk[0]?.details?.fund_distribution_scan_failed ?? null,
+      LAST_SUCCESSFUL_RUN: lastFundOk[0]?.completed_at ?? null,
+      NOTE: "NO_EVENTS is not evidence of an accumulating class; distribution is stored per share class, never inherited from the master fund.",
+    },
     ETF_FULL_SWEEP: etf,
     ETF_REPAIR: etfRepair,
     ETF_DISTRIBUTION_BACKFILL: etfDistributionBackfill,

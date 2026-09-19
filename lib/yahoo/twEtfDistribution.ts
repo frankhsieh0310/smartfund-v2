@@ -153,3 +153,16 @@ export async function twProgress(query: Query) {
   )[0];
   return { TW_ETF_TOTAL: r.total, TW_ETF_CHECKED: r.checked, TW_ETF_WITH_HISTORY: r.with_history, TW_ETF_EMPTY: r.empty, TW_ETF_PENDING: r.pending };
 }
+
+/** Taiwan ETF sector coverage (aggregate only). COVERED = a snapshot whose sector weights sum to > 0. */
+export async function twSectorProgress(query: Query) {
+  const r = (
+    await query(
+      `WITH tw AS (SELECT e.id::text AS id FROM etfs e WHERE e.is_active = true AND ${TW_UNIVERSE_SQL}),
+            cov AS (SELECT a.etf_id, max(a.retrieved_at) AS last FROM etf_sector_allocations a JOIN tw ON tw.id = a.etf_id GROUP BY a.etf_id HAVING sum(a.weight) > 0)
+       SELECT (SELECT count(*)::int FROM tw) AS total, (SELECT count(*)::int FROM cov) AS covered, (SELECT max(last) FROM cov) AS last_sweep`,
+      [],
+    )
+  )[0];
+  return { TW_ETF_SECTOR_TOTAL: r.total, TW_ETF_SECTOR_COVERED: r.covered, TW_ETF_SECTOR_UNCOVERED: r.total - r.covered, TW_ETF_SECTOR_LAST_SWEEP: r.last_sweep };
+}

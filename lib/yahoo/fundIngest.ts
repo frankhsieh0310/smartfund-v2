@@ -14,6 +14,8 @@
 //   write per master per run; fully reversible via source='YAHOO_US_MF_V1'.
 // Morningstar fields are FUND-ONLY.
 
+import { fetchDividendHistory, type DividendEvent } from "./distributionFetch";
+import type { FundDistributionBatch } from "./fundDistribution";
 import { fetchQuoteSummary, fetchChartFull, screenerPage, rawNum, rawText, sleep, type RateStats } from "./productSession";
 
 export type QueryFn = (sql: string, params: any[]) => Promise<any[]>;
@@ -220,6 +222,9 @@ export type IngestResult = {
   masterLinked: boolean;
   navRowsWritten: number;
   distributionRows: number;
+  /** share-class-level events for the caller to bulk-write (never inherited from the master fund) */
+  distribution: FundDistributionBatch | null;
+  distributionFailed: boolean; // Yahoo/API error while scanning history (retried automatically; NOT "no events")
   holdingsWritten: number;
   morningstar: { overall: number | null; risk: number | null; category: string | null; rank: number | null };
   error?: string;
@@ -238,7 +243,7 @@ export async function ingestUsFundShareClass(
   const res: IngestResult = {
     symbol: rec.symbol, ok: false, coreOk: false, navHistoryOk: false, holdingsOk: false,
     shareClassInserted: false, shareClassUpdated: false,
-    masterCreated: false, masterLinked: false, navRowsWritten: 0, distributionRows: 0, holdingsWritten: 0,
+    masterCreated: false, masterLinked: false, navRowsWritten: 0, distributionRows: 0, distribution: null, distributionFailed: false, holdingsWritten: 0,
     morningstar: { overall: rec.msOverall, risk: rec.msRisk, category: rec.msCategory, rank: rec.msRank3y },
   };
   try {
@@ -376,8 +381,23 @@ export async function ingestUsFundShareClass(
             [fundId, chart.regularMarketPrice, chart.regularMarketTime],
           );
         }
-        // distributions -> reuse fund dividend_yield? there is no fund distribution table; record count only.
-        res.distributionRows = chart.dividends.length;
+        // distributions: kept per SHARE CLASS (this symbol's own fund_id + share_class_id) and returned for a bulk write.
+        const byDate = new Map<string, DividendEvent>();
+        for (const d of chart.dividends) if (d.amount > 0 && d.date) byDate.set(d.date, { exDate: d.date, amount: Math.round(d.amount * 1e6) / 1e6 });
+        res.distributionRows = byDate.size;
+        if (shareClassId) {
+          // First time this class is seen with no stored events: scan its FULL history once per lap (dividends only, monthly candles).
+          // A class that genuinely has none stays "no events" (NOT accumulating) and costs one light request per lap.
+          const has = await query(`SELECT 1 FROM fund_distribution_observations WHERE fund_id = $1 AND share_class_id = $2 AND source = 'YAHOO_CHART' LIMIT 1`, [fundId, shareClassId]);
+          if (!has.length) {
+            const h = await fetchDividendHistory(rec.symbol, { period1: 0, interval: "1mo" });
+            if (h.kind === "OK") for (const e of h.events) byDate.set(e.exDate, e);
+            else if (h.kind === "FAILED") res.distributionFailed = true;
+          }
+          if (byDate.size) {
+            res.distribution = { fundId, shareClassId, symbol: rec.symbol, currency: chart.currency, events: [...byDate.values()].sort((a, b) => a.exDate.localeCompare(b.exDate)) };
+          }
+        }
       }
       res.navHistoryOk = true;
     } catch (e) {

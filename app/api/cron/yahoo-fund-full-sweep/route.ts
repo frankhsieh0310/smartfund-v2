@@ -18,6 +18,7 @@ import { prisma } from "@/lib/prisma";
 import { beginRun, finishRun, readCheckpoint, writeCheckpoint } from "@/lib/cloud-ingestion/runContext";
 import { discoverAllUsFunds, enrichFundFromYahoo, ingestUsFundShareClass } from "@/lib/yahoo/fundIngest";
 import { sleep, newRateStats, authDiag } from "@/lib/yahoo/productSession";
+import { bulkUpsertFundDistributions, type FundDistributionBatch } from "@/lib/yahoo/fundDistribution";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -127,6 +128,8 @@ export async function GET(request: Request) {
     const mastersHoldingsWrittenThisRun = new Set<string>();
 
     let attempted = 0, coreOk = 0, navHistoryOk = 0, holdingsOk = 0, morningstarOk = 0, failed = 0;
+    const distBuf: FundDistributionBatch[] = [];
+    let distInserted = 0, distUpdated = 0, distFailedClasses = 0, distWriteFailed = 0;
     let navRows = 0, distRows = 0, holdRows = 0, scIns = 0, scUpd = 0, mCreated = 0, mLinked = 0;
 
     // One symbol's full fetch+write, isolated: a throw here is caught locally and counted as a
@@ -150,6 +153,8 @@ export async function GET(request: Request) {
           if (r.morningstar.overall != null || r.morningstar.risk != null || r.morningstar.category) morningstarOk++;
         } else failed++;
         if (r.navHistoryOk) { navHistoryOk++; navRows += r.navRowsWritten; distRows += r.distributionRows; }
+        if (r.distribution) distBuf.push(r.distribution);
+        if (r.distributionFailed) distFailedClasses++;
         if (r.holdingsOk) { holdingsOk++; holdRows += r.holdingsWritten; }
         await recordCoreOutcome(sym, r.coreOk, r.coreOk ? undefined : (stats.lastFailure ?? "WRITE_FAILED"));
       } catch {
@@ -163,6 +168,14 @@ export async function GET(request: Request) {
       const chunk = slice.slice(i, i + SWEEP_CONCURRENCY);
       attempted += chunk.length;
       await Promise.all(chunk.map((sym) => runOne(sym)));
+      // one bulk write per chunk of share classes; a failed write only affects this chunk (state-based: retried next lap)
+      if (distBuf.length) {
+        const batchToWrite = distBuf.splice(0, distBuf.length);
+        try {
+          const w = await bulkUpsertFundDistributions(query, batchToWrite);
+          distInserted += w.inserted; distUpdated += w.updated;
+        } catch { distWriteFailed += batchToWrite.length; }
+      }
       await sleep(500);
     }
 
@@ -179,7 +192,8 @@ export async function GET(request: Request) {
     const details = {
       trigger: "CLOUD_SCHEDULED", attempted,
       core_metadata_ok: coreOk, morningstar_ok: morningstarOk, nav_history_ok: navHistoryOk, holdings_ok: holdingsOk,
-      failed, nav_rows_written: navRows, distribution_rows: distRows, holdings_written: holdRows,
+      failed, nav_rows_written: navRows, distribution_rows: distRows,
+      fund_distribution_inserted: distInserted, fund_distribution_updated: distUpdated, fund_distribution_scan_failed: distFailedClasses, fund_distribution_write_failed: distWriteFailed, holdings_written: holdRows,
       share_class_inserted: scIns, share_class_updated: scUpd, master_created: mCreated, master_linked: mLinked,
       rate_limited: stats.rateLimited, crumb_refresh: stats.crumbRefresh, enrich_failures: stats.failures ?? {},
       auth_cookie_present: authDiag.lastCookiePresent, auth_crumb_present: authDiag.lastCrumbPresent,
