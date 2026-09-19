@@ -11,7 +11,7 @@ import { listGovernmentYieldSeries } from "../../services/governmentYieldService
 import { buildProvenance } from "./provenance.ts";
 import type { CoverageStatus, FreshnessStatus, Provenance } from "./types.ts";
 
-export const SEARCH_ASSET_TYPES = ["STOCK", "ETF", "FUND", "INDEX", "DERIVATIVES", "FIXED_INCOME", "FX", "MACRO", "COMMODITY", "CRYPTO"] as const;
+export const SEARCH_ASSET_TYPES = ["STOCK", "ETF", "FUND", "INDEX", "FIXED_INCOME", "FX", "MACRO", "COMMODITY", "CRYPTO"] as const;
 export type SearchAssetType = typeof SEARCH_ASSET_TYPES[number];
 export type SearchType = "ALL" | SearchAssetType;
 export const DEFAULT_TOTAL_LIMIT = 30;
@@ -58,18 +58,6 @@ const identityPayload = (data: SearchableRow[], source: string | null = null): D
   meta: { freshnessStatus: "UNKNOWN", source, asOfDate: null, lastUpdated: null, coverageStatus: "PARTIAL_CURRENT", provenance: buildProvenance({ source }) },
 });
 const emptyMetrics = { priceOrNav: null, changePercent: null, asOfDate: null };
-
-async function searchDerivatives(query: string): Promise<DomainPayload> {
-  const contains = { contains: query, mode: "insensitive" as const };
-  const [futures, options] = await Promise.all([
-    prisma.futuresContract.findMany({ where: { OR: [{ contractSymbol: contains }, { underlying: contains }] }, orderBy: [{ expiration: "asc" }, { id: "asc" }], take: MAX_CANDIDATES_PER_DOMAIN }),
-    prisma.optionContract.findMany({ where: { OR: [{ contractSymbol: contains }, { underlying: contains }] }, orderBy: [{ expiration: "asc" }, { id: "asc" }], take: MAX_CANDIDATES_PER_DOMAIN }),
-  ]);
-  return identityPayload([
-    ...futures.map((row) => ({ identity: { assetType: "DERIVATIVES" as const, id: row.id, symbol: row.contractSymbol, name: row.contractSymbol, displayName: `${row.underlying} ${row.contractSymbol}`, currency: row.currency, market: row.exchange, country: null }, metrics: emptyMetrics, source: row.source })),
-    ...options.map((row) => ({ identity: { assetType: "DERIVATIVES" as const, id: row.id, symbol: row.contractSymbol, name: row.contractSymbol, displayName: `${row.underlying} ${row.callPut} ${row.strike}`, currency: row.currency, market: row.exchange, country: null }, metrics: emptyMetrics, source: null })),
-  ]);
-}
 
 async function searchFixedIncome(query: string): Promise<DomainPayload> {
   const rows = await listGovernmentYieldSeries({ query }) as Array<Record<string, unknown>>;
@@ -154,7 +142,6 @@ const runners: Record<SearchAssetType, (query: string) => Promise<DomainPayload>
   ETF: (query) => searchEtfs(query, { page: 1, pageSize: MAX_PER_DOMAIN }) as Promise<DomainPayload>,
   FUND: (query) => searchFunds(query, { page: 1, pageSize: MAX_PER_DOMAIN }) as Promise<DomainPayload>,
   INDEX: (query) => searchIndices(query, { page: 1, pageSize: MAX_CANDIDATES_PER_DOMAIN }) as Promise<DomainPayload>,
-  DERIVATIVES: searchDerivatives,
   FIXED_INCOME: searchFixedIncome,
   FX: (query) => searchFx(query, { page: 1, pageSize: MAX_CANDIDATES_PER_DOMAIN }) as Promise<DomainPayload>,
   MACRO: searchMacro,

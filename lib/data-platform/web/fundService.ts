@@ -7,7 +7,7 @@ import { buildProvenance } from "./provenance.ts";
 import { isoOrNull, numberOrNull, type CanonicalIdentity, type HistoryQuery, type ListQuery, type Provenance, type ResponseMeta, type ServiceResponse, type SummaryMetrics } from "./types.ts";
 import { mapFundMainCategory, type FundMainCategory } from "./fundCategoryMapping.ts";
 
-const fundIdentity = (row: { id: string; code: string | null; isin: string | null; name: string; currency: string; domicile: string | null; region: string | null }): CanonicalIdentity => ({ assetType: "FUND", id: row.id, symbol: row.code ?? row.isin ?? row.id, name: row.name, displayName: row.name, currency: row.currency, market: row.domicile, country: row.region ?? row.domicile });
+const fundIdentity = (row: { id: string; code: string | null; isin: string | null; name: string; currency: string; region: string | null }): CanonicalIdentity => ({ assetType: "FUND", id: row.id, symbol: row.code ?? row.isin ?? row.id, name: row.name, displayName: row.name, currency: row.currency, market: null, country: row.region });
 const fundMetrics = (row: { latestNav: unknown; currency: string; latestNavDate: Date | null; return1y: unknown }): SummaryMetrics => ({ priceOrNav: numberOrNull(row.latestNav), change: null, changePercent: null, currency: row.currency, asOfDate: isoOrNull(row.latestNavDate), performance1M: null, performance3M: null, performance1Y: numberOrNull(row.return1y) });
 
 export type FundListQuery = ListQuery & {
