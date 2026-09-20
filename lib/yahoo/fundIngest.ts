@@ -386,11 +386,11 @@ export async function ingestUsFundShareClass(
         for (const d of chart.dividends) if (d.amount > 0 && d.date) byDate.set(d.date, { exDate: d.date, amount: Math.round(d.amount * 1e6) / 1e6 });
         res.distributionRows = byDate.size;
         if (shareClassId) {
-          // First time this class is seen with no stored events: scan its FULL history once per lap (dividends only, monthly candles).
+          // First time this class is seen with no stored events: scan its FULL history once per lap (dividends only, daily candles: coarser candles merge same-bar events).
           // A class that genuinely has none stays "no events" (NOT accumulating) and costs one light request per lap.
           const has = await query(`SELECT 1 FROM fund_distribution_observations WHERE fund_id = $1 AND share_class_id = $2 AND source = 'YAHOO_CHART' LIMIT 1`, [fundId, shareClassId]);
           if (!has.length) {
-            const h = await fetchDividendHistory(rec.symbol, { period1: 0, interval: "1mo" });
+            const h = await fetchDividendHistory(rec.symbol, { period1: 0 });
             if (h.kind === "OK") for (const e of h.events) byDate.set(e.exDate, e);
             else if (h.kind === "FAILED") res.distributionFailed = true;
           }

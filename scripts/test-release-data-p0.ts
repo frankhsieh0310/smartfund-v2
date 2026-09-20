@@ -2,7 +2,7 @@
 // Run: npx tsx scripts/test-release-data-p0.ts
 import { groupSectorRows } from "../lib/holdings/sectorAllocation";
 import { analyzePortfolio, computeWeights, type LoadedProduct } from "../lib/holdings/portfolioAnalysis";
-import { parseChartDividends } from "../lib/yahoo/distributionFetch";
+import { parseChartDividends, planDividendCatchUp, DIST_OVERLAP_DAYS } from "../lib/yahoo/distributionFetch";
 import { parseTpexNotice, parseTwseNotice, rocToIso, yahooSymbolFor } from "../lib/yahoo/twEtfDistribution";
 
 let failures = 0;
@@ -56,6 +56,15 @@ const twse = parseTwseNotice({ data: [["115年09月21日", "00713", "x", "息", 
 check(twse.length === 1 && twse[0].code === "00713" && twse[0].cashDividend === 1.25, "TWSE notice: announced cash amounts only (no 待公告, no 權-only)");
 const tpex = parseTpexNotice({ tables: [{ data: [["115/09/21", "00697B", "x", "除息", "0", "0", "0", "0.31000000"]] }] });
 check(tpex.length === 1 && tpex[0].exDate === "2026-09-21", "TPEx notice parsed");
+
+// ---- P3: dividend incremental anchor = last STORED event (never the price-history date)
+const epoch = (d: string) => Math.floor(Date.parse(d) / 1000);
+check(planDividendCatchUp(null, epoch("2026-09-14")) === null, "no stored event => no catch-up (historical scan belongs to the backfill)");
+check(planDividendCatchUp("2026-08-03", epoch("2026-09-14")) === epoch("2026-08-03") - DIST_OVERLAP_DAYS * 86400, "AGG case: price window starts 09-14, last event 08-03 => fetch from event - 45d (finds 09-01)");
+check(planDividendCatchUp("2026-08-03", epoch("2026-06-01")) === null, "price window already reaches the anchor => no extra request");
+check(DIST_OVERLAP_DAYS === 45, "overlap is 45 days");
+const weekly = parseChartDividends("W", 200, { chart: { result: [{ meta: { currency: "USD" }, events: { dividends: { a: { date: 1785000000, amount: 0.1 }, b: { date: 1785604800, amount: 0.1 }, c: { date: 1786209600, amount: 0.1 } } } }] } });
+check(weekly.kind === "OK" && weekly.events.length === 3, "weekly payer keeps every event (daily candles)");
 
 if (failures) { console.log(`\n${failures} FAILED`); process.exit(1); }
 console.log("\nALL PASSED");

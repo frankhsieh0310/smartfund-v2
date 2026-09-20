@@ -52,10 +52,7 @@ const TIME_BUDGET_MS = 150_000;
 const JOB = "YAHOO_ETF_DISTRIBUTION_BACKFILL";
 const CHECKPOINT_KEY = "yahoo-etf-distribution-backfill";
 const LOCK_WINDOW_MINUTES = 6;
-const WIDE_WINDOW_SECONDS = 450 * 86_400; // ~15 months of headroom for annual-frequency inference
-// Acceptance-test / high-liquidity ETFs get covered first so this doesn't wait on id order.
 const CONCURRENCY = 10; // parallel Yahoo chart requests per chunk; one bulk DB write per chunk
-const PRIORITY_SYMBOLS = ["SPY", "QQQ", "BND", "HYG", "SCHD", "VYM", "AGG", "VOO", "VTI", "GLD", "IEMG", "XLK", "IVV", "VNQ", "LQD"];
 
 // An ETF with distribution_checked_at set was already scanned this era and confirmed to have zero
 // distribution events (a real, legitimate outcome for a non-paying ETF) — excluding it here is what
@@ -63,8 +60,12 @@ const PRIORITY_SYMBOLS = ["SPY", "QQQ", "BND", "HYG", "SCHD", "VYM", "AGG", "VOO
 const CANDIDATE_WHERE = `e.is_active = true AND e.distribution_checked_at IS NULL AND (
     ${TW_UNIVERSE_SQL}
     OR (e.data_source ~ '^[A-Za-z0-9.^=-]{1,15}$'
-        AND EXISTS (SELECT 1 FROM etf_history h WHERE h.etf_id = e.id LIMIT 1)
-        AND NOT EXISTS (SELECT 1 FROM etf_distribution_events d WHERE d.etf_id = e.id LIMIT 1)))`;
+        AND EXISTS (SELECT 1 FROM etf_history h WHERE h.etf_id = e.id LIMIT 1)))`;
+// 2026-09-19 Release Data P3 — global historical repair: every market gets the same full-history scan (checked_at is the
+// state), no longer only ETFs with ZERO stored events (those with a few events were left with permanent gaps).
+// Priority is data-driven, never a symbol list: 0 = Taiwan, 1 = ETFs with a distribution in the last 400 days, 2 = the rest.
+const TIER_SQL = `(CASE WHEN ${TW_UNIVERSE_SQL} THEN 0
+       WHEN EXISTS (SELECT 1 FROM etf_distribution_events d WHERE d.etf_id = e.id::text AND d.ex_date >= CURRENT_DATE - 400) THEN 1 ELSE 2 END)`;
 
 async function countRemaining(): Promise<number> {
   return (await query(`SELECT count(*)::int n FROM etfs e WHERE ${CANDIDATE_WHERE}`, []))[0]?.n ?? 0;
@@ -99,9 +100,9 @@ export async function GET(request: Request) {
       `SELECT e.id::text AS id, e.code, e.data_source, e.exchange, (${TW_UNIVERSE_SQL}) AS is_tw
          FROM etfs e
         WHERE ${CANDIDATE_WHERE}
-        ORDER BY (CASE WHEN ${TW_UNIVERSE_SQL} THEN 0 WHEN e.code = ANY($1) THEN 1 ELSE 2 END), e.id
-        LIMIT $2`,
-      [PRIORITY_SYMBOLS, batch],
+        ORDER BY ${TIER_SQL}, e.id
+        LIMIT $1`,
+      [batch],
     )) as Array<{ id: string; code: string; data_source: string | null; exchange: string | null; is_tw: boolean }>;
 
     let attempted = 0, covered = 0, empty = 0, notAvailable = 0, failed = 0, inserted = 0, updated = 0, lastId: string | null = null;
@@ -112,9 +113,8 @@ export async function GET(request: Request) {
       const outcomes: Array<{ e: (typeof chunk)[number]; o: DividendFetchOutcome }> = await Promise.all(
         chunk.map(async (e) => {
           const symbol = e.is_tw ? yahooSymbolFor(e) : (e.data_source as string);
-          // Taiwan: full history. Everything else keeps the existing ~15-month window.
-          const period1 = e.is_tw ? 0 : Math.floor((Date.now() - WIDE_WINDOW_SECONDS * 1000) / 1000);
-          return { e, o: await fetchDividendHistory(symbol, { period1 }) };
+          // Full history for every market, daily candles (monthly/weekly candles merge same-bar dividends and lose events).
+          return { e, o: await fetchDividendHistory(symbol, { period1: 0 }) };
         }),
       );
       attempted += chunk.length;

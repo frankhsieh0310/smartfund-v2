@@ -15,8 +15,7 @@
 import { isAuthorizedCron, unauthorizedCron } from "@/lib/cron/authorize";
 import { prisma } from "@/lib/prisma";
 import { beginRun, finishRun, readCheckpoint, writeCheckpoint } from "@/lib/cloud-ingestion/runContext";
-import { enrichEtfProduct } from "@/lib/yahoo/etfEnrich";
-import { ingestEtfHistory } from "@/lib/yahoo/etfHistory";
+import { fetchSweepPayload, loadChunkState, writeSweepChunk, type SweepItemResult } from "@/lib/yahoo/etfSweepBatch";
 import { sleep, newRateStats, authDiag, authAgeSeconds } from "@/lib/yahoo/productSession";
 import { TW_UNIVERSE_SQL, yahooSymbolFor } from "@/lib/yahoo/twEtfDistribution";
 
@@ -34,11 +33,20 @@ export const dynamic = "force-dynamic";
 
 const query = (sql: string, params: unknown[]) => prisma.$queryRawUnsafe(sql, ...params) as Promise<any[]>;
 const TIME_BUDGET_MS = 240_000; // stay well under maxDuration so a checkpoint write always happens
+const CHUNK = 10; // ETFs per bulk write (one short transaction)
+const FETCH_CONCURRENCY = 5; // parallel Yahoo fetches inside a chunk
 const SYMBOL_RE = /^[A-Za-z0-9.^=-]{1,15}$/;
 const JOB = "YAHOO_ETF_FULL_SWEEP";
 const REPAIR_JOB = "YAHOO_ETF_ENRICH_REPAIR"; // job_id in production_scheduler_failures (reused, no schema change)
 const CHECKPOINT_KEY = "yahoo-etf-full-sweep";
 const LOCK_WINDOW_MINUTES = 6; // > maxDuration (300s) + margin: a genuinely-alive invocation is still within this
+
+async function mapPool<T, R>(items: T[], n: number, fn: (x: T) => Promise<R>): Promise<R[]> {
+  const out: R[] = new Array(items.length);
+  let next = 0;
+  await Promise.all(Array.from({ length: Math.min(n, items.length) }, async () => { for (;;) { const i = next++; if (i >= items.length) return; out[i] = await fn(items[i]); } }));
+  return out;
+}
 
 // STEP 8 support: record (or clear) an enrich-core failure in the shared repair queue. Reuses
 // production_scheduler_failures (job_id, stock_id) as its PK — no new table, no raw payload stored.
@@ -109,32 +117,62 @@ export async function GET(request: Request) {
       [cursor?.tier ?? null, cursor?.id ?? null, batch],
     )) as Array<{ id: string; code: string; data_source: string | null; exchange: string | null; tier: number; symbol: string | null }>;
 
-    // Enrich concurrency is (and always has been) 1 — this loop is strictly sequential, one
-    // ingestEtfHistory + one enrichEtfProduct call at a time. The cloud enrich-success-rate problem
-    // was never a concurrency/rate-limit issue (rate_limited stayed 0) — see productSession.ts's
-    // fetchQuoteSummary fix (403-as-retryable, real cookie capture) and the module split below.
+    // 2026-09-19 Release Data P3 — SAME sweep, chunked: a chunk of CHUNK ETFs is fetched with bounded concurrency (Yahoo only),
+    // then written with one statement per table inside one short transaction (was ~30 sequential statements per ETF).
+    // If a chunk write fails it is retried one ETF at a time, so a single bad ETF is recorded as failed and skipped instead of
+    // blocking the lap; the checkpoint only advances after each chunk has finished.
     let attempted = 0, histOk = 0, enrichCoreOk = 0, holdingsOk = 0, histRows = 0, holdRows = 0, perfRows = 0, distEvents = 0, failed = 0, noSym = 0;
     let lastId: string | null = cpBefore?.lastSymbol && cursor ? cpBefore.lastSymbol : null;
-    let twTier = 0, writeFailed = 0;
-    for (const e of rows) {
+    let twTier = 0, writeFailed = 0, chunkRetries = 0, chunks = 0, statementsHint = 0;
+    const inTx = <T,>(fn: (q: (sql: string, params: any[]) => Promise<any[]>) => Promise<T>) =>
+      prisma.$transaction((tx) => fn((sql, params) => (tx as any).$queryRawUnsafe(sql, ...params) as Promise<any[]>), { timeout: 60_000, maxWait: 15_000 });
+
+    for (let i = 0; i < rows.length; i += CHUNK) {
       if (Date.now() - started > TIME_BUDGET_MS) break;
-      lastId = `${e.tier}:${e.id}`;
-      if (e.tier === 0) twTier++;
-      attempted++;
-      const sym = (e.symbol ?? "").trim();
-      if (!SYMBOL_RE.test(sym)) { noSym++; continue; }
-      try {
-        const h = await ingestEtfHistory(query, { etfId: e.id, symbol: sym });
-        if (h.ok) { histOk++; histRows += h.rowsWritten; distEvents += h.distributionEvents; } else failed++;
-        // Taiwan ETFs whose data_source has no Yahoo suffix (e.g. 006208) need the derived .TW/.TWO symbol for quoteSummary.
-        const enrichSym = e.tier === 0 ? yahooSymbolFor(e) : sym;
-        const p = await enrichEtfProduct(query, { etfId: e.id, symbol: enrichSym }, stats);
-        if (p.error?.startsWith("WRITE_FAILED")) writeFailed++; // never swallow enrich write errors silently again
-        if (p.coreOk) { enrichCoreOk++; perfRows += p.performanceWritten; } else failed++;
-        if (p.holdingsOk) { holdingsOk++; holdRows += p.holdingsWritten; }
-        await recordEnrichOutcome(e.id, sym, p.coreOk, p.coreOk ? undefined : stats.lastFailure, null);
-      } catch { failed++; }
-      await sleep(400);
+      const chunk = rows.slice(i, i + CHUNK);
+      chunks++;
+      attempted += chunk.length;
+      twTier += chunk.filter((e) => e.tier === 0).length;
+      const eligible = chunk.map((e) => ({ e, sym: (e.symbol ?? "").trim() })).filter((x) => SYMBOL_RE.test(x.sym));
+      noSym += chunk.length - eligible.length;
+      if (eligible.length) {
+        const stateOf = await loadChunkState(query, eligible.map((x) => x.e.id));
+        const payloads = await mapPool(eligible, FETCH_CONCURRENCY, (x) =>
+          fetchSweepPayload({ etfId: x.e.id, symbol: x.sym, enrichSymbol: x.e.tier === 0 ? yahooSymbolFor(x.e) : x.sym }, stateOf(x.e.id)),
+        );
+        for (const p of payloads) { // merge per-item counters into the run totals
+          stats.calls += p.stats.calls; stats.rateLimited += p.stats.rateLimited; stats.crumbRefresh += p.stats.crumbRefresh;
+          for (const [k, v] of Object.entries(p.stats.failures ?? {})) { const fk = k as keyof NonNullable<typeof stats.failures>; stats.failures ??= {}; stats.failures[fk] = (stats.failures[fk] ?? 0) + (v as number); }
+        }
+        let results: SweepItemResult[] = [];
+        try {
+          results = await inTx((q) => writeSweepChunk(q, payloads));
+        } catch {
+          chunkRetries++;
+          for (const p of payloads) {
+            try { results.push(...(await inTx((q) => writeSweepChunk(q, [p])))); }
+            catch (err) {
+              writeFailed++; failed++;
+              await recordEnrichOutcome(p.item.etfId, p.item.symbol, false, "WRITE_FAILED:" + String((err as Error).message ?? err).slice(0, 80), null);
+            }
+          }
+        }
+        const okIds: string[] = [];
+        for (const r of results) {
+          if (r.historyOk) { histOk++; histRows += r.rowsWritten; distEvents += r.distributionEvents; } else failed++;
+          if (r.coreOk) { enrichCoreOk++; perfRows += r.performanceWritten; okIds.push(r.etfId); } else { failed++; await recordEnrichOutcome(r.etfId, r.symbol, false, r.failure, null); }
+          if (r.holdingsOk) { holdingsOk++; holdRows += r.holdingsWritten; }
+        }
+        if (okIds.length) {
+          await query(
+            `UPDATE production_scheduler_failures SET resolved = true, resolved_at = NOW(), resolution_reason = 'REPAIRED_BY_SWEEP'
+              WHERE job_id = $1 AND stock_id = ANY($2::text[]) AND resolved = false`,
+            [REPAIR_JOB, okIds],
+          );
+        }
+      }
+      lastId = `${chunk[chunk.length - 1].tier}:${chunk[chunk.length - 1].id}`;
+      await sleep(150);
     }
 
     const wrapped = rows.length < batch; // fewer rows than requested = reached the end of the table
@@ -155,7 +193,7 @@ export async function GET(request: Request) {
       rate_limited: stats.rateLimited, crumb_refresh: stats.crumbRefresh, enrich_failures: stats.failures ?? {},
       auth_cookie_present: authDiag.lastCookiePresent, auth_crumb_present: authDiag.lastCrumbPresent,
       auth_failure_reason: authDiag.lastFailureReason, auth_age_seconds: authAgeSeconds(),
-      concurrency: 1,
+      concurrency: FETCH_CONCURRENCY, chunk_size: CHUNK, chunks, chunk_write_retries: chunkRetries,
       checkpoint_before: cpBefore, checkpoint_after: cpAfter, wrapped,
       runtime_ms: Date.now() - started,
     };

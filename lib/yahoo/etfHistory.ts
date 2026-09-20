@@ -4,6 +4,8 @@
 // SQL mirrors scripts/data/etf-yahoo/run-etf-yahoo-full-universe.ts.
 
 import { fetchChartFull } from "./productSession";
+import { fetchDividendHistory, planDividendCatchUp } from "./distributionFetch";
+import { bulkUpsertEvents, type EventRow } from "./twEtfDistribution";
 
 export type QueryFn = (sql: string, params: any[]) => Promise<any[]>;
 
@@ -68,21 +70,22 @@ export async function ingestEtfHistory(
   // source_record_id) key). Wrapped separately so a write hiccup here can't erase the price-history
   // credit above (same write-isolation lesson as the enrich-reliability fix).
   try {
-    if (chart.dividends.length) {
-      for (const d of chart.dividends) {
-        if (!(d.amount > 0) || !d.date) continue;
-        await query(
-          `INSERT INTO etf_distribution_events
-             (id, etf_id, share_class_id, ex_date, effective_date, amount, currency, source, source_record_id, verification_status, imported_at, created_at, updated_at)
-           VALUES (gen_random_uuid(), $1, 'PRIMARY', $2::date, $2::date, $3, $4, 'YAHOO_CHART', $5, 'SOURCE_PARSED', NOW(), NOW(), NOW())
-           ON CONFLICT (etf_id, share_class_id, ex_date, source, source_record_id) DO NOTHING`,
-          [input.etfId, d.date, d.amount, chart.currency ?? "USD", `YAHOO:${input.symbol}:${d.date}`],
-        );
-      }
+    // 2026-09-19 Release Data P3: dividend anchor = last STORED event (-45d overlap), not the price-history date.
+    const anchorRow = await query(`SELECT COALESCE(max(ex_date) FILTER (WHERE source = 'YAHOO_CHART'), max(ex_date))::text d FROM etf_distribution_events WHERE etf_id = $1`, [input.etfId]);
+    const events = new Map<string, number>();
+    for (const d of chart.dividends) if (d.amount > 0 && d.date) events.set(d.date, Math.round(d.amount * 1e6) / 1e6);
+    const catchUpFrom = planDividendCatchUp(anchorRow[0]?.d ?? null, period1);
+    if (catchUpFrom != null) {
+      const extra = await fetchDividendHistory(input.symbol, { period1: catchUpFrom });
+      if (extra.kind === "OK") for (const e of extra.events) events.set(e.exDate, e.amount);
     }
+    const rows: EventRow[] = [...events].map(([exDate, amount]) => ({
+      etfId: input.etfId, exDate, amount, currency: chart.currency ?? "USD", source: "YAHOO_CHART", sourceRecordId: `YAHOO:${input.symbol}:${exDate}`,
+    }));
+    if (rows.length) await bulkUpsertEvents(query as any, rows);
+    out.distributionEvents = rows.length;
   } catch { /* distribution write is best-effort; price history above already succeeded */ }
 
-  out.distributionEvents = chart.dividends.length;
   out.ok = true;
   return out;
 }

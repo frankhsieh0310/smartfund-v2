@@ -247,3 +247,90 @@ async function writeEtfEnrichData(
     out.creditAllocWritten = ratings.length;
   }
 }
+
+// ---------------------------------------------------------------------------------------------------------
+// 2026-09-19 Release Data P3 — batch support for the SAME ETF full sweep (no second pipeline).
+// fetchEtfEnrichCtx = the two quoteSummary calls of enrichEtfProduct (no DB); buildEnrichPlan = the pure
+// derivation of every row enrichEtfProduct writes (kept in this file, next to the per-row writer it mirrors,
+// and covered by an equivalence test that runs both writers on identical Yahoo responses).
+// ---------------------------------------------------------------------------------------------------------
+export type EnrichCtx = { fp: any; ks: any; sd: any; pr: any; perf: any; th: any; srcUrl: string; retrievedAt: string };
+
+export async function fetchEtfEnrichCtx(
+  symbol: string,
+  stats?: RateStats,
+): Promise<{ coreOk: boolean; holdingsOk: boolean; ctx: EnrichCtx | null; error?: string }> {
+  const qs = await fetchQuoteSummary(symbol, ETF_CORE_MODULES, stats);
+  if (!qs) return { coreOk: false, holdingsOk: false, ctx: null, error: "NO_QUOTE_SUMMARY_CORE" };
+  const r = qs.result;
+  const retrievedAt = new Date().toISOString();
+  const hqs = await fetchQuoteSummary(symbol, ETF_HOLDINGS_MODULES, stats);
+  return {
+    coreOk: true,
+    holdingsOk: !!hqs,
+    ctx: { fp: r.fundProfile ?? {}, ks: r.defaultKeyStatistics ?? {}, sd: r.summaryDetail ?? {}, pr: r.price ?? {}, perf: r.fundPerformance ?? {}, th: hqs?.result?.topHoldings ?? {}, srcUrl: qs.url, retrievedAt },
+  };
+}
+
+export type EnrichPlan = {
+  etfId: string;
+  symbol: string;
+  meta: { nameEn: string | null; category: string | null; currency: string | null; inception: number | null; nav: number | null; aum: number | null; expense: number | null; yield: number | null; beta: number | null } | null;
+  metadataChanged: number;
+  performance: { date: string; r1m: number | null; r3m: number | null; r6m: number | null; rytd: number | null; r1y: number | null; r3y: number | null; r5y: number | null } | null;
+  snapshot: { sourceRecordId: string; srcUrl: string; retrievedAt: string; checksum: string; rowCount: number; quality: string; lineage: string } | null;
+  holdings: Array<{ rowId: string; name: string; ticker: string | null; weight: number | null; raw: any }>;
+  observationDate: string;
+  srcUrl: string; // quoteSummary core URL + retrieval time: provenance stored on allocation rows (same values the per-row writer used)
+  retrievedAt: string;
+  sectors: Array<{ name: string; weight: number }>;
+  ratings: Array<{ name: string; weight: number }>;
+};
+
+export function buildEnrichPlan(etfId: string, symbol: string, ctx: EnrichCtx): EnrichPlan {
+  const { fp, ks, sd, pr, perf, th, srcUrl, retrievedAt } = ctx;
+  const md = {
+    nameEn: rawText(pr.longName) ?? rawText(pr.shortName),
+    category: rawText(fp.categoryName),
+    currency: rawText(pr.currency),
+    inception: rawNum(ks.fundInceptionDate),
+    nav: rawNum(sd.navPrice),
+    aum: rawNum(sd.totalAssets ?? ks.totalAssets),
+    expense: rawNum(fp.feesExpensesInvestment?.annualReportExpenseRatio ?? ks.annualReportExpenseRatio),
+    yield: rawNum(sd.yield),
+    beta: rawNum(ks.beta3Year),
+  };
+  const metadataChanged = Object.values(md).filter((v) => v != null).length + [sd.fiftyTwoWeekHigh, sd.fiftyTwoWeekLow, sd.fiftyDayAverage, sd.twoHundredDayAverage].filter((v) => rawNum(v) != null).length;
+  const trailing = perf.trailingReturns ?? {};
+  const p = {
+    r1m: pct(trailing.oneMonth), r3m: pct(trailing.threeMonth), r6m: pct(trailing.sixMonth),
+    rytd: pct(trailing.ytd), r1y: pct(trailing.oneYear), r3y: pct(trailing.threeYear), r5y: pct(trailing.fiveYear),
+  };
+  const d = new Date().toISOString().slice(0, 10);
+  const holdings = (Array.isArray(th.holdings) ? th.holdings : [])
+    .map((row: any, i: number) => {
+      const name = rawText(row?.holdingName) ?? rawText(row?.name);
+      return name ? { rank: i + 1, name, ticker: rawText(row?.symbol), weight: pct(row?.holdingPercent ?? row?.weight), raw: row } : null;
+    })
+    .filter(Boolean) as Array<{ rank: number; name: string; ticker: string | null; weight: number | null; raw: any }>;
+  return {
+    etfId, symbol,
+    meta: Object.values(md).some((v) => v != null) || metadataChanged ? md : null,
+    metadataChanged,
+    performance: Object.values(p).some((v) => v != null) ? { date: d, ...p } : null,
+    snapshot: holdings.length
+      ? {
+          sourceRecordId: `YAHOO:${symbol}:${new Date().toISOString().slice(0, 10)}`, srcUrl, retrievedAt,
+          checksum: symbol.slice(0, 32) || retrievedAt, rowCount: holdings.length,
+          quality: JSON.stringify({ sourceDateStatus: "UNKNOWN", retrievedAt }),
+          lineage: JSON.stringify({ provider: "YAHOO_QUOTE_SUMMARY", module: "topHoldings", symbol }),
+        }
+      : null,
+    holdings: holdings.map((h) => ({ rowId: `${h.rank}:${h.ticker ?? h.name}`.slice(0, 240), name: h.name, ticker: h.ticker, weight: h.weight, raw: h.raw })),
+    observationDate: d,
+    srcUrl,
+    retrievedAt,
+    sectors: allocRows(th.sectorWeightings),
+    ratings: allocRows(th.bondRatings),
+  };
+}

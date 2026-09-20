@@ -15,6 +15,23 @@ export type DividendFetchOutcome =
   | { kind: "NOT_AVAILABLE"; symbol: string; reason: string }
   | { kind: "FAILED"; symbol: string; reason: string };
 
+/** Overlap kept behind the last stored event: covers late Yahoo revisions, timestamp-boundary shifts and ex-date corrections. */
+export const DIST_OVERLAP_DAYS = 45;
+
+/**
+ * Incremental anchor for dividend events. It is the LAST STORED DISTRIBUTION EVENT — never the last price-history date,
+ * which other price jobs advance independently and which used to make events between two sweep visits invisible.
+ * Returns the epoch-second period1 of an extra dividend-only request, or null when the price chart window (starting at
+ * chartPeriod1) already reaches back far enough, or when there is no stored event (historical scan is the backfill's job).
+ */
+export function planDividendCatchUp(lastEventDate: string | null, chartPeriod1: number): number | null {
+  if (!lastEventDate) return null;
+  const t = Date.parse(lastEventDate);
+  if (!Number.isFinite(t)) return null;
+  const from = Math.floor((t - DIST_OVERLAP_DAYS * 86_400_000) / 1000);
+  return from < chartPeriod1 ? from : null;
+}
+
 const iso = (t: number) => new Date(t * 1000).toISOString().slice(0, 10);
 
 /** Pure: turn a parsed chart JSON body into an outcome (exported for tests). */
@@ -43,10 +60,13 @@ export function parseChartDividends(symbol: string, status: number, body: any): 
   return { kind: "OK", symbol, currency: res.meta?.currency ?? null, events };
 }
 
-/** interval "1mo" returns the identical dividend events with ~15x less payload (verified on funds); use it for full-history scans. */
-export async function fetchDividendHistory(symbol: string, opts: { period1: number; interval?: "1d" | "1mo" }): Promise<DividendFetchOutcome> {
+/**
+ * Daily candles only. Do NOT use monthly/weekly candles here: Yahoo merges every dividend that falls in the same bar, so a weekly
+ * payer loses ~75% of its events (measured: CHPY 75 -> 19, ODTE 23 -> 7) and a monthly bar can also shift or add a date.
+ */
+export async function fetchDividendHistory(symbol: string, opts: { period1: number }): Promise<DividendFetchOutcome> {
   const p2 = Math.floor((Date.now() + 86_400_000) / 1000);
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?period1=${opts.period1}&period2=${p2}&interval=${opts.interval ?? "1d"}&events=div`;
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?period1=${opts.period1}&period2=${p2}&interval=1d&events=div`;
   try {
     const r = await fetch(url, { headers: { "user-agent": UA, accept: "application/json" }, signal: AbortSignal.timeout(30_000) });
     let body: any = null;
