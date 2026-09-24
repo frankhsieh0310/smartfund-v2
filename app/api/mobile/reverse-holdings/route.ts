@@ -15,7 +15,9 @@
 // 62k+ rows, and YAHOO_TW_FUND, 10k+ rows) only ever wrote holding_name text — no schema change this
 // round, so those are matched by a company-name prefix derived from the canonical stock's own
 // company_name (never a per-ticker hardcoded string), skipped only when holding_code is already
-// present and didn't match on ticker.
+// present and didn't match on ticker. The company-name lookup itself resolves the bare exchange-local
+// code (see bareTickerFor) — a raw suffixed lookup against `stocks` always misses there, which used to
+// silently disable this fallback for every non-US ticker (fixed 2026-09-24).
 import { prisma } from "@/lib/prisma";
 import { classifyHoldingsCoverage, type CoverageDepth } from "@/lib/holdings/coverageDepth";
 
@@ -36,6 +38,26 @@ function namePrefixFor(companyName: string | null): string {
   return first;
 }
 
+// `stocks.ticker` stores the bare exchange-local code (e.g. "2330", "0700"), never the
+// ".TW"/".HK"/".T"/".KS"/".AS"-suffixed form this route receives — a raw suffixed lookup against
+// `stocks` always misses, which silently disabled the name-prefix fallback below for every non-US
+// ticker. Map the suffix to its exchange(s) so the lookup uses the same bare code + exchange filter
+// `stocks` actually stores; a suffix with no known exchange mapping (or none at all, e.g. "AAPL")
+// falls back to matching the ticker as-is.
+const EXCHANGE_SUFFIX: Record<string, string[]> = {
+  TW: ["TWSE", "TPEX"],
+  TWO: ["TPEX", "TWSE"],
+  HK: ["HKG"],
+  T: ["JPX"],
+  KS: ["KSC"],
+  AS: ["AMS"],
+};
+function bareTickerFor(t: string): { bare: string; exchanges: string[] | null } {
+  const m = /^(.+)\.([A-Z]{1,3})$/.exec(t);
+  const exchanges = m ? (EXCHANGE_SUFFIX[m[2]] ?? null) : null;
+  return exchanges ? { bare: m![1], exchanges } : { bare: t, exchanges: null };
+}
+
 // holding_date is ALWAYS the snapshot's own report/effective date (or null) — never a fetch/ingest time.
 type EtfHoldingRow = { code: string; name: string; exchange: string | null; region: string | null; ticker: string; requested: string; holding_name: string; weight: string | null; holding_date: string | null; source: string | null; row_count: number | null };
 type FundHoldingRow = {
@@ -53,13 +75,23 @@ export async function GET(req: Request) {
   try {
     // Canonical company name per ticker, to derive a generic (never per-ticker-hardcoded) name-prefix
     // fallback for the two fund-holdings sources that never stored a ticker (see file header note).
-    const nameRows = await prisma.$queryRawUnsafe<{ ticker: string; company_name: string }[]>(
-      `SELECT DISTINCT ON (ticker) UPPER(ticker) AS ticker, company_name
-         FROM stocks WHERE UPPER(ticker) = ANY($1::text[])
-        ORDER BY ticker, (exchange IN ('NASDAQ','NYSE')) DESC`,
-      tickers,
-    );
-    const nameByTicker = new Map(nameRows.map((r) => [r.ticker, r.company_name]));
+    // Looked up per-ticker (MAX_TICKERS is 10) via its bare code + exchange — see bareTickerFor.
+    const nameByTicker = new Map<string, string>();
+    for (const t of tickers) {
+      const { bare, exchanges } = bareTickerFor(t);
+      const rows = exchanges
+        ? await prisma.$queryRawUnsafe<{ company_name: string }[]>(
+            `SELECT company_name FROM stocks WHERE UPPER(ticker) = $1 AND exchange = ANY($2::text[])
+              ORDER BY (exchange = $3) DESC LIMIT 1`,
+            bare, exchanges, exchanges[0],
+          )
+        : await prisma.$queryRawUnsafe<{ company_name: string }[]>(
+            `SELECT company_name FROM stocks WHERE UPPER(ticker) = $1
+              ORDER BY (exchange IN ('NASDAQ','NYSE')) DESC LIMIT 1`,
+            bare,
+          );
+      if (rows[0]) nameByTicker.set(t, rows[0].company_name);
+    }
     const namePrefixes = tickers.map((t) => namePrefixFor(nameByTicker.get(t) ?? null));
 
     // A Taiwan symbol (2330.TW / 6488.TWO) is also matched by its bare code: TW broker sources store "2330".
