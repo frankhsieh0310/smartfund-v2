@@ -21,6 +21,10 @@ const ETF_PERIOD_COLUMN: Record<string, string> = {
   "1M": "return_1m", "3M": "return_3m", "6M": "return_6m", "1Y": "return_1y", "3Y": "return_3y", "5Y": "return_5y",
 };
 const FUND_PERIOD_COLUMN: Record<string, string> = { "1Y": "return_1y", "3Y": "return_3y", "5Y": "return_5y" };
+// 1M/3M/6M/YTD have no flat funds.return_* column, but real values exist per-fund in
+// fund_risk_metrics (latest as_of_date per fund) — a separate, smaller (702-fund) real dataset,
+// not a fabricated fallback.
+const FUND_RISK_METRIC_CODE: Record<string, string> = { "1M": "RETURN_1M", "3M": "RETURN_3M", "6M": "RETURN_6M", "YTD": "RETURN_YTD" };
 
 const fmtPct = (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(2)}%`;
 const fmtStars = (v: number) => "★".repeat(v) + "☆".repeat(5 - v);
@@ -127,13 +131,68 @@ export async function GET(request: Request) {
         }),
       }, { headers });
     }
+    if (rankingType === "BETA") {
+      const rows = await prisma.$queryRawUnsafe<Array<{
+        id: string; code: string; name: string; beta: string; latest_price: string | null; price_date: string | null; total: string;
+      }>>(
+        `SELECT id, code, name, beta::text AS beta, latest_price::text AS latest_price, price_updated_at::text AS price_date,
+                COUNT(*) OVER ()::text AS total
+           FROM etfs WHERE is_active = true AND beta IS NOT NULL AND name ~ $3
+          ORDER BY etfs.beta ${sort} LIMIT $1 OFFSET $2`,
+        limit, offset, ZH,
+      );
+      const total = rows.length ? Number(rows[0].total) : 0;
+      return Response.json({
+        assetType, rankingType, supported: true, total, page, limit, hasMore: offset + rows.length < total,
+        results: rows.map((r) => ({
+          id: r.id, code: r.code, name: r.name, metricValue: Number(r.beta), metricDisplay: Number(r.beta).toFixed(2),
+          price: r.latest_price !== null ? Number(r.latest_price) : null, priceDate: r.price_date,
+        })),
+      }, { headers });
+    }
     return unsupported(assetType, rankingType, page, limit, "NO_REAL_DATA");
   }
 
   // FUND
   if (rankingType === "PERFORMANCE") {
+    const metricCode = FUND_RISK_METRIC_CODE[period];
+    if (metricCode) {
+      const rows = await prisma.$queryRawUnsafe<Array<{
+        id: string; code: string | null; name: string; value: string; nav: string | null; nav_date: string | null; total: string;
+      }>>(
+        `WITH latest_metric AS (
+           SELECT DISTINCT ON (fund_id) fund_id, value FROM fund_risk_metrics
+            WHERE metric_code = $4 ORDER BY fund_id, as_of_date DESC
+         ), ranked AS (
+           SELECT f.id, f.code, f.name, lm.value, f.latest_nav, f.latest_nav_date,
+                  COALESCE(sc.master_fund_id, f.id) AS portfolio,
+                  ROW_NUMBER() OVER (
+                    PARTITION BY COALESCE(sc.master_fund_id, f.id)
+                    ORDER BY (f.id = fm.representative_fund_id) DESC NULLS LAST, lm.value ${sort} NULLS LAST
+                  ) AS rn
+             FROM funds f
+             JOIN latest_metric lm ON lm.fund_id = f.id
+             LEFT JOIN fund_share_classes sc ON sc.fund_id = f.id
+             LEFT JOIN fund_master fm ON fm.id = sc.master_fund_id
+            WHERE f.is_active = true AND f.name ~ $3
+         )
+         SELECT id, code, name, value::text AS value, latest_nav::text AS nav, latest_nav_date::text AS nav_date,
+                COUNT(*) OVER ()::text AS total
+           FROM ranked WHERE rn = 1
+          ORDER BY ranked.value ${sort} LIMIT $1 OFFSET $2`,
+        limit, offset, ZH, metricCode,
+      );
+      const total = rows.length ? Number(rows[0].total) : 0;
+      return Response.json({
+        assetType, rankingType, period, supported: true, total, page, limit, hasMore: offset + rows.length < total,
+        results: rows.map((r) => ({
+          id: r.id, code: r.code, name: r.name, metricValue: Number(r.value) * 100, metricDisplay: fmtPct(Number(r.value) * 100),
+          price: r.nav !== null ? Number(r.nav) : null, priceDate: r.nav_date,
+        })),
+      }, { headers });
+    }
     const column = FUND_PERIOD_COLUMN[period];
-    if (!column) return unsupported(assetType, rankingType, page, limit, "FUND_HAS_NO_1M_3M_6M_RETURN_DATA");
+    if (!column) return unsupported(assetType, rankingType, page, limit, "UNSUPPORTED_PERIOD");
     const rows = await prisma.$queryRawUnsafe<Array<{
       id: string; code: string | null; name: string; value: string; nav: string | null; nav_date: string | null; total: string;
     }>>(
