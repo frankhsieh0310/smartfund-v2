@@ -1,94 +1,224 @@
-// Function 3 (基金 / ETF 排行榜) — real backend ranking over the FULL canonical product universe.
-// ETF: etfs table's own return_1m/3m/6m/1y/3y/5y columns (already populated by the existing Yahoo
-// pipeline — no new ingestion). Fund: canonical portfolio-deduped (COALESCE(master_fund_id, id), same
-// grouping already used by the reverse-lookup engine's fund_batches CTE) over funds.return_1y/3y/5y —
-// Fund has no 1m/3m/6m columns in this schema, so those periods are simply not offered for Fund (never
-// fabricated). Full-universe sort (ORDER BY ... LIMIT/OFFSET in SQL) before pagination — never a
-// partial/page-local sort.
+// Function 3 (基金 / ETF 排行中心) — unified real-data ranking API over the full canonical
+// product universe. Every dimension maps to a column/source already populated in production;
+// nothing is self-calculated. Dividend yield reuses the same materialized values as Function 6
+// (lib/yahoo/distributionYield.ts's etfs.dividend_yield column for ETF, the offline
+// lib/yahoo/fundYieldRanking.ts snapshot for Fund) — never a live re-fetch, never a self-computed
+// trailing yield. Morningstar reuses funds.morningstar, synced by lib/yahoo/fundIngest.ts from
+// Yahoo's own quoteSummary.morningStarOverallRating (a real Morningstar passthrough, not invented).
+//
+// 繁中前台硬規則: every result must carry a reliable Chinese display name (name matches the CJK
+// range). A product without one stays in the backend universe (full-universe counts below still
+// count it) but never surfaces in this ranking list — no AI translation, no English-name fallback
+// into the main list. If a dimension has zero real data within the Chinese-eligible universe, the
+// dimension is reported unsupported rather than shown empty or backed by fabricated numbers.
 import { prisma } from "@/lib/prisma";
+import { readFundYieldSnapshot, rankFundYields } from "@/lib/yahoo/fundYieldRanking";
 
 const headers = { "Access-Control-Allow-Origin": "*", "Cache-Control": "no-store" };
+const ZH = "[一-鿿]";
 
 const ETF_PERIOD_COLUMN: Record<string, string> = {
   "1M": "return_1m", "3M": "return_3m", "6M": "return_6m", "1Y": "return_1y", "3Y": "return_3y", "5Y": "return_5y",
 };
-// Fund schema has no 1m/3m/6m return columns — those periods return an explicit UNSUPPORTED state,
-// never a fabricated number.
 const FUND_PERIOD_COLUMN: Record<string, string> = { "1Y": "return_1y", "3Y": "return_3y", "5Y": "return_5y" };
+
+const fmtPct = (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(2)}%`;
+const fmtStars = (v: number) => "★".repeat(v) + "☆".repeat(5 - v);
+const fmtAum = (v: number, currency: string) => `${currency} ${Math.round(v).toLocaleString("zh-TW")}`;
+const fmtVolume = (v: number) => `${Math.round(v).toLocaleString("zh-TW")} 股`;
+
+function unsupported(assetType: string, rankingType: string, page: number, limit: number, reason: string) {
+  return Response.json({ assetType, rankingType, supported: false, total: 0, page, limit, hasMore: false, results: [], reason }, { headers });
+}
 
 export async function GET(request: Request) {
   const q = new URL(request.url).searchParams;
   const assetType = q.get("assetType") === "FUND" ? "FUND" : "ETF";
+  const rankingType = (q.get("rankingType") ?? "PERFORMANCE").toUpperCase();
   const period = (q.get("period") ?? "1Y").toUpperCase();
   const sort = q.get("sort") === "asc" ? "ASC" : "DESC";
   const limit = Math.min(100, Math.max(1, Number(q.get("limit") ?? 50)));
   const page = Math.max(1, Number(q.get("page") ?? 1));
   const offset = (page - 1) * limit;
 
-  const columnMap = assetType === "FUND" ? FUND_PERIOD_COLUMN : ETF_PERIOD_COLUMN;
-  const column = columnMap[period];
-  if (!column) {
-    return Response.json({
-      assetType, period, supported: false, total: 0, page, limit, hasMore: false, results: [],
-      reason: assetType === "FUND" ? "FUND_HAS_NO_1M_3M_6M_RETURN_DATA" : "UNSUPPORTED_PERIOD",
-    }, { headers });
+  if (assetType === "ETF") {
+    if (rankingType === "PERFORMANCE") {
+      const column = ETF_PERIOD_COLUMN[period];
+      if (!column) return unsupported(assetType, rankingType, page, limit, "UNSUPPORTED_PERIOD");
+      const rows = await prisma.$queryRawUnsafe<Array<{
+        id: string; code: string; name: string; value: string; latest_price: string | null; price_date: string | null; total: string;
+      }>>(
+        `SELECT id, code, name, ${column}::text AS value, latest_price::text, price_updated_at::text AS price_date,
+                COUNT(*) OVER ()::text AS total
+           FROM etfs WHERE is_active = true AND ${column} IS NOT NULL AND name ~ $3
+          ORDER BY ${column} ${sort} LIMIT $1 OFFSET $2`,
+        limit, offset, ZH,
+      );
+      const total = rows.length ? Number(rows[0].total) : 0;
+      return Response.json({
+        assetType, rankingType, period, supported: true, total, page, limit, hasMore: offset + rows.length < total,
+        results: rows.map((r) => ({
+          id: r.id, code: r.code, name: r.name, metricValue: Number(r.value), metricDisplay: fmtPct(Number(r.value)),
+          price: r.latest_price !== null ? Number(r.latest_price) : null, priceDate: r.price_date,
+        })),
+      }, { headers });
+    }
+    if (rankingType === "AUM") {
+      const rows = await prisma.$queryRawUnsafe<Array<{
+        id: string; code: string; name: string; aum: string; currency: string; latest_price: string | null; price_date: string | null; total: string;
+      }>>(
+        `SELECT id, code, name, aum::text AS aum, currency, latest_price::text AS latest_price, price_updated_at::text AS price_date,
+                COUNT(*) OVER ()::text AS total
+           FROM etfs WHERE is_active = true AND aum IS NOT NULL AND name ~ $3
+          ORDER BY etfs.aum ${sort} LIMIT $1 OFFSET $2`,
+        limit, offset, ZH,
+      );
+      const total = rows.length ? Number(rows[0].total) : 0;
+      return Response.json({
+        assetType, rankingType, supported: true, total, page, limit, hasMore: offset + rows.length < total,
+        results: rows.map((r) => ({
+          id: r.id, code: r.code, name: r.name, metricValue: Number(r.aum), metricDisplay: fmtAum(Number(r.aum), r.currency),
+          price: r.latest_price !== null ? Number(r.latest_price) : null, priceDate: r.price_date,
+        })),
+      }, { headers });
+    }
+    if (rankingType === "VOLUME") {
+      const rows = await prisma.$queryRawUnsafe<Array<{
+        id: string; code: string; name: string; volume: string; latest_price: string | null; price_date: string | null; total: string;
+      }>>(
+        `SELECT id, code, name, volume::text AS volume, latest_price::text AS latest_price, price_updated_at::text AS price_date,
+                COUNT(*) OVER ()::text AS total
+           FROM etfs WHERE is_active = true AND volume IS NOT NULL AND name ~ $3
+          ORDER BY etfs.volume ${sort} LIMIT $1 OFFSET $2`,
+        limit, offset, ZH,
+      );
+      const total = rows.length ? Number(rows[0].total) : 0;
+      return Response.json({
+        assetType, rankingType, supported: true, total, page, limit, hasMore: offset + rows.length < total,
+        results: rows.map((r) => ({
+          id: r.id, code: r.code, name: r.name, metricValue: Number(r.volume), metricDisplay: fmtVolume(Number(r.volume)),
+          price: r.latest_price !== null ? Number(r.latest_price) : null, priceDate: r.price_date,
+        })),
+      }, { headers });
+    }
+    if (rankingType === "DIVIDEND_YIELD") {
+      // Same materialized column + filters as the frozen Function 6 (lib/yahoo/distributionYield.ts
+      // getEtfYahooYieldRanking) — TWD, bare (non-suffixed) code only — just with real OFFSET pagination
+      // added, which that limit-only helper doesn't support.
+      const rows = await prisma.$queryRawUnsafe<Array<{
+        id: string; code: string; name: string; dividend_yield: string; latest_price: string | null; price_date: string | null; total: string;
+      }>>(
+        `SELECT id, code, name, dividend_yield::text AS dividend_yield, latest_price::text AS latest_price, price_updated_at::text AS price_date,
+                COUNT(*) OVER ()::text AS total
+           FROM etfs
+          WHERE is_active = true AND currency = 'TWD' AND code !~ '\\.' AND dividend_yield IS NOT NULL AND name ~ $3
+          ORDER BY etfs.dividend_yield ${sort} LIMIT $1 OFFSET $2`,
+        limit, offset, ZH,
+      );
+      const total = rows.length ? Number(rows[0].total) : 0;
+      return Response.json({
+        assetType, rankingType, supported: true, total, page, limit, hasMore: offset + rows.length < total,
+        results: rows.map((r) => {
+          const pct = Number(r.dividend_yield) * 100;
+          return {
+            id: r.id, code: r.code, name: r.name, metricValue: pct, metricDisplay: `${pct.toFixed(2)}%`,
+            price: r.latest_price !== null ? Number(r.latest_price) : null, priceDate: r.price_date,
+          };
+        }),
+      }, { headers });
+    }
+    return unsupported(assetType, rankingType, page, limit, "NO_REAL_DATA");
   }
 
-  if (assetType === "ETF") {
+  // FUND
+  if (rankingType === "PERFORMANCE") {
+    const column = FUND_PERIOD_COLUMN[period];
+    if (!column) return unsupported(assetType, rankingType, page, limit, "FUND_HAS_NO_1M_3M_6M_RETURN_DATA");
     const rows = await prisma.$queryRawUnsafe<Array<{
-      id: string; code: string; name: string; value: string; latest_price: string | null; price_date: string | null;
+      id: string; code: string | null; name: string; value: string; nav: string | null; nav_date: string | null; total: string;
     }>>(
-      `SELECT id, code, name, ${column}::text AS value, latest_price::text, price_updated_at::text AS price_date
-         FROM etfs WHERE is_active = true AND ${column} IS NOT NULL
-        ORDER BY ${column} ${sort} LIMIT $1 OFFSET $2`,
-      limit, offset,
+      `WITH ranked AS (
+         SELECT f.id, f.code, f.name, f.${column} AS value, f.latest_nav, f.latest_nav_date,
+                COALESCE(sc.master_fund_id, f.id) AS portfolio,
+                ROW_NUMBER() OVER (
+                  PARTITION BY COALESCE(sc.master_fund_id, f.id)
+                  ORDER BY (f.id = fm.representative_fund_id) DESC NULLS LAST, f.${column} ${sort} NULLS LAST
+                ) AS rn
+           FROM funds f
+           LEFT JOIN fund_share_classes sc ON sc.fund_id = f.id
+           LEFT JOIN fund_master fm ON fm.id = sc.master_fund_id
+          WHERE f.is_active = true AND f.${column} IS NOT NULL AND f.name ~ $3
+       )
+       SELECT id, code, name, value::text AS value, latest_nav::text AS nav, latest_nav_date::text AS nav_date,
+              COUNT(*) OVER ()::text AS total
+         FROM ranked WHERE rn = 1
+        ORDER BY ranked.value ${sort} LIMIT $1 OFFSET $2`,
+      limit, offset, ZH,
     );
-    const totalRow = await prisma.$queryRawUnsafe<Array<{ c: string }>>(
-      `SELECT COUNT(*)::text c FROM etfs WHERE is_active = true AND ${column} IS NOT NULL`,
-    );
-    const total = Number(totalRow[0].c);
+    const total = rows.length ? Number(rows[0].total) : 0;
     return Response.json({
-      assetType, period, supported: true, total, page, limit, hasMore: offset + rows.length < total,
+      assetType, rankingType, period, supported: true, total, page, limit, hasMore: offset + rows.length < total,
       results: rows.map((r) => ({
-        id: r.id, code: r.code, name: r.name, returnPct: Number(r.value),
-        price: r.latest_price !== null ? Number(r.latest_price) : null, priceDate: r.price_date,
+        id: r.id, code: r.code, name: r.name, metricValue: Number(r.value), metricDisplay: fmtPct(Number(r.value)),
+        price: r.nav !== null ? Number(r.nav) : null, priceDate: r.nav_date,
       })),
     }, { headers });
   }
-
-  // FUND — one row per canonical portfolio (COALESCE(master_fund_id, id)), preferring the fund_master's
-  // own representative_fund_id when one exists, else whichever share class has the best return in this
-  // sort direction — this is display dedup only (never drops the underlying share-class-level data,
-  // it's still queryable via the fund detail route), matching "same product shown once, not twice".
-  const rankedRows = await prisma.$queryRawUnsafe<Array<{
-    id: string; code: string | null; name: string; value: string; nav: string | null; nav_date: string | null; total: string;
-  }>>(
-    `WITH ranked AS (
-       SELECT f.id, f.code, f.name, f.${column} AS value, f.latest_nav, f.latest_nav_date,
-              COALESCE(sc.master_fund_id, f.id) AS portfolio,
-              ROW_NUMBER() OVER (
-                PARTITION BY COALESCE(sc.master_fund_id, f.id)
-                ORDER BY (f.id = fm.representative_fund_id) DESC NULLS LAST, f.${column} ${sort} NULLS LAST
-              ) AS rn
-         FROM funds f
-         LEFT JOIN fund_share_classes sc ON sc.fund_id = f.id
-         LEFT JOIN fund_master fm ON fm.id = sc.master_fund_id
-        WHERE f.is_active = true AND f.${column} IS NOT NULL
-     )
-     SELECT id, code, name, value::text, latest_nav::text AS nav, latest_nav_date::text AS nav_date,
-            COUNT(*) OVER ()::text AS total
-       FROM ranked WHERE rn = 1
-      ORDER BY value ${sort} LIMIT $1 OFFSET $2`,
-    limit, offset,
-  );
-  const total = rankedRows.length ? Number(rankedRows[0].total) : 0;
-  return Response.json({
-    assetType, period, supported: true, total, page, limit, hasMore: offset + rankedRows.length < total,
-    results: rankedRows.map((r) => ({
-      id: r.id, code: r.code, name: r.name, returnPct: Number(r.value),
-      price: r.nav !== null ? Number(r.nav) : null, priceDate: r.nav_date,
-    })),
-  }, { headers });
+  if (rankingType === "MORNINGSTAR") {
+    const rows = await prisma.$queryRawUnsafe<Array<{
+      id: string; code: string | null; name: string; morningstar: number; nav: string | null; nav_date: string | null; total: string;
+    }>>(
+      `WITH ranked AS (
+         SELECT f.id, f.code, f.name, f.morningstar, f.latest_nav, f.latest_nav_date,
+                COALESCE(sc.master_fund_id, f.id) AS portfolio,
+                ROW_NUMBER() OVER (
+                  PARTITION BY COALESCE(sc.master_fund_id, f.id)
+                  ORDER BY (f.id = fm.representative_fund_id) DESC NULLS LAST, f.morningstar DESC NULLS LAST
+                ) AS rn
+           FROM funds f
+           LEFT JOIN fund_share_classes sc ON sc.fund_id = f.id
+           LEFT JOIN fund_master fm ON fm.id = sc.master_fund_id
+          WHERE f.is_active = true AND f.morningstar BETWEEN 1 AND 5 AND f.name ~ $3
+       )
+       SELECT id, code, name, morningstar, latest_nav::text AS nav, latest_nav_date::text AS nav_date,
+              COUNT(*) OVER ()::text AS total
+         FROM ranked WHERE rn = 1
+        ORDER BY ranked.morningstar ${sort} LIMIT $1 OFFSET $2`,
+      limit, offset, ZH,
+    );
+    const total = rows.length ? Number(rows[0].total) : 0;
+    return Response.json({
+      assetType, rankingType, supported: true, total, page, limit, hasMore: offset + rows.length < total,
+      results: rows.map((r) => ({
+        id: r.id, code: r.code, name: r.name, metricValue: r.morningstar, metricDisplay: fmtStars(r.morningstar),
+        price: r.nav !== null ? Number(r.nav) : null, priceDate: r.nav_date,
+      })),
+    }, { headers });
+  }
+  if (rankingType === "DIVIDEND_YIELD") {
+    // The offline Yahoo-direct fund-yield snapshot (Function 6's own source) currently maps only the
+    // global-fund pool — it has zero overlap with the Chinese-named canonical Fund universe (verified:
+    // 0 of 14,934 ranked rows have a Chinese name). Rather than surface an all-English list or silently
+    // drop the zh gate, this dimension is honestly reported unsupported until the two pools are mapped.
+    try {
+      const snapshot = await readFundYieldSnapshot();
+      const ranked = rankFundYields(snapshot.rows).filter((r) => new RegExp(ZH).test(r.name));
+      if (ranked.length === 0) return unsupported(assetType, rankingType, page, limit, "NO_REAL_DATA_FOR_ZH_UNIVERSE");
+      const slice = sort === "ASC" ? [...ranked].reverse() : ranked;
+      const pageRows = slice.slice(offset, offset + limit);
+      return Response.json({
+        assetType, rankingType, supported: true, total: ranked.length, page, limit, hasMore: offset + pageRows.length < ranked.length,
+        results: pageRows.map((r) => ({
+          id: r.shareClassId, code: r.code, name: r.name, metricValue: r.yahooYield,
+          metricDisplay: `${r.yahooYield!.toFixed(2)}%`, price: null, priceDate: null,
+        })),
+      }, { headers });
+    } catch {
+      return unsupported(assetType, rankingType, page, limit, "SNAPSHOT_UNAVAILABLE");
+    }
+  }
+  if (rankingType === "AUM") return unsupported(assetType, rankingType, page, limit, "NO_REAL_DATA_FOR_ZH_UNIVERSE");
+  return unsupported(assetType, rankingType, page, limit, "NO_REAL_DATA");
 }
 
 export async function OPTIONS() {
