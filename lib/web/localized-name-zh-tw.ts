@@ -11,6 +11,10 @@ const NAMES: Record<string, Entry> = {
   "000660.KS": { name: "SK海力士", confidence: "TAIWAN_COMMON" },
   "8035.T": { name: "東京威力科創", confidence: "TAIWAN_COMMON" },
   "2330.TW": { name: "台積電", confidence: "TAIWAN_COMMON" },
+  // TSM is the NYSE ADR for the same company as 2330.TW — real, verified common name, not an AI
+  // translation. Confirmed via DB: stocks.company_name_zh is NULL for the TSM row (only company_name,
+  // English), so without this entry the ADR falls through to its English legal name.
+  "TSM": { name: "台積電", confidence: "TAIWAN_COMMON" },
 };
 
 export const localizedNameZhTw = (symbol: string | null | undefined, fallback: string) => {
