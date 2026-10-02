@@ -22,6 +22,7 @@
 import { isAuthorizedCron, unauthorizedCron } from "@/lib/cron/authorize";
 import { prisma } from "@/lib/prisma";
 import { upsertSnapshot, type QueryFn } from "@/lib/etf-holdings-engine/storage";
+import { syncOfficialSnapshotToHoldings } from "@/lib/etf-holdings-engine/syncToHoldings";
 import type { CanonicalSnapshot, OfficialPcfAdapter } from "@/lib/etf-holdings-engine/types";
 import {
   beginRun,
@@ -196,8 +197,16 @@ export async function GET(request: Request) {
         snap = await attempt();
       }
       if (!snap.positions.length) throw new Error("empty positions");
-      await upsertSnapshot(query, snap);
+      const { snapshotId } = await upsertSnapshot(query, snap);
       passed++;
+      // Bridge to the table the app actually reads. Isolated: a sync failure never undoes the
+      // official snapshot write above, and never blocks the rest of this batch.
+      try {
+        await syncOfficialSnapshotToHoldings(query, snap.etfCode, { snapshotId });
+      } catch {
+        /* official snapshot is safely stored either way; this ETF's app-facing holdings just stay
+           on whatever date they were last synced to, until the next successful run retries it */
+      }
     } catch (e) {
       failedCount++;
       const message = e instanceof Error ? e.message : String(e);
