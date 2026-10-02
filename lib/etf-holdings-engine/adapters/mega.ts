@@ -1,0 +1,87 @@
+// Mega (兆豐) Securities Investment Trust — official actual-holdings page, plain HTTP GET, no headless
+// browser, no cookie. Verified 2026-09-26:
+//   https://www.megafunds.com.tw/MEGA/etf/etf_product.aspx?id=<fund_id>
+// is a genuinely separate official page ("持股比重"/基金配置) from the PCF page (trade_pcf.aspx),
+// server-rendered, full portfolio in one response (no "load more" needed — a row near the end of the
+// visibly-truncated list is already present in the raw HTML). Cross-validated against trade_pcf.aspx for
+// 00996A: identical figures on both pages, confirming these are real total positions, never a
+// creation-basket requiring scaling.
+import * as cheerio from "cheerio";
+import type { CanonicalPosition, CanonicalSnapshot, OfficialPcfAdapter } from "../types.ts";
+
+const BASE = "https://www.megafunds.com.tw/MEGA/etf/etf_product.aspx";
+
+// market ticker -> official internal fund_id. Captured verbatim from the official ETF overview page
+// (https://www.megafunds.com.tw/MEGA/etf/index.aspx), whose per-ticker tiles carry `data-uid="<fund_id>"`
+// directly alongside the visible ticker text — cross-verified against trade_pcf.aspx's own `#fund_id`
+// dropdown values (one-time read 2026-09-26, never guessed). fund_id=24 ("兆豐美國黃金礦業ETF基金")
+// exists in that dropdown but has no ticker tile yet on the overview page — a new/unlisted entrant,
+// deliberately excluded until it has an official ticker to map.
+const FUND_ID_MAP: Record<string, string> = {
+  "00943": "20", "00932": "19", "00921": "18", "00913": "17", "00690": "5",
+  "00911": "16", "00957B": "21", "00982T": "22", "00996A": "23",
+};
+
+function num(s: string | undefined | null): number {
+  if (!s) return 0;
+  return Number(s.replace(/[,%]/g, "").trim()) || 0;
+}
+
+export const MegaOfficialPcfAdapter: OfficialPcfAdapter = {
+  issuer: "Mega",
+
+  async fetchSnapshot(etfCode: string): Promise<CanonicalSnapshot> {
+    const fundId = FUND_ID_MAP[etfCode];
+    if (!fundId) throw new Error(`MEGA_UNMAPPED_ETF_${etfCode} — not in the official data-uid map, never guessed`);
+
+    const r = await fetch(`${BASE}?id=${fundId}`, { headers: { "User-Agent": "Mozilla/5.0" } });
+    if (!r.ok) throw new Error(`MEGA_HTTP_${r.status}_${etfCode}`);
+    const html = await r.text();
+
+    // The page's own "資料來源：兆豐投信，YYYY/MM/DD" label — never today, never trade_pcf.aspx's query
+    // date, never one shared issuer-wide date (confirmed per-ETF: e.g. 00996A=2026/09/24 vs
+    // 00957B=2026/09/23 on the same day).
+    const dateMatch = html.match(/資料來源：兆豐投信，(\d{4}\/\d{2}\/\d{2})/);
+    if (!dateMatch) throw new Error(`MEGA_NO_DATE_${etfCode} — page markup changed, adapter needs re-verification`);
+    const dataDate = dateMatch[1].replaceAll("/", "-");
+
+    const navMatch = html.match(/淨資產價值[\s\S]{0,80}?([\d,]+)\s*<\/div>/);
+    const unitsMatch = html.match(/在外流通單位數[\s\S]{0,80}?([\d,]+)\s*<\/div>/);
+
+    const $ = cheerio.load(html);
+    const cellsOf = (el: Parameters<typeof $>[0]) => $(el).find(".fund-content").map((_, c) => $(c).text().trim()).get();
+
+    const positions: CanonicalPosition[] = [
+      ...$(".fund-info.content-list-1").map((_, el) => {
+        const c = cellsOf(el); // 股票代號 / 股票名稱 / 股數 / 持股權重
+        return { securityCode: c[0], securityName: c[1], positionType: "EQUITY" as const, positionAmount: num(c[2]), positionUnit: "SHARES" as const, weight: num(c[3]), canonicalSecurityId: null };
+      }).get(),
+      ...$(".fund-info.content-list-6").map((_, el) => {
+        const c = cellsOf(el); // 債券代號 / 債券名稱 / 面額 / 市值 / 持股權重(%)
+        // Official par value is 面額 (c[2]); 市值 (market value, c[3]) is never used as the position amount.
+        return { securityCode: c[0], securityName: c[1], positionType: "BOND" as const, positionAmount: num(c[2]), positionUnit: "PAR_VALUE" as const, weight: num(c[4]), canonicalSecurityId: null };
+      }).get(),
+      ...$(".fund-info.content-list-2").map((_, el) => {
+        const c = cellsOf(el); // 期貨代號 / 期貨名稱 / 契約年月 / 口數 / 持股權重
+        return { securityCode: c[0], securityName: c[1], positionType: "FUTURE" as const, positionAmount: num(c[3]), positionUnit: "CONTRACTS" as const, weight: num(c[4]), canonicalSecurityId: null };
+      }).get(),
+    ];
+    if (!positions.length) throw new Error(`MEGA_NO_HOLDINGS_${etfCode}_${dataDate}`);
+
+    return {
+      etfCode,
+      issuer: "Mega",
+      assetType:
+        positions.some((p) => p.positionType === "EQUITY") && positions.some((p) => p.positionType === "BOND") ? "MULTI_ASSET" :
+        positions.some((p) => p.positionType === "BOND") ? "BOND" :
+        positions.some((p) => p.positionType === "EQUITY") ? "EQUITY" : "OTHER",
+      dataDate,
+      announcementDate: dataDate,
+      fundNav: num(navMatch?.[1]),
+      outstandingUnits: num(unitsMatch?.[1]),
+      positions,
+      source: "MEGA_OFFICIAL_ACTUAL_HOLDINGS_PAGE",
+      retrievedAt: new Date().toISOString(),
+    };
+  },
+};
