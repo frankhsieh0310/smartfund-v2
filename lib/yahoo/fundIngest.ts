@@ -266,7 +266,6 @@ export async function ingestUsFundShareClass(
       [rec.symbol],
     );
     let fundId: string;
-    const navDateSql = "CURRENT_DATE";
     if (existingFund[0]) {
       fundId = existingFund[0].id;
       await query(
@@ -282,13 +281,12 @@ export async function ingestUsFundShareClass(
            return_1y = COALESCE($10::numeric, return_1y), return_3y = COALESCE($11::numeric, return_3y),
            return_5y = COALESCE($12::numeric, return_5y), return_10y = COALESCE($13::numeric, return_10y),
            expense_ratio = COALESCE($14::numeric, expense_ratio), aum = COALESCE($15::numeric, aum),
-           latest_nav = COALESCE($16::numeric, latest_nav),
-           inception_date = COALESCE(to_timestamp($17::numeric)::date, inception_date),
+           inception_date = COALESCE(to_timestamp($16::numeric)::date, inception_date),
            data_provider = 'yahoo', last_nav_source = 'YAHOO_QUOTE_SUMMARY', updated_at = NOW()
          WHERE id = $1`,
         [fundId, rec.name.slice(0, 500), (rec.family ?? "UNKNOWN").slice(0, 200), rec.currency, rec.category,
          rec.msOverall, rec.msRisk, rec.msCategory, rec.msRank3y,
-         rec.r1y, rec.r3y, rec.r5y, rec.r10y, rec.netExpense, rec.netAssets, rec.navPrice, rec.inceptionEpoch],
+         rec.r1y, rec.r3y, rec.r5y, rec.r10y, rec.netExpense, rec.netAssets, rec.inceptionEpoch],
       );
       res.shareClassUpdated = true;
     } else {
@@ -302,12 +300,12 @@ export async function ingestUsFundShareClass(
            (gen_random_uuid()::text, $1::text, $1::text, $2::text, COALESCE($3::text,'USD'), $4::text, 'US', $5::int, $6::int,
             $7::text, $8::int, CASE WHEN $5::int IS NOT NULL OR $6::int IS NOT NULL THEN 'YAHOO_QUOTE_SUMMARY' END,
             CASE WHEN $5::int IS NOT NULL OR $6::int IS NOT NULL THEN NOW() END,
-            $9::numeric, $10::numeric, $11::numeric, $12::numeric, $13::numeric, $14::numeric, $15::numeric, ${navDateSql},
-            to_timestamp($16::numeric)::date, true, 'yahoo', $17::text, 'YAHOO_QUOTE_SUMMARY', NOW(), NOW())
+            $9::numeric, $10::numeric, $11::numeric, $12::numeric, $13::numeric, $14::numeric, NULL, NULL,
+            to_timestamp($15::numeric)::date, true, 'yahoo', $16::text, 'YAHOO_QUOTE_SUMMARY', NOW(), NOW())
          RETURNING id::text`,
         [rec.name.slice(0, 500), (rec.family ?? "UNKNOWN").slice(0, 200), rec.currency, rec.category,
          rec.msOverall, rec.msRisk, rec.msCategory, rec.msRank3y,
-         rec.r1y, rec.r3y, rec.r5y, rec.r10y, rec.netExpense, rec.netAssets, rec.navPrice, rec.inceptionEpoch, rec.symbol],
+         rec.r1y, rec.r3y, rec.r5y, rec.r10y, rec.netExpense, rec.netAssets, rec.inceptionEpoch, rec.symbol],
       );
       fundId = ins[0].id;
       res.shareClassInserted = true;
@@ -364,16 +362,23 @@ export async function ingestUsFundShareClass(
             `INSERT INTO fund_history (id, fund_id, date, nav, created_at)
              SELECT gen_random_uuid()::text, $1, x.date::date, x.nav, NOW()
              FROM jsonb_to_recordset($2::jsonb) AS x(date text, nav numeric)
-             ON CONFLICT (fund_id, date) DO UPDATE SET nav = COALESCE(fund_history.nav, EXCLUDED.nav)
+             ON CONFLICT (fund_id, date) DO UPDATE SET nav = EXCLUDED.nav
+             WHERE fund_history.nav IS DISTINCT FROM EXCLUDED.nav
              RETURNING 1`,
-            [fundId, JSON.stringify(chunk.map((c) => ({ date: c.date, nav: c.adjClose ?? c.close })))],
+            [fundId, JSON.stringify(chunk.map((c) => ({ date: c.date, nav: c.close })))],
           );
           res.navRowsWritten += r2.length;
         }
-        if (chart.regularMarketPrice != null) {
+        // A mutual fund's published NAV is the unadjusted observation. Its date
+        // must come from that same observation, never the ingestion clock.
+        const latestNav = navs.at(-1);
+        if (latestNav) {
           await query(
-            `UPDATE funds SET latest_nav = COALESCE($2, latest_nav), latest_nav_date = COALESCE($3::date, latest_nav_date), updated_at = NOW() WHERE id = $1`,
-            [fundId, chart.regularMarketPrice, chart.regularMarketTime],
+            `UPDATE funds SET latest_nav = $2::numeric, latest_nav_date = $3::date,
+               nav_updated_at = NOW(), updated_at = NOW()
+             WHERE id = $1 AND (latest_nav_date IS NULL OR latest_nav_date < $3::date
+               OR (latest_nav_date = $3::date AND latest_nav IS DISTINCT FROM $2::numeric(14,4)))`,
+            [fundId, latestNav.close, latestNav.date],
           );
         }
         // distributions -> reuse fund dividend_yield? there is no fund distribution table; record count only.
@@ -390,12 +395,17 @@ export async function ingestUsFundShareClass(
         mastersHoldingsWrittenThisRun.add(masterId);
         // idempotent replace of this master representative's YAHOO holdings
         await query(`DELETE FROM holdings WHERE fund_id = $1 AND source = 'YAHOO_QUOTE_SUMMARY'`, [fundId]);
-        const asOf = new Date().toISOString().slice(0, 10);
+        // Yahoo's topHoldings quoteSummary module carries no "as of" date for the portfolio snapshot
+        // itself — only composition (name/ticker/weight). Per the holdings date-source rule: never
+        // substitute the fetch date (or any other date) for a date the source doesn't actually give.
+        // as_of_date stays NULL (requires holdings.as_of_date nullable — see
+        // prisma/migrations/20261003010000_holdings_as_of_date_nullable); the row is still useful for
+        // composition, it's just honestly undated.
         for (const h of rec.topHoldings) {
           await query(
             `INSERT INTO holdings (id, asset_type, fund_id, share_class_id, as_of_date, rank, holding_name, holding_code, weight, source, source_record_id, created_at)
-             VALUES (gen_random_uuid()::text, 'FUND', $1::text, NULL, $2::date, $3::int, $4::text, $5::text, $6::numeric, 'YAHOO_QUOTE_SUMMARY', $7::text, NOW())`,
-            [fundId, asOf, h.rank, h.name.slice(0, 300), h.ticker, h.weight == null ? null : h.weight / 100, `${h.rank}:${(h.ticker ?? h.name).slice(0, 80)}`],
+             VALUES (gen_random_uuid()::text, 'FUND', $1::text, NULL, NULL, $2::int, $3::text, $4::text, $5::numeric, 'YAHOO_QUOTE_SUMMARY', $6::text, NOW())`,
+            [fundId, h.rank, h.name.slice(0, 300), h.ticker, h.weight == null ? null : h.weight / 100, `${h.rank}:${(h.ticker ?? h.name).slice(0, 80)}`],
           );
         }
         res.holdingsWritten = rec.topHoldings.length;

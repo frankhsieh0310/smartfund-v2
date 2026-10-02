@@ -1406,7 +1406,9 @@ model Holding {
   etfId          String?         @map("etf_id")
   fundId         String?         @map("fund_id")
   shareClassId   String?         @map("share_class_id")
-  asOfDate       DateTime        @map("as_of_date") @db.Date
+  /// Nullable: a source with no reliable holdings-as-of date (e.g. Yahoo topHoldings, which has none)
+  /// must not fabricate one. NULL here means "date unavailable", never a guess.
+  asOfDate       DateTime?       @map("as_of_date") @db.Date
   rank           Int
   /// @deprecated 改用 securityId + Security 關聯，保留供過渡期相容
   holdingName    String          @map("holding_name")
@@ -6717,4 +6719,51 @@ model DatasetAlertEvent {
 
   @@index([status, condition, lastObservedAt])
   @@map("dataset_alert_events")
+}
+
+/// Taiwan ETF Official Daily Holdings Engine (Function 2). Sourced only from each issuer's own official
+/// PCF/holdings page or API — never MoneyDJ, never a third-party aggregator. Covers active and passive
+/// ETFs from all 17 confirmed issuers under one shared shape; issuer adapters only translate their
+/// official source into this canonical model, they do not own any schema of their own.
+/// Identity: (etf_code, data_date). A same-day rerun upserts in place; a new trading day always inserts a
+/// new snapshot row — history is never overwritten.
+model EtfOfficialDailySnapshot {
+  id               String                     @id @default(uuid()) @db.Uuid
+  etfCode          String                     @map("etf_code")
+  issuer           String
+  assetType        String                     @map("asset_type")
+  dataDate         DateTime                   @map("data_date") @db.Date
+  announcementDate DateTime                   @map("announcement_date") @db.Date
+  fundNav          Decimal                    @map("fund_nav") @db.Decimal(24, 4)
+  outstandingUnits Decimal                    @map("outstanding_units") @db.Decimal(24, 4)
+  source           String
+  retrievedAt      DateTime                   @map("retrieved_at")
+  createdAt        DateTime                   @default(now()) @map("created_at")
+  positions        EtfOfficialDailyPosition[]
+
+  @@unique([etfCode, dataDate])
+  @@index([etfCode, dataDate])
+  @@map("etf_official_daily_snapshots")
+}
+
+/// One row per security/contract in a snapshot. positionAmount is always in the position's OWN official
+/// unit (shares for equity, par/nominal value for bonds, contract count for futures/options) — never
+/// coerced across asset types. See lib/etf-holdings-engine/types.ts for the canonical model this mirrors.
+model EtfOfficialDailyPosition {
+  id                  String                   @id @default(uuid()) @db.Uuid
+  snapshotId          String                   @map("snapshot_id") @db.Uuid
+  securityCode        String                   @map("security_code")
+  securityName        String                   @map("security_name")
+  positionType        String                   @map("position_type")
+  positionAmount      Decimal                  @map("position_amount") @db.Decimal(28, 4)
+  positionUnit        String                   @map("position_unit")
+  weight              Decimal                  @db.Decimal(10, 4)
+  rank                Int?
+  canonicalSecurityId String?                  @map("canonical_security_id")
+  source              String
+  snapshot            EtfOfficialDailySnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+
+  @@unique([snapshotId, securityCode])
+  @@index([snapshotId])
+  @@map("etf_official_daily_positions")
 }

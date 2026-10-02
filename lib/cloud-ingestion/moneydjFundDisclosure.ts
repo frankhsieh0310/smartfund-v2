@@ -47,16 +47,14 @@ export async function fetchMoneydjDisclosure(moneydjCode: string): Promise<Money
 
   const html = new TextDecoder("big5").decode(await response.arrayBuffer());
   const $ = load(html);
-  const text = $("body").text();
-  const date = text.match(/資料月份：\s*(\d{4}\/\d{2}\/\d{2})/)?.[1]?.replaceAll("/", "-");
-  if (!date) throw new Error("MONEYDJ_DISCLOSURE_DATE_MISSING");
-  // A disclosed holdings date can never be in the future — the regex above matches the FIRST
-  // "資料月份：" anywhere in the page body, which for a code MoneyDJ doesn't actually recognize (e.g.
-  // an ISIN passed where MoneyDJ expects its own short fund code) can land on an unrelated
-  // placeholder/template date elsewhere on the fallback page instead of a real disclosure date.
-  if (new Date(date).getTime() > Date.now()) throw new Error(`MONEYDJ_DISCLOSURE_DATE_IMPLAUSIBLE:${date}`);
 
+  // Collect holdings rows first, and remember which <table> each one lives in — the disclosure date
+  // must come from that SAME table's own text, never from anywhere else on the page. A code MoneyDJ
+  // doesn't recognize (e.g. an ISIN passed where it expects its own short fund code) can render a
+  // fallback page that still has an unrelated "資料月份：" string elsewhere (nav, footer, an ad), and a
+  // whole-body regex has no way to tell that apart from the real one next to the actual holdings.
   const holdings: DisclosedHolding[] = [];
+  const holdingsTables = new Set<ReturnType<typeof $>>();
   $("tr").each((_, row) => {
     const cells = $(row)
       .find("td")
@@ -67,9 +65,28 @@ export async function fetchMoneydjDisclosure(moneydjCode: string): Promise<Money
     const weightMatch = cells[1].match(/^(\d+(?:\.\d+)?)%$/);
     if (!weightMatch || cells[0].includes("投資名稱")) return;
     const weight = Number(weightMatch[1]);
-    if (cells[0] && Number.isFinite(weight)) holdings.push({ name: cells[0], weight });
+    if (cells[0] && Number.isFinite(weight)) {
+      holdings.push({ name: cells[0], weight });
+      const table = $(row).closest("table");
+      if (table.length) holdingsTables.add(table);
+    }
   });
   if (!holdings.length) throw new Error("MONEYDJ_DISCLOSED_HOLDINGS_MISSING");
+
+  // Date must be found inside one of the tables that actually held a matched row — not the page body.
+  let date: string | undefined;
+  for (const table of holdingsTables) {
+    // The caption is sometimes just outside the <table> tag itself, so also check the immediate
+    // parent — still bounded to this specific holdings block, not the whole page.
+    const scope = table.text() + " " + table.parent().text();
+    const match = scope.match(/資料月份：\s*(\d{4}\/\d{2}\/\d{2})/);
+    if (match) { date = match[1].replaceAll("/", "-"); break; }
+  }
+  // No reliable date found in the holdings table itself: do not fall back to the page body, do not
+  // guess, do not use today's fetch date. The caller must treat this as "date unavailable", not
+  // persist a fabricated as_of_date.
+  if (!date) throw new Error("MONEYDJ_DISCLOSURE_DATE_MISSING");
+  if (new Date(date).getTime() > Date.now()) throw new Error(`MONEYDJ_DISCLOSURE_DATE_IMPLAUSIBLE:${date}`);
 
   const scope =
     holdings.length === 10
