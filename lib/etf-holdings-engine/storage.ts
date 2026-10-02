@@ -18,7 +18,7 @@ export async function upsertSnapshot(query: QueryFn, snapshot: CanonicalSnapshot
   const rows = await query(
     `INSERT INTO etf_official_daily_snapshots
        (etf_code, issuer, asset_type, data_date, announcement_date, fund_nav, outstanding_units, source, retrieved_at)
-     VALUES ($1, $2, $3, $4::date, $5::date, $6, $7, $8, $9)
+     VALUES ($1, $2, $3, $4::date, $5::date, $6, $7, $8, $9::timestamptz)
      ON CONFLICT (etf_code, data_date) DO UPDATE SET
        issuer = EXCLUDED.issuer, asset_type = EXCLUDED.asset_type, announcement_date = EXCLUDED.announcement_date,
        fund_nav = EXCLUDED.fund_nav, outstanding_units = EXCLUDED.outstanding_units,
