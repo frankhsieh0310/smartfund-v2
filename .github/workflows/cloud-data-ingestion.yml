@@ -31,13 +31,20 @@ on:
     - cron: "30 14 * * 1-5" # MOPS financial incremental (2nd pass) — 22:30 Taipei, catches late filers same day
     - cron: "0 13 * * *"    # SEC EDGAR financial incremental (discovery + bounded issuer refresh) — daily
     - cron: "30 11 * * 1-5" # Function 2: Taiwan ETF official daily holdings — 19:30 Taipei, weekdays only
+    # Institutional (三大法人): TWSE/TPEx publish same-day net buy/sell after market close, usually by
+    # mid-afternoon. Two checks, not a retry loop — updateInstitutional() already returns written=0
+    # (no throw, no non-2xx) when the source has nothing for that date yet, so 15:00 is a safe no-op
+    # on a day it hasn't posted yet, and 17:00 simply re-checks; neither check is ever marked failed
+    # for "not published yet".
+    - cron: "0 7 * * 1-5"  # Institutional check 1 — 15:00 Taipei, weekdays only
+    - cron: "0 9 * * 1-5"  # Institutional check 2 — 17:00 Taipei, weekdays only
   workflow_dispatch:
     inputs:
       job:
         description: "Which job to run"
         type: choice
         default: all
-        options: [both, etf-price, moneydj-fund, moneydj-etf, global-etf-holdings, fund-holdings, fund-nav, consensus-ingest, consensus-aggregate, consensus-performance, consensus-flips, consensus-backfill, tw-fundamentals-refresh, global-pe-recompute, mops-financial-incremental, sec-financial-incremental, etf-official-holdings, all]
+        options: [both, etf-price, moneydj-fund, moneydj-etf, global-etf-holdings, fund-holdings, fund-nav, consensus-ingest, consensus-aggregate, consensus-performance, consensus-flips, consensus-backfill, tw-fundamentals-refresh, global-pe-recompute, mops-financial-incremental, sec-financial-incremental, etf-official-holdings, institutional-update, all]
 
 concurrency:
   group: cloud-data-ingestion
@@ -79,6 +86,8 @@ jobs:
             "30 14 * * 1-5") echo "job=mops-financial-incremental" >> "$GITHUB_OUTPUT" ;;
             "0 13 * * *") echo "job=sec-financial-incremental" >> "$GITHUB_OUTPUT" ;;
             "30 11 * * 1-5") echo "job=etf-official-holdings" >> "$GITHUB_OUTPUT" ;;
+            "0 7 * * 1-5") echo "job=institutional-update" >> "$GITHUB_OUTPUT" ;;
+            "0 9 * * 1-5") echo "job=institutional-update" >> "$GITHUB_OUTPUT" ;;
             *)            echo "job=${{ github.event.inputs.job || 'all' }}" >> "$GITHUB_OUTPUT" ;;
           esac
 
@@ -246,6 +255,20 @@ jobs:
                --retry 2 --retry-connrefused --retry-delay 10 \
                -H "Authorization: Bearer ${SECRET}" \
                "${BASE_URL}/api/cron/cloud-sec-financial-incremental" | tee sec-financial-incremental-response.json
+          echo
+
+      - name: Institutional (三大法人) daily net buy/sell
+        if: ${{ contains(fromJSON('["institutional-update","all"]'), steps.pick.outputs.job) }}
+        run: |
+          set -euo pipefail
+          # updateInstitutional() already returns written=0 (HTTP 200, no throw) when TWSE/TPEx have
+          # nothing posted yet for the date — a safe no-op, never a failed step. --fail-with-body only
+          # trips on a genuine non-2xx (network/5xx), not on "not published yet".
+          curl --fail-with-body --show-error --silent \
+               --connect-timeout 15 --max-time 60 \
+               --retry 2 --retry-connrefused --retry-delay 10 \
+               -H "Authorization: Bearer ${SECRET}" \
+               "${BASE_URL}/api/cron/institutional-update" | tee institutional-update-response.json
           echo
 
       - name: Function 2 — Taiwan ETF official daily holdings (bounded-batch, up to 12 calls)
