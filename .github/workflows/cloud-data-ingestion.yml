@@ -36,7 +36,7 @@ on:
         description: "Which job to run"
         type: choice
         default: all
-        options: [both, etf-price, moneydj-fund, moneydj-etf, global-etf-holdings, fund-holdings, fund-nav, consensus-ingest, consensus-aggregate, consensus-performance, consensus-flips, consensus-backfill, tw-fundamentals-refresh, global-pe-recompute, mops-financial-incremental, sec-financial-incremental, all]
+        options: [both, etf-price, moneydj-fund, moneydj-etf, global-etf-holdings, fund-holdings, fund-nav, consensus-ingest, consensus-aggregate, consensus-performance, consensus-flips, consensus-backfill, tw-fundamentals-refresh, global-pe-recompute, mops-financial-incremental, sec-financial-incremental, etf-official-holdings, all]
 
 concurrency:
   group: cloud-data-ingestion
