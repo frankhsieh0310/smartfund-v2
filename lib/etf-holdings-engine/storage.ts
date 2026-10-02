@@ -10,7 +10,7 @@ export type QueryFn = (sql: string, params: unknown[]) => Promise<any[]>;
 
 export async function upsertSnapshot(query: QueryFn, snapshot: CanonicalSnapshot): Promise<{ snapshotId: string; wasNew: boolean }> {
   const existing = await query(
-    `SELECT id FROM etf_official_daily_snapshots WHERE etf_code = $1 AND data_date = $2`,
+    `SELECT id FROM etf_official_daily_snapshots WHERE etf_code = $1 AND data_date = $2::date`,
     [snapshot.etfCode, snapshot.dataDate],
   );
   const wasNew = existing.length === 0;

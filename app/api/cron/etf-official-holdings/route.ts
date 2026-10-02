@@ -228,8 +228,12 @@ export async function GET(request: Request) {
     failed: (isFromToday ? effectiveCheckpoint?.failed ?? 0 : 0) + failedCount,
   });
 
+  // A batch that attempted tickers but succeeded at none is a total failure, not a completed run —
+  // reachedEnd alone (what the workflow step currently gates on) must never read as "it worked".
+  const totalFailure = processed > 0 && passed === 0;
+
   await finishRun(runId, JOB, "ALL", startedMs, {
-    status: timeBudgetStop ? "PARTIAL" : failedCount > 0 ? "PARTIAL" : "COMPLETED",
+    status: totalFailure ? "FAILED" : timeBudgetStop ? "PARTIAL" : failedCount > 0 ? "PARTIAL" : "COMPLETED",
     attempted: processed,
     completed: passed,
     inserted: passed,
@@ -242,7 +246,7 @@ export async function GET(request: Request) {
   });
 
   return Response.json({
-    ok: true,
+    ok: !totalFailure,
     job: JOB,
     processed,
     passed,
@@ -253,5 +257,5 @@ export async function GET(request: Request) {
     universeCount: flat.length,
     ctbcDate,
     runtimeMs: Date.now() - startedMs,
-  });
+  }, { status: totalFailure ? 500 : 200 });
 }
