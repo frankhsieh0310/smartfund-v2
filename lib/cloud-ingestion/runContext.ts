@@ -55,7 +55,12 @@ function newId(): string {
 
 /**
  * Insert the RUNNING run-log row. Returns { runId, skipped }.
- * skipped=true means a row with this run_key already exists (double trigger) — caller should no-op.
+ * skipped=true means a run with this run_key already COMPLETED — caller should no-op. A prior
+ * attempt that FAILED, was PARTIAL, or never got past RUNNING (crashed before finishRun) does NOT
+ * block a retry: the conflicting row is reused in place (same run_key, fresh id/status/started_at),
+ * so the exact same batch can be re-attempted. Once a run_key's row reaches COMPLETED, no later
+ * attempt can overwrite it — that single `status <> 'COMPLETED'` guard is what still prevents two
+ * genuinely-successful runs from ever being recorded for the same run_key.
  */
 export async function beginRun(input: BeginRunInput): Promise<{ runId: string; skipped: boolean }> {
   const runId = newId();
@@ -77,7 +82,16 @@ export async function beginRun(input: BeginRunInput): Promise<{ runId: string; s
     `INSERT INTO production_scheduler_runs
        (id, job_id, exchange, run_type, status, started_at, universe_count, run_key, details, attempted, completed, inserted, updated, failed)
      VALUES ($1, $2, 'CLOUD', 'CLOUD_INGESTION', $3, CURRENT_TIMESTAMP, $4, $5, $6::jsonb, 0, 0, 0, 0, 0)
-     ON CONFLICT (run_key) WHERE run_key IS NOT NULL DO NOTHING
+     ON CONFLICT (run_key) WHERE run_key IS NOT NULL DO UPDATE SET
+       id = EXCLUDED.id,
+       status = EXCLUDED.status,
+       started_at = CURRENT_TIMESTAMP,
+       completed_at = NULL,
+       universe_count = EXCLUDED.universe_count,
+       details = EXCLUDED.details,
+       attempted = 0, completed = 0, inserted = 0, updated = 0, failed = 0,
+       error = NULL
+     WHERE production_scheduler_runs.status <> $7
      RETURNING id`,
     runId,
     input.jobName,
@@ -85,9 +99,10 @@ export async function beginRun(input: BeginRunInput): Promise<{ runId: string; s
     input.universeCount,
     input.runKey,
     JSON.stringify(details),
+    STATUS_DB.COMPLETED,
   );
   if (!rows.length) return { runId, skipped: true };
-  return { runId, skipped: false };
+  return { runId: rows[0].id, skipped: false };
 }
 
 export async function finishRun(
