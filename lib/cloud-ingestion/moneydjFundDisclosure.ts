@@ -50,6 +50,11 @@ export async function fetchMoneydjDisclosure(moneydjCode: string): Promise<Money
   const text = $("body").text();
   const date = text.match(/資料月份：\s*(\d{4}\/\d{2}\/\d{2})/)?.[1]?.replaceAll("/", "-");
   if (!date) throw new Error("MONEYDJ_DISCLOSURE_DATE_MISSING");
+  // A disclosed holdings date can never be in the future — the regex above matches the FIRST
+  // "資料月份：" anywhere in the page body, which for a code MoneyDJ doesn't actually recognize (e.g.
+  // an ISIN passed where MoneyDJ expects its own short fund code) can land on an unrelated
+  // placeholder/template date elsewhere on the fallback page instead of a real disclosure date.
+  if (new Date(date).getTime() > Date.now()) throw new Error(`MONEYDJ_DISCLOSURE_DATE_IMPLAUSIBLE:${date}`);
 
   const holdings: DisclosedHolding[] = [];
   $("tr").each((_, row) => {
