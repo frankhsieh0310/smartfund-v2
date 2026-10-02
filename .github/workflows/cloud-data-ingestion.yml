@@ -30,6 +30,7 @@ on:
     - cron: "30 10 * * 1-5" # MOPS financial incremental — 18:30 Taipei, after-hours filing check (weekdays)
     - cron: "30 14 * * 1-5" # MOPS financial incremental (2nd pass) — 22:30 Taipei, catches late filers same day
     - cron: "0 13 * * *"    # SEC EDGAR financial incremental (discovery + bounded issuer refresh) — daily
+    - cron: "30 11 * * 1-5" # Function 2: Taiwan ETF official daily holdings — 19:30 Taipei, weekdays only
   workflow_dispatch:
     inputs:
       job:
@@ -77,6 +78,7 @@ jobs:
             "30 10 * * 1-5") echo "job=mops-financial-incremental" >> "$GITHUB_OUTPUT" ;;
             "30 14 * * 1-5") echo "job=mops-financial-incremental" >> "$GITHUB_OUTPUT" ;;
             "0 13 * * *") echo "job=sec-financial-incremental" >> "$GITHUB_OUTPUT" ;;
+            "30 11 * * 1-5") echo "job=etf-official-holdings" >> "$GITHUB_OUTPUT" ;;
             *)            echo "job=${{ github.event.inputs.job || 'all' }}" >> "$GITHUB_OUTPUT" ;;
           esac
 
@@ -246,11 +248,42 @@ jobs:
                "${BASE_URL}/api/cron/cloud-sec-financial-incremental" | tee sec-financial-incremental-response.json
           echo
 
+      - name: Function 2 — Taiwan ETF official daily holdings (bounded-batch, up to 12 calls)
+        if: ${{ contains(fromJSON('["etf-official-holdings","all"]'), steps.pick.outputs.job) }}
+        run: |
+          set -euo pipefail
+          # One invocation processes at most BATCH_SIZE=40 canonical portfolios and returns (a full
+          # 331-portfolio pass does not fit in Vercel's 300s maxDuration). This step calls the same
+          # route repeatedly — still all within the single 30 11 * * 1-5 daily trigger, not a second
+          # schedule — until it reports reachedEnd=true or MAX_INVOCATIONS=12 is reached. No sleep/poll
+          # between calls: each call does real bounded batch work, not a wait for something else to
+          # finish.
+          MAX_INVOCATIONS=12
+          reached_end=false
+          for i in $(seq 1 "${MAX_INVOCATIONS}"); do
+            echo "Function 2 batch call ${i}/${MAX_INVOCATIONS}"
+            curl --fail-with-body --show-error --silent \
+                 --connect-timeout 15 --max-time 290 \
+                 -H "Authorization: Bearer ${SECRET}" \
+                 "${BASE_URL}/api/cron/etf-official-holdings" | tee "etf-official-holdings-response-${i}.json"
+            echo
+            if jq -e '.reachedEnd == true' "etf-official-holdings-response-${i}.json" > /dev/null; then
+              reached_end=true
+              break
+            fi
+          done
+          if [ "${reached_end}" != "true" ]; then
+            echo "::error::Function 2 did not reach the end of the 331-portfolio universe within ${MAX_INVOCATIONS} invocations."
+            exit 1
+          fi
+
       - name: Upload responses
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: ingestion-responses-${{ github.run_id }}
-          path: "*-response.json"
+          path: |
+            *-response.json
+            etf-official-holdings-response-*.json
           if-no-files-found: ignore
           retention-days: 7
