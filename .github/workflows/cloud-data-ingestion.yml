@@ -578,8 +578,18 @@ jobs:
           # checkpoints per ticker — no sleep/poll here. Loops until this issuer's own reachedEnd=true;
           # the 90-minute job timeout above is the hard backstop against an unbounded loop, and 200 is
           # a generous sanity cap well beyond what any single issuer's own ticker count could need.
+          #
+          # skip_streak is a defensive guard against a DIFFERENT failure mode than reachedEnd itself:
+          # `skipped: true` (route.ts's run_key double-trigger guard) means this call made ZERO
+          # progress. One or two in a row can be benign (a near-simultaneous retry racing the prior
+          # call's own in-flight request), but several in a row means the loop is genuinely spinning
+          # with no progress — stop well short of burning the whole 200-call sanity cap on no-op calls.
+          # This is deliberately NOT "skipped => reachedEnd=true": a skip is never treated as done, only
+          # as "stop retrying without progress" — the actual fix for why a legitimate same-day retry
+          # could get skipped at all belongs in route.ts/runContext.ts's run_key lifecycle, not here.
           reached_end=false
           call=0
+          skip_streak=0
           while [ "${reached_end}" != "true" ]; do
             call=$((call + 1))
             if [ "${call}" -gt 200 ]; then
@@ -595,6 +605,14 @@ jobs:
             echo
             if jq -e '.reachedEnd == true' "etf-${{ matrix.issuer }}-response-${call}.json" > /dev/null; then
               reached_end=true
+            elif jq -e '.skipped == true' "etf-${{ matrix.issuer }}-response-${call}.json" > /dev/null; then
+              skip_streak=$((skip_streak + 1))
+              if [ "${skip_streak}" -ge 5 ]; then
+                echo "::error::${{ matrix.issuer }} got ${skip_streak} consecutive skipped (no-progress) responses — stopping without reachedEnd=true."
+                exit 1
+              fi
+            else
+              skip_streak=0
             fi
           done
 
