@@ -505,17 +505,17 @@ jobs:
           # A 200 PARTIAL response must not hide provider/symbol failures in Actions.
           jq -e '.ok == true and ((.failedMarkets // []) | length == 0)' "crypto-${phase}-response.json" >/dev/null
 
-      - name: Function 2 — Taiwan ETF official daily holdings (bounded-batch, up to 12 calls)
+      - name: Function 2 — Taiwan ETF official daily holdings (bounded-batch, up to 40 calls)
         if: ${{ contains(fromJSON('["etf-official-holdings","all"]'), steps.pick.outputs.job) }}
         run: |
           set -euo pipefail
-          # One invocation processes at most BATCH_SIZE=40 canonical portfolios and returns (a full
-          # 331-portfolio pass does not fit in Vercel's 300s maxDuration). This step calls the same
-          # route repeatedly — still all within the single 30 11 * * 1-5 daily trigger, not a second
-          # schedule — until it reports reachedEnd=true or MAX_INVOCATIONS=12 is reached. No sleep/poll
-          # between calls: each call does real bounded batch work, not a wait for something else to
-          # finish.
-          MAX_INVOCATIONS=12
+          # BATCH_SIZE lowered 40 -> 10 after two real production FUNCTION_INVOCATION_TIMEOUTs, so this
+          # needs proportionally more invocations to cover the same 331-portfolio universe
+          # (ceil(331/10) = 34; 40 leaves margin). Still all within the single 30 11 * * 1-5 daily
+          # trigger, not a second schedule — until it reports reachedEnd=true or MAX_INVOCATIONS is
+          # reached. No sleep/poll between calls: each call does real bounded batch work, not a wait
+          # for something else to finish.
+          MAX_INVOCATIONS=40
           reached_end=false
           for i in $(seq 1 "${MAX_INVOCATIONS}"); do
             echo "Function 2 batch call ${i}/${MAX_INVOCATIONS}"
