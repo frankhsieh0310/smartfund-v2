@@ -99,12 +99,27 @@ async function boundedExecute(sql: string, params: unknown[], bound?: BoundedDbO
 
 /**
  * Insert the RUNNING run-log row. Returns { runId, skipped }.
- * skipped=true means a run with this run_key already COMPLETED — caller should no-op. A prior
- * attempt that FAILED, was PARTIAL, or never got past RUNNING (crashed before finishRun) does NOT
- * block a retry: the conflicting row is reused in place (same run_key, fresh id/status/started_at),
- * so the exact same batch can be re-attempted. Once a run_key's row reaches COMPLETED, no later
- * attempt can overwrite it — that single `status <> 'COMPLETED'` guard is what still prevents two
- * genuinely-successful runs from ever being recorded for the same run_key.
+ * skipped=true means a run with this run_key is CURRENTLY RUNNING (a genuine concurrent duplicate
+ * trigger) — caller should no-op. Any TERMINAL prior attempt — COMPLETED, PARTIAL, FAILED, or SKIPPED
+ * — does NOT block a retry: the conflicting row is reused in place (same run_key, fresh
+ * id/status/started_at), so the exact same batch can be re-attempted.
+ *
+ * Previously the guard was `status <> 'COMPLETED'`, i.e. only a COMPLETED row blocked reuse. That
+ * broke exactly the retries the checkpoint-correctness fix depends on: a failed ticker now never
+ * advances lastSymbol, so a legitimate same-day retry necessarily reuses the SAME startIndex — and a
+ * manual checkpoint rewind (e.g. to recover tickers an old buggy build had silently skipped) can also
+ * revisit a startIndex that already ran to COMPLETED earlier that day. Both cases are legitimate
+ * same-day retries, not duplicates, yet the old guard treated a COMPLETED run_key as permanently
+ * sealed — confirmed in Production (run #1231): calls 20-200 all returned `skipped: true` for
+ * run_key "...starting-at-52" because run #1230 had already completed that exact run_key earlier
+ * that day, and GitHub's while-loop kept retrying without ever reaching reachedEnd=true.
+ *
+ * The fix: block ONLY when the existing row's status is RUNNING (a genuinely active, concurrent
+ * invocation for this exact run_key) — `status <> 'RUNNING'` as the WHERE guard. Any terminal status
+ * allows the row to be reused for a fresh attempt. This is actually STRICTER concurrency protection
+ * than before for true duplicates (the old guard let a second concurrent call steal a still-RUNNING
+ * row, since RUNNING <> COMPLETED was also true), while no longer permanently sealing off legitimate
+ * same-day retries at a previously-used startIndex.
  */
 export async function beginRun(input: BeginRunInput, bound?: BoundedDbOptions): Promise<{ runId: string; skipped: boolean }> {
   const runId = newId();
@@ -137,7 +152,7 @@ export async function beginRun(input: BeginRunInput, bound?: BoundedDbOptions): 
        error = NULL
      WHERE production_scheduler_runs.status <> $7
      RETURNING id`,
-    [runId, input.jobName, STATUS_DB.RUNNING, input.universeCount, input.runKey, JSON.stringify(details), STATUS_DB.COMPLETED],
+    [runId, input.jobName, STATUS_DB.RUNNING, input.universeCount, input.runKey, JSON.stringify(details), STATUS_DB.RUNNING],
     bound,
   );
   if (!rows.length) return { runId, skipped: true };
