@@ -97,29 +97,38 @@ async function boundedExecute(sql: string, params: unknown[], bound?: BoundedDbO
   );
 }
 
+// How long a RUNNING row is trusted as "someone is genuinely still working on this run_key" before
+// it's treated as abandoned (a crashed/force-killed invocation that never reached finishRun, so the
+// row is permanently stuck at RUNNING). Must sit comfortably ABOVE Vercel's own maxDuration=300s for
+// this route (see route.ts) — by the time this TTL elapses, Vercel itself is GUARANTEED to have
+// already force-killed any invocation that started that long ago, even one that somehow ran past its
+// own HARD_RESPONSE_DEADLINE_MS=120000 soft deadline. 300s + 60s margin = 360s. Deliberately NOT sized
+// off the 120s soft deadline alone — that would risk declaring a legitimately-still-running (if slow)
+// invocation "stale" and letting a second caller steal it out from under it.
+const STALE_RUNNING_TTL_SECONDS = 360;
+
 /**
  * Insert the RUNNING run-log row. Returns { runId, skipped }.
- * skipped=true means a run with this run_key is CURRENTLY RUNNING (a genuine concurrent duplicate
- * trigger) — caller should no-op. Any TERMINAL prior attempt — COMPLETED, PARTIAL, FAILED, or SKIPPED
- * — does NOT block a retry: the conflicting row is reused in place (same run_key, fresh
- * id/status/started_at), so the exact same batch can be re-attempted.
+ * skipped=true means a run with this run_key is CURRENTLY RUNNING AND FRESH — i.e. started less than
+ * STALE_RUNNING_TTL_SECONDS ago, a genuine concurrent duplicate trigger — caller should no-op. Any
+ * TERMINAL prior attempt (COMPLETED, PARTIAL, FAILED, SKIPPED) OR a STALE RUNNING row (started_at older
+ * than the TTL — Vercel's own 300s maxDuration guarantees whatever invocation set it is long dead) does
+ * NOT block a retry: the conflicting row is reused in place (fresh id, status=RUNNING, started_at=now,
+ * completed_at/error cleared, attempted/completed/inserted/updated/failed reset to 0), so the exact
+ * same batch can be re-attempted as a clean new attempt with no leftover terminal metadata from
+ * whichever prior attempt owned the row.
  *
- * Previously the guard was `status <> 'COMPLETED'`, i.e. only a COMPLETED row blocked reuse. That
- * broke exactly the retries the checkpoint-correctness fix depends on: a failed ticker now never
- * advances lastSymbol, so a legitimate same-day retry necessarily reuses the SAME startIndex — and a
- * manual checkpoint rewind (e.g. to recover tickers an old buggy build had silently skipped) can also
- * revisit a startIndex that already ran to COMPLETED earlier that day. Both cases are legitimate
- * same-day retries, not duplicates, yet the old guard treated a COMPLETED run_key as permanently
- * sealed — confirmed in Production (run #1231): calls 20-200 all returned `skipped: true` for
- * run_key "...starting-at-52" because run #1230 had already completed that exact run_key earlier
- * that day, and GitHub's while-loop kept retrying without ever reaching reachedEnd=true.
- *
- * The fix: block ONLY when the existing row's status is RUNNING (a genuinely active, concurrent
- * invocation for this exact run_key) — `status <> 'RUNNING'` as the WHERE guard. Any terminal status
- * allows the row to be reused for a fresh attempt. This is actually STRICTER concurrency protection
- * than before for true duplicates (the old guard let a second concurrent call steal a still-RUNNING
- * row, since RUNNING <> COMPLETED was also true), while no longer permanently sealing off legitimate
- * same-day retries at a previously-used startIndex.
+ * History: the guard was originally `status <> 'COMPLETED'` (any non-COMPLETED row, including RUNNING,
+ * was reusable — so true concurrent duplicates were never reliably blocked). That was tightened to
+ * `status <> 'RUNNING'` (any terminal status reusable, but ANY RUNNING row blocks, regardless of age) —
+ * confirmed in Production (run #1231) to correctly unblock legitimate same-day retries at a previously-
+ * COMPLETED run_key. But that tightened guard introduced a NEW failure mode (run #1233): a RUNNING row
+ * left behind by an invocation that Vercel/curl force-killed before it ever reached finishRun (so
+ * completed_at/status were never updated) is now a PERMANENT lock — every later legitimate retry at
+ * that run_key sees status='RUNNING' and is skipped forever, exactly what happened to 7 of 17 issuers
+ * (all retrying "...starting-at-0", 5 consecutive skips each). This round's fix: a RUNNING row only
+ * blocks while it's FRESH (started_at within the TTL); once stale, it's treated the same as a terminal
+ * row — reusable by a fresh attempt.
  */
 export async function beginRun(input: BeginRunInput, bound?: BoundedDbOptions): Promise<{ runId: string; skipped: boolean }> {
   const runId = newId();
@@ -137,6 +146,12 @@ export async function beginRun(input: BeginRunInput, bound?: BoundedDbOptions): 
     stale_skipped: 0,
     started_ms: startedMs,
   };
+  // Atomic takeover: the WHERE guard on the ON CONFLICT...DO UPDATE is evaluated under Postgres's own
+  // row-level lock for this run_key, so two concurrent callers can never both see "eligible" and both
+  // win — exactly one UPDATE applies (or neither, if the existing row is RUNNING and fresh), with no
+  // separate SELECT-then-UPDATE step that could race. staleTtlSeconds is an internal constant (never
+  // user input), so direct interpolation into the SQL text here is safe — same pattern as the
+  // SET LOCAL statement_timeout interpolation in boundedQuery/boundedExecute above.
   const rows = await boundedQuery<{ id: string }>(
     `INSERT INTO production_scheduler_runs
        (id, job_id, exchange, run_type, status, started_at, universe_count, run_key, details, attempted, completed, inserted, updated, failed)
@@ -151,6 +166,7 @@ export async function beginRun(input: BeginRunInput, bound?: BoundedDbOptions): 
        attempted = 0, completed = 0, inserted = 0, updated = 0, failed = 0,
        error = NULL
      WHERE production_scheduler_runs.status <> $7
+        OR production_scheduler_runs.started_at < (CURRENT_TIMESTAMP - INTERVAL '${STALE_RUNNING_TTL_SECONDS} seconds')
      RETURNING id`,
     [runId, input.jobName, STATUS_DB.RUNNING, input.universeCount, input.runKey, JSON.stringify(details), STATUS_DB.RUNNING],
     bound,
