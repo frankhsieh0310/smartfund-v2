@@ -523,18 +523,37 @@ jobs:
   # Replaces the old single cross-issuer batch loop: all 17 issuers' official sources were already
   # individually verified to have no bulk/multi-fund endpoint, so this is purely an orchestration
   # change — one slow/stuck issuer can no longer block or share a time budget with any other issuer.
+  # GitHub resolves job.if BEFORE strategy.matrix expands for that job, so a job.if referencing
+  # `matrix.*` fails the whole workflow at startup with "Unrecognized named-value: 'matrix'" — no step
+  # ever runs, no Production API is ever called. This prep job computes the issuer LIST itself (one
+  # name for a manual single-issuer dispatch, all 17 for a schedule run or issuer=all), and the real
+  # job below consumes that list via fromJSON() in strategy.matrix — its own if never references matrix.
+  etf-issuer-matrix-setup:
+    if: ${{ github.event.schedule == '30 11 * * 1-5' || github.event.inputs.job == 'etf-official-holdings' || github.event.inputs.job == 'all' }}
+    runs-on: ubuntu-latest
+    outputs:
+      issuers: ${{ steps.set.outputs.issuers }}
+    steps:
+      - id: set
+        run: |
+          set -euo pipefail
+          all='["Cathay","JPMorgan","Allianz","UPAMC","AB","Fubon","CTBC","KGI","First","FHT","SinoPac","Yuanta","Capital","Mega","Taishin","Nomura","BlackRock"]'
+          selected="${{ github.event.inputs.issuer }}"
+          if [ -z "${selected}" ] || [ "${selected}" = "all" ]; then
+            echo "issuers=${all}" >> "$GITHUB_OUTPUT"
+          else
+            echo "issuers=[\"${selected}\"]" >> "$GITHUB_OUTPUT"
+          fi
+
   etf-official-holdings:
-    # Scheduled run (no inputs at all) or workflow_dispatch with issuer left at its 'all' default:
-    # every one of the 17 matrix legs runs, same as before. workflow_dispatch with a specific issuer
-    # selected: only that one matrix leg's `if` is true — every other leg is skipped outright (shown
-    # as skipped in the Actions UI, never calls the Production API at all).
-    if: ${{ (github.event.schedule == '30 11 * * 1-5' || github.event.inputs.job == 'etf-official-holdings' || github.event.inputs.job == 'all') && ((github.event.inputs.issuer || 'all') == 'all' || github.event.inputs.issuer == matrix.issuer) }}
+    needs: etf-issuer-matrix-setup
+    if: ${{ github.event.schedule == '30 11 * * 1-5' || github.event.inputs.job == 'etf-official-holdings' || github.event.inputs.job == 'all' }}
     runs-on: ubuntu-latest
     timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
-        issuer: [Cathay, JPMorgan, Allianz, UPAMC, AB, Fubon, CTBC, KGI, First, FHT, SinoPac, Yuanta, Capital, Mega, Taishin, Nomura, BlackRock]
+        issuer: ${{ fromJSON(needs.etf-issuer-matrix-setup.outputs.issuers) }}
     env:
       BASE_URL: https://smartfund-v2.vercel.app
       SECRET: ${{ secrets.SMARTFUND_CRON_SECRET }}
