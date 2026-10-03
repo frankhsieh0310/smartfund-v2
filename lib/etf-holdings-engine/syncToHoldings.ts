@@ -134,12 +134,31 @@ export async function syncOfficialSnapshotToHoldings(
   const manageOwnTransaction = opts.manageOwnTransaction ?? true;
   if (manageOwnTransaction) await query("BEGIN", []);
   try {
-    for (const r of rows) {
+    // Bulk, set-based write — same jsonb_to_recordset pattern storage.ts's upsertSnapshot already uses
+    // for etf_official_daily_positions. Was previously one sequential `await query(INSERT...)` per row
+    // (confirmed via live measurement: ~117-120ms/row, so a 504-position ETF alone took ~59s of pure
+    // round trips) — now O(ceil(rows.length/200)) statements regardless of row count. No ON CONFLICT
+    // clause: the `holdings` table has no unique constraint on (etf_id, as_of_date, holding_code) or on
+    // source_record_id (only plain indexes), so a plain bulk INSERT reproduces the exact same semantics
+    // the old per-row INSERT had — this function's own `alreadySynced` check above is what has always
+    // prevented duplicate inserts for the same (etf_id, as_of_date), unchanged by this rewrite.
+    for (let i = 0; i < rows.length; i += 200) {
+      const chunk = rows.slice(i, i + 200);
       await query(
         `INSERT INTO holdings
            (id, asset_type, etf_id, as_of_date, rank, holding_name, holding_code, weight, security_id, ticker, shares, source, source_record_id, weight_method, country, created_at)
-         VALUES (gen_random_uuid(), 'ETF', $1, $2::date, $3, $4, $5, $6, $7, $8, $9, 'ETF_OFFICIAL_DAILY_SNAPSHOT', $10, 'ISSUER_REPORTED', 'TW', now())`,
-        [etfId, dataDate, r.rank, r.holdingName, r.holdingCode, r.weight, r.securityId, r.ticker, r.shares, `${etfCode}:${dataDate}:${r.holdingCode}`],
+         SELECT gen_random_uuid(), 'ETF', $1::uuid, $2::date, x.rank, x.holding_name, x.holding_code, x.weight, x.security_id, x.ticker, x.shares, 'ETF_OFFICIAL_DAILY_SNAPSHOT', x.source_record_id, 'ISSUER_REPORTED', 'TW', now()
+           FROM jsonb_to_recordset($3::jsonb) AS x(
+             rank int, holding_name text, holding_code text, weight numeric, security_id uuid, ticker text, shares numeric, source_record_id text)`,
+        [
+          etfId,
+          dataDate,
+          JSON.stringify(chunk.map((r) => ({
+            rank: r.rank, holding_name: r.holdingName, holding_code: r.holdingCode, weight: r.weight,
+            security_id: r.securityId, ticker: r.ticker, shares: r.shares,
+            source_record_id: `${etfCode}:${dataDate}:${r.holdingCode}`,
+          }))),
+        ],
       );
     }
     if (manageOwnTransaction) await query("COMMIT", []);

@@ -285,7 +285,19 @@ export async function GET(request: Request) {
   let passed = 0;
   let failedCount = 0;
   let timeBudgetStop = false;
+  // Set the instant any ticker fails — the invocation stops immediately (no further tickers attempted
+  // this call) and reachedEnd can never be true this call. This is the checkpoint-correctness invariant:
+  // lastSymbol (below) only ever advances to a ticker that fully succeeded (fetch + snapshot persistence
+  // + holdings sync all succeeded) — a failed ticker is NEVER recorded as "attempted" in the checkpoint,
+  // so the next invocation's startIndex computation naturally retries that SAME ticker, not the one
+  // after it. Previously, the checkpoint advanced past a ticker whether it succeeded or failed, so a
+  // transient failure (e.g. a DB timeout) got permanently skipped for the rest of that calendar day —
+  // this is what this round fixes. Correctness over completeness: an issuer that hits a failure now
+  // blocks here with a clear red signal, rather than finishing the day with a silent data hole.
+  let stoppedOnFailure = false;
   const failedTickers: Array<{ ticker: string; error: string }> = [];
+  // Only ever sourced from a FULLY successful ticker (either from a prior invocation's checkpoint, or
+  // one just processed below) — never the ticker a failure occurred on.
   let lastProcessedTicker: string | null = effectiveCheckpoint?.lastSymbol ?? null;
   let index = Math.max(startIndex, 0);
 
@@ -298,7 +310,6 @@ export async function GET(request: Request) {
     if (remainingGlobalMs < MIN_REMAINING_TO_START_MS) { timeBudgetStop = true; break; }
     const ticker = tickers[index];
     processed++;
-    lastProcessedTicker = ticker;
 
     // This ticker's deadline is whichever is SMALLER: its own 45s total budget, or whatever's left of
     // the route's 120s hard deadline. If the global budget is the tighter one, aborting it here still
@@ -330,34 +341,38 @@ export async function GET(request: Request) {
       // see runBoundedPersistence above for why this replaced two separate unbounded raw-SQL calls.
       await runBoundedPersistence(snap);
       passed++;
+      lastProcessedTicker = ticker;
+      // Checkpoint immediately after a successful ticker — if Vercel kills this invocation or the work
+      // budget runs out before the next ticker starts, this ticker's success is already durably saved.
+      await writeCheckpoint(`${JOB}:${issuer}`, checkpointKey, runId, {
+        lastSymbol: lastProcessedTicker,
+        processed: (isFromToday ? effectiveCheckpoint?.processed ?? 0 : 0) + processed,
+        succeeded: (isFromToday ? effectiveCheckpoint?.succeeded ?? 0 : 0) + passed,
+        failed: (isFromToday ? effectiveCheckpoint?.failed ?? 0 : 0) + failedCount,
+      }, CHECKPOINT_BOUND);
     } catch (e) {
       failedCount++;
       const message = e instanceof Error ? e.message : String(e);
       failedTickers.push({ ticker, error: message.slice(0, 300) });
-      // Source failure (502/403/browser timeout/parse failure) for this one ticker — the existing
-      // holdings row for it is never cleared, no empty data is ever written over it, and the loop
-      // simply moves to the next ticker.
+      // Deliberately NOT writing a checkpoint here: lastSymbol must stay at the last ticker that fully
+      // succeeded, so the next invocation's startIndex = indexOf(lastSymbol)+1 retries THIS SAME ticker
+      // instead of skipping past it. Stop the whole invocation now rather than attempting more tickers
+      // past a failure — a clear red signal (failedTickers below, totalFailure/non-200 status) beats an
+      // issuer that silently finishes its list with a persistence hole in it.
+      stoppedOnFailure = true;
     } finally {
       clearTimeout(deadlineTimer);
     }
 
-    // Checkpoint after EVERY ticker — "completed" means attempted (success OR a recorded source
-    // failure), never just success. If Vercel kills this invocation or the work budget runs out mid-
-    // run, whatever was already attempted stays saved and the next invocation resumes right after it.
-    await writeCheckpoint(`${JOB}:${issuer}`, checkpointKey, runId, {
-      lastSymbol: lastProcessedTicker,
-      processed: (isFromToday ? effectiveCheckpoint?.processed ?? 0 : 0) + processed,
-      succeeded: (isFromToday ? effectiveCheckpoint?.succeeded ?? 0 : 0) + passed,
-      failed: (isFromToday ? effectiveCheckpoint?.failed ?? 0 : 0) + failedCount,
-    }, CHECKPOINT_BOUND);
+    if (stoppedOnFailure) break;
   }
 
-  // reachedEnd means every one of this issuer's own tickers has now been attempted at least once
-  // today (success or recorded source failure) — not that they all succeeded. A few source failures
-  // never block the rest of this issuer's list, and never prevent reachedEnd from becoming true.
-  // timeBudgetStop now also covers the MAX_ETFS_PER_INVOCATION cap (see the loop above), so hitting
-  // that cap correctly keeps reachedEnd=false even when plenty of time budget remains.
-  const reachedEnd = !timeBudgetStop && index >= tickers.length;
+  // reachedEnd means every one of this issuer's own tickers has been FULLY synced (not just attempted —
+  // see stoppedOnFailure above). A ticker that failed blocks reachedEnd from ever becoming true this
+  // call; the next invocation retries that exact ticker. timeBudgetStop also covers the
+  // MAX_ETFS_PER_INVOCATION cap (see the loop above), so hitting that cap correctly keeps
+  // reachedEnd=false even when plenty of time budget remains.
+  const reachedEnd = !timeBudgetStop && !stoppedOnFailure && index >= tickers.length;
   if (reachedEnd) {
     // Clear the cursor so tomorrow's first invocation for this issuer starts from ticker 0 again.
     await writeCheckpoint(`${JOB}:${issuer}`, checkpointKey, runId, {
@@ -383,7 +398,7 @@ export async function GET(request: Request) {
     retryableFailures: 0,
     checkpointAfter: { lastSymbol: nextCursor, processed, succeeded: passed, failed: failedCount, updatedAt: null },
     error: failedTickers.length ? `${failedTickers.length} failures; e.g. ${failedTickers[0]?.error}` : null,
-    details: { issuer, startIndex: Math.max(startIndex, 0), attempted: processed, reachedEnd, timeBudgetStop },
+    details: { issuer, startIndex: Math.max(startIndex, 0), attempted: processed, reachedEnd, timeBudgetStop, stoppedOnFailure },
   }, CHECKPOINT_BOUND);
 
   return Response.json({
