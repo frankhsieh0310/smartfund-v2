@@ -152,7 +152,6 @@ jobs:
             "30 10 * * 1-5") echo "job=mops-financial-incremental" >> "$GITHUB_OUTPUT" ;;
             "30 14 * * 1-5") echo "job=mops-financial-incremental" >> "$GITHUB_OUTPUT" ;;
             "0 13 * * *") echo "job=sec-financial-incremental" >> "$GITHUB_OUTPUT" ;;
-            "30 11 * * 1-5") echo "job=etf-official-holdings" >> "$GITHUB_OUTPUT" ;;
             "0 */2 * * 1-5") echo "job=fx-quote" >> "$GITHUB_OUTPUT" ;;
             *)            echo "job=${{ github.event.inputs.job || 'all' }}" >> "$GITHUB_OUTPUT" ;;
           esac
@@ -505,43 +504,72 @@ jobs:
           # A 200 PARTIAL response must not hide provider/symbol failures in Actions.
           jq -e '.ok == true and ((.failedMarkets // []) | length == 0)' "crypto-${phase}-response.json" >/dev/null
 
-      - name: Function 2 — Taiwan ETF official daily holdings (bounded-batch, up to 40 calls)
-        if: ${{ contains(fromJSON('["etf-official-holdings","all"]'), steps.pick.outputs.job) }}
-        run: |
-          set -euo pipefail
-          # BATCH_SIZE lowered 40 -> 10 after two real production FUNCTION_INVOCATION_TIMEOUTs, so this
-          # needs proportionally more invocations to cover the same 331-portfolio universe
-          # (ceil(331/10) = 34; 40 leaves margin). Still all within the single 30 11 * * 1-5 daily
-          # trigger, not a second schedule — until it reports reachedEnd=true or MAX_INVOCATIONS is
-          # reached. No sleep/poll between calls: each call does real bounded batch work, not a wait
-          # for something else to finish.
-          MAX_INVOCATIONS=40
-          reached_end=false
-          for i in $(seq 1 "${MAX_INVOCATIONS}"); do
-            echo "Function 2 batch call ${i}/${MAX_INVOCATIONS}"
-            curl --fail-with-body --show-error --silent \
-                 --connect-timeout 15 --max-time 290 \
-                 -H "Authorization: Bearer ${SECRET}" \
-                 "${BASE_URL}/api/cron/etf-official-holdings" | tee "etf-official-holdings-response-${i}.json"
-            echo
-            if jq -e '.reachedEnd == true' "etf-official-holdings-response-${i}.json" > /dev/null; then
-              reached_end=true
-              break
-            fi
-          done
-          if [ "${reached_end}" != "true" ]; then
-            echo "::error::Function 2 did not reach the end of the 331-portfolio universe within ${MAX_INVOCATIONS} invocations."
-            exit 1
-          fi
-
       - name: Upload responses
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: ingestion-responses-${{ github.run_id }}
-          path: |
-            *-response.json
-            etf-official-holdings-response-*.json
+          path: "*-response.json"
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # Function 2: Taiwan ETF Official Daily Holdings — one matrix job per issuer (fail-fast: false), each
+  # independently time-boxed and checkpointed server-side (app/api/cron/etf-official-holdings?issuer=).
+  # Replaces the old single cross-issuer batch loop: all 17 issuers' official sources were already
+  # individually verified to have no bulk/multi-fund endpoint, so this is purely an orchestration
+  # change — one slow/stuck issuer can no longer block or share a time budget with any other issuer.
+  etf-official-holdings:
+    if: ${{ github.event.schedule == '30 11 * * 1-5' || github.event.inputs.job == 'etf-official-holdings' || github.event.inputs.job == 'all' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        issuer: [Cathay, JPMorgan, Allianz, UPAMC, AB, Fubon, CTBC, KGI, First, FHT, SinoPac, Yuanta, Capital, Mega, Taishin, Nomura, BlackRock]
+    env:
+      BASE_URL: https://smartfund-v2.vercel.app
+      SECRET: ${{ secrets.SMARTFUND_CRON_SECRET }}
+    steps:
+      - name: Guard — secret present
+        run: |
+          if [ -z "${SECRET}" ]; then
+            echo "::error::SMARTFUND_CRON_SECRET is not set on this repository."
+            exit 1
+          fi
+
+      - name: "ETF official holdings — ${{ matrix.issuer }}"
+        run: |
+          set -euo pipefail
+          # Each call does real, time-boxed work server-side (WORK_BUDGET_MS in the route) and
+          # checkpoints per ticker — no sleep/poll here. Loops until this issuer's own reachedEnd=true;
+          # the 90-minute job timeout above is the hard backstop against an unbounded loop, and 200 is
+          # a generous sanity cap well beyond what any single issuer's own ticker count could need.
+          reached_end=false
+          call=0
+          while [ "${reached_end}" != "true" ]; do
+            call=$((call + 1))
+            if [ "${call}" -gt 200 ]; then
+              echo "::error::${{ matrix.issuer }} did not reach reachedEnd=true within 200 calls — stopping."
+              exit 1
+            fi
+            echo "${{ matrix.issuer }} call ${call}"
+            curl --fail-with-body --show-error --silent \
+                 --connect-timeout 15 --max-time 240 \
+                 -H "Authorization: Bearer ${SECRET}" \
+                 "${BASE_URL}/api/cron/etf-official-holdings?issuer=${{ matrix.issuer }}" \
+                 | tee "etf-${{ matrix.issuer }}-response-${call}.json"
+            echo
+            if jq -e '.reachedEnd == true' "etf-${{ matrix.issuer }}-response-${call}.json" > /dev/null; then
+              reached_end=true
+            fi
+          done
+
+      - name: Upload responses
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: etf-official-holdings-${{ matrix.issuer }}-${{ github.run_id }}
+          path: "etf-${{ matrix.issuer }}-response-*.json"
           if-no-files-found: ignore
           retention-days: 7
 
