@@ -37,7 +37,7 @@ export async function upsertSnapshot(query: QueryFn, snapshot: CanonicalSnapshot
     await query(
       `INSERT INTO etf_official_daily_positions
          (snapshot_id, security_code, security_name, position_type, position_amount, position_unit, weight, rank, canonical_security_id, source)
-       SELECT $1, x.code, x.name, x.position_type, x.position_amount, x.position_unit, x.weight, x.rank, x.canonical_security_id, $2
+       SELECT $1::uuid, x.code, x.name, x.position_type, x.position_amount, x.position_unit, x.weight, x.rank, x.canonical_security_id, $2
          FROM jsonb_to_recordset($3::jsonb) AS x(
            code text, name text, position_type text, position_amount numeric, position_unit text,
            weight numeric, rank int, canonical_security_id text)
@@ -97,8 +97,8 @@ export async function loadFrontendDiff(query: QueryFn, etfCode: string): Promise
   const [to, from] = snaps;
 
   const [toPositions, fromPositions] = await Promise.all([
-    query(`SELECT security_code, security_name, position_type, position_amount, position_unit, weight FROM etf_official_daily_positions WHERE snapshot_id = $1`, [to.id]),
-    query(`SELECT security_code, security_name, position_type, position_amount, position_unit, weight FROM etf_official_daily_positions WHERE snapshot_id = $1`, [from.id]),
+    query(`SELECT security_code, security_name, position_type, position_amount, position_unit, weight FROM etf_official_daily_positions WHERE snapshot_id = $1::uuid`, [to.id]),
+    query(`SELECT security_code, security_name, position_type, position_amount, position_unit, weight FROM etf_official_daily_positions WHERE snapshot_id = $1::uuid`, [from.id]),
   ]);
   const T = new Map(toPositions.map((p) => [p.security_code, p]));
   const F = new Map(fromPositions.map((p) => [p.security_code, p]));

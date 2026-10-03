@@ -68,7 +68,7 @@ export async function syncOfficialSnapshotToHoldings(
   const etfId = etfRows[0].id as string;
 
   const snapshotRows = opts.snapshotId
-    ? await query(`SELECT id, data_date::text AS data_date FROM etf_official_daily_snapshots WHERE id = $1`, [opts.snapshotId])
+    ? await query(`SELECT id, data_date::text AS data_date FROM etf_official_daily_snapshots WHERE id = $1::uuid`, [opts.snapshotId])
     : await query(
         `SELECT id, data_date::text AS data_date FROM etf_official_daily_snapshots WHERE etf_code = $1 ORDER BY data_date DESC LIMIT 1`,
         [etfCode],
@@ -78,7 +78,7 @@ export async function syncOfficialSnapshotToHoldings(
 
   const positions = await query(
     `SELECT security_code, security_name, position_type, position_amount, position_unit, weight, rank
-       FROM etf_official_daily_positions WHERE snapshot_id = $1`,
+       FROM etf_official_daily_positions WHERE snapshot_id = $1::uuid`,
     [snapshotId],
   );
   if (!positions.length) return { status: "SKIPPED_EMPTY_POSITIONS", etfCode, dataDate };
