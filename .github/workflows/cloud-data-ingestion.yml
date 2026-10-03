@@ -95,6 +95,11 @@ on:
         type: choice
         default: all
         options: [both, etf-price, moneydj-fund, moneydj-etf, global-etf-holdings, fund-holdings, fund-nav, consensus-ingest, consensus-aggregate, consensus-performance, consensus-flips, consensus-backfill, tw-fundamentals-refresh, global-pe-recompute, mops-financial-incremental, sec-financial-incremental, etf-official-holdings, fx-quote, crypto-quote, crypto-marketcap, crypto-history, index-history, index-japan, index-korea, index-china, index-philippines, index-hongkong, index-sea, index-india, index-russia, index-europe, index-us, commodity-cbot, commodity-comex-nymex, commodity-livestock, commodity-ice, all]
+      issuer:
+        description: "ETF issuer to run (etf-official-holdings job only; ignored by every other job)"
+        type: choice
+        default: all
+        options: [all, Cathay, JPMorgan, Allianz, UPAMC, AB, Fubon, CTBC, KGI, First, FHT, SinoPac, Yuanta, Capital, Mega, Taishin, Nomura, BlackRock]
 
 concurrency:
   group: cloud-data-ingestion
@@ -519,7 +524,11 @@ jobs:
   # individually verified to have no bulk/multi-fund endpoint, so this is purely an orchestration
   # change — one slow/stuck issuer can no longer block or share a time budget with any other issuer.
   etf-official-holdings:
-    if: ${{ github.event.schedule == '30 11 * * 1-5' || github.event.inputs.job == 'etf-official-holdings' || github.event.inputs.job == 'all' }}
+    # Scheduled run (no inputs at all) or workflow_dispatch with issuer left at its 'all' default:
+    # every one of the 17 matrix legs runs, same as before. workflow_dispatch with a specific issuer
+    # selected: only that one matrix leg's `if` is true — every other leg is skipped outright (shown
+    # as skipped in the Actions UI, never calls the Production API at all).
+    if: ${{ (github.event.schedule == '30 11 * * 1-5' || github.event.inputs.job == 'etf-official-holdings' || github.event.inputs.job == 'all') && ((github.event.inputs.issuer || 'all') == 'all' || github.event.inputs.issuer == matrix.issuer) }}
     runs-on: ubuntu-latest
     timeout-minutes: 90
     strategy:
