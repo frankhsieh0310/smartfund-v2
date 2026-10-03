@@ -58,7 +58,7 @@ export type SyncResult =
 export async function syncOfficialSnapshotToHoldings(
   query: QueryFn,
   etfCode: string,
-  opts: { snapshotId?: string; dryRun?: boolean } = {},
+  opts: { snapshotId?: string; dryRun?: boolean; manageOwnTransaction?: boolean } = {},
 ): Promise<SyncResult> {
   const etfRows = await query(
     `SELECT id FROM etfs WHERE code = $1 AND currency = 'TWD' AND exchange IN ('TWSE','TPEx','TPEX') LIMIT 1`,
@@ -126,7 +126,13 @@ export async function syncOfficialSnapshotToHoldings(
     };
   }
 
-  await query("BEGIN", []);
+  // Default (every pre-existing caller): this function owns its own BEGIN/COMMIT/ROLLBACK, exactly as
+  // before. opts.manageOwnTransaction === false means the caller is ALREADY running `query` inside its
+  // own transaction (e.g. a bounded prisma.$transaction) — issuing a nested BEGIN/COMMIT here would
+  // either no-op with a Postgres warning or, worse, prematurely end the caller's transaction, so those
+  // statements are skipped and the caller owns atomicity + rollback-on-throw instead.
+  const manageOwnTransaction = opts.manageOwnTransaction ?? true;
+  if (manageOwnTransaction) await query("BEGIN", []);
   try {
     for (const r of rows) {
       await query(
@@ -136,9 +142,9 @@ export async function syncOfficialSnapshotToHoldings(
         [etfId, dataDate, r.rank, r.holdingName, r.holdingCode, r.weight, r.securityId, r.ticker, r.shares, `${etfCode}:${dataDate}:${r.holdingCode}`],
       );
     }
-    await query("COMMIT", []);
+    if (manageOwnTransaction) await query("COMMIT", []);
   } catch (error) {
-    await query("ROLLBACK", []);
+    if (manageOwnTransaction) await query("ROLLBACK", []);
     throw error;
   }
 

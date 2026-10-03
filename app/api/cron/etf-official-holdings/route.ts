@@ -32,6 +32,7 @@ import {
   readCheckpoint,
   writeCheckpoint,
   type CheckpointRow,
+  type BoundedDbOptions,
 } from "@/lib/cloud-ingestion/runContext";
 import * as fs from "fs";
 import * as path from "path";
@@ -59,14 +60,19 @@ export const maxDuration = 300;
 export const dynamic = "force-dynamic";
 
 const JOB = "ETF_OFFICIAL_HOLDINGS";
-// A full invocation never runs past this — well under Vercel's 300s maxDuration, leaving headroom for
-// whatever ticker is in flight when the budget check fires (bounded by PER_ETF_TIMEOUT_MS below) plus
-// the final checkpoint/response write.
-const WORK_BUDGET_MS = 180_000;
-// Before starting the NEXT ticker, if less than this much budget remains, stop cleanly (HTTP 200,
-// reachedEnd left for the next invocation to determine) instead of risking Vercel killing the function
-// mid-ticker. Must comfortably exceed PER_ETF_TOTAL_TIMEOUT_MS so a started ticker always has room to
-// finish within WORK_BUDGET_MS.
+// Real wall-clock hard stop for the whole invocation — well under Vercel's 300s maxDuration. This is
+// one of TWO independent guarantees against a stuck invocation (the other is the DB-level transaction
+// timeout below): even if every per-ticker/DB bound below somehow failed to fire, the loop's own
+// remaining-time check (MIN_REMAINING_TO_START_MS) stops starting new work comfortably before this.
+const HARD_RESPONSE_DEADLINE_MS = 120_000;
+// A single invocation never attempts more than this many ETFs, regardless of how much time budget is
+// left — GitHub's own while-loop (cloud-data-ingestion.yml) calls this route again immediately, so
+// there is no benefit to risking a longer invocation, and real benefit (smaller blast radius per call,
+// faster checkpoint cadence) to keeping this small. Do not attempt to finish a whole issuer in one call.
+const MAX_ETFS_PER_INVOCATION = 2;
+// Before starting the NEXT ticker, if less than this much of HARD_RESPONSE_DEADLINE_MS remains, stop
+// cleanly (HTTP 200, reachedEnd=false) instead of risking Vercel killing the function mid-ticker. Must
+// comfortably exceed PER_ETF_TOTAL_TIMEOUT_MS so a started ticker always has room to finish.
 const MIN_REMAINING_TO_START_MS = 50_000;
 // fetch + the one bounded retry, COMBINED, for a single ETF — not 45s each. One AbortController per
 // ticker is given this deadline (or the route's own remaining global budget, whichever is smaller — see
@@ -75,6 +81,20 @@ const MIN_REMAINING_TO_START_MS = 50_000;
 // when the first attempt fails means the deadline — not the attempt itself — caused the failure, and
 // the retry is skipped outright.
 const PER_ETF_TOTAL_TIMEOUT_MS = 45_000;
+// Per-ticker DB persistence (official snapshot + app-facing holdings sync, now one atomic
+// prisma.$transaction — see runBoundedPersistence below). maxWait bounds how long Prisma may queue
+// waiting to ACQUIRE a pooled connection (the actual historical failure mode — see lib/prisma.ts's own
+// comment about a prior pgbouncer connection-exhaustion incident); timeout bounds the transaction's own
+// execution once acquired. Either limit being exceeded makes Prisma cancel/roll back server-side — the
+// underlying query is genuinely interrupted, not just abandoned client-side.
+const DB_MAX_WAIT_MS = 5_000;
+const DB_TIMEOUT_MS = 20_000;
+// Same bound, applied to the much smaller checkpoint/run-log writes (beginRun/readCheckpoint/
+// writeCheckpoint/finishRun) so they also can never silently exceed the route's own hard deadline.
+const CHECKPOINT_BOUND: BoundedDbOptions = { maxWaitMs: 5_000, timeoutMs: 10_000 };
+// Per-probe cap for resolveCtbcLatestDate's backward date search (below) — it runs BEFORE the main
+// loop and, pre-fix, had no timeout at all on its own fetchSnapshot calls.
+const CTBC_DATE_PROBE_TIMEOUT_MS = 20_000;
 
 /** Sleep that resolves immediately if `signal` is already aborted, and stops waiting the moment it
  * aborts mid-sleep — the 1.5s bounded retry delay must not itself ignore the deadline. */
@@ -93,18 +113,30 @@ function abortableSleep(ms: number, signal: AbortSignal): Promise<void> {
 // resolved by probing backward from the current Taipei calendar date until CTBC's own API confirms one
 // with a real snapshot — never by computing or guessing a date locally. Bounded to at most 7 calendar
 // days back (covers a normal weekend/holiday gap), so this never becomes an unbounded retry loop.
-async function resolveCtbcLatestDate(): Promise<string> {
+// deadlineAt bounds this against the route's own HARD_RESPONSE_DEADLINE_MS: each probe gets its own
+// AbortController (min of CTBC_DATE_PROBE_TIMEOUT_MS and whatever's actually left), and once there's
+// not enough budget left for another probe, this gives up early rather than risk blowing the route's
+// hard deadline before the main per-ticker loop even starts — CTBC's tickers then fall through to the
+// existing documented per-ticker failure path (ctbcDate stays null, each one fails individually).
+async function resolveCtbcLatestDate(deadlineAt: number): Promise<string> {
   const anchorTicker = "00406A";
   const taipeiToday = new Date(Date.now() + 8 * 60 * 60 * 1000);
   for (let back = 0; back <= 7; back++) {
+    const remaining = deadlineAt - Date.now();
+    if (remaining < 5_000) break;
     const d = new Date(taipeiToday);
     d.setUTCDate(d.getUTCDate() - back);
     const candidate = d.toISOString().slice(0, 10);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), Math.min(CTBC_DATE_PROBE_TIMEOUT_MS, remaining));
     try {
-      const snap = await CtbcOfficialPcfAdapter.fetchSnapshot(anchorTicker, candidate);
+      const snap = await CtbcOfficialPcfAdapter.fetchSnapshot(anchorTicker, candidate, controller.signal);
       if (snap.dataDate) return snap.dataDate;
     } catch {
-      // no official publication for this candidate date — try the previous day
+      // no official publication for this candidate date, or this probe hit its own timeout — try the
+      // previous day
+    } finally {
+      clearTimeout(timer);
     }
   }
   throw new Error("CTBC_NO_AVAILABLE_DATE_WITHIN_7_DAYS");
@@ -151,11 +183,46 @@ function todayTaipeiKey(): string {
   return new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
 }
 
+// Replaces two separate, unbounded raw-SQL calls (upsertSnapshot's own writes, then
+// syncOfficialSnapshotToHoldings's own internal BEGIN/COMMIT) with ONE prisma.$transaction carrying a
+// real DB-level bound. This is deliberately NOT "wrap the existing calls in Promise.race" — a
+// client-side race would abandon the promise while the underlying query/connection kept running.
+//
+// Critically, Prisma's own $transaction `timeout` option is NOT sufficient by itself: verified against
+// a real hanging query (pg_sleep(30) inside a transaction with Prisma timeout:20000) that the promise
+// only rejects once the hanging query naturally finishes (~30s), reporting "transaction already closed"
+// post-hoc — it never cancels the in-flight query. Only a Postgres-level `SET LOCAL statement_timeout`,
+// issued as the transaction's first statement, makes Postgres itself cancel the query server-side
+// (error 57014) at the actual bound. So both are used together here: statement_timeout for genuine
+// per-query interruption, maxWait/timeout for connection-acquisition and total-transaction-duration.
+//
+// syncOfficialSnapshotToHoldings is called with manageOwnTransaction: false because it's now running
+// inside this function's own transaction — a nested BEGIN/COMMIT would conflict with it. Its failure is
+// caught (not rethrown) to preserve the pre-existing isolation: an app-facing holdings-sync failure must
+// never undo the official snapshot write that already succeeded above it in the same transaction.
+async function runBoundedPersistence(snap: CanonicalSnapshot): Promise<{ snapshotId: string }> {
+  const statementTimeoutMs = Math.trunc(DB_TIMEOUT_MS) | 0;
+  return prisma.$transaction(
+    async (tx) => {
+      await tx.$executeRawUnsafe(`SET LOCAL statement_timeout = ${statementTimeoutMs}`);
+      const txQuery: QueryFn = async (sql, params) => tx.$queryRawUnsafe(sql, ...params);
+      const { snapshotId } = await upsertSnapshot(txQuery, snap);
+      try {
+        await syncOfficialSnapshotToHoldings(txQuery, snap.etfCode, { snapshotId, manageOwnTransaction: false });
+      } catch {
+        /* official snapshot is safely stored either way; this ETF's app-facing holdings just stay
+           on whatever date they were last synced to, until the next successful run retries it */
+      }
+      return { snapshotId };
+    },
+    { maxWait: DB_MAX_WAIT_MS, timeout: DB_TIMEOUT_MS },
+  );
+}
+
 export async function GET(request: Request) {
   if (!isAuthorizedCron(request)) return unauthorizedCron();
 
   const startedMs = Date.now();
-  const query: QueryFn = async (sql, params) => prisma.$queryRawUnsafe(sql, ...params);
 
   const issuerUniverse = buildIssuerUniverse();
   const issuer = new URL(request.url).searchParams.get("issuer");
@@ -170,7 +237,7 @@ export async function GET(request: Request) {
 
   // Daily reset, scoped to this issuer only: a checkpoint from a previous Taipei calendar day never
   // suppresses today's run for THIS issuer — other issuers' checkpoints are untouched either way.
-  const storedCheckpoint = await readCheckpoint(checkpointKey);
+  const storedCheckpoint = await readCheckpoint(checkpointKey, CHECKPOINT_BOUND);
   const isFromToday = taipeiDateKey(storedCheckpoint?.updatedAt ?? null) === todayTaipeiKey();
   const effectiveCheckpoint: CheckpointRow | null = isFromToday ? storedCheckpoint : null;
 
@@ -186,7 +253,7 @@ export async function GET(request: Request) {
     universeCount: tickers.length,
     batchSize: tickers.length - Math.max(startIndex, 0),
     checkpointBefore: effectiveCheckpoint,
-  });
+  }, CHECKPOINT_BOUND);
   if (skipped) {
     return Response.json({
       ok: true, job: JOB, issuer, skipped: true, reason: "run_key already present (double trigger)", runKey,
@@ -196,7 +263,7 @@ export async function GET(request: Request) {
   let ctbcDate: string | null = null;
   if (issuer === "CTBC") {
     try {
-      ctbcDate = await resolveCtbcLatestDate();
+      ctbcDate = await resolveCtbcLatestDate(startedMs + HARD_RESPONSE_DEADLINE_MS);
     } catch {
       /* every CTBC ticker this run will fail individually and be reported */
     }
@@ -211,17 +278,20 @@ export async function GET(request: Request) {
   let index = Math.max(startIndex, 0);
 
   for (; index < tickers.length; index++) {
+    // Hard cap: never attempt to finish a whole issuer in one invocation — GitHub's own while-loop
+    // calls this route again immediately, so there's no reachedEnd=true here even if time remains.
+    if (processed >= MAX_ETFS_PER_INVOCATION) { timeBudgetStop = true; break; }
     const elapsedBeforeTicker = Date.now() - startedMs;
-    const remainingGlobalMs = WORK_BUDGET_MS - elapsedBeforeTicker;
+    const remainingGlobalMs = HARD_RESPONSE_DEADLINE_MS - elapsedBeforeTicker;
     if (remainingGlobalMs < MIN_REMAINING_TO_START_MS) { timeBudgetStop = true; break; }
     const ticker = tickers[index];
     processed++;
     lastProcessedTicker = ticker;
 
     // This ticker's deadline is whichever is SMALLER: its own 45s total budget, or whatever's left of
-    // the route's 180s global budget. If the global budget is the tighter one, aborting it here still
+    // the route's 120s hard deadline. If the global budget is the tighter one, aborting it here still
     // cancels real in-flight work (closes the page / aborts the fetch) rather than letting it run on
-    // past 180s while the route itself has already moved on.
+    // past the hard deadline while the route itself has already moved on.
     const tickerDeadlineMs = Math.min(PER_ETF_TOTAL_TIMEOUT_MS, remainingGlobalMs);
     const controller = new AbortController();
     const deadlineTimer = setTimeout(() => controller.abort(), tickerDeadlineMs);
@@ -244,16 +314,10 @@ export async function GET(request: Request) {
         snap = await attempt();
       }
       if (!snap.positions.length) throw new Error("empty positions");
-      const { snapshotId } = await upsertSnapshot(query, snap);
+      // Official snapshot write + app-facing holdings bridge, as one DB-timeout-bounded transaction —
+      // see runBoundedPersistence above for why this replaced two separate unbounded raw-SQL calls.
+      await runBoundedPersistence(snap);
       passed++;
-      // Bridge to the table the app actually reads, immediately — not deferred until this issuer (or
-      // all 17) finishes. Isolated: a sync failure never undoes the official snapshot write above.
-      try {
-        await syncOfficialSnapshotToHoldings(query, snap.etfCode, { snapshotId });
-      } catch {
-        /* official snapshot is safely stored either way; this ETF's app-facing holdings just stay
-           on whatever date they were last synced to, until the next successful run retries it */
-      }
     } catch (e) {
       failedCount++;
       const message = e instanceof Error ? e.message : String(e);
@@ -273,12 +337,14 @@ export async function GET(request: Request) {
       processed: (isFromToday ? effectiveCheckpoint?.processed ?? 0 : 0) + processed,
       succeeded: (isFromToday ? effectiveCheckpoint?.succeeded ?? 0 : 0) + passed,
       failed: (isFromToday ? effectiveCheckpoint?.failed ?? 0 : 0) + failedCount,
-    });
+    }, CHECKPOINT_BOUND);
   }
 
   // reachedEnd means every one of this issuer's own tickers has now been attempted at least once
   // today (success or recorded source failure) — not that they all succeeded. A few source failures
   // never block the rest of this issuer's list, and never prevent reachedEnd from becoming true.
+  // timeBudgetStop now also covers the MAX_ETFS_PER_INVOCATION cap (see the loop above), so hitting
+  // that cap correctly keeps reachedEnd=false even when plenty of time budget remains.
   const reachedEnd = !timeBudgetStop && index >= tickers.length;
   if (reachedEnd) {
     // Clear the cursor so tomorrow's first invocation for this issuer starts from ticker 0 again.
@@ -287,7 +353,7 @@ export async function GET(request: Request) {
       processed: (isFromToday ? effectiveCheckpoint?.processed ?? 0 : 0) + processed,
       succeeded: (isFromToday ? effectiveCheckpoint?.succeeded ?? 0 : 0) + passed,
       failed: (isFromToday ? effectiveCheckpoint?.failed ?? 0 : 0) + failedCount,
-    });
+    }, CHECKPOINT_BOUND);
   }
   const nextCursor = reachedEnd ? null : lastProcessedTicker;
 
@@ -306,7 +372,7 @@ export async function GET(request: Request) {
     checkpointAfter: { lastSymbol: nextCursor, processed, succeeded: passed, failed: failedCount, updatedAt: null },
     error: failedTickers.length ? `${failedTickers.length} failures; e.g. ${failedTickers[0]?.error}` : null,
     details: { issuer, startIndex: Math.max(startIndex, 0), attempted: processed, reachedEnd, timeBudgetStop },
-  });
+  }, CHECKPOINT_BOUND);
 
   return Response.json({
     ok: !totalFailure,

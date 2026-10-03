@@ -53,6 +53,46 @@ function newId(): string {
   return globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
+/** Optional, additive bound for callers that need a real DB-level guarantee (not just abandoning the
+ * client-side promise): maxWait is how long Prisma may wait to ACQUIRE the transaction/connection slot
+ * (the actual risk in practice — connection-pool contention); timeoutMs is applied TWICE — as Prisma's
+ * own interactive-transaction `timeout` (bounds the whole transaction's wall-clock duration) AND, more
+ * importantly, as a Postgres `SET LOCAL statement_timeout` issued as the transaction's first statement.
+ *
+ * This second part is not optional decoration — it was verified against a real hanging query
+ * (`pg_sleep(30)` inside a transaction with Prisma `timeout: 20000`) that Prisma's own `timeout` option
+ * alone does NOT cancel an in-flight query server-side: the promise only rejected once pg_sleep(30)
+ * naturally finished at ~30s (reporting "transaction already closed" post-hoc), not at 20s. Only
+ * `SET LOCAL statement_timeout` made Postgres itself cancel the query server-side (error 57014,
+ * "canceling statement due to statement timeout") at the bound, genuinely interrupting the work instead
+ * of just abandoning the client-side promise. Omit this param (every existing caller does) and behavior
+ * is 100% unchanged — plain prisma.$queryRawUnsafe/$executeRawUnsafe, no new transaction wrapper. */
+export type BoundedDbOptions = { maxWaitMs: number; timeoutMs: number };
+
+async function boundedQuery<T>(sql: string, params: unknown[], bound?: BoundedDbOptions): Promise<T[]> {
+  if (!bound) return prisma.$queryRawUnsafe<T[]>(sql, ...params);
+  const statementTimeoutMs = Math.trunc(bound.timeoutMs) | 0;
+  return prisma.$transaction(
+    async (tx) => {
+      await tx.$executeRawUnsafe(`SET LOCAL statement_timeout = ${statementTimeoutMs}`);
+      return tx.$queryRawUnsafe<T[]>(sql, ...params);
+    },
+    { maxWait: bound.maxWaitMs, timeout: bound.timeoutMs },
+  );
+}
+
+async function boundedExecute(sql: string, params: unknown[], bound?: BoundedDbOptions): Promise<void> {
+  if (!bound) { await prisma.$executeRawUnsafe(sql, ...params); return; }
+  const statementTimeoutMs = Math.trunc(bound.timeoutMs) | 0;
+  await prisma.$transaction(
+    async (tx) => {
+      await tx.$executeRawUnsafe(`SET LOCAL statement_timeout = ${statementTimeoutMs}`);
+      await tx.$executeRawUnsafe(sql, ...params);
+    },
+    { maxWait: bound.maxWaitMs, timeout: bound.timeoutMs },
+  );
+}
+
 /**
  * Insert the RUNNING run-log row. Returns { runId, skipped }.
  * skipped=true means a run with this run_key already COMPLETED — caller should no-op. A prior
@@ -62,7 +102,7 @@ function newId(): string {
  * attempt can overwrite it — that single `status <> 'COMPLETED'` guard is what still prevents two
  * genuinely-successful runs from ever being recorded for the same run_key.
  */
-export async function beginRun(input: BeginRunInput): Promise<{ runId: string; skipped: boolean }> {
+export async function beginRun(input: BeginRunInput, bound?: BoundedDbOptions): Promise<{ runId: string; skipped: boolean }> {
   const runId = newId();
   const startedMs = Date.now();
   const details = {
@@ -78,7 +118,7 @@ export async function beginRun(input: BeginRunInput): Promise<{ runId: string; s
     stale_skipped: 0,
     started_ms: startedMs,
   };
-  const rows = await prisma.$queryRawUnsafe<Array<{ id: string }>>(
+  const rows = await boundedQuery<{ id: string }>(
     `INSERT INTO production_scheduler_runs
        (id, job_id, exchange, run_type, status, started_at, universe_count, run_key, details, attempted, completed, inserted, updated, failed)
      VALUES ($1, $2, 'CLOUD', 'CLOUD_INGESTION', $3, CURRENT_TIMESTAMP, $4, $5, $6::jsonb, 0, 0, 0, 0, 0)
@@ -93,13 +133,8 @@ export async function beginRun(input: BeginRunInput): Promise<{ runId: string; s
        error = NULL
      WHERE production_scheduler_runs.status <> $7
      RETURNING id`,
-    runId,
-    input.jobName,
-    STATUS_DB.RUNNING,
-    input.universeCount,
-    input.runKey,
-    JSON.stringify(details),
-    STATUS_DB.COMPLETED,
+    [runId, input.jobName, STATUS_DB.RUNNING, input.universeCount, input.runKey, JSON.stringify(details), STATUS_DB.COMPLETED],
+    bound,
   );
   if (!rows.length) return { runId, skipped: true };
   return { runId: rows[0].id, skipped: false };
@@ -111,6 +146,7 @@ export async function finishRun(
   provider: string,
   startedMs: number,
   input: FinishRunInput,
+  bound?: BoundedDbOptions,
 ): Promise<void> {
   const details = {
     provider,
@@ -119,7 +155,7 @@ export async function finishRun(
     runtime_ms: Date.now() - startedMs,
     ...input.details,
   };
-  await prisma.$executeRawUnsafe(
+  await boundedExecute(
     `UPDATE production_scheduler_runs
        SET status = $2,
            completed_at = CURRENT_TIMESTAMP,
@@ -132,28 +168,19 @@ export async function finishRun(
            error = $9,
            details = $10::jsonb
      WHERE id = $1`,
-    runId,
-    STATUS_DB[input.status],
-    input.attempted,
-    input.completed,
-    input.inserted,
-    input.updated,
-    input.failed,
-    input.retryableFailures,
-    input.error ?? null,
-    JSON.stringify(details),
+    [runId, STATUS_DB[input.status], input.attempted, input.completed, input.inserted, input.updated, input.failed, input.retryableFailures, input.error ?? null, JSON.stringify(details)],
+    bound,
   );
   // best-effort marker so job_id is discoverable even though we store it in details
   void jobName;
 }
 
-export async function readCheckpoint(checkpointKey: string): Promise<CheckpointRow | null> {
-  const rows = await prisma.$queryRawUnsafe<
-    Array<{ last_symbol: string | null; processed: number; succeeded: number; failed: number; updated_at: Date }>
-  >(
+export async function readCheckpoint(checkpointKey: string, bound?: BoundedDbOptions): Promise<CheckpointRow | null> {
+  const rows = await boundedQuery<{ last_symbol: string | null; processed: number; succeeded: number; failed: number; updated_at: Date }>(
     `SELECT last_symbol, processed, succeeded, failed, updated_at
        FROM production_scheduler_checkpoints WHERE checkpoint_key = $1 LIMIT 1`,
-    checkpointKey,
+    [checkpointKey],
+    bound,
   );
   const row = rows[0];
   if (!row) return null;
@@ -171,8 +198,9 @@ export async function writeCheckpoint(
   checkpointKey: string,
   runId: string,
   next: { lastSymbol: string | null; processed: number; succeeded: number; failed: number },
+  bound?: BoundedDbOptions,
 ): Promise<void> {
-  await prisma.$executeRawUnsafe(
+  await boundedExecute(
     `INSERT INTO production_scheduler_checkpoints
        (checkpoint_key, job_id, run_id, last_symbol, processed, succeeded, failed, started_at, updated_at, run_type)
      VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'ROLLING')
@@ -184,13 +212,8 @@ export async function writeCheckpoint(
            succeeded = EXCLUDED.succeeded,
            failed = EXCLUDED.failed,
            updated_at = CURRENT_TIMESTAMP`,
-    checkpointKey,
-    jobId,
-    runId,
-    next.lastSymbol,
-    next.processed,
-    next.succeeded,
-    next.failed,
+    [checkpointKey, jobId, runId, next.lastSymbol, next.processed, next.succeeded, next.failed],
+    bound,
   );
 }
 
