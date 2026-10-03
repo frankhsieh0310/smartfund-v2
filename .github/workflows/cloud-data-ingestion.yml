@@ -552,6 +552,12 @@ jobs:
     timeout-minutes: 90
     strategy:
       fail-fast: false
+      # All 17 issuer legs hitting the same Vercel project concurrently was the actual systemic
+      # blocker: 14 of 17 timed out at curl's own 240s ceiling with 0 bytes received (exit 28) — not an
+      # issuer-side or route-side failure, concurrency contention against the single Production
+      # deployment. Capping concurrent legs bounds that contention; fail-fast stays false so one
+      # issuer's outcome still never affects any other's.
+      max-parallel: 3
       matrix:
         issuer: ${{ fromJSON(needs.etf-issuer-matrix-setup.outputs.issuers) }}
     env:
