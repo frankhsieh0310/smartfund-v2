@@ -55,23 +55,27 @@ function newId(): string {
 
 /** Optional, additive bound for callers that need a real DB-level guarantee (not just abandoning the
  * client-side promise): maxWait is how long Prisma may wait to ACQUIRE the transaction/connection slot
- * (the actual risk in practice — connection-pool contention); timeoutMs is applied TWICE — as Prisma's
- * own interactive-transaction `timeout` (bounds the whole transaction's wall-clock duration) AND, more
- * importantly, as a Postgres `SET LOCAL statement_timeout` issued as the transaction's first statement.
+ * (the actual risk in practice — connection-pool contention); statementTimeoutMs becomes a Postgres
+ * `SET LOCAL statement_timeout` issued as the transaction's first statement — this is what actually
+ * cancels a hanging query server-side (verified against a real pg_sleep(30) hang: Prisma's own
+ * `timeout` option alone never cancels an in-flight query, it only rejects the wrapper once the query
+ * naturally finishes); timeoutMs is Prisma's own interactive-transaction `timeout`, the OUTER bound on
+ * the whole transaction's wall-clock duration (acquiring the connection, running the query, COMMIT).
  *
- * This second part is not optional decoration — it was verified against a real hanging query
- * (`pg_sleep(30)` inside a transaction with Prisma `timeout: 20000`) that Prisma's own `timeout` option
- * alone does NOT cancel an in-flight query server-side: the promise only rejected once pg_sleep(30)
- * naturally finished at ~30s (reporting "transaction already closed" post-hoc), not at 20s. Only
- * `SET LOCAL statement_timeout` made Postgres itself cancel the query server-side (error 57014,
- * "canceling statement due to statement timeout") at the bound, genuinely interrupting the work instead
- * of just abandoning the client-side promise. Omit this param (every existing caller does) and behavior
- * is 100% unchanged — plain prisma.$queryRawUnsafe/$executeRawUnsafe, no new transaction wrapper. */
-export type BoundedDbOptions = { maxWaitMs: number; timeoutMs: number };
+ * timeoutMs MUST stay comfortably larger than statementTimeoutMs — confirmed in Production (run #1221,
+ * 006203/006206) that setting them equal (both 20000ms) let the query legitimately run right up to its
+ * own statement_timeout, and by the time Postgres cancelled it server-side, Prisma's transaction
+ * wrapper had ALSO just expired (timeout=20000ms, actual elapsed≈20513–20537ms) — so the wrapper threw
+ * "transaction already closed" instead of letting the (successful, un-hung) query commit. The headroom
+ * between statementTimeoutMs and timeoutMs exists specifically so a query that finishes right at its
+ * own statement_timeout still has time to COMMIT inside a transaction wrapper that hasn't expired yet.
+ * Omit this param (every existing caller does) and behavior is 100% unchanged — plain
+ * prisma.$queryRawUnsafe/$executeRawUnsafe, no new transaction wrapper. */
+export type BoundedDbOptions = { maxWaitMs: number; timeoutMs: number; statementTimeoutMs: number };
 
 async function boundedQuery<T>(sql: string, params: unknown[], bound?: BoundedDbOptions): Promise<T[]> {
   if (!bound) return prisma.$queryRawUnsafe<T[]>(sql, ...params);
-  const statementTimeoutMs = Math.trunc(bound.timeoutMs) | 0;
+  const statementTimeoutMs = Math.trunc(bound.statementTimeoutMs) | 0;
   return prisma.$transaction(
     async (tx) => {
       await tx.$executeRawUnsafe(`SET LOCAL statement_timeout = ${statementTimeoutMs}`);
@@ -83,7 +87,7 @@ async function boundedQuery<T>(sql: string, params: unknown[], bound?: BoundedDb
 
 async function boundedExecute(sql: string, params: unknown[], bound?: BoundedDbOptions): Promise<void> {
   if (!bound) { await prisma.$executeRawUnsafe(sql, ...params); return; }
-  const statementTimeoutMs = Math.trunc(bound.timeoutMs) | 0;
+  const statementTimeoutMs = Math.trunc(bound.statementTimeoutMs) | 0;
   await prisma.$transaction(
     async (tx) => {
       await tx.$executeRawUnsafe(`SET LOCAL statement_timeout = ${statementTimeoutMs}`);

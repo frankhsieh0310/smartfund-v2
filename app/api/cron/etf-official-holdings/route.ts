@@ -84,14 +84,21 @@ const PER_ETF_TOTAL_TIMEOUT_MS = 45_000;
 // Per-ticker DB persistence (official snapshot + app-facing holdings sync, now one atomic
 // prisma.$transaction — see runBoundedPersistence below). maxWait bounds how long Prisma may queue
 // waiting to ACQUIRE a pooled connection (the actual historical failure mode — see lib/prisma.ts's own
-// comment about a prior pgbouncer connection-exhaustion incident); timeout bounds the transaction's own
-// execution once acquired. Either limit being exceeded makes Prisma cancel/roll back server-side — the
-// underlying query is genuinely interrupted, not just abandoned client-side.
+// comment about a prior pgbouncer connection-exhaustion incident); DB_STATEMENT_TIMEOUT_MS is the
+// Postgres-level `SET LOCAL statement_timeout` that genuinely cancels a hanging query server-side;
+// DB_TRANSACTION_TIMEOUT_MS is Prisma's own outer transaction-wrapper timeout, which MUST stay
+// comfortably larger than DB_STATEMENT_TIMEOUT_MS. Production run #1221 (tickers 006203/006206) showed
+// why: with both set to 20000ms, a query that ran right up to its own statement_timeout caused the
+// Prisma wrapper to ALSO expire at almost the same instant (elapsed≈20513–20537ms), so a query that
+// Postgres was about to legitimately finish/cancel got reported as "transaction already closed"
+// instead of being allowed to COMMIT. The headroom below exists so COMMIT always has room to run.
 const DB_MAX_WAIT_MS = 5_000;
-const DB_TIMEOUT_MS = 20_000;
-// Same bound, applied to the much smaller checkpoint/run-log writes (beginRun/readCheckpoint/
-// writeCheckpoint/finishRun) so they also can never silently exceed the route's own hard deadline.
-const CHECKPOINT_BOUND: BoundedDbOptions = { maxWaitMs: 5_000, timeoutMs: 10_000 };
+const DB_STATEMENT_TIMEOUT_MS = 20_000;
+const DB_TRANSACTION_TIMEOUT_MS = 30_000;
+// Same shape, applied to the much smaller checkpoint/run-log writes (beginRun/readCheckpoint/
+// writeCheckpoint/finishRun) so they also can never silently exceed the route's own hard deadline —
+// same headroom principle: the transaction wrapper timeout stays above the statement timeout.
+const CHECKPOINT_BOUND: BoundedDbOptions = { maxWaitMs: 5_000, statementTimeoutMs: 10_000, timeoutMs: 15_000 };
 // Per-probe cap for resolveCtbcLatestDate's backward date search (below) — it runs BEFORE the main
 // loop and, pre-fix, had no timeout at all on its own fetchSnapshot calls.
 const CTBC_DATE_PROBE_TIMEOUT_MS = 20_000;
@@ -193,15 +200,20 @@ function todayTaipeiKey(): string {
 // only rejects once the hanging query naturally finishes (~30s), reporting "transaction already closed"
 // post-hoc — it never cancels the in-flight query. Only a Postgres-level `SET LOCAL statement_timeout`,
 // issued as the transaction's first statement, makes Postgres itself cancel the query server-side
-// (error 57014) at the actual bound. So both are used together here: statement_timeout for genuine
-// per-query interruption, maxWait/timeout for connection-acquisition and total-transaction-duration.
+// (error 57014) at the actual bound. So both are used together: statement_timeout for genuine per-query
+// interruption, maxWait/timeout for connection-acquisition and total-transaction-duration — but they
+// must NOT be set to the same value. Production run #1221 (006203/006206) proved that equal values let
+// a query run right up to its own statement_timeout and have the Prisma wrapper expire at almost the
+// same instant, turning a query Postgres was about to legitimately finish into a false
+// "transaction already closed" failure instead of letting it COMMIT. DB_TRANSACTION_TIMEOUT_MS is kept
+// comfortably above DB_STATEMENT_TIMEOUT_MS for exactly this reason.
 //
 // syncOfficialSnapshotToHoldings is called with manageOwnTransaction: false because it's now running
 // inside this function's own transaction — a nested BEGIN/COMMIT would conflict with it. Its failure is
 // caught (not rethrown) to preserve the pre-existing isolation: an app-facing holdings-sync failure must
 // never undo the official snapshot write that already succeeded above it in the same transaction.
 async function runBoundedPersistence(snap: CanonicalSnapshot): Promise<{ snapshotId: string }> {
-  const statementTimeoutMs = Math.trunc(DB_TIMEOUT_MS) | 0;
+  const statementTimeoutMs = Math.trunc(DB_STATEMENT_TIMEOUT_MS) | 0;
   return prisma.$transaction(
     async (tx) => {
       await tx.$executeRawUnsafe(`SET LOCAL statement_timeout = ${statementTimeoutMs}`);
@@ -215,7 +227,7 @@ async function runBoundedPersistence(snap: CanonicalSnapshot): Promise<{ snapsho
       }
       return { snapshotId };
     },
-    { maxWait: DB_MAX_WAIT_MS, timeout: DB_TIMEOUT_MS },
+    { maxWait: DB_MAX_WAIT_MS, timeout: DB_TRANSACTION_TIMEOUT_MS },
   );
 }
 
