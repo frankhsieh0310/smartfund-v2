@@ -68,14 +68,21 @@ const WORK_BUDGET_MS = 180_000;
 // mid-ticker. Must comfortably exceed PER_ETF_TOTAL_TIMEOUT_MS so a started ticker always has room to
 // finish within WORK_BUDGET_MS.
 const MIN_REMAINING_TO_START_MS = 50_000;
-// fetch + the one bounded retry, combined, for a single ETF — no single ticker may consume the rest of
-// the invocation's time budget.
+// fetch + the one bounded retry, COMBINED, for a single ETF — not 45s each. One AbortController per
+// ticker is given this deadline (or the route's own remaining global budget, whichever is smaller — see
+// the loop below), and aborting it actually cancels the in-flight work (closes the Puppeteer page,
+// aborts the fetch) instead of merely abandoning an unawaited promise. A signal that's already aborted
+// when the first attempt fails means the deadline — not the attempt itself — caused the failure, and
+// the retry is skipped outright.
 const PER_ETF_TOTAL_TIMEOUT_MS = 45_000;
 
-function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
-  return new Promise<T>((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error(`${label}_TIMEOUT_${ms}ms`)), ms);
-    promise.then((v) => { clearTimeout(timer); resolve(v); }, (e) => { clearTimeout(timer); reject(e); });
+/** Sleep that resolves immediately if `signal` is already aborted, and stops waiting the moment it
+ * aborts mid-sleep — the 1.5s bounded retry delay must not itself ignore the deadline. */
+function abortableSleep(ms: number, signal: AbortSignal): Promise<void> {
+  return new Promise((resolve) => {
+    if (signal.aborted) { resolve(); return; }
+    const timer = setTimeout(resolve, ms);
+    signal.addEventListener("abort", () => { clearTimeout(timer); resolve(); }, { once: true });
   });
 }
 
@@ -204,21 +211,37 @@ export async function GET(request: Request) {
   let index = Math.max(startIndex, 0);
 
   for (; index < tickers.length; index++) {
-    if (Date.now() - startedMs > WORK_BUDGET_MS - MIN_REMAINING_TO_START_MS) { timeBudgetStop = true; break; }
+    const elapsedBeforeTicker = Date.now() - startedMs;
+    const remainingGlobalMs = WORK_BUDGET_MS - elapsedBeforeTicker;
+    if (remainingGlobalMs < MIN_REMAINING_TO_START_MS) { timeBudgetStop = true; break; }
     const ticker = tickers[index];
     processed++;
     lastProcessedTicker = ticker;
 
+    // This ticker's deadline is whichever is SMALLER: its own 45s total budget, or whatever's left of
+    // the route's 180s global budget. If the global budget is the tighter one, aborting it here still
+    // cancels real in-flight work (closes the page / aborts the fetch) rather than letting it run on
+    // past 180s while the route itself has already moved on.
+    const tickerDeadlineMs = Math.min(PER_ETF_TOTAL_TIMEOUT_MS, remainingGlobalMs);
+    const controller = new AbortController();
+    const deadlineTimer = setTimeout(() => controller.abort(), tickerDeadlineMs);
+
     const attempt = (): Promise<CanonicalSnapshot> =>
-      issuer === "CTBC" ? adapter.fetchSnapshot(ticker, ctbcDate ?? undefined) : adapter.fetchSnapshot(ticker);
+      issuer === "CTBC"
+        ? adapter.fetchSnapshot(ticker, ctbcDate ?? undefined, controller.signal)
+        : adapter.fetchSnapshot(ticker, undefined, controller.signal);
 
     try {
       let snap: CanonicalSnapshot;
       try {
-        snap = await withTimeout(attempt(), PER_ETF_TOTAL_TIMEOUT_MS, ticker);
-      } catch {
-        await new Promise((r) => setTimeout(r, 1500)); // one bounded retry, transient network only
-        snap = await withTimeout(attempt(), PER_ETF_TOTAL_TIMEOUT_MS, ticker);
+        snap = await attempt();
+      } catch (firstError) {
+        // The deadline (not the attempt itself) already fired — this ticker's whole budget, first
+        // attempt + retry combined, is spent. Do not retry past an already-expired deadline.
+        if (controller.signal.aborted) throw firstError;
+        await abortableSleep(1500, controller.signal); // one bounded retry, transient network only
+        if (controller.signal.aborted) throw firstError;
+        snap = await attempt();
       }
       if (!snap.positions.length) throw new Error("empty positions");
       const { snapshotId } = await upsertSnapshot(query, snap);
@@ -238,6 +261,8 @@ export async function GET(request: Request) {
       // Source failure (502/403/browser timeout/parse failure) for this one ticker — the existing
       // holdings row for it is never cleared, no empty data is ever written over it, and the loop
       // simply moves to the next ticker.
+    } finally {
+      clearTimeout(deadlineTimer);
     }
 
     // Checkpoint after EVERY ticker — "completed" means attempted (success OR a recorded source

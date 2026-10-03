@@ -46,8 +46,8 @@ function findWeightData(nuxtState: any): WeightData {
 export const YuantaOfficialPcfAdapter: OfficialPcfAdapter = {
   issuer: "Yuanta",
 
-  async fetchSnapshot(etfCode: string): Promise<CanonicalSnapshot> {
-    const r = await fetch(`${BASE}/product/detail/${etfCode}/ratio`, { headers: { "User-Agent": "Mozilla/5.0" } });
+  async fetchSnapshot(etfCode: string, _date?: string, signal?: AbortSignal): Promise<CanonicalSnapshot> {
+    const r = await fetch(`${BASE}/product/detail/${etfCode}/ratio`, { headers: { "User-Agent": "Mozilla/5.0" }, signal });
     if (!r.ok) throw new Error(`YUANTA_HTTP_${r.status}_${etfCode}`);
     const html = await r.text();
     const nuxtState = extractNuxtState(html);

@@ -24,11 +24,12 @@ type NomuraTradeInfoResponse = {
   };
 };
 
-async function post<T>(path: string, body: unknown): Promise<T> {
+async function post<T>(path: string, body: unknown, signal?: AbortSignal): Promise<T> {
   const r = await fetch(`${BASE}${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
+    signal,
   });
   if (!r.ok) throw new Error(`NOMURA_HTTP_${r.status}`);
   return r.json();
@@ -45,18 +46,18 @@ export const NomuraOfficialPcfAdapter: OfficialPcfAdapter = {
     return [...j.Entries.AllDate].reverse(); // newest first
   },
 
-  async fetchSnapshot(etfCode: string, date?: string): Promise<CanonicalSnapshot> {
+  async fetchSnapshot(etfCode: string, date?: string, signal?: AbortSignal): Promise<CanonicalSnapshot> {
     let d = date;
     if (!d) {
       const dates = await post<NomuraDateResponse>("/API/ETFAPI/api/Fund/GetFundTradeInfoDate", {
         Type: 1, Keyword: "", FundNo: etfCode, Date: "",
-      });
+      }, signal);
       d = dates.Entries.LatestDate ?? undefined;
       if (!d) throw new Error(`NOMURA_NO_LATEST_DATE_${etfCode}`);
     }
     const j = await post<NomuraTradeInfoResponse>("/API/ETFAPI/api/Fund/GetFundTradeInfo", {
       Type: 1, Keyword: "", FundNo: etfCode, Date: d,
-    });
+    }, signal);
     if (j.StatusCode !== 0) throw new Error(`NOMURA_FETCH_FAILED_${etfCode}_${d}`);
     const e = j.Entries;
     const stocks = e.Stocks ?? [];

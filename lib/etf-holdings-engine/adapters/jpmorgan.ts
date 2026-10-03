@@ -20,7 +20,7 @@ function num(s: string | undefined | null): number {
 export const JpmorganOfficialPcfAdapter: OfficialPcfAdapter = {
   issuer: "JPMorgan",
 
-  async fetchSnapshot(etfCode: string): Promise<CanonicalSnapshot> {
+  async fetchSnapshot(etfCode: string, _date?: string, signal?: AbortSignal): Promise<CanonicalSnapshot> {
     const url = PRODUCT_URL[etfCode];
     if (!url) throw new Error(`JPMORGAN_UNMAPPED_ETF_${etfCode} — no confirmed official product URL, never guessed`);
 
@@ -81,6 +81,6 @@ export const JpmorganOfficialPcfAdapter: OfficialPcfAdapter = {
         source: "JPMORGAN_OFFICIAL_PCF_PAGE",
         retrievedAt: new Date().toISOString(),
       };
-    });
+    }, signal);
   },
 };

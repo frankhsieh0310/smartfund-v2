@@ -15,8 +15,8 @@ function num(s: string | undefined | null): number {
 export const TaishinOfficialPcfAdapter: OfficialPcfAdapter = {
   issuer: "Taishin",
 
-  async fetchSnapshot(etfCode: string): Promise<CanonicalSnapshot> {
-    const r = await fetch(`${BASE}/ETF/Home/Pcf/${etfCode}`, { headers: { "User-Agent": "Mozilla/5.0" } });
+  async fetchSnapshot(etfCode: string, _date?: string, signal?: AbortSignal): Promise<CanonicalSnapshot> {
+    const r = await fetch(`${BASE}/ETF/Home/Pcf/${etfCode}`, { headers: { "User-Agent": "Mozilla/5.0" }, signal });
     if (!r.ok) throw new Error(`TAISHIN_HTTP_${r.status}_${etfCode}`);
     const html = await r.text();
     const $ = cheerio.load(html);

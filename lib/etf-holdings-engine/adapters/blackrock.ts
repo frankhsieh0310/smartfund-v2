@@ -43,12 +43,12 @@ function splitCsvLine(line: string): string[] {
 export const BlackRockOfficialPcfAdapter: OfficialPcfAdapter = {
   issuer: "BlackRock",
 
-  async fetchSnapshot(etfCode: string): Promise<CanonicalSnapshot> {
+  async fetchSnapshot(etfCode: string, _date?: string, signal?: AbortSignal): Promise<CanonicalSnapshot> {
     const productId = PRODUCT_ID_MAP[etfCode];
     if (!productId) throw new Error(`BLACKROCK_UNMAPPED_ETF_${etfCode} — not in the official products-list map, never guessed`);
 
     const url = `https://www.blackrock.com/tw/products/${productId}/fund/1480664180144.ajax?fileType=csv&fileName=${etfCode}_holdings&dataType=fund`;
-    const r = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } });
+    const r = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" }, signal });
     if (!r.ok) throw new Error(`BLACKROCK_HTTP_${r.status}_${etfCode}`);
     const text = await r.text();
     const lines = text.split("\n").map((l) => l.replace(/\r$/, "")).filter((l) => l.length > 0);

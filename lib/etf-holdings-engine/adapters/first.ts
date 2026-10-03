@@ -31,11 +31,12 @@ function num(s: string | undefined | null): number {
   return Number(s.replace(/[A-Z]+|[,%]/g, "").trim()) || 0;
 }
 
-async function callWebApi<T>(method: string, fundID: string): Promise<T> {
+async function callWebApi<T>(method: string, fundID: string, signal?: AbortSignal): Promise<T> {
   const r = await fetch(`${BASE}/WebAPI.aspx/${method}`, {
     method: "POST",
     headers: { "Content-Type": "application/json; charset=UTF-8" },
     body: JSON.stringify({ pStrFundID: fundID, pStrDate: "" }),
+    signal,
   });
   if (!r.ok) throw new Error(`FIRST_HTTP_${r.status}_${method}`);
   const j = await r.json();
@@ -45,13 +46,13 @@ async function callWebApi<T>(method: string, fundID: string): Promise<T> {
 export const FirstOfficialPcfAdapter: OfficialPcfAdapter = {
   issuer: "First",
 
-  async fetchSnapshot(etfCode: string): Promise<CanonicalSnapshot> {
+  async fetchSnapshot(etfCode: string, _date?: string, signal?: AbortSignal): Promise<CanonicalSnapshot> {
     const fundID = FUND_ID_MAP[etfCode];
     if (!fundID) throw new Error(`FIRST_UNMAPPED_ETF_${etfCode} — not in the official FundDetail-ID map, never guessed`);
 
     const [hd, meta] = await Promise.all([
-      callWebApi<HdRow[]>("Get_hd", fundID),
-      callWebApi<BuySellARow[]>("Get_BuySellA", fundID),
+      callWebApi<HdRow[]>("Get_hd", fundID, signal),
+      callWebApi<BuySellARow[]>("Get_BuySellA", fundID, signal),
     ]);
     if (!hd.length) throw new Error(`FIRST_NO_HOLDINGS_${etfCode}`);
     // Get_BuySellA is used only for fund-level NAV/outstanding-units values — its own `sdate` (a query/

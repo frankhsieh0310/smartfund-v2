@@ -67,20 +67,20 @@ function num(s: string | undefined | null): number {
 
 const BROWSER_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36";
 
-async function fetchJson<T>(url: string): Promise<T> {
-  const r = await fetch(url, { headers: { "User-Agent": BROWSER_UA, Referer: "https://www.cathaysite.com.tw/ETF/purchase" } });
+async function fetchJson<T>(url: string, signal?: AbortSignal): Promise<T> {
+  const r = await fetch(url, { headers: { "User-Agent": BROWSER_UA, Referer: "https://www.cathaysite.com.tw/ETF/purchase" }, signal });
   if (!r.ok) throw new Error(`CATHAY_HTTP_${r.status}_${url}`);
   return r.json() as Promise<T>;
 }
 
-async function fetchBaseSnapshot(baseTicker: string, date?: string): Promise<CanonicalSnapshot> {
+async function fetchBaseSnapshot(baseTicker: string, date?: string, signal?: AbortSignal): Promise<CanonicalSnapshot> {
   const fundCode = FUND_CODE_MAP[baseTicker];
   if (!fundCode) throw new Error(`CATHAY_UNMAPPED_ETF_${baseTicker} — not in the official GetETFList map, never guessed`);
   // GetBuySale resolves "current" itself when SearchDate is omitted (confirmed: omitting it returns the
   // same result as the site's own default page load; passing today's calendar date instead is NOT
   // equivalent — it can return "查無資料" for a date not yet published).
   const buySaleDateParam = date ? `&SearchDate=${date}` : "";
-  const buySale = await fetchJson<BuySaleResponse>(`${BUYSALE_BASE}/GetBuySale?FundCode=${fundCode}${buySaleDateParam}&IsTest=false&status=1`);
+  const buySale = await fetchJson<BuySaleResponse>(`${BUYSALE_BASE}/GetBuySale?FundCode=${fundCode}${buySaleDateParam}&IsTest=false&status=1`, signal);
   if (!buySale.success || !buySale.result) throw new Error(`CATHAY_BUYSALE_FAILED_${baseTicker}_${date ?? "default"} — ${buySale.returnMessage}`);
   const meta = buySale.result;
   // `preDateC` is the official date this holdings composition actually reflects (confirmed via the PCF-vs-
@@ -91,9 +91,9 @@ async function fetchBaseSnapshot(baseTicker: string, date?: string): Promise<Can
   const detailDate = holdingsDate.replaceAll("/", "-");
 
   const [stocks, bonds, futures] = await Promise.all([
-    fetchJson<ListResponse<ActualStockRow>>(`${ETF_BASE}/GetETFDetailStockList?FundCode=${fundCode}&SearchDate=${detailDate}&status=1`),
-    fetchJson<ListResponse<ActualBondRow>>(`${ETF_BASE}/GetETFDetailBondList?FundCode=${fundCode}&SearchDate=${detailDate}&status=1`),
-    fetchJson<ListResponse<ActualFutureRow>>(`${ETF_BASE}/GetETFDetailFutureList?FundCode=${fundCode}&SearchDate=${detailDate}&status=1`),
+    fetchJson<ListResponse<ActualStockRow>>(`${ETF_BASE}/GetETFDetailStockList?FundCode=${fundCode}&SearchDate=${detailDate}&status=1`, signal),
+    fetchJson<ListResponse<ActualBondRow>>(`${ETF_BASE}/GetETFDetailBondList?FundCode=${fundCode}&SearchDate=${detailDate}&status=1`, signal),
+    fetchJson<ListResponse<ActualFutureRow>>(`${ETF_BASE}/GetETFDetailFutureList?FundCode=${fundCode}&SearchDate=${detailDate}&status=1`, signal),
   ]);
 
   const stockRows = stocks.result ?? [];
@@ -139,9 +139,9 @@ async function fetchBaseSnapshot(baseTicker: string, date?: string): Promise<Can
 export const CathayOfficialPcfAdapter: OfficialPcfAdapter = {
   issuer: "Cathay",
 
-  async fetchSnapshot(etfCode: string, date?: string): Promise<CanonicalSnapshot> {
+  async fetchSnapshot(etfCode: string, date?: string, signal?: AbortSignal): Promise<CanonicalSnapshot> {
     const baseTicker = CATHAY_ALIAS_MAP[etfCode] ?? etfCode;
-    const snapshot = await fetchBaseSnapshot(baseTicker, date);
+    const snapshot = await fetchBaseSnapshot(baseTicker, date, signal);
     // An alias (K-class) publishes the identical base-fund snapshot under its own market ticker — same
     // holdings, same dates, same figures; only the reported etfCode differs.
     return baseTicker === etfCode ? snapshot : { ...snapshot, etfCode };

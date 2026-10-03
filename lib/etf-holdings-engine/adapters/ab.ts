@@ -33,11 +33,11 @@ function mdyToIso(mdy: string): string {
   return `${y}-${m}-${d}`;
 }
 
-async function fetchViaJsonApi(etfCode: string, isin: string): Promise<CanonicalSnapshot> {
+async function fetchViaJsonApi(etfCode: string, isin: string, signal?: AbortSignal): Promise<CanonicalSnapshot> {
   // Omitting the `date` query param returns the same (latest) response as passing today's resolved date
   // explicitly — confirmed identical — so the official source resolves "latest" itself; never computed
   // locally.
-  const r = await fetch(`https://webapi.alliancebernstein.com/v2/funds/tw/zh-tw/investor/${isin}/holdings`);
+  const r = await fetch(`https://webapi.alliancebernstein.com/v2/funds/tw/zh-tw/investor/${isin}/holdings`, { signal });
   if (!r.ok) throw new Error(`AB_HTTP_${r.status}_${etfCode}`);
   const j: HoldingsResponse = await r.json();
   const sections = [...(j.domesticHoldings ?? []), ...(j.foreignHoldings ?? [])];
@@ -101,9 +101,9 @@ async function fetchViaJsonApi(etfCode: string, isin: string): Promise<Canonical
 export const AbOfficialPcfAdapter: OfficialPcfAdapter = {
   issuer: "AB",
 
-  async fetchSnapshot(etfCode: string): Promise<CanonicalSnapshot> {
+  async fetchSnapshot(etfCode: string, _date?: string, signal?: AbortSignal): Promise<CanonicalSnapshot> {
     const isin = ISIN_MAP[etfCode];
-    if (isin) return fetchViaJsonApi(etfCode, isin);
+    if (isin) return fetchViaJsonApi(etfCode, isin, signal);
 
     const url = PRODUCT_URL[etfCode];
     if (!url) throw new Error(`AB_UNMAPPED_ETF_${etfCode} — no confirmed official product URL, never guessed`);
@@ -155,6 +155,6 @@ export const AbOfficialPcfAdapter: OfficialPcfAdapter = {
         source: "AB_OFFICIAL_PRODUCT_PAGE",
         retrievedAt: new Date().toISOString(),
       };
-    });
+    }, signal);
   },
 };

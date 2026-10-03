@@ -33,9 +33,9 @@ function num(s: string | undefined | null): number {
 }
 
 let tokenCache: { token: string; cookie: string; expiresAt: number } | null = null;
-async function getAntiForgeryContext(): Promise<{ token: string; cookie: string }> {
+async function getAntiForgeryContext(signal?: AbortSignal): Promise<{ token: string; cookie: string }> {
   if (tokenCache && Date.now() < tokenCache.expiresAt) return tokenCache;
-  const r = await fetch(`${BASE}/api/AntiForgery/GetAntiForgeryToken`);
+  const r = await fetch(`${BASE}/api/AntiForgery/GetAntiForgeryToken`, { signal });
   if (!r.ok) throw new Error(`ALLIANZ_HTTP_${r.status}_ANTIFORGERY`);
   const setCookies = r.headers.getSetCookie ? r.headers.getSetCookie() : ([r.headers.get("set-cookie") ?? ""].filter(Boolean));
   if (!setCookies.length) throw new Error("ALLIANZ_NO_ANTIFORGERY_COOKIE — site behavior changed, adapter needs re-verification");
@@ -46,12 +46,13 @@ async function getAntiForgeryContext(): Promise<{ token: string; cookie: string 
   return tokenCache;
 }
 
-async function postWithToken<T>(path: string, body: unknown): Promise<T> {
-  const { token, cookie } = await getAntiForgeryContext();
+async function postWithToken<T>(path: string, body: unknown, signal?: AbortSignal): Promise<T> {
+  const { token, cookie } = await getAntiForgeryContext(signal);
   const r = await fetch(`${BASE}${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "X-XSRF-TOKEN": token, Cookie: cookie },
     body: JSON.stringify(body),
+    signal,
   });
   if (!r.ok) throw new Error(`ALLIANZ_HTTP_${r.status}_${path}`);
   return r.json() as Promise<T>;
@@ -60,11 +61,11 @@ async function postWithToken<T>(path: string, body: unknown): Promise<T> {
 export const AllianzOfficialPcfAdapter: OfficialPcfAdapter = {
   issuer: "Allianz",
 
-  async fetchSnapshot(etfCode: string): Promise<CanonicalSnapshot> {
+  async fetchSnapshot(etfCode: string, _date?: string, signal?: AbortSignal): Promise<CanonicalSnapshot> {
     const fundID = FUND_ID_MAP[etfCode];
     if (!fundID) throw new Error(`ALLIANZ_UNMAPPED_ETF_${etfCode} — not in the official GetFundDropdownOptions map, never guessed`);
 
-    const j = await postWithToken<GetFundAssetsResponse>("/api/Fund/GetFundAssets", { FundID: fundID });
+    const j = await postWithToken<GetFundAssetsResponse>("/api/Fund/GetFundAssets", { FundID: fundID }, signal);
     const asset = j.Entries?.Data?.FundAsset;
     const tables = j.Entries?.Data?.Table ?? [];
     if (!asset) throw new Error(`ALLIANZ_NO_HOLDINGS_${etfCode} — ${j.Message || "empty response"}`);

@@ -30,11 +30,11 @@ function num(s: string | undefined | null): number {
 export const MegaOfficialPcfAdapter: OfficialPcfAdapter = {
   issuer: "Mega",
 
-  async fetchSnapshot(etfCode: string): Promise<CanonicalSnapshot> {
+  async fetchSnapshot(etfCode: string, _date?: string, signal?: AbortSignal): Promise<CanonicalSnapshot> {
     const fundId = FUND_ID_MAP[etfCode];
     if (!fundId) throw new Error(`MEGA_UNMAPPED_ETF_${etfCode} — not in the official data-uid map, never guessed`);
 
-    const r = await fetch(`${BASE}?id=${fundId}`, { headers: { "User-Agent": "Mozilla/5.0" } });
+    const r = await fetch(`${BASE}?id=${fundId}`, { headers: { "User-Agent": "Mozilla/5.0" }, signal });
     if (!r.ok) throw new Error(`MEGA_HTTP_${r.status}_${etfCode}`);
     const html = await r.text();
 

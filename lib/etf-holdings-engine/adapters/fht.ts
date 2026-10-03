@@ -23,9 +23,9 @@ function num(s: string | undefined | null): number {
 /** Issuer-level session bootstrap: one plain GET of an official FHT page, collecting every Set-Cookie
  * into a jar reused by every subsequent fundList/assets call in this run. Not per-ETF, not per-call. */
 let sessionCookieJar: string | null = null;
-async function bootstrapSession(): Promise<string> {
+async function bootstrapSession(signal?: AbortSignal): Promise<string> {
   if (sessionCookieJar) return sessionCookieJar;
-  const r = await fetch(`${BASE}${BOOTSTRAP_PATH}`, { headers: { "User-Agent": BROWSER_UA } });
+  const r = await fetch(`${BASE}${BOOTSTRAP_PATH}`, { headers: { "User-Agent": BROWSER_UA }, signal });
   if (!r.ok) throw new Error(`FHT_HTTP_${r.status}_BOOTSTRAP`);
   // Node's fetch exposes combined Set-Cookie via getSetCookie() when available; fall back to a single header read.
   const cookies = typeof (r.headers as any).getSetCookie === "function"
@@ -57,11 +57,12 @@ let fundMapCache: Map<string, FundEntry> | null = null;
  * response, never assumed to be one shared issuer-wide date and never guessed as "today" or "previous
  * business day".
  */
-async function resolveFundMap(): Promise<Map<string, FundEntry>> {
+async function resolveFundMap(signal?: AbortSignal): Promise<Map<string, FundEntry>> {
   if (fundMapCache) return fundMapCache;
-  const cookie = await bootstrapSession();
+  const cookie = await bootstrapSession(signal);
   const r = await fetch(`${BASE}/api/fundList?ec001=3`, {
     headers: authedHeaders(cookie, `${BASE}${BOOTSTRAP_PATH}`),
+    signal,
   });
   if (!r.ok) throw new Error(`FHT_HTTP_${r.status}_FUNDLIST`);
   const contentType = r.headers.get("content-type") ?? "";
@@ -87,8 +88,8 @@ function positionTypeOf(ftype: string): { type: CanonicalPosition["positionType"
 export const FhtOfficialPcfAdapter: OfficialPcfAdapter = {
   issuer: "FHT",
 
-  async fetchSnapshot(etfCode: string, date?: string): Promise<CanonicalSnapshot> {
-    const map = await resolveFundMap();
+  async fetchSnapshot(etfCode: string, date?: string, signal?: AbortSignal): Promise<CanonicalSnapshot> {
+    const map = await resolveFundMap(signal);
     const fund = map.get(etfCode);
     if (!fund) throw new Error(`FHT_UNMAPPED_ETF_${etfCode} — not found in official fundList, never guessed`);
     const fundID = fund.fundID;
@@ -96,9 +97,9 @@ export const FhtOfficialPcfAdapter: OfficialPcfAdapter = {
     // official latest-available-data-date from fundList — never a shared issuer-wide guess.
     const qDate = date ?? fund.latestDataDate;
 
-    const cookie = await bootstrapSession();
+    const cookie = await bootstrapSession(signal);
     const referer = `${BASE}/ETF/etf_detail/${fundID}`;
-    const r = await fetch(`${BASE}/api/assets?fundID=${fundID}&qDate=${qDate}`, { headers: authedHeaders(cookie, referer) });
+    const r = await fetch(`${BASE}/api/assets?fundID=${fundID}&qDate=${qDate}`, { headers: authedHeaders(cookie, referer), signal });
     if (!r.ok) throw new Error(`FHT_HTTP_${r.status}_${etfCode}`);
     const contentType = r.headers.get("content-type") ?? "";
     if (!contentType.includes("json")) throw new Error(`FHT_ASSETS_NOT_JSON_${etfCode} — got content-type "${contentType}" instead of json`);

@@ -56,11 +56,12 @@ function positionTypeOf(code: string): { type: CanonicalPosition["positionType"]
   return { type: "OTHER", unit: "OTHER" }; // MARGIN, CASH, and any other official group
 }
 
-async function fetchAuthToken(): Promise<string> {
+async function fetchAuthToken(signal?: AbortSignal): Promise<string> {
   const r = await fetch(`${API_BASE}/home/AuthToken?token=${encodeURIComponent(AUTH_SEED)}`, {
     method: "POST",
     headers: { "content-type": "application/json; charset=utf-8" },
     body: JSON.stringify({ token: AUTH_SEED }),
+    signal,
   });
   if (!r.ok) throw new Error(`CTBC_HTTP_${r.status}_AUTHTOKEN`);
   const j = await r.json();
@@ -71,17 +72,18 @@ async function fetchAuthToken(): Promise<string> {
 export const CtbcOfficialPcfAdapter: OfficialPcfAdapter = {
   issuer: "CTBC",
 
-  async fetchSnapshot(etfCode: string, date?: string): Promise<CanonicalSnapshot> {
+  async fetchSnapshot(etfCode: string, date?: string, signal?: AbortSignal): Promise<CanonicalSnapshot> {
     const fid = FID_MAP[etfCode];
     if (!fid) throw new Error(`CTBC_UNMAPPED_ETF_${etfCode} — not in the official FID map, never guessed`);
     if (!date) throw new Error(`CTBC_DATE_REQUIRED_${etfCode} — this adapter does not default to today; caller must pass an explicit official data date`);
 
     // Fetch a fresh token and immediately use it — no logging/wait/other network work in between.
-    const token = await fetchAuthToken();
+    const token = await fetchAuthToken(signal);
     const r = await fetch(`${API_BASE}/etf/Buyback?token=${encodeURIComponent(token)}`, {
       method: "POST",
       headers: { "content-type": "application/json; charset=utf-8" },
       body: JSON.stringify({ token, FID: fid, StartDate: date }),
+      signal,
     });
     if (!r.ok) throw new Error(`CTBC_HTTP_${r.status}_${etfCode}`);
     const j: BuybackResponse = await r.json();

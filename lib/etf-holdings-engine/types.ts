@@ -48,8 +48,10 @@ export type CanonicalSnapshot = {
 export interface OfficialPcfAdapter {
   readonly issuer: string;
   /** Official response for the latest (or an explicit) date, normalized to CanonicalSnapshot. Throws if
-   * the issuer has no data for that date/ETF rather than returning a partial/guessed snapshot. */
-  fetchSnapshot(etfCode: string, date?: string): Promise<CanonicalSnapshot>;
+   * the issuer has no data for that date/ETF rather than returning a partial/guessed snapshot.
+   * `signal`, when given, aborts every underlying fetch/Puppeteer operation immediately (not just the
+   * caller's await) — optional so existing call sites without a signal keep working unchanged. */
+  fetchSnapshot(etfCode: string, date?: string, signal?: AbortSignal): Promise<CanonicalSnapshot>;
   /** Available data dates for this ETF, newest first, straight from the issuer's own date-list API.
    * Optional — many issuers only expose "latest" or a fixed-date query, never fabricate a range for those. */
   listAvailableDates?(etfCode: string): Promise<string[]>;

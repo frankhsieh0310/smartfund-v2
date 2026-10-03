@@ -42,9 +42,9 @@ function currencyFromMoneyString(s: string | undefined | null): string | null {
 }
 
 let fundNoMapCache: Map<string, string> | null = null;
-async function resolveFundNoMap(): Promise<Map<string, string>> {
+async function resolveFundNoMap(signal?: AbortSignal): Promise<Map<string, string>> {
   if (fundNoMapCache) return fundNoMapCache;
-  const r = await fetch(`${BASE}/etf/list`, { method: "POST" });
+  const r = await fetch(`${BASE}/etf/list`, { method: "POST", signal });
   if (!r.ok) throw new Error(`CAPITAL_HTTP_${r.status}_LIST`);
   const j: ListResponse = await r.json();
   const map = new Map<string, string>();
@@ -57,8 +57,8 @@ async function resolveFundNoMap(): Promise<Map<string, string>> {
 export const CapitalOfficialPcfAdapter: OfficialPcfAdapter = {
   issuer: "Capital",
 
-  async fetchSnapshot(etfCode: string): Promise<CanonicalSnapshot> {
-    const map = await resolveFundNoMap();
+  async fetchSnapshot(etfCode: string, _date?: string, signal?: AbortSignal): Promise<CanonicalSnapshot> {
+    const map = await resolveFundNoMap(signal);
     const fundId = map.get(etfCode);
     if (!fundId) throw new Error(`CAPITAL_UNMAPPED_ETF_${etfCode} — not in the official etf/list map, never guessed`);
 
@@ -66,6 +66,7 @@ export const CapitalOfficialPcfAdapter: OfficialPcfAdapter = {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ fundId }),
+      signal,
     });
     if (!r.ok) throw new Error(`CAPITAL_HTTP_${r.status}_${etfCode}`);
     const j: BuybackResponse = await r.json();

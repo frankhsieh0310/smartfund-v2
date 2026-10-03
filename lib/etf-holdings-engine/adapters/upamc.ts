@@ -27,12 +27,12 @@ function rocToIsoDate(roc: string): string {
 }
 
 let cachedCookie: string | null = null;
-async function getSessionCookie(): Promise<string> {
+async function getSessionCookie(signal?: AbortSignal): Promise<string> {
   if (cachedCookie) return cachedCookie;
   let url = `${BASE}/ETF/Transaction/PCF`;
   const cookies: string[] = [];
   for (let i = 0; i < 10; i++) {
-    const r = await fetch(url, { redirect: "manual", headers: cookies.length ? { Cookie: cookies.join("; ") } : {} });
+    const r = await fetch(url, { redirect: "manual", headers: cookies.length ? { Cookie: cookies.join("; ") } : {}, signal });
     const setCookie = r.headers.get("set-cookie");
     if (setCookie) cookies.push(setCookie.split(";")[0]);
     if (r.status >= 300 && r.status < 400) {
@@ -60,10 +60,10 @@ let defaultQueryDateCache: string | null = null;
  * after it — confirmed empirically across several) — only for whatever date this input actually defaults
  * to, which the site computes server-side (next valid PCF-query date, not a fixed day offset). Captured
  * here alongside the fund map from the same one HTML fetch, never computed locally. */
-async function ensureFundListLoaded(): Promise<void> {
+async function ensureFundListLoaded(signal?: AbortSignal): Promise<void> {
   if (fundCodeMapCache) return;
-  const cookie = await getSessionCookie();
-  const r = await fetch(`${BASE}/ETF/Transaction/PCF`, { headers: { Cookie: cookie } });
+  const cookie = await getSessionCookie(signal);
+  const r = await fetch(`${BASE}/ETF/Transaction/PCF`, { headers: { Cookie: cookie }, signal });
   if (!r.ok) throw new Error(`UPAMC_HTTP_${r.status}_FUNDLIST`);
   const html = await r.text();
   const map = new Map<string, string>();
@@ -79,30 +79,31 @@ async function ensureFundListLoaded(): Promise<void> {
   defaultQueryDateCache = dateMatch[1];
 }
 
-async function resolveFundCode(etfCode: string): Promise<string> {
-  await ensureFundListLoaded();
+async function resolveFundCode(etfCode: string, signal?: AbortSignal): Promise<string> {
+  await ensureFundListLoaded(signal);
   const code = fundCodeMapCache!.get(etfCode);
   if (!code) throw new Error(`UPAMC_UNMAPPED_ETF_${etfCode} — not found in official dropdown, never guessed`);
   return code;
 }
 
-async function resolveDefaultQueryDate(): Promise<string> {
-  await ensureFundListLoaded();
+async function resolveDefaultQueryDate(signal?: AbortSignal): Promise<string> {
+  await ensureFundListLoaded(signal);
   return defaultQueryDateCache!;
 }
 
 export const UpamcOfficialPcfAdapter: OfficialPcfAdapter = {
   issuer: "UPAMC",
 
-  async fetchSnapshot(etfCode: string, rocDate?: string): Promise<CanonicalSnapshot> {
-    const fundCode = await resolveFundCode(etfCode);
-    const date = rocDate ?? await resolveDefaultQueryDate();
+  async fetchSnapshot(etfCode: string, rocDate?: string, signal?: AbortSignal): Promise<CanonicalSnapshot> {
+    const fundCode = await resolveFundCode(etfCode, signal);
+    const date = rocDate ?? await resolveDefaultQueryDate(signal);
 
-    const cookie = await getSessionCookie();
+    const cookie = await getSessionCookie(signal);
     const r = await fetch(`${BASE}/ETF/Transaction/GetPCF`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Cookie: cookie },
       body: JSON.stringify({ fundCode, date, specificDate: true }),
+      signal,
     });
     if (!r.ok) throw new Error(`UPAMC_HTTP_${r.status}`);
     const j: UniGetPcfResponse = await r.json();

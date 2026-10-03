@@ -32,7 +32,7 @@ function num(s: string | undefined | null): number {
 export const KgiOfficialPcfAdapter: OfficialPcfAdapter = {
   issuer: "KGI",
 
-  async fetchSnapshot(etfCode: string): Promise<CanonicalSnapshot> {
+  async fetchSnapshot(etfCode: string, _date?: string, signal?: AbortSignal): Promise<CanonicalSnapshot> {
     const fundID = FUND_ID_MAP[etfCode];
     if (!fundID) throw new Error(`KGI_UNMAPPED_ETF_${etfCode} — not in the official FundID map, never guessed`);
 
@@ -40,6 +40,7 @@ export const KgiOfficialPcfAdapter: OfficialPcfAdapter = {
       method: "POST",
       headers: { "User-Agent": "Mozilla/5.0", "Content-Type": "application/x-www-form-urlencoded" },
       body: `fundID=${fundID}&queryDate=`,
+      signal,
     });
     if (!r.ok) throw new Error(`KGI_HTTP_${r.status}_${etfCode}`);
     const html = await r.text();

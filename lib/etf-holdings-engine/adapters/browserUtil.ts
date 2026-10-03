@@ -32,14 +32,49 @@ async function getBrowser(): Promise<Browser> {
   return sharedBrowser;
 }
 
-export async function withPage<T>(fn: (page: Page) => Promise<T>): Promise<T> {
+/**
+ * Runs fn(page) on a fresh page on the shared browser. If `signal` aborts before fn(page) settles,
+ * the page is closed immediately — closing a Puppeteer page rejects any pending goto/waitForFunction/
+ * evaluate on it right away, so the abandoned work doesn't keep running in the background. The shared
+ * browser itself is never closed here (other callers may still be using it); only this one page is.
+ * The abort listener is always removed in `finally`, whichever side wins the race.
+ */
+export async function withPage<T>(fn: (page: Page) => Promise<T>, signal?: AbortSignal): Promise<T> {
   const browser = await getBrowser();
   const page = await browser.newPage();
   await page.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36");
-  try {
-    return await fn(page);
-  } finally {
+
+  if (signal?.aborted) {
     await page.close();
+    throw new Error("ABORTED_BEFORE_START");
+  }
+
+  let onAbort: (() => void) | null = null;
+  try {
+    const work = fn(page);
+    if (!signal) return await work;
+
+    const aborted = new Promise<never>((_, reject) => {
+      onAbort = () => reject(new Error("ABORTED"));
+      signal.addEventListener("abort", onAbort);
+    });
+    try {
+      return await Promise.race([work, aborted]);
+    } catch (error) {
+      // Whichever side lost the race, make sure the page actually stops: closing it rejects any
+      // still-pending goto/waitForFunction/evaluate inside `work` immediately, instead of leaving an
+      // orphaned navigation running on the shared browser. `work` itself is abandoned here (we're
+      // already throwing) — swallow its eventual settlement so it never surfaces as an unhandled
+      // rejection once the page-close forces it to reject too.
+      work.catch(() => {});
+      await page.close().catch(() => {});
+      throw error;
+    }
+  } finally {
+    if (onAbort) signal!.removeEventListener("abort", onAbort);
+    // best-effort: if the race path above already closed the page, this is a harmless no-op (Puppeteer
+    // tolerates closing an already-closed page); if fn(page) resolved normally, this is the real close.
+    await page.close().catch(() => {});
   }
 }
 
