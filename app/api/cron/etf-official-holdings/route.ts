@@ -58,8 +58,21 @@ export const dynamic = "force-dynamic";
 
 const JOB = "ETF_OFFICIAL_HOLDINGS";
 const CHECKPOINT_KEY = "etf-official-holdings";
-const BATCH_SIZE = 40;
+// Lowered from 40 after two real production timeouts (one single-ticker canary cold-start, one full
+// batch-of-40 run) both hit Vercel's 300s maxDuration. 10 keeps a 300s budget comfortable even for an
+// all-Puppeteer batch (JPMorgan/AB-style cold Chromium launches included).
+const BATCH_SIZE = 10;
 const TIME_BUDGET_MS = 270_000; // headroom under maxDuration=300s, in case a batch runs unusually slow
+// No single ETF may consume the whole function's time budget — a hung browser/page on one ticker must
+// not starve every other ticker still queued in this invocation.
+const PER_ETF_TIMEOUT_MS = 45_000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`${label}_TIMEOUT_${ms}ms`)), ms);
+    promise.then((v) => { clearTimeout(timer); resolve(v); }, (e) => { clearTimeout(timer); reject(e); });
+  });
+}
 
 // CTBC's adapter has no "today" fallback by design and exposes no listAvailableDates() — it always
 // requires an explicit date, and its Buyback API is strict (a date with no official publication for
@@ -191,10 +204,10 @@ export async function GET(request: Request) {
     try {
       let snap: CanonicalSnapshot;
       try {
-        snap = await attempt();
+        snap = await withTimeout(attempt(), PER_ETF_TIMEOUT_MS, target.ticker);
       } catch {
         await new Promise((r) => setTimeout(r, 1500)); // one bounded retry, transient network only
-        snap = await attempt();
+        snap = await withTimeout(attempt(), PER_ETF_TIMEOUT_MS, target.ticker);
       }
       if (!snap.positions.length) throw new Error("empty positions");
       const { snapshotId } = await upsertSnapshot(query, snap);
@@ -214,19 +227,33 @@ export async function GET(request: Request) {
       // per-ticker failure is isolated — never blocks the rest of this batch, and never blocks the
       // checkpoint from advancing past this ticker on the next invocation
     }
+
+    // Checkpoint after EVERY ticker, not once at the end of the batch — if Vercel kills this
+    // invocation mid-batch (the exact FUNCTION_INVOCATION_TIMEOUT seen in production), whatever was
+    // already attempted stays saved and the next invocation resumes right after it, never re-doing
+    // (or silently skipping) work that already happened.
+    await writeCheckpoint(JOB, CHECKPOINT_KEY, runId, {
+      lastSymbol: lastProcessedTicker,
+      processed: (isFromToday ? effectiveCheckpoint?.processed ?? 0 : 0) + processed,
+      succeeded: (isFromToday ? effectiveCheckpoint?.succeeded ?? 0 : 0) + passed,
+      failed: (isFromToday ? effectiveCheckpoint?.failed ?? 0 : 0) + failedCount,
+    });
   }
 
   // If the time budget was hit mid-batch, the checkpoint must resume AT this ticker next time, not
-  // skip past it — so it doesn't advance past a never-attempted item.
+  // skip past it — so it doesn't advance past a never-attempted item. reachedEnd clears the cursor
+  // entirely (next invocation starts a fresh daily pass); every other case already has the correct
+  // cursor saved from the in-loop checkpoint write above.
   const actuallyReachedEnd = timeBudgetStop ? false : reachedEnd;
+  if (actuallyReachedEnd) {
+    await writeCheckpoint(JOB, CHECKPOINT_KEY, runId, {
+      lastSymbol: null,
+      processed: (isFromToday ? effectiveCheckpoint?.processed ?? 0 : 0) + processed,
+      succeeded: (isFromToday ? effectiveCheckpoint?.succeeded ?? 0 : 0) + passed,
+      failed: (isFromToday ? effectiveCheckpoint?.failed ?? 0 : 0) + failedCount,
+    });
+  }
   const nextCursor = actuallyReachedEnd ? null : lastProcessedTicker;
-
-  await writeCheckpoint(JOB, CHECKPOINT_KEY, runId, {
-    lastSymbol: nextCursor,
-    processed: (isFromToday ? effectiveCheckpoint?.processed ?? 0 : 0) + processed,
-    succeeded: (isFromToday ? effectiveCheckpoint?.succeeded ?? 0 : 0) + passed,
-    failed: (isFromToday ? effectiveCheckpoint?.failed ?? 0 : 0) + failedCount,
-  });
 
   // A batch that attempted tickers but succeeded at none is a total failure, not a completed run —
   // reachedEnd alone (what the workflow step currently gates on) must never read as "it worked".
