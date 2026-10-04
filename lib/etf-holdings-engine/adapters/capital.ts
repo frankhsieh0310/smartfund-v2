@@ -54,6 +54,59 @@ async function resolveFundNoMap(signal?: AbortSignal): Promise<Map<string, strin
   return map;
 }
 
+// Each attempt's own internal cap — well under the route's 45s per-ticker total budget, leaving room
+// for one retry within that same outer budget. Confirmed live (00946: a single buyback request takes
+// ~72ms normally) that Production's "This operation was aborted" (runtimeMs≈49624 ≈ the route's own
+// 45s AbortController + fixed overhead) was a one-shot transient stall, not a structural slow-response
+// or data-size issue — so a single bounded retry, not a longer timeout, is the right fix.
+const CAPITAL_BUYBACK_ATTEMPT_TIMEOUT_MS = 18_000;
+
+type BuybackAttemptResult =
+  | { ok: true; res: Response }
+  | { ok: false; retryable: boolean; error: Error };
+
+/** One attempt at the buyback POST, bounded by whichever is SMALLER: its own internal timeout, or
+ * whatever's left of the caller's outer AbortSignal (the route's own per-ticker/global deadline —
+ * aborting here never outlives or extends that budget, both attempts share it). Only a network-level
+ * failure or an internal-timeout abort (never the OUTER signal firing — that means the ticker's whole
+ * budget is spent, not a transient blip) or a 5xx response is retryable; 403/404/any other 4xx is not. */
+async function attemptBuyback(etfCode: string, fundId: string, outerSignal?: AbortSignal): Promise<BuybackAttemptResult> {
+  const attemptController = new AbortController();
+  const onOuterAbort = () => attemptController.abort();
+  outerSignal?.addEventListener("abort", onOuterAbort, { once: true });
+  const timer = setTimeout(() => attemptController.abort(), CAPITAL_BUYBACK_ATTEMPT_TIMEOUT_MS);
+  try {
+    const r = await fetch(`${BASE}/etf/buyback`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fundId }),
+      signal: attemptController.signal,
+    });
+    if (!r.ok) {
+      const retryable = r.status >= 500 && r.status < 600;
+      return { ok: false, retryable, error: new Error(`CAPITAL_HTTP_${r.status}_${etfCode}`) };
+    }
+    return { ok: true, res: r };
+  } catch (e) {
+    // The outer signal firing means this ticker's whole route-level budget is spent — matches
+    // route.ts's own "deadline already fired, don't retry" rule, never retried here either.
+    const retryable = !outerSignal?.aborted;
+    return { ok: false, retryable, error: e instanceof Error ? e : new Error(String(e)) };
+  } finally {
+    clearTimeout(timer);
+    outerSignal?.removeEventListener("abort", onOuterAbort);
+  }
+}
+
+async function fetchBuybackWithBoundedRetry(etfCode: string, fundId: string, outerSignal?: AbortSignal): Promise<Response> {
+  const first = await attemptBuyback(etfCode, fundId, outerSignal);
+  if (first.ok) return first.res;
+  if (!first.retryable) throw first.error;
+  const second = await attemptBuyback(etfCode, fundId, outerSignal);
+  if (second.ok) return second.res;
+  throw second.error;
+}
+
 export const CapitalOfficialPcfAdapter: OfficialPcfAdapter = {
   issuer: "Capital",
 
@@ -62,13 +115,7 @@ export const CapitalOfficialPcfAdapter: OfficialPcfAdapter = {
     const fundId = map.get(etfCode);
     if (!fundId) throw new Error(`CAPITAL_UNMAPPED_ETF_${etfCode} — not in the official etf/list map, never guessed`);
 
-    const r = await fetch(`${BASE}/etf/buyback`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ fundId }),
-      signal,
-    });
-    if (!r.ok) throw new Error(`CAPITAL_HTTP_${r.status}_${etfCode}`);
+    const r = await fetchBuybackWithBoundedRetry(etfCode, fundId, signal);
     const j: BuybackResponse = await r.json();
     if (j.code !== 200 || !j.data) throw new Error(`CAPITAL_BUYBACK_FAILED_${etfCode}`);
     const { pcf, stocks, bonds, futures, rps, assets } = j.data;

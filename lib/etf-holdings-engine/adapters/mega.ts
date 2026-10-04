@@ -27,6 +27,33 @@ function num(s: string | undefined | null): number {
   return Number(s.replace(/[,%]/g, "").trim()) || 0;
 }
 
+// Explicitly named per the diagnosis task, plus any other response header that looks like a WAF/CDN/
+// proxy marker — never anything that could carry a credential. Only consulted on a non-2xx response;
+// the normal 200 path never builds or logs this.
+const MEGA_DIAGNOSTIC_HEADER_ALLOWLIST = ["server", "via", "x-cache", "cf-ray", "cf-cache-status", "content-type", "content-length"];
+const MEGA_SENSITIVE_HEADER_PATTERN = /cookie|authoriz|token|secret|session|api-key/i;
+
+/** Builds a safe-to-log diagnostic string for a non-2xx Mega response — status/timing/URL plus a
+ * curated set of WAF/CDN/proxy-identifying response headers and a short body preview. Never includes
+ * Authorization/Cookie/any header matching MEGA_SENSITIVE_HEADER_PATTERN, and never the full body. */
+function buildMegaErrorDiagnostics(res: Response, url: string, fundId: string, elapsedMs: number, bodyText: string): string {
+  const headerPairs: string[] = [];
+  for (const key of MEGA_DIAGNOSTIC_HEADER_ALLOWLIST) {
+    const v = res.headers.get(key);
+    if (v) headerPairs.push(`${key}=${v}`);
+  }
+  // Catch other obvious WAF/CDN/proxy markers (vendor-specific header names vary) without an exhaustive
+  // per-vendor allowlist — explicitly excluding anything that could be a credential.
+  for (const [key, value] of res.headers.entries()) {
+    const lower = key.toLowerCase();
+    if (MEGA_DIAGNOSTIC_HEADER_ALLOWLIST.includes(lower)) continue; // already captured above
+    if (MEGA_SENSITIVE_HEADER_PATTERN.test(lower)) continue; // never log
+    if (/waf|cdn|proxy|ray|edge|block|challenge/.test(lower)) headerPairs.push(`${key}=${value}`);
+  }
+  const bodyPreview = bodyText.slice(0, 300).replace(/\s+/g, " ");
+  return `[diag status=${res.status} elapsedMs=${elapsedMs} url=${url} fundId=${fundId} headers={${headerPairs.join(",")}} bodyPreview="${bodyPreview}"]`;
+}
+
 export const MegaOfficialPcfAdapter: OfficialPcfAdapter = {
   issuer: "Mega",
 
@@ -34,8 +61,14 @@ export const MegaOfficialPcfAdapter: OfficialPcfAdapter = {
     const fundId = FUND_ID_MAP[etfCode];
     if (!fundId) throw new Error(`MEGA_UNMAPPED_ETF_${etfCode} — not in the official data-uid map, never guessed`);
 
-    const r = await fetch(`${BASE}?id=${fundId}`, { headers: { "User-Agent": "Mozilla/5.0" }, signal });
-    if (!r.ok) throw new Error(`MEGA_HTTP_${r.status}_${etfCode}`);
+    const url = `${BASE}?id=${fundId}`;
+    const startedAt = Date.now();
+    const r = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" }, signal });
+    if (!r.ok) {
+      const elapsedMs = Date.now() - startedAt;
+      const bodyText = await r.text().catch(() => "");
+      throw new Error(`MEGA_HTTP_${r.status}_${etfCode} ${buildMegaErrorDiagnostics(r, url, fundId, elapsedMs, bodyText)}`);
+    }
     const html = await r.text();
 
     // The page's own "資料來源：兆豐投信，YYYY/MM/DD" label — never today, never trade_pcf.aspx's query
