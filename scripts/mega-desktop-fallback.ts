@@ -61,14 +61,35 @@ async function runOne(ticker: string): Promise<TickerResult> {
   return { ticker, ok: true, detail: "ok" };
 }
 
+// Optional single-ticker canary: `--ticker 00690` (or `--ticker=00690`) restricts the run to exactly
+// one ticker, for a one-off Production end-to-end check without touching the rest of today's Mega
+// universe. Omit the flag and every Mega ticker runs, unchanged — this never alters the default path.
+function parseCanaryTicker(argv: string[]): string | undefined {
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+    if (arg === "--ticker") return argv[i + 1];
+    if (arg.startsWith("--ticker=")) return arg.slice("--ticker=".length);
+  }
+  return undefined;
+}
+
 async function main() {
   if (!INGEST_URL || !INGEST_SECRET) {
     console.error("[mega-desktop-fallback] MISSING_CONFIG: set MEGA_DESKTOP_INGEST_URL and MEGA_DESKTOP_INGEST_SECRET");
     process.exit(1);
   }
 
-  const tickers = Object.keys(FUND_ID_MAP);
-  console.log(`[mega-desktop-fallback] starting, ${tickers.length} Mega tickers, ingest=${INGEST_URL}`);
+  const canaryTicker = parseCanaryTicker(process.argv.slice(2));
+  let tickers = Object.keys(FUND_ID_MAP);
+  if (canaryTicker !== undefined) {
+    if (!(canaryTicker in FUND_ID_MAP)) {
+      console.error(`[mega-desktop-fallback] UNKNOWN_CANARY_TICKER: ${canaryTicker} is not in the Mega FUND_ID_MAP`);
+      process.exit(1);
+    }
+    tickers = [canaryTicker];
+    console.log(`[mega-desktop-fallback] CANARY MODE: restricted to single ticker ${canaryTicker}`);
+  }
+  console.log(`[mega-desktop-fallback] starting, ${tickers.length} Mega ticker(s), ingest=${INGEST_URL}`);
 
   const results: TickerResult[] = [];
   for (const ticker of tickers) {
