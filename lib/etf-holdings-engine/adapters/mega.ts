@@ -17,7 +17,10 @@ const BASE = "https://www.megafunds.com.tw/MEGA/etf/etf_product.aspx";
 // dropdown values (one-time read 2026-09-26, never guessed). fund_id=24 ("兆豐美國黃金礦業ETF基金")
 // exists in that dropdown but has no ticker tile yet on the overview page — a new/unlisted entrant,
 // deliberately excluded until it has an official ticker to map.
-const FUND_ID_MAP: Record<string, string> = {
+// Exported (additive only — no change to any request/parsing behavior) so the Mega-desktop-fallback
+// ingest endpoint can validate an incoming ticker against the SAME authoritative map, instead of a
+// second, driftable copy of the same list.
+export const FUND_ID_MAP: Record<string, string> = {
   "00943": "20", "00932": "19", "00921": "18", "00913": "17", "00690": "5",
   "00911": "16", "00957B": "21", "00982T": "22", "00996A": "23",
 };
