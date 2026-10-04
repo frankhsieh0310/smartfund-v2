@@ -537,7 +537,10 @@ jobs:
       - id: set
         run: |
           set -euo pipefail
-          all='["Cathay","JPMorgan","Allianz","UPAMC","AB","Fubon","CTBC","KGI","First","FHT","SinoPac","Yuanta","Capital","Mega","Taishin","Nomura","BlackRock"]'
+          # Mega official site blocks cloud/datacenter egress (Vercel + GitHub 403);
+          # Mega is updated via DESKTOP fallback. Excluded from the schedule/issuer=all list below —
+          # manual single-issuer dispatch (issuer=Mega) still works, for diagnostics only.
+          all='["Cathay","JPMorgan","Allianz","UPAMC","AB","Fubon","CTBC","KGI","First","FHT","SinoPac","Yuanta","Capital","Taishin","Nomura","BlackRock"]'
           selected="${{ github.event.inputs.issuer }}"
           if [ -z "${selected}" ] || [ "${selected}" = "all" ]; then
             echo "issuers=${all}" >> "$GITHUB_OUTPUT"
