@@ -12,8 +12,8 @@ function bucketBy(rows: { weightPct: number; sector: string | null; country: str
   return [...totals.entries()].map(([label, weightPct]) => ({ label, weightPct })).sort((a, b) => b.weightPct - a.weightPct);
 }
 
-export async function GET(_req: Request, { params }: { params: Promise<{ type: string; id: string }> }) {
-  const { type, id } = await params;
+export async function GET(_req: Request, context: RouteContext<"/api/holdings/[type]/[id]/concentration">) {
+  const { type, id } = await context.params;
   const productType = type.toUpperCase() === "ETF" ? "ETF" : type.toUpperCase() === "FUND" ? "FUND" : null;
   if (!productType || !id) return Response.json({ ok: false, error: "INVALID_PRODUCT" }, { status: 400, headers });
 

@@ -2,8 +2,8 @@ import { getLatestSnapshot, coverageDepthOf, type ProductType } from "@/lib/data
 
 const headers = { "Access-Control-Allow-Origin": "*", "Cache-Control": "no-store" };
 
-export async function GET(_req: Request, { params }: { params: Promise<{ type: string; id: string }> }) {
-  const { type, id } = await params;
+export async function GET(_req: Request, context: RouteContext<"/api/holdings/[type]/[id]/table">) {
+  const { type, id } = await context.params;
   const productType = type.toUpperCase() === "ETF" ? "ETF" : type.toUpperCase() === "FUND" ? "FUND" : null;
   if (!productType || !id) return Response.json({ ok: false, error: "INVALID_PRODUCT" }, { status: 400, headers });
 

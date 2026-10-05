@@ -4,8 +4,8 @@ const headers = { "Access-Control-Allow-Origin": "*", "Cache-Control": "no-store
 
 type Entry = { key: string; name: string; oldWeightPct: number | null; newWeightPct: number | null; deltaPct: number | null };
 
-export async function GET(_req: Request, { params }: { params: Promise<{ type: string; id: string }> }) {
-  const { type, id } = await params;
+export async function GET(_req: Request, context: RouteContext<"/api/holdings/[type]/[id]/diff">) {
+  const { type, id } = await context.params;
   const productType = type.toUpperCase() === "ETF" ? "ETF" : type.toUpperCase() === "FUND" ? "FUND" : null;
   if (!productType || !id) return Response.json({ ok: false, error: "INVALID_PRODUCT" }, { status: 400, headers });
 
