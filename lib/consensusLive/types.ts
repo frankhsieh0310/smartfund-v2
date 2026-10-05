@@ -38,6 +38,8 @@ export type ExtractedOpinion = {
 
 // Final App-facing card DTO (post same-event merge). One event/interview = one card, even when
 // WallStreetCN split it into several live-feed items.
+export type QueryFn = <T = Record<string, unknown>>(sql: string, params: unknown[]) => Promise<T[]>;
+
 export type LiveOpinionCard = {
   id: string;
   speakerName: string;

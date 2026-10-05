@@ -5,6 +5,7 @@
 import { generateObject, gateway } from "ai";
 import { z } from "zod";
 import type { ExtractedOpinion, RawFeedItem } from "./types";
+import { toTaiwanTraditional } from "./taiwanLocalization";
 
 const MODEL = process.env.CONSENSUS_EXTRACTION_MODEL || "openai/gpt-4o-mini";
 
@@ -46,9 +47,24 @@ const SYSTEM_PROMPT = [
   "view_changed 只有在原文明確寫出「改口」「上調」「下調」「轉多」「轉空」「調整目標價」等字樣時才能是 true，",
   "絕對不能自己用其他歷史資料去推論這個人是否改變了看法 —— 沒有明確寫出來就一律 false。",
   "",
-  "輸出一律使用繁體中文（summary_zh / reason_zh / topic_name / organization / role / speaker_name 等欄位），",
-  "即使原文是簡體中文。不要給投資建議，不要加上你自己推測的市場影響。",
+  "輸出一律使用台灣繁體中文與台灣金融市場慣用詞彙（summary_zh / reason_zh / topic_name / organization /",
+  "role / speaker_name 等欄位），即使原文是簡體中文或使用中國大陸用語 —— 例如「特朗普」要寫成「川普」、",
+  "「美联储」要寫成「美國聯準會」、「加息」要寫成「升息」、「通胀」要寫成「通膨」。",
+  "這只是第一層把關，之後還會有 deterministic 的台灣用語校正，所以你仍必須盡力自己先寫對。",
+  "不要給投資建議，不要加上你自己推測的市場影響。",
 ].join("\n");
+
+function localizeOpinionFields<T extends { speakerName: string | null; organization: string | null; role: string | null; topicName: string | null; summaryZh: string | null; reasonZh: string | null }>(o: T): T {
+  return {
+    ...o,
+    speakerName: toTaiwanTraditional(o.speakerName),
+    organization: toTaiwanTraditional(o.organization),
+    role: toTaiwanTraditional(o.role),
+    topicName: toTaiwanTraditional(o.topicName),
+    summaryZh: toTaiwanTraditional(o.summaryZh),
+    reasonZh: toTaiwanTraditional(o.reasonZh),
+  };
+}
 
 export async function extractOpinion(item: RawFeedItem): Promise<ExtractedOpinion> {
   const text = `${item.title ? item.title + "\n" : ""}${item.content_text}`.slice(0, 4000);
@@ -62,7 +78,7 @@ export async function extractOpinion(item: RawFeedItem): Promise<ExtractedOpinio
       system: SYSTEM_PROMPT,
       prompt: JSON.stringify({ published_at: new Date(item.display_time * 1000).toISOString(), text }),
     });
-    return {
+    return localizeOpinionFields({
       qualifies: object.qualifies,
       sourceItem: item,
       speakerName: object.speaker_name,
@@ -75,7 +91,7 @@ export async function extractOpinion(item: RawFeedItem): Promise<ExtractedOpinio
       summaryZh: object.summary_zh,
       reasonZh: object.reason_zh,
       viewChanged: object.view_changed,
-    };
+    });
   } catch {
     // Extraction failure -> treat as not-qualifying rather than fabricate a guess. Never a fake card.
     return {
@@ -130,10 +146,16 @@ export async function synthesizeMergedCard(members: ExtractedOpinion[]): Promise
       ].join("\n"),
       prompt: bulletins,
     });
-    return { topicName: object.topic_name, stance: object.stance, summaryZh: object.summary_zh, reasonZh: object.reason_zh };
+    return {
+      topicName: toTaiwanTraditional(object.topic_name),
+      stance: object.stance,
+      summaryZh: toTaiwanTraditional(object.summary_zh),
+      reasonZh: toTaiwanTraditional(object.reason_zh),
+    };
   } catch {
-    // Fallback: the single most recent member's own fields (still real data, never fabricated) —
-    // only used if the merge AI call itself fails, not as a stance-selection strategy.
+    // Fallback: the single most recent member's own fields (already localized by extractOpinion
+    // above — still real data, never fabricated) — only used if the merge AI call itself fails, not
+    // as a stance-selection strategy.
     const latest = members.slice().sort((a, b) => b.sourceItem.display_time - a.sourceItem.display_time)[0];
     return { topicName: latest.topicName ?? "", stance: latest.stance, summaryZh: latest.summaryZh ?? "", reasonZh: latest.reasonZh ?? "" };
   }

@@ -297,6 +297,7 @@
     "iconv-lite": "^0.7.2",
     "lucide-react": "^1.23.0",
     "next": "16.2.9",
+    "opencc-js": "^1.4.2",
     "papaparse": "^5.4.1",
     "pdf-parse": "^2.4.5",
     "pg": "^8.13.1",

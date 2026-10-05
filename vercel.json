@@ -1,8 +1,12 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "app/api/mobile/reverse-holdings/route.ts": { "regions": ["sin1"] }
+  },
   "crons": [
     { "path": "/api/workflows/bootstrap?workflow=poc", "schedule": "0 5 * * *" },
     { "path": "/api/workflows/bootstrap?workflow=consensus", "schedule": "20 16 * * *" },
+    { "path": "/api/cron/consensus-live-ingest", "schedule": "*/5 * * * *" },
     { "path": "/api/workflows/bootstrap?workflow=yahoo-etf-full-sweep", "schedule": "0 3 * * *" },
     { "path": "/api/workflows/bootstrap?workflow=yahoo-etf-enrich-repair", "schedule": "30 3 * * *" },
     { "path": "/api/workflows/bootstrap?workflow=yahoo-fund-full-sweep", "schedule": "0 4 * * *" },
