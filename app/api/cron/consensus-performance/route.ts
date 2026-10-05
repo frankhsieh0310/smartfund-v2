@@ -97,7 +97,7 @@ export async function GET(request: Request) {
            price_1m_date, price_1m, return_1m, benchmark_return_1m, alpha_1m, hit_1m,
            price_3m_date, price_3m, return_3m, benchmark_return_3m, alpha_3m, hit_3m,
            price_6m_date, price_6m, return_6m, benchmark_return_6m, alpha_6m, hit_6m, updated_at)
-         values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,
+         values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::timestamptz,$11,$12,$13,
                  $14,$15,$16,$17,$18,$19, $20,$21,$22,$23,$24,$25, $26,$27,$28,$29,$30,$31, now())
          on conflict (stock_link_id) do update set
            source_grade = excluded.source_grade, consensus_agreement = excluded.consensus_agreement,

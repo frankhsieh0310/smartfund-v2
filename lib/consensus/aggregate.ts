@@ -31,7 +31,7 @@ function baseCte(): string {
       ) x
     ) least_grade on true
     where e.extraction_status = 'CLASSIFIED'
-      and e.event_at >= $1
+      and e.event_at >= $1::timestamptz
       and least_grade.g <= 2            -- A or B only
   ),
   links as (

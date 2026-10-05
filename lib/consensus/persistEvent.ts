@@ -91,7 +91,7 @@ export async function persistConsensusEvent(query: QueryFn, input: PersistInput)
          source_title, original_text, summary_zh, language, stance, confidence, statement_strength,
          sector, theme, direct_stock_symbols, inferred_stock_symbols, extraction_status, extraction_model,
          content_hash, extraction_version, needs_review_reason)
-       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17::jsonb,$18::jsonb,$19,$20,$21,$22,$23)
+       values ($1,$2,$3,$4::timestamptz,$5::timestamptz,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17::jsonb,$18::jsonb,$19,$20,$21,$22,$23)
        returning id`,
       [input.personId, input.sourceId, key, input.eventAt, input.publishedAt ?? null,
        input.eventType ?? null, input.sourceUrl, input.sourceTitle ?? null, input.rawText.slice(0, 12000),
@@ -107,7 +107,7 @@ export async function persistConsensusEvent(query: QueryFn, input: PersistInput)
   for (const u of urls) {
     await query(
       `insert into consensus_event_sources (event_id, source_id, url, source_grade, published_at)
-       values ($1,$2,$3,$4,$5) on conflict (event_id, url) do nothing`,
+       values ($1,$2,$3,$4,$5::timestamptz) on conflict (event_id, url) do nothing`,
       [eventId, input.sourceId, u, input.sourceGrade, input.publishedAt ?? null],
     );
   }
