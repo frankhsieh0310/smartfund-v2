@@ -37,7 +37,7 @@ const pctp = (v: any): number | null => {
 // Income A" all collapsed to just the family name, because Advisor/Inv/Inst/Select are also literal
 // words in those funds' own series branding, not only share-class markers. M and Z were also missing
 // from the token list (observed on Fidelity Blue Chip Growth/Gold/Balanced M and Z classes).
-const SUFFIX_RE =
+export const SUFFIX_RE =
   /\s+(?:Class\s+)?(?:A|B|C|D|F|F-?1|F-?2|F-?3|I|II|III|M|Z|R|R-?1|R-?2|R-?3|R-?4|R-?5|R-?6|R-?2E|R-?5E|K|K6|Adm|Admiral|Inv|Investor|Instl?(?:\s*(?:Pl(?:us)?|Sel(?:ect)?|Prm|Premier))?|Institutional|Inst(?:\s*(?:Pl(?:us)?|Sel(?:ect)?))?|529-?[A-F0-9-]+|Select|Retail|Svc|Service|Advisor|Adv|No Load|NL|Load)\s*$/i;
 export function masterStem(name: string): string {
   return (name || "")
