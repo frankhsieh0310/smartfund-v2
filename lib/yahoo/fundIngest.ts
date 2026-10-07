@@ -29,9 +29,16 @@ const pctp = (v: any): number | null => {
   return Math.abs(raw) <= 3 ? raw * 100 : raw;
 };
 
-// ---- Tier-A master key: family + stem (strip class-suffix tokens). No name-only merge. ----
+// ---- Tier-A master key: family + stem (strip a TRAILING class-suffix token only). No name-only merge. ----
+// Anchored at end-of-string ($, not \b.*$): a share-class word only counts as a suffix when it is the
+// last token in the name. Un-anchored, the first occurrence anywhere matched and everything after it
+// (including the real, distinguishing fund name) was discarded — e.g. "Fidelity ADVISOR OTC I",
+// "Russell INV US Small Cap Equity A", "Morgan Stanley INST Discovery A" and "Columbia SELECT Corporate
+// Income A" all collapsed to just the family name, because Advisor/Inv/Inst/Select are also literal
+// words in those funds' own series branding, not only share-class markers. M and Z were also missing
+// from the token list (observed on Fidelity Blue Chip Growth/Gold/Balanced M and Z classes).
 const SUFFIX_RE =
-  /\s+(?:Class\s+)?(?:A|B|C|D|F|F-?1|F-?2|F-?3|I|II|III|R|R-?1|R-?2|R-?3|R-?4|R-?5|R-?6|R-?2E|R-?5E|K|K6|Adm|Admiral|Inv|Investor|Instl?(?:\s*(?:Pl(?:us)?|Sel(?:ect)?|Prm|Premier))?|Institutional|Inst(?:\s*(?:Pl(?:us)?|Sel(?:ect)?))?|529-?[A-F0-9-]+|Select|Retail|Svc|Service|Advisor|Adv|No Load|NL|Load)\b.*$/i;
+  /\s+(?:Class\s+)?(?:A|B|C|D|F|F-?1|F-?2|F-?3|I|II|III|M|Z|R|R-?1|R-?2|R-?3|R-?4|R-?5|R-?6|R-?2E|R-?5E|K|K6|Adm|Admiral|Inv|Investor|Instl?(?:\s*(?:Pl(?:us)?|Sel(?:ect)?|Prm|Premier))?|Institutional|Inst(?:\s*(?:Pl(?:us)?|Sel(?:ect)?))?|529-?[A-F0-9-]+|Select|Retail|Svc|Service|Advisor|Adv|No Load|NL|Load)\s*$/i;
 export function masterStem(name: string): string {
   return (name || "")
     .replace(/\s+/g, " ")
