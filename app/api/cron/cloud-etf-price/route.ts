@@ -34,12 +34,23 @@ const DAY = 86_400_000;
 const dateKey = (value: Date) => value.toISOString().slice(0, 10);
 const utcDate = (value: Date) => new Date(`${dateKey(value)}T00:00:00.000Z`);
 
-function periodReturn(rows: Array<{ date: Date; price: number }>, days: number): number | null {
+// etf_performance.return_* columns are Decimal(8,4) — max magnitude 9999.9999. A near-zero base
+// price (confirmed in Production: KSM-F112.TA, 2026-10-03, PostgresError 22003 "numeric field
+// overflow" on prisma.etfPerformance.upsert) can produce a computed percentage the column can't
+// store. This is our own derived metric, not a Yahoo raw value, so returning null for an
+// unrepresentable result is not "truncating/adjusting/deriving Yahoo data" — the raw price history
+// (etfHistory rows) is written in full beforehand regardless. Before this guard, the upsert threw,
+// the catch block skipped the subsequent `etf.update` that advances priceUpdatedAt, and the same
+// symbol was retried and failed identically on every later cycle it came up in.
+const MAX_STORABLE_RETURN = 9999.9999;
+export function periodReturn(rows: Array<{ date: Date; price: number }>, days: number): number | null {
   const latest = rows.at(-1);
   if (!latest) return null;
   const target = latest.date.getTime() - days * DAY;
   const base = [...rows].reverse().find((row) => row.date.getTime() <= target);
-  return base?.price ? ((latest.price / base.price) - 1) * 100 : null;
+  if (!base?.price) return null;
+  const value = ((latest.price / base.price) - 1) * 100;
+  return Number.isFinite(value) && Math.abs(value) <= MAX_STORABLE_RETURN ? value : null;
 }
 
 export async function GET(request: Request) {
