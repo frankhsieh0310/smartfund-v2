@@ -199,6 +199,13 @@ export async function fetchYahooChart(
 
   let res: Response;
   try {
+    // 2026-10-08 reliability fix: same stalled-connection hang already diagnosed and fixed for
+    // fetchYahooFxSpark below (2026-09-12) — this call had no AbortSignal.timeout, so a stalled
+    // Yahoo connection hangs the whole cron invocation until Vercel's hard maxDuration kill, with
+    // no chance for a catch block to run and record anything (confirmed in Production:
+    // CLOUD_ETF_PRICE, the only caller, got stuck IN_PROGRESS with attempted=0 for every run from
+    // 2026-10-07 08:43 onward). lib/yahoo/productSession.ts (used by the still-healthy
+    // yahoo-etf-full-sweep) has used this same timeout pattern on every fetch from the start.
     res = await fetch(url, {
       headers: {
         // Yahoo 對沒有 User-Agent 的請求有時會拒絕，這裡帶一個常見瀏覽器
@@ -206,6 +213,7 @@ export async function fetchYahooChart(
         "User-Agent":
           "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
       },
+      signal: AbortSignal.timeout(15_000),
     });
   } catch (err) {
     console.error(`[YahooClient] fetch 失敗 (${symbol}):`, err);
@@ -260,11 +268,13 @@ export async function fetchYahooQuotes(symbols: string[]): Promise<YahooQuoteRes
 
   let res: Response;
   try {
+    // Same timeout fix as fetchYahooChart/fetchYahooChartPeriod below — see their comments.
     res = await fetch(url, {
       headers: {
         "User-Agent":
           "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
       },
+      signal: AbortSignal.timeout(15_000),
     });
   } catch (err) {
     console.error(`[YahooClient] Quote fetch 失敗:`, err);
@@ -361,7 +371,12 @@ export async function fetchYahooChartPeriod(
 
   let res: Response;
   try {
-    res = await fetch(url, { headers: COMMON_HEADERS });
+    // 2026-10-08 reliability fix: this is the function CLOUD_ETF_PRICE calls directly. Without a
+    // timeout, a stalled Yahoo connection hangs the cron invocation until Vercel's hard maxDuration
+    // kill — confirmed in Production (every run since 2026-10-07 08:43 stuck IN_PROGRESS,
+    // attempted=0). Same pattern already proven and shipped for fetchYahooFxSpark (2026-09-12) and
+    // used throughout lib/yahoo/productSession.ts (the still-healthy yahoo-etf-full-sweep path).
+    res = await fetch(url, { headers: COMMON_HEADERS, signal: AbortSignal.timeout(15_000) });
   } catch (err) {
     console.error(`[YahooClient] incremental chart fetch failed (${symbol}):`, err);
     return null;
