@@ -102,7 +102,20 @@ on:
         options: [all, Cathay, JPMorgan, Allianz, UPAMC, AB, Fubon, CTBC, KGI, First, FHT, SinoPac, Yuanta, Capital, Mega, Taishin, Nomura, BlackRock]
 
 concurrency:
-  group: cloud-data-ingestion
+  # 2026-10-08 fix: this used to be one fixed group ("cloud-data-ingestion") shared by EVERY one of
+  # the ~29 distinct schedule triggers in this file (ETF price, fund-nav, MoneyDJ, commodity per
+  # exchange, index per region, consensus, PE recompute, FX, crypto, ...). With cancel-in-progress
+  # false, GitHub Actions keeps at most one RUNNING + one PENDING run per group — a new trigger that
+  # arrives while both slots are occupied cancels the older pending run outright. On a schedule this
+  # dense, an unrelated job's run (commodity, index, consensus, etc.) can occupy the single slot and
+  # silently cancel the ETF-price trigger before it ever starts, with nothing in the run history to
+  # show WHY it's missing — indistinguishable from "GitHub just didn't fire it". Keying the group by
+  # the triggering cron expression itself (stable per job, available via github.event.schedule on a
+  # schedule-triggered run) gives every logical job its own queue: ETF price can still only have one
+  # of ITS OWN runs in flight at a time (the original intent), but can never be blocked or cancelled
+  # by a commodity/index/consensus/other run contending for a shared slot. No other job's cron time,
+  # case-dispatch mapping, or step logic changes — only how concurrent runs are grouped.
+  group: cloud-data-ingestion-${{ github.event.schedule || github.event.inputs.job || 'manual' }}
   cancel-in-progress: false
 
 jobs:
