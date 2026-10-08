@@ -30,6 +30,17 @@ const CHECKPOINT_KEY = "cloud-etf-price:ROLLING";
 const DEFAULT_BATCH = 1000;
 const MAX_BATCH = 1500;
 const DAY = 86_400_000;
+// 2026-10-08 root-cause fix: confirmed in the raw GitHub Actions log — the curl calling this route
+// returns "Operation timed out after 300001 milliseconds with 0 bytes received" on every invocation.
+// DEFAULT_BATCH=1000, each item doing a real Yahoo fetch (its own 15s timeout, d800f8097) plus two DB
+// upserts plus fetchYahooChartPeriod's built-in 300ms throttle sleep — at just the mandatory sleep
+// alone, 1000 items is already a guaranteed ~300s, before any real fetch/DB time. The function never
+// gets anywhere near returning, so finishRun() never runs and every invocation is invisible in
+// production_scheduler_runs (permanently IN_PROGRESS, attempted=0) even though GitHub Actions reports
+// the step as merely "timed out", not an application error. Exact same class of bug already diagnosed
+// and fixed for cloud-moneydj-fund (4a6ddfe57): a time budget, not a smaller batch alone, is what
+// guarantees a checkpoint gets written before Vercel's hard maxDuration kill. Not a maxDuration change.
+export const TIME_BUDGET_MS = 240_000;
 
 const dateKey = (value: Date) => value.toISOString().slice(0, 10);
 const utcDate = (value: Date) => new Date(`${dateKey(value)}T00:00:00.000Z`);
@@ -105,10 +116,26 @@ export async function GET(request: Request) {
   let freshSkipped = 0;
   let staleSkipped = 0;
   let http5xx = 0;
+  let timeBudgetStop = false;
   const failures: Array<{ id: string; symbol: string; reason: string }> = [];
   let lastId = cursor;
 
+  // Saves progress reached SO FAR, called after every item — not just once at the end — so an ETF
+  // that was already successfully fetched and written is never re-fetched by the next invocation
+  // even if this one is killed immediately after. Same pattern as cloud-moneydj-fund (4a6ddfe57).
+  const saveProgress = (cursorId: string) =>
+    writeCheckpoint(JOB, CHECKPOINT_KEY, runId, {
+      lastSymbol: cursorId,
+      processed: (before?.processed ?? 0) + attempted,
+      succeeded: (before?.succeeded ?? 0) + updatedMaster,
+      failed: (before?.failed ?? 0) + failed,
+    });
+
   for (const etf of candidates) {
+    if (Date.now() - startedMs > TIME_BUDGET_MS) {
+      timeBudgetStop = true;
+      break;
+    }
     lastId = etf.id;
     // current/fresh row skip — already updated today
     if (etf.priceUpdatedAt && utcDate(etf.priceUpdatedAt).getTime() >= todayUtc.getTime()) {
@@ -118,6 +145,8 @@ export async function GET(request: Request) {
     attempted++;
     const symbol = etf.dataSource!;
     try {
+      // finally below always saves progress for this item, even when one of the continues inside
+      // this try fires (null response / empty candle series) — continue still runs a finally.
       const from = etf.priceUpdatedAt ?? new Date(Date.now() - 1100 * DAY);
       const response = await fetchYahooChartPeriod(
         symbol,
@@ -219,11 +248,16 @@ export async function GET(request: Request) {
       failed++;
       retryable++;
       failures.push({ id: etf.id, symbol, reason: String(error).slice(0, 300) });
+    } finally {
+      // Progress checkpoint after every ETF reached — runs on every path out of the try (both
+      // continues above and normal completion), success or failure alike.
+      await saveProgress(lastId);
     }
   }
 
-  // If we returned a short window (< batch) we reached the tail — wrap next run.
-  const reachedEnd = candidates.length < batch;
+  // If we returned a short window (< batch) we reached the tail — wrap next run. A time-budget stop
+  // is not "reached the tail": keep the cursor where it stopped so the next run resumes from there.
+  const reachedEnd = !timeBudgetStop && candidates.length < batch;
   const nextCursor = reachedEnd ? "" : lastId;
   const after: CheckpointRow = {
     lastSymbol: nextCursor,
@@ -239,7 +273,7 @@ export async function GET(request: Request) {
     failed: after.failed,
   });
 
-  const status = failed > 0 && inserted === 0 ? "PARTIAL" : "COMPLETED";
+  const status = timeBudgetStop || (failed > 0 && inserted === 0) ? "PARTIAL" : "COMPLETED";
   await finishRun(runId, JOB, PROVIDER, startedMs, {
     status,
     attempted,
@@ -255,6 +289,8 @@ export async function GET(request: Request) {
       batch_size: batch,
       wrapped,
       reached_end: reachedEnd,
+      time_budget_stop: timeBudgetStop,
+      time_budget_ms: TIME_BUDGET_MS,
       window_size: candidates.length,
       fresh_skipped: freshSkipped,
       stale_skipped: staleSkipped,
@@ -281,6 +317,7 @@ export async function GET(request: Request) {
     checkpointAfter: nextCursor || "(wrapped to start)",
     wrapped,
     reachedEnd,
+    timeBudgetStop,
     universeCount,
     runtimeMs: Date.now() - startedMs,
     status,
