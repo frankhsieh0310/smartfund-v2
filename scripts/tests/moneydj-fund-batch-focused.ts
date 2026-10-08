@@ -15,14 +15,15 @@
 import assert from 'node:assert/strict';
 import { runMoneydjBatch } from '../../app/api/cron/cloud-moneydj-fund/route';
 
-type Fund = { fundId: string; moneydjCode: string; canonicalName: string };
+type Fund = { fundId: string; moneydjCode: string; canonicalName: string; portfolioKey: string };
 
 function makeFunds(n: number): Fund[] {
-  return Array.from({ length: n }, (_, i) => ({
-    fundId: `fund-${String(i).padStart(3, '0')}`,
-    moneydjCode: `MDJ${i}`,
-    canonicalName: `Fund ${i}`,
-  }));
+  // Standalone funds (no master mapping): portfolioKey === fundId, same as nextCodes() falls back
+  // to COALESCE(sc.master_fund_id, f.id) when there's no verified master.
+  return Array.from({ length: n }, (_, i) => {
+    const fundId = `fund-${String(i).padStart(3, '0')}`;
+    return { fundId, moneydjCode: `MDJ${i}`, canonicalName: `Fund ${i}`, portfolioKey: fundId };
+  });
 }
 
 async function main() {
