@@ -1,0 +1,123 @@
+name: tdcc-nav-7day-readonly-test
+
+# Read-only, self-expiring verification: does TDCC's public open-data NAV endpoint
+# (https://openapi.tdcc.com.tw/v1/opendata/3-4) reliably return a fresh, complete bulk dataset once a
+# day, every day, for 7 consecutive days (2026-10-09 .. 2026-10-15, Asia/Taipei calendar date)?
+#
+# This workflow does NOT:
+#   - call any smartfund-v2 Production route, API, or secret (no SMARTFUND_CRON_SECRET, no DATABASE_URL)
+#   - write to any database
+#   - trigger any ingestion job
+#   - deploy anything
+#   - modify any existing table, schedule, or Production code path
+# It only GETs the public TDCC endpoint directly from the runner, computes a few counts (record count,
+# distinct fund codes, distinct ISINs, latest NAV date) with a local Node script, and uploads that JSON
+# as a workflow artifact. Nothing it does is reversible-risk: deleting this file (or letting it run out
+# its date window below) fully removes its effect.
+#
+# Self-expiring: the first step checks today's Asia/Taipei calendar date against the fixed 7-day
+# window. Outside that window the job exits 0 immediately without calling TDCC at all — so this
+# workflow is inert before 2026-10-09 and after 2026-10-15 without needing a separate manual step to
+# disable it. Scheduled workflows only run from the repository's default branch, so this file has no
+# effect until merged there (not done by this commit).
+
+on:
+  schedule:
+    - cron: "0 8 * * *" # 16:00 Asia/Taipei daily (UTC+8) — matches the user-specified daily check time
+  workflow_dispatch: {} # manual run allowed for one-off inspection; still read-only, still date-gated
+
+concurrency:
+  group: tdcc-nav-7day-readonly-test
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Guard — only run inside the 7-day test window (Asia/Taipei date)
+        id: gate
+        run: |
+          today=$(TZ=Asia/Taipei date +%F)
+          echo "Asia/Taipei date: ${today}"
+          echo "today=${today}" >> "$GITHUB_OUTPUT"
+          if [[ "${today}" < "2026-10-09" || "${today}" > "2026-10-15" ]]; then
+            echo "Outside the 2026-10-09..2026-10-15 test window — exiting without calling TDCC."
+            echo "in_window=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "in_window=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Fetch TDCC 3-4 (offshore fund NAV) — single read-only GET, no auth
+        if: steps.gate.outputs.in_window == 'true'
+        id: fetch
+        run: |
+          set -euo pipefail
+          start_ms=$(date +%s%3N)
+          http_status=$(curl -s -o tdcc-3-4-response.json -w "%{http_code}" \
+            --connect-timeout 15 --max-time 60 \
+            "https://openapi.tdcc.com.tw/v1/opendata/3-4")
+          end_ms=$(date +%s%3N)
+          echo "http_status=${http_status}" >> "$GITHUB_OUTPUT"
+          echo "execution_ms=$((end_ms - start_ms))" >> "$GITHUB_OUTPUT"
+          echo "HTTP ${http_status} in $((end_ms - start_ms))ms"
+
+      - name: Summarize response (record/fund/ISIN counts, latest NAV date) — read-only, no writes
+        if: steps.gate.outputs.in_window == 'true'
+        run: |
+          node --input-type=module -e '
+            import { readFileSync, writeFileSync } from "node:fs";
+            const httpStatus = Number(process.env.HTTP_STATUS);
+            const executionMs = Number(process.env.EXECUTION_MS);
+            const runDate = process.env.RUN_DATE;
+            const out = {
+              runDate,
+              fetchedAt: new Date().toISOString(),
+              httpStatus,
+              executionMs,
+              status: "FAILED",
+              recordCount: 0,
+              fundCount: 0,
+              isinCount: 0,
+              latestNavDate: null,
+              error: null,
+            };
+            try {
+              if (httpStatus !== 200) throw new Error(`non-200 HTTP status: ${httpStatus}`);
+              const text = readFileSync("tdcc-3-4-response.json", "utf8");
+              const rows = JSON.parse(text);
+              if (!Array.isArray(rows)) throw new Error("response body is not a JSON array");
+              out.recordCount = rows.length;
+              const codeKey = Object.keys(rows[0] ?? {}).find((k) => k.includes("基金代碼"));
+              out.fundCount = new Set(rows.map((r) => r[codeKey])).size;
+              const isins = rows.map((r) => r.ISINCODE).filter(Boolean);
+              out.isinCount = new Set(isins).size;
+              const dates = rows.map((r) => r["日期"]).filter(Boolean).sort();
+              out.latestNavDate = dates.at(-1) ?? null;
+              out.status = out.recordCount > 0 ? "SUCCESS" : "SOURCE_EMPTY";
+            } catch (e) {
+              out.status = "FAILED";
+              out.error = String(e.message || e).slice(0, 500);
+            }
+            writeFileSync(`tdcc-nav-test-summary-${runDate}.json`, JSON.stringify(out, null, 2));
+            console.log(JSON.stringify(out, null, 2));
+          '
+        env:
+          HTTP_STATUS: ${{ steps.fetch.outputs.http_status }}
+          EXECUTION_MS: ${{ steps.fetch.outputs.execution_ms }}
+          RUN_DATE: ${{ steps.gate.outputs.today }}
+
+      - name: Record outside-window no-op
+        if: steps.gate.outputs.in_window != 'true'
+        run: echo "Outside test window; no TDCC call made, nothing to report today."
+
+      - name: Upload daily evidence artifact
+        if: steps.gate.outputs.in_window == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: tdcc-nav-test-day-${{ github.run_id }}
+          path: |
+            tdcc-nav-test-summary-*.json
+            tdcc-3-4-response.json
+          if-no-files-found: warn
+          retention-days: 30
