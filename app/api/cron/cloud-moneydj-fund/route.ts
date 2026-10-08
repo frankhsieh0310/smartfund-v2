@@ -37,8 +37,16 @@ export const dynamic = "force-dynamic";
 const JOB = "CLOUD_MONEYDJ_FUND";
 const PROVIDER = "MONEYDJ";
 const CHECKPOINT_KEY = "cloud-moneydj-fund:ROLLING";
-const DEFAULT_BATCH = 200;
-const MAX_BATCH = 300;
+// 2026-10-08: confirmed in Production that no CLOUD_MONEYDJ_FUND run has EVER reached COMPLETED —
+// every invocation is left permanently IN_PROGRESS with attempted=0, because run stats are only
+// written once by finishRun() at the very end of the loop (same gap as the cloud-etf-price hang
+// fixed in d800f8097), and a 200-fund batch cannot reliably finish inside maxDuration=300s: the
+// nextCodes() lookup alone measured ~12.5s, leaving an unrealistic per-item budget for 200 real
+// MoneyDJ fetch+parse+persist calls (each already individually timeout-protected at 30s). Lowered
+// to a batch size this window can realistically complete start-to-finish; no change to the fetch,
+// parse, persist, checkpoint or backoff logic itself.
+const DEFAULT_BATCH = 50;
+const MAX_BATCH = 80;
 const FRESH_DAYS = 25; // matches the local disclosure worker's re-fetch guard
 
 type MappedFund = { fundId: string; moneydjCode: string; canonicalName: string };
