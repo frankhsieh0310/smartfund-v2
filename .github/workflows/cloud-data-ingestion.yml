@@ -158,6 +158,7 @@ jobs:
             "30 14 * * 1-5") echo "job=mops-financial-incremental" >> "$GITHUB_OUTPUT" ;;
             "0 13 * * *") echo "job=sec-financial-incremental" >> "$GITHUB_OUTPUT" ;;
             "0 */2 * * 1-5") echo "job=fx-quote" >> "$GITHUB_OUTPUT" ;;
+            "30 11 * * 1-5") echo "job=etf-official-holdings" >> "$GITHUB_OUTPUT" ;;
             *)            echo "job=${{ github.event.inputs.job || 'all' }}" >> "$GITHUB_OUTPUT" ;;
           esac
 
