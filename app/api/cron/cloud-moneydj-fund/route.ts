@@ -6,12 +6,12 @@
 // conflict target and advisory lock are identical to the existing local job.
 //
 // Trigger: GitHub Actions schedule -> GET with `Authorization: Bearer <CRON_SECRET>`.
-// One invocation: read ROLLING checkpoint -> next <=BATCH mapped fund codes by fund id ->
-// fetch MoneyDJ -> compare 資料月份 -> only-newer write -> advance checkpoint -> run log -> return.
+// One invocation: read ROLLING checkpoint -> next <=BATCH MASTER-FUND portfolios (one representative
+// share class per verified master_fund_id, standalone funds unaffected) -> fetch MoneyDJ -> compare
+// 資料月份 -> only-newer write -> advance checkpoint -> run log -> return.
 // 403/429 => bounded backoff, mark PARTIAL, stop early, never clear existing data. No loop.
 //
-// TODO_MASTER_FUND_DEDUP = YES  (per-code behavior retained this round; master/share-class
-// dedup is a later phase and is not attempted here.)
+// MASTER_FUND_DEDUP: implemented 2026-10-08 — see nextCodes()/freshnessCutoffDate() below.
 
 import { isAuthorizedCron, unauthorizedCron } from "@/lib/cron/authorize";
 import { prisma } from "@/lib/prisma";
@@ -55,7 +55,11 @@ const FRESH_DAYS = 25; // matches the local disclosure worker's re-fetch guard
 // happens). Not a maxDuration increase — maxDuration stays 300.
 const TIME_BUDGET_MS = 240_000;
 
-type MappedFund = { fundId: string; moneydjCode: string; canonicalName: string };
+// portfolioKey = fund_share_classes.master_fund_id when that mapping is verifiable (an actual row
+// links this fund to a master), otherwise the fund's own id — i.e. the SAME master-fund identity
+// already established and tested in f48d8e25a/8b83d4a27, never a name-similarity guess made here.
+// fundId stays the representative Yahoo/MoneyDJ-identified fund actually fetched for this portfolio.
+type MappedFund = { fundId: string; moneydjCode: string; canonicalName: string; portfolioKey: string };
 
 export type MoneydjBatchOutcome = {
   attempted: number;
@@ -110,7 +114,7 @@ export async function runMoneydjBatch(
       timeBudgetStop = true;
       break;
     }
-    lastId = fund.fundId;
+    lastId = fund.portfolioKey; // cursor advances by master-fund portfolio, not by individual share class
     attempted++;
     try {
       const result = await opts.processOne(fund);
@@ -146,23 +150,60 @@ export async function runMoneydjBatch(
   return { attempted, updatedFunds, rowsPersisted, failed, retryable, http403, http429, alreadyCurrent, backoffStop, timeBudgetStop, failures, lastId };
 }
 
+// 2026-10-08: dedup by master fund. A master's share classes all disclose the SAME underlying
+// portfolio (that's the whole point of f48d8e25a/8b83d4a27's master-fund model) — fetching and
+// writing MoneyDJ holdings separately for every share class was pure waste, since
+// lib/data-platform/reverseHoldings.ts already groups by master_fund_id at READ time and serves
+// whichever share class actually has the data to all of them. The grouping key here is exactly
+// fund_share_classes.master_fund_id — never a name-similarity guess — and a fund with no verified
+// master mapping (no fund_share_classes row) is its own standalone portfolio, unchanged from before.
+//
+// Freshness cutoff: 每月8-15日 the official disclosure window is checked tightly — only this
+// calendar month's data counts as fresh, forcing a re-check of anything still showing last month's
+// filing. Outside that window the existing FRESH_DAYS rolling check remains as the 補查 backstop for
+// funds that published late (so a fund that didn't have its report out by the 15th still gets
+// picked up once FRESH_DAYS elapses, not forgotten).
+export function freshnessCutoffDate(now: Date = new Date()): string {
+  const taipeiMs = now.getTime() + 8 * 60 * 60 * 1000; // Asia/Taipei, no DST
+  const t = new Date(taipeiMs);
+  const day = t.getUTCDate();
+  if (day >= 8 && day <= 15) {
+    return new Date(Date.UTC(t.getUTCFullYear(), t.getUTCMonth(), 1)).toISOString().slice(0, 10);
+  }
+  return new Date(now.getTime() - FRESH_DAYS * 86_400_000).toISOString().slice(0, 10);
+}
+
 async function nextCodes(cursor: string, batch: number): Promise<MappedFund[]> {
   return prisma.$queryRawUnsafe<MappedFund[]>(
-    `SELECT f.id AS "fundId", m.moneydj_code AS "moneydjCode", f.name AS "canonicalName"
-       FROM fund_mappings m
-       JOIN funds f ON f.id = m.fund_id
-      WHERE m.moneydj_code IS NOT NULL
-        AND f.id > $1
-        AND NOT EXISTS (
-          SELECT 1 FROM holdings h
-           WHERE h.fund_id = f.id AND h.source = $2
-             AND h.as_of_date >= CURRENT_DATE - ($3 || ' days')::interval
-        )
-      ORDER BY f.id
+    `WITH candidates AS (
+       SELECT f.id AS fund_id, m.moneydj_code, f.name AS canonical_name,
+              COALESCE(sc.master_fund_id, f.id) AS portfolio_key
+         FROM fund_mappings m
+         JOIN funds f ON f.id = m.fund_id
+         LEFT JOIN fund_share_classes sc ON sc.fund_id = f.id
+        WHERE m.moneydj_code IS NOT NULL
+     ),
+     fresh_portfolios AS (
+       SELECT DISTINCT COALESCE(sc.master_fund_id, h.fund_id) AS portfolio_key
+         FROM holdings h
+         LEFT JOIN fund_share_classes sc ON sc.fund_id = h.fund_id
+        WHERE h.asset_type = 'FUND' AND h.source = $2 AND h.as_of_date >= $3::date
+     ),
+     picked AS (
+       SELECT DISTINCT ON (c.portfolio_key) c.fund_id, c.moneydj_code, c.canonical_name, c.portfolio_key
+         FROM candidates c
+        WHERE c.portfolio_key > $1
+          AND c.portfolio_key NOT IN (SELECT portfolio_key FROM fresh_portfolios)
+        ORDER BY c.portfolio_key, c.fund_id
+     )
+     SELECT fund_id AS "fundId", moneydj_code AS "moneydjCode", canonical_name AS "canonicalName",
+            portfolio_key AS "portfolioKey"
+       FROM picked
+      ORDER BY portfolio_key
       LIMIT $4`,
     cursor,
     MONEYDJ_SOURCE,
-    String(FRESH_DAYS),
+    freshnessCutoffDate(),
     batch,
   );
 }
@@ -279,7 +320,7 @@ export async function GET(request: Request) {
       http_403: http403,
       http_429: http429,
       http_5xx: 0,
-      todo_master_fund_dedup: true,
+      master_fund_dedup: true,
       sample_failures: failures.slice(0, 5),
     },
   });
@@ -306,6 +347,6 @@ export async function GET(request: Request) {
     universeCount,
     runtimeMs: Date.now() - startedMs,
     status,
-    todoMasterFundDedup: true,
+    masterFundDedup: true,
   });
 }
