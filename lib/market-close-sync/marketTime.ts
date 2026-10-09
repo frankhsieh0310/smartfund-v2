@@ -37,23 +37,59 @@ export function isTradingDay(job: ExchangeCalendarJob, localDate: string): boole
   return true;
 }
 
-/**
- * Is `job`'s market closed-and-past-its-stabilization-delay as of `now`, for `now`'s own local
- * trading date? Returns the target local date to sync if so, else null (either not a trading day,
- * or still before close+delay today).
- *
- * Deliberately does NOT look backward for a previous trading day the caller might have missed — the
- * checkpoint (stored by the route, not this module) is what carries forward "last date actually
- * synced"; this function only answers "is *today* done cooking yet".
- */
-export function marketCloseEligibility(job: ExchangeCalendarJob, now: Date): { targetLocalDate: string } | null {
-  const { date, time, weekday } = localNow(now, job.timezone);
-  if (!job.weekdays.includes(weekday)) return null;
-  if (job.holidays.includes(date)) return null;
+function addLocalDays(localDate: string, deltaDays: number): string {
+  // Pure calendar-date arithmetic in UTC-as-calendar (never through a timezone-sensitive Date
+  // constructor) — localDate is already a plain YYYY-MM-DD, we only need to step whole days.
+  const d = new Date(`${localDate}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + deltaDays);
+  return d.toISOString().slice(0, 10);
+}
+
+/** Is this `localDate` (for `job`'s market) definitely closed-and-past-stabilization-delay as of
+ * `now`? A date strictly before `now`'s own local date is trivially closed (it's entirely in the
+ * past). `now`'s own local date additionally needs the close+delay wall-clock check. */
+function isDefinitelyClosed(job: ExchangeCalendarJob, localDate: string, now: Date): boolean {
+  const { date: nowLocalDate, time: nowLocalTime } = localNow(now, job.timezone);
+  if (localDate < nowLocalDate) return true;
+  if (localDate > nowLocalDate) return false; // a future date can never be closed
   const closeMinutes = minutesSinceMidnight(job.regularSession.close) + job.stabilizationDelayMinutes;
-  const nowMinutes = minutesSinceMidnight(time);
-  if (nowMinutes < closeMinutes) return null;
-  return { targetLocalDate: date };
+  return minutesSinceMidnight(nowLocalTime) >= closeMinutes;
+}
+
+const DEFAULT_TRADING_DAY_LOOKBACK = 5;
+
+/**
+ * The target local trading date to sync for `job`, as of `now`: the MOST RECENT trading day that is
+ * both (a) definitely closed+past-stabilization-delay and (b) not yet marked done by `isDoneForDate`.
+ * Scans calendar days backward from `now`'s own local date (which is itself a candidate only once
+ * it's closed — see isDefinitelyClosed), skipping non-trading days (weekends/holidays), for up to
+ * `maxTradingDayLookback` actual trading days considered. Returns null if every trading day in that
+ * window is either not yet closed or already done (the market is "caught up").
+ *
+ * This replaces the earlier, narrower "is *today* done cooking yet" check (which, past local
+ * midnight in a market's own timezone, could report a market ineligible merely because tomorrow's
+ * session hasn't closed yet — even though yesterday's real close was still sitting there unsynced).
+ */
+export function findEligibleTradeDate(
+  job: ExchangeCalendarJob,
+  now: Date,
+  isDoneForDate: (localDate: string) => boolean,
+  maxTradingDayLookback: number = DEFAULT_TRADING_DAY_LOOKBACK,
+): { targetLocalDate: string } | null {
+  const { date: nowLocalDate } = localNow(now, job.timezone);
+  let tradingDaysSeen = 0;
+  // Calendar-day cap well above maxTradingDayLookback so a long holiday cluster can't infinite-loop;
+  // 3x the trading-day target is generous (covers even a 2-week holiday block around a 5-day lookback).
+  const calendarDayCap = maxTradingDayLookback * 3 + 10;
+  for (let back = 0; back <= calendarDayCap && tradingDaysSeen < maxTradingDayLookback; back++) {
+    const candidate = addLocalDays(nowLocalDate, -back);
+    if (!isTradingDay(job, candidate)) continue;
+    tradingDaysSeen++;
+    if (!isDefinitelyClosed(job, candidate, now)) continue; // today, not closed yet — not a candidate
+    if (isDoneForDate(candidate)) continue; // already synced — keep scanning older days for a gap
+    return { targetLocalDate: candidate };
+  }
+  return null;
 }
 
 /**
