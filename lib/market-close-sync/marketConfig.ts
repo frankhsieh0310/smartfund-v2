@@ -31,9 +31,44 @@ export const ETF_EXCHANGE_TO_JOB_ID: Record<string, string> = {
   "Taipei Exchange": "tpex-yahoo-daily",
   TPEx: "tpex-yahoo-daily",
   SES: "singapore-yahoo-daily",
-  // Deliberately NOT mapped (no confident 1:1 stock-calendar counterpart in this config, as of
-  // 2026-10-09): "Cboe UK", "Vienna", "Tel Aviv", "Warsaw", "Jakarta", "Taiwan", "Paris", "Frankfurt",
-  // "Dusseldorf" — adding any of these requires confirming the right job id first, not guessing.
+
+  // Added 2026-10-10 (task H exchange-coverage pass), each with its own match basis — the exact
+  // job's timezone/session/holidays/stabilizationDelayMinutes this entry inherits:
+  LSE: "united-kingdom-yahoo-daily", // exact string match: job.exchanges includes "LSE" literally
+  IOB: "united-kingdom-yahoo-daily", // exact string match: job.exchanges includes "IOB" literally
+  // "AQS" is the job's code for the London-listed Aquis Stock Exchange; "Aquis AQSE" is the ETF
+  // table's own name for the same venue (AQSE = Aquis Stock Exchange) — same market, same calendar.
+  "Aquis AQSE": "united-kingdom-yahoo-daily",
+  ASX: "australia-yahoo-daily", // exact string match: job.exchanges includes "ASX" literally
+  // "FRA" (job code) is the standard short code for the Frankfurt Stock Exchange; "Frankfurt" /
+  // "Dusseldorf" are the ETF table's own city-named venues for FRA and the job's "DUS" code
+  // respectively — both already under the same Germany job's exchanges array, same trading calendar.
+  Frankfurt: "germany-yahoo-daily",
+  Dusseldorf: "germany-yahoo-daily",
+  NYSE: "nyse-yahoo-daily", // exact string match: job.exchanges includes "NYSE" literally
+  // "NYSE American" is the current official name of the exchange the job still lists under its
+  // historical code "ASE" (NYSE American was formerly AMEX) — same venue, same calendar.
+  "NYSE American": "amex-yahoo-daily",
+  Paris: "france-yahoo-daily", // job.exchanges includes "PAR" (Euronext Paris); same city/venue
+  MCE: "spain-yahoo-daily", // exact string match: job.exchanges includes "MCE" literally
+  // "Swiss" (ETF table) and the job's "EBS" code both refer to SIX Swiss Exchange (EBS = its
+  // electronic-bourse trading code) — single Swiss market, no other Swiss job exists to confuse it with.
+  Swiss: "switzerland-yahoo-daily",
+  // "Stockholm" (ETF table) and the job's "STO" code are the same venue by name (Stockholmsbörsen).
+  Stockholm: "stockholm-yahoo-daily",
+  // "KSE" here is Korea's exchange, consistent with this same country already having "KOE"/"KSC" job
+  // codes under korea-yahoo-daily — included on country-level confidence (not a byte-identical code
+  // match like the others above); if this turns out to be a different Korea-adjacent venue with its
+  // own holiday calendar, this is the single line to revisit.
+  KSE: "korea-yahoo-daily",
+
+  // Deliberately NOT mapped — no confident match found, left unmapped rather than guessed:
+  // "Cboe UK" (ambiguous: job's uk exchanges array has "CXE"/"AQS"/"IOB"/"LSE" but none is
+  //   confirmed as literally "Cboe UK" by name or code),
+  // "Tel Aviv", "Mexico", "Vienna", "Warsaw", "Jakarta", "Istanbul", "Budapest", "HOSE", "Saudi",
+  //   "Oslo", "Qatar" (no job exists for these countries in this config at all),
+  // "Taiwan" (too ambiguous between the existing twse/tpex jobs to assign to one without guessing),
+  // "OTC Markets OTCPK"/"OTCID"/"OTCQX"/"OTCQB", "Cboe CA" (no corresponding job/code found).
 };
 
 let cachedRegistry: ExchangeCalendarRegistry | null = null;
