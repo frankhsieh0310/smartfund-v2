@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "rules": { "exact_identifier_only": true, "max_db_concurrency": 1, "government_curves_are_not_security_market_data": true },
+  "routes": [
+    { "source": "JAPAN_MOF_JGB_AUCTION", "market": "JAPAN", "status": "PRODUCTION_READY", "grain": "INDIVIDUAL_SECURITY_AUCTION", "identifier": "JGB_TENOR_AND_ISSUE_NUMBER", "fields": ["auction_date", "weighted_average_price", "average_yield", "coupon", "issue_date", "maturity_date"], "desktop_allowed": true },
+    { "source": "US_TREASURY_AUCTION", "market": "US", "status": "RAILWAY_OWNED", "grain": "INDIVIDUAL_SECURITY_AUCTION", "identifier": "CUSIP", "desktop_allowed": false },
+    { "source": "UK_DMO_GILT", "market": "UK", "status": "PARTIAL_BUT_USEFUL", "grain": "INDIVIDUAL_SECURITY", "identifier": "ISIN", "desktop_allowed": false },
+    { "source": "FRANCE_AFT_AUCTION", "market": "FRANCE", "status": "PARTIAL_BUT_USEFUL", "grain": "INDIVIDUAL_SECURITY_AUCTION", "identifier": "ISIN", "desktop_allowed": false },
+    { "source": "ITALY_MEF_AUCTION", "market": "ITALY", "status": "SOURCE_REQUIRED", "grain": "INDIVIDUAL_SECURITY_AUCTION", "identifier": "ISIN", "desktop_allowed": false },
+    { "source": "TPEX_CB_DAILY", "market": "TAIWAN", "status": "REFERENCE_ONLY", "reason": "BROKER_AGGREGATE_WITHOUT_SECURITY_IDENTIFIER" },
+    { "source": "FHLBANKS_OF", "market": "US_AGENCY", "status": "REFERENCE_ONLY", "reason": "IDENTITY_AND_TERMS_WITHOUT_VERIFIED_PRICE_OR_YIELD" },
+    { "source": "WORLD_BANK_IBRD", "market": "SUPRANATIONAL", "status": "REFERENCE_ONLY", "reason": "ISSUANCE_MASTER_WITHOUT_VERIFIED_PRICE_OR_YIELD" }
+  ]
+}

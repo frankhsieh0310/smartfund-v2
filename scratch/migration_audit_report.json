@@ -1,0 +1,1043 @@
+[
+  {
+    "migration": "20260729090000_add_production_scheduler_state",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "reason": "present in DB migration ledger (finished_at set)",
+    "inLedger": true
+  },
+  {
+    "migration": "20260729093000_add_daily_engine_lifecycle",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "reason": "present in DB migration ledger (finished_at set)",
+    "inLedger": true
+  },
+  {
+    "migration": "20260729100000_add_daily_completion_policy",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "reason": "present in DB migration ledger (finished_at set)",
+    "inLedger": true
+  },
+  {
+    "migration": "20260729110000_add_historical_market_lifecycle",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "reason": "present in DB migration ledger (finished_at set)",
+    "inLedger": true
+  },
+  {
+    "migration": "20260729120000_add_provider_symbol_mapping_registry",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "reason": "present in DB migration ledger (finished_at set)",
+    "inLedger": true
+  },
+  {
+    "migration": "20260730090000_add_stock_financial_facts",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "reason": "present in DB migration ledger (finished_at set)",
+    "inLedger": true
+  },
+  {
+    "migration": "20260801090000_exchange_aware_daily_scheduler",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "reason": "present in DB migration ledger (finished_at set)",
+    "inLedger": true
+  },
+  {
+    "migration": "20260805000000_add_global_index_platform",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "reason": "present in DB migration ledger (finished_at set)",
+    "inLedger": true
+  },
+  {
+    "migration": "20260805090000_global_crypto_platform",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "reason": "present in DB migration ledger (finished_at set)",
+    "inLedger": true
+  },
+  {
+    "migration": "20260805120000_global_fx_platform",
+    "status": "PARTIALLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 67,
+    "presentChecks": 60,
+    "missingDetails": [
+      "index fx_currencies_active_kind_idx on fx_currencies missing",
+      "index fx_pairs_classification_active_idx on fx_pairs missing",
+      "index fx_latest_quotes_quoted_at_idx on fx_latest_quotes missing",
+      "index fx_metrics_metric_observed_at_idx on fx_metrics missing",
+      "index fx_coverage_status_quality_status_idx on fx_coverage missing",
+      "index fx_work_items_status_next_run_at_priority_idx on fx_work_items missing",
+      "index fx_archive_manifests_status_range_end_idx on fx_archive_manifests missing"
+    ]
+  },
+  {
+    "migration": "20260805160000_global_etf_holdings",
+    "status": "PARTIALLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 48,
+    "presentChecks": 47,
+    "missingDetails": [
+      "table etf_holding_derived missing"
+    ]
+  },
+  {
+    "migration": "20260808154200_add_minimal_ipo_offerings",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 17,
+    "presentChecks": 17,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260808160000_four_asset_schema_gap_repair",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 92,
+    "presentChecks": 92,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260809000000_add_fund_share_class_identity",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 22,
+    "presentChecks": 22,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260809010000_add_fund_provider_mapping_verification_contract",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 3,
+    "presentChecks": 3,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260809020000_add_fund_holdings_disclosure_contract",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 4,
+    "presentChecks": 4,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260809030000_add_fund_documents",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 21,
+    "presentChecks": 21,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260809040000_add_fund_share_class_fees_terms",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 2,
+    "presentChecks": 2,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260809050000_add_fund_classifications",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 24,
+    "presentChecks": 24,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260809060000_add_fund_risk_metrics",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 10,
+    "presentChecks": 10,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260809070000_add_fund_moneydj_p0_contracts",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 28,
+    "presentChecks": 28,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260809093000_add_futures_positioning_observations",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 10,
+    "presentChecks": 10,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260809111500_add_company_guidance",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 21,
+    "presentChecks": 21,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260809160000_crypto_p0_professional_depth",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 21,
+    "presentChecks": 21,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260809161000_add_corporate_actions",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 18,
+    "presentChecks": 18,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260809162500_add_futures_canonical",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 23,
+    "presentChecks": 23,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260809163000_new_asset_schema_blocked_batch_v1",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 113,
+    "presentChecks": 113,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260809170000_add_options_canonical",
+    "status": "PARTIALLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 33,
+    "presentChecks": 32,
+    "missingDetails": [
+      "index option_observations_contract_id_observed_at_key on option_observations missing"
+    ]
+  },
+  {
+    "migration": "20260809170000_fx_forward_points_foundation",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 18,
+    "presentChecks": 18,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260809171000_add_securities_lending_observations",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 15,
+    "presentChecks": 15,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260809172000_add_etf_flows",
+    "status": "PARTIALLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 14,
+    "presentChecks": 13,
+    "missingDetails": [
+      "index etf_flows_etf_date_method_key on etf_flows missing"
+    ]
+  },
+  {
+    "migration": "20260809180000_global_fx_p0_depth",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 30,
+    "presentChecks": 30,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260809184500_add_market_breadth_observations",
+    "status": "PARTIALLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 13,
+    "presentChecks": 12,
+    "missingDetails": [
+      "index market_breadth_observations_market_observation_date_metric_type_key on market_breadth_observations missing"
+    ]
+  },
+  {
+    "migration": "20260809190000_add_treasury_fiscal_observations",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 18,
+    "presentChecks": 18,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260809193000_add_carbon_market_observations",
+    "status": "PARTIALLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 15,
+    "presentChecks": 14,
+    "missingDetails": [
+      "index carbon_market_observations_market_instrument_observation_date_metric_type_key on carbon_market_observations missing"
+    ]
+  },
+  {
+    "migration": "20260809195500_add_credit_derivative_observations",
+    "status": "PARTIALLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 17,
+    "presentChecks": 16,
+    "missingDetails": [
+      "index credit_derivative_observations_source_instrument_id_observation_date_metric_type_key on credit_derivative_observations missing"
+    ]
+  },
+  {
+    "migration": "20260809202000_add_shipping_market_observations",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 15,
+    "presentChecks": 15,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260809210000_add_sovereign_debt_observations",
+    "status": "PARTIALLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 20,
+    "presentChecks": 19,
+    "missingDetails": [
+      "index sovereign_debt_observations_country_metric_code_observ_key on sovereign_debt_observations missing"
+    ]
+  },
+  {
+    "migration": "20260809213000_add_energy_physical_observations",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 21,
+    "presentChecks": 21,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260809213000_add_mortgage_rate_observations",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 20,
+    "presentChecks": 20,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260809223000_global_index_p0_depth_recovery",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 12,
+    "presentChecks": 12,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260809230000_global_index_p0_structural_completion_v2",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 1,
+    "presentChecks": 1,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260809233000_currency_index_p0_depth_recovery",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 51,
+    "presentChecks": 51,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260810003000_global_index_constituents_p0",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "reason": "present in DB migration ledger (finished_at set)",
+    "inLedger": true
+  },
+  {
+    "migration": "20260810003000_insider_professional_depth",
+    "status": "PARTIALLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 30,
+    "presentChecks": 11,
+    "missingDetails": [
+      "table insiders missing",
+      "table insider_filings missing",
+      "insider_issuer_relationships.insider_id missing",
+      "insider_issuer_relationships.other_text missing",
+      "insider_issuer_relationships.effective_from missing",
+      "insider_issuer_relationships.effective_to missing",
+      "insider_issuer_relationships.created_at missing",
+      "insider_issuer_relationships.updated_at missing"
+    ]
+  },
+  {
+    "migration": "20260810003000_institutional_holdings_p0_depth_recovery",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 93,
+    "presentChecks": 93,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260810011000_institutional_holdings_mapping_cross_portfolio_v2",
+    "status": "CONFIRMED_NOT_APPLIED",
+    "inLedger": false,
+    "totalChecks": 28,
+    "presentChecks": 0,
+    "missingDetails": [
+      "table institutional_portfolio_overlap missing",
+      "table institutional_security_crowding missing",
+      "institutional_security_mapping_queue.raw_identifier (ALTER ADD) missing",
+      "institutional_security_mapping_queue.normalized_identifier (ALTER ADD) missing",
+      "institutional_security_mapping_queue.normalization_method (ALTER ADD) missing",
+      "institutional_security_mapping_queue.validation_status (ALTER ADD) missing",
+      "institutional_security_mapping_queue.security_id (ALTER ADD) missing",
+      "institutional_security_mapping_queue.mapping_method (ALTER ADD) missing"
+    ]
+  },
+  {
+    "migration": "20260810030000_global_ranking_engine_p0_depth_recovery",
+    "status": "CONFIRMED_NOT_APPLIED",
+    "inLedger": false,
+    "totalChecks": 18,
+    "presentChecks": 0,
+    "missingDetails": [
+      "table ranking_metric_contracts missing",
+      "table ranking_definitions missing",
+      "table ranking_universe_snapshots missing",
+      "table ranking_snapshots missing",
+      "table ranking_results missing",
+      "table ranking_work_items missing",
+      "index ranking_metric_contracts_asset_type_metric_code_metric_version_key on ranking_metric_contracts missing",
+      "index ranking_definitions_ranking_code_key on ranking_definitions missing"
+    ]
+  },
+  {
+    "migration": "20260810033000_index_constituent_mapping_provenance",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "reason": "present in DB migration ledger (finished_at set)",
+    "inLedger": true
+  },
+  {
+    "migration": "20260810083000_sovereign_debt_p0_depth",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 58,
+    "presentChecks": 58,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260810090000_bond_p0_professional_depth_recovery",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 134,
+    "presentChecks": 134,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260810090000_carbon_markets_p0_depth",
+    "status": "PARTIALLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 41,
+    "presentChecks": 40,
+    "missingDetails": [
+      "index carbon_market_observations_market_instrument_date_metric_auction_key on carbon_market_observations missing"
+    ]
+  },
+  {
+    "migration": "20260810090000_credit_derivatives_p0_depth",
+    "status": "PARTIALLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 62,
+    "presentChecks": 60,
+    "missingDetails": [
+      "index credit_derivative_market_quotes_instrument_id_tenor_as_of_source_key on credit_derivative_market_quotes missing",
+      "index credit_derivative_index_constituents_series_entity_effective_key on credit_derivative_index_constituents missing"
+    ]
+  },
+  {
+    "migration": "20260810090000_currency_index_provenance_closeout_v3",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 1,
+    "presentChecks": 1,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260810090000_electricity_p0_depth",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 31,
+    "presentChecks": 31,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260810090000_energy_physical_p0_professional_depth",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 39,
+    "presentChecks": 39,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260810090000_futures_positioning_depth",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 42,
+    "presentChecks": 42,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260810090000_sovereign_debt_v2_gate",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 9,
+    "presentChecks": 9,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260810091500_sovereign_debt_v2_contract_cleanup",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 0,
+    "presentChecks": 0,
+    "missingDetails": [],
+    "reason": "UPDATE-only migration (no schema objects); verified 0 rows remain matching the pre-migration WHERE clause"
+  },
+  {
+    "migration": "20260810100000_fx_forward_points_p0_semantic_recovery",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 96,
+    "presentChecks": 96,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260810100000_global_options_p0_depth",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "reason": "present in DB migration ledger (finished_at set)",
+    "inLedger": true
+  },
+  {
+    "migration": "20260810100000_mortgage_rates_professional_depth",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 45,
+    "presentChecks": 45,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260810100000_treasury_fiscal_professional_depth",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 67,
+    "presentChecks": 67,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260810110000_futures_positioning_analytics",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 45,
+    "presentChecks": 45,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260810110000_global_share_buyback_core_closeout_v3",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "reason": "present in DB migration ledger (finished_at set)",
+    "inLedger": true
+  },
+  {
+    "migration": "20260810120000_add_shipping_index_canonical_depth",
+    "status": "CONFIRMED_NOT_APPLIED",
+    "inLedger": false,
+    "totalChecks": 12,
+    "presentChecks": 0,
+    "missingDetails": [
+      "table shipping_indices missing",
+      "table shipping_index_observations missing",
+      "table shipping_index_derived missing",
+      "table shipping_index_methodologies missing",
+      "table shipping_index_routes missing",
+      "table shipping_index_events missing",
+      "table shipping_index_coverage missing",
+      "index shipping_indices_provider_segment_idx on shipping_indices missing"
+    ]
+  },
+  {
+    "migration": "20260810130000_global_analyst_estimates_p0_depth_recovery",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "reason": "present in DB migration ledger (finished_at set)",
+    "inLedger": true
+  },
+  {
+    "migration": "20260810143000_analyst_guidance_actual_link_v2",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "reason": "present in DB migration ledger (finished_at set)",
+    "inLedger": true
+  },
+  {
+    "migration": "20260810150000_commodity_futures_p0_depth_recovery",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 34,
+    "presentChecks": 34,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260810160000_analyst_guidance_closeout_v3",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "reason": "present in DB migration ledger (finished_at set)",
+    "inLedger": true
+  },
+  {
+    "migration": "20260810161000_analyst_guidance_closeout_v3_freshness",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "reason": "present in DB migration ledger (finished_at set)",
+    "inLedger": true
+  },
+  {
+    "migration": "20260810170000_commodity_futures_v3_contract_identity_closeout",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 16,
+    "presentChecks": 16,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260810171000_commodity_futures_v3_fail_closed_guards",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 0,
+    "presentChecks": 0,
+    "missingDetails": [],
+    "reason": "trigger function migration; verified commodity_contract_identity_guard trigger exists live"
+  },
+  {
+    "migration": "20260810183000_margin_short_p0_depth_recovery",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 36,
+    "presentChecks": 36,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260810190000_global_ipo_p0_depth_recovery",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 82,
+    "presentChecks": 82,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260810210000_global_etf_flows_p0_depth_recovery",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "reason": "present in DB migration ledger (finished_at set)",
+    "inLedger": true
+  },
+  {
+    "migration": "20260810210000_global_share_buyback_p0_depth_recovery",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "reason": "present in DB migration ledger (finished_at set)",
+    "inLedger": true
+  },
+  {
+    "migration": "20260810223000_global_share_buyback_program_semantics_v2",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "reason": "present in DB migration ledger (finished_at set)",
+    "inLedger": true
+  },
+  {
+    "migration": "20260810230000_global_insider_ownership_p0_depth_recovery",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "reason": "present in DB migration ledger (finished_at set)",
+    "inLedger": true
+  },
+  {
+    "migration": "20260810233000_global_insider_ownership_beneficial_proxy_denominator_v2",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "reason": "present in DB migration ledger (finished_at set)",
+    "inLedger": true
+  },
+  {
+    "migration": "20260810233000_global_watchlist_alert_p0_depth_recovery",
+    "status": "PARTIALLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 78,
+    "presentChecks": 73,
+    "missingDetails": [
+      "table watchlist_input_sources missing",
+      "index alert_rule_versions_rule_version_key on alert_rule_versions missing",
+      "index watchlist_input_sources_asset_service_key on watchlist_input_sources missing",
+      "index alert_occurrences_filter_idx on alert_occurrences missing",
+      "index alert_delivery_attempts_number_key on alert_delivery_attempts missing"
+    ]
+  },
+  {
+    "migration": "20260810234500_global_insider_ownership_core_readiness_closeout_v3",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "reason": "present in DB migration ledger (finished_at set)",
+    "inLedger": true
+  },
+  {
+    "migration": "20260811000000_global_money_supply_p0_depth_recovery",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 36,
+    "presentChecks": 36,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260811010000_equity_index_futures_p0_canary",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 21,
+    "presentChecks": 21,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260811013000_etf_distribution_events_additive",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "reason": "present in DB migration ledger (finished_at set)",
+    "inLedger": true
+  },
+  {
+    "migration": "20260814120000_shared_multilingual_identity",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 35,
+    "presentChecks": 35,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260816063000_macro_alfred_true_vintage_additive",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 2,
+    "presentChecks": 2,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260816103000_crypto_derivative_cross_domain_identity",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 19,
+    "presentChecks": 19,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260816124500_crypto_liquidation_stream",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 3,
+    "presentChecks": 3,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260816124510_bridge_existing_okx_liquidations",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 0,
+    "presentChecks": 0,
+    "missingDetails": [],
+    "reason": "one-time backfill INSERT; verified 13 matching rows exist live"
+  },
+  {
+    "migration": "20260816140000_industry_chain_official_layer",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "reason": "present in DB migration ledger (finished_at set)",
+    "inLedger": true
+  },
+  {
+    "migration": "20260816150000_stock_security_link",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "reason": "present in DB migration ledger (finished_at set)",
+    "inLedger": true
+  },
+  {
+    "migration": "20260816170000_global_dataset_runtime_registry",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "reason": "present in DB migration ledger (finished_at set)",
+    "inLedger": true
+  },
+  {
+    "migration": "20260816174000_futures_option_products",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 18,
+    "presentChecks": 18,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260816180000_add_security_regulatory_evidence",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "reason": "present in DB migration ledger (finished_at set)",
+    "inLedger": true
+  },
+  {
+    "migration": "20260816180000_futures_current_curve_analytics",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 33,
+    "presentChecks": 33,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260816181500_futures_margin_underlying_foundation",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 33,
+    "presentChecks": 33,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260816190000_add_fund_security_relationships",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 59,
+    "presentChecks": 59,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260816190000_futures_positioning_analytics_v2",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 22,
+    "presentChecks": 22,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260816190000_stock_guidance_pit_and_sec_identity_foundation",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "reason": "present in DB migration ledger (finished_at set)",
+    "inLedger": true
+  },
+  {
+    "migration": "20260816200000_add_fund_source_allocations",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 10,
+    "presentChecks": 10,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260816200000_taifex_futures_positioning",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 40,
+    "presentChecks": 40,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260816203000_stock_versioned_analytics_foundation",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "reason": "present in DB migration ledger (finished_at set)",
+    "inLedger": true
+  },
+  {
+    "migration": "20260816210000_add_moneydj_external_catalog",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 38,
+    "presentChecks": 38,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260816220000_add_moneydj_detail_history",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 29,
+    "presentChecks": 29,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260816221500_bond_index_authorized_public_observations",
+    "status": "PARTIALLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 17,
+    "presentChecks": 16,
+    "missingDetails": [
+      "index bond_index_observations_metric_type_observation_date_idx on bond_index_observations missing"
+    ]
+  },
+  {
+    "migration": "20260816223000_futures_yahoo_root_history",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 28,
+    "presentChecks": 28,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260816231500_futures_yahoo_full_universe",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 34,
+    "presentChecks": 34,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260816233000_etf_yahoo_observations",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 23,
+    "presentChecks": 23,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260816233000_futures_yahoo_current_quotes",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 25,
+    "presentChecks": 25,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260816235500_futures_global_technical",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 38,
+    "presentChecks": 38,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260817003000_bond_etf_research_analytics",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 12,
+    "presentChecks": 12,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260817003000_commodity_futures_technical_snapshots",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 24,
+    "presentChecks": 24,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260817010000_futures_yahoo_intraday_raw",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 4,
+    "presentChecks": 4,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260817013000_etf_history_ohlcv",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 9,
+    "presentChecks": 9,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260818194000_derivatives_options_phase1",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 2,
+    "presentChecks": 2,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260819090000_private_rls_phase1_plan",
+    "status": "CONFIRMED_NOT_APPLIED",
+    "inLedger": false,
+    "totalChecks": 0,
+    "presentChecks": 0,
+    "missingDetails": [],
+    "reason": "file explicitly marked \"PLAN ONLY: do not apply without staging validation\" in its own header comment - intentionally never executed"
+  },
+  {
+    "migration": "20260823133000_smart_watchlist_foundation",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "reason": "present in DB migration ledger (finished_at set)",
+    "inLedger": true
+  },
+  {
+    "migration": "20260823150000_smart_signal_alert_foundation",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "reason": "present in DB migration ledger (finished_at set)",
+    "inLedger": true
+  },
+  {
+    "migration": "20260824143000_portfolio_foundation",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "reason": "present in DB migration ledger (finished_at set)",
+    "inLedger": true
+  },
+  {
+    "migration": "20260826090000_public_rls_phase1_close_client_writes",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "reason": "present in DB migration ledger (finished_at set)",
+    "inLedger": true
+  },
+  {
+    "migration": "20260826093000_public_rls_phase2_close_client_reads",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "reason": "present in DB migration ledger (finished_at set)",
+    "inLedger": true
+  },
+  {
+    "migration": "20260829170000_etf_holdings_schema_reconciliation",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "reason": "present in DB migration ledger (finished_at set)",
+    "inLedger": true
+  },
+  {
+    "migration": "20260829173000_etf_allocation_schema",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "reason": "present in DB migration ledger (finished_at set)",
+    "inLedger": true
+  },
+  {
+    "migration": "20260831090000_etf_holdings_unknown_source_date",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 1,
+    "presentChecks": 1,
+    "missingDetails": []
+  },
+  {
+    "migration": "20260901093000_add_taiwan_institutional_daily",
+    "status": "CONFIRMED_FULLY_APPLIED",
+    "reason": "present in DB migration ledger (finished_at set)",
+    "inLedger": true
+  },
+  {
+    "migration": "earnings_calendar_platform_pending",
+    "status": "CONFIRMED_NOT_APPLIED",
+    "inLedger": false,
+    "totalChecks": 13,
+    "presentChecks": 0,
+    "missingDetails": [
+      "table earnings_calendar_events missing",
+      "table earnings_calendar_event_revisions missing",
+      "table earnings_actual_results missing",
+      "table earnings_estimates missing",
+      "table earnings_coverage missing",
+      "company_guidance.event_id (ALTER ADD) missing",
+      "index earnings_calendar_events_date_status_idx on earnings_calendar_events missing",
+      "index earnings_calendar_events_stock_period_idx on earnings_calendar_events missing"
+    ]
+  },
+  {
+    "migration": "ipo_calendar_platform_pending",
+    "status": "PARTIALLY_APPLIED",
+    "inLedger": false,
+    "totalChecks": 55,
+    "presentChecks": 17,
+    "missingDetails": [
+      "ipo_offerings.legal_entity_name missing",
+      "ipo_offerings.ticker missing",
+      "ipo_offerings.exchange missing",
+      "ipo_offerings.sector missing",
+      "ipo_offerings.industry missing",
+      "ipo_offerings.listing_type missing",
+      "ipo_offerings.date_certainty missing",
+      "ipo_offerings.offer_price missing"
+    ]
+  }
+]

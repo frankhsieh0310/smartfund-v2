@@ -61,20 +61,30 @@ if (!["NASDAQ", "NYSE", "AMEX"].includes(marketArg)) throw new Error(`UNSUPPORTE
 const MARKET = marketArg as Market;
 const INCREMENTAL = process.argv.includes("--incremental");
 const DRY_RUN = process.argv.includes("--dry-run");
-const JOB_ID = `official-financial-${MARKET.toLowerCase()}-${INCREMENTAL ? "incremental" : "historical"}`;
+const CANARY = process.argv.includes("--canary");
+const JOB_ID = `official-financial-${MARKET.toLowerCase()}-${CANARY ? "filing-canary" : INCREMENTAL ? "incremental" : "historical"}`;
 const LOCK_KEY = JOB_ID;
 const CONFLICT_JOB_ID = `official-financial-${MARKET.toLowerCase()}-${INCREMENTAL ? "historical" : "incremental"}`;
 const RUN_TYPE = INCREMENTAL ? "OFFICIAL_FINANCIAL_INCREMENTAL" : "OFFICIAL_FINANCIAL_HISTORICAL";
 const TARGET_DATE = new Date(`${new Date().toISOString().slice(0, 10)}T00:00:00.000Z`);
 const maxSymbolsArg = process.argv.find((arg) => arg.startsWith("--max-symbols="))?.slice("--max-symbols=".length);
 const parsedMaxSymbols = Number.parseInt(maxSymbolsArg ?? "25", 10);
+const CANARY_SYMBOL = process.argv.find((arg) => arg.startsWith("--symbol="))?.slice("--symbol=".length).trim().toUpperCase();
 if (!Number.isSafeInteger(parsedMaxSymbols) || parsedMaxSymbols < 1) throw new Error(`INVALID_MAX_SYMBOLS:${maxSymbolsArg ?? ""}`);
 const MAX_SYMBOLS = parsedMaxSymbols;
 const CHECKPOINT_EVERY = 5;
 const REQUEST_DELAY_MS = 250;
 const REQUEST_TIMEOUT_MS = 30_000;
 const RAW_ROOT = path.resolve("runtime", "official-financial", "us", MARKET.toLowerCase());
-const prisma = new PrismaClient({ datasources: { db: { url: process.env.DIRECT_URL ?? process.env.DATABASE_URL } } });
+function transactionPoolUrl(): string | undefined {
+  const source = process.env.DATABASE_URL ?? process.env.DIRECT_URL;
+  if (!source) return undefined;
+  const url = new URL(source.replace(":5432/", ":6543/"));
+  url.searchParams.set("pgbouncer", "true");
+  url.searchParams.set("connection_limit", "1");
+  return url.toString();
+}
+const prisma = new PrismaClient({ datasources: { db: { url: transactionPoolUrl() } } });
 const SEC_HEADERS = {
   Accept: "application/json",
   "User-Agent": process.env.SEC_USER_AGENT ?? "SmartFund data platform contact@smartfund.app",
@@ -189,7 +199,7 @@ function assertStockInScope(stock: Stock, stockIdSet: Set<string>): void {
 
 async function loadMarketUniverse(): Promise<{ stocks: Stock[]; stockIds: string[]; stockIdSet: Set<string> }> {
   const stocks = await prisma.stock.findMany({
-    where: { exchange: MARKET, isActive: true },
+    where: { exchange: MARKET, isActive: true, ...(CANARY_SYMBOL ? { ticker: CANARY_SYMBOL } : {}) },
     select: { id: true, ticker: true, companyName: true, exchange: true, isActive: true },
     orderBy: [{ ticker: "asc" }, { id: "asc" }],
   });
@@ -420,7 +430,14 @@ async function processStock(stock: Stock, cikByTicker: Map<string, string>, stoc
   const url = `https://data.sec.gov/api/xbrl/companyfacts/CIK${cik}.json`;
   const { payload, text } = await fetchJson<SecCompanyFacts>(url);
   const archive = await archiveJson(stock, cik, text);
-  const facts = normalizeCompanyFacts(stock, cik, payload, archive.sha256);
+  const normalizedFacts = normalizeCompanyFacts(stock, cik, payload, archive.sha256);
+  const latestCanaryFact = CANARY
+    ? normalizedFacts.filter((fact) => fact.filingDate).sort((a, b) => (b.filingDate ?? "").localeCompare(a.filingDate ?? ""))[0]
+    : null;
+  const latestCanaryAccession = latestCanaryFact?.sourceFactKey.split(":")[1];
+  const facts = CANARY && latestCanaryAccession
+    ? normalizedFacts.filter((fact) => fact.sourceFactKey.split(":")[1] === latestCanaryAccession)
+    : normalizedFacts;
   if (!facts.length) throw new Error("SEC_NO_CANONICAL_FACTS");
   const rows = await upsertFacts(facts, stockIdSet);
   await resolveFailure(stock, stockIdSet);
@@ -429,12 +446,25 @@ async function processStock(stock: Stock, cikByTicker: Map<string, string>, stoc
 
 async function loadCikMap(stocks: Stock[]): Promise<Map<string, string>> {
   const allowedTickers = new Set(stocks.map((stock) => normalizedTicker(stock.ticker)));
-  const { payload } = await fetchJson<Record<string, { ticker: string; cik_str: number }>>("https://www.sec.gov/files/company_tickers.json");
-  return new Map(
-    Object.values(payload)
-      .map((item) => [normalizedTicker(item.ticker), String(item.cik_str).padStart(10, "0")] as const)
-      .filter(([ticker]) => allowedTickers.has(ticker)),
+  const stockIds = stocks.map((stock) => stock.id);
+  const canonical = await prisma.$queryRawUnsafe<Array<{ ticker: string; cik: string }>>(
+    `SELECT l.ticker, e.identifier_value AS cik
+       FROM canonical_issuer_stock_links l
+       JOIN canonical_issuer_identifiers e ON e.id = l.issuer_identifier_id
+      WHERE l.stock_id = ANY($1::text[])
+        AND e.identifier_type = 'CIK'
+        AND l.verification_status = 'VERIFIED_OFFICIAL_EXACT'
+        AND (l.effective_to IS NULL OR l.effective_to > NOW())`,
+    stockIds,
   );
+  const result = new Map(canonical.map((item) => [normalizedTicker(item.ticker), item.cik.padStart(10, "0")]));
+  const missing = new Set([...allowedTickers].filter((ticker) => !result.has(ticker)));
+  if (missing.size === 0) return result;
+  const { payload } = await fetchJson<Record<string, { ticker: string; cik_str: number }>>("https://www.sec.gov/files/company_tickers.json");
+  for (const [ticker, cik] of Object.values(payload)
+      .map((item) => [normalizedTicker(item.ticker), String(item.cik_str).padStart(10, "0")] as const)
+      .filter(([ticker]) => missing.has(ticker))) result.set(ticker, cik);
+  return result;
 }
 
 function restoreSummary(details: Partial<RunSummary> | null, checkpoint: { processed: number; succeeded: number; failed: number } | null) {
@@ -546,7 +576,7 @@ async function main(): Promise<void> {
     const [cikByTicker, resume, recentFilingCiks] = await Promise.all([
       loadCikMap(marketScope.stocks),
       loadLifecycleResumeCheckpoint(prisma, JOB_ID, INCREMENTAL ? { targetTradeDate: TARGET_DATE, runType: RUN_TYPE } : undefined),
-      INCREMENTAL ? discoverRecentFilingCiks() : Promise.resolve(null),
+      INCREMENTAL && !CANARY ? discoverRecentFilingCiks() : Promise.resolve(null),
     ]);
     const stocks = recentFilingCiks
       ? marketScope.stocks.filter((stock) => {
@@ -573,7 +603,7 @@ async function main(): Promise<void> {
       }
     }
 
-    const reconciledFailures = await prisma.$executeRawUnsafe(
+    const reconciledFailures = CANARY ? 0 : await prisma.$executeRawUnsafe(
       `UPDATE production_scheduler_failures failure
           SET resolved = TRUE, resolved_at = NOW(), resolution_reason = 'SEC_FINANCIAL_FACTS_ALREADY_INGESTED'
         WHERE failure.job_id = $1 AND failure.resolved = FALSE
@@ -592,7 +622,7 @@ async function main(): Promise<void> {
       MARKET,
     );
     if (reconciledFailures > 0) console.log(JSON.stringify({ market: MARKET, retryRecovered: reconciledFailures, reason: "FACTS_ALREADY_INGESTED" }));
-    const invalidFactsRemoved = await removeInvalidPointInTimeFacts(marketScope.stockIds);
+    const invalidFactsRemoved = CANARY ? 0 : await removeInvalidPointInTimeFacts(marketScope.stockIds);
     if (invalidFactsRemoved > 0) console.log(JSON.stringify({ market: MARKET, invalidFactsRemoved, validation: "PERIOD_END_NOT_AFTER_FILING_DATE" }));
     let latestPeriod: string | null = null;
     let lastProcessedSymbol = resume?.last_symbol ?? null;

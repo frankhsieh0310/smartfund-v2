@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "source": "MONEYDJ_PUBLIC_DISCLOSURE",
+  "funds": [
+    {
+      "fundId": "016e165f-090e-47c7-9223-aba1bde5d498",
+      "shareClassId": null,
+      "moneydjCode": "TLZH6",
+      "canonicalName": "安聯美國收益基金-BT累積類股(美元)"
+    }
+  ]
+}

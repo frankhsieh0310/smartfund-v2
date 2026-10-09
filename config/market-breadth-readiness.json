@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "metricStates": [
+    { "metricCode": "ADVANCING_ISSUES", "state": "PRODUCTION_READY", "requiredInputs": ["TWSE official MI_INDEX"], "missingReason": null, "sourceState": "SOURCE_READY", "verificationState": "VERIFIED" },
+    { "metricCode": "DECLINING_ISSUES", "state": "PRODUCTION_READY", "requiredInputs": ["TWSE official MI_INDEX"], "missingReason": null, "sourceState": "SOURCE_READY", "verificationState": "VERIFIED" },
+    { "metricCode": "UNCHANGED_ISSUES", "state": "PRODUCTION_READY", "requiredInputs": ["TWSE official MI_INDEX"], "missingReason": null, "sourceState": "SOURCE_READY", "verificationState": "VERIFIED" },
+    { "metricCode": "ADVANCE_DECLINE_LINE", "state": "DERIVED_READY", "requiredInputs": ["ADVANCING_ISSUES", "DECLINING_ISSUES"], "missingReason": "Absolute level remains bounded-baseline until history target completes", "sourceState": "SOURCE_READY", "verificationState": "BOUNDED_BASELINE_DERIVED" },
+    { "metricCode": "BREADTH_RATIO", "state": "DERIVED_READY", "requiredInputs": ["ADVANCING_ISSUES", "DECLINING_ISSUES"], "missingReason": null, "sourceState": "SOURCE_READY", "verificationState": "FORMULA_VERIFIED" },
+    { "metricCode": "MCCLELLAN_OSCILLATOR", "state": "WARMUP_PENDING", "requiredInputs": ["39 ordered trading sessions of net advances"], "missingReason": "39-session EMA warm-up not yet complete", "sourceState": "SOURCE_READY", "verificationState": "FAIL_CLOSED_WARMUP" },
+    { "metricCode": "MCCLELLAN_SUMMATION", "state": "WARMUP_PENDING", "requiredInputs": ["validated MCCLELLAN_OSCILLATOR history"], "missingReason": "Oscillator warm-up and recursive state required", "sourceState": "SOURCE_READY", "verificationState": "FAIL_CLOSED_WARMUP" },
+    { "metricCode": "NEW_HIGH_52W", "state": "INPUT_CONSTRAINED", "requiredInputs": ["point-in-time eligible securities", "252-session adjusted price history"], "missingReason": "Approved security-level point-in-time input not in breadth scope", "sourceState": "INPUT_UNAVAILABLE", "verificationState": "CONSTRAINT_VERIFIED" },
+    { "metricCode": "NEW_LOW_52W", "state": "INPUT_CONSTRAINED", "requiredInputs": ["point-in-time eligible securities", "252-session adjusted price history"], "missingReason": "Approved security-level point-in-time input not in breadth scope", "sourceState": "INPUT_UNAVAILABLE", "verificationState": "CONSTRAINT_VERIFIED" },
+    { "metricCode": "UP_VOLUME", "state": "INPUT_CONSTRAINED", "requiredInputs": ["point-in-time eligible securities", "daily close direction", "daily volume"], "missingReason": "Complete canonical volume coverage not available in breadth scope", "sourceState": "INPUT_UNAVAILABLE", "verificationState": "CONSTRAINT_VERIFIED" },
+    { "metricCode": "DOWN_VOLUME", "state": "INPUT_CONSTRAINED", "requiredInputs": ["point-in-time eligible securities", "daily close direction", "daily volume"], "missingReason": "Complete canonical volume coverage not available in breadth scope", "sourceState": "INPUT_UNAVAILABLE", "verificationState": "CONSTRAINT_VERIFIED" },
+    { "metricCode": "TRIN", "state": "INPUT_CONSTRAINED", "requiredInputs": ["ADVANCING_ISSUES", "DECLINING_ISSUES", "UP_VOLUME", "DOWN_VOLUME"], "missingReason": "Volume breadth inputs unavailable", "sourceState": "INPUT_UNAVAILABLE", "verificationState": "CONSTRAINT_VERIFIED" },
+    { "metricCode": "UNCHANGED_VOLUME", "state": "NOT_APPLICABLE", "requiredInputs": [], "missingReason": "Optional extended metric; not required by Core P0 contract", "sourceState": "NOT_APPLICABLE", "verificationState": "CONTRACT_VERIFIED" }
+  ],
+  "marketStates": [
+    { "marketId": "TWSE", "state": "PRODUCTION_READY", "missingReason": "Professional history depth still running", "licenseState": "REVIEW_REQUIRED", "verificationState": "CANONICAL_READ_BACK_PASS" },
+    { "marketId": "NASDAQ", "state": "SOURCE_CONSTRAINED", "missingReason": "Canary not registered and approved production write path missing", "licenseState": "LICENSE_PENDING", "verificationState": "SOURCE_PENDING_CONFIRMED" },
+    { "marketId": "NYSE", "state": "LICENSE_CONSTRAINED", "missingReason": "Approved official breadth feed and redistribution rights pending", "licenseState": "LICENSE_PENDING", "verificationState": "CONSTRAINT_VERIFIED" },
+    { "marketId": "CBOE", "state": "LICENSE_CONSTRAINED", "missingReason": "Approved official breadth feed and redistribution rights pending", "licenseState": "LICENSE_PENDING", "verificationState": "CONSTRAINT_VERIFIED" },
+    { "marketId": "TPEX", "state": "LICENSE_CONSTRAINED", "missingReason": "Approved official breadth endpoint and terms pending", "licenseState": "LICENSE_PENDING", "verificationState": "CONSTRAINT_VERIFIED" },
+    { "marketId": "JPX", "state": "LICENSE_CONSTRAINED", "missingReason": "Approved official breadth endpoint and terms pending", "licenseState": "LICENSE_PENDING", "verificationState": "CONSTRAINT_VERIFIED" },
+    { "marketId": "HKEX", "state": "LICENSE_CONSTRAINED", "missingReason": "Approved official breadth endpoint and terms pending", "licenseState": "LICENSE_PENDING", "verificationState": "CONSTRAINT_VERIFIED" },
+    { "marketId": "KRX", "state": "LICENSE_CONSTRAINED", "missingReason": "Approved official breadth endpoint and terms pending", "licenseState": "LICENSE_PENDING", "verificationState": "CONSTRAINT_VERIFIED" },
+    { "marketId": "LSE", "state": "LICENSE_CONSTRAINED", "missingReason": "Approved official breadth endpoint and terms pending", "licenseState": "LICENSE_PENDING", "verificationState": "CONSTRAINT_VERIFIED" },
+    { "marketId": "EURONEXT", "state": "LICENSE_CONSTRAINED", "missingReason": "Approved official breadth endpoint and terms pending", "licenseState": "LICENSE_PENDING", "verificationState": "CONSTRAINT_VERIFIED" },
+    { "marketId": "ASX", "state": "LICENSE_CONSTRAINED", "missingReason": "Approved official breadth endpoint and terms pending", "licenseState": "LICENSE_PENDING", "verificationState": "CONSTRAINT_VERIFIED" },
+    { "marketId": "SGX", "state": "LICENSE_CONSTRAINED", "missingReason": "Approved official breadth endpoint and terms pending", "licenseState": "LICENSE_PENDING", "verificationState": "CONSTRAINT_VERIFIED" }
+  ]
+}

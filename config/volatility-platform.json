@@ -1,0 +1,30 @@
+{
+  "asset": "GLOBAL_VOLATILITY_INDEX",
+  "timezone": "UTC",
+  "pollMinutes": 15,
+  "retry": { "maxAttempts": 6, "baseDelayMs": 30000, "maxDelayMs": 900000 },
+  "intervals": ["1m", "5m", "15m", "30m", "60m", "4h", "1D", "1W", "1M"],
+  "officialRegistry": [
+    { "id": "cboe", "name": "Cboe Global Markets", "url": "https://www.cboe.com/tradable_products/vix/vix_historical_data/", "access": "PUBLIC" },
+    { "id": "eurex", "name": "Eurex / STOXX", "url": "https://www.stoxx.com/index-details?symbol=V2TX", "access": "PUBLIC" },
+    { "id": "jpx", "name": "Japan Exchange Group", "url": "https://www.jpx.co.jp/english/markets/indices/volatility/index.html", "access": "PUBLIC" },
+    { "id": "twse", "name": "Taiwan Stock Exchange", "url": "https://www.twse.com.tw/en/indices/taiex/mi-5min-hist.html", "access": "PUBLIC_WHEN_PUBLISHED" },
+    { "id": "nse-india", "name": "National Stock Exchange of India", "url": "https://www.nseindia.com/products-services/indices-india-vix-index", "access": "PUBLIC" },
+    { "id": "hkex", "name": "Hong Kong Exchanges and Clearing", "url": "https://www.hkex.com.hk/Market-Data/Securities-Prices/Equities/Equities-Quote", "access": "DISCOVERY_REQUIRED" }
+  ],
+  "universe": [
+    { "symbol": "VIX", "name": "Cboe Volatility Index", "provider": "cboe", "historicalUrl": "https://cdn.cboe.com/api/global/us_indices/daily_prices/VIX_History.csv" },
+    { "symbol": "VIX9D", "name": "Cboe 9-Day Volatility Index", "provider": "cboe", "historicalUrl": "https://cdn.cboe.com/api/global/us_indices/daily_prices/VIX9D_History.csv" },
+    { "symbol": "VIX3M", "name": "Cboe 3-Month Volatility Index", "provider": "cboe", "historicalUrl": "https://cdn.cboe.com/api/global/us_indices/daily_prices/VIX3M_History.csv" },
+    { "symbol": "VIX6M", "name": "Cboe 6-Month Volatility Index", "provider": "cboe", "historicalUrl": "https://cdn.cboe.com/api/global/us_indices/daily_prices/VIX6M_History.csv" },
+    { "symbol": "VIX1Y", "name": "Cboe 1-Year Volatility Index", "provider": "cboe", "historicalUrl": "https://cdn.cboe.com/api/global/us_indices/daily_prices/VIX1Y_History.csv" },
+    { "symbol": "VXN", "name": "Cboe Nasdaq-100 Volatility Index", "provider": "cboe", "historicalUrl": "https://cdn.cboe.com/api/global/us_indices/daily_prices/VXN_History.csv" },
+    { "symbol": "RVX", "name": "Cboe Russell 2000 Volatility Index", "provider": "cboe", "historicalUrl": "https://cdn.cboe.com/api/global/us_indices/daily_prices/RVX_History.csv" },
+    { "symbol": "VXD", "name": "Cboe DJIA Volatility Index", "provider": "cboe", "historicalUrl": "https://cdn.cboe.com/api/global/us_indices/daily_prices/VXD_History.csv" },
+    { "symbol": "VVIX", "name": "Cboe VIX Volatility Index", "provider": "cboe", "historicalUrl": "https://cdn.cboe.com/api/global/us_indices/daily_prices/VVIX_History.csv" },
+    { "symbol": "VSTOXX", "name": "EURO STOXX 50 Volatility Index", "provider": "eurex", "status": "OFFICIAL_DISCOVERY" },
+    { "symbol": "VNKY", "name": "Nikkei 225 Volatility Index", "provider": "jpx", "status": "OFFICIAL_DISCOVERY" },
+    { "symbol": "INDIA_VIX", "name": "India VIX", "provider": "nse-india", "status": "OFFICIAL_DISCOVERY" },
+    { "symbol": "TAIWAN_VIX", "name": "Taiwan VIX", "provider": "twse", "status": "OFFICIAL_WHEN_LEGALLY_AVAILABLE" }
+  ]
+}

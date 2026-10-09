@@ -20,6 +20,9 @@ export async function POST(request: Request) {
 
   if (b.all) {
     await q(`update consensus_inapp_notifications set is_read = true, read_at = now() where installation_id = $1 and not is_read`, installationId);
+    await q(`update alert_occurrences a set acknowledged_at=now(),acknowledged_by=r.owner_user_id
+      from alert_rules_p0 r,consensus_push_installations i
+      where a.rule_id=r.id and i.installation_id=$1 and r.owner_user_id=i.preferences->>'verified_owner_user_id' and a.acknowledged_at is null`,installationId);
   } else {
     const ids = Array.isArray(b.ids) ? (b.ids as unknown[]).map(String).slice(0, 200) : [];
     if (ids.length === 0) return Response.json({ ok: false, error: "ids or all required" }, { status: 400, headers: cors });

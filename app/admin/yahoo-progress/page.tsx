@@ -57,6 +57,12 @@ type ProgressResponse = {
   ETF_DISTRIBUTION_BACKFILL: DistributionBackfillSection;
   FUND_FULL_SWEEP: FundSweepSection;
   FUND_REPAIR: RepairSection;
+  FUND_DISTRIBUTION_BACKFILL: {
+    records: number; funds_with_data: number; latest_event_date: string | null;
+    processed: number; succeeded: number; failed: number; remaining: number | null;
+    checkpoint: unknown; last_completed_at: string | null; currently_running: boolean;
+    workflow_status: "RUNNING" | "IDLE" | "STALLED" | "COMPLETED" | "ERROR"; job_id: string | null;
+  };
   SYSTEM: { windows_required: boolean; manual_operation_required: boolean; cloud_only: boolean; last_updated_at: string };
 };
 
@@ -201,6 +207,27 @@ function DistributionBackfillCard({ d }: { d: DistributionBackfillSection }) {
   );
 }
 
+function FundDistributionCard({ d }: { d: ProgressResponse["FUND_DISTRIBUTION_BACKFILL"] }) {
+  return (
+    <div style={{ background: "#fff", border: "1px solid #e2e5ea", borderRadius: 12, padding: 16 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+        <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>Fund 配息／回補</h3>
+        <StatusPill status={d.currently_running ? "RUNNING" : d.workflow_status} />
+      </div>
+      <div style={{ fontSize: 13, color: "#444", display: "grid", gap: 4 }}>
+        <div>已收錄基金：{n(d.funds_with_data)} 檔</div>
+        <div>配息紀錄：{n(d.records)} 筆</div>
+        <div>processed / succeeded / failed：{n(d.processed)} / {n(d.succeeded)} / {n(d.failed)}</div>
+        <div>remaining：{n(d.remaining)}</div>
+        <div>checkpoint：{d.checkpoint == null ? "—" : String(d.checkpoint)}</div>
+        <div>最後完成：{fmtTs(d.last_completed_at)}</div>
+        <div>最新配息事件：{d.latest_event_date ? new Date(d.latest_event_date).toLocaleDateString("zh-TW") : "—"}</div>
+        <div>目前執行：{d.currently_running ? "是" : "否"}{d.job_id ? `（${d.job_id}）` : ""}</div>
+      </div>
+    </div>
+  );
+}
+
 function SlicesTable({ rows }: { rows: SliceRow[] }) {
   if (!rows.length) return <div style={{ color: "#888", fontSize: 13 }}>尚無紀錄</div>;
   return (
@@ -319,6 +346,7 @@ export default function YahooProgressPage() {
             <span>ETF 配息回補 <StatusPill status={data.ETF_DISTRIBUTION_BACKFILL.workflow_status} /></span>
             <span>Fund 全量匯入 <StatusPill status={data.FUND_FULL_SWEEP.workflow_status} /></span>
             <span>Fund Repair <StatusPill status={data.FUND_REPAIR.pending > 0 ? "RUNNING" : "COMPLETED"} /></span>
+            <span>Fund 配息／回補 <StatusPill status={data.FUND_DISTRIBUTION_BACKFILL.currently_running ? "RUNNING" : data.FUND_DISTRIBUTION_BACKFILL.workflow_status} /></span>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 14, marginTop: 16 }}>
             <SweepCard
@@ -336,6 +364,7 @@ export default function YahooProgressPage() {
               pending={data.ETF_REPAIR.pending} notAvailable={data.ETF_REPAIR.not_available}
               lastRunAt={data.ETF_REPAIR.last_run_at}
             />
+            <FundDistributionCard d={data.FUND_DISTRIBUTION_BACKFILL} />
             <DistributionBackfillCard d={data.ETF_DISTRIBUTION_BACKFILL} />
             <SweepCard
               title="Yahoo 基金全量匯入"

@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "asset": "COMMODITY",
+  "priority": 9,
+  "idleOnly": true,
+  "maxDbConcurrency": 1,
+  "backoffMs": 21600000,
+  "ownershipPolicy": "ONE_PHYSICAL_DATASET_ONE_INGESTION_OWNER_MANY_CONSUMERS",
+  "existingOwners": [
+    { "layer": "EIA_SHARED_OFFICIAL_LAYER", "owner": "ENERGY_PHYSICAL_SUPPLY_DEMAND", "consumers": ["COMMODITY","MACRO"], "download": false },
+    { "layer": "FUTURES_CFTC_COT_LAYER", "owner": "FUTURES", "consumers": ["COMMODITY","FX"], "download": false },
+    { "layer": "EXCHANGE_WAREHOUSE_INVENTORY_LAYER", "owner": "FUTURES", "consumers": ["COMMODITY"], "download": false },
+    { "layer": "ICE_FUTURES_LAYER", "owner": "FUTURES", "consumers": ["COMMODITY"], "download": false },
+    { "layer": "FAO_SHARED_LAYER", "owner": "COMMODITY_OFFICIAL_COMPLETION", "consumers": ["COMMODITY","MACRO"], "download": false },
+    { "layer": "UN_COMTRADE_SHARED_LAYER", "owner": "SHARED_UN_TRADE", "consumers": ["COMMODITY","MACRO"], "download": false },
+    { "layer": "UNCTAD_SHARED_LAYER", "owner": "COMMODITY_BACKGROUND_PUBLIC_EXPANSION", "consumers": ["COMMODITY","MACRO"], "download": true }
+  ],
+  "workItems": [
+    { "id": "JODI_OIL", "source": "JODI", "owner": "JODI_SHARED_OFFICIAL_LAYER", "adapter": "JODI_ANNUAL_CSV_CATALOG", "catalog": "https://www.jodidata.org/oil/database/data-downloads.aspx", "state": "PENDING_IDLE", "scope": "primary and secondary oil; all countries/products/flows; 2002-present", "sourcePriority": 30 },
+    { "id": "JODI_GAS", "source": "JODI", "owner": "JODI_SHARED_OFFICIAL_LAYER", "adapter": "JODI_ANNUAL_CSV_CATALOG", "catalog": "https://www.jodidata.org/gas/database/data-downloads.aspx", "state": "PENDING_IDLE", "scope": "production, consumption, imports, exports, storage; all countries/history", "sourcePriority": 30 },
+    { "id": "UNCTAD_MARITIME", "source": "UNCTAD", "owner": "UNCTAD_SHARED_LAYER", "adapter": "UNCTAD_DATA_API", "catalog": "https://unctadstat.unctad.org/", "state": "PENDING_IDLE", "scope": "seaborne trade, port throughput, fleet, registration and connectivity; full supported history", "sourcePriority": 40 },
+    { "id": "PUBLIC_PORTS", "source": "OFFICIAL_PORT_AUTHORITIES", "owner": "UNCTAD_SHARED_LAYER", "adapter": "OFFICIAL_PORT_CATALOG", "state": "PENDING_IDLE", "scope": "bounded common adapter; Taiwan, Singapore MPA and other official structured national port statistics", "sourcePriority": 50 },
+    { "id": "NOAA_CPC_ONI", "source": "NOAA_CPC", "owner": "CLIMATE_COMMODITY_RISK_SHARED_LAYER", "adapter": "NOAA_FIXED_WIDTH_INDEX", "url": "https://www.cpc.ncep.noaa.gov/data/indices/oni.ascii.txt", "state": "PENDING_IDLE", "scope": "ONI observed index and deterministic ENSO phase; complete published history", "sourcePriority": 40 },
+    { "id": "NOAA_CPC_FORECASTS", "source": "NOAA_CPC", "owner": "CLIMATE_COMMODITY_RISK_SHARED_LAYER", "adapter": "NOAA_FORECAST_VINTAGE", "catalog": "https://www.cpc.ncep.noaa.gov/products/predictions/long_range/", "state": "PENDING_IDLE", "scope": "ENSO probability and seasonal temperature/precipitation outlook; observation and forecast grains separated", "sourcePriority": 40 },
+    { "id": "US_DROUGHT", "source": "US_DROUGHT_MONITOR", "owner": "CLIMATE_COMMODITY_RISK_SHARED_LAYER", "adapter": "OFFICIAL_DROUGHT_TABULAR", "catalog": "https://droughtmonitor.unl.edu/DmData/DataDownload.aspx", "state": "PENDING_IDLE", "scope": "severity, area percent, region and date; structured data only", "sourcePriority": 40 },
+    { "id": "FAO_GIEWS", "source": "FAO_GIEWS", "owner": "FAO_SHARED_LAYER", "adapter": "FAO_GIEWS_PUBLICATION_EVENTS", "catalog": "https://www.fao.org/giews/", "state": "PENDING_IDLE", "scope": "country, commodity, warning/event, date, actual/forecast and source document id", "sourcePriority": 40 },
+    { "id": "OPEC_MOMR", "source": "OPEC", "owner": "OPEC_PUBLIC_LAYER", "adapter": "OPEC_STANDARD_PUBLIC_TABLES", "catalog": "https://www.opec.org/opec_web/en/publications/338.htm", "state": "PENDING_IDLE", "scope": "standard high-value MOMR tables only; report vintages preserved; no full-document NLP", "sourcePriority": 40 },
+    { "id": "IEA_PUBLIC", "source": "IEA_PUBLIC", "owner": "IEA_PUBLIC_LAYER", "adapter": "IEA_PUBLIC_STRUCTURED_ONLY", "catalog": "https://www.iea.org/data-and-statistics", "state": "PENDING_IDLE", "scope": "genuinely free structured unique indicators and public summaries only", "sourcePriority": 50 },
+    { "id": "IEA_LICENSED", "source": "IEA_LICENSED", "owner": null, "adapter": "NONE", "state": "EXTERNALLY_BLOCKED_LICENSE", "scope": "licensed databases are excluded", "sourcePriority": 99 },
+    { "id": "EU_ETS_PUBLIC", "source": "EU_COMMISSION", "owner": "GLOBAL_CARBON_MARKETS", "adapter": "SHARED_PUBLIC_CARBON", "catalog": "https://climate.ec.europa.eu/eu-action/eu-emissions-trading-system-eu-ets_en", "state": "PENDING_IDLE", "scope": "official public metadata and auctions; ICE market data consumed from Futures owner", "sourcePriority": 40 },
+    { "id": "CALIFORNIA_AUCTIONS", "source": "CALIFORNIA_ARB", "owner": "GLOBAL_CARBON_MARKETS", "adapter": "CARB_STANDARD_AUCTION_TABLES", "catalog": "https://ww2.arb.ca.gov/our-work/programs/cap-and-trade-program/auction-information", "state": "PENDING_IDLE", "scope": "auction date/type/vintage/offered/sold/settlement/reserve/bid coverage; full public history", "sourcePriority": 40 },
+    { "id": "COPERNICUS", "source": "COPERNICUS", "owner": "CLIMATE_COMMODITY_RISK_SHARED_LAYER", "adapter": "BOUNDED_DERIVED_PRODUCTS_ONLY", "catalog": "https://cds.climate.copernicus.eu/", "state": "INPUT_GATED_DATA_VOLUME_GATED", "scope": "bounded high-value derived soil moisture, precipitation, vegetation, drought and anomaly products only", "sourcePriority": 90 }
+  ],
+  "dedupKey": ["canonical_metric","commodity","geography","period","unit","grain"],
+  "lineageFields": ["source_lineage","source_priority","reconciliation_status"],
+  "localePolicy": "ACTIVE_SHARED_LOCALE_MODEL"
+}

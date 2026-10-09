@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "assetClass": "GLOBAL_EQUITY_INDEX_FUTURES",
+  "policy": "OFFICIAL_EXCHANGE_ONLY",
+  "venues": [
+    {"id":"CME","name":"CME Group","baseUrl":"https://www.cmegroup.com","publicData":"https://www.cmegroup.com/markets/equities.html"},
+    {"id":"ICE","name":"ICE Futures Europe","baseUrl":"https://www.ice.com","publicData":"https://www.ice.com/products/Futures-Options/Equity-Derivatives"},
+    {"id":"EUREX","name":"Eurex","baseUrl":"https://www.eurex.com","publicData":"https://www.eurex.com/ex-en/markets/idx"},
+    {"id":"SGX","name":"Singapore Exchange","baseUrl":"https://www.sgx.com","publicData":"https://www.sgx.com/derivatives/delayed-prices-futures"},
+    {"id":"JPX","name":"Japan Exchange Group","baseUrl":"https://www.jpx.co.jp","publicData":"https://www.jpx.co.jp/english/markets/derivatives/index.html"},
+    {"id":"HKEX","name":"Hong Kong Exchanges and Clearing","baseUrl":"https://www.hkex.com.hk","publicData":"https://www.hkex.com.hk/Market-Data/Futures-and-Options-Prices"},
+    {"id":"TAIFEX","name":"Taiwan Futures Exchange","baseUrl":"https://www.taifex.com.tw","publicData":"https://www.taifex.com.tw/enl/eng3/futDailyMarketReport"},
+    {"id":"KRX","name":"Korea Exchange","baseUrl":"https://global.krx.co.kr","publicData":"https://global.krx.co.kr/main/main.jsp"},
+    {"id":"OSE","name":"Osaka Exchange","baseUrl":"https://www.jpx.co.jp","publicData":"https://www.jpx.co.jp/english/markets/derivatives/index.html"},
+    {"id":"ASX","name":"Australian Securities Exchange","baseUrl":"https://www.asx.com.au","publicData":"https://www.asx.com.au/markets/trade-our-derivatives-market/derivatives-market-prices"},
+    {"id":"NSE","name":"National Stock Exchange of India","baseUrl":"https://www.nseindia.com","publicData":"https://www.nseindia.com/market-data/equity-derivatives-watch"},
+    {"id":"BSE","name":"BSE India","baseUrl":"https://www.bseindia.com","publicData":"https://www.bseindia.com/markets/Derivatives/DeriReports/DeriMarketWatch.aspx"},
+    {"id":"B3","name":"B3","baseUrl":"https://www.b3.com.br","publicData":"https://www.b3.com.br/en_us/market-data-and-indices/"},
+    {"id":"MEXDER","name":"MexDer","baseUrl":"https://www.mexder.com.mx","publicData":"https://www.mexder.com.mx/wb3/wb/MEX/quotes"}
+  ]
+}

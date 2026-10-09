@@ -1,0 +1,17 @@
+{
+  "asset": "GLOBAL_CORPORATE_ACTIONS",
+  "version": 1,
+  "sources": [
+    { "id": "SEC", "country": "US", "baseUrl": "https://www.sec.gov", "endpoint": "https://www.sec.gov/files/company_tickers_exchange.json", "kind": "issuer_registry" },
+    { "id": "NYSE", "country": "US", "baseUrl": "https://www.nyse.com", "endpoint": "https://www.nyse.com/api/corporate-actions/v1/events", "kind": "corporate_actions" },
+    { "id": "NASDAQ", "country": "US", "baseUrl": "https://www.nasdaqtrader.com", "endpoint": "https://www.nasdaqtrader.com/Trader.aspx?id=MarketSystemStatus", "kind": "official_notice" },
+    { "id": "LSE", "country": "GB", "baseUrl": "https://www.londonstockexchange.com", "endpoint": "https://www.londonstockexchange.com/news?tab=news-explorer", "kind": "official_notice" },
+    { "id": "JPX", "country": "JP", "baseUrl": "https://www.jpx.co.jp", "endpoint": "https://www.jpx.co.jp/english/listing/stocks/new/index.html", "kind": "official_notice" },
+    { "id": "HKEX", "country": "HK", "baseUrl": "https://www.hkex.com.hk", "endpoint": "https://www.hkexnews.hk/index.htm", "kind": "official_notice" },
+    { "id": "TWSE", "country": "TW", "baseUrl": "https://www.twse.com.tw", "endpoint": "https://openapi.twse.com.tw/v1/opendata/t187ap04_L", "kind": "open_data" },
+    { "id": "TPEx", "country": "TW", "baseUrl": "https://www.tpex.org.tw", "endpoint": "https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap04_O", "kind": "open_data" },
+    { "id": "SGX", "country": "SG", "baseUrl": "https://www.sgx.com", "endpoint": "https://api2.sgx.com/sites/default/files/reports/" , "kind": "official_notice" },
+    { "id": "ASX", "country": "AU", "baseUrl": "https://www.asx.com.au", "endpoint": "https://www.asx.com.au/asx/1/company/announcements", "kind": "official_notice" },
+    { "id": "KRX", "country": "KR", "baseUrl": "https://global.krx.co.kr", "endpoint": "https://global.krx.co.kr/main/main.jsp", "kind": "official_notice" }
+  ]
+}

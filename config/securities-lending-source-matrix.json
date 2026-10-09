@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "markets": [
+    { "market": "TWSE", "status": "PUBLIC_OFFICIAL", "authority": "Taiwan Stock Exchange", "sourceUrl": "https://www.twse.com.tw/rwd/en/marginTrading/TWT93U", "metrics": ["SHORT_BALANCE", "SECURITIES_BORROWING_BALANCE", "SECURITIES_BORROWING_VOLUME", "SECURITIES_RETURN_VOLUME"], "frequency": "DAILY", "grain": "SECURITY_DATE_METRIC", "historyAvailableFrom": "2019-12-23", "termsState": "PUBLIC_ENDPOINT", "licenseState": "PUBLIC", "parserState": "PRODUCTION", "semantic": "margin short balance and borrowed-securities sold statistics remain distinct", "machineReadable": true },
+    { "market": "FINRA", "status": "PUBLIC_SHORT_VOLUME_ONLY", "metric": "SHORT_VOLUME", "semantic": "off-exchange short-sale transaction volume; not short interest", "machineReadable": true },
+    { "market": "NYSE", "status": "PUBLIC_SHORT_INTEREST_AVAILABLE", "metric": "SHORT_INTEREST_SHARES", "frequency": "BIWEEKLY", "machineReadable": "SOURCE_DISCOVERY_REQUIRED" },
+    { "market": "NASDAQ", "status": "PUBLIC_SHORT_INTEREST_AVAILABLE", "metric": "SHORT_INTEREST_SHARES", "frequency": "BIWEEKLY", "machineReadable": "SOURCE_DISCOVERY_REQUIRED" },
+    { "market": "JPX", "status": "PUBLIC_BALANCE_AVAILABLE", "metric": "SHORT_BALANCE", "frequency": "WEEKLY_OR_RESTRICTED_DAILY", "machineReadable": true },
+    { "market": "HKEX", "status": "PUBLIC_SHORT_VOLUME_ONLY", "metric": "SHORT_VOLUME", "machineReadable": "SOURCE_DISCOVERY_REQUIRED" },
+    { "market": "ASX", "status": "PUBLIC_SHORT_INTEREST_AVAILABLE", "metric": "SHORT_INTEREST_SHARES", "machineReadable": "SOURCE_DISCOVERY_REQUIRED" },
+    { "market": "LSE", "status": "NO_COMPARABLE_DATA", "metric": null, "note": "FCA public net short positions are holder disclosure events, not security-level securities-lending balances." },
+    { "market": "KRX", "status": "SOURCE_PENDING", "metric": null },
+    { "market": "SGX", "status": "LICENSE_REQUIRED", "metric": "BORROW_FEE" },
+    { "market": "CANADA", "status": "SOURCE_PENDING", "metric": null },
+    { "market": "EUROPE", "status": "SOURCE_PENDING", "metric": null }
+  ]
+}

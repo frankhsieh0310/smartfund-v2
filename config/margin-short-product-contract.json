@@ -1,0 +1,8 @@
+{
+  "securityDetail": ["identity", "market", "MARGIN_FINANCING_BALANCE", "SHORT_BALANCE", "SECURITIES_BORROWING_BALANCE", "availableOptionalMetrics", "1D_CHANGE", "1W_CHANGE", "1M_CHANGE", "history", "marketPercentile", "source", "publicationDate", "freshness", "coverage"],
+  "marketDetail": ["marketIdentity", "MARGIN_FINANCING_BALANCE", "SHORT_BALANCE", "SECURITIES_BORROWING_BALANCE", "changes", "history", "coverage", "source", "freshness"],
+  "search": ["ticker", "company", "market", "country", "metricAvailability"],
+  "screener": ["market", "marginBalance", "shortBalance", "shortRatio", "1W_CHANGE", "1M_CHANGE", "percentile", "historyAvailability"],
+  "compare": { "sameMarket": "compatible source metrics", "crossMarket": ["normalizedRatio", "percentageChange", "percentile"] },
+  "ranking": ["largestMarginBalance", "largestShortBalance", "largestShortRatio", "largest1WIncrease", "largest1MIncrease"]
+}

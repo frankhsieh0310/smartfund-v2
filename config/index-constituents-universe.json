@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "asset": "GLOBAL_INDEX_CONSTITUENTS",
+  "indices": [
+    {"id":"SP500","name":"S&P 500","provider":"sp-global","region":"US","priority":1},
+    {"id":"NASDAQ100","name":"Nasdaq-100","provider":"nasdaq","region":"US","priority":1},
+    {"id":"DOW30","name":"Dow Jones Industrial Average","provider":"sp-global","region":"US","priority":1},
+    {"id":"RUSSELL1000","name":"Russell 1000","provider":"lseg-ftse-russell","region":"US","priority":1},
+    {"id":"RUSSELL2000","name":"Russell 2000","provider":"lseg-ftse-russell","region":"US","priority":1},
+    {"id":"MSCI_WORLD","name":"MSCI World","provider":"msci","region":"GLOBAL","priority":1},
+    {"id":"MSCI_ACWI","name":"MSCI ACWI","provider":"msci","region":"GLOBAL","priority":1},
+    {"id":"MSCI_EM","name":"MSCI Emerging Markets","provider":"msci","region":"GLOBAL","priority":1},
+    {"id":"FTSE100","name":"FTSE 100","provider":"lseg-ftse-russell","region":"GB","priority":1},
+    {"id":"EURO_STOXX50","name":"EURO STOXX 50","provider":"stoxx","region":"EU","priority":1},
+    {"id":"DAX40","name":"DAX 40","provider":"deutsche-boerse","region":"DE","priority":1},
+    {"id":"CAC40","name":"CAC 40","provider":"euronext","region":"FR","priority":1},
+    {"id":"IBEX35","name":"IBEX 35","provider":"bolsa-madrid","region":"ES","priority":1},
+    {"id":"NIKKEI225","name":"Nikkei 225","provider":"nikkei","region":"JP","priority":1},
+    {"id":"TOPIX","name":"TOPIX","provider":"jpx","region":"JP","priority":1},
+    {"id":"HANG_SENG","name":"Hang Seng Index","provider":"hkex","region":"HK","priority":1},
+    {"id":"HSCEI","name":"Hang Seng China Enterprises Index","provider":"hkex","region":"HK","priority":1},
+    {"id":"CSI300","name":"CSI 300","provider":"csindex","region":"CN","priority":1},
+    {"id":"KOSPI200","name":"KOSPI 200","provider":"krx","region":"KR","priority":1},
+    {"id":"TW50","name":"FTSE TWSE Taiwan 50","provider":"twse","region":"TW","priority":1},
+    {"id":"TW_MID_CAP100","name":"FTSE TWSE Taiwan Mid-Cap 100","provider":"twse","region":"TW","priority":1}
+  ],
+  "constituentFields": ["ticker","isin","weight","shares","country","sector","industry","freeFloat","marketCap","entryDate","exitDate"],
+  "identity": "indexId + effectiveDate + ISIN; fallback indexId + effectiveDate + normalized ticker"
+}

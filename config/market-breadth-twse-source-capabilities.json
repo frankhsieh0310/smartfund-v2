@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "source": "TWSE Official MI_INDEX type=MS",
+  "endpoint": "https://www.twse.com.tw/rwd/zh/afterTrading/MI_INDEX",
+  "publicationSemantics": "Official after-trading daily market statistics; no forward fill and no synthetic non-trading dates.",
+  "deepestVerifiedBreadthDate": "2020-01-02",
+  "probes": {
+    "2020-01-02": "BREADTH_TABLE_AVAILABLE",
+    "2019-12-02": "BREADTH_TABLE_NOT_EXPOSED",
+    "2010-01-04": "BREADTH_TABLE_NOT_EXPOSED",
+    "2000-01-04": "ENDPOINT_DATE_UNSUPPORTED"
+  },
+  "metrics": [
+    { "metricCode": "ADVANCING_ISSUES", "status": "OFFICIAL_READY", "unit": "ISSUES", "semantics": "Stock column of advancing securities; parenthetical value is limit-up count" },
+    { "metricCode": "DECLINING_ISSUES", "status": "OFFICIAL_READY", "unit": "ISSUES", "semantics": "Stock column of declining securities; parenthetical value is limit-down count" },
+    { "metricCode": "UNCHANGED_ISSUES", "status": "OFFICIAL_READY", "unit": "ISSUES", "semantics": "Stock column of unchanged securities" },
+    { "metricCode": "LIMIT_UP_ISSUES", "status": "OFFICIAL_READY", "unit": "ISSUES", "semantics": "Parenthetical stock count in advancing row" },
+    { "metricCode": "LIMIT_DOWN_ISSUES", "status": "OFFICIAL_READY", "unit": "ISSUES", "semantics": "Parenthetical stock count in declining row" },
+    { "metricCode": "NO_TRADE_ISSUES", "status": "OFFICIAL_READY", "unit": "ISSUES", "semantics": "Stock column of no-trade row" },
+    { "metricCode": "NO_COMPARISON_ISSUES", "status": "OFFICIAL_READY", "unit": "ISSUES", "semantics": "Stock column of no-comparison row" },
+    { "metricCode": "TOTAL_MARKET_VOLUME", "status": "OFFICIAL_READY", "unit": "SHARES", "semantics": "Total row across published categories; not up/down volume" },
+    { "metricCode": "TOTAL_MARKET_VALUE", "status": "OFFICIAL_READY", "unit": "TWD", "semantics": "Total transaction value across published categories" },
+    { "metricCode": "NEW_HIGH_52W", "status": "INPUT_CONSTRAINED", "unit": "ISSUES", "semantics": "Not exposed by verified MI_INDEX type=MS breadth table" },
+    { "metricCode": "NEW_LOW_52W", "status": "INPUT_CONSTRAINED", "unit": "ISSUES", "semantics": "Not exposed by verified MI_INDEX type=MS breadth table" },
+    { "metricCode": "UP_VOLUME", "status": "INPUT_CONSTRAINED", "unit": "SHARES", "semantics": "Total market volume is not directional volume" },
+    { "metricCode": "DOWN_VOLUME", "status": "INPUT_CONSTRAINED", "unit": "SHARES", "semantics": "Total market volume is not directional volume" },
+    { "metricCode": "UNCHANGED_VOLUME", "status": "INPUT_CONSTRAINED", "unit": "SHARES", "semantics": "Not exposed by verified source" }
+  ]
+}

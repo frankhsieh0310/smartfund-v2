@@ -1,0 +1,10 @@
+import 'dotenv/config';
+import pg from 'pg';
+const client = new pg.Client({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
+await client.connect();
+const q = async (sql, params = []) => (await client.query(sql, params)).rows;
+const secId = (await q(`select security_id from insider_ownership_eligible_issuers where ticker='AAPL'`))[0].security_id;
+console.log('secId', secId);
+console.log('in securities?', await q(`select id, ticker, name, exchange from securities where id=$1`, [secId]));
+console.log('in stocks?', await q(`select id, ticker, company_name from stocks where id=$1`, [secId]));
+await client.end();

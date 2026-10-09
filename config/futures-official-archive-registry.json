@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "asset": "FUTURES",
+  "maxDbConcurrency": 1,
+  "boundedBatchSize": 1,
+  "scheduleMs": 21600000,
+  "sources": [
+    {"exchange":"CME","roots":["SR3","SR1","GE"],"identityUrl":"https://www.cmegroup.com/ftp/pub/pub/fprf/csv/cmeg.fut.prf.csv","historyUrl":"https://www.cmegroup.com/market-data/daily-settlements.html","classification":"SOURCE_TERMS_BLOCKED","reason":"OFFICIAL_AUTOMATED_ACCESS_PROHIBITION_RETURNED_BY_SOURCE","adapter":null},
+    {"exchange":"CBOT","roots":["ZQ","ZB","ZN","ZF","ZT","ZC","ZW","LE"],"identityUrl":"https://www.cmegroup.com/ftp/pub/pub/fprf/csv/cmeg.fut.prf.csv","historyUrl":"https://www.cmegroup.com/market-data/daily-settlements.html","classification":"SOURCE_TERMS_BLOCKED","reason":"OFFICIAL_AUTOMATED_ACCESS_PROHIBITION_RETURNED_BY_SOURCE","adapter":null},
+    {"exchange":"COMEX","roots":["GC","SI","HG"],"identityUrl":"https://www.cmegroup.com/ftp/pub/pub/fprf/csv/cmeg.fut.prf.csv","historyUrl":"https://www.cmegroup.com/market-data/daily-settlements.html","classification":"SOURCE_TERMS_BLOCKED","reason":"OFFICIAL_AUTOMATED_ACCESS_PROHIBITION_RETURNED_BY_SOURCE","adapter":null},
+    {"exchange":"NYMEX","roots":["CL","NG","HO","RB"],"identityUrl":"https://www.cmegroup.com/ftp/pub/pub/fprf/csv/cmeg.fut.prf.csv","historyUrl":"https://www.cmegroup.com/market-data/daily-settlements.html","classification":"SOURCE_TERMS_BLOCKED","reason":"OFFICIAL_AUTOMATED_ACCESS_PROHIBITION_RETURNED_BY_SOURCE","adapter":null},
+    {"exchange":"CME_GROUP","roots":["ES","NQ","YM","RTY"],"identityUrl":"https://www.cmegroup.com/ftp/pub/pub/fprf/csv/cmeg.fut.prf.csv","historyUrl":"https://www.cmegroup.com/market-data/daily-settlements.html","classification":"SOURCE_TERMS_BLOCKED","reason":"OFFICIAL_AUTOMATED_ACCESS_PROHIBITION_RETURNED_BY_SOURCE","adapter":null},
+    {"exchange":"TAIFEX","roots":["TX"],"identityUrl":"https://www.taifex.com.tw/cht/3/futDailyMarketReport","historyUrl":"https://www.taifex.com.tw/cht/3/dlFutPrevious30DaysSalesData","classification":"VERIFIED_PUBLIC","reason":"OFFICIAL_CURRENT_AND_RECENT_CONTRACT_LEVEL_FILES;NO_DEEP_EXPIRED_ARCHIVE_CURSOR","adapter":"EXISTING_TAIFEX_DAILY"},
+    {"exchange":"OSE","roots":["NK225","TOA3M"],"identityUrl":"https://www.jpx.co.jp/english/markets/derivatives/settlement-price/","historyUrl":"https://www.jpx.co.jp/english/markets/paid-info-derivatives/historical/01.html","classification":"LICENSE_CONSTRAINED","reason":"PUBLIC_SETTLEMENT_IS_CURRENT;DEEP_OHLC_HISTORY_IS_PAID_J_QUANTS_DATACUBE","adapter":null},
+    {"exchange":"TOCOM","roots":["JGB"],"identityUrl":"https://www.jpx.co.jp/english/markets/derivatives/settlement-price/","historyUrl":"https://www.jpx.co.jp/english/markets/paid-info-derivatives/historical/01.html","classification":"LICENSE_CONSTRAINED","reason":"PUBLIC_SETTLEMENT_IS_CURRENT;DEEP_OHLC_HISTORY_IS_PAID_J_QUANTS_DATACUBE","adapter":null},
+    {"exchange":"EUREX","roots":["FSR3"],"identityUrl":"https://www.eurex.com/ex-en/data/trading-files/product-parameter-files","historyUrl":"https://www.eurex.com/ex-en/data/statistics/market-statistics-online","classification":"OFFICIAL_BUT_NOT_MACHINE_ACCESSIBLE","reason":"OFFICIAL_FILES_DISCOVERED;NO_STABLE_CONTRACT_ARCHIVE_CURSOR_VERIFIED","adapter":null},
+    {"exchange":"ICE","roots":["DX","BRN","G","KC","SB","CT"],"identityUrl":"https://www.ice.com/products/Futures-Options","historyUrl":"https://www.ice.com/marketdata/reports","classification":"LICENSE_CONSTRAINED","reason":"DEEP_CONTRACT_HISTORY_REQUIRES_LICENSED_MARKET_DATA","adapter":null},
+    {"exchange":"ICE_FUTURES_EUROPE","roots":["I","SO3"],"identityUrl":"https://www.ice.com/products/Futures-Options","historyUrl":"https://www.ice.com/marketdata/reports","classification":"LICENSE_CONSTRAINED","reason":"DEEP_CONTRACT_HISTORY_REQUIRES_LICENSED_MARKET_DATA","adapter":null},
+    {"exchange":"LME","roots":["AH","CA","NI","ZS"],"identityUrl":"https://www.lme.com/en/market-data/reports-and-data","historyUrl":"https://www.lme.com/en/market-data/accessing-market-data","classification":"LICENSE_CONSTRAINED","reason":"CONTRACT_MODEL_AND_DEEP_HISTORY_REQUIRE_LICENSED_REFERENCE_DATA","adapter":null},
+    {"exchange":"KCBT","roots":["KE"],"identityUrl":"https://www.cmegroup.com/ftp/pub/pub/fprf/csv/cmeg.fut.prf.csv","historyUrl":"https://www.cmegroup.com/market-data/daily-settlements.html","classification":"SOURCE_TERMS_BLOCKED","reason":"LEGACY_VENUE_ALIAS_REQUIRES_CME_REFERENCE_FILE;AUTOMATED_ACCESS_PROHIBITED","adapter":null}
+  ]
+}

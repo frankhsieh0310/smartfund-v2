@@ -1,0 +1,18 @@
+{
+  "asset":"GLOBAL_REIT","version":1,
+  "relations":{
+    "reit_entities":{"grain":"reitId","required":["reitId","officialName","ticker","exchange","country","currency","reitType","status","source","verificationStatus","licenseStatus"]},
+    "reit_fundamentals":{"grain":"reitId+reportingPeriod+asOfDate","fields":["navPerShare","netAssetValue","navType","ffo","ffoPerShare","ffoType","affo","affoPerShare","affoType","calculationDefinition","revenue","netIncome","totalAssets","totalDebt","netDebt","sharesOutstanding","occupancyRate","portfolioScope","sameStoreNOIGrowth","debtToAssets","netDebtToEBITDA","interestCoverage","fixedRateDebtPercent","weightedAverageInterestRate","weightedAverageDebtMaturity","source","sourceRecordId","publicationDate","verificationStatus"]},
+    "reit_distributions":{"grain":"reitId+exDate+distributionType","fields":["recordDate","payDate","amount","currency","distributionType","source","sourceRecordId","verificationStatus"]},
+    "reit_property_exposures":{"grain":"reitId+asOfDate+exposureType+exposureName","types":["PROPERTY_TYPE","COUNTRY","REGION","TENANT","ASSET","OTHER"]},
+    "reit_properties":{"grain":"propertyId+reitId+asOfDate","fields":["propertyName","propertyType","country","city","ownershipPercent","grossAssetValue","occupancy","source"]}
+  },
+  "semantics":{"ffoTypes":["NAREIT_FFO","COMPANY_REPORTED_FFO","NORMALIZED_FFO","OTHER"],"affoTypes":["COMPANY_REPORTED_AFFO","OTHER"],"navTypes":["REPORTED_NAV","ACCOUNTING_NAV","CONSENSUS_NAV","DERIVED_NAV","OTHER"],"distributionTypes":["ORDINARY","SPECIAL","CAPITAL_GAIN","RETURN_OF_CAPITAL","OTHER"],"derivedMetrics":["TRAILING_12M_DISTRIBUTION","TRAILING_YIELD","FFO_PAYOUT_RATIO","AFFO_PAYOUT_RATIO","PRICE_TO_FFO","PRICE_TO_AFFO","PRICE_TO_NAV","NAV_PREMIUM_DISCOUNT","RETURN_1D","RETURN_1W","RETURN_1M","RETURN_3M","RETURN_6M","RETURN_YTD","RETURN_1Y","RETURN_3Y","RETURN_5Y","RETURN_10Y","VOLATILITY_30D","VOLATILITY_90D","VOLATILITY_1Y","MAX_DRAWDOWN_1Y","MAX_DRAWDOWN_3Y","MAX_DRAWDOWN_5Y","52_WEEK_HIGH","52_WEEK_LOW"]},
+  "linkMethods":["EXACT_ISIN","EXACT_FIGI","EXACT_SEDOL","EXACT_CUSIP","EXACT_MIC_PLUS_TICKER","EXACT_VERIFIED_PROVIDER_ID"],
+  "provenanceFields":["source","sourceType","sourceRecordId","sourceUrl","asOfDate","publicationDate","ingestedAt","calculatedAt","verificationStatus","licenseStatus"],
+  "detailContract":["identity","exchangeCountryCurrency","reitType","propertyType","price","priceHistory","marketCap","nav","ffo","affo","occupancy","leverage","distributions","yieldAndPayout","propertyAndCountryExposure","valuation","performance","risk","freshness","provenance","missingSourceLicenseState"],
+  "searchContract":["ticker","name","country","exchange","reitType","propertyType"],
+  "screenerContract":["country","propertyType","marketCap","dividendYield","priceToFFO","priceToAFFO","priceToNAV","occupancy","leverage","return1Y","volatility","drawdown"],
+  "compareContract":["price","marketCap","nav","ffo","affo","yield","payout","occupancy","leverage","propertyExposure","returns","risk","currency"],
+  "rankingContract":{"metrics":["dividendYield","ffoYield","affoYield","navPremiumDiscount","occupancy","leverage","return1Y","volatility"],"missingValue":"UNAVAILABLE"}
+}

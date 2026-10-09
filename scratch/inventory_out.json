@@ -1,0 +1,344 @@
+[
+  {
+    "cat": "TEST_VERIFY",
+    "count": 482,
+    "codes": [
+      "M",
+      "??"
+    ],
+    "samples": [
+      "M scripts/data/daily/run-production-macro-daily.ts",
+      "M scripts/data/daily/run-production-yahoo-daily.ts",
+      "M scripts/data/daily/test-exchange-calendar.ts",
+      "M scripts/data/financial/backfill-taiwan-official-financial.ts",
+      "M scripts/data/financial/run-production-sec-financial.ts",
+      "M scripts/data/historical/run-production-jpx-historical.ts",
+      "M scripts/data/historical/run-production-sp500-historical.ts",
+      "M scripts/data/production/run-production-cron.ts",
+      "M scripts/data/technical/run-production-stock-technical.ts",
+      "?? scripts/data/alerts/",
+      "?? scripts/data/analyst-estimates/",
+      "?? scripts/data/asset-expansion-v1/"
+    ]
+  },
+  {
+    "cat": "SHARED_DATA_MODEL",
+    "count": 207,
+    "codes": [
+      "M",
+      "??"
+    ],
+    "samples": [
+      "M lib/data-platform/providers/ProviderRegistry.ts",
+      "M lib/hooks/useWatchlist.ts",
+      "M lib/prisma.ts",
+      "M lib/services/dataProviders/yahoo/yahooClient.ts",
+      "M prisma/schema.prisma",
+      "?? db/",
+      "?? lib/alerts/",
+      "?? lib/auth/",
+      "?? lib/data-platform/archive/",
+      "?? lib/data-platform/compare/",
+      "?? lib/data-platform/futures/",
+      "?? lib/data-platform/industry-chain/"
+    ]
+  },
+  {
+    "cat": "OTHER",
+    "count": 183,
+    "codes": [
+      "M",
+      "??"
+    ],
+    "samples": [
+      "M config/asset-provider-registry.json",
+      "M config/data-daily-schedule.json",
+      "M config/production-yahoo-daily-jobs.json",
+      "M docs/data/worker-ownership.md",
+      "M scripts/update-etf.ts",
+      "?? SmartFund.docx",
+      "?? SmartMatch_2026-08-19_æ¨æ¥è¨è«åçå®æ´æ´ç.docx",
+      "?? SmartMatch_2026-08-19_æ¨æ¥è¨è«åçå®æ´æ´ç.pdf",
+      "?? SmartMatch_è¡é·ç­ç¥å°è©±æ´ç (Autosaved).docx",
+      "?? SmartMatch_è¡é·ç­ç¥å°è©±æ´ç.docx",
+      "?? config/bis-shared-official-registry.json",
+      "?? config/bond-production-event-strategies.json"
+    ]
+  },
+  {
+    "cat": "ETF",
+    "count": 91,
+    "codes": [
+      "??"
+    ],
+    "samples": [
+      "?? config/etf-flows-coverage.json",
+      "?? config/etf-flows-official-registry.json",
+      "?? config/etf-flows-universe.json",
+      "?? config/etf-full-universe-product-expansion.json",
+      "?? config/etf-holding-security-resolver.json",
+      "?? config/etf-holdings-coverage.json",
+      "?? config/etf-holdings-official-registry.json",
+      "?? config/etf-holdings-p0-contract.json",
+      "?? config/etf-holdings-platform.json",
+      "?? config/etf-public-source-expansion.json",
+      "?? config/etf-regulatory-identity-routing.json",
+      "?? config/etf-yahoo-full-universe.json"
+    ]
+  },
+  {
+    "cat": "FUND",
+    "count": 78,
+    "codes": [
+      "??"
+    ],
+    "samples": [
+      "?? config/fund-classification-registry.json",
+      "?? config/fund-documents-registry.json",
+      "?? config/fund-fees-terms-registry.json",
+      "?? config/fund-holdings-sec-registry.json",
+      "?? config/fund-moneydj-disclosure-canary.json",
+      "?? config/fund-moneydj-p0-canary.json",
+      "?? config/fund-risk-performance-canary.json",
+      "?? config/global-fund-background-public-expansion.json",
+      "?? config/global-fund-free-public-source-mesh.json",
+      "?? config/moneydj-fund-public-layer.json",
+      "?? scripts/data/daily/fund-master-holdings-update.ts",
+      "?? scripts/data/global-fund/"
+    ]
+  },
+  {
+    "cat": "WEB_UI",
+    "count": 51,
+    "codes": [
+      "M",
+      "??",
+      "!!"
+    ],
+    "samples": [
+      "M app/api/etfs/route.ts",
+      "M app/compare/page.tsx",
+      "M app/etf/page.tsx",
+      "M app/funds/page.tsx",
+      "M app/globals.css",
+      "M app/markets/page.tsx",
+      "M app/page.tsx",
+      "M app/pricing/page.tsx",
+      "M app/quiz/page.tsx",
+      "M components/home/CriteriaBuilderSection.tsx",
+      "M components/home/FeaturesSection.tsx",
+      "M components/home/HeroSection.tsx"
+    ]
+  },
+  {
+    "cat": "UNKNOWN",
+    "count": 34,
+    "codes": [
+      "M",
+      "??",
+      "!!"
+    ],
+    "samples": [
+      "M .gitignore",
+      "M railway.toml",
+      "?? .codex-edit-capability-check",
+      "?? .gitattributes",
+      "?? Dockerfile.bond",
+      "?? artifacts/",
+      "?? bond-desktop-ownership.json",
+      "?? bond-desktop-package-manifest.json",
+      "?? bond-to-desktop.json",
+      "?? public/hero-smartfund-skyline-v3.png",
+      "?? public/images/",
+      "?? railway.bond.toml"
+    ]
+  },
+  {
+    "cat": "CONSENSUS",
+    "count": 30,
+    "codes": [
+      "??"
+    ],
+    "samples": [
+      "?? app/api/consensus/",
+      "?? config/consensus/",
+      "?? lib/consensus/"
+    ]
+  },
+  {
+    "cat": "CLOUD_INGESTION",
+    "count": 28,
+    "codes": [
+      "??"
+    ],
+    "samples": [
+      "?? app/api/cron/"
+    ]
+  },
+  {
+    "cat": "SHARED_API",
+    "count": 27,
+    "codes": [
+      "M",
+      "??"
+    ],
+    "samples": [
+      "M app/api/stocks/[symbol]/route.ts",
+      "?? app/api/alerts/",
+      "?? app/api/compare/",
+      "?? app/api/funds/",
+      "?? app/api/government-yields/",
+      "?? app/api/home-market-overview/",
+      "?? app/api/home-rankings/",
+      "?? app/api/industry-chain/",
+      "?? app/api/me/",
+      "?? app/api/mobile/",
+      "?? app/api/portfolios/",
+      "?? app/api/push/"
+    ]
+  },
+  {
+    "cat": "INDEX",
+    "count": 24,
+    "codes": [
+      "??"
+    ],
+    "samples": [
+      "?? config/equity-index-futures-coverage.json",
+      "?? config/equity-index-futures-official-registry.json",
+      "?? config/equity-index-futures-p0-data-contract.json",
+      "?? config/equity-index-futures-production-scheduler.json",
+      "?? config/equity-index-futures-universe.json",
+      "?? config/equity-index-futures-venue-source-matrix.json",
+      "?? config/fixed-income-bond-index-material-catalog.json",
+      "?? config/fixed-income-bond-index-public-universe.json",
+      "?? config/global-index-depth-orchestrator.json",
+      "?? config/global-index-pit-revision-contract.json",
+      "?? config/global-index-public-expansion.json",
+      "?? config/global-index-rebalance-calendar-contract.json"
+    ]
+  },
+  {
+    "cat": "WORKFLOW_CORE",
+    "count": 22,
+    "codes": [
+      "??"
+    ],
+    "samples": [
+      "?? app/api/workflows/",
+      "?? app/workflows/",
+      "?? lib/cloud-ingestion/",
+      "?? lib/cron/"
+    ]
+  },
+  {
+    "cat": "INSIDER",
+    "count": 15,
+    "codes": [
+      "??"
+    ],
+    "samples": [
+      "?? config/global-insider-coverage.json",
+      "?? config/global-insider-official-registry.json",
+      "?? config/global-insider-ownership-product-contracts.json",
+      "?? config/global-insider-ownership-source-matrix.json",
+      "?? config/global-insider-product-contract.json",
+      "?? config/global-insider-scheduler.json",
+      "?? config/global-insider-source-matrix.json",
+      "?? config/global-insider-universe.json",
+      "?? scripts/data/insider-ownership/",
+      "?? scripts/data/insider/"
+    ]
+  },
+  {
+    "cat": "FUNDAMENTALS",
+    "count": 11,
+    "codes": [
+      "??"
+    ],
+    "samples": [
+      "?? config/analyst-estimates-coverage.json",
+      "?? config/analyst-estimates-jurisdiction-matrix.json",
+      "?? config/analyst-estimates-official-registry.json",
+      "?? config/analyst-estimates-priority-universe.json",
+      "?? config/analyst-estimates-provider-license-register.json",
+      "?? config/analyst-estimates-scheduler.json",
+      "?? config/analyst-estimates-universe.json",
+      "?? config/earnings-calendar-platform.json",
+      "?? config/earnings-calendar-production-canary-plan.json",
+      "?? config/earnings-calendar-source-state-matrix.json",
+      "?? lib/fundamentals/"
+    ]
+  },
+  {
+    "cat": "FX",
+    "count": 10,
+    "codes": [
+      "??"
+    ],
+    "samples": [
+      "?? config/cross-currency-basis-source-registry.json",
+      "?? config/currency-index-p0-contract.json",
+      "?? config/currency-index-platform.json",
+      "?? config/fx-investing-public-source.json",
+      "?? config/fx-official-fixing-sources.json",
+      "?? config/fx-platform.json",
+      "?? config/fx-reserves-professional-contract.json",
+      "?? config/fx-reserves-registry.json",
+      "?? config/global-fx-background-public-expansion.json",
+      "?? config/global-fx-depth-orchestrator.json"
+    ]
+  },
+  {
+    "cat": "INSTITUTIONAL",
+    "count": 9,
+    "codes": [
+      "??"
+    ],
+    "samples": [
+      "?? config/institutional-holdings-platform.json",
+      "?? scripts/data/institutional-holdings/"
+    ]
+  },
+  {
+    "cat": "DEPLOYMENT_CONFIG",
+    "count": 5,
+    "codes": [
+      "M",
+      "??"
+    ],
+    "samples": [
+      "M next.config.ts",
+      "M package-lock.json",
+      "M package.json",
+      "?? .vercelignore",
+      "?? vercel.json"
+    ]
+  },
+  {
+    "cat": "MOVEMENT_RADAR",
+    "count": 2,
+    "codes": [
+      "??"
+    ],
+    "samples": [
+      "?? app/movement-radar/",
+      "?? components/movement-radar/"
+    ]
+  }
+]
+TOTAL_ENTRIES_SCANNED: 678
+TOTAL_FILES_COUNTED: 1309
+EXCLUDED_SCRATCH_TOPLEVEL_ENTRIES: 11 [
+  'review-output/SMARTFUND_VS_TRADINGVIEW_FULL_PRODUCT_DATA_AND_RESEARCH_GAP_AUDIT_01.md',
+  'review-output/global-stock-maximum-professional-recovery-v2.md',
+  'review-output/migration-ledger-reconciliation-2026-08-10.md',
+  'runtime-status/',
+  'runtime/',
+  'scratch/',
+  '.next/',
+  '.scratch/',
+  '.swc/',
+  '.vercel/',
+  'node_modules/'
+]

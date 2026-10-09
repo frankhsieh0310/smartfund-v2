@@ -1,0 +1,280 @@
+{
+  "version": 1,
+  "asset": "GLOBAL_COMMODITY",
+  "layer": "L0",
+  "generatedAt": "2026-08-04",
+  "policies": {
+    "officialFirst": true,
+    "yahooRole": "VALIDATION_ONLY",
+    "historicalStarted": false,
+    "prismaChanges": false,
+    "migrationChanges": false
+  },
+  "reasonCodes": [
+    "SOURCE_NOT_PROVIDED",
+    "BLOCKED_LICENSE",
+    "BLOCKED_AUTH",
+    "NETWORK_TIMEOUT",
+    "PARSE_FAILURE",
+    "NOT_APPLICABLE",
+    "INSUFFICIENT_INPUT",
+    "RETRY_PENDING"
+  ],
+  "sources": [
+    {
+      "id": "EIA",
+      "institution": "U.S. Energy Information Administration",
+      "officialWebsite": "https://www.eia.gov/",
+      "country": "US",
+      "updateFrequency": "DAILY_TO_ANNUAL",
+      "datasets": [
+        "EIA_PETROLEUM_PRICES",
+        "EIA_WEEKLY_PETROLEUM",
+        "EIA_NATURAL_GAS",
+        "EIA_ELECTRICITY"
+      ],
+      "license": "PUBLIC_WITH_API_KEY",
+      "api": "https://api.eia.gov/v2/",
+      "bulkFile": "https://www.eia.gov/opendata/bulkfiles.php",
+      "metadataEndpoint": "https://api.eia.gov/v2/",
+      "status": "REGISTERED",
+      "official": true
+    },
+    {
+      "id": "IEA",
+      "institution": "International Energy Agency",
+      "officialWebsite": "https://www.iea.org/data-and-statistics",
+      "country": "INTL",
+      "updateFrequency": "MONTHLY_TO_ANNUAL",
+      "datasets": [],
+      "license": "MIXED_REVIEW_REQUIRED",
+      "api": null,
+      "bulkFile": "https://www.iea.org/data-and-statistics/data-tools",
+      "metadataEndpoint": "https://www.iea.org/data-and-statistics",
+      "status": "REGISTERED",
+      "official": true
+    },
+    {
+      "id": "OPEC",
+      "institution": "Organization of the Petroleum Exporting Countries",
+      "officialWebsite": "https://www.opec.org/opec_web/en/publications/202.htm",
+      "country": "INTL",
+      "updateFrequency": "MONTHLY_ANNUAL",
+      "datasets": [
+        "OPEC_MOMR"
+      ],
+      "license": "PUBLICATION_REUSE_REVIEW_REQUIRED",
+      "api": null,
+      "bulkFile": "https://www.opec.org/opec_web/en/publications/202.htm",
+      "metadataEndpoint": "https://www.opec.org/opec_web/en/data_graphs/40.htm",
+      "status": "REGISTERED",
+      "official": true
+    },
+    {
+      "id": "LBMA",
+      "institution": "London Bullion Market Association",
+      "officialWebsite": "https://www.lbma.org.uk/prices-and-data",
+      "country": "GB",
+      "updateFrequency": "DAILY_MONTHLY",
+      "datasets": [
+        "LBMA_PRICES"
+      ],
+      "license": "BENCHMARK_LICENSE_REVIEW_REQUIRED",
+      "api": null,
+      "bulkFile": "https://www.lbma.org.uk/prices-and-data",
+      "metadataEndpoint": "https://www.lbma.org.uk/prices-and-data",
+      "status": "REGISTERED",
+      "official": true
+    },
+    {
+      "id": "WGC",
+      "institution": "World Gold Council",
+      "officialWebsite": "https://www.gold.org/goldhub/data",
+      "country": "INTL",
+      "updateFrequency": "DAILY_TO_QUARTERLY",
+      "datasets": [],
+      "license": "TERMS_REVIEW_REQUIRED",
+      "api": null,
+      "bulkFile": "https://www.gold.org/goldhub/data",
+      "metadataEndpoint": "https://www.gold.org/goldhub/data",
+      "status": "REGISTERED",
+      "official": true
+    },
+    {
+      "id": "LME",
+      "institution": "London Metal Exchange",
+      "officialWebsite": "https://www.lme.com/en/Market-data",
+      "country": "GB",
+      "updateFrequency": "DAILY",
+      "datasets": [
+        "LME_MARKET_WAREHOUSE"
+      ],
+      "license": "COMMERCIAL_LICENSE_REVIEW_REQUIRED",
+      "api": null,
+      "bulkFile": "https://www.lme.com/en/Market-data/Reports-and-data",
+      "metadataEndpoint": "https://www.lme.com/en/Market-data",
+      "status": "REGISTERED",
+      "official": true
+    },
+    {
+      "id": "CME",
+      "institution": "CME Group / COMEX",
+      "officialWebsite": "https://www.cmegroup.com/market-data.html",
+      "country": "US",
+      "updateFrequency": "INTRADAY_DAILY",
+      "datasets": [
+        "CME_SETTLEMENTS"
+      ],
+      "license": "COMMERCIAL_LICENSE_REVIEW_REQUIRED",
+      "api": null,
+      "bulkFile": "https://www.cmegroup.com/market-data/settlements.html",
+      "metadataEndpoint": "https://www.cmegroup.com/market-data.html",
+      "status": "REGISTERED",
+      "official": true
+    },
+    {
+      "id": "USDA_NASS",
+      "institution": "USDA National Agricultural Statistics Service",
+      "officialWebsite": "https://www.nass.usda.gov/",
+      "country": "US",
+      "updateFrequency": "WEEKLY_TO_ANNUAL",
+      "datasets": [
+        "USDA_QUICK_STATS"
+      ],
+      "license": "PUBLIC_WITH_API_KEY",
+      "api": "https://quickstats.nass.usda.gov/api",
+      "bulkFile": "https://www.nass.usda.gov/Quick_Stats/",
+      "metadataEndpoint": "https://quickstats.nass.usda.gov/",
+      "status": "REGISTERED",
+      "official": true
+    },
+    {
+      "id": "USDA_FAS",
+      "institution": "USDA Foreign Agricultural Service",
+      "officialWebsite": "https://apps.fas.usda.gov/psdonline/",
+      "country": "US",
+      "updateFrequency": "MONTHLY",
+      "datasets": [
+        "USDA_PSD"
+      ],
+      "license": "PUBLIC",
+      "api": "https://apps.fas.usda.gov/PSDOnlineDataServices/",
+      "bulkFile": "https://apps.fas.usda.gov/psdonline/downloads/psd_alldata_csv.zip",
+      "metadataEndpoint": "https://apps.fas.usda.gov/psdonline/",
+      "status": "REGISTERED",
+      "official": true
+    },
+    {
+      "id": "FAOSTAT",
+      "institution": "Food and Agriculture Organization of the United Nations",
+      "officialWebsite": "https://www.fao.org/faostat/",
+      "country": "INTL",
+      "updateFrequency": "ANNUAL",
+      "datasets": [
+        "FAOSTAT_CROPS_LIVESTOCK"
+      ],
+      "license": "CC_BY_4_0_SUBJECT_TO_DATASET",
+      "api": "https://fenixservices.fao.org/faostat/api/v1/",
+      "bulkFile": "https://bulkdownloads.fao.org/",
+      "metadataEndpoint": "https://www.fao.org/faostat/en/#data",
+      "status": "REGISTERED",
+      "official": true
+    },
+    {
+      "id": "USGS_NMIC",
+      "institution": "U.S. Geological Survey National Minerals Information Center",
+      "officialWebsite": "https://www.usgs.gov/centers/national-minerals-information-center/commodity-statistics-and-information",
+      "country": "US",
+      "updateFrequency": "MONTHLY_ANNUAL",
+      "datasets": [
+        "USGS_MINERAL_STATS"
+      ],
+      "license": "US_PUBLIC_DOMAIN",
+      "api": null,
+      "bulkFile": "https://www.usgs.gov/centers/national-minerals-information-center/historical-statistics-mineral-commodities-united",
+      "metadataEndpoint": "https://data.usgs.gov/datacatalog/",
+      "status": "REGISTERED",
+      "official": true
+    },
+    {
+      "id": "BALTIC",
+      "institution": "Baltic Exchange",
+      "officialWebsite": "https://www.balticexchange.com/en/data-services.html",
+      "country": "GB",
+      "updateFrequency": "DAILY",
+      "datasets": [
+        "BALTIC_INDICES"
+      ],
+      "license": "COMMERCIAL_LICENSE_REQUIRED",
+      "api": null,
+      "bulkFile": null,
+      "metadataEndpoint": "https://www.balticexchange.com/en/data-services.html",
+      "status": "REGISTERED",
+      "official": true
+    },
+    {
+      "id": "ENTSOE",
+      "institution": "ENTSO-E Transparency Platform",
+      "officialWebsite": "https://transparency.entsoe.eu/",
+      "country": "EU",
+      "updateFrequency": "INTRADAY_DAILY",
+      "datasets": [
+        "ENTSOE_MARKET"
+      ],
+      "license": "TERMS_AND_TOKEN_REQUIRED",
+      "api": "https://web-api.tp.entsoe.eu/",
+      "bulkFile": null,
+      "metadataEndpoint": "https://transparency.entsoe.eu/content/static_content/Static%20content/web%20api/Guide.html",
+      "status": "REGISTERED",
+      "official": true
+    },
+    {
+      "id": "EEX",
+      "institution": "European Energy Exchange",
+      "officialWebsite": "https://www.eex.com/en/market-data",
+      "country": "DE",
+      "updateFrequency": "INTRADAY_DAILY",
+      "datasets": [
+        "EEX_MARKET"
+      ],
+      "license": "COMMERCIAL_LICENSE_REVIEW_REQUIRED",
+      "api": null,
+      "bulkFile": null,
+      "metadataEndpoint": "https://www.eex.com/en/market-data",
+      "status": "REGISTERED",
+      "official": true
+    },
+    {
+      "id": "EU_ETS",
+      "institution": "European Commission EU Emissions Trading System",
+      "officialWebsite": "https://climate.ec.europa.eu/eu-action/eu-emissions-trading-system-eu-ets_en",
+      "country": "EU",
+      "updateFrequency": "ANNUAL_EVENT_DRIVEN",
+      "datasets": [
+        "EU_ETS_REGISTRY"
+      ],
+      "license": "EU_REUSE_POLICY_SUBJECT_TO_DATASET",
+      "api": null,
+      "bulkFile": "https://climate.ec.europa.eu/eu-action/eu-emissions-trading-system-eu-ets/union-registry_en",
+      "metadataEndpoint": "https://climate.ec.europa.eu/eu-action/eu-emissions-trading-system-eu-ets_en",
+      "status": "REGISTERED",
+      "official": true
+    },
+    {
+      "id": "WORLD_BANK_PINK_SHEET",
+      "institution": "World Bank Commodity Markets",
+      "officialWebsite": "https://www.worldbank.org/en/research/commodity-markets",
+      "country": "INTL",
+      "updateFrequency": "MONTHLY",
+      "datasets": [
+        "WORLD_BANK_PINK_SHEET"
+      ],
+      "license": "CC_BY_4_0",
+      "api": null,
+      "bulkFile": "https://thedocs.worldbank.org/en/doc/5d903e848db1d1b83e0ec8f744e55570-0350012021/related/CMO-Historical-Data-Monthly.xlsx",
+      "metadataEndpoint": "https://www.worldbank.org/en/research/commodity-markets",
+      "status": "REGISTERED",
+      "official": true
+    }
+  ]
+}

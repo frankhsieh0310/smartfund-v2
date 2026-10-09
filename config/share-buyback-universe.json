@@ -1,0 +1,5 @@
+{
+  "asset": "GLOBAL_SHARE_BUYBACK",
+  "eventTypes": ["BOARD_AUTHORIZATION", "BUYBACK_PROGRAM", "REPURCHASED_SHARES", "REMAINING_AUTHORIZATION", "ANNOUNCEMENT", "EXECUTION", "CANCELLATION", "TREASURY_STOCK", "COMPLETION"],
+  "fields": ["sourceId", "market", "issuer", "symbol", "eventType", "announcementDate", "executionDate", "shares", "amount", "currency", "remainingShares", "remainingAmount", "status", "sourceUrl", "retrievedAt"]
+}

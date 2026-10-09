@@ -1,0 +1,12 @@
+{
+  "observation": ["sourceValue","sourceUnit","normalizedValue","normalizedUnit","observationDate","referencePeriod","publicationDate","retrievedAt","source","sourceUrl","externalSeriesId","sourceRecordId","checksum","verificationStatus"],
+  "revisionLineage": {"key":["canonicalSeriesId","observationDate","publicationDate","sourceRecordId"],"policy":"append provenance version; canonical economic_values remains series_id/date latest verified value"},
+  "freshnessStates": ["CURRENT","WAITING_FOR_NEXT_RELEASE","SOURCE_DELAYED","STALE","SOURCE_PENDING","ACCESS_CONSTRAINED","UNKNOWN"],
+  "verificationStates": ["VERIFIED_OFFICIAL","VERIFIED_DERIVED","UNVERIFIED","SOURCE_PENDING","ACCESS_CONSTRAINED","LICENSE_PENDING","INVALID","UNKNOWN"],
+  "seasonalComparison": {"quarterly":["PREVIOUS_RELEASE","YOY_COMPARABLE_PERIOD"],"weekly":["PREVIOUS_OBSERVATION","YOY_COMPARABLE_WEEK","5Y_SEASONAL_RANGE"]},
+  "analytics": {"inventoryStorage":["ABS_CHANGE_1P","PCT_CHANGE_1P","YOY_ABS_CHANGE","YOY_PCT_CHANGE","RAW_LEVEL_PERCENTILE","INVENTORY_ZSCORE"],"production":["YOY_ABS_CHANGE","YOY_PCT_CHANGE","RAW_LEVEL_PERCENTILE"],"daysOfSupply":"CONTRACT_READY_DATA_PENDING","inventoryVsPrice":"FUTURE_RESEARCH_CONTRACT"},
+  "search": ["commodity","metricType","country","region","provider","frequency"],
+  "screener": ["commodityGroup","commodity","metricType","region","frequency","latestLevel","yoyChange","percentile","historyDepth"],
+  "compare": "compatible metricType + normalizedUnit + semantic peer group only",
+  "ranking": "same commodityGroup + metricType + normalizedUnit only"
+}

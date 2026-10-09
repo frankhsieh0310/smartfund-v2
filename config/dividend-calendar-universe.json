@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "asset": "GLOBAL_DIVIDEND_CALENDAR",
+  "securityTypes": ["COMMON_STOCK", "PREFERRED_STOCK", "ETF", "REIT", "CLOSED_END_FUND", "OTHER_LEGAL_DISTRIBUTING_SECURITY"],
+  "markets": ["SEC", "NYSE", "NASDAQ", "LSE", "JPX", "HKEX", "TWSE", "TPEx", "SGX", "ASX", "KRX"]
+}

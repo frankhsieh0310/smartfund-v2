@@ -12,8 +12,8 @@ import {
 async function main(): Promise<void> {
   const registry = await loadExchangeCalendarRegistry();
   const raw = JSON.parse(await readFile(join(process.cwd(), "config", "production-yahoo-daily-jobs.json"), "utf8")) as Record<string, unknown>;
-  assert.equal(registry.jobs.length, 16);
-  assert.equal(new Set(registry.jobs.map((job) => job.id)).size, 16);
+  assert.equal(registry.jobs.length, 22);
+  assert.equal(new Set(registry.jobs.map((job) => job.id)).size, 22);
   assert.ok(registry.jobs.every((job) => job.schedulerEnabled));
   assert.ok(registry.jobs.every((job) => job.timezone.includes("/")));
   assert.ok(registry.jobs.every((job) => job.providerProbeSymbols.length >= 1));

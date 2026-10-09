@@ -1,0 +1,9 @@
+{
+  "asset": "GLOBAL_VOLATILITY_INDEX",
+  "semantics": {"valueChange":"LEVEL_CHANGE","valueChangePercent":"LEVEL_CHANGE_PERCENT","drawdown":"INDEX_LEVEL_DRAWDOWN","prohibited":"INVESTMENT_TOTAL_RETURN"},
+  "detail": ["identity","provider","country","underlyingReference","volatilityHorizon","currentValue","dailyHistory","CHANGE_1D","CHANGE_1W","CHANGE_1M","CHANGE_3M","CHANGE_1Y","52_WEEK_HIGH","52_WEEK_LOW","PERCENTILE_1Y","methodology","freshness","source","qualityStatus"],
+  "search": ["symbol","officialName","provider","underlyingReference","country"],
+  "compare": ["currentValue","LEVEL_CHANGE","percentile","volatilityHorizon","underlyingReference"],
+  "screener": ["provider","country","underlyingReference","volatilityHorizon","currentValue","CHANGE_1M","PERCENTILE_1Y"],
+  "ranking": {"status":"READY","isolation":"VOLATILITY_INDICES_ONLY","metrics":["currentValue","CHANGE_1D","CHANGE_1W","CHANGE_1M","CHANGE_3M","PERCENTILE_1Y"]}
+}

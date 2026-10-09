@@ -1,0 +1,19 @@
+{
+  "asset": "TREASURY_FISCAL_OPERATIONS",
+  "country": "US",
+  "source": "US_TREASURY_FISCAL_DATA_MTS_TABLE_1",
+  "endpoint": "https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/accounting/mts/mts_table_1",
+  "frequency": "MONTHLY",
+  "pollIntervalMs": 21600000,
+  "catchUpIntervalMs": 5000,
+  "historyTargetMonths": 120,
+  "historyPageSize": 1000,
+  "historyQuotaPeriods": 24,
+  "parserVersion": "MTS_TABLE_1_V2",
+  "retry": { "maxAttempts": 3, "baseDelayMs": 30000 },
+  "metrics": [
+    { "id": "US_TOTAL_RECEIPTS", "code": "TOTAL_RECEIPTS", "name": "Total Receipts", "category": "RECEIPTS", "officialField": "current_month_gross_rcpt_amt" },
+    { "id": "US_TOTAL_OUTLAYS", "code": "TOTAL_OUTLAYS", "name": "Total Outlays", "category": "OUTLAYS", "officialField": "current_month_gross_outly_amt" },
+    { "id": "US_BUDGET_SURPLUS_DEFICIT", "code": "BUDGET_SURPLUS_DEFICIT", "name": "Budget Surplus / Deficit", "category": "BALANCE", "officialField": "current_month_dfct_sur_amt" }
+  ]
+}

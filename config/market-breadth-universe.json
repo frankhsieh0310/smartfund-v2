@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "asset": "GLOBAL_MARKET_BREADTH",
+  "metrics": ["advance", "decline", "advance_decline_line", "new_high", "new_low", "high_52w", "low_52w", "up_volume", "down_volume", "trin", "mcclellan_oscillator", "mcclellan_summation", "market_breadth_ratio", "tick"],
+  "derived": {
+    "advance_decline_line": "previous + advance - decline",
+    "market_breadth_ratio": "advance / decline",
+    "trin": "(advance / decline) / (up_volume / down_volume)",
+    "mcclellan_oscillator": "EMA19(advance-decline) - EMA39(advance-decline)",
+    "mcclellan_summation": "previous + mcclellan_oscillator"
+  },
+  "tickPolicy": "Ingest only when an approved official source legally exposes it; never synthesize tick."
+}

@@ -1,0 +1,24 @@
+{
+  "asset": "GLOBAL_ECONOMIC_CALENDAR",
+  "policy": "official-public-sources-only",
+  "providers": [
+    {"id":"fred","name":"FRED","country":"US","baseUrl":"https://fred.stlouisfed.org","calendarUrl":"https://fred.stlouisfed.org/releases/calendar"},
+    {"id":"bls","name":"BLS","country":"US","baseUrl":"https://www.bls.gov","calendarUrl":"https://www.bls.gov/schedule/news_release/"},
+    {"id":"bea","name":"BEA","country":"US","baseUrl":"https://www.bea.gov","calendarUrl":"https://www.bea.gov/news/schedule"},
+    {"id":"census","name":"US Census","country":"US","baseUrl":"https://www.census.gov","calendarUrl":"https://www.census.gov/economic-indicators/calendar-listview.html"},
+    {"id":"federal-reserve","name":"Federal Reserve","country":"US","baseUrl":"https://www.federalreserve.gov","calendarUrl":"https://www.federalreserve.gov/newsevents/calendar.htm"},
+    {"id":"ecb","name":"ECB","country":"EU","baseUrl":"https://www.ecb.europa.eu","calendarUrl":"https://www.ecb.europa.eu/press/calendars/mgcgc/html/index.en.html"},
+    {"id":"eurostat","name":"Eurostat","country":"EU","baseUrl":"https://ec.europa.eu/eurostat","calendarUrl":"https://ec.europa.eu/eurostat/news/release-calendar"},
+    {"id":"ons","name":"ONS","country":"GB","baseUrl":"https://www.ons.gov.uk","calendarUrl":"https://www.ons.gov.uk/releasecalendar"},
+    {"id":"statcan","name":"Statistics Canada","country":"CA","baseUrl":"https://www.statcan.gc.ca","calendarUrl":"https://www150.statcan.gc.ca/n1/dai-quo/cal2-eng.htm"},
+    {"id":"stat-jp","name":"Japan Statistics Bureau","country":"JP","baseUrl":"https://www.stat.go.jp","calendarUrl":"https://www.stat.go.jp/english/data/index.html"},
+    {"id":"boj","name":"BOJ","country":"JP","baseUrl":"https://www.boj.or.jp","calendarUrl":"https://www.boj.or.jp/en/about/calendar/index.htm"},
+    {"id":"nbs-cn","name":"NBS China","country":"CN","baseUrl":"https://www.stats.gov.cn","calendarUrl":"https://www.stats.gov.cn/english/PressRelease/"},
+    {"id":"abs","name":"ABS Australia","country":"AU","baseUrl":"https://www.abs.gov.au","calendarUrl":"https://www.abs.gov.au/release-calendar"},
+    {"id":"rba","name":"RBA","country":"AU","baseUrl":"https://www.rba.gov.au","calendarUrl":"https://www.rba.gov.au/schedules-events/"},
+    {"id":"kostat","name":"Statistics Korea","country":"KR","baseUrl":"https://kostat.go.kr","calendarUrl":"https://kostat.go.kr/board.es?mid=a20101000000&bid=11773"},
+    {"id":"imf","name":"IMF","country":"GLOBAL","baseUrl":"https://www.imf.org","calendarUrl":"https://www.imf.org/en/News/Seminars/Conferences"},
+    {"id":"oecd","name":"OECD","country":"GLOBAL","baseUrl":"https://www.oecd.org","calendarUrl":"https://www.oecd.org/en/about/news/media-calendar.html"},
+    {"id":"world-bank","name":"World Bank","country":"GLOBAL","baseUrl":"https://www.worldbank.org","calendarUrl":"https://www.worldbank.org/en/events"}
+  ]
+}

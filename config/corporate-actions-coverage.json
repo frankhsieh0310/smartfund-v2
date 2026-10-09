@@ -1,0 +1,7 @@
+{
+  "asset": "GLOBAL_CORPORATE_ACTIONS",
+  "modes": ["Historical", "Latest", "Upcoming", "Incremental"],
+  "dates": ["Announcement", "Effective Date", "Ex-Date", "Record Date", "Payment Date"],
+  "operations": ["Archive", "Retry", "Checkpoint", "Scheduler"],
+  "schedule": { "incrementalIntervalHours": 24, "retryLimit": 5, "requestTimeoutMs": 30000 }
+}

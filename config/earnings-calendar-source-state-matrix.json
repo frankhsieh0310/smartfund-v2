@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "rules": {
+    "confirmedAllowedSourceTypes": ["COMPANY_IR_CONFIRMED", "EXCHANGE_OFFICIAL", "REGULATOR_OFFICIAL"],
+    "filingAloneCreatesEarningsEvent": false,
+    "unknownBecomesEstimated": false,
+    "consensusLicenseStatus": "LICENSE_PENDING"
+  },
+  "markets": [
+    { "market": "US", "state": "READY_CANARY", "candidates": ["SEC EDGAR", "Company official IR/newsroom"], "semanticGate": "SEC filing is evidence only; company release establishes announcement date" },
+    { "market": "TAIWAN", "state": "SOURCE_PENDING", "candidates": ["TWSE/MOPS", "Company official IR"], "semanticGate": "Financial filing, material information, board approval and earnings call remain distinct" },
+    { "market": "JAPAN", "state": "SOURCE_PENDING", "candidates": ["JPX/TDnet", "Company official IR"], "semanticGate": "Only verified financial-results releases establish announcement events" },
+    { "market": "HONG_KONG", "state": "SOURCE_PENDING", "candidates": ["HKEXnews", "Issuer official IR"], "semanticGate": "Results announcement differs from document publication timestamp" },
+    { "market": "UK_EUROPE", "state": "TERMS_REVIEW", "candidates": ["Issuer official IR", "Official regulated-news service"], "semanticGate": "Per-source terms and announcement semantics required" },
+    { "market": "AUSTRALIA", "state": "SOURCE_PENDING", "candidates": ["ASX issuer announcements", "Company official IR"], "semanticGate": "Semantic canary required before ingestion" },
+    { "market": "CANADA", "state": "ACCESS_BLOCKED", "candidates": ["SEDAR+", "Company official IR"], "semanticGate": "Automated access and document semantics require review" },
+    { "market": "CHINA", "state": "NOT_IMPLEMENTED", "candidates": ["Official exchange issuer disclosures"], "semanticGate": "Exchange-specific adapter required" },
+    { "market": "SINGAPORE", "state": "NOT_IMPLEMENTED", "candidates": ["SGX issuer announcements"], "semanticGate": "Results-announcement classifier required" },
+    { "market": "OTHER", "state": "NOT_IMPLEMENTED", "candidates": [], "semanticGate": "Jurisdiction registry not yet defined" }
+  ]
+}

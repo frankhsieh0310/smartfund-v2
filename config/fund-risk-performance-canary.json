@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "funds": [
+    { "fundId": "025b7023-323f-427e-8427-8d264d97501a", "profile": "LONG_HISTORY" },
+    { "fundId": "ca4a33c2-4ad8-47df-9627-952538cd6906", "profile": "MEDIUM_HISTORY" },
+    { "fundId": "44d03387-9cf1-4896-a3cf-9d02ae76e11a", "profile": "ACCUMULATION_LONG" },
+    { "fundId": "abf367dc-427f-4c20-9030-a3e71df9fed2", "profile": "ACCUMULATION_SPARSE" },
+    { "fundId": "279924b4-0dce-40a7-a5ac-5d50321caf99", "profile": "DISTRIBUTION_SHORT" }
+  ]
+}

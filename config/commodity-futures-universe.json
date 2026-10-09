@@ -1,0 +1,17 @@
+{
+  "assetClass":"GLOBAL COMMODITY FUTURES",
+  "contractIsolationRequired":true,
+  "continuousMetadataRequired":["rollMethod","rollDate","underlyingCommodity"],
+  "fields":["open","high","low","close","volume","openInterest","settlement","contractMonth","expiration","continuousContract","timestamp","timezone","exchange","source","quality"],
+  "instruments":[
+    ["Gold Futures","GC","COMEX"],["Silver Futures","SI","COMEX"],["Copper Futures","HG","COMEX"],["Platinum Futures","PL","NYMEX"],["Palladium Futures","PA","NYMEX"],
+    ["Aluminum Futures","AH","LME"],["Nickel Futures","NI","LME"],["Zinc Futures","ZN","LME"],["Lead Futures","PB","LME"],
+    ["WTI Crude Futures","CL","NYMEX"],["Brent Crude Futures","B","ICE"],["Natural Gas Futures","NG","NYMEX"],
+    ["Gasoline Futures","RB","NYMEX"],["Heating Oil Futures","HO","NYMEX"],["Corn Futures","ZC","CBOT"],
+    ["Soybean Futures","ZS","CBOT"],["Soybean Meal","ZM","CBOT"],["Soybean Oil","ZL","CBOT"],
+    ["Wheat Futures","ZW","CBOT"],["Kansas Wheat","KE","KCBT"],["Rice Futures","ZR","CBOT"],["Oats Futures","ZO","CBOT"],
+    ["Coffee Futures","KC","ICE"],["Cocoa Futures","CC","ICE"],["Sugar Futures","SB","ICE"],["Cotton Futures","CT","ICE"],
+    ["Orange Juice Futures","OJ","ICE"],["Lumber Futures","LBR","CME_GROUP"],["Rubber Futures","RSS3","TOCOM"],
+    ["Live Cattle","LE","CME_GROUP"],["Feeder Cattle","GF","CME_GROUP"],["Lean Hogs","HE","CME_GROUP"]
+  ]
+}

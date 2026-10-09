@@ -1,0 +1,7 @@
+{
+  "asset": "GLOBAL_ANALYST_ESTIMATES",
+  "modes": ["Historical", "Latest", "Incremental"],
+  "fields": ["Revenue Estimate", "EPS Estimate", "EBITDA Estimate", "Net Income Estimate", "Target Price", "Consensus Rating", "Buy", "Hold", "Sell", "Revision", "Guidance"],
+  "operations": ["Consensus", "Archive", "Retry", "Checkpoint", "Scheduler"],
+  "constraints": { "licensedConsensusRequired": true, "companyGuidanceIsNotConsensus": true }
+}

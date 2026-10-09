@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "asset": "SEC_INVESTMENT_COMPANY_SHARED",
+  "officialSource": "SEC_EDGAR",
+  "forms": ["NPORT-P", "N-CEN"],
+  "canonicalObservationRelation": "holdings",
+  "identityRelations": ["funds", "fund_share_classes", "fund_provider_mappings"],
+  "consumers": ["ETF", "FUND"],
+  "duplicateConsumerStorage": false,
+  "ordinaryLifecycle": {
+    "owner": "GLOBAL_FUND_SUPERVISOR_HOLDINGS_DOMAIN",
+    "runner": "scripts/data/global-fund/run-fund-holdings-latest.ts",
+    "supervisor": "scripts/data/global-fund/run-global-fund-supervisor.ts",
+    "checkpoint": "runtime/sec-investment-company/checkpoint.json",
+    "retryResume": "runtime/global-fund/holdings/queue.json",
+    "intervalMs": 86400000
+  },
+  "work": [
+    {"id":"NPORT_CURRENT_AND_PIT","state":"AUTO_CONTINUING","owner":"GLOBAL_FUND_SUPERVISOR_HOLDINGS_DOMAIN"},
+    {"id":"NPORT_HISTORICAL_DEPTH","state":"QUEUED","owner":"GLOBAL_FUND_SUPERVISOR_HOLDINGS_DOMAIN"},
+    {"id":"NPORT_ETF_FUND_MAPPING","state":"QUEUED","owner":"GLOBAL_FUND_SUPERVISOR_HOLDINGS_DOMAIN"},
+    {"id":"NPORT_DERIVATIVES_LENDING_BORROWING_TURNOVER","state":"QUEUED","owner":"GLOBAL_FUND_SUPERVISOR_HOLDINGS_DOMAIN"},
+    {"id":"NCEN_METADATA_LIFECYCLE","state":"QUEUED","owner":"GLOBAL_FUND_SUPERVISOR_HOLDINGS_DOMAIN"}
+  ],
+  "dbPoolMode": "SUPABASE_TRANSACTION_POOLING_6543_PGBOUNCER",
+  "maxDbConcurrency": 1
+}

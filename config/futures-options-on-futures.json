@@ -1,0 +1,17 @@
+{
+  "domain": "FUTURES_OPTIONS_ON_FUTURES",
+  "poll_interval_ms": 21600000,
+  "sources": [
+    {"exchange":"TAIFEX","status":"NOT_APPLICABLE","product":"TXO","relationship":"INDEX","official_url":"https://www.taifex.com.tw/cht/2/tXO","reason":"Official specification identifies the TAIEX capitalization-weighted stock index as the underlying; TXO is not an option on a futures root or contract."},
+    {"exchange":"CME_FAMILY","status":"SOURCE_TERMS_BLOCKED","reason":"No repository-verified automated official route may be used; retained evidence must not be promoted into current contracts."},
+    {"exchange":"OSE_TOCOM","status":"PARTIAL_PUBLIC","official_url":"https://www.jpx.co.jp/english/derivatives/rules/outline/","reason":"Official public product specifications exist, but no exact eligible match to the current OSE/TOCOM roots was verified."},
+    {"exchange":"EUREX","status":"PARTIAL_PUBLIC","official_url":"https://www.eurex.com/ex-en/data/trading-files","reason":"Free static instrument reference data exists, but no exact eligible match to the current FSR3 root was verified."},
+    {"exchange":"ICE","status":"PRODUCTION_READY","reason":"Official public product specifications provide exact product IDs and futures-root relationships for eligible current roots."},
+    {"exchange":"LME","status":"LICENSE_CONSTRAINED","reason":"Contract-series reference coverage is licensed."}
+  ],
+  "verified_products": [
+    {"exchange":"ICE","product_id":"22","product_code":"SB","name":"Sugar No. 11 Options","root_exchange":"ICE","root_symbol":"SB","multiplier":"One SB futures contract (112,000 pounds)","settlement_style":"FUTURES_DELIVERY_ON_EXERCISE","exercise_style":"AMERICAN","url":"https://www.ice.com/products/22/specs"},
+    {"exchange":"ICE","product_id":"14","product_code":"KC","name":"Coffee C Options","root_exchange":"ICE","root_symbol":"KC","multiplier":"One Coffee C futures contract (37,500 pounds)","settlement_style":"FUTURES_DELIVERY_ON_EXERCISE","exercise_style":"AMERICAN","url":"https://www.ice.com/products/14/coffee-c-"},
+    {"exchange":"ICE","product_id":"8","product_code":"CC","name":"Cocoa Options","root_exchange":"ICE","root_symbol":"CC","multiplier":"One Cocoa futures contract","settlement_style":"FUTURES_DELIVERY_ON_EXERCISE","exercise_style":"AMERICAN","url":"https://www.ice.com/products/8/Cocoa-Options"}
+  ]
+}

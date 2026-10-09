@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "assetClass": "GLOBAL_INTEREST_RATE_FUTURES",
+  "policy": "OFFICIAL_PUBLIC_ONLY_NO_SCRAPING_WORKAROUND",
+  "venues": [
+    { "id": "CME", "name": "CME Group", "country": "US", "baseUrl": "https://www.cmegroup.com", "publicData": "https://www.cmegroup.com/CmeWS/mvc/Settlements/Futures/Settlements/", "verificationStatus": "ACCESS_BLOCKED_NETWORK_OR_EDGE" },
+    { "id": "ICE", "name": "ICE Futures Europe", "country": "GB", "baseUrl": "https://www.ice.com", "publicData": "https://www.ice.com/products/Futures-Options/Interest-Rates", "verificationStatus": "PRODUCT_PAGE_FETCH_PASS_SETTLEMENT_SEMANTICS_NOT_AVAILABLE" },
+    { "id": "EUREX", "name": "Eurex", "country": "DE", "baseUrl": "https://www.eurex.com", "publicData": "https://www.eurex.com/ex-en/markets/int/fix", "verificationStatus": "ACCESS_BLOCKED_NETWORK_OR_EDGE" },
+    { "id": "SGX", "name": "Singapore Exchange", "country": "SG", "baseUrl": "https://www.sgx.com", "publicData": "https://www.sgx.com/derivatives/delayed-prices-futures", "verificationStatus": "ACCESS_BLOCKED_NETWORK_OR_EDGE" },
+    { "id": "OSE", "name": "Osaka Exchange / Japan Exchange Group", "country": "JP", "baseUrl": "https://www.jpx.co.jp", "publicData": "https://www.jpx.co.jp/english/markets/derivatives/settlement-price/index.html", "productCode": "TOA3M", "contractCodePattern": "FUT_TOA3M_*", "underlyingRate": "TONA", "currency": "JPY", "providerExternalId": null, "source": "JPX_OSE_OFFICIAL_SETTLEMENT_CSV", "verificationStatus": "VERIFIED_OFFICIAL_PUBLIC" }
+  ]
+}

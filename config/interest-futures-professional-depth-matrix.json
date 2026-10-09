@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "evidenceAsOf": "2026-08-10",
+  "dimensions": ["identity", "specification", "listedContracts", "expiration", "lifecycle", "settlement", "ohlc", "volume", "openInterest", "history", "sequentialExpiries", "frontContract", "continuous", "rollAudit", "impliedRate", "curve", "calendarSpread", "underlyingLink", "cashRateSpread", "dv01Bpv", "performance", "risk", "volumeOiAnalytics", "provenance", "freshness", "detail", "search", "screener", "compare", "ranking"],
+  "rows": [
+    { "instrumentId": "OSE_TONA_3M", "identity": "PRODUCTION_READY", "specification": "PRODUCTION_READY", "listedContracts": "PRODUCTION_READY_20", "expiration": "PRODUCTION_READY", "lifecycle": "PRODUCTION_READY_ACTIVE", "settlement": "PRODUCTION_READY_20_CURRENT", "ohlc": "SOURCE_NOT_AVAILABLE", "volume": "SOURCE_NOT_AVAILABLE", "openInterest": "SOURCE_NOT_AVAILABLE", "history": "TIME_DEPTH_CONSTRAINED_READY", "sequentialExpiries": "PRODUCTION_READY_20", "frontContract": "PRODUCTION_READY_CALENDAR_FRONT", "continuous": "PREREQUISITES_PENDING", "rollAudit": "PREREQUISITES_PENDING", "impliedRate": "PRODUCTION_READY", "curve": "PRODUCTION_READY_20_POINTS", "calendarSpread": "CURRENT_ONLY", "underlyingLink": "EXACT_VERIFIED_TONA", "cashRateSpread": "SOURCE_PENDING", "dv01Bpv": "PRODUCTION_READY_CONTRACT_BPV", "performance": "TIME_DEPTH_CONSTRAINED", "risk": "TIME_DEPTH_CONSTRAINED", "volumeOiAnalytics": "SOURCE_NOT_AVAILABLE", "provenance": "PRODUCTION_READY_22_OF_22", "freshness": "CURRENT", "detail": "PROFESSIONAL_READY_CURRENT_CURVE", "search": "PRODUCTION_READY", "screener": "PARTIAL", "compare": "PARTIAL", "ranking": "PARTIAL" },
+    { "instrumentId": "CME_SOFR_3M", "allProductionDomains": "ACCESS_CONSTRAINED", "identity": "ACCESS_CONSTRAINED", "detail": "ACCESS_CONSTRAINED_READY" },
+    { "instrumentId": "CME_SOFR_1M", "allProductionDomains": "ACCESS_CONSTRAINED", "identity": "ACCESS_CONSTRAINED", "detail": "ACCESS_CONSTRAINED_READY" },
+    { "instrumentId": "CME_FED_FUNDS_30D", "allProductionDomains": "ACCESS_CONSTRAINED", "identity": "ACCESS_CONSTRAINED", "detail": "ACCESS_CONSTRAINED_READY" },
+    { "instrumentId": "CME_EURODOLLAR", "allProductionDomains": "ACCESS_CONSTRAINED", "identity": "ACCESS_CONSTRAINED", "detail": "ACCESS_CONSTRAINED_READY" },
+    { "instrumentId": "ICE_EURIBOR_3M", "allProductionDomains": "MAPPING_CONSTRAINED", "identity": "SOURCE_CONSTRAINED", "detail": "MAPPING_CONSTRAINED_READY" },
+    { "instrumentId": "ICE_SONIA_3M", "allProductionDomains": "MAPPING_CONSTRAINED", "identity": "SOURCE_CONSTRAINED", "detail": "MAPPING_CONSTRAINED_READY" },
+    { "instrumentId": "EUREX_SARON_3M", "allProductionDomains": "ACCESS_CONSTRAINED", "identity": "ACCESS_CONSTRAINED", "detail": "ACCESS_CONSTRAINED_READY" },
+    { "instrumentId": "SGX_TONA_3M", "allProductionDomains": "ACCESS_CONSTRAINED", "identity": "ACCESS_CONSTRAINED", "detail": "ACCESS_CONSTRAINED_READY" }
+  ],
+  "summary": { "rows": 9, "unknownStates": 0, "physicalProductionRoots": 1, "physicalContracts": 20, "physicalObservations": 22, "currentCurvePoints": 20, "historySourceBoundary": "PUBLIC_LATEST_FILE_ONLY" }
+}

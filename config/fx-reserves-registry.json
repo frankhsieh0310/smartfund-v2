@@ -1,0 +1,34 @@
+{
+  "asset": "GLOBAL_FX_RESERVES",
+  "sourcePolicy": "OFFICIAL_ONLY",
+  "series": [
+    {
+      "code": "US_FX_RESERVES_EX_GOLD",
+      "country": "United States",
+      "currency": "USD",
+      "reserveType": "FOREIGN_CURRENCY_RESERVES_EX_GOLD",
+      "officialName": "United States Foreign Currency Reserves",
+      "jurisdiction": "United States",
+      "region": "North America",
+      "reserveAuthorityId": "US_TREASURY",
+      "reserveAuthorityName": "United States Department of the Treasury",
+      "centralBankOrTreasury": "TREASURY",
+      "unit": "USD millions",
+      "frequency": "monthly",
+      "source": "Federal Reserve Bank of St. Louis / IMF International Financial Statistics",
+      "sourceUrl": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=TRESEGUSM052N",
+      "adapter": "fred-official-csv",
+      "active": true
+    }
+  ],
+  "officialCatalogs": [
+    {
+      "code": "IMF_IRFCL",
+      "scope": "global",
+      "source": "IMF International Reserves and Foreign Currency Liquidity",
+      "sourceUrl": "https://data.imf.org/IRFCL",
+      "adapter": "imf-official-catalog",
+      "active": false
+    }
+  ]
+}

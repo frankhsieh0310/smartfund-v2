@@ -1,0 +1,6 @@
+{
+  "asset":"GLOBAL_REIT",
+  "features":["Historical","Latest","Dividend","NAV","FFO","AFFO","Property Allocation","Country Allocation","Sector Allocation","Comparison","Chart","Archive","Retry","Checkpoint","Scheduler"],
+  "intervals":["1m","5m","15m","30m","60m","4h","1D","1W","1M"],
+  "stages":["Historical","Latest","Incremental","Retry","Archive"]
+}

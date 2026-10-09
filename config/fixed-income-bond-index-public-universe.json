@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "owner": "GLOBAL_INDEX",
+  "consumer": "FIXED_INCOME",
+  "dedupe": ["provider", "provider_external_id", "return_type", "currency"],
+  "indexes": [
+    {"id":"bbg-global-aggregate","provider":"Bloomberg","code":"LEGATRUU","name":"Bloomberg Global Aggregate Bond Index","family":"AGGREGATE_BOND","currency":"USD","status":"IDENTITY_ONLY_PUBLIC"},
+    {"id":"bbg-us-aggregate","provider":"Bloomberg","code":"LBUSTRUU","name":"Bloomberg US Aggregate Bond Index","family":"AGGREGATE_BOND","currency":"USD","status":"IDENTITY_ONLY_PUBLIC"},
+    {"id":"bbg-us-corporate","provider":"Bloomberg","code":"LUACTRUU","name":"Bloomberg US Corporate Bond Index","family":"INVESTMENT_GRADE_CORPORATE","currency":"USD","status":"IDENTITY_ONLY_PUBLIC"},
+    {"id":"bbg-global-aggregate-corporate","provider":"Bloomberg","code":"LGCPTRUU","name":"Bloomberg Global Aggregate Corporate Bond Index","family":"INVESTMENT_GRADE_CORPORATE","currency":"USD","status":"IDENTITY_ONLY_PUBLIC"},
+    {"id":"bbg-us-corporate-high-yield","provider":"Bloomberg","code":"LF98TRUU","name":"Bloomberg US Corporate High Yield Bond Index","family":"HIGH_YIELD","currency":"USD","status":"IDENTITY_ONLY_PUBLIC"},
+    {"id":"ice-us-corporate","provider":"ICE BofA","code":"BAMLC0A0","name":"ICE BofA US Corporate Index","family":"INVESTMENT_GRADE_CORPORATE","currency":"USD","status":"METRICS_ONLY_PUBLIC_LICENSE_CONSTRAINED"},
+    {"id":"ice-us-high-yield","provider":"ICE BofA","code":"BAMLH0A0HYM2","name":"ICE BofA US High Yield Index","family":"HIGH_YIELD","currency":"USD","status":"METRICS_ONLY_PUBLIC_LICENSE_CONSTRAINED"},
+    {"id":"ice-global-high-yield","provider":"ICE BofA","code":"BHW0","name":"ICE BofA Global High Yield Index","family":"HIGH_YIELD","currency":"USD","status":"IDENTITY_ONLY_PUBLIC"},
+    {"id":"jpm-embi-global-diversified","provider":"J.P. Morgan","code":"JPM_EMBI_GLOBAL_DIVERSIFIED","name":"J.P. Morgan EMBI Global Diversified","family":"EM_HARD_CURRENCY","currency":"USD","status":"IDENTITY_ONLY_PUBLIC"},
+    {"id":"jpm-gbi-em-global-diversified","provider":"J.P. Morgan","code":"JPM_GBI_EM_GLOBAL_DIVERSIFIED","name":"J.P. Morgan GBI-EM Global Diversified","family":"EM_LOCAL_CURRENCY","currency":"LOCAL_CURRENCY","status":"IDENTITY_ONLY_PUBLIC"},
+    {"id":"jpm-cembi-broad-diversified","provider":"J.P. Morgan","code":"JPM_CEMBI_BROAD_DIVERSIFIED","name":"J.P. Morgan CEMBI Broad Diversified","family":"EM_CORPORATE","currency":"USD","status":"IDENTITY_ONLY_PUBLIC"},
+    {"id":"ice-us-em-corporate-plus","provider":"ICE BofA","code":"BAMLEMUBCRPIUS","name":"ICE BofA US Emerging Markets Corporate Plus Index","family":"EM_CORPORATE","currency":"USD","status":"METRICS_ONLY_PUBLIC_LICENSE_CONSTRAINED"},
+    {"id":"ftse-world-government-bond","provider":"FTSE Russell","code":"WGBI","name":"FTSE World Government Bond Index","family":"GOVERNMENT_BOND","currency":"MULTI_CURRENCY","status":"IDENTITY_ONLY_PUBLIC"}
+  ],
+  "fredMetrics": [
+    {"indexId":"ice-us-corporate","seriesId":"BAMLC0A0CMEY","metric":"EFFECTIVE_YIELD"},
+    {"indexId":"ice-us-corporate","seriesId":"BAMLC0A0CM","metric":"OPTION_ADJUSTED_SPREAD"},
+    {"indexId":"ice-us-high-yield","seriesId":"BAMLH0A0HYM2EY","metric":"EFFECTIVE_YIELD"},
+    {"indexId":"ice-us-high-yield","seriesId":"BAMLH0A0HYM2","metric":"OPTION_ADJUSTED_SPREAD"},
+    {"indexId":"ice-us-em-corporate-plus","seriesId":"BAMLEMUBCRPIUSEY","metric":"EFFECTIVE_YIELD"}
+  ],
+  "observationWriteGate": "FI_ALLOW_INTERNAL_ICE_TOP_LEVEL_DATA=1",
+  "defaultObservationWrite": false
+}

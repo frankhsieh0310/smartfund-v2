@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "defaultUniverseType": "EXCHANGE_DEFINED_BREADTH_UNIVERSE",
+  "requiredFields": ["marketId", "universeType", "asOfDate", "eligibleSecurityCount", "includedSecurityCount", "excludedSecurityCount", "selectionRule", "source", "verificationStatus"],
+  "eligibilityPolicy": "Use the official exchange breadth universe when consuming an official observation. Derived observations require point-in-time eligible primary common equity; exclude ETF, preferred, warrant, right, fund, ETN, duplicate listing and securities not active on the observation date.",
+  "suspensionPolicy": "Retain suspended securities in the eligible denominator only when the governing official methodology does; otherwise mark POINT_IN_TIME_LIMITED until verified.",
+  "pointInTimePolicy": "Never apply today's membership to historical dates. Missing historical listing or membership state produces POINT_IN_TIME_LIMITED, not COMPLETE."
+}

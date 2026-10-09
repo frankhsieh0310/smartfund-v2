@@ -1,0 +1,9 @@
+{
+  "version":1,
+  "reviewedAt":"2026-08-10",
+  "indices":[
+    {"indexId":"HANG_SENG","provider":"Hang Seng Indexes","methodologyUrl":"https://www.hsi.com.hk/static/uploads/contents/en/dl_centre/methodologies/IM_hsie.pdf","methodologyStatus":"VERIFIED_OFFICIAL","reviewFrequency":"QUARTERLY","rebalanceFrequency":"QUARTERLY","weightingMethodology":"FREE_FLOAT_ADJUSTED_MARKET_CAP_WITH_8_PERCENT_CAP","effectiveDateConvention":"OFFICIAL_REVIEW_NOTICE_EFFECTIVE_DATE"},
+    {"indexId":"HSCEI","provider":"Hang Seng Indexes","methodologyUrl":"https://www.hsi.com.hk/static/uploads/contents/en/dl_centre/methodologies/IM_hsceie.pdf","methodologyStatus":"VERIFIED_OFFICIAL","reviewFrequency":"QUARTERLY","rebalanceFrequency":"QUARTERLY","weightingMethodology":"FREE_FLOAT_ADJUSTED_MARKET_CAP_WITH_8_PERCENT_CAP","effectiveDateConvention":"OFFICIAL_REVIEW_NOTICE_EFFECTIVE_DATE"},
+    {"indexId":"NASDAQ100","provider":"Nasdaq","methodologyUrl":"https://indexes.nasdaq.com/docs/Methodology_NDX.pdf","methodologyStatus":"VERIFIED_OFFICIAL","reviewFrequency":"ANNUAL_RECONSTITUTION_WITH_QUARTERLY_REBALANCE","rebalanceFrequency":"QUARTERLY","weightingMethodology":"MODIFIED_MARKET_CAPITALIZATION","effectiveDateConvention":"OFFICIAL_NASDAQ_EFFECTIVE_DATE"}
+  ]
+}

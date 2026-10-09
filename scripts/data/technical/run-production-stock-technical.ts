@@ -10,15 +10,16 @@ import {
 type Stock = { id: string; ticker: string; yahooSymbol: string; companyName: string; exchange: string; isActive: boolean };
 type Price = { date: Date; high: { toNumber(): number } | null; low: { toNumber(): number } | null; close: { toNumber(): number } };
 type Row = Record<string, string | number | null> & { id: string; date: string };
-type Market = "JPX" | "KSC" | "KOE" | "HKG" | "SHH" | "SHZ" | "SES" | "TOR" | "NEO" | "VAN" | "CNQ" | "PAR";
+type Market = "NASDAQ" | "NYSE" | "AMEX" | "TWSE" | "TPEX" | "JPX" | "KSC" | "KOE" | "HKG" | "SHH" | "SHZ" | "SES" | "TOR" | "NEO" | "VAN" | "CNQ" | "PAR";
 
 const rawMarket = process.argv.find((v) => v.startsWith("--market="))?.slice(9).trim().toUpperCase();
 if (!rawMarket) throw new Error("MARKET_REQUIRED:pass an explicitly supported exchange");
-if (!(["JPX", "KSC", "KOE", "HKG", "SHH", "SHZ", "SES", "TOR", "NEO", "VAN", "CNQ", "PAR"] as string[]).includes(rawMarket)) throw new Error(`UNSUPPORTED_TECHNICAL_MARKET:${rawMarket}`);
+if (!(["NASDAQ", "NYSE", "AMEX", "TWSE", "TPEX", "JPX", "KSC", "KOE", "HKG", "SHH", "SHZ", "SES", "TOR", "NEO", "VAN", "CNQ", "PAR"] as string[]).includes(rawMarket)) throw new Error(`UNSUPPORTED_TECHNICAL_MARKET:${rawMarket}`);
 const MARKET = rawMarket as Market;
 const DRY_RUN = process.argv.includes("--dry-run");
 const maxArg = process.argv.find((v) => v.startsWith("--max-symbols="))?.slice(14);
 const MAX_SYMBOLS = Number.parseInt(maxArg ?? "25", 10);
+const ONLY_SYMBOL = process.argv.find((v) => v.startsWith("--symbol="))?.slice(9).trim().toUpperCase() ?? null;
 if (!Number.isSafeInteger(MAX_SYMBOLS) || MAX_SYMBOLS < 1 || MAX_SYMBOLS > 250) throw new Error(`INVALID_MAX_SYMBOLS:${maxArg ?? ""}`);
 const MARKET_STOCK_PREFIXES: Partial<Record<Market, readonly string[]>> = {
   SHH: ["600", "601", "603", "605", "688", "689", "900"],
@@ -36,10 +37,18 @@ const MARKET_TICKER_EXCLUSION_REGEX: Partial<Record<Market, string>> = {
 };
 const NON_STOCK_NAME_REGEX = /\bfund\b|etf\b|\b(bond|debenture|warrant|bitcoin|ether|crypto)\b|physical (gold|silver|uranium|platinum|palladium)/i;
 const NON_STOCK_NAME_SQL = "(^|[^[:alpha:]])fund([^[:alpha:]]|$)|etf([^[:alpha:]]|$)|(^|[^[:alpha:]])(bond|debenture|warrant|bitcoin|ether|crypto)([^[:alpha:]]|$)|physical (gold|silver|uranium|platinum|palladium)";
-const JOB_ID = `stock-technical-${MARKET.toLowerCase()}-historical`;
-const RUN_TYPE = "STOCK_TECHNICAL_HISTORICAL";
+const JOB_ID = `stock-technical-${MARKET.toLowerCase()}-${ONLY_SYMBOL ? "canary" : "historical"}`;
+const RUN_TYPE = ONLY_SYMBOL ? "STOCK_TECHNICAL_CANARY" : "STOCK_TECHNICAL_HISTORICAL";
 const FORMULA_VERSION = "TECHNICAL_V1";
-const prisma = new PrismaClient({ datasources: { db: { url: process.env.DIRECT_URL ?? process.env.DATABASE_URL } } });
+function transactionPoolUrl(): string | undefined {
+  const source = process.env.DATABASE_URL ?? process.env.DIRECT_URL;
+  if (!source) return undefined;
+  const url = new URL(source.replace(":5432/", ":6543/"));
+  url.searchParams.set("pgbouncer", "true");
+  url.searchParams.set("connection_limit", "1");
+  return url.toString();
+}
+const prisma = new PrismaClient({ datasources: { db: { url: transactionPoolUrl() } } });
 const EXCLUDED_NON_STOCK_SYMBOLS = new Set<string>();
 const OFFICIAL_CNQ_STOCK_TICKERS = new Set<string>();
 const OFFICIAL_PAR_STOCK_TICKERS = new Set<string>();
@@ -290,13 +299,18 @@ async function findCompletionTargets(afterTicker: string | null | undefined, lim
       WHERE stock.exchange = $1
         AND stock.is_active = TRUE
         AND stock.ticker > $2
+        AND ($7::text IS NULL OR stock.ticker = $7)
         AND ($4::text IS NULL OR stock.ticker ~ $4)
         AND ($5::text IS NULL OR stock.ticker !~ $5)
         AND NOT EXISTS (SELECT 1 FROM etfs etf WHERE etf.code = stock.yahoo_symbol)
         AND NOT EXISTS (SELECT 1 FROM assets asset WHERE asset.asset_type::text IN ('ETF', 'FUND') AND asset.code = stock.yahoo_symbol)
         AND stock.company_name !~* $6
         AND EXISTS (SELECT 1 FROM stock_history history WHERE history.stock_id = stock.id OFFSET 4 LIMIT 1)
-        AND NOT EXISTS (SELECT 1 FROM stock_technical technical WHERE technical.stock_id = stock.id)
+        AND NOT EXISTS (
+          SELECT 1 FROM stock_technical technical
+           WHERE technical.stock_id = stock.id
+             AND technical.date >= (SELECT MAX(latest_history.date) FROM stock_history latest_history WHERE latest_history.stock_id = stock.id)
+        )
       ORDER BY stock.ticker ASC, stock.id ASC`,
     MARKET,
     afterTicker ?? "",
@@ -304,6 +318,7 @@ async function findCompletionTargets(afterTicker: string | null | undefined, lim
     MARKET_STOCK_REGEX[MARKET] ?? null,
     MARKET_TICKER_EXCLUSION_REGEX[MARKET] ?? null,
     NON_STOCK_NAME_SQL,
+    ONLY_SYMBOL,
   );
   return candidates.filter((stock) => isWithinMarketStockScope(stock)).slice(0, limit);
 }

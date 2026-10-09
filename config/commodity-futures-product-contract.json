@@ -1,0 +1,9 @@
+{
+  "assetClass":"COMMODITY_FUTURES",
+  "detail":["commodity","productRoot","exchange","contractSpecifications","activeContract","listedContracts","expiry","firstNotice","lastTrade","ohlc","settlement","volume","openInterest","contractHistory","continuousHistory","rollHistory","curve","performance","risk","freshness","provenance"],
+  "search":["commodity","rootSymbol","exchange","commodityGroup"],
+  "screener":["commodityGroup","exchange","currency","volume","openInterest","expiry","return1M","return3M","return1Y","volatility"],
+  "compare":["settlement","returns","volume","openInterest","volatility","drawdown"],
+  "ranking":["return1D","return1W","return1M","return3M","returnYTD","return1Y","volume","openInterest","volatility"],
+  "status":"DATA_CONTRACT_DEFINED_P0_DATA_PENDING"
+}

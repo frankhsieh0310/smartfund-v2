@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "ownerNodeId": "smartfund-master",
+  "pollIntervalMs": 60000,
+  "staggerMs": 15000,
+  "maxDbConcurrency": 1,
+  "dbPoolMode": "SUPABASE_TRANSACTION_POOLING_6543_PGBOUNCER",
+  "priorityPolicy": { "ordinary": 0, "backgroundExpansion": 9, "uncertainIdle": "WAIT" },
+  "remoteAssets": ["MACRO"],
+  "assets": [
+    { "asset": "ETF", "checkpoint": "runtime/global-etf/checkpoint.json", "heartbeat": "runtime-status/etf.json", "pidFile": "runtime/global-etf/supervisor.pid", "command": ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "scripts/data/global-etf/start-global-etf-supervisor.ps1"] },
+    { "asset": "FUND", "checkpoint": "runtime/global-fund/checkpoint.json", "heartbeat": "runtime-status/fund.json", "pidFile": "runtime/global-fund/master-launched.pid", "command": ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "scripts/data/global-fund/start-global-fund-production-supervisor.ps1"] },
+    { "asset": "INDEX", "checkpoint": "runtime/index/checkpoint.json", "heartbeat": "runtime-status/global-index.json", "pidFile": "runtime/index/standalone.pid", "command": ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "scripts/data/index/start-index-standalone.ps1"] },
+    { "asset": "FUTURES", "checkpoint": "runtime/equity-index-futures/checkpoint/runner.json", "heartbeat": "runtime/equity-index-futures/checkpoint/runner.json", "pidFile": "runtime/equity-index-futures/master-launched.pid", "command": ["node", "--experimental-strip-types", "--env-file=.env", "scripts/data/equity-index-futures/run-global-equity-index-futures.ts"] },
+    { "asset": "FIXED_INCOME", "checkpoint": "runtime/bond/incremental/checkpoint.json", "heartbeat": "runtime-status/fixed-income.json", "pidFile": "runtime/bond/desktop-supervisor/supervisor.pid", "command": ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "scripts/data/bond/run-desktop-global-bond-supervisor.ps1"] },
+    { "asset": "FX", "checkpoint": "runtime/fx/checkpoint.json", "heartbeat": "runtime-status/fx.json", "pidFile": "runtime/fx/launcher.pid", "command": ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "scripts/data/fx/start-standalone-fx.ps1"] },
+    { "asset": "COMMODITY", "checkpoint": "runtime/commodity/checkpoint.json", "heartbeat": "runtime-status/commodity.json", "pidFile": "runtime/commodity/desktop-supervisor/master-launched.pid", "command": ["node", "--experimental-strip-types", "--env-file=.env", "scripts/data/commodity/run-desktop-supervisor.ts"] },
+    { "asset": "CRYPTO", "checkpoint": "DATABASE:crypto_work_items", "heartbeat": "runtime-status/crypto.json", "pidFile": "runtime/crypto/standalone.pid", "command": ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "scripts/data/crypto/run-crypto-standalone.ps1"] }
+  ]
+}

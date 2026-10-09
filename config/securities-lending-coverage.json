@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "stages": ["HISTORICAL", "LATEST", "INCREMENTAL", "RETRY", "ARCHIVE"],
+  "features": ["borrowFee", "utilization", "loanBalance", "availability", "archive", "retry", "checkpoint", "scheduler", "completionManifest"],
+  "storage": { "raw": "runtime/securities-lending/archive", "normalized": "runtime/securities-lending/data", "checkpoint": "runtime/securities-lending/checkpoint.json" }
+}

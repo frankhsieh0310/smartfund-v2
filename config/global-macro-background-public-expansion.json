@@ -1,0 +1,177 @@
+{
+  "version": 1,
+  "asset": "MACRO",
+  "existingMacroPriority": 0,
+  "priority": 9,
+  "mode": "IDLE_ONLY_FAIL_CLOSED",
+  "claimOnlyWhenExistingMacroQueueExplicitlyIdle": true,
+  "uncertainIdleMeansWaitBackoff": true,
+  "explicitIdleMarker": "runtime/global-macro-public-mesh/priority-0-idle.json",
+  "database": {
+    "maxConcurrency": 1,
+    "boundedBatching": true,
+    "idempotentWrites": true,
+    "holdConnectionDuringHttp": false
+  },
+  "executionTarget": {
+    "universe": "FULL_SUPPORTED_COUNTRY_INDICATOR_UNIVERSE",
+    "history": "DEEPEST_RELIABLE_FREE_PUBLIC_HISTORY",
+    "incremental": true,
+    "scheduledRefresh": true,
+    "executor": "ORDINARY_NODE_WORKER"
+  },
+  "canonicalDedup": {
+    "sourcePriority": [
+      "DIRECT_NATIONAL_OFFICIAL",
+      "DIRECT_INTERNATIONAL_OFFICIAL",
+      "OFFICIAL_RESEARCH_INSTITUTION",
+      "PUBLIC_AGGREGATOR",
+      "SMARTFUND_DERIVED"
+    ],
+    "requiredFields": [
+      "canonical_series",
+      "provider_series",
+      "source_lineage",
+      "source_priority",
+      "reconciliation_status"
+    ],
+    "duplicateCanonicalSeriesForbidden": true
+  },
+  "vintageCapabilities": [
+    "TRUE_VINTAGE",
+    "REVISION_HISTORY_AVAILABLE",
+    "FIRST_OBSERVED_BY_SMARTFUND",
+    "LATEST_ONLY",
+    "NO_VINTAGE_SUPPORT"
+  ],
+  "routes": [
+    {
+      "id": "EIA_ENERGY",
+      "source": "EIA_SHARED_OFFICIAL_LAYER",
+      "sourceOwner": "EIA_SHARED_OFFICIAL_LAYER",
+      "consumers": ["MACRO", "COMMODITY"],
+      "adapter": "EIA_SHARED_OFFICIAL_ADAPTER",
+      "vintageCapability": "REVISION_HISTORY_AVAILABLE",
+      "checkpoint": "runtime/global-macro-background-public-expansion/eia-energy.json"
+    },
+    {
+      "id": "ILOSTAT",
+      "source": "ILOSTAT_SHARED_OFFICIAL_LAYER",
+      "sourceOwner": "ILOSTAT_SHARED_OFFICIAL_LAYER",
+      "consumers": ["MACRO"],
+      "adapter": "ILOSTAT_SDMX_BULK_ADAPTER",
+      "vintageCapability": "LATEST_ONLY",
+      "checkpoint": "runtime/global-macro-background-public-expansion/ilostat.json"
+    },
+    {
+      "id": "ALFRED",
+      "source": "FRED_SHARED_OFFICIAL_LAYER",
+      "sourceOwner": "FRED_SHARED_OFFICIAL_LAYER",
+      "consumers": ["MACRO"],
+      "adapter": "EXISTING_FRED_INFRASTRUCTURE_ALFRED_EXTENSION",
+      "vintageCapability": "TRUE_VINTAGE",
+      "querySemantics": ["AS_KNOWN_AT_TIME", "FIRST_RELEASE", "LATEST_REVISED"],
+      "checkpoint": "runtime/global-macro-background-public-expansion/alfred.json"
+    },
+    {
+      "id": "PHILADELPHIA_FED_SPF",
+      "source": "PHILADELPHIA_FED_SPF_OFFICIAL",
+      "sourceOwner": "FED_RESEARCH_SURVEYS_SHARED_LAYER",
+      "consumers": ["MACRO"],
+      "adapter": "OFFICIAL_FORECAST_VINTAGE_ADAPTER",
+      "vintageCapability": "TRUE_VINTAGE",
+      "checkpoint": "runtime/global-macro-background-public-expansion/philly-fed-spf.json"
+    },
+    {
+      "id": "ECB_SPF",
+      "source": "ECB_SHARED_OFFICIAL_LAYER",
+      "sourceOwner": "ECB_SHARED_OFFICIAL_LAYER",
+      "consumers": ["MACRO"],
+      "adapter": "EXISTING_ECB_INFRASTRUCTURE_SPF_EXTENSION",
+      "vintageCapability": "TRUE_VINTAGE",
+      "checkpoint": "runtime/global-macro-background-public-expansion/ecb-spf.json"
+    },
+    {
+      "id": "NY_FED_SCE",
+      "source": "NY_FED_SHARED_OFFICIAL_LAYER",
+      "sourceOwner": "NY_FED_SHARED_OFFICIAL_LAYER",
+      "consumers": ["MACRO"],
+      "adapter": "EXISTING_NY_FED_INFRASTRUCTURE_SCE_EXTENSION",
+      "vintageCapability": "REVISION_HISTORY_AVAILABLE",
+      "checkpoint": "runtime/global-macro-background-public-expansion/ny-fed-sce.json"
+    },
+    {
+      "id": "NY_FED_GSCPI",
+      "source": "NY_FED_SHARED_OFFICIAL_LAYER",
+      "sourceOwner": "NY_FED_SHARED_OFFICIAL_LAYER",
+      "consumers": ["MACRO"],
+      "adapter": "EXISTING_NY_FED_INFRASTRUCTURE_GSCPI_EXTENSION",
+      "vintageCapability": "LATEST_ONLY",
+      "canonicalDomain": "MACRO_SUPPLY_CHAIN_PRESSURE",
+      "checkpoint": "runtime/global-macro-background-public-expansion/ny-fed-gscpi.json"
+    },
+    {
+      "id": "UN_WORLD_POPULATION_PROSPECTS",
+      "source": "UN_WPP_SHARED_OFFICIAL_LAYER",
+      "sourceOwner": "UN_SHARED_OFFICIAL_LAYER",
+      "consumers": ["MACRO"],
+      "adapter": "UN_WPP_OFFICIAL_BULK_ADAPTER",
+      "vintageCapability": "TRUE_VINTAGE",
+      "grains": ["ACTUAL", "PROJECTION", "PROJECTION_VINTAGE", "SCENARIO"],
+      "checkpoint": "runtime/global-macro-background-public-expansion/un-wpp.json"
+    },
+    {
+      "id": "OECD_MIGRATION",
+      "source": "OECD_SHARED_OFFICIAL_LAYER",
+      "sourceOwner": "OECD_SHARED_OFFICIAL_LAYER",
+      "consumers": ["MACRO"],
+      "adapter": "EXISTING_OECD_ADAPTER_MIGRATION_EXTENSION",
+      "vintageCapability": "LATEST_ONLY",
+      "checkpoint": "runtime/global-macro-background-public-expansion/oecd-migration.json"
+    },
+    {
+      "id": "IFO",
+      "source": "IFO_PUBLIC_OFFICIAL_ROUTE",
+      "sourceOwner": "IFO_PUBLIC_OFFICIAL_LAYER",
+      "consumers": ["MACRO"],
+      "adapter": "MINIMUM_PUBLIC_SURVEY_ADAPTER",
+      "vintageCapability": "LATEST_ONLY",
+      "checkpoint": "runtime/global-macro-background-public-expansion/ifo.json"
+    },
+    {
+      "id": "EU_ESI",
+      "source": "EU_EC_SHARED_OFFICIAL_LAYER",
+      "sourceOwner": "EU_EC_SHARED_OFFICIAL_LAYER",
+      "consumers": ["MACRO"],
+      "adapter": "EXISTING_EU_INFRASTRUCTURE_ESI_EXTENSION",
+      "vintageCapability": "LATEST_ONLY",
+      "checkpoint": "runtime/global-macro-background-public-expansion/eu-esi.json"
+    },
+    {
+      "id": "ECONOMIC_SURPRISE_DERIVED",
+      "source": "VERIFIED_FORECAST_PLUS_FIRST_RELEASE_ACTUAL",
+      "sourceOwner": "SMARTFUND_DERIVED_MACRO_LAYER",
+      "consumers": ["MACRO"],
+      "adapter": "METHODOLOGY_VERSIONED_SURPRISE_DERIVER",
+      "formula": "FIRST_RELEASE_ACTUAL_MINUS_EXPECTED_VALUE",
+      "laterRevisedActualForbidden": true,
+      "vintageCapability": "TRUE_VINTAGE",
+      "checkpoint": "runtime/global-macro-background-public-expansion/economic-surprise.json"
+    }
+  ],
+  "reuseOnly": [
+    "BIS_PROPERTY",
+    "OECD_HOUSING",
+    "IMF_GFS",
+    "OECD_GOVERNMENT",
+    "BOJ_TANKAN",
+    "MICHIGAN_SENTIMENT",
+    "GLOBAL_SOVEREIGN_DEBT_OFFICES"
+  ],
+  "multilingual": {
+    "owner": "ACTIVE_SHARED_LOCALE_MODEL",
+    "officialNamesOnly": true,
+    "translateCodes": false,
+    "massTranslation": false
+  }
+}

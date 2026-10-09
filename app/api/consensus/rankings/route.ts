@@ -8,6 +8,7 @@
 // NEVER fall back to mock rankings).
 
 import { prisma } from "@/lib/prisma";
+import { industryDisplayZh, organizationDisplayZh, personDisplayZh, personShortNameZh, sourceDisplayZh } from "@/lib/consensus/displayLocalization";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -76,6 +77,7 @@ export async function GET(request: Request) {
   );
   const flips = flipsRaw.map((f) => ({
     symbol: String(f.symbol), person: String(f.person), category: (f.category as string) ?? null,
+    person_display_zh: personDisplayZh(String(f.person)), person_short_name_zh: personShortNameZh(String(f.person)),
     from: String(f.prev_stance), to: String(f.current_stance),
     prev_event_at: f.prev_event_at ? new Date(f.prev_event_at as string).toISOString() : null,
     current_event_at: f.current_event_at ? new Date(f.current_event_at as string).toISOString() : null,
@@ -83,9 +85,13 @@ export async function GET(request: Request) {
   const latest_events = latestEventsRaw.map((e) => ({
     id: String(e.id), person: String(e.person), category: (e.category as string) ?? null,
     organization: (e.organization as string) ?? null, stance: String(e.stance),
+    person_display_zh: personDisplayZh(String(e.person)), person_short_name_zh: personShortNameZh(String(e.person)),
+    organization_display_zh: organizationDisplayZh((e.organization as string) ?? null),
     summary_zh: (e.summary_zh as string) ?? null, sector: (e.sector as string) ?? null, theme: (e.theme as string) ?? null,
     event_at: e.event_at ? new Date(e.event_at as string).toISOString() : null,
     source_url: String(e.source_url), source_title: (e.source_title as string) ?? null,
+    source_display_zh: sourceDisplayZh(String(e.source_url), (e.source_title as string) ?? null),
+    sector_display_zh: industryDisplayZh((e.sector as string) ?? null),
     direct_symbols: Array.isArray(e.direct_stock_symbols) ? e.direct_stock_symbols : [],
     inferred_symbols: Array.isArray(e.inferred_stock_symbols) ? e.inferred_stock_symbols : [],
   }));
@@ -154,6 +160,7 @@ export async function GET(request: Request) {
       latest_events,
       sectors: sectors.map((s) => ({
         sector: String(s.sector),
+        sector_display_zh: industryDisplayZh(String(s.sector)),
         bullish_people: n(s.bullish_people),
         bearish_people: n(s.bearish_people),
         neutral_people: n(s.neutral_people),

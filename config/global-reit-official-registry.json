@@ -1,0 +1,14 @@
+{
+  "asset": "GLOBAL_REIT",
+  "version": 1,
+  "sources": [
+    {"id":"nareit","name":"Nareit","country":"US","kind":"association","officialUrl":"https://www.reit.com/investing/reit-directory","accessState":"PUBLIC_OFFICIAL"},
+    {"id":"ftse-epra-nareit","name":"FTSE EPRA Nareit","country":"GLOBAL","kind":"index_registry","officialUrl":"https://www.lseg.com/en/ftse-russell/indices/epra-nareit","accessState":"LICENSE_REQUIRED"},
+    {"id":"ares","name":"Association for Real Estate Securitization","country":"JP","kind":"association","officialUrl":"https://j-reit.jp/en/list/","accessState":"PUBLIC_OFFICIAL"},
+    {"id":"sgx","name":"Singapore Exchange","country":"SG","kind":"exchange","officialUrl":"https://www.sgx.com/securities/securities-products","accessState":"PUBLIC_PARTIAL"},
+    {"id":"hkex","name":"Hong Kong Exchanges and Clearing","country":"HK","kind":"exchange","officialUrl":"https://www.hkex.com.hk/Products/Securities/Real-Estate-Investment-Trusts?sc_lang=en","accessState":"PUBLIC_OFFICIAL"},
+    {"id":"asx","name":"Australian Securities Exchange","country":"AU","kind":"exchange","officialUrl":"https://www.asx.com.au/markets/trade-our-cash-market/equity-market-prices","accessState":"PUBLIC_PARTIAL"},
+    {"id":"lse","name":"London Stock Exchange","country":"GB","kind":"exchange","officialUrl":"https://www.londonstockexchange.com/raise-finance/equity/investment-funds/reits","accessState":"PUBLIC_OFFICIAL"}
+  ],
+  "discoveryPolicy": {"officialOnly":true,"followExchangeListings":true,"retainRawEvidence":true}
+}

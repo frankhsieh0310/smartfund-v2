@@ -1,0 +1,19 @@
+{
+  "asset": "GLOBAL_ANALYST_ESTIMATES",
+  "datasets": {
+    "companyGuidance": "SEC_EDGAR_OFFICIAL_FILINGS",
+    "analystConsensus": "LICENSE_PENDING"
+  },
+  "issuers": [
+    {
+      "symbol": "NVDA",
+      "cik": "0001045810",
+      "canaryFiling": {
+        "accessionNumber": "0001045810-26-000051",
+        "filedAt": "2026-05-20",
+        "sourceUrl": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000051/q1fy27pr.htm"
+      }
+    }
+  ],
+  "issuerSchema": { "symbol": "string", "cik": "10-digit string (optional)", "irFeedUrl": "https URL (optional)" }
+}

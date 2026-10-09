@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "asset": "GLOBAL_COMMODITY",
+  "sources": [
+    { "id": "EIA", "readiness": "SOURCE_BLOCKED", "reason": "API key required" },
+    { "id": "IEA", "readiness": "EVENT_ONLY", "reason": "Release metadata only; data reuse requires review" },
+    { "id": "OPEC", "readiness": "EVENT_ONLY", "reason": "Publication event only; no stable canonical parser" },
+    { "id": "LBMA", "readiness": "SOURCE_BLOCKED", "reason": "Benchmark license review required" },
+    { "id": "WGC", "readiness": "EVENT_ONLY", "reason": "Dataset-version event only; terms review required" },
+    { "id": "LME", "readiness": "SOURCE_BLOCKED", "reason": "Commercial market-data license required" },
+    { "id": "CME", "readiness": "SOURCE_BLOCKED", "reason": "Commercial settlement-data license required" },
+    { "id": "USDA_NASS", "readiness": "EVENT_ONLY", "reason": "Release event only; API key required for data" },
+    { "id": "USDA_FAS", "readiness": "EVENT_ONLY", "reason": "Dated publication event; canonical inventory semantics are outside takeover scope" },
+    { "id": "FAOSTAT", "readiness": "METADATA_ONLY", "reason": "Weekly bulk-catalog version metadata" },
+    { "id": "USGS_NMIC", "readiness": "METADATA_ONLY", "reason": "Publication catalog metadata" },
+    { "id": "BALTIC", "readiness": "SOURCE_BLOCKED", "reason": "Commercial index license required" },
+    { "id": "ENTSOE", "readiness": "SOURCE_BLOCKED", "reason": "Transparency Platform token required" },
+    { "id": "EEX", "readiness": "SOURCE_BLOCKED", "reason": "Licensed end-of-day delivery required" },
+    { "id": "EU_ETS", "readiness": "METADATA_ONLY", "reason": "Registry publication metadata; inventory semantics are outside takeover scope" },
+    { "id": "WORLD_BANK_PINK_SHEET", "readiness": "CANONICAL_ADAPTER_READY", "scope": "COMMODITY_SPOT", "eventType": "MONTHLY_PUBLICATION", "canonicalDestination": "MarketMaster/MarketData", "canonicalIdentity": "WB_BRENT_SPOT" }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "asset": "GLOBAL_MARKET_BREADTH",
+  "policy": "Official exchange sources only. A landing page is not treated as a machine-readable feed. Unknown licensing or schema blocks ingestion until reviewed.",
+  "sources": [
+    { "id": "NYSE", "region": "US", "officialUrl": "https://www.nyse.com/market-data", "mode": "DISCOVERY", "license": "REVIEW_REQUIRED" },
+    { "id": "NASDAQ", "region": "US", "officialUrl": "https://www.nasdaq.com/market-activity", "mode": "DISCOVERY", "license": "REVIEW_REQUIRED" },
+    { "id": "CBOE", "region": "US", "officialUrl": "https://www.cboe.com/us/equities/market_statistics/", "mode": "DISCOVERY", "license": "REVIEW_REQUIRED" },
+    { "id": "TWSE", "region": "TW", "officialUrl": "https://www.twse.com.tw/en/indices/taiex/mi-index.html", "mode": "DISCOVERY", "license": "REVIEW_REQUIRED" },
+    { "id": "TPEX", "region": "TW", "officialUrl": "https://www.tpex.org.tw/en-us/mainboard/after-trading/market.html", "mode": "DISCOVERY", "license": "REVIEW_REQUIRED" },
+    { "id": "JPX", "region": "JP", "officialUrl": "https://www.jpx.co.jp/english/markets/statistics-equities/index.html", "mode": "DISCOVERY", "license": "REVIEW_REQUIRED" },
+    { "id": "HKEX", "region": "HK", "officialUrl": "https://www.hkex.com.hk/Market-Data/Statistics/Consolidated-Reports", "mode": "DISCOVERY", "license": "REVIEW_REQUIRED" },
+    { "id": "KRX", "region": "KR", "officialUrl": "https://global.krx.co.kr/main/main.jsp", "mode": "DISCOVERY", "license": "REVIEW_REQUIRED" },
+    { "id": "LSE", "region": "GB", "officialUrl": "https://www.londonstockexchange.com/market-data", "mode": "DISCOVERY", "license": "REVIEW_REQUIRED" },
+    { "id": "EURONEXT", "region": "EU", "officialUrl": "https://live.euronext.com/en/markets", "mode": "DISCOVERY", "license": "REVIEW_REQUIRED" },
+    { "id": "ASX", "region": "AU", "officialUrl": "https://www.asx.com.au/markets/trade-our-cash-market/overview", "mode": "DISCOVERY", "license": "REVIEW_REQUIRED" },
+    { "id": "SGX", "region": "SG", "officialUrl": "https://www.sgx.com/securities/market-updates", "mode": "DISCOVERY", "license": "REVIEW_REQUIRED" }
+  ],
+  "endpointOverride": "Set MARKET_BREADTH_<SOURCE_ID>_URL to an approved official JSON endpoint. Tokens {date}, {from}, and {to} are supported."
+}

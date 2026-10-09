@@ -1,0 +1,332 @@
+{
+  "version": 1,
+  "asset": "GLOBAL_COMMODITY",
+  "layer": "L1",
+  "generatedAt": "2026-08-04",
+  "datasets": [
+    {
+      "id": "EIA_PETROLEUM_PRICES",
+      "sourceId": "EIA",
+      "name": "Petroleum spot and product prices",
+      "commodities": [
+        "WTI",
+        "BRENT",
+        "GASOLINE",
+        "HEATING_OIL"
+      ],
+      "capabilities": [
+        "spot",
+        "historical",
+        "latest"
+      ],
+      "status": "REGISTERED",
+      "officialFirst": true,
+      "ingestionStarted": false
+    },
+    {
+      "id": "EIA_WEEKLY_PETROLEUM",
+      "sourceId": "EIA",
+      "name": "Weekly petroleum status",
+      "commodities": [
+        "CRUDE_OIL",
+        "GASOLINE",
+        "DISTILLATE"
+      ],
+      "capabilities": [
+        "inventory",
+        "production",
+        "consumption",
+        "imports",
+        "exports"
+      ],
+      "status": "REGISTERED",
+      "officialFirst": true,
+      "ingestionStarted": false
+    },
+    {
+      "id": "EIA_NATURAL_GAS",
+      "sourceId": "EIA",
+      "name": "Natural gas storage, supply and prices",
+      "commodities": [
+        "NATURAL_GAS"
+      ],
+      "capabilities": [
+        "spot",
+        "historical",
+        "latest",
+        "inventory",
+        "production",
+        "consumption",
+        "imports",
+        "exports"
+      ],
+      "status": "REGISTERED",
+      "officialFirst": true,
+      "ingestionStarted": false
+    },
+    {
+      "id": "EIA_ELECTRICITY",
+      "sourceId": "EIA",
+      "name": "Electricity operations and prices",
+      "commodities": [
+        "ELECTRICITY"
+      ],
+      "capabilities": [
+        "spot",
+        "historical",
+        "latest",
+        "production",
+        "consumption"
+      ],
+      "status": "REGISTERED",
+      "officialFirst": true,
+      "ingestionStarted": false
+    },
+    {
+      "id": "OPEC_MOMR",
+      "sourceId": "OPEC",
+      "name": "Monthly Oil Market Report",
+      "commodities": [
+        "CRUDE_OIL"
+      ],
+      "capabilities": [
+        "production",
+        "consumption",
+        "exports",
+        "seasonality"
+      ],
+      "status": "REGISTERED",
+      "officialFirst": true,
+      "ingestionStarted": false
+    },
+    {
+      "id": "LBMA_PRICES",
+      "sourceId": "LBMA",
+      "name": "LBMA precious metal benchmark prices",
+      "commodities": [
+        "GOLD",
+        "SILVER",
+        "PLATINUM",
+        "PALLADIUM"
+      ],
+      "capabilities": [
+        "spot",
+        "historical",
+        "latest"
+      ],
+      "status": "REGISTERED",
+      "officialFirst": true,
+      "ingestionStarted": false
+    },
+    {
+      "id": "LME_MARKET_WAREHOUSE",
+      "sourceId": "LME",
+      "name": "LME cash, futures and warehouse data",
+      "commodities": [
+        "COPPER",
+        "ALUMINUM",
+        "NICKEL",
+        "ZINC",
+        "LEAD",
+        "TIN"
+      ],
+      "capabilities": [
+        "spot",
+        "historical",
+        "latest",
+        "futures",
+        "inventory",
+        "termStructure"
+      ],
+      "status": "REGISTERED",
+      "officialFirst": true,
+      "ingestionStarted": false
+    },
+    {
+      "id": "CME_SETTLEMENTS",
+      "sourceId": "CME",
+      "name": "CME/COMEX futures settlements",
+      "commodities": [
+        "ENERGY",
+        "METALS",
+        "AGRICULTURE",
+        "LIVESTOCK",
+        "SOFTS"
+      ],
+      "capabilities": [
+        "futures",
+        "historical",
+        "latest",
+        "termStructure"
+      ],
+      "status": "REGISTERED",
+      "officialFirst": true,
+      "ingestionStarted": false
+    },
+    {
+      "id": "USDA_QUICK_STATS",
+      "sourceId": "USDA_NASS",
+      "name": "NASS Quick Stats",
+      "commodities": [
+        "CORN",
+        "WHEAT",
+        "SOYBEANS",
+        "COTTON",
+        "CATTLE",
+        "HOGS"
+      ],
+      "capabilities": [
+        "inventory",
+        "production",
+        "consumption"
+      ],
+      "status": "REGISTERED",
+      "officialFirst": true,
+      "ingestionStarted": false
+    },
+    {
+      "id": "USDA_PSD",
+      "sourceId": "USDA_FAS",
+      "name": "Production, Supply and Distribution",
+      "commodities": [
+        "GRAINS",
+        "OILSEEDS",
+        "COTTON",
+        "SUGAR"
+      ],
+      "capabilities": [
+        "inventory",
+        "production",
+        "consumption",
+        "imports",
+        "exports"
+      ],
+      "status": "REGISTERED",
+      "officialFirst": true,
+      "ingestionStarted": false
+    },
+    {
+      "id": "FAOSTAT_CROPS_LIVESTOCK",
+      "sourceId": "FAOSTAT",
+      "name": "Crops and livestock products",
+      "commodities": [
+        "AGRICULTURE",
+        "LIVESTOCK"
+      ],
+      "capabilities": [
+        "production",
+        "imports",
+        "exports"
+      ],
+      "status": "REGISTERED",
+      "officialFirst": true,
+      "ingestionStarted": false
+    },
+    {
+      "id": "USGS_MINERAL_STATS",
+      "sourceId": "USGS_NMIC",
+      "name": "Mineral commodity statistics",
+      "commodities": [
+        "INDUSTRIAL_METALS",
+        "FERTILIZER",
+        "RARE_EARTHS"
+      ],
+      "capabilities": [
+        "historical",
+        "inventory",
+        "production",
+        "consumption",
+        "imports",
+        "exports"
+      ],
+      "status": "REGISTERED",
+      "officialFirst": true,
+      "ingestionStarted": false
+    },
+    {
+      "id": "BALTIC_INDICES",
+      "sourceId": "BALTIC",
+      "name": "Baltic freight indices",
+      "commodities": [
+        "DRY_BULK_SHIPPING"
+      ],
+      "capabilities": [
+        "spot",
+        "historical",
+        "latest"
+      ],
+      "status": "REGISTERED",
+      "officialFirst": true,
+      "ingestionStarted": false
+    },
+    {
+      "id": "ENTSOE_MARKET",
+      "sourceId": "ENTSOE",
+      "name": "European electricity market and generation",
+      "commodities": [
+        "ELECTRICITY"
+      ],
+      "capabilities": [
+        "spot",
+        "historical",
+        "latest",
+        "production",
+        "consumption"
+      ],
+      "status": "REGISTERED",
+      "officialFirst": true,
+      "ingestionStarted": false
+    },
+    {
+      "id": "EEX_MARKET",
+      "sourceId": "EEX",
+      "name": "European energy and environmental market data",
+      "commodities": [
+        "ELECTRICITY",
+        "EU_ALLOWANCE"
+      ],
+      "capabilities": [
+        "spot",
+        "historical",
+        "latest",
+        "futures",
+        "termStructure"
+      ],
+      "status": "REGISTERED",
+      "officialFirst": true,
+      "ingestionStarted": false
+    },
+    {
+      "id": "EU_ETS_REGISTRY",
+      "sourceId": "EU_ETS",
+      "name": "EU ETS allocation, verified emissions and compliance",
+      "commodities": [
+        "EU_ALLOWANCE"
+      ],
+      "capabilities": [
+        "historical",
+        "latest",
+        "inventory"
+      ],
+      "status": "REGISTERED",
+      "officialFirst": true,
+      "ingestionStarted": false
+    },
+    {
+      "id": "WORLD_BANK_PINK_SHEET",
+      "sourceId": "WORLD_BANK_PINK_SHEET",
+      "name": "Commodity Markets Pink Sheet",
+      "commodities": [
+        "GLOBAL_COMMODITIES"
+      ],
+      "capabilities": [
+        "spot",
+        "historical",
+        "latest"
+      ],
+      "status": "REGISTERED",
+      "officialFirst": true,
+      "ingestionStarted": false
+    }
+  ]
+}

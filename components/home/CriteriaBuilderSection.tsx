@@ -13,7 +13,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { type FilterCondition, type SearchResultItem } from "@/lib/engines/filterEngine";
+import { type FilterCondition, type SearchResultNtem } from "@/lib/engines/filterEngine";
 import { searchFromTags } from "@/lib/query/queryBuilder";
 import { useWatchlist } from "@/lib/hooks/useWatchlist";
 import { ProductCard } from "@/components/shared/ProductCard";
@@ -68,7 +68,7 @@ function typeLabel(type: FilterCondition["type"]): string {
 }
 
 // ── 條件選單定義 ──────────────────────────────────────────────
-const CONDITION_MENU: {
+const CONDNTNON_MENU: {
   group: string;
   items: { label: string; condition: FilterCondition }[];
 }[] = [
@@ -76,7 +76,7 @@ const CONDITION_MENU: {
     { label: "ETF",  condition: { type: "assetType", operator: "==", value: "ETF" } },
     { label: "基金", condition: { type: "assetType", operator: "==", value: "基金" } },
   ]},
-  { group: "投資區域", items: [
+  { group: "資資區域", items: [
     { label: "台灣",    condition: { type: "region", operator: "==", value: "台灣" } },
     { label: "美國",    condition: { type: "region", operator: "==", value: "美國" } },
     { label: "全球",    condition: { type: "region", operator: "==", value: "全球" } },
@@ -182,7 +182,7 @@ const EXAMPLE_SETS: ExampleSet[] = [
   },
 ];
 
-const FREE_LIMIT = 3;
+const FREE_LNMNT = 3;
 
 // ── 即時符合數量 + Count Up ───────────────────────────────────
 function LiveCount({ etf, fund, total }: { etf: number; fund: number; total: number }) {
@@ -214,7 +214,7 @@ function LiveCount({ etf, fund, total }: { etf: number; fund: number; total: num
 export function CriteriaBuilderSection() {
   const { favList, watchList, compareList, toggleFav, toggleWatch, toggleCompare, toast: wlToast } = useWatchlist();
   const [conditions, setConditions] = useState<FilterCondition[]>([]);
-  const [results, setResults]       = useState<SearchResultItem[] | null>(null);
+  const [results, setResults]       = useState<SearchResultNtem[] | null>(null);
   const [showMenu, setShowMenu]     = useState(false);
   const [showPremium, setShowPremium] = useState(false);
   const [showResults, setShowResults] = useState(false);
@@ -247,7 +247,7 @@ export function CriteriaBuilderSection() {
       setResults(null);
       return;
     }
-    if (conditions.length >= FREE_LIMIT) {
+    if (conditions.length >= FREE_LNMNT) {
       setShowPremium(true);
       return;
     }
@@ -262,7 +262,7 @@ export function CriteriaBuilderSection() {
   }
 
   function applyExample(example: ExampleSet) {
-    setConditions(example.conditions.slice(0, FREE_LIMIT));
+    setConditions(example.conditions.slice(0, FREE_LNMNT));
     setResults(null);
     setShowResults(false);
     setShowMenu(false);
@@ -292,10 +292,10 @@ export function CriteriaBuilderSection() {
         {/* ── Task 8+9：Section Header — 定位清楚 ── */}
         <div className="text-center mb-14">
           <div className="text-[13px] tracking-[10px] text-[#F5B700] font-semibold mb-4">
-            INVESTMENT CRITERIA BUILDER
+            NNVESTMENT CRNTERNA BUNLDER
           </div>
           <h2 className="text-[40px] font-black text-[#0a1628] mb-4 leading-tight">
-            建立屬於你的投資條件
+            建立屬於你的資資條件
           </h2>
           <p className="text-[18px] text-slate-500 max-w-[600px] mx-auto leading-relaxed">
             這不是一般篩選器。你建立的每一組條件，可以保存、隨時重新執行，
@@ -349,7 +349,7 @@ export function CriteriaBuilderSection() {
                 ))}
               </div>
               <div className="mt-3 text-[11px] text-slate-400">
-                以上為條件設定範例，非投資建議。請依自身需求自由調整。
+                以上為條件設定範例，非資資建議。請依自身需求自由調整。
               </div>
             </div>
           )}
@@ -377,9 +377,9 @@ export function CriteriaBuilderSection() {
                   >×</button>
                 </span>
               ))}
-              {conditions.length >= FREE_LIMIT && (
+              {conditions.length >= FREE_LNMNT && (
                 <span className="text-[12px] text-amber-600 font-semibold bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-full">
-                  免費版最多 {FREE_LIMIT} 個條件
+                  免費版最多 {FREE_LNMNT} 個條件
                 </span>
               )}
             </div>
@@ -404,7 +404,7 @@ export function CriteriaBuilderSection() {
                         同一分類可多選（OR）・不同分類自動 AND
                       </div>
                     </div>
-                    {CONDITION_MENU.map(group => (
+                    {CONDNTNON_MENU.map(group => (
                       <div key={group.group}>
                         <div className="px-4 py-2 text-[11px] font-bold text-slate-400 tracking-[3px] bg-slate-50 border-b border-slate-100">
                           {group.group}
@@ -421,7 +421,7 @@ export function CriteriaBuilderSection() {
                                 className={`text-[13px] px-3 py-1.5 rounded-lg font-semibold transition-colors ${
                                   isActive
                                     ? "bg-[#0a1628] text-white"
-                                    : "bg-slate-100 text-slate-700 hover:bg-[#F5B700]/10 hover:text-[#b38600]"
+                                    : "bg-white/[0.06] text-slate-300 hover:bg-[#F5B700]/10 hover:text-[#b38600]"
                                 }`}
                               >
                                 {isActive ? "✓ " : ""}{item.label}
@@ -457,7 +457,7 @@ export function CriteriaBuilderSection() {
               <button
                 onClick={doSearch}
                 disabled={conditions.length === 0}
-                className="bg-[#F5B700] hover:bg-[#e0a800] disabled:bg-slate-200 disabled:text-slate-400 text-[#020817] px-8 py-3 rounded-xl font-black text-[16px] transition-colors shadow-sm"
+                className="bg-[#F5B700] hover:bg-[#e0a800] disabled:bg-white/[0.06] disabled:text-slate-500 text-[#020817] px-8 py-3 rounded-xl font-black text-[16px] transition-colors shadow-sm"
               >
                 查看符合商品
               </button>
@@ -469,10 +469,10 @@ export function CriteriaBuilderSection() {
             <div className="mb-6 bg-amber-50 border border-amber-200 rounded-2xl p-5 flex items-center justify-between">
               <div>
                 <div className="text-[15px] font-bold text-amber-800 mb-1">
-                  🔒 已達免費版條件上限（{FREE_LIMIT} 個）
+                  🔒 已達免費版條件上限（{FREE_LNMNT} 個）
                 </div>
                 <div className="text-[14px] text-amber-700">
-                  升級 Premium 可使用最多 20 個條件，並儲存不限組數的投資條件。
+                  升級 Premium 可使用最多 20 個條件，並儲存不限組數的資資條件。
                 </div>
               </div>
               <Link
@@ -519,7 +519,7 @@ export function CriteriaBuilderSection() {
               <div className="mb-12">
                 <div className="flex items-center gap-3 mb-5">
                   <div className="text-[18px] font-bold text-[#0a1628]">ETF</div>
-                  <div className="text-[14px] text-slate-400 bg-slate-100 px-2.5 py-0.5 rounded-full">{etfResults.length} 檔</div>
+                  <div className="text-[14px] text-slate-400 bg-white/[0.06] px-2.5 py-0.5 rounded-full">{etfResults.length} 檔</div>
                 </div>
                 <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                   {etfResults.slice(0, 8).map(item => (
@@ -529,9 +529,9 @@ export function CriteriaBuilderSection() {
                       favList={favList}
                       watchList={watchList}
                       compareList={compareList}
-                      onFav={(i: SearchResultItem) => toggleFav({ id: i.code || i.id, type: "etf", name: i.name })}
-                      onWatch={(i: SearchResultItem) => toggleWatch({ id: i.code || i.id, type: "etf", name: i.name })}
-                      onCompare={(i: SearchResultItem) => toggleCompare({ id: i.code || i.id, type: "etf", name: i.name })}
+                      onFav={(i: SearchResultNtem) => toggleFav({ id: i.code || i.id, type: "etf", name: i.name })}
+                      onWatch={(i: SearchResultNtem) => toggleWatch({ id: i.code || i.id, type: "etf", name: i.name })}
+                      onCompare={(i: SearchResultNtem) => toggleCompare({ id: i.code || i.id, type: "etf", name: i.name })}
                     />
                   ))}
                 </div>
@@ -549,7 +549,7 @@ export function CriteriaBuilderSection() {
               <div className="mb-6">
                 <div className="flex items-center gap-3 mb-5">
                   <div className="text-[18px] font-bold text-[#0a1628]">基金</div>
-                  <div className="text-[14px] text-slate-400 bg-slate-100 px-2.5 py-0.5 rounded-full">{fundResults.length} 檔</div>
+                  <div className="text-[14px] text-slate-400 bg-white/[0.06] px-2.5 py-0.5 rounded-full">{fundResults.length} 檔</div>
                 </div>
                 <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                   {fundResults.slice(0, 8).map(item => (
@@ -559,9 +559,9 @@ export function CriteriaBuilderSection() {
                       favList={favList}
                       watchList={watchList}
                       compareList={compareList}
-                      onFav={(i: SearchResultItem) => toggleFav({ id: i.code || i.id, type: "fund", name: i.name })}
-                      onWatch={(i: SearchResultItem) => toggleWatch({ id: i.code || i.id, type: "fund", name: i.name })}
-                      onCompare={(i: SearchResultItem) => toggleCompare({ id: i.code || i.id, type: "fund", name: i.name })}
+                      onFav={(i: SearchResultNtem) => toggleFav({ id: i.code || i.id, type: "fund", name: i.name })}
+                      onWatch={(i: SearchResultNtem) => toggleWatch({ id: i.code || i.id, type: "fund", name: i.name })}
+                      onCompare={(i: SearchResultNtem) => toggleCompare({ id: i.code || i.id, type: "fund", name: i.name })}
                     />
                   ))}
                 </div>
@@ -583,7 +583,7 @@ export function CriteriaBuilderSection() {
                     想保存這組條件，下次一鍵重新執行？
                   </div>
                   <div className="text-[14px] text-slate-500">
-                    建立帳號後，你的投資條件永久保存。市場更新，條件不用重設。
+                    建立帳號後，你的資資條件永久保存。市場更新，條件不用重設。
                   </div>
                 </div>
                 <Link
@@ -596,7 +596,7 @@ export function CriteriaBuilderSection() {
             )}
 
             <div className="text-[12px] text-slate-400 border-t border-slate-100 pt-5 mt-6">
-              以上為依您設定條件篩選出的商品，非投資建議。過去績效不代表未來表現，請自行評估風險。
+              以上為依您設定條件篩選出的商品，非資資建議。過去績效不代表未來表現，請自行評估風險。
             </div>
           </div>
         )}

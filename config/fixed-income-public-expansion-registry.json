@@ -1,0 +1,106 @@
+{
+  "version": 1,
+  "asset": "FIXED_INCOME",
+  "priority": 9,
+  "existingFixedIncomePriority": 0,
+  "mode": "IDLE_ONLY_FAIL_CLOSED",
+  "fullUniverseTarget": "FULL_ELIGIBLE_FIXED_INCOME_UNIVERSE",
+  "fullHistoryTarget": "DEEPEST_RELIABLE_FREE_PUBLIC_HISTORY",
+  "database": {
+    "poolMode": "SUPABASE_TRANSACTION_POOLING_6543_PGBOUNCER",
+    "maxConcurrency": 1,
+    "boundedBatching": true,
+    "idempotentWrites": true
+  },
+  "canonicalDedup": {
+    "securityPriority": ["ISIN", "CUSIP_WHERE_LEGALLY_USABLE", "OFFICIAL_LOCAL_SECURITY_ID", "VERIFIED_COMPOSITE_IDENTITY"],
+    "issuerResolver": "SHARED_GLEIF_ENTITY_LAYER",
+    "ratingEventKey": ["agency", "issuer_or_security", "action_type", "effective_date", "new_rating", "new_outlook"],
+    "ratingSourcePriority": ["RATING_AGENCY_PUBLIC_RELEASE", "REGULATORY_DISCLOSURE", "ISSUER_DISCLOSURE", "SUPPLEMENTAL_PUBLIC"],
+    "crossAgencyMerge": false,
+    "lineagePreserved": true
+  },
+  "routes": [
+    {
+      "id": "PUBLIC_RATINGS",
+      "product": "PUBLIC_CREDIT_RATING_ACTION_LAYER",
+      "state": "LICENSE_LIMITED",
+      "sources": ["SP_GLOBAL_RATINGS_PUBLIC_RELEASES", "MOODYS_RATINGS_PUBLIC_RELEASES", "FITCH_RATINGS_PUBLIC_RELEASES", "SEC_FILINGS", "ISSUER_ANNOUNCEMENTS", "REGULATORY_EXCHANGE_DISCLOSURES"],
+      "agencyGrain": "DISTINCT",
+      "licensedHistory": "EXTERNALLY_BLOCKED_LICENSE",
+      "checkpoint": "runtime/fixed-income/public-expansion/public-ratings.json"
+    },
+    {
+      "id": "ADB_ASIANBONDSONLINE",
+      "product": "OFFICIAL_REGIONAL_FIXED_INCOME_AGGREGATOR",
+      "state": "SOURCE_LIMITED",
+      "source": "ADB_ASIANBONDSONLINE_PUBLIC",
+      "precedence": ["DIRECT_NATIONAL_OFFICIAL", "ADB_ASIANBONDSONLINE", "SUPPLEMENTAL"],
+      "checkpoint": "runtime/fixed-income/public-expansion/adb-asianbondsonline.json"
+    },
+    {
+      "id": "TAIWAN_SOVEREIGN",
+      "product": "TAIWAN_GOVERNMENT_DEBT",
+      "state": "SOURCE_LIMITED",
+      "sources": ["TAIWAN_CBC", "TAIWAN_MOF", "TAIWAN_TREASURY_AGENCY"],
+      "checkpoint": "runtime/fixed-income/public-expansion/taiwan-sovereign.json"
+    },
+    {
+      "id": "GLOBAL_DEBT_OFFICES",
+      "product": "GLOBAL_SOVEREIGN_DEBT_OFFICE_REGISTRY",
+      "state": "SOURCE_LIMITED",
+      "commonAdapter": true,
+      "sources": ["US_TREASURY_RAILWAY_READ_ONLY", "UK_DMO", "GERMANY_FINANZAGENTUR", "FRANCE_AFT", "ITALY_MEF_TREASURY", "JAPAN_MOF", "TAIWAN_CBC_MOF", "CANADA_DEBT_MANAGEMENT", "AUSTRALIA_AOFM"],
+      "checkpoint": "runtime/fixed-income/public-expansion/global-debt-offices.json"
+    },
+    {
+      "id": "MSRB_EMMA",
+      "product": "MUNICIPAL_BOND",
+      "state": "LICENSE_LIMITED",
+      "source": "MSRB_EMMA_FREE_PUBLIC",
+      "restrictedBulk": "EXTERNALLY_BLOCKED_LICENSE_OR_ACCESS",
+      "checkpoint": "runtime/fixed-income/public-expansion/msrb-emma.json"
+    },
+    {
+      "id": "STRUCTURED_CREDIT",
+      "products": ["AGENCY_MBS", "NON_AGENCY_MBS", "TBA", "ABS", "CMBS", "CMO"],
+      "state": "SOURCE_LIMITED",
+      "sources": ["NY_FED_EXISTING", "FED_EXISTING", "SEC_EXISTING", "FINRA_TRACE_PUBLIC_ONLY", "GOVERNMENT_AGENCY_PUBLIC"],
+      "checkpoint": "runtime/fixed-income/public-expansion/structured-credit.json"
+    },
+    {
+      "id": "SUSTAINABLE_BONDS",
+      "products": ["GREEN_BOND", "SOCIAL_BOND", "SUSTAINABILITY_BOND", "SUSTAINABILITY_LINKED_BOND", "TRANSITION_BOND"],
+      "state": "SOURCE_LIMITED",
+      "sources": ["BIS_SHARED_EXISTING", "ADB_ASIANBONDSONLINE_PUBLIC", "CLIMATE_BONDS_INITIATIVE_PUBLIC_ONLY", "ISSUER_FRAMEWORKS", "OFFICIAL_REGULATORY_DISCLOSURES"],
+      "checkpoint": "runtime/fixed-income/public-expansion/sustainable-bonds.json"
+    },
+    {
+      "id": "CONVERTIBLE_BONDS",
+      "product": "CONVERTIBLE_BOND",
+      "state": "SOURCE_LIMITED",
+      "sourcePriority": ["TAIWAN_OFFICIAL_PUBLIC", "OFFICIAL_EXCHANGE", "ISSUER_DISCLOSURE"],
+      "checkpoint": "runtime/fixed-income/public-expansion/convertible-bonds.json"
+    },
+    {
+      "id": "PUBLIC_SECURITY_MASTER",
+      "product": "GLOBAL_BOND_PUBLIC_SECURITY_MASTER",
+      "state": "COMPLETE_AS_AVAILABLE",
+      "sources": ["OFFICIAL_DEBT_OFFICES", "REGULATORS", "EXCHANGES", "ISSUERS", "GLEIF_SHARED_EXISTING", "SEC_EXISTING", "EMMA_PUBLIC", "TREASURY_SHARED", "PUBLIC_BOND_LISTINGS"],
+      "checkpoint": "runtime/fixed-income/public-expansion/public-security-master.json"
+    },
+    {
+      "id": "EXISTING_OFFICIAL_DEPTH_ROUTING",
+      "state": "COMPLETE_REUSE_OWNED",
+      "sources": ["BIS", "FEDERAL_RESERVE", "NY_FED", "ECB", "IMF", "WORLD_BANK", "GLEIF", "US_TREASURY", "SEC", "FINRA_PUBLIC_PORTION"],
+      "duplicateDownloader": false,
+      "checkpoint": "EXISTING_SOURCE_CHECKPOINTS_UNCHANGED"
+    }
+  ],
+  "multilingual": {
+    "model": "ACTIVE_SHARED_LOCALE_MODEL",
+    "officialNamesOnly": true,
+    "translateSecurityCodes": false,
+    "massTranslation": false
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "scope": ["STOCK", "ETF"],
+  "storage": {
+    "marketQuote": "EXISTING_ASSET_LATEST_FIELDS_UNTIL_SHARED_CANONICAL_SCHEMA_APPROVED",
+    "intradayBar": "SCHEMA_BLOCKED",
+    "marketSession": "CONFIGURATION_CONSTRAINED"
+  },
+  "quoteContract": ["instrument_id", "latest_price", "change", "change_percent", "previous_close", "open", "high", "low", "volume", "currency", "exchange", "source_timestamp", "received_at", "source", "delay_minutes", "freshness_state", "verification_state"],
+  "intraday5mContract": ["instrument_id", "market_session_date", "bar_timestamp", "open", "high", "low", "close", "volume", "currency", "exchange", "source_timestamp", "received_at", "source", "delay_minutes", "freshness_state", "verification_state"],
+  "freshnessStates": ["REALTIME", "DELAYED", "SOURCE_DELAYED", "EOD_ONLY", "SOURCE_CONSTRAINED", "ACCESS_CONSTRAINED", "LICENSE_CONSTRAINED"],
+  "policy": { "grain": "5m", "ticksStored": false, "eventDriven": true, "boundedBatching": true, "assumeRealtime": false, "redistributionRequiresApproval": true },
+  "markets": [
+    { "market": "TWSE", "currentQuote": "EOD_ONLY", "intraday5m": "SOURCE_CONSTRAINED" },
+    { "market": "TPEX", "currentQuote": "EOD_ONLY", "intraday5m": "SOURCE_CONSTRAINED" },
+    { "market": "NYSE", "currentQuote": "SOURCE_DELAYED", "intraday5m": "LICENSE_CONSTRAINED" },
+    { "market": "NASDAQ", "currentQuote": "SOURCE_DELAYED", "intraday5m": "LICENSE_CONSTRAINED" },
+    { "market": "JPX", "currentQuote": "SOURCE_DELAYED", "intraday5m": "LICENSE_CONSTRAINED" },
+    { "market": "HKEX", "currentQuote": "SOURCE_DELAYED", "intraday5m": "LICENSE_CONSTRAINED" },
+    { "market": "LSE", "currentQuote": "SOURCE_DELAYED", "intraday5m": "LICENSE_CONSTRAINED" },
+    { "market": "EURONEXT", "currentQuote": "SOURCE_DELAYED", "intraday5m": "LICENSE_CONSTRAINED" },
+    { "market": "ASX", "currentQuote": "SOURCE_DELAYED", "intraday5m": "LICENSE_CONSTRAINED" },
+    { "market": "SGX", "currentQuote": "SOURCE_DELAYED", "intraday5m": "LICENSE_CONSTRAINED" },
+    { "market": "KRX", "currentQuote": "SOURCE_DELAYED", "intraday5m": "LICENSE_CONSTRAINED" }
+  ]
+}

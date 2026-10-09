@@ -1,0 +1,19 @@
+{
+  "asset": "GLOBAL_ETF_PRODUCT_DATA_EXPANSION",
+  "universe": 12802,
+  "batchSize": 50,
+  "maxDbConcurrency": 1,
+  "dbPoolMode": "SUPABASE_TRANSACTION_POOLING_6543_PGBOUNCER",
+  "priorityIsolation": "INDEPENDENT_ETF_PRODUCT_EXPANSION_LANE",
+  "touchPriority0": false,
+  "touchPriority9": false,
+  "existingHoldingsOwner": {"pidFile":"runtime/etf-holdings/supervisor.pid","codes":["IVV","IWM","AGG"],"touch":false},
+  "existingFlowCodes": ["AAXJ","ACWI","ACWV","ACWX","AGG","AGRH","AGZ","AIA","AOA","AOK","IVV","IWM"],
+  "exactIssuerProviders": ["BlackRock / iShares"],
+  "identityPolicy": {"allowFuzzy":false,"keys":["isin","cik","series_id","class_id","ticker_exchange_mic"],"rawPreserved":true},
+  "sourcePriority": ["REGULATOR","OFFICIAL_EXCHANGE","ISSUER","SUPPLEMENTAL"],
+  "domains": ["HOLDINGS_CURRENT","HOLDINGS_PIT","NPORT_PROMOTION","NCEN_METADATA","NAV_AUM_SHARES","FLOWS","IDENTITY","FEES_STRUCTURE","DISTRIBUTIONS","PRODUCT_LIFECYCLE"],
+  "dedupeKey": ["domain","etf_id","source","as_of","source_record_id","raw_identity"],
+  "unsupportedAction": "RECORD_AND_CONTINUE",
+  "identityBlockedAction": "STAGE_RAW_AND_CONTINUE"
+}

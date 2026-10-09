@@ -1,0 +1,5 @@
+$ErrorActionPreference='Stop'
+$repo=(Resolve-Path (Join-Path $PSScriptRoot '..\..\..')).Path; $dir=Join-Path $repo 'runtime\etf-yahoo-full-universe'; New-Item -ItemType Directory -Force $dir | Out-Null
+$pidFile=Join-Path $dir 'worker.pid'; if(Test-Path $pidFile){$old=[int](Get-Content $pidFile -Raw);if(Get-Process -Id $old -ErrorAction SilentlyContinue){Write-Output $old;exit 0}}
+$p=Start-Process -FilePath (Get-Command node).Source -ArgumentList @('--experimental-strip-types','--env-file=.env',(Join-Path $repo 'scripts\data\etf-yahoo\run-etf-yahoo-full-universe.ts'),'--continuous') -WorkingDirectory $repo -WindowStyle Hidden -PassThru
+Set-Content $pidFile $p.Id -Encoding ascii; Start-Sleep -Seconds 2;if(-not(Get-Process -Id $p.Id -ErrorAction SilentlyContinue)){throw 'ETF Yahoo worker exited during startup'};Write-Output $p.Id

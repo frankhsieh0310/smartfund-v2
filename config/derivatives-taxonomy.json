@@ -1,0 +1,11 @@
+{
+  "asset": "DERIVATIVES",
+  "children": {
+    "FUTURES": { "status": "PRESERVED", "existingSchema": "FuturesContract/FuturesObservation" },
+    "OPTIONS": { "status": "PHASE1_ACTIVE", "existingSchema": "OptionContract/OptionObservation" },
+    "STRUCTURED_PRODUCTS": {
+      "status": "TAXONOMY_ONLY",
+      "children": { "FCN": { "status": "PLACEHOLDER", "ingestionEnabled": false } }
+    }
+  }
+}

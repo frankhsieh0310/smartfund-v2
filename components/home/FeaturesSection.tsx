@@ -7,7 +7,6 @@
 // ============================================================
 
 import Link from "next/link";
-import { getHomeTopEtfs, getHomeTopFunds } from "@/lib/services/rankingService";
 
 export function FeaturesSection() {
   return (
@@ -16,7 +15,7 @@ export function FeaturesSection() {
       <section id="features" className="relative z-10 py-28" style={{ backgroundColor:"#F5F7FA" }}>
         <div className="max-w-[1600px] mx-auto px-10">
           <div className="text-center mb-14">
-            <div className="text-[14px] tracking-[10px] text-[#F5B700] font-semibold mb-4">WHY SMARTMATCH</div>
+            <div className="text-[14px] tracking-[10px] text-[#F5B700] font-semibold mb-4">選擇 SmartMatch 的理由</div>
             <h2 className="text-[40px] font-black text-[#0a1628]">為什麼使用 SmartMatch</h2>
             <p className="text-[18px] text-slate-500 mt-3 max-w-[600px] mx-auto">
               不只是資料查詢。SmartMatch 是你的投資決策夥伴。
@@ -48,7 +47,7 @@ export function FeaturesSection() {
       <section className="relative z-10 py-28" style={{ backgroundColor:"#ffffff" }}>
         <div className="max-w-[1600px] mx-auto px-10">
           <div className="text-center mb-14">
-            <div className="text-[14px] tracking-[10px] text-[#F5B700] font-semibold mb-4">MEMBER VALUE</div>
+            <div className="text-[14px] tracking-[10px] text-[#F5B700] font-semibold mb-4">會員價值</div>
             <h2 className="text-[40px] font-black text-[#0a1628]">註冊後可以做什麼？</h2>
             <p className="text-[18px] text-slate-500 mt-3 max-w-[560px] mx-auto">
               建立帳號後，你的投資資料庫就開始運作。
@@ -91,16 +90,16 @@ export function FeaturesSection() {
       <section className="relative z-10 py-28" style={{ backgroundColor:"#ffffff" }}>
         <div className="max-w-[1600px] mx-auto px-10">
           <div className="text-center mb-14">
-            <div className="text-[14px] tracking-[10px] text-[#F5B700] font-semibold mb-4">GET STARTED</div>
+            <div className="text-[14px] tracking-[10px] text-[#F5B700] font-semibold mb-4">開始使用</div>
             <h2 className="text-[40px] font-black text-[#0a1628]">開始使用 SmartMatch</h2>
           </div>
           <div className="grid grid-cols-5 gap-4 relative">
             {[
-              { step:"STEP 1", icon:"👤", title:"建立帳號",       desc:"免費註冊，30 秒完成" },
-              { step:"STEP 2", icon:"🏠", title:"設定首頁模組",   desc:"選擇你想追蹤的市場與商品" },
-              { step:"STEP 3", icon:"🧠", title:"完成投資分析",   desc:"20題問卷了解投資風格" },
-              { step:"STEP 4", icon:"⭐", title:"收藏與追蹤商品", desc:"建立自己的ETF與基金清單" },
-              { step:"STEP 5", icon:"💾", title:"建立投資資料庫", desc:"分析結果與追蹤記錄永久保存" },
+              { step:"步驟 1", icon:"👤", title:"建立帳號",       desc:"免費註冊，30 秒完成" },
+              { step:"步驟 2", icon:"🏠", title:"設定首頁模組",   desc:"選擇你想追蹤的市場與商品" },
+              { step:"步驟 3", icon:"🧠", title:"完成投資分析",   desc:"20題問卷了解投資風格" },
+              { step:"步驟 4", icon:"⭐", title:"收藏與追蹤商品", desc:"建立自己的ETF與基金清單" },
+              { step:"步驟 5", icon:"💾", title:"建立投資資料庫", desc:"分析結果與追蹤記錄永久保存" },
             ].map((s, i) => (
               <div key={s.step} className="relative">
                 {i < 4 && (
@@ -125,87 +124,11 @@ export function FeaturesSection() {
         </div>
       </section>
 
-      {/* ══ ZONE 6：熱門申購排行（白底）════════════════════════════ */}
-      <section className="relative z-10 py-28" style={{ backgroundColor:"#ffffff" }}>
-        <div className="max-w-[1600px] mx-auto px-10">
-          <div className="text-center mb-12">
-            <div className="text-[14px] tracking-[10px] text-[#F5B700] font-semibold mb-3">HOT PICKS</div>
-            <h2 className="text-[40px] font-black text-[#0a1628]">熱門申購排行榜</h2>
-            <p className="text-[16px] text-slate-400 mt-2">近一週資金淨流入排行・示意資料</p>
-          </div>
-          <div className="grid grid-cols-2 gap-8">
-            <div>
-              <div className="flex items-center gap-3 mb-4">
-                <span className="text-[20px]">📊</span>
-                <h3 className="text-[20px] font-bold text-[#0a1628]">ETF 近1年績效 Top 5</h3>
-              </div>
-              <div className="border border-slate-100 rounded-2xl overflow-hidden">
-                <table className="w-full text-[15px]">
-                  <thead><tr className="bg-slate-50 text-slate-400 text-[13px]">
-                    <th className="px-4 py-3 text-left w-8">#</th>
-                    <th className="px-4 py-3 text-left">代碼</th>
-                    <th className="px-4 py-3 text-left">名稱</th>
-                    <th className="px-4 py-3 text-right">殖利率</th>
-                    <th className="px-4 py-3 text-right">近1年</th>
-                  </tr></thead>
-                  <tbody>
-                    {getHomeTopEtfs().map((e, i) => (
-                      <tr key={e.code} className="border-t border-slate-50 hover:bg-slate-50 transition-colors">
-                        <td className="px-4 py-2.5"><span className={`text-[13px] font-bold ${i<3?"text-[#b38600]":"text-slate-300"}`}>{i+1}</span></td>
-                        <td className="px-4 py-2.5 font-bold text-[#b38600]">{e.code}</td>
-                        <td className="px-4 py-2.5 text-slate-600 truncate max-w-[140px]">{e.name}</td>
-                        <td className="px-4 py-2.5 text-right text-slate-500">{e.dividendYield>0?`${e.dividendYield.toFixed(1)}%`:"—"}</td>
-                        <td className={`px-4 py-2.5 text-right font-semibold ${e.return1y>=0?"text-emerald-600":"text-red-500"}`}>{e.return1y>=0?"+":""}{e.return1y.toFixed(1)}%</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <div className="mt-3 text-right">
-                <Link href="/etf" className="text-[14px] text-[#b38600] hover:underline">查看完整排行榜 →</Link>
-              </div>
-            </div>
-            <div>
-              <div className="flex items-center gap-3 mb-4">
-                <span className="text-[20px]">🏦</span>
-                <h3 className="text-[20px] font-bold text-[#0a1628]">基金近1年績效 Top 5</h3>
-              </div>
-              <div className="border border-slate-100 rounded-2xl overflow-hidden">
-                <table className="w-full text-[15px]">
-                  <thead><tr className="bg-slate-50 text-slate-400 text-[13px]">
-                    <th className="px-4 py-3 text-left w-8">#</th>
-                    <th className="px-4 py-3 text-left">公司</th>
-                    <th className="px-4 py-3 text-left">基金名稱</th>
-                    <th className="px-4 py-3 text-right">年化配息</th>
-                    <th className="px-4 py-3 text-right">近1年</th>
-                  </tr></thead>
-                  <tbody>
-                    {getHomeTopFunds().map((f, i) => (
-                      <tr key={f.id} className="border-t border-slate-50 hover:bg-slate-50 transition-colors">
-                        <td className="px-4 py-2.5"><span className={`text-[13px] font-bold ${i<3?"text-[#b38600]":"text-slate-300"}`}>{i+1}</span></td>
-                        <td className="px-4 py-2.5 text-slate-500 text-[13px]">{f.company}</td>
-                        <td className="px-4 py-2.5 text-slate-600 truncate max-w-[160px]">{f.name}</td>
-                        <td className="px-4 py-2.5 text-right font-semibold text-[#b38600]">{f.dividendYieldA>0?`${f.dividendYieldA.toFixed(1)}%`:"—"}</td>
-                        <td className={`px-4 py-2.5 text-right font-semibold ${f.return1y>=0?"text-emerald-600":"text-red-500"}`}>{f.return1y>=0?"+":""}{f.return1y.toFixed(1)}%</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <div className="mt-3 text-right">
-                <Link href="/funds" className="text-[14px] text-[#b38600] hover:underline">查看完整排行榜 →</Link>
-              </div>
-            </div>
-          </div>
-          <p className="text-[14px] text-slate-400 mt-6 text-center">以上排行為示意範例，非即時申購數據，僅供功能展示。</p>
-        </div>
-      </section>
-
       {/* ══ ZONE 7：About SmartMatch（深藍）════════════════════════ */}
       <section className="relative z-10 py-28" style={{ backgroundColor:"#0a1628" }}>
         <div className="max-w-[1600px] mx-auto px-10">
           <div className="text-center mb-14">
-            <div className="text-[14px] tracking-[10px] text-[#F5B700] font-semibold mb-4">ABOUT</div>
+            <div className="text-[14px] tracking-[10px] text-[#F5B700] font-semibold mb-4">關於我們</div>
             <h2 className="text-[40px] font-black text-white">關於 SmartMatch</h2>
             <p className="text-[18px] text-slate-400 mt-3 max-w-[680px] mx-auto leading-relaxed">
               投資資料分析平台。整合市場數據、ETF 與基金資料庫、商品比較、個人化儀表板與分析工具，幫助你建立更有系統的投資決策流程。
@@ -213,27 +136,27 @@ export function FeaturesSection() {
           </div>
           <div className="grid lg:grid-cols-3 gap-6 mb-10">
             <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-7">
-              <div className="text-[12px] tracking-[4px] text-[#F5B700] font-semibold mb-4">PLATFORM</div>
+              <div className="text-[12px] tracking-[4px] text-[#F5B700] font-semibold mb-4">平台特色</div>
               <h3 className="text-[20px] font-bold text-white mb-4">平台介紹</h3>
               <div className="space-y-3 text-[16px] text-slate-400 leading-relaxed">
                 <p>SmartMatch 為<span className="text-white font-semibold">瑞宇智庫</span>旗下投資資料分析平台。</p>
                 <p>提供個人化投資首頁、ETF 與基金資料庫、商品比較中心與資產配置分析工具。</p>
-                <p>定位類似 Morningstar，以<span className="text-white">客觀數據</span>為核心，不提供投資建議。</p>
+                <p>以<span className="text-white">客觀數據</span>為核心，不提供投資建議。</p>
               </div>
             </div>
             <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-7">
-              <div className="text-[12px] tracking-[4px] text-[#F5B700] font-semibold mb-4">DATA SOURCES</div>
+              <div className="text-[12px] tracking-[4px] text-[#F5B700] font-semibold mb-4">資料說明</div>
               <h3 className="text-[20px] font-bold text-white mb-4">資料來源</h3>
               <div className="space-y-2 text-[16px] text-slate-400">
                 <div className="flex items-start gap-2"><span className="text-[#F5B700] shrink-0">·</span><span>ETF：各發行商公開說明書</span></div>
                 <div className="flex items-start gap-2"><span className="text-[#F5B700] shrink-0">·</span><span>基金：投信投顧公會公開資料</span></div>
                 <div className="flex items-start gap-2"><span className="text-[#F5B700] shrink-0">·</span><span>市場指數：各交易所公開資訊</span></div>
                 <div className="flex items-start gap-2"><span className="text-[#F5B700] shrink-0">·</span><span>申購排行：投信投顧公會月報</span></div>
-                <p className="text-[14px] text-slate-600 mt-3">目前版本使用示意數據供功能展示。</p>
+                
               </div>
             </div>
             <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-7">
-              <div className="text-[12px] tracking-[4px] text-[#F5B700] font-semibold mb-4">DISCLAIMER</div>
+              <div className="text-[12px] tracking-[4px] text-[#F5B700] font-semibold mb-4">免責聲明</div>
               <h3 className="text-[20px] font-bold text-white mb-4">免責聲明</h3>
               <div className="space-y-3 text-[16px] text-slate-400 leading-relaxed">
                 <p>本平台所有內容均為<span className="text-slate-300">資料分析結果</span>，不構成投資建議或買賣推薦。</p>
@@ -241,20 +164,6 @@ export function FeaturesSection() {
                 <p>過去績效不代表未來表現。</p>
               </div>
             </div>
-          </div>
-          <div className="grid grid-cols-4 gap-4">
-            {[
-              { num:"95+",  label:"ETF 商品",   sub:"台股＋美股" },
-              { num:"269+", label:"基金商品",     sub:"前20大基金公司" },
-              { num:"34+",  label:"市場指標",     sub:"台灣、美歐、亞洲、商品" },
-              { num:"NT$99起", label:"多元方案", sub:"依需求升級" },
-            ].map(s => (
-              <div key={s.label} className="bg-white/[0.04] border border-white/[0.08] rounded-xl p-5 text-center">
-                <div className="text-[36px] font-black text-[#F5B700] leading-none mb-1">{s.num}</div>
-                <div className="text-[16px] font-semibold text-white mb-1">{s.label}</div>
-                <div className="text-[14px] text-slate-500">{s.sub}</div>
-              </div>
-            ))}
           </div>
         </div>
       </section>
@@ -265,7 +174,7 @@ export function FeaturesSection() {
           <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
             <div>
               <div className="text-[24px] font-black text-white">Smart<span className="text-[#F5B700]">Match</span></div>
-              <div className="text-[14px] text-slate-500 mt-1">瑞宇智庫｜Investment Intelligence Platform</div>
+              <div className="text-[14px] text-slate-500 mt-1">瑞宇智庫｜全球投資研究平台</div>
             </div>
             <div className="flex flex-wrap gap-6 text-[16px] text-slate-500">
               <Link href="/markets" className="hover:text-slate-300 transition-colors">市場中心</Link>
@@ -278,7 +187,7 @@ export function FeaturesSection() {
               <a href="mailto:contact@smartmatch.tw" className="hover:text-slate-300 transition-colors">聯絡我們</a>
             </div>
             <div className="text-[13px] text-slate-600 text-right">
-              <div>以上資料為示意範例，不構成投資建議</div>
+              <div>資料僅供研究參考，不構成投資建議</div>
               <div className="mt-1">© 2026 SmartMatch｜瑞宇智庫 版權所有</div>
             </div>
           </div>

@@ -1,0 +1,18 @@
+{
+  "version": "MACRO_GLOBAL_PUBLIC_SOVEREIGN_DEBT_FISCAL_EXTERNAL_AND_RESERVES_EXPANSION_06",
+  "source": "World Bank Indicators API",
+  "baseUrl": "https://api.worldbank.org/v2",
+  "countries": [
+    {"iso3":"USA","name":"United States"},{"iso3":"EMU","name":"Euro Area"},{"iso3":"DEU","name":"Germany"},{"iso3":"FRA","name":"France"},{"iso3":"ITA","name":"Italy"},{"iso3":"ESP","name":"Spain"},{"iso3":"GBR","name":"United Kingdom"},{"iso3":"JPN","name":"Japan"},{"iso3":"CHN","name":"China"},{"iso3":"TWN","name":"Taiwan"},{"iso3":"HKG","name":"Hong Kong"},{"iso3":"KOR","name":"South Korea"},{"iso3":"SGP","name":"Singapore"},{"iso3":"IND","name":"India"},{"iso3":"IDN","name":"Indonesia"},{"iso3":"MYS","name":"Malaysia"},{"iso3":"THA","name":"Thailand"},{"iso3":"PHL","name":"Philippines"},{"iso3":"AUS","name":"Australia"},{"iso3":"NZL","name":"New Zealand"},{"iso3":"CAN","name":"Canada"},{"iso3":"BRA","name":"Brazil"},{"iso3":"MEX","name":"Mexico"},{"iso3":"CHL","name":"Chile"},{"iso3":"COL","name":"Colombia"},{"iso3":"PER","name":"Peru"},{"iso3":"ZAF","name":"South Africa"},{"iso3":"TUR","name":"Turkey"},{"iso3":"CHE","name":"Switzerland"}
+  ],
+  "indicators": [
+    {"code":"GC.DOD.TOTL.GD.ZS","metric":"CENTRAL_GOVERNMENT_DEBT_TO_GDP","domain":"SOVEREIGN_DEBT","unit":"PERCENT_OF_GDP","frequency":"ANNUAL","label":"Central government debt, total (% of GDP)"},
+    {"code":"GC.NLD.TOTL.GD.ZS","metric":"GENERAL_GOVERNMENT_BALANCE_TO_GDP","domain":"FISCAL","unit":"PERCENT_OF_GDP","frequency":"ANNUAL","label":"Net lending (+) / net borrowing (-) (% of GDP)"},
+    {"code":"GC.REV.XGRT.GD.ZS","metric":"REVENUE_TO_GDP","domain":"FISCAL","unit":"PERCENT_OF_GDP","frequency":"ANNUAL","label":"Revenue, excluding grants (% of GDP)"},
+    {"code":"GC.XPN.TOTL.GD.ZS","metric":"EXPENDITURE_TO_GDP","domain":"FISCAL","unit":"PERCENT_OF_GDP","frequency":"ANNUAL","label":"Expense (% of GDP)"},
+    {"code":"BN.CAB.XOKA.CD","metric":"CURRENT_ACCOUNT","domain":"EXTERNAL","unit":"CURRENT_USD","frequency":"ANNUAL","label":"Current account balance (BoP, current US$)"},
+    {"code":"DT.DOD.DECT.CD","metric":"EXTERNAL_DEBT","domain":"EXTERNAL","unit":"CURRENT_USD","frequency":"ANNUAL","label":"External debt stocks, total (DOD, current US$)"},
+    {"code":"FI.RES.TOTL.CD","metric":"TOTAL_RESERVES","domain":"RESERVES","unit":"CURRENT_USD","frequency":"ANNUAL","label":"Total reserves (includes gold, current US$)"},
+    {"code":"FI.RES.XGLD.CD","metric":"RESERVES_EX_GOLD","domain":"RESERVES","unit":"CURRENT_USD","frequency":"ANNUAL","label":"Total reserves minus gold (current US$)"}
+  ]
+}

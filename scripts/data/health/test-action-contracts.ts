@@ -1,0 +1,13 @@
+import assert from "node:assert/strict";
+import { loadActionContracts } from "./action-contracts.ts";
+const contracts = await loadActionContracts();
+assert.equal(contracts.length, 15);
+assert.equal(contracts.filter((item) => item.status === "EXECUTABLE").length, 6);
+assert.equal(contracts.filter((item) => item.status === "PARTIAL").length, 8);
+assert.equal(contracts.filter((item) => item.status === "BLOCKED").length, 1);
+assert.equal(contracts.filter((item) => item.enabled).length, 5);
+assert.equal(contracts.find((item) => item.dataset_key === "FX_SPOT")?.enabled, true);
+assert.ok(Array.isArray(contracts.find((item) => item.dataset_key === "MACRO_VALUES")?.child_contracts));
+assert.ok(Array.isArray(contracts.find((item) => item.dataset_key === "COMMODITY_PRIORITY0")?.child_contracts));
+assert.equal(contracts.find((item) => item.dataset_key === "STOCK_DAILY_HISTORY")?.enabled, false);
+console.log("action contract tests passed");

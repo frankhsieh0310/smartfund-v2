@@ -1,51 +1,35 @@
-"use client";
-// ============================================================
-// app/page.tsx
-// SmartMatch 首頁
-// 只保留：import、Navbar、component 組合
-// 目標行數 < 80 行
-// ============================================================
-
 import Link from "next/link";
-import { HeroSection }              from "@/components/home/HeroSection";
-import { CriteriaBuilderSection }   from "@/components/home/CriteriaBuilderSection";
-import { WorkspacePreviewSection }  from "@/components/home/WorkspacePreviewSection";
-import { MarketOverviewSection }    from "@/components/home/MarketOverviewSection";
-import { FeaturesSection }          from "@/components/home/FeaturesSection";
+import { HomeRankingLoader } from "@/components/home/HomeRankingPanels";
+import { HomeLanguageSelector } from "@/components/home/HomeLanguageSelector";
 
-export default function Home() {
-  return (
-    <main className="min-h-screen">
+const quick=[["台積電","2330.TW"],["0050","0050"],["美國科技股","美國科技股"],["高股息 ETF","高股息 ETF"],["黃金","黃金"]] as const;
+const assets=[
+["股票","全球上市公司","即時行情與財務數據","▥","/search?type=STOCK"],
+["ETF","多元化投資組合","主題、產業、區域 ETF","◔","/etf"],
+["基金","全球公募基金","淨值、績效、風險與持有分析","▤","/fund"],
+["指數","市場指標與分析","全球指數即時追蹤","⌁","/search?type=INDEX"],
+["總體經濟","宏觀數據分析","經濟指標與政策追蹤","◎","/search?type=MACRO"],
+] as const;
+const values=[["數據全面","整合全球市場數據","◉"],["即時更新","市場數據持續更新","◴"],["專業分析","多維度分析工具","◎"],["智慧篩選","自訂條件篩選","☷"],["跨平台體驗","支援多裝置使用","▣"]] as const;
 
-      {/* ══ NAVBAR ══════════════════════════════════════════════════ */}
-      <header className="fixed top-0 left-0 w-full z-50 bg-[#040a18]/90 backdrop-blur-xl border-b border-white/[0.08]">
-        <div className="max-w-[1600px] mx-auto h-20 px-10 flex items-center justify-between">
-          <div>
-            <div className="text-[32px] font-black text-white leading-none">Smart<span className="text-[#F5B700]">Match</span></div>
-            <div className="text-[12px] text-slate-400 mt-0.5">Investment Intelligence Platform</div>
-          </div>
-          <nav className="hidden lg:flex gap-8 text-[18px] font-semibold text-slate-300">
-            <Link href="/quiz"    className="hover:text-white transition-colors">投資人格分析</Link>
-            <Link href="/etf"     className="hover:text-white transition-colors">ETF篩選器</Link>
-            <Link href="/funds"   className="hover:text-white transition-colors">基金篩選器</Link>
-            <Link href="/markets" className="hover:text-white transition-colors">市場中心</Link>
-            <Link href="/clients" className="hover:text-white transition-colors">客戶管理</Link>
-            <Link href="/pricing" className="hover:text-[#F5B700] transition-colors">方案</Link>
-          </nav>
-          <div className="flex items-center gap-4">
-            <a href="#" className="text-[16px] font-semibold text-slate-300 border border-white/30 px-5 py-2.5 rounded-lg hover:bg-white/10 transition-colors">登入</a>
-            <Link href="/quiz" className="bg-[#F5B700] hover:bg-[#e0a800] text-[#0B1220] px-6 py-2.5 rounded-lg font-bold text-[16px] transition-colors">開始建立</Link>
-          </div>
-        </div>
-      </header>
+export default function Home(){return <main className="min-h-screen bg-[#061728] text-[#f7f3e8]"><Header/><Hero/><Assets/><Screening/><Market/><Why/><Footer/></main>}
 
-      {/* ══ SECTIONS ══════════════════════════════════════════════ */}
-      <HeroSection />
-      <CriteriaBuilderSection />
-      <WorkspacePreviewSection />
-      <MarketOverviewSection />
-      <FeaturesSection />
+function Header(){return <header className="h-16 border-b border-[#23415c] bg-[#041321]"><div className="mx-auto flex h-full max-w-[1380px] items-center px-7">
+<Link href="/" className="flex w-[245px] items-center gap-2 text-[#edbd62]"><BrandMark/><span><b className="block text-[18px] leading-5">SmartMatch</b><small className="text-[11px]">全球投資研究平台</small></span></Link>
+<nav className="flex flex-1 items-center justify-center gap-8 text-[15px] font-semibold"><Link className="border-b-2 border-[#e6b657] py-[21px] text-[#f2c66e]" href="/">首頁</Link><Link href="/search?type=STOCK">股票</Link><Link href="/etf">ETF</Link><Link href="/fund">基金</Link><Link href="/search?type=INDEX">指數</Link><Link href="/search?type=MACRO">總經</Link><Link href="/movement-radar">大佬動向雷達</Link><details className="relative"><summary className="cursor-pointer list-none">更多⌄</summary><div className="absolute top-8 z-50 grid w-36 gap-2 rounded-lg border border-[#36536b] bg-[#0b2135] p-3 shadow-xl"><Link href="/search?type=FIXED_INCOME">固定收益</Link><Link href="/search?type=FX">外匯</Link><Link href="/search?type=COMMODITY">商品</Link><Link href="/search?type=CRYPTO">加密資產</Link></div></details></nav>
+<div className="flex w-[405px] items-center justify-end gap-5 text-[14px]"><Link href="/search" aria-label="搜尋">⌕</Link><HomeLanguageSelector/><Link className="rounded-lg border border-[#d7aa58] px-5 py-2.5 text-[#f0bf65]" href="/auth/login">登入／註冊</Link><Link className="rounded-lg bg-[#e9be6e] px-5 py-2.5 font-bold text-[#17212a]" href="/quiz">立即開始</Link></div></div></header>}
 
-    </main>
-  );
-}
+function BrandMark(){return <svg viewBox="0 0 40 40" className="h-9 w-9 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 3 6 11v18l14 8 14-8V11L20 3Z"/><path d="m6 11 14 9 14-9M20 20v17M12 7l8 5 8-5M12 16v10l8 5 8-5V16"/><path d="m12 26-6 3m22-3 6 3"/></svg>}function Hero(){return <section className="relative h-[330px] overflow-hidden border-b border-[#183a58] bg-[radial-gradient(circle_at_72%_45%,#0d3654_0%,#071d31_36%,#061625_68%)]"><div className="relative mx-auto h-full max-w-[1380px] px-12">
+<div className="relative z-20 w-[540px] pt-11"><h1 className="whitespace-nowrap text-[43px] font-black leading-tight tracking-[-.04em]">全球投資・一站掌握</h1><p className="mt-1 whitespace-nowrap text-[40px] font-black leading-tight tracking-[-.035em] text-[#edbd62]">數據驅動・智慧決策</p><p className="mt-4 text-[15px] leading-7 text-[#e3e7e8]">整合全球市場數據與專業分析工具，<br/>幫助你做出更明智的投資選擇</p>
+<form action="/search" className="mt-5 flex h-[49px] w-[440px] items-center rounded-[11px] bg-[#f4f5f3] p-1.5 shadow-2xl"><input name="q" aria-label="全站搜尋" className="min-w-0 flex-1 bg-transparent px-3 text-[14px] text-slate-800 outline-none placeholder:text-slate-500" placeholder="搜尋股票、ETF、基金、指數或關鍵字…"/><button aria-label="搜尋" className="h-9 w-11 rounded-[9px] bg-gradient-to-br from-[#f5d482] to-[#dcae54] text-xl text-[#18212a]">⌕</button></form>
+<div className="mt-3 flex items-center gap-2 text-[12px]"><span className="mr-1 text-slate-300">快速搜尋：</span>{quick.map(([l,q])=><Link key={l} href={"/search?q="+encodeURIComponent(q)} className="rounded border border-[#607387] px-3 py-1.5 hover:border-[#e7b75d]">{l}</Link>)}</div></div><Globe/></div></section>}
+
+function Globe(){return <div className="absolute right-[20px] top-0 h-[330px] w-[960px] overflow-hidden" aria-label="全球財富與資產流動視覺"><div className="absolute inset-0 bg-[url('/images/home-wealth-globe-v2.png')] bg-[length:960px_auto] bg-[position:center_48%] bg-no-repeat"/><div className="absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-[#07192a] to-transparent"/></div>}function Assets(){return <section className="mx-auto max-w-[1380px] px-10 pb-5 pt-5"><div className="mb-3 flex items-center justify-between"><h2 className="text-[25px] font-black">探索全球投資市場</h2><Link href="/search" className="text-[13px] font-bold text-[#e7b75e]">查看全部市場 →</Link></div><div className="grid grid-cols-6 gap-3">{assets.map(([n,a,b,i,h])=><Link key={n} href={h} className="flex h-[166px] flex-col items-center justify-center rounded-[11px] border border-[#34506a] bg-gradient-to-br from-[#102c45] to-[#091e32] px-3 text-center hover:border-[#d6a855]"><span className="text-[43px] leading-none text-[#efc574]">{i}</span><h3 className="mt-3 text-[18px] font-black">{n}</h3><p className="mt-2 text-[12px] leading-5 text-slate-300">{a}<br/>{b}</p><span className="mt-2 text-[12px] font-bold text-[#eabc63]">探索更多 →</span></Link>)}<details className="group relative h-[166px] rounded-[11px] border border-[#34506a] bg-gradient-to-br from-[#102c45] to-[#091e32] text-center hover:border-[#d6a855]"><summary className="flex h-full cursor-pointer list-none flex-col items-center justify-center"><span className="text-[43px] leading-none text-[#efc574]">▦</span><h3 className="mt-3 text-[18px] font-black">更多資產</h3><p className="mt-2 text-[12px] leading-5 text-slate-300">債券、外匯、大宗商品<br/>多元資產配置</p><span className="mt-2 text-[12px] font-bold text-[#eabc63]">探索更多 →</span></summary><div className="absolute right-0 top-full z-30 mt-2 grid w-full gap-2 rounded-lg border border-[#3c5870] bg-[#0b2135] p-3 text-[13px] shadow-2xl"><Link href="/search?type=FIXED_INCOME">固定收益</Link><Link href="/search?type=FX">外匯</Link><Link href="/search?type=DERIVATIVES">衍生品</Link><Link href="/search?type=COMMODITY">商品</Link><Link href="/search?type=CRYPTO">加密資產</Link></div></details></div></section>}
+
+function Screening(){const chips=["ROE 連續成長","ETF 低費用＋高流動性","KD 黃金交叉","債券高殖利率＋短天期","商品庫存低於歷史區間"];return <section className="mx-auto max-w-[1380px] px-10 pb-5"><div className="grid min-h-[277px] grid-cols-[54%_46%] overflow-hidden rounded-[13px] border border-[#b28a45] bg-[radial-gradient(circle_at_34%_54%,rgba(21,71,105,.47),transparent_44%),linear-gradient(110deg,#0b2a43,#071a2d)]"><div className="p-6"><h2 className="text-[31px] font-black">全方位智慧篩選 <span className="ml-2 rounded bg-[#e5b660] px-2 py-1 align-middle text-[11px] text-[#17202a]">核心功能</span></h2><p className="mt-2 text-[14px] leading-6 text-slate-200">從股票、ETF、基金到各類資產，運用多維度條件找出符合投資邏輯的標的</p><div className="mt-5 flex flex-wrap gap-2">{["股票篩選","ETF 篩選","基金篩選","債券篩選","大宗商品篩選","更多資產"].map(x=><span key={x} className="rounded-lg border border-[#405e77] bg-[#102b43] px-3 py-3 text-[11px]">{x}</span>)}</div><div className="mt-4 flex flex-wrap gap-2">{chips.map(x=><span key={x} className="rounded-full border border-[#bc944e] px-3 py-1.5 text-[12px] text-[#f1c873]">{x}</span>)}</div><button disabled title="篩選頁正在準備中" className="mt-5 cursor-not-allowed rounded-lg bg-gradient-to-br from-[#f1cf81] to-[#d9aa52] px-10 py-3 text-[14px] font-black text-[#17212a]">開始篩選 →</button></div><div className="m-4 rounded-xl border border-[#3a5770] bg-[#071b2c]/90 p-4"><h3 className="text-[15px] font-bold">建立你的篩選條件</h3><div className="mt-3 flex gap-8 border-b border-[#31506a] pb-2 text-[12px]"><b className="text-[#efc36c]">基本面</b><span>估值</span><span>技術面</span><span>籌碼面</span><span>其他條件</span></div><div className="mt-3 space-y-2 text-[12px]"><Row a="ROE（股東權益報酬率）" b="大於" c="15%"/><Row a="ROE 連續成長" b="至少連續" c="2 季"/><Row a="本益比（P/E）" b="小於" c="20"/><Row a="營收成長率" b="大於" c="10%"/></div><div className="mt-3 flex justify-between"><span className="rounded-full border border-[#405d75] px-3 py-1.5 text-[11px]">＋ 新增條件</span><span className="rounded-lg bg-[#e7bd67] px-4 py-2 text-[12px] font-bold text-[#16212a]">篩選標的</span></div></div></div></section>}
+function Row({a,b,c}:{a:string;b:string;c:string}){return <div className="grid grid-cols-[1fr_108px_82px] gap-1">{[a,b,c].map(x=><span key={x} className="rounded border border-[#294861] bg-[#0d2941] px-3 py-2">{x}</span>)}</div>}
+
+function Market(){return <section className="mx-auto max-w-[1380px] px-10 pb-6"><HomeRankingLoader/></section>}
+function Why(){return <section className="border-y border-[#23445f] bg-[#082039]"><div className="mx-auto max-w-[1380px] px-10 py-5"><h2 className="mb-5 text-[23px] font-black">為什麼選擇 SmartMatch？</h2><div className="grid grid-cols-5 gap-5">{values.map(([a,b,i])=><div key={a} className="flex items-center gap-3"><span className="text-4xl text-[#e8b75d]">{i}</span><div><h3 className="text-[15px] font-black text-[#efc26a]">{a}</h3><p className="mt-1 text-[11px] text-slate-300">{b}</p></div></div>)}</div></div></section>}
+function Footer(){return <footer className="border-t border-[#bd9149] bg-[#051522] py-6"><div className="mx-auto grid max-w-[1380px] grid-cols-[2.2fr_1fr_1.2fr_1fr_1.3fr] gap-10 px-10 text-[12px] text-slate-400"><div><div className="flex items-center gap-2 text-[#e7b85e]"><BrandMark/><b className="text-[17px]">SmartMatch</b></div><p className="mt-3 max-w-[290px] leading-5">整合全球投資數據與分析工具，協助投資者做出更明智的投資決策。</p></div><FooterGroup title="產品" items={["股票","ETF","基金","指數","總經"]}/><FooterGroup title="關於我們" items={["關於 SmartMatch","聯絡我們","使用條款","隱私政策"]}/><FooterGroup title="追蹤我們" items={["社群平台","影音頻道"]}/><div><h3 className="font-bold text-slate-200">下載應用程式</h3><div className="mt-4 flex gap-2"><span className="rounded border border-slate-500 px-3 py-2 text-slate-200">蘋果裝置</span><span className="rounded border border-slate-500 px-3 py-2 text-slate-200">安卓裝置</span></div></div></div><div className="mx-auto mt-5 max-w-[1380px] border-t border-white/5 px-10 pt-4 text-center text-[11px] text-slate-500">© 2026 SmartMatch. 保留所有權利。</div></footer>}
+function FooterGroup({title,items}:{title:string;items:string[]}){return <div><h3 className="font-bold text-slate-200">{title}</h3><ul className="mt-3 space-y-2">{items.map(item=><li key={item}>{item}</li>)}</ul></div>}

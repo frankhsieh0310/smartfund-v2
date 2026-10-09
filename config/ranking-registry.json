@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "limit": 100,
+  "sourceManifest": "config/ranking-source-manifest.json",
+  "assets": {
+    "stock": {
+      "rankings": {
+        "top-gainers": { "field": "changePercent", "direction": "desc" },
+        "top-losers": { "field": "changePercent", "direction": "asc" },
+        "most-active": { "field": "volume", "direction": "desc" },
+        "market-cap": { "field": "marketCap", "direction": "desc" },
+        "pe": { "field": "pe", "direction": "asc", "positiveOnly": true },
+        "pb": { "field": "pb", "direction": "asc", "positiveOnly": true },
+        "roe": { "field": "roe", "direction": "desc" },
+        "dividend-yield": { "field": "dividendYield", "direction": "desc" },
+        "eps-growth": { "field": "epsGrowth", "direction": "desc" }
+      }
+    },
+    "etf": {
+      "rankings": {
+        "return": { "field": "return", "direction": "desc" },
+        "dividend": { "field": "dividendYield", "direction": "desc" },
+        "aum": { "field": "aum", "direction": "desc" },
+        "net-flow": { "field": "netFlow", "direction": "desc" }
+      }
+    },
+    "fund": {
+      "rankings": {
+        "return": { "field": "return", "direction": "desc" },
+        "sharpe": { "field": "sharpe", "direction": "desc" },
+        "aum": { "field": "aum", "direction": "desc" }
+      }
+    },
+    "bond": {
+      "rankings": {
+        "yield": { "field": "yield", "direction": "desc" },
+        "return": { "field": "return", "direction": "desc" }
+      }
+    },
+    "commodity": { "rankings": { "change": { "field": "changePercent", "direction": "desc" } } },
+    "crypto": {
+      "rankings": {
+        "market-cap": { "field": "marketCap", "direction": "desc" },
+        "change": { "field": "changePercent", "direction": "desc" },
+        "funding": { "field": "fundingRate", "direction": "desc" }
+      }
+    },
+    "fx": { "rankings": { "strength": { "field": "strength", "direction": "desc" } } },
+    "index": { "rankings": { "change": { "field": "changePercent", "direction": "desc" } } },
+    "reit": {
+      "rankings": {
+        "dividend": { "field": "dividendYield", "direction": "desc" },
+        "ffo": { "field": "ffo", "direction": "desc" }
+      }
+    }
+  }
+}

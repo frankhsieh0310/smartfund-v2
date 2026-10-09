@@ -1,0 +1,23 @@
+{
+  "version": "MACRO_GLOBAL_MONEY_SUPPLY_PUBLIC_ADAPTER_COMPLETION_05",
+  "lastVerifiedAt": "2026-08-16T10:15:00Z",
+  "policy": "DIRECT_OFFICIAL_STRUCTURED_SOURCE_FIRST",
+  "sources": [
+    {"source":"FED","economy":"US","seriesFamilies":["M1","M2"],"structuredRoute":"FRED_CSV","frequency":"MONTHLY","revisionSemantics":"ALFRED_SEPARATE_EXISTING_LIFECYCLE","status":"PRODUCTION_READY"},
+    {"source":"ECB","economy":"EURO_AREA","seriesFamilies":["M1","M2","M3"],"structuredRoute":"ECB_SDMX_CSV","frequency":"MONTHLY","revisionSemantics":"SOURCE_VERSION_RETAINED_LATEST_ONLY","status":"PRODUCTION_READY"},
+    {"source":"BOJ","economy":"JP","seriesFamilies":["M1","M2","M3","BROAD_LIQUIDITY","MONETARY_BASE"],"structuredRoute":"OFFICIAL_STAT_SEARCH","frequency":"MONTHLY","revisionSemantics":"NOT_VERIFIED","status":"PARTIAL_PUBLIC","lastError":"MACHINE_READABLE_QUERY_CONTRACT_NOT_VERIFIED"},
+    {"source":"BOE","economy":"GB","seriesFamilies":["M4"],"structuredRoute":"IADB_CSV","frequency":"MONTHLY","revisionSemantics":"LATEST_SOURCE_VERSION_ONLY","status":"PRODUCTION_READY"},
+    {"source":"PBOC","economy":"CN","seriesFamilies":["M0","M1","M2"],"structuredRoute":"OFFICIAL_HTML_TABLES","frequency":"MONTHLY","revisionSemantics":"NOT_VERIFIED","status":"PARTIAL_PUBLIC"},
+    {"source":"BOC","economy":"CA","seriesFamilies":["M1_PLUS","M1_PLUS_PLUS","M2_PLUS","M2_PLUS_PLUS"],"structuredRoute":"VALET_JSON","frequency":"MONTHLY","revisionSemantics":"LATEST_SOURCE_VERSION_ONLY","status":"PRODUCTION_READY"},
+    {"source":"RBA","economy":"AU","seriesFamilies":["CURRENCY","M1","M3","BROAD_MONEY"],"structuredRoute":"D03_CSV","frequency":"MONTHLY","revisionSemantics":"NOT_VERIFIED","status":"SOURCE_ACCESS_UNSTABLE","lastError":"HTTP_403"},
+    {"source":"SNB","economy":"CH","seriesFamilies":["M1","M2","M3","MONETARY_BASE"],"structuredRoute":"SNB_DATA_PORTAL","frequency":"MONTHLY","revisionSemantics":"NOT_VERIFIED","status":"SOURCE_LIMITED"},
+    {"source":"RBNZ","economy":"NZ","seriesFamilies":["MONETARY_AGGREGATES"],"structuredRoute":"OFFICIAL_STATISTICS","frequency":"MONTHLY","revisionSemantics":"NOT_VERIFIED","status":"SOURCE_REQUIRED"},
+    {"source":"TAIWAN_CBC","economy":"TW","seriesFamilies":["M1A","M1B","M2"],"structuredRoute":"CBC_OFFICIAL_TABLES","frequency":"MONTHLY","revisionSemantics":"NOT_VERIFIED","status":"PARTIAL_PUBLIC"},
+    {"source":"HKMA","economy":"HK","seriesFamilies":["M1","M2","M3"],"structuredRoute":"HKMA_OPEN_API","frequency":"MONTHLY","revisionSemantics":"NOT_VERIFIED","status":"SOURCE_LIMITED","lastError":"HTTP_400_QUERY_CONTRACT_REQUIRED"},
+    {"source":"MAS","economy":"SG","seriesFamilies":["M1","M2","M3"],"structuredRoute":"MAS_DATASTORE","frequency":"MONTHLY","revisionSemantics":"NOT_VERIFIED","status":"PARTIAL_PUBLIC"},
+    {"source":"BOK","economy":"KR","seriesFamilies":["M1","M2","LF"],"structuredRoute":"ECOS_JSON_API","frequency":"MONTHLY","revisionSemantics":"NOT_VERIFIED","status":"CREDENTIAL_REQUIRED_FREE_API_KEY_OR_EXACT_PUBLIC_ROUTE"}
+  ],
+  "terminalFingerprintFields": ["source", "structuredRoute", "status", "lastError"],
+  "crossCountryEquivalenceAssumed": false,
+  "derivedAggregatesAllowed": false
+}

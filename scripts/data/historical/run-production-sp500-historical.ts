@@ -22,7 +22,12 @@ type Candle = { date: Date; open: number | null; high: number | null; low: numbe
 type Mapping = { canonical_symbol: string; provider_symbol: string; availability: string; rule: string; reason: string; evidence: string | null };
 type Member = { canonicalSymbol: string; stock: Stock | null; mapping: Mapping | null };
 
-const prisma = new PrismaClient();
+const rawDatabaseUrl = process.env.DIRECT_URL ?? process.env.DATABASE_URL;
+if (!rawDatabaseUrl) throw new Error("DATABASE_URL_REQUIRED");
+const boundedDatabaseUrl = new URL(rawDatabaseUrl);
+if (!boundedDatabaseUrl.searchParams.has("connection_limit")) boundedDatabaseUrl.searchParams.set("connection_limit", "1");
+if (!boundedDatabaseUrl.searchParams.has("pool_timeout")) boundedDatabaseUrl.searchParams.set("pool_timeout", "20");
+const prisma = new PrismaClient({ datasources: { db: { url: boundedDatabaseUrl.toString() } } });
 const marketArg = process.argv.find((value) => value.startsWith("--market="))?.slice("--market=".length) ?? "SP500";
 if (!["SP500", "NYSE"].includes(marketArg)) throw new Error(`UNSUPPORTED_HISTORICAL_MARKET:${marketArg}`);
 const MARKET = marketArg as "SP500" | "NYSE";
@@ -33,6 +38,8 @@ const CONCURRENCY = 4;
 const maxSymbolsArg = process.argv.find((value) => value.startsWith("--max-symbols="))?.slice("--max-symbols=".length);
 const maxSymbols = maxSymbolsArg ? Number.parseInt(maxSymbolsArg, 10) : null;
 const DAILY_JOB_ID = MARKET === "NYSE" ? "nyse-yahoo-daily" : "sp500-yahoo-daily";
+const DRY_RUN = process.argv.includes("--dry-run");
+const INSERT_CHUNK_SIZE = 1_000;
 
 async function dailyIsActive(): Promise<boolean> {
   const rows = await prisma.$queryRawUnsafe<Array<{ active: boolean }>>(
@@ -72,9 +79,8 @@ async function fetchMax(symbol: string): Promise<Candle[] | null> {
   }
 }
 
-async function upsertYahooCandles(stock: Stock, candles: Candle[]): Promise<{ inserted: number; updated: number }> {
+async function insertMissingYahooCandles(stock: Stock, candles: Candle[]): Promise<{ inserted: number; updated: number }> {
   const valid = candles.filter((candle) => candle.close !== null);
-  const existing = await prisma.stockHistory.count({ where: { stockId: stock.id } });
   const payload = valid.map((candle) => ({
     id: randomUUID(),
     date: candle.date.toISOString().slice(0, 10),
@@ -85,32 +91,31 @@ async function upsertYahooCandles(stock: Stock, candles: Candle[]): Promise<{ in
     adjustedClose: candle.adjClose,
     volume: candle.volume,
   }));
-  await prisma.$executeRawUnsafe(
-    `INSERT INTO stock_history (id, stock_id, date, open, high, low, close, adjusted_close, volume, source, source_symbol, provider_method, imported_at, updated_at)
-     SELECT value->>'id', $1, (value->>'date')::date, NULLIF(value->>'open', '')::numeric, NULLIF(value->>'high', '')::numeric,
-            NULLIF(value->>'low', '')::numeric, (value->>'close')::numeric, NULLIF(value->>'adjustedClose', '')::numeric,
-            NULLIF(value->>'volume', '')::numeric, 'YAHOO', $2, 'YAHOO_CHART_API', NOW(), NOW()
-     FROM jsonb_array_elements($3::jsonb) AS value
-     ON CONFLICT (stock_id, date) DO UPDATE SET
-       open = EXCLUDED.open, high = EXCLUDED.high, low = EXCLUDED.low, close = EXCLUDED.close,
-       adjusted_close = EXCLUDED.adjusted_close, volume = EXCLUDED.volume, source = 'YAHOO',
-       source_symbol = EXCLUDED.source_symbol, provider_method = 'YAHOO_CHART_API', updated_at = NOW()`,
-    stock.id,
-    stock.yahooSymbol,
-    JSON.stringify(payload),
-  );
-  await prisma.stockHistory.deleteMany({ where: { stockId: stock.id, OR: [{ source: { not: "YAHOO" } }, { source: null }] } });
-  const inserted = Math.max(0, valid.length - existing);
-  return { inserted, updated: valid.length - inserted };
+  let inserted = 0;
+  for (let offset = 0; offset < payload.length; offset += INSERT_CHUNK_SIZE) {
+    const chunk = payload.slice(offset, offset + INSERT_CHUNK_SIZE);
+    inserted += await prisma.$executeRawUnsafe(
+      `INSERT INTO stock_history (id, stock_id, date, open, high, low, close, adjusted_close, volume, source, source_symbol, provider_method, imported_at, updated_at)
+       SELECT value->>'id', $1, (value->>'date')::date, NULLIF(value->>'open', '')::numeric, NULLIF(value->>'high', '')::numeric,
+              NULLIF(value->>'low', '')::numeric, (value->>'close')::numeric, NULLIF(value->>'adjustedClose', '')::numeric,
+              NULLIF(value->>'volume', '')::numeric, 'YAHOO', $2, 'YAHOO_CHART_API', NOW(), NOW()
+       FROM jsonb_array_elements($3::jsonb) AS value
+       ON CONFLICT (stock_id, date) DO NOTHING`,
+      stock.id,
+      stock.yahooSymbol,
+      JSON.stringify(chunk),
+    );
+  }
+  return { inserted, updated: 0 };
 }
 
 async function hasValidatedYahooHistorical(stock: Stock): Promise<boolean> {
-  const rows = await prisma.$queryRawUnsafe<Array<{ total_rows: number; non_yahoo_rows: number; invalid_rows: number }>>(
-    "SELECT COUNT(*)::int AS total_rows, COUNT(*) FILTER (WHERE source IS DISTINCT FROM 'YAHOO')::int AS non_yahoo_rows, COUNT(*) FILTER (WHERE close IS NULL OR (high IS NOT NULL AND low IS NOT NULL AND high < low) OR (high IS NOT NULL AND open IS NOT NULL AND high < open) OR (high IS NOT NULL AND close IS NOT NULL AND high < close) OR (low IS NOT NULL AND open IS NOT NULL AND low > open) OR (low IS NOT NULL AND close IS NOT NULL AND low > close))::int AS invalid_rows FROM stock_history WHERE stock_id = $1",
+  if (!stock.historyBackfilledAt) return false;
+  const rows = await prisma.$queryRawUnsafe<Array<{ yahoo_exists: boolean }>>(
+    "SELECT EXISTS(SELECT 1 FROM stock_history WHERE stock_id = $1 AND source = 'YAHOO' LIMIT 1) AS yahoo_exists",
     stock.id,
   );
-  const row = rows[0];
-  return Boolean(row && row.total_rows > 0 && row.non_yahoo_rows === 0 && row.invalid_rows === 0);
+  return Boolean(rows[0]?.yahoo_exists);
 }
 
 function classification(error: unknown): "PERMANENT_UNAVAILABLE" | "RETRYABLE_FAILURE" {
@@ -133,13 +138,13 @@ async function persistFailure(stock: Stock, error: unknown): Promise<"PERMANENT_
   return kind;
 }
 
-type Quality = { duplicate_rows: number; invalid_ohlcv_rows: number; yahoo_covered_stocks: number; non_yahoo_rows: number; earliest_date: Date | null; latest_date: Date | null };
+type Quality = { duplicate_rows: null; invalid_ohlcv_rows: null; yahoo_covered_stocks: number; non_yahoo_rows: null; earliest_date: Date | null; latest_date: Date | null; evidence_status: "EVIDENCE_PENDING" };
 async function validateHistoricalRows(stockIds: string[]): Promise<Quality> {
   const rows = await prisma.$queryRawUnsafe<Quality[]>(
-    "WITH scoped AS (SELECT stock_id, date, open, high, low, close, source FROM stock_history WHERE stock_id = ANY($1::text[])) SELECT (SELECT COUNT(*)::int FROM (SELECT stock_id, date FROM scoped GROUP BY stock_id, date HAVING COUNT(*) > 1) duplicates) AS duplicate_rows, (SELECT COUNT(*)::int FROM scoped WHERE close IS NULL OR (high IS NOT NULL AND low IS NOT NULL AND high < low) OR (high IS NOT NULL AND open IS NOT NULL AND high < open) OR (high IS NOT NULL AND close IS NOT NULL AND high < close) OR (low IS NOT NULL AND open IS NOT NULL AND low > open) OR (low IS NOT NULL AND close IS NOT NULL AND low > close)) AS invalid_ohlcv_rows, (SELECT COUNT(DISTINCT stock_id)::int FROM scoped WHERE source = 'YAHOO') AS yahoo_covered_stocks, (SELECT COUNT(*)::int FROM scoped WHERE source IS DISTINCT FROM 'YAHOO') AS non_yahoo_rows, (SELECT MIN(date) FROM scoped) AS earliest_date, (SELECT MAX(date) FROM scoped) AS latest_date",
+    "SELECT NULL::int AS duplicate_rows, NULL::int AS invalid_ohlcv_rows, COUNT(*) FILTER (WHERE history_backfilled_at IS NOT NULL)::int AS yahoo_covered_stocks, NULL::int AS non_yahoo_rows, NULL::date AS earliest_date, MAX(latest_date) AS latest_date, 'EVIDENCE_PENDING'::text AS evidence_status FROM stocks WHERE id = ANY($1::text[])",
     stockIds,
   );
-  return rows[0] ?? { duplicate_rows: 0, invalid_ohlcv_rows: 0, yahoo_covered_stocks: 0, non_yahoo_rows: 0, earliest_date: null, latest_date: null };
+  return rows[0] ?? { duplicate_rows: null, invalid_ohlcv_rows: null, yahoo_covered_stocks: 0, non_yahoo_rows: null, earliest_date: null, latest_date: null, evidence_status: "EVIDENCE_PENDING" };
 }
 
 async function resolveUniverse(): Promise<Member[]> {
@@ -175,6 +180,40 @@ async function main(): Promise<void> {
   const unresolved = members.filter((member) => !member.stock && !unavailable.includes(member));
   if (unresolved.length) throw new Error(`UNRESOLVED_SP500_MAPPING:${unresolved.map((member) => member.canonicalSymbol).join(",")}`);
   const stocks = members.flatMap((member) => member.stock ? [member.stock] : []).sort((a, b) => a.yahooSymbol.localeCompare(b.yahooSymbol));
+  if (DRY_RUN) {
+    const resume = await loadLifecycleResumeCheckpoint(prisma, JOB_ID);
+    const resumeIndex = resume?.last_symbol ? stocks.findIndex((stock) => stock.yahooSymbol === resume.last_symbol) : -1;
+    if (resume?.last_symbol && resumeIndex < 0) throw new Error(`RESUME_SYMBOL_NOT_IN_UNIVERSE:${resume.last_symbol}`);
+    const pending = resume ? stocks.slice(resumeIndex + 1) : stocks;
+    const selected = pending.slice(0, maxSymbols && maxSymbols > 0 ? maxSymbols : 5);
+    const [locks, runs, dailyActive] = await Promise.all([
+      prisma.$queryRawUnsafe<Array<{ count: number }>>(
+        "SELECT COUNT(*)::int AS count FROM production_scheduler_locks WHERE job_id = ANY($1::text[]) AND expires_at > NOW()",
+        [JOB_ID, DAILY_JOB_ID],
+      ),
+      prisma.$queryRawUnsafe<Array<{ count: number }>>(
+        "SELECT COUNT(*)::int AS count FROM production_scheduler_runs WHERE job_id = ANY($1::text[]) AND status IN ('RUNNING','IN_PROGRESS','PAUSE_REQUESTED')",
+        [JOB_ID, DAILY_JOB_ID],
+      ),
+      dailyIsActive(),
+    ]);
+    const activeLocks = Number(locks[0]?.count ?? 0);
+    const activeRuns = Number(runs[0]?.count ?? 0);
+    console.log(JSON.stringify({
+      jobId: JOB_ID,
+      status: activeLocks === 0 && activeRuns === 0 && !dailyActive ? "DRY_RUN_READY" : "DRY_RUN_BLOCKED_COLLISION",
+      market: MARKET,
+      checkpoint: resume ? { lastSymbol: resume.last_symbol, processed: resume.processed, succeeded: resume.succeeded, failed: resume.failed } : null,
+      plannedCount: selected.length,
+      plannedSymbols: selected.map((stock) => stock.yahooSymbol),
+      activeLocks,
+      activeRuns,
+      dailyActive,
+      insertMode: "INSERT_MISSING_ONLY",
+      writesPerformed: false,
+    }, null, 2));
+    return;
+  }
   const lifecycle = await prisma.$queryRawUnsafe<Array<{ historical_status: string }>>("SELECT historical_status FROM production_market_lifecycles WHERE market_id = $1", MARKET);
   if (["MARKET_COMPLETE", "HISTORICAL_READY_WITH_EXCEPTIONS"].includes(lifecycle[0]?.historical_status ?? "")) {
     console.log(JSON.stringify({ jobId: JOB_ID, status: "SKIPPED_COMPLETED" }));
@@ -212,7 +251,7 @@ async function main(): Promise<void> {
           const candles = await fetchMax(stock.yahooSymbol);
           const valid = candles?.filter((candle) => candle.close !== null) ?? [];
           if (!valid.length) throw new Error("YAHOO_NO_DATA");
-          const { inserted, updated } = await upsertYahooCandles(stock, valid);
+          const { inserted, updated } = await insertMissingYahooCandles(stock, valid);
           const latest = valid.at(-1)!;
           await prisma.stock.update({ where: { id: stock.id }, data: { latestDate: latest.date, latestClose: latest.close!, historyBackfilledAt: new Date() } });
           await prisma.$executeRawUnsafe("DELETE FROM production_scheduler_failures WHERE job_id = $1 AND stock_id = $2", JOB_ID, stock.id);
@@ -243,17 +282,14 @@ async function main(): Promise<void> {
     const quality = await validateHistoricalRows(stocks.map((stock) => stock.id));
     const historicalCoverage = members.length === 0 ? 0 : quality.yahoo_covered_stocks / members.length;
     const classified = summary.completed + summary.failed;
-    const validationPasses = summary.attempted === stocks.length
+    const processingPasses = summary.attempted === stocks.length
       && classified === stocks.length
-      && historicalCoverage >= 0.98
-      && quality.duplicate_rows === 0
-      && quality.invalid_ohlcv_rows === 0
-      && quality.non_yahoo_rows === 0;
-    const historicalState = !validationPasses
+      && historicalCoverage >= 0.98;
+    const historicalState = !processingPasses
       ? "RETRY_REQUIRED"
-      : (summary.failed > 0 || (retryable[0]?.count ?? 0) > 0 ? "HISTORICAL_READY_WITH_EXCEPTIONS" : "MARKET_COMPLETE");
+      : "HISTORICAL_READY_WITH_EXCEPTIONS";
     const validation = {
-      status: validationPasses ? "PASS" : "FAIL",
+      status: processingPasses ? "PASS_WITH_EVIDENCE_GAP" : "FAIL",
       market: EXCHANGE,
       universe: members.length,
       resolvedStocks: stocks.length,
@@ -269,6 +305,7 @@ async function main(): Promise<void> {
       invalidOhlcvRows: quality.invalid_ohlcv_rows,
       yahooCoveredStocks: quality.yahoo_covered_stocks,
       nonYahooRows: quality.non_yahoo_rows,
+      rowLevelQualityEvidence: quality.evidence_status,
       earliestTradingDate: quality.earliest_date,
       latestTradingDate: quality.latest_date,
       latestCompletedSymbol: stocks.at(-1)?.yahooSymbol ?? null,

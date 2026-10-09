@@ -1,6 +1,7 @@
 // Yahoo ETF price history — v8 chart (no crumb) -> etf_history upsert (etf_id,date) + etfs latest.
 // Incremental: if history exists, fetch since last_date - 5 trading-day overlap; else full inception.
-// COALESCE upsert = stale/duplicate rows never overwrite a good value; unique (etf_id,date).
+// Same-source revisions replace changed values; other sources keep their existing
+// precedence and only receive missing-field fills. Identical rows are not rewritten.
 // SQL mirrors scripts/data/etf-yahoo/run-etf-yahoo-full-universe.ts.
 
 import { fetchChartFull } from "./productSession";
@@ -33,6 +34,10 @@ export async function ingestEtfHistory(
 
   const sourceUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(input.symbol)}?period1=${period1}&interval=1d&events=div%2Csplit`;
   const retrievedAt = new Date().toISOString();
+  const priceColumns = ["open", "high", "low", "close", "adjusted_close", "price", "volume"];
+  const incomingValue = (column: string) => `CASE WHEN etf_history.source = 'YAHOO'
+    THEN COALESCE(EXCLUDED.${column}, etf_history.${column})
+    ELSE COALESCE(etf_history.${column}, EXCLUDED.${column}) END`;
   for (let i = 0; i < valid.length; i += 500) {
     const chunk = valid.slice(i, i + 500).map((c) => ({
       date: c.date, open: c.open, high: c.high, low: c.low, close: c.close,
@@ -43,22 +48,24 @@ export async function ingestEtfHistory(
        SELECT gen_random_uuid()::text, $1, x.date::date, x.close, x.volume, x.open, x.high, x.low, x.close, x.adjusted_close, 'YAHOO', $2, $3::timestamptz
        FROM jsonb_to_recordset($4::jsonb) AS x(date text, open numeric, high numeric, low numeric, close numeric, adjusted_close numeric, volume numeric)
        ON CONFLICT (etf_id, date) DO UPDATE SET
-         open = COALESCE(etf_history.open, EXCLUDED.open), high = COALESCE(etf_history.high, EXCLUDED.high),
-         low = COALESCE(etf_history.low, EXCLUDED.low), close = COALESCE(etf_history.close, EXCLUDED.close),
-         adjusted_close = COALESCE(etf_history.adjusted_close, EXCLUDED.adjusted_close),
-         price = COALESCE(etf_history.price, EXCLUDED.price), volume = COALESCE(etf_history.volume, EXCLUDED.volume),
+         ${priceColumns.map((column) => `${column} = ${incomingValue(column)}`).join(",\n         ")},
          source = COALESCE(etf_history.source, EXCLUDED.source), source_url = COALESCE(etf_history.source_url, EXCLUDED.source_url),
          known_at = GREATEST(etf_history.known_at, EXCLUDED.known_at)
+       WHERE ROW(${priceColumns.map((column) => `etf_history.${column}`).join(", ")})
+         IS DISTINCT FROM ROW(${priceColumns.map(incomingValue).join(", ")})
        RETURNING 1`,
       [input.etfId, sourceUrl, retrievedAt, JSON.stringify(chunk)],
     );
     out.rowsWritten += r.length;
   }
-  const lastC = valid[valid.length - 1];
   await query(
-    `UPDATE etfs SET data_provider = 'yahoo-finance', data_source = $2, latest_price = COALESCE($3, latest_price),
-       volume = COALESCE($4, volume), price_updated_at = NOW(), updated_at = NOW() WHERE id = $1`,
-    [input.etfId, input.symbol, lastC.close, lastC.volume],
+    `UPDATE etfs e SET latest_price = h.price, volume = COALESCE(h.volume, e.volume),
+       price_updated_at = NOW(), updated_at = NOW()
+     FROM (SELECT price, volume FROM etf_history
+           WHERE etf_id = $1 AND price IS NOT NULL ORDER BY date DESC LIMIT 1) h
+     WHERE e.id = $1 AND (e.latest_price IS DISTINCT FROM h.price
+       OR (h.volume IS NOT NULL AND e.volume IS DISTINCT FROM h.volume))`,
+    [input.etfId],
   );
 
   // Distribution events -> etf_distribution_events (reused table; existing rows there are

@@ -1,0 +1,29 @@
+{
+  "asset": "GLOBAL_IPO_CALENDAR",
+  "statusTaxonomy": ["FILED", "AMENDED", "MARKETING", "EXPECTED", "PRICE_RANGE_SET", "PRICED", "LISTING_SCHEDULED", "LISTED", "POSTPONED", "WITHDRAWN", "CANCELLED", "COMPLETED", "UNKNOWN"],
+  "priceSemantics": ["INITIAL_RANGE", "REVISED_RANGE", "FINAL_PRICE"],
+  "dateStatus": ["CONFIRMED", "ESTIMATED", "TENTATIVE", "UNKNOWN"],
+  "mappingMethods": ["EXACT_REGULATOR_ID", "EXACT_ISIN", "EXACT_CUSIP", "EXACT_SEDOL", "EXACT_FIGI", "EXACT_MIC_PLUS_TICKER", "EXACT_VERIFIED_LISTING_NOTICE"],
+  "mappingStatuses": ["PENDING", "AMBIGUOUS", "NOT_LISTED_YET", "NO_STOCK_RECORD", "VERIFIED"],
+  "underwriterRoles": ["GLOBAL_COORDINATOR", "LEAD_LEFT", "BOOKRUNNER", "JOINT_BOOKRUNNER", "UNDERWRITER", "SPONSOR", "OTHER"],
+  "projections": ["IPO_THIS_WEEK", "PRICING_THIS_WEEK", "LISTING_THIS_WEEK", "UPCOMING_FILED", "UPCOMING_PRICED", "POSTPONED", "RECENTLY_LISTED"],
+  "productContracts": {
+    "detail": ["issuer", "country", "exchange", "ticker", "status", "filingDate", "priceRange", "finalOfferPrice", "sharesOffered", "grossProceeds", "pricingDates", "listingDates", "underwriters", "provenance", "freshness"],
+    "search": ["issuer", "ticker", "exchange", "country", "status", "pricingDate", "listingDate"],
+    "screener": ["market", "country", "status", "dateRange", "priceRange", "offerPrice", "grossProceeds", "sector", "underwriter"],
+    "compare": ["offerPrice", "dealSize", "valuation", "underwriters", "firstDayReturn", "return30d", "return90d"],
+    "ranking": ["proceeds", "firstDayReturn", "return30d", "return90d", "withdrawalRate", "underwriterCohort"]
+  },
+  "officialSources": [
+    { "id": "SEC_EDGAR", "jurisdiction": "US", "status": "FETCH_PARSE_SEMANTICS_PASS", "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&type=S-1&owner=include&count=40&output=atom" },
+    { "id": "JPX_NEW_LISTINGS", "jurisdiction": "Japan", "status": "FETCH_PARSE_SEMANTICS_PASS", "url": "https://www.jpx.co.jp/english/listing/stocks/new/index.html" },
+    { "id": "NYSE_IPO_CENTER", "jurisdiction": "US", "status": "OFFICIAL_PAGE_THIRD_PARTY_DATA_NOT_CANONICAL", "url": "https://www.nyse.com/ipo-center/filings" },
+    { "id": "NASDAQ_IPO_CALENDAR", "jurisdiction": "US", "status": "THIRD_PARTY_ESTIMATES_NOT_CANONICAL", "url": "https://www.nasdaq.com/market-activity/ipos" },
+    { "id": "TWSE", "jurisdiction": "Taiwan", "status": "SOURCE_DISCOVERY_REQUIRED" },
+    { "id": "TPEX", "jurisdiction": "Taiwan", "status": "SOURCE_DISCOVERY_REQUIRED" },
+    { "id": "HKEX", "jurisdiction": "Hong Kong", "status": "OFFICIAL_DOCUMENT_PATH_IDENTIFIED_ADAPTER_PENDING" },
+    { "id": "LSE_EURONEXT", "jurisdiction": "UK_Europe", "status": "SOURCE_DISCOVERY_REQUIRED" },
+    { "id": "SGX", "jurisdiction": "Singapore", "status": "SOURCE_DISCOVERY_REQUIRED" },
+    { "id": "ASX", "jurisdiction": "Australia", "status": "SOURCE_DISCOVERY_REQUIRED" }
+  ]
+}

@@ -1,0 +1,209 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "./generated/currency-index-client"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum MarketType {
+  INDEX
+  COMMODITY
+  FOREX
+  BOND
+  VOLATILITY
+  CRYPTO
+}
+
+model MarketMaster {
+  id String @id @default(uuid())
+  symbol String @unique
+  name String
+  nameZh String? @map("name_zh")
+  assetType MarketType @map("asset_type")
+  region String?
+  country String?
+  exchange String?
+  currency String?
+  category String?
+  provider String?
+  isActive Boolean @default(true) @map("is_active")
+  latestClose Decimal? @map("latest_close") @db.Decimal(16, 4)
+  latestDate DateTime? @map("latest_date") @db.Date
+  latestChangePct Decimal? @map("latest_change_pct") @db.Decimal(8, 4)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  latestChange Decimal? @map("latest_change") @db.Decimal(16, 4)
+  sector String?
+  @@map("market_master")
+}
+
+model MarketData {
+  id String @id @default(uuid())
+  symbol String
+  name String
+  nameZh String? @map("name_zh")
+  type MarketType
+  date DateTime @db.Date
+  close Decimal @db.Decimal(16, 4)
+  open Decimal? @db.Decimal(16, 4)
+  high Decimal? @db.Decimal(16, 4)
+  low Decimal? @db.Decimal(16, 4)
+  volume Decimal? @db.Decimal(20, 0)
+  changePts Decimal? @map("change_pts") @db.Decimal(16, 4)
+  changePct Decimal? @map("change_pct") @db.Decimal(8, 4)
+  region String?
+  currency String?
+  source String?
+  createdAt DateTime @default(now()) @map("created_at")
+  @@unique([symbol, date])
+  @@map("market_data")
+}
+
+model CurrencyIndexProfile {
+  id String @id @default(uuid()) @db.Uuid
+  symbol String @unique
+  officialName String @map("official_name")
+  displayName String @map("display_name")
+  provider String
+  providerExternalId String? @map("provider_external_id")
+  currency String?
+  jurisdiction String?
+  region String?
+  indexType String @map("index_type")
+  basketType String @map("basket_type")
+  status String
+  startDate DateTime? @map("start_date") @db.Date
+  endDate DateTime? @map("end_date") @db.Date
+  baseDate DateTime? @map("base_date") @db.Date
+  baseValue Decimal? @map("base_value") @db.Decimal(24, 8)
+  methodologyUrl String? @map("methodology_url")
+  officialSourceUrl String? @map("official_source_url")
+  licenseStatus String @map("license_status")
+  verificationStatus String @map("verification_status")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  @@map("currency_index_profiles")
+}
+
+model CurrencyIndexObservationMeta {
+  id String @id @default(uuid()) @db.Uuid
+  symbol String
+  observationDate DateTime @map("observation_date") @db.Date
+  observationType String @map("observation_type")
+  source String
+  sourceType String @map("source_type")
+  sourceRecordId String? @map("source_record_id")
+  sourceUrl String? @map("source_url")
+  asOfDate DateTime @map("as_of_date") @db.Date
+  ingestedAt DateTime @default(now()) @map("ingested_at")
+  retrievedAt DateTime @default(now()) @map("retrieved_at")
+  parserVersion String @default("UNSPECIFIED") @map("parser_version")
+  checksum String?
+  checksumStatus String @default("UNAVAILABLE") @map("checksum_status")
+  verificationStatus String @map("verification_status")
+  licenseStatus String @map("license_status")
+  qualityStatus String @map("quality_status")
+  @@unique([symbol, observationDate])
+  @@map("currency_index_observation_meta")
+}
+
+model CurrencyIndexMethodology {
+  id String @id @default(uuid()) @db.Uuid
+  symbol String @unique
+  provider String
+  indexObjective String @map("index_objective")
+  basketDefinition String @map("basket_definition")
+  constituentCurrencies Json @map("constituent_currencies")
+  weightingMethod String @map("weighting_method")
+  weightSource String @map("weight_source")
+  baseDate DateTime? @map("base_date") @db.Date
+  baseValue Decimal? @map("base_value") @db.Decimal(24, 8)
+  rebalanceFrequency String @map("rebalance_frequency")
+  calculationFrequency String? @map("calculation_frequency")
+  methodologyUrl String @map("methodology_url")
+  effectiveDate DateTime? @map("effective_date") @db.Date
+  source String
+  licenseStatus String @map("license_status")
+  verificationStatus String @map("verification_status")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  @@map("currency_index_methodologies")
+}
+
+model CurrencyIndexConstituent {
+  id String @id @default(uuid()) @db.Uuid
+  symbol String
+  currencyCode String @map("currency_code")
+  weight Decimal? @db.Decimal(18, 10)
+  asOfDate DateTime @map("as_of_date") @db.Date
+  effectiveFrom DateTime? @map("effective_from") @db.Date
+  effectiveTo DateTime? @map("effective_to") @db.Date
+  source String
+  sourceRecordId String? @map("source_record_id")
+  licenseStatus String @map("license_status")
+  derivationType String @map("derivation_type")
+  @@unique([symbol, currencyCode, asOfDate])
+  @@map("currency_index_constituents")
+}
+
+model CurrencyIndexEvent {
+  id String @id @default(uuid()) @db.Uuid
+  symbol String
+  eventType String @map("event_type")
+  announcementDate DateTime? @map("announcement_date") @db.Date
+  effectiveDate DateTime @map("effective_date") @db.Date
+  source String
+  sourceRecordId String? @map("source_record_id")
+  sourceUrl String? @map("source_url")
+  verificationStatus String @map("verification_status")
+  @@unique([symbol, eventType, effectiveDate])
+  @@map("currency_index_events")
+}
+
+model CurrencyIndexAnalytic {
+  id String @id @default(uuid()) @db.Uuid
+  symbol String
+  asOfDate DateTime @map("as_of_date") @db.Date
+  metric String
+  value Decimal @db.Decimal(24, 10)
+  semantic String
+  source String
+  qualityStatus String @map("quality_status")
+  createdAt DateTime @default(now()) @map("created_at")
+  @@unique([symbol, asOfDate, metric])
+  @@map("currency_index_analytics")
+}
+
+model CurrencyIndexIncrementalState {
+  symbol String @id
+  lastSourceDate DateTime? @map("last_source_date") @db.Date
+  lastCanonicalDate DateTime? @map("last_canonical_date") @db.Date
+  lastSourceState String? @map("last_source_state")
+  lastProcessedRecord String? @map("last_processed_record")
+  lastSuccessfulRun DateTime? @map("last_successful_run")
+  nextEligibleAt DateTime? @map("next_eligible_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  @@map("currency_index_incremental_state")
+}
+
+model CurrencyIndexCoverage {
+  symbol String @id
+  identityAvailable Boolean @map("identity_available")
+  currentAvailable Boolean @map("current_available")
+  historyAvailable Boolean @map("history_available")
+  firstDate DateTime? @map("first_date") @db.Date
+  lastDate DateTime? @map("last_date") @db.Date
+  observationCount Int @map("observation_count")
+  methodologyAvailable Boolean @map("methodology_available")
+  basketAvailable Boolean @map("basket_available")
+  weightsAvailable Boolean @map("weights_available")
+  performanceAvailable Boolean @map("performance_available")
+  sourceVerified Boolean @map("source_verified")
+  licenseStatus String @map("license_status")
+  coverageStatus String @map("coverage_status")
+  lastCheckedAt DateTime @map("last_checked_at")
+  @@map("currency_index_coverage")
+}

@@ -1,0 +1,23 @@
+{
+  "asset": "GLOBAL_ETF",
+  "universe": 12802,
+  "batchSize": 50,
+  "maxDbConcurrency": 1,
+  "dbPoolMode": "SUPABASE_TRANSACTION_POOLING_6543_PGBOUNCER",
+  "allowFuzzy": false,
+  "identityKeys": ["ISIN", "CUSIP", "SEC_CLASS_ID", "SERIES_ID_CLASS_ID", "ISSUER_PRODUCT_ID", "PROVIDER_CANONICAL_ID", "UNIQUE_TICKER_EXCHANGE", "OFFICIAL_REGULATOR_LINK"],
+  "products": [
+    {"code":"AAXJ","portfolioId":"239601","slug":"ishares-msci-all-country-asia-ex-japan-etf"},
+    {"code":"ACWI","portfolioId":"239600","slug":"ishares-msci-acwi-etf"},
+    {"code":"ACWV","portfolioId":"239605","slug":"ishares-msci-all-country-world-minimum-volatility-etf"},
+    {"code":"ACWX","portfolioId":"239594","slug":"ishares-msci-acwi-ex-us-etf"},
+    {"code":"AGG","portfolioId":"239458","slug":"ishares-core-total-us-bond-market-etf"},
+    {"code":"AGRH","portfolioId":"328180","slug":"ishares-interest-rate-hedged-u-s-aggregate-bond-etf"},
+    {"code":"AGZ","portfolioId":"239457","slug":"ishares-agency-bond-etf"},
+    {"code":"AIA","portfolioId":"239730","slug":"ishares-asia-50-etf"},
+    {"code":"AOA","portfolioId":"239729","slug":"ishares-aggressive-allocation-etf"},
+    {"code":"AOK","portfolioId":"239733","slug":"ishares-conservative-allocation-etf"},
+    {"code":"IVV","portfolioId":"239726","slug":"ishares-core-s-p-500-etf"},
+    {"code":"IWM","portfolioId":"239710","slug":"ishares-russell-2000-etf"}
+  ]
+}

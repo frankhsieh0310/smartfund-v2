@@ -1,0 +1,32 @@
+-- FX spot P0 only. Deliberately does not alter fx_forward_observations,
+-- cross-currency basis, OIS, currency-index, or any non-FX relation.
+CREATE TABLE IF NOT EXISTS "fx_sources" ("id" TEXT PRIMARY KEY,"name" TEXT NOT NULL,"kind" TEXT NOT NULL,"official" BOOLEAN NOT NULL DEFAULT false,"legal_public" BOOLEAN NOT NULL DEFAULT true,"base_url" TEXT NOT NULL,"license_url" TEXT,"capabilities" JSONB NOT NULL,"active" BOOLEAN NOT NULL DEFAULT true,"metadata" JSONB,"created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,"updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS "fx_currencies" ("code" TEXT PRIMARY KEY,"name" TEXT NOT NULL,"kind" TEXT NOT NULL DEFAULT 'FIAT',"iso_numeric" TEXT,"minor_units" INTEGER,"authority_id" TEXT,"active" BOOLEAN NOT NULL DEFAULT true,"metadata" JSONB,"created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,"updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS "fx_pairs" ("symbol" TEXT PRIMARY KEY,"base_currency" TEXT NOT NULL,"quote_currency" TEXT NOT NULL,"classification" TEXT NOT NULL,"provider_symbol" TEXT,"price_precision" INTEGER NOT NULL DEFAULT 6,"active" BOOLEAN NOT NULL DEFAULT true,"metadata" JSONB,"created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,"updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,UNIQUE("base_currency","quote_currency"));
+ALTER TABLE "fx_pairs" ADD COLUMN IF NOT EXISTS "display_pair" TEXT;
+ALTER TABLE "fx_pairs" ADD COLUMN IF NOT EXISTS "quote_convention" TEXT NOT NULL DEFAULT 'QUOTE_UNITS_PER_BASE';
+ALTER TABLE "fx_pairs" ADD COLUMN IF NOT EXISTS "pip_precision" INTEGER;
+ALTER TABLE "fx_pairs" ADD COLUMN IF NOT EXISTS "deliverability" TEXT;
+ALTER TABLE "fx_pairs" ADD COLUMN IF NOT EXISTS "onshore_offshore_type" TEXT;
+ALTER TABLE "fx_pairs" ADD COLUMN IF NOT EXISTS "source" TEXT NOT NULL DEFAULT 'SMARTFUND_FX_REGISTRY';
+ALTER TABLE "fx_pairs" ADD COLUMN IF NOT EXISTS "verification_status" TEXT NOT NULL DEFAULT 'DETERMINISTIC_VERIFIED';
+ALTER TABLE "fx_pairs" ADD COLUMN IF NOT EXISTS "classification_method" TEXT NOT NULL DEFAULT 'CONFIGURED_CURRENCY_SET_V1';
+ALTER TABLE "fx_pairs" ADD COLUMN IF NOT EXISTS "usd_cross" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "fx_pairs" ADD COLUMN IF NOT EXISTS "start_date" DATE;
+ALTER TABLE "fx_pairs" ADD COLUMN IF NOT EXISTS "end_date" DATE;
+CREATE TABLE IF NOT EXISTS "fx_pair_aliases" ("id" TEXT PRIMARY KEY,"pair_symbol" TEXT NOT NULL,"provider" TEXT NOT NULL,"provider_symbol" TEXT NOT NULL,"provider_market" TEXT,"mapping_method" TEXT NOT NULL,"inverted_alias" BOOLEAN NOT NULL DEFAULT false,"source" TEXT NOT NULL,"verified_at" TIMESTAMP(3),"created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,"updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,UNIQUE("provider","provider_symbol"));
+CREATE INDEX IF NOT EXISTS "fx_pair_aliases_pair_symbol_idx" ON "fx_pair_aliases"("pair_symbol");
+CREATE TABLE IF NOT EXISTS "fx_candles" ("pair_symbol" TEXT NOT NULL,"interval" TEXT NOT NULL,"open_time" TIMESTAMP(3) NOT NULL,"close_time" TIMESTAMP(3) NOT NULL,"open" DECIMAL(30,12) NOT NULL,"high" DECIMAL(30,12) NOT NULL,"low" DECIMAL(30,12) NOT NULL,"close" DECIMAL(30,12) NOT NULL,"bid" DECIMAL(30,12),"ask" DECIMAL(30,12),"mid" DECIMAL(30,12),"spread" DECIMAL(30,12),"volume" DECIMAL(30,8),"source" TEXT NOT NULL,"source_url" TEXT,"observed_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,PRIMARY KEY("pair_symbol","interval","open_time","source"));
+ALTER TABLE "fx_candles" ADD COLUMN IF NOT EXISTS "provider_symbol" TEXT;
+ALTER TABLE "fx_candles" ADD COLUMN IF NOT EXISTS "source_record_id" TEXT;
+ALTER TABLE "fx_candles" ADD COLUMN IF NOT EXISTS "source_type" TEXT NOT NULL DEFAULT 'LEGAL_PUBLIC_MARKET';
+ALTER TABLE "fx_candles" ADD COLUMN IF NOT EXISTS "verification_status" TEXT NOT NULL DEFAULT 'ARCHIVE_SEMANTICS_VERIFIED';
+ALTER TABLE "fx_candles" ADD COLUMN IF NOT EXISTS "archive_manifest_id" TEXT;
+ALTER TABLE "fx_candles" ADD COLUMN IF NOT EXISTS "ingestion_batch" TEXT;
+ALTER TABLE "fx_candles" ADD COLUMN IF NOT EXISTS "ingested_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
+CREATE INDEX IF NOT EXISTS "fx_candles_interval_open_time_idx" ON "fx_candles"("interval","open_time");
+CREATE TABLE IF NOT EXISTS "fx_latest_quotes" ("pair_symbol" TEXT PRIMARY KEY,"bid" DECIMAL(30,12),"ask" DECIMAL(30,12),"mid" DECIMAL(30,12) NOT NULL,"spread" DECIMAL(30,12),"source" TEXT NOT NULL,"quoted_at" TIMESTAMP(3) NOT NULL,"ingested_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,"metadata" JSONB);
+CREATE TABLE IF NOT EXISTS "fx_metrics" ("pair_symbol" TEXT NOT NULL,"interval" TEXT NOT NULL,"metric" TEXT NOT NULL,"observed_at" TIMESTAMP(3) NOT NULL,"value" DECIMAL(30,12),"payload" JSONB,"source" TEXT NOT NULL DEFAULT 'SMARTFUND_DERIVED',"computed_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,PRIMARY KEY("pair_symbol","interval","metric","observed_at"));
+CREATE TABLE IF NOT EXISTS "fx_coverage" ("pair_symbol" TEXT NOT NULL,"capability" TEXT NOT NULL,"interval" TEXT NOT NULL DEFAULT '',"status" TEXT NOT NULL,"provider" TEXT,"earliest_at" TIMESTAMP(3),"latest_at" TIMESTAMP(3),"freshness_seconds" INTEGER,"row_count" BIGINT NOT NULL DEFAULT 0,"quality_status" TEXT NOT NULL DEFAULT 'PENDING',"details" JSONB,"checked_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,PRIMARY KEY("pair_symbol","capability","interval"));
+CREATE TABLE IF NOT EXISTS "fx_work_items" ("id" TEXT PRIMARY KEY,"dedupe_key" TEXT NOT NULL UNIQUE,"kind" TEXT NOT NULL,"pair_symbol" TEXT,"payload" JSONB NOT NULL,"status" TEXT NOT NULL DEFAULT 'PENDING',"priority" INTEGER NOT NULL DEFAULT 100,"attempts" INTEGER NOT NULL DEFAULT 0,"max_attempts" INTEGER NOT NULL DEFAULT 8,"next_run_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,"last_error" TEXT,"checkpoint" JSONB,"created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,"updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,"completed_at" TIMESTAMP(3));
+CREATE TABLE IF NOT EXISTS "fx_archive_manifests" ("id" TEXT PRIMARY KEY,"pair_symbol" TEXT NOT NULL,"interval" TEXT NOT NULL,"range_start" TIMESTAMP(3) NOT NULL,"range_end" TIMESTAMP(3) NOT NULL,"row_count" BIGINT NOT NULL,"checksum" TEXT NOT NULL,"storage_uri" TEXT NOT NULL,"source" TEXT NOT NULL,"status" TEXT NOT NULL DEFAULT 'AVAILABLE',"created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,"verified_at" TIMESTAMP(3),UNIQUE("pair_symbol","interval","range_start","range_end","source"));

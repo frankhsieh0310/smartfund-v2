@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "detail": { "publicMarketStatistics": ["securityIdentity", "market", "latestMetrics", "metricDefinitions", "units", "observationDate", "history", "source", "freshness", "coverageState"], "professionalSecuritiesLending": ["BORROW_FEE", "BORROW_RATE", "UTILIZATION", "SHARES_AVAILABLE", "RECALL"], "unavailableState": "LICENSE_CONSTRAINED" },
+  "search": ["ticker", "company", "market", "coverageState"],
+  "screener": { "publicEnabled": ["SHORT_BALANCE", "SECURITIES_BORROWING_BALANCE", "SHORT_INTEREST_SHARES", "SHORT_VOLUME", "DAYS_TO_COVER"], "professionalDisabledUntilLicensed": ["BORROW_FEE", "UTILIZATION", "SHARES_AVAILABLE"] },
+  "compare": { "rule": "sameMetricCodeAndCompatibleUnitOnly" },
+  "ranking": { "requiredDimensions": ["metricCode", "market", "observationDate", "source", "coverageDenominator"] },
+  "noDataStates": ["NO_OBSERVATION_REPORTED", "SOURCE_NOT_AVAILABLE", "SOURCE_PENDING", "LICENSE_PENDING"]
+}

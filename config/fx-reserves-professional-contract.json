@@ -1,0 +1,28 @@
+{
+  "asset": "GLOBAL_FX_RESERVES",
+  "reserveTypes": ["TOTAL_RESERVES", "FOREIGN_CURRENCY_RESERVES", "FOREIGN_CURRENCY_RESERVES_EX_GOLD", "GOLD_RESERVES", "SDR_HOLDINGS", "IMF_RESERVE_POSITION", "OTHER_RESERVE_ASSETS", "OTHER_VERIFIED"],
+  "verificationStates": ["VERIFIED_OFFICIAL", "VERIFIED_DERIVED", "UNVERIFIED_LEGACY", "SOURCE_PENDING", "LICENSE_PENDING", "INVALID", "UNKNOWN"],
+  "freshnessStates": ["CURRENT", "WAITING_FOR_NEXT_RELEASE", "SOURCE_DELAYED", "STALE", "SOURCE_PENDING", "LICENSE_PENDING", "UNKNOWN"],
+  "observation": {"publicationDate": "NULLABLE_NOT_OBSERVATION_MONTH", "referencePeriod": "NULLABLE", "retrievedAt": "REQUIRED", "sourceValue": "REQUIRED", "sourceUnit": "REQUIRED", "normalizedValue": "OPTIONAL_SEPARATE", "normalizedUnit": "OPTIONAL_SEPARATE"},
+  "usdNormalization": {"status": "CONTRACT_READY_DATA_PENDING", "fields": ["normalizedUSDValue", "fxRate", "fxDate", "fxSource"], "overwriteSourceObservation": false},
+  "composition": {"status": "CONTRACT_READY_DATA_PENDING", "officialComponentsOnly": true, "fields": ["country", "reserveType", "asOfDate", "value", "unit", "shareOfTotal"]},
+  "reserveAdequacy": {"status": "CONTRACT_READY_DATA_PENDING", "denominators": ["imports", "shortTermExternalDebt", "broadMoney"]},
+  "analytics": {"semantic": "RESERVE_LEVEL_CHANGE", "monthly": ["1M", "3M", "6M", "YTD", "1Y", "3Y", "5Y", "10Y", "YOY"], "notApplicable": ["1D", "1W"], "ranges": ["1Y", "3Y", "5Y", "10Y"], "percentiles": ["1Y", "3Y", "5Y", "10Y", "20Y"]},
+  "productContracts": {
+    "detail": ["country", "authority", "reserveType", "latestValue", "unit", "observationDate", "history", "changes", "range", "percentile", "source", "freshness", "provenance", "coverage"],
+    "countryDetail": ["country", "authority", "officialAvailableReserveComponents"],
+    "search": ["country", "authority", "reserveType", "frequency", "unit"],
+    "screener": ["region", "country", "reserveType", "latestLevel", "oneYearChange", "fiveYearChange", "percentile", "historyDepth"],
+    "compare": ["reserveType", "unit", "currency", "percentageChange", "indexedGrowth", "gdpNormalized"],
+    "ranking": {"semanticallyEquivalentOnly": true, "allowedExamples": ["TOTAL_RESERVES_USD_NORMALIZED", "1Y_RESERVE_GROWTH"]}
+  },
+  "targetJurisdictions": ["United States", "Euro Area", "China", "Japan", "Switzerland", "India", "Russia", "Taiwan", "Hong Kong", "Singapore", "South Korea", "Brazil", "Saudi Arabia", "Canada", "Australia", "United Kingdom", "OTHER_IMF_AVAILABLE_COUNTRIES"],
+  "countrySources": [
+    {"country":"United States","authority":"United States Department of the Treasury","reserveTypesAvailable":["FOREIGN_CURRENCY_RESERVES_EX_GOLD"],"officialSource":"Federal Reserve Bank of St. Louis / IMF IFS","externalSeriesId":"TRESEGUSM052N","frequency":"MONTHLY","historyAvailable":true,"sourceStatus":"VERIFIED_OFFICIAL","licenseStatus":"OPEN_OFFICIAL"},
+    {"country":"China","authority":"State Administration of Foreign Exchange / People's Bank of China","reserveTypesAvailable":[],"officialSource":"SOURCE_DISCOVERY_PENDING","externalSeriesId":null,"frequency":"MONTHLY","historyAvailable":null,"sourceStatus":"SOURCE_PENDING","licenseStatus":"UNKNOWN"},
+    {"country":"Japan","authority":"Ministry of Finance Japan","reserveTypesAvailable":[],"officialSource":"SOURCE_DISCOVERY_PENDING","externalSeriesId":null,"frequency":"MONTHLY","historyAvailable":null,"sourceStatus":"SOURCE_PENDING","licenseStatus":"UNKNOWN"},
+    {"country":"Switzerland","authority":"Swiss National Bank","reserveTypesAvailable":[],"officialSource":"SOURCE_DISCOVERY_PENDING","externalSeriesId":null,"frequency":"MONTHLY","historyAvailable":null,"sourceStatus":"SOURCE_PENDING","licenseStatus":"UNKNOWN"},
+    {"country":"India","authority":"Reserve Bank of India","reserveTypesAvailable":[],"officialSource":"SOURCE_DISCOVERY_PENDING","externalSeriesId":null,"frequency":"WEEKLY_OR_MONTHLY","historyAvailable":null,"sourceStatus":"SOURCE_PENDING","licenseStatus":"UNKNOWN"},
+    {"country":"Euro Area","authority":"European Central Bank","reserveTypesAvailable":[],"officialSource":"SOURCE_DISCOVERY_PENDING","externalSeriesId":null,"frequency":"MONTHLY","historyAvailable":null,"sourceStatus":"SOURCE_PENDING","licenseStatus":"UNKNOWN"}
+  ]
+}

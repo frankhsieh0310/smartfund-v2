@@ -1,0 +1,1 @@
+{"version":1,"runner":"scripts/data/equity-index-futures/run-global-equity-index-futures.ts","service":"smartfund-v2","createNewRailwayService":false,"incrementalIntervalMs":3600000,"retryIntervalMs":300000,"archiveAfterDays":30}

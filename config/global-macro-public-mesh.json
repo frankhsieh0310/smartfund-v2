@@ -1,0 +1,20 @@
+{
+  "version":"GLOBAL_MACRO_PUBLIC_MESH_V1",
+  "asset":"GLOBAL_MACRO",
+  "execution":{"mode":"ORDINARY_NODE_LIFECYCLE_ONLY","fullRecognizedCountryUniverse":true,"fullMaterialSeriesUniverse":true,"fullReliableHistory":true,"vintagePitWhereAvailable":true,"incremental":true,"scheduledRefresh":true,"maxDbConcurrency":1,"pool":"SUPABASE_TRANSACTION_POOLING_6543_PGBOUNCER"},
+  "safety":{"depthAuditRerun":false,"historicalRestart":false,"passDomainRestart":false,"duplicateProviderAdapter":false,"duplicateRailwayWriter":false,"codexDataLoop":false,"canonicalMappingRequired":true},
+  "routes":[
+    {"domain":"COUNTRY_AND_OFFICIAL_INSTITUTION_DISCOVERY","status":"AUTO_CONTINUING","owner":"GLOBAL_MACRO_PUBLIC_MESH","route":"IMF DSBB/SDDS/e-GDDS/NSDP + BIS central-bank directory + existing country registry"},
+    {"domain":"SERIES_DISCOVERY_AND_FULL_HISTORY","status":"INPUT_GATED_AUTO_CONTINUING","owner":"MACRO_PRODUCTION_DAILY","route":"existing IMF/World Bank/OECD/FRED/ECB adapters plus common SDMX/REST/CSV/XLS families","requirement":"VERIFIED_PUBLIC_PROVIDER_DATASET"},
+    {"domain":"BIS_GLOBAL_DATASETS","status":"AUTO_CONTINUING","owner":"SHARED_BIS_OFFICIAL_NODE_WORKER","route":"existing bounded SDMX dataset cursor and checkpoints"},
+    {"domain":"NATIONAL_OFFICIAL_SOURCES","status":"INPUT_GATED_AUTO_CONTINUING","owner":"GLOBAL_MACRO_PUBLIC_MESH","route":"common adapter first; country-specific only when common representation fails","requirement":"PUBLIC_STRUCTURED_OFFICIAL_ENDPOINT"},
+    {"domain":"DBNOMICS_BACKUP","status":"INPUT_GATED_AUTO_CONTINUING","owner":"MACRO_PRODUCTION_DAILY","route":"DBnomics v22 backup after canonical mapping; never primary over direct official","requirement":"CANONICAL_MAPPING_VERIFIED"},
+    {"domain":"CANONICAL_DEDUP_RECONCILIATION","status":"AUTO_CONTINUING","owner":"GLOBAL_MACRO_PUBLIC_MESH","route":"one economic grain, multiple source lineages, priority-aware reconciliation"},
+    {"domain":"VINTAGE_PIT_REVISION","status":"INPUT_GATED_AUTO_CONTINUING","owner":"ECONOMIC_CALENDAR + PROVIDER_WORKERS","route":"append source-supported release/vintage observations; never overwrite prior vintages","requirement":"SOURCE_RELEASE_OR_VINTAGE_SEMANTICS"},
+    {"domain":"FORECAST_SURVEY_VINTAGES","status":"WAITING_DEPENDENCY","owner":"GLOBAL_MACRO_PUBLIC_MESH","route":"public official/research forecasts only; TIER remains separate from Taiwan official actuals","requirement":"PUBLIC_STRUCTURED_SOURCE_WITH_VINTAGE_DATE"},
+    {"domain":"RELEASE_CALENDAR","status":"AUTO_CONTINUING","owner":"GLOBAL_ECONOMIC_CALENDAR","route":"existing official event/revision/checkpoint lifecycle"},
+    {"domain":"MULTILINGUAL_IDENTITIES","status":"INPUT_GATED_AUTO_CONTINUING","owner":"ACTIVE_SHARED_LOCALE_MODEL","route":"official local names, aliases and locale metadata; language-neutral canonical IDs","requirement":"OFFICIAL_LOCALIZED_INPUT"},
+    {"domain":"UN_UNCTAD_COMTRADE_FAOSTAT_WTO","status":"WAITING_DEPENDENCY","owner":"GLOBAL_MACRO_PUBLIC_MESH","route":"common SDMX/REST/CSV adapters after public endpoint and dataset-grain contract","requirement":"PUBLIC_MACHINE_READABLE_DATASET_ROUTE"},
+    {"domain":"SUPPLEMENTAL_OWID","status":"WAITING_DEPENDENCY","owner":"GLOBAL_MACRO_PUBLIC_MESH","route":"only material datasets not covered by higher-priority official source","requirement":"NO_CANONICAL_OFFICIAL_DUPLICATE"}
+  ]
+}

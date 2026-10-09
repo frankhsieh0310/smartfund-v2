@@ -1,0 +1,17 @@
+{
+  "version":"2.0.0",
+  "metricTaxonomy":["TOTAL_ASSETS","RESERVE_BALANCES","REVERSE_REPO","GOVERNMENT_ACCOUNT","SECURITIES_OUTRIGHT","MBS","MONETARY_POLICY_SECURITIES","REFINANCING_OPERATIONS","LENDING_FACILITY","OTHER_VERIFIED"],
+  "balanceSheetSides":["ASSET","LIABILITY","MEMORANDUM","FACILITY","OTHER"],
+  "liquidityDirections":["LIQUIDITY_ADDING","LIQUIDITY_DRAINING","CONTEXT_DEPENDENT","NOT_DIRECTLY_DIRECTIONAL"],
+  "completionStates":["COMPLETE","PARTIAL_COMPLETE","SOURCE_CONSTRAINED","FAILED","BACKGROUND_PENDING"],
+  "freshnessStates":["CURRENT","WAITING_FOR_NEXT_PUBLICATION","SOURCE_DELAYED","STALE","SOURCE_PENDING","SOURCE_CONSTRAINED","UNKNOWN"],
+  "analytics":{"semantic":"CHANGE_NOT_RETURN","metrics":["ABS_CHANGE_WOW","PCT_CHANGE_WOW","ABS_CHANGE_MOM","PCT_CHANGE_MOM","ABS_CHANGE_YOY","PCT_CHANGE_YOY","ABS_CHANGE_4W","PCT_CHANGE_4W","ABS_CHANGE_13W","PCT_CHANGE_13W","ABS_CHANGE_26W","PCT_CHANGE_26W","ABS_CHANGE_52W","PCT_CHANGE_52W","52W_HIGH","52W_LOW","3Y_HIGH","3Y_LOW","5Y_HIGH","5Y_LOW","1Y_PERCENTILE","3Y_PERCENTILE","5Y_PERCENTILE","10Y_PERCENTILE","BASE_100"]},
+  "fedNetLiquidity":{"status":"CONTRACT_ONLY","metricType":"DERIVED_ANALYTIC","formulaVersion":"FNL_V1_ASSETS_MINUS_TGA_MINUS_RRP","formula":"FED_TOTAL_ASSETS_USD_MILLIONS - FED_TGA_USD_MILLIONS - (FED_REVERSE_REPO_USD_BILLIONS * 1000)","alignment":"ACTUAL_OBSERVATION_DATE_ONLY","officialSeries":false},
+  "comparison":{"absoluteLevel":"NATIVE_LEVEL_NOT_DIRECTLY_COMPARABLE","allowed":["PCT_CHANGE_WOW","PCT_CHANGE_MOM","PCT_CHANGE_YOY","BASE_100"],"fxNormalized":"DATA_PENDING","gdpNormalized":"CONTRACT_READY_DATA_PENDING"},
+  "events":{"status":"CONTRACT_READY_DATA_PENDING","types":["QE_ANNOUNCEMENT","QT_ANNOUNCEMENT","FACILITY_LAUNCH","FACILITY_TERMINATION","METHODOLOGY_CHANGE","SERIES_RECLASSIFICATION"]},
+  "pointInTime":{"level":2,"required":["observationDate","sourceVersion","importedAt","checksum"],"revisionPolicy":"ARCHIVE_BEFORE_CANONICAL_OVERWRITE"},
+  "searchFields":["centralBankName","country","currency","seriesCode","liquidityMetricType","balanceSheetSide"],
+  "detailFields":["identity","centralBank","country","currency","metricType","balanceSheetSide","currentValue","unit","observationDate","history","changes","ranges","percentiles","source","freshness","provenance","coverage"],
+  "screenerFields":["centralBankId","currency","liquidityMetricType","balanceSheetSide","frequency","freshnessStatus"],
+  "rankingPolicy":"YOY_PERCENT_CHANGE_ONLY_NO_ABSOLUTE_CROSS_CURRENCY_RANKING"
+}

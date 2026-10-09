@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "asset": "GLOBAL_MARKET_BREADTH",
+  "stages": ["historical", "latest", "incremental", "retry", "archive"],
+  "frequencies": ["daily", "weekly", "monthly"],
+  "optionalFrequency": "intraday",
+  "capabilities": ["chart", "comparison", "technical", "archive", "retry", "checkpoint"],
+  "historical": { "from": "2000-01-01", "chunkDays": 31 },
+  "incrementalPollMinutes": 60,
+  "archiveAfterDays": 365
+}

@@ -2,6 +2,29 @@
 builder = "DOCKERFILE"
 
 [deploy]
+# Root cause (confirmed via actual code + Railway status + production_scheduler_runs, not
+# guessed): run-production-cron.ts's main() runs the Yahoo dispatcher exactly once and returns —
+# there is no internal loop/setInterval, by design. Under the OLD always-on Service model
+# (restartPolicyType = "NEVER"), that one exit was final: nothing ever re-invoked the process, so
+# no source probe ever ran again after the single 2026-09-16 08:38 ET dispatch. Railway's native
+# `cronSchedule` converts THIS SAME service (not a second, parallel one) into a recurring
+# platform-invoked job: Railway itself starts a fresh instance at each scheduled time, runs
+# startCommand once, and lets it exit — the platform re-invokes on the next tick regardless of
+# whether the prior run exited cleanly, errored, or crashed. This is why the fix is a platform
+# schedule, not a process-internal loop: a loop only survives a clean exit, not a crash.
+#
+# Cadence reuses the existing 15-minute constant already established elsewhere in this codebase
+# (config/data-daily-schedule.json's top-level "schedulerIntervalMinutes": 15) rather than
+# inventing a new one. The existing dispatcher already decides per-invocation, per-market, whether
+# anything is actually due (source-state-driven, NOOP otherwise) — this only changes who keeps
+# calling it.
+#
+# restartPolicyType intentionally removed: it is a semantics for a persistent always-on process
+# ("what to do when the process dies"), which does not apply once cronSchedule governs the
+# lifecycle (each tick is an independent, expected-to-exit invocation, not a crash to recover
+# from). Leaving it in would be misleading, not just redundant.
+#
+# NOT ACTIVE until deployed — config-as-code alone does not take effect without a Railway deploy,
+# which requires the user's own explicit authorization (see chat).
 startCommand = "sh -c \"npx prisma migrate deploy && node --experimental-strip-types scripts/data/production/run-production-cron.ts\""
-restartPolicyType = "NEVER"
-cronSchedule = "*/5 * * * *"
+cronSchedule = "*/15 * * * *"

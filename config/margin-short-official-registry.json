@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "asset": "GLOBAL_MARGIN_SHORT_STATISTICS",
+  "sources": [
+    { "id": "FINRA", "country": "US", "officialUrl": "https://www.finra.org/finra-data/browse-catalog/short-sale-volume-data", "datasets": ["shortSellingVolume"], "level": "security", "adapter": "SECURITIES_LENDING_CANONICAL" },
+    { "id": "NASDAQ", "country": "US", "officialUrl": "https://www.nasdaqtrader.com/Trader.aspx?id=RegSHO", "datasets": ["shortInterest", "shortRatio"], "level": "security", "adapter": "SECURITIES_LENDING_CANONICAL" },
+    { "id": "TWSE", "country": "TW", "officialUrl": "https://www.twse.com.tw/rwd/en/marginTrading/TWT93U?response=json", "datasets": ["marginFinancingBalance", "securitiesBorrowingAggregate", "shortSellingVolume"], "level": "market_and_security", "adapter": "SECURITIES_LENDING_CANONICAL" },
+    { "id": "JPX", "country": "JP", "officialUrl": "https://www.jpx.co.jp/english/markets/statistics-equities/margin/index.html", "datasets": ["marginFinancingBalance", "securitiesBorrowingAggregate", "shortSellingVolume"], "level": "market_and_security", "adapter": "SECURITIES_LENDING_CANONICAL" },
+    { "id": "HKEX", "country": "HK", "officialUrl": "https://www.hkex.com.hk/Market-Data/Securities-Prices/Short-Selling/Short-Selling-Turnover-and-Stock-Lending?sc_lang=en", "datasets": ["securitiesBorrowingAggregate", "shortSellingVolume"], "level": "market_and_security", "adapter": "SECURITIES_LENDING_CANONICAL" },
+    { "id": "KRX", "country": "KR", "officialUrl": "https://global.krx.co.kr/", "datasets": ["marginFinancingBalance", "shortSellingVolume"], "level": "market_and_security", "adapter": "SECURITIES_LENDING_CANONICAL" }
+  ]
+}

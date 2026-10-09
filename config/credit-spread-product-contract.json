@@ -1,0 +1,9 @@
+{
+  "assetClass":"GLOBAL CREDIT SPREAD","version":"1.0.0","primaryChangeUnit":"basis_points",
+  "detail":["identity","region","creditQuality","spreadType","currentSpread","change1DBps","change1WBps","change1MBps","history","percentile","volatility","benchmark","freshness","source","coverageStatus","licenseStatus"],
+  "search":["name","code","region","ratingBucket","spreadType"],
+  "screener":["region","ratingBucket","currentSpread","change1WBps","change1MBps","percentile1Y","volatility90D"],
+  "compare":["currentSpread","bpsChanges","percentiles","volatility","ratingBucket","region","spreadSemanticCompatibility","semanticWarning"],
+  "ranking":["widestSpread","tightestSpread","largest1DWidening","largest1WWidening","percentile1Y","constrainedExclusionReason"],
+  "constraints":{"numericFilters":"PRODUCTION_READY_ONLY","compare":"MATCHING_SPREAD_SEMANTICS_ONLY","ranking":"PRODUCTION_READY_COMPARABLE_OAS_ONLY","constrainedVisibility":"IDENTITY_AND_CONSTRAINT_STATE_ONLY"}
+}

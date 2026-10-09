@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "asset": "GLOBAL_ETF_HOLDINGS",
+  "canonicalUniverse": { "relation": "etfs", "expected": 12802, "secondUniverseForbidden": true },
+  "snapshotCompleteness": ["FULL_SOURCE_SNAPSHOT", "PARTIAL_SOURCE_SNAPSHOT", "TOP_HOLDINGS_ONLY", "SOURCE_TRUNCATED", "UNKNOWN"],
+  "holdingTypes": ["EQUITY", "BOND", "CASH", "FUTURE", "OPTION", "SWAP", "FX_FORWARD", "MONEY_MARKET", "OTHER"],
+  "identityMatchMethods": ["EXACT_ISIN", "EXACT_CUSIP", "EXACT_SEDOL", "EXACT_FIGI", "EXACT_VERIFIED_PROVIDER_ID", "EXACT_MIC_PLUS_TICKER"],
+  "identityForbidden": ["FUZZY_NAME", "LLM_GUESS", "COMPANY_NAME_SIMILARITY"],
+  "effectiveDate": { "sourceDeclaredOnly": true, "retrievalDateIsNotEffectiveDate": true, "pointInTimeMinimumDistinctDates": 2 },
+  "duplicateControl": { "sameEffectiveDateAndChecksum": "NO_OP_CURRENT", "duplicateArchive": false },
+  "freshness": ["CURRENT", "WAITING_FOR_NEXT_DISCLOSURE", "SOURCE_DELAYED", "STALE", "SOURCE_PENDING", "LICENSE_PENDING", "UNKNOWN"],
+  "priorityIssuerBatch": [
+    { "id": "blackrock", "status": "READY", "candidateCount": 2 },
+    { "id": "vanguard", "status": "ADAPTER_NOT_IMPLEMENTED", "candidateCount": 1 },
+    { "id": "state-street", "status": "ADAPTER_NOT_IMPLEMENTED", "candidateCount": 1 },
+    { "id": "invesco", "status": "ADAPTER_NOT_IMPLEMENTED", "candidateCount": 1 },
+    { "id": "amundi", "status": "TERMS_REVIEW_REQUIRED", "candidateCount": 1 },
+    { "id": "xtrackers", "status": "TERMS_REVIEW_REQUIRED", "candidateCount": 1 },
+    { "id": "ubs", "status": "TERMS_REVIEW_REQUIRED", "candidateCount": 1 },
+    { "id": "jpmam", "status": "ADAPTER_NOT_IMPLEMENTED", "candidateCount": 1 }
+  ],
+  "currentSourceCapability": { "blackrock": "CURRENT_ONLY_SOURCE" },
+  "analytics": { "allocations": "DERIVED_FROM_HOLDINGS", "changeRequiresDistinctDates": 2, "turnoverProxy": "DERIVED_ESTIMATE", "overlapRequiresCompatibleDates": true }
+}

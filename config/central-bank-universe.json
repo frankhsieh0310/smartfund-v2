@@ -1,0 +1,7 @@
+{
+  "asset":"GLOBAL CENTRAL BANK POLICY RATES",
+  "fields":["Country","Central Bank","Policy Rate","Rate Type","Effective Date","Announcement Date","Historical","Source","Quality"],
+  "rateTypes":["Policy Rate","Deposit Rate","Discount Rate","Lending Rate","Target Range","Effective Rate"],
+  "coverage":{"historical":true,"latest":true,"changeHistory":true,"comparison":true,"chart":true,"archive":true,"retry":true,"checkpoint":true,"scheduler":true},
+  "quality":{"requiredSource":"official central bank","forbiddenSource":"news","unparsed":"REVIEW_REQUIRED","verified":"OFFICIAL"}
+}

@@ -1,0 +1,1022 @@
+{
+  "version": 3,
+  "cycleMs": 60000,
+  "stallGraceMs": 1800000,
+  "maxRecoveryAttempts": 3,
+  "recoveryBackoffMs": [
+    60000,
+    300000,
+    900000
+  ],
+  "assets": [
+    {
+      "asset": "STOCK",
+      "owner": "GLOBAL_STOCK_DEPTH_ORCHESTRATOR",
+      "statusPath": "runtime-status/global-stock.json",
+      "checkpointPath": "runtime/global-stock-depth-orchestrator/checkpoint.json",
+      "expectedRunning": true,
+      "recovery": {
+        "command": "node",
+        "args": [
+          "--experimental-strip-types",
+          "--env-file=.env",
+          "scripts/data/orchestrator/run-global-stock-depth-orchestrator.ts"
+        ],
+        "workingDirectory": ".",
+        "checkpointPath": "runtime/global-stock-depth-orchestrator/checkpoint.json",
+        "expectedProcessPattern": "run-global-stock-depth-orchestrator.ts",
+        "singleWriterPath": "runtime/global-stock-depth-orchestrator/single-writer.lock",
+        "heartbeatPath": "runtime/global-stock-depth-orchestrator/heartbeat.json",
+        "targetProgressMetrics": [
+          "processed",
+          "checkpoint",
+          "coverage"
+        ],
+        "stallThresholdMs": 1800000,
+        "safeStopCommand": null,
+        "safeRestartCommand": "npm run data:stock:depth:orchestrator",
+        "codeConfigVersion": "global-stock-depth-orchestrator:v1",
+        "autoRecoveryAllowed": true
+      }
+    },
+    {
+      "asset": "ETF",
+      "owner": "GLOBAL_ETF_LATEST",
+      "statusPath": "runtime-status/etf.json",
+      "checkpointPath": "runtime/global-etf/checkpoint.json",
+      "expectedRunning": true,
+      "persistentProcess": true,
+      "recovery": {
+        "command": "node",
+        "args": [
+          "--experimental-strip-types",
+          "--env-file=.env",
+          "scripts/data/global-etf/run-global-etf-latest.ts"
+        ],
+        "workingDirectory": ".",
+        "checkpointPath": "runtime/global-etf/checkpoint.json",
+        "expectedProcessPattern": "run-global-etf-latest.ts",
+        "singleWriterPath": "runtime/global-etf/single-writer.lock",
+        "heartbeatPath": "runtime/global-etf/heartbeat.json",
+        "targetProgressMetrics": [
+          "processed",
+          "checkpoint",
+          "coverage",
+          "latest"
+        ],
+        "stallThresholdMs": 1800000,
+        "safeStopCommand": "Stop-Process -Id (Get-Content runtime/global-etf/single-writer.lock | ConvertFrom-Json).pid",
+        "safeRestartCommand": "node --experimental-strip-types --env-file=.env scripts/data/global-etf/run-global-etf-latest.ts",
+        "codeConfigVersion": "global-etf-latest:source+single-writer-v1",
+        "autoRecoveryAllowed": true
+      }
+    },
+    {
+      "asset": "FUND",
+      "owner": "FUND_MONEYDJ_PUBLIC_LAYER",
+      "statusPath": "runtime-status/fund.json",
+      "checkpointPath": "runtime/global-fund/moneydj-public-layer/checkpoint.json",
+      "expectedRunning": true,
+      "recovery": {
+        "command": "node",
+        "args": [
+          "--experimental-strip-types",
+          "--env-file=.env",
+          "scripts/data/global-fund/run-moneydj-fund-public-layer.ts"
+        ],
+        "workingDirectory": ".",
+        "checkpointPath": "runtime/global-fund/moneydj-public-layer/checkpoint.json",
+        "expectedProcessPattern": "run-moneydj-fund-public-layer.ts",
+        "singleWriterPath": "runtime/global-fund/moneydj-public-layer/single-writer.lock",
+        "heartbeatPath": "runtime/global-fund/moneydj-public-layer/health.json",
+        "targetProgressMetrics": [
+          "processed",
+          "coverage",
+          "checkpoint",
+          "lastSuccess"
+        ],
+        "stallThresholdMs": 1800000,
+        "safeStopCommand": "Stop-Process -Id (Get-Content runtime/global-fund/moneydj-public-layer/pid)",
+        "safeRestartCommand": "npm run data:fund:moneydj-public-layer",
+        "codeConfigVersion": "moneydj-public-layer:v1:canonical-recovery-v3",
+        "autoRecoveryAllowed": true,
+        "executionMode": "continuous",
+        "requiredAutonomous": true
+      }
+    },
+    {
+      "asset": "INDEX",
+      "owner": "GLOBAL_INDEX_LATEST",
+      "statusPath": "runtime/index/runtime-status.json",
+      "checkpointPath": "runtime/index/checkpoint.json",
+      "expectedRunning": true,
+      "recovery": {
+        "command": "node",
+        "args": [
+          "--experimental-strip-types",
+          "--env-file=.env",
+          "scripts/data/index/run-global-index.ts"
+        ],
+        "workingDirectory": ".",
+        "checkpointPath": "runtime/index/checkpoint.json",
+        "expectedProcessPattern": "run-global-index.ts",
+        "singleWriterPath": "runtime/index/single-writer.lock",
+        "heartbeatPath": "runtime/index/heartbeat.json",
+        "targetProgressMetrics": [
+          "processed",
+          "coverage",
+          "checkpoint",
+          "latest"
+        ],
+        "stallThresholdMs": 1800000,
+        "safeStopCommand": "Stop-Process -Id (Get-Content runtime/index/single-writer.lock | ConvertFrom-Json).pid",
+        "safeRestartCommand": "node --experimental-strip-types --env-file=.env scripts/data/index/run-global-index.ts",
+        "codeConfigVersion": "global-index:scheduled-refresh+target-terminal-v3",
+        "executionMode": "scheduled",
+        "requiredAutonomous": true,
+        "autoRecoveryAllowed": true
+      }
+    },
+    {
+      "asset": "FUTURES",
+      "owner": "GLOBAL_FUTURES_DEPTH_ORCHESTRATOR",
+      "statusPath": "runtime-status/futures.json",
+      "checkpointPath": "runtime/global-futures-depth-orchestrator/checkpoint.json",
+      "expectedRunning": true,
+      "persistentProcess": true,
+      "recovery": {
+        "command": "node",
+        "args": [
+          "--experimental-strip-types",
+          "scripts/data/orchestrator/run-global-futures-depth-orchestrator.ts"
+        ],
+        "workingDirectory": ".",
+        "checkpointPath": "runtime/global-futures-depth-orchestrator/checkpoint.json",
+        "expectedProcessPattern": "run-global-futures-depth-orchestrator.ts",
+        "singleWriterPath": "runtime/global-futures-depth-orchestrator/single-writer.lock",
+        "heartbeatPath": "runtime/global-futures-depth-orchestrator/heartbeat.json",
+        "targetProgressMetrics": [
+          "processed",
+          "rows",
+          "latest"
+        ],
+        "stallThresholdMs": 1800000,
+        "safeStopCommand": "Stop-Process -Id (Get-Content runtime/global-futures-depth-orchestrator/single-writer.lock | ConvertFrom-Json).pid",
+        "safeRestartCommand": "node --experimental-strip-types scripts/data/orchestrator/run-global-futures-depth-orchestrator.ts",
+        "codeConfigVersion": "global-futures-depth-orchestrator:v8-prisma-protocol-compatible",
+        "autoRecoveryAllowed": true
+      }
+    },
+    {
+      "asset": "FIXED_INCOME",
+      "owner": "GLOBAL_BOND_DESKTOP_SUPERVISOR",
+      "statusPath": "runtime-status/fixed-income.json",
+      "checkpointPath": "runtime/bond/incremental/checkpoint.json",
+      "expectedRunning": true,
+      "recovery": {
+        "command": "node",
+        "args": [
+          "scripts/data/bond/launch-desktop-global-bond-supervisor.cjs"
+        ],
+        "workingDirectory": ".",
+        "checkpointPath": "runtime/bond/incremental/checkpoint.json",
+        "expectedProcessPattern": "launch-desktop-global-bond-supervisor.cjs",
+        "singleWriterPath": "runtime/bond/desktop-supervisor/supervisor.pid",
+        "heartbeatPath": "runtime/bond/desktop-supervisor/health.json",
+        "targetProgressMetrics": [
+          "processed",
+          "checkpoint",
+          "rows",
+          "lastSuccess"
+        ],
+        "stallThresholdMs": 1800000,
+        "safeStopCommand": "Stop-Process -Id (Get-Content runtime/bond/desktop-supervisor/supervisor.pid)",
+        "safeRestartCommand": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/data/bond/run-desktop-global-bond-supervisor.ps1",
+        "codeConfigVersion": "desktop-global-bond-supervisor:prisma-protocol-compatible-v5",
+        "autoRecoveryAllowed": true,
+        "executionMode": "continuous",
+        "requiredAutonomous": true
+      }
+    },
+    {
+      "asset": "FX",
+      "owner": "FX_P0_CANONICAL_HANDOFF",
+      "statusPath": "runtime/fx/p0-handoff/heartbeat.json",
+      "checkpointPath": "runtime/fx/p0-handoff/checkpoint.json",
+      "expectedRunning": true,
+      "recovery": {
+        "command": "node",
+        "args": [
+          "--env-file=.env",
+          "scripts/data/fx/run-p0-handoff.ts",
+          "--background"
+        ],
+        "workingDirectory": ".",
+        "checkpointPath": "runtime/fx/p0-handoff/checkpoint.json",
+        "expectedProcessPattern": "run-p0-handoff.ts --background",
+        "singleWriterPath": "runtime/fx/p0-handoff/single-writer.lock",
+        "heartbeatPath": "runtime/fx/p0-handoff/heartbeat.json",
+        "targetProgressMetrics": [
+          "cursor"
+        ],
+        "stallThresholdMs": 1800000,
+        "safeStopCommand": "Stop-Process -Id (Get-Content runtime/fx/p0-handoff/single-writer.lock | ConvertFrom-Json).pid",
+        "safeRestartCommand": "node --env-file=.env scripts/data/fx/run-p0-handoff.ts --background",
+        "codeConfigVersion": "fx-p0-canonical-handoff:cursor-progress-v2",
+        "autoRecoveryAllowed": true,
+        "executionMode": "continuous",
+        "requiredAutonomous": true
+      }
+    },
+    {
+      "asset": "MACRO",
+      "owner": "ECONOMIC_EVENT_ENGINE",
+      "statusPath": "runtime-status/macro.json",
+      "checkpointPath": "runtime/economic/event-engine/checkpoint.json",
+      "expectedRunning": true,
+      "recovery": {
+        "command": "node",
+        "args": [
+          "--experimental-strip-types",
+          "--env-file=.env",
+          "scripts/data/economic/run-economic-event-engine.ts"
+        ],
+        "workingDirectory": ".",
+        "checkpointPath": "runtime/economic/event-engine/checkpoint.json",
+        "expectedProcessPattern": "run-economic-event-engine.ts",
+        "singleWriterPath": "runtime/economic/event-engine/engine.lock",
+        "heartbeatPath": "runtime/economic/event-engine/heartbeat.json",
+        "targetProgressMetrics": [
+          "processed",
+          "checkpoint",
+          "rows",
+          "latest"
+        ],
+        "stallThresholdMs": 1800000,
+        "safeStopCommand": "Stop-Process -Id (Get-Content runtime/economic/event-engine/runner.pid)",
+        "safeRestartCommand": "node --experimental-strip-types --env-file=.env scripts/data/economic/run-economic-event-engine.ts",
+        "codeConfigVersion": "economic-event-engine:single-writer-v1",
+        "autoRecoveryAllowed": true
+      }
+    },
+    {
+      "asset": "COMMODITY",
+      "owner": "COMMODITY_DESKTOP_SUPERVISOR",
+      "statusPath": "runtime-status/commodity.json",
+      "checkpointPath": "runtime/commodity/checkpoint.json",
+      "expectedRunning": true,
+      "recovery": {
+        "command": "node",
+        "args": [
+          "--experimental-strip-types",
+          "--env-file=.env",
+          "scripts/data/commodity/run-desktop-supervisor.ts"
+        ],
+        "workingDirectory": ".",
+        "checkpointPath": "runtime/commodity/checkpoint.json",
+        "expectedProcessPattern": "run-desktop-supervisor.ts",
+        "singleWriterPath": "runtime/commodity/desktop-supervisor/supervisor.lock",
+        "heartbeatPath": "runtime/commodity/desktop-supervisor/health.json",
+        "targetProgressMetrics": [
+          "processed",
+          "checkpoint",
+          "coverage",
+          "rows"
+        ],
+        "stallThresholdMs": 1800000,
+        "safeStopCommand": null,
+        "safeRestartCommand": "node --experimental-strip-types --env-file=.env scripts/data/commodity/run-desktop-supervisor.ts",
+        "codeConfigVersion": "commodity-desktop-supervisor:source",
+        "autoRecoveryAllowed": true
+      }
+    },
+    {
+      "asset": "CRYPTO",
+      "owner": "CRYPTO",
+      "statusPath": "runtime-status/crypto.json",
+      "checkpointPath": "runtime/crypto/completion-manifest.json",
+      "expectedRunning": true,
+      "persistentProcess": true,
+      "recovery": {
+        "command": "node",
+        "args": [
+          "--experimental-strip-types",
+          "scripts/data/crypto/run-crypto-standalone-node.ts"
+        ],
+        "workingDirectory": ".",
+        "checkpointPath": "runtime/crypto/completion-manifest.json",
+        "expectedProcessPattern": "run-crypto-standalone-node.ts",
+        "singleWriterPath": "runtime/crypto/standalone.pid",
+        "heartbeatPath": "runtime/crypto/heartbeat.json",
+        "targetProgressMetrics": [
+          "rows",
+          "checkpoint",
+          "latest"
+        ],
+        "stallThresholdMs": 1800000,
+        "safeStopCommand": "Stop-Process -Id (Get-Content runtime/crypto/standalone.pid)",
+        "safeRestartCommand": "node --experimental-strip-types scripts/data/crypto/run-crypto-standalone-node.ts",
+        "codeConfigVersion": "global-crypto:prisma-protocol-compatible-v7:canonical-recovery-v3",
+        "autoRecoveryAllowed": true,
+        "executionMode": "continuous",
+        "requiredAutonomous": true
+      }
+    }
+  ],
+  "childWorkers": [
+    {
+      "asset": "SMART_ALERTS",
+      "owner": "SMART_SIGNAL_ALERT_EVALUATOR",
+      "statusPath": "runtime/alert-evaluator/heartbeat.json",
+      "checkpointPath": "runtime/alert-evaluator/checkpoint.json",
+      "expectedRunning": true,
+      "expectedCadenceMs": 60000,
+      "recovery": {
+        "command": "node",
+        "args": [
+          "--experimental-strip-types",
+          "--env-file=.env",
+          "scripts/data/alerts/run-alert-evaluator.ts"
+        ],
+        "workingDirectory": ".",
+        "checkpointPath": "runtime/alert-evaluator/checkpoint.json",
+        "expectedProcessPattern": "run-alert-evaluator.ts",
+        "singleWriterPath": "runtime/alert-evaluator/single-writer.lock",
+        "heartbeatPath": "runtime/alert-evaluator/heartbeat.json",
+        "targetProgressMetrics": [
+          "processed",
+          "pending",
+          "checkpoint",
+          "lastSuccess"
+        ],
+        "stallThresholdMs": 300000,
+        "safeStopCommand": null,
+        "safeRestartCommand": "node --experimental-strip-types --env-file=.env scripts/data/alerts/run-alert-evaluator.ts",
+        "codeConfigVersion": "smart-signal-evaluator:bounded-db-queue-v1",
+        "autoRecoveryAllowed": true
+      }
+    },
+    {
+      "asset": "ETF_ANALYTICS",
+      "owner": "ETF_ANALYTICS",
+      "statusPath": "runtime/etf-analytics/heartbeat.json",
+      "checkpointPath": "runtime/etf-analytics/checkpoint.json",
+      "expectedRunning": true,
+      "expectedCadenceMs": 21600000,
+      "recovery": {
+        "command": "node",
+        "args": [
+          "--experimental-strip-types",
+          "--env-file=.env",
+          "scripts/data/etf-quality/run-etf-analytics-worker.ts"
+        ],
+        "workingDirectory": ".",
+        "checkpointPath": "runtime/etf-analytics/checkpoint.json",
+        "expectedProcessPattern": "run-etf-analytics-worker.ts",
+        "singleWriterPath": "runtime/etf-analytics/single-writer.lock",
+        "heartbeatPath": "runtime/etf-analytics/heartbeat.json",
+        "targetProgressMetrics": [
+          "processed",
+          "rows",
+          "pending"
+        ],
+        "stallThresholdMs": 25200000,
+        "safeStopCommand": "Stop-Process -Id (Get-Content runtime/etf-analytics/single-writer.lock | ConvertFrom-Json).pid",
+        "safeRestartCommand": "node --experimental-strip-types --env-file=.env scripts/data/etf-quality/run-etf-analytics-worker.ts",
+        "codeConfigVersion": "etf-analytics:bounded-deterministic-v1:canonical-recovery-v3",
+        "autoRecoveryAllowed": true,
+        "executionMode": "continuous",
+        "requiredAutonomous": true
+      }
+    },
+    {
+      "asset": "STOCK_TECHNICAL",
+      "owner": "GLOBAL_STOCK_TECHNICAL_QUANT",
+      "statusPath": "runtime/global-stock-technical-quant/heartbeat.json",
+      "checkpointPath": "runtime/global-stock-technical-quant/checkpoint.json",
+      "expectedRunning": true,
+      "expectedCadenceMs": 900000,
+      "recovery": {
+        "command": "node",
+        "args": [
+          "--experimental-strip-types",
+          "--env-file=.env",
+          "scripts/data/technical/run-global-stock-technical-supervisor.ts"
+        ],
+        "workingDirectory": ".",
+        "checkpointPath": "runtime/global-stock-technical-quant/checkpoint.json",
+        "expectedProcessPattern": "run-global-stock-technical-supervisor.ts",
+        "singleWriterPath": "runtime/global-stock-technical-quant/single-writer.lock",
+        "heartbeatPath": "runtime/global-stock-technical-quant/heartbeat.json",
+        "targetProgressMetrics": [
+          "checkpoint",
+          "lastSuccess"
+        ],
+        "stallThresholdMs": 1800000,
+        "safeStopCommand": "Stop-Process -Id (Get-Content runtime/global-stock-technical-quant/supervisor.pid | ConvertFrom-Json).pid",
+        "safeRestartCommand": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/data/technical/start-global-stock-technical-supervisor.ps1",
+        "codeConfigVersion": "global-stock-technical:windows-atomic-v2:canonical-recovery-v3",
+        "autoRecoveryAllowed": true,
+        "executionMode": "continuous",
+        "requiredAutonomous": true
+      }
+    },
+    {
+      "asset": "FUND_ANALYTICS",
+      "owner": "FUND_RISK_PERFORMANCE",
+      "statusPath": "runtime/global-fund/supervisor/health.json",
+      "checkpointPath": "runtime/global-fund/risk-performance/checkpoint.json",
+      "expectedRunning": true,
+      "expectedCadenceMs": 86400000,
+      "recovery": {
+        "command": "node",
+        "args": [
+          "--experimental-strip-types",
+          "--env-file=.env",
+          "scripts/data/global-fund/run-global-fund-supervisor.ts",
+          "--domain=riskPerformance"
+        ],
+        "workingDirectory": ".",
+        "checkpointPath": "runtime/global-fund/risk-performance/checkpoint.json",
+        "expectedProcessPattern": "run-global-fund-supervisor.ts --domain=riskPerformance",
+        "singleWriterPath": "runtime/global-fund/risk-performance/single-writer.lock",
+        "heartbeatPath": "runtime/global-fund/supervisor/health.json",
+        "targetProgressMetrics": [
+          "processed",
+          "lastTargetProgress"
+        ],
+        "stallThresholdMs": 108000000,
+        "safeStopCommand": "Stop-Process -Id (Get-Content runtime/global-fund/supervisor/health.json | ConvertFrom-Json).pid",
+        "safeRestartCommand": "node --experimental-strip-types --env-file=.env scripts/data/global-fund/run-global-fund-supervisor.ts --domain=riskPerformance",
+        "codeConfigVersion": "fund-risk-performance:parent-domain-scheduler-v2",
+        "autoRecoveryAllowed": true
+      }
+    },
+    {
+      "asset": "FUND_NAV",
+      "owner": "FUND_NAV_OWNED_CHILD",
+      "statusPath": "runtime/global-fund/nav-owned-child/health.json",
+      "checkpointPath": "runtime/global-fund/checkpoint.json",
+      "expectedRunning": true,
+      "expectedCadenceMs": 21600000,
+      "recovery": {
+        "command": "node",
+        "args": [
+          "--experimental-strip-types",
+          "--env-file=.env",
+          "scripts/data/global-fund/run-fund-nav-owned-child.ts"
+        ],
+        "workingDirectory": ".",
+        "checkpointPath": "runtime/global-fund/checkpoint.json",
+        "expectedProcessPattern": "run-fund-nav-owned-child.ts",
+        "singleWriterPath": "runtime/global-fund/nav-owned-child/single-owner.lock",
+        "heartbeatPath": "runtime/global-fund/nav-owned-child/health.json",
+        "targetProgressMetrics": [
+          "lastSuccess",
+          "latest"
+        ],
+        "stallThresholdMs": 27000000,
+        "safeStopCommand": "Stop-Process -Id (Get-Content runtime/global-fund/nav-owned-child/health.json | ConvertFrom-Json).childPid",
+        "safeRestartCommand": "node --experimental-strip-types --env-file=.env scripts/data/global-fund/run-fund-nav-owned-child.ts",
+        "codeConfigVersion": "fund-nav-owned-child:desktop-registry-v1-prisma-protocol-compatible:canonical-recovery-v3",
+        "autoRecoveryAllowed": true,
+        "executionMode": "continuous",
+        "requiredAutonomous": true
+      }
+    },
+    {
+      "asset": "FUTURES",
+      "owner": "FUTURES_EQUITY_INDEX",
+      "statusPath": "runtime/equity-index-futures/checkpoint/runner.json",
+      "checkpointPath": "runtime/equity-index-futures/checkpoint/runner.json",
+      "expectedRunning": true,
+      "expectedCadenceMs": 3600000,
+      "recovery": {
+        "command": "node",
+        "args": [
+          "--experimental-strip-types",
+          "--env-file=.env",
+          "scripts/data/equity-index-futures/run-global-equity-index-futures.ts"
+        ],
+        "workingDirectory": ".",
+        "checkpointPath": "runtime/equity-index-futures/checkpoint/runner.json",
+        "expectedProcessPattern": "run-global-equity-index-futures.ts",
+        "singleWriterPath": "runtime/equity-index-futures/single-writer.lock",
+        "heartbeatPath": "runtime/equity-index-futures/checkpoint/runner.json",
+        "targetProgressMetrics": [
+          "rows",
+          "latest",
+          "checkpoint"
+        ],
+        "stallThresholdMs": 7200000,
+        "safeStopCommand": "Stop-Process -Id (Get-Content runtime/equity-index-futures/single-writer.lock | ConvertFrom-Json).pid",
+        "safeRestartCommand": "node --experimental-strip-types --env-file=.env scripts/data/equity-index-futures/run-global-equity-index-futures.ts",
+        "codeConfigVersion": "equity-index-futures:prisma-protocol-compatible-v7",
+        "autoRecoveryAllowed": true
+      }
+    },
+    {
+      "asset": "FUTURES",
+      "owner": "FUTURES_COMMODITY",
+      "statusPath": "runtime/commodity-futures/checkpoint.json",
+      "checkpointPath": "runtime/commodity-futures/checkpoint.json",
+      "expectedRunning": true,
+      "expectedCadenceMs": 900000,
+      "recovery": {
+        "command": "node",
+        "args": [
+          "--experimental-strip-types",
+          "--env-file=.env",
+          "scripts/data/commodity-futures/run-global-commodity-futures.ts"
+        ],
+        "workingDirectory": ".",
+        "checkpointPath": "runtime/commodity-futures/checkpoint.json",
+        "expectedProcessPattern": "run-global-commodity-futures.ts",
+        "singleWriterPath": "runtime/commodity-futures/single-writer.lock",
+        "heartbeatPath": "runtime/commodity-futures/public-data-owner.json",
+        "targetProgressMetrics": [
+          "rows",
+          "cycle",
+          "latest",
+          "checkpoint"
+        ],
+        "stallThresholdMs": 1800000,
+        "safeStopCommand": "Stop-Process -Id (Get-Content runtime/commodity-futures/single-writer.lock | ConvertFrom-Json).pid",
+        "safeRestartCommand": "node --experimental-strip-types --env-file=.env scripts/data/commodity-futures/run-global-commodity-futures.ts",
+        "codeConfigVersion": "commodity-futures:prisma-protocol-compatible-v7:canonical-recovery-v3",
+        "autoRecoveryAllowed": true,
+        "executionMode": "continuous",
+        "requiredAutonomous": true
+      }
+    },
+    {
+      "asset": "FUTURES",
+      "owner": "FUTURES_INTEREST_RATE",
+      "statusPath": "runtime/interest-futures/checkpoint.json",
+      "checkpointPath": "runtime/interest-futures/checkpoint.json",
+      "expectedRunning": true,
+      "expectedCadenceMs": 900000,
+      "recovery": {
+        "command": "node",
+        "args": [
+          "--experimental-strip-types",
+          "--env-file=.env",
+          "scripts/data/interest-futures/run-interest-futures.ts"
+        ],
+        "workingDirectory": ".",
+        "checkpointPath": "runtime/interest-futures/checkpoint.json",
+        "expectedProcessPattern": "run-interest-futures.ts",
+        "singleWriterPath": "runtime/interest-futures/runner.lock",
+        "heartbeatPath": "runtime/interest-futures/checkpoint.json",
+        "targetProgressMetrics": [
+          "rows",
+          "latest",
+          "checkpoint"
+        ],
+        "stallThresholdMs": 1800000,
+        "safeStopCommand": "Stop-Process -Id (Get-Content runtime/interest-futures/runner.lock | ConvertFrom-Json).pid",
+        "safeRestartCommand": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/data/interest-futures/start-interest-futures.ps1",
+        "codeConfigVersion": "interest-futures:runner-lock-v1:canonical-recovery-v3",
+        "autoRecoveryAllowed": true,
+        "executionMode": "continuous",
+        "requiredAutonomous": true
+      }
+    },
+    {
+      "asset": "FUTURES",
+      "owner": "FUTURES_POSITIONING",
+      "statusPath": "runtime/futures-positioning/checkpoint.json",
+      "checkpointPath": "runtime/futures-positioning/checkpoint.json",
+      "expectedRunning": true,
+      "expectedCadenceMs": 21600000,
+      "recovery": {
+        "command": "node",
+        "args": [
+          "--experimental-strip-types",
+          "--env-file=.env",
+          "scripts/data/futures-positioning/run-global-futures-positioning.ts"
+        ],
+        "workingDirectory": ".",
+        "checkpointPath": "runtime/futures-positioning/checkpoint.json",
+        "expectedProcessPattern": "run-global-futures-positioning.ts",
+        "singleWriterPath": "runtime/futures-positioning/single-writer.lock",
+        "heartbeatPath": "runtime/futures-positioning/heartbeat.json",
+        "targetProgressMetrics": [
+          "rows",
+          "latest",
+          "checkpoint"
+        ],
+        "stallThresholdMs": 43200000,
+        "safeStopCommand": "Stop-Process -Id (Get-Content runtime/futures-positioning/single-writer.lock | ConvertFrom-Json).pid",
+        "safeRestartCommand": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/data/futures-positioning/start-futures-positioning.ps1",
+        "codeConfigVersion": "futures-positioning:single-writer-v1:canonical-recovery-v3",
+        "autoRecoveryAllowed": true,
+        "executionMode": "continuous",
+        "requiredAutonomous": true
+      }
+    },
+    {
+      "asset": "STOCK",
+      "owner": "GLOBAL_STOCK_PRICE_HISTORY",
+      "statusPath": "runtime/global-stock-price-history/heartbeat.json",
+      "checkpointPath": "runtime/global-stock-price-history/supervisor-checkpoint.json",
+      "expectedRunning": true,
+      "expectedCadenceMs": 60000,
+      "recovery": {
+        "command": "node",
+        "args": [
+          "--experimental-strip-types",
+          "--env-file=.env",
+          "scripts/data/stock/run-global-stock-price-history-supervisor.ts"
+        ],
+        "workingDirectory": ".",
+        "checkpointPath": "runtime/global-stock-price-history/supervisor-checkpoint.json",
+        "expectedProcessPattern": "run-global-stock-price-history-supervisor.ts",
+        "singleWriterPath": "runtime/global-stock-price-history/single-writer.lock",
+        "heartbeatPath": "runtime/global-stock-price-history/heartbeat.json",
+        "targetProgressMetrics": [
+          "rows",
+          "coverage",
+          "pending",
+          "earliest",
+          "latest",
+          "historyYears",
+          "density"
+        ],
+        "stallThresholdMs": 300000,
+        "safeStopCommand": "Stop-Process -Id (Get-Content runtime/global-stock-price-history/single-writer.lock | ConvertFrom-Json).pid",
+        "safeRestartCommand": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/data/stock/start-global-stock-price-history.ps1",
+        "codeConfigVersion": "global-stock-price-history:history-monitoring+single-writer-v2:canonical-recovery-v3",
+        "autoRecoveryAllowed": true,
+        "executionMode": "continuous",
+        "requiredAutonomous": true
+      }
+    },
+    {
+      "asset": "STOCK_CURRENT_EOD",
+      "owner": "STOCK_CURRENT_EOD",
+      "statusPath": "runtime/stock-current-eod/heartbeat.json",
+      "checkpointPath": "runtime/stock-current-eod/checkpoint.json",
+      "expectedRunning": true,
+      "expectedCadenceMs": 300000,
+      "recovery": {
+        "command": "node",
+        "args": [
+          "--experimental-strip-types",
+          "--env-file=.env",
+          "scripts/data/stock/run-stock-current-eod-supervisor.ts"
+        ],
+        "workingDirectory": ".",
+        "checkpointPath": "runtime/stock-current-eod/checkpoint.json",
+        "expectedProcessPattern": "run-stock-current-eod-supervisor.ts",
+        "singleWriterPath": "runtime/stock-current-eod/single-writer.lock",
+        "heartbeatPath": "runtime/stock-current-eod/heartbeat.json",
+        "targetProgressMetrics": [
+          "processed",
+          "checkpoint",
+          "lastSuccess"
+        ],
+        "stallThresholdMs": 1800000,
+        "safeStopCommand": "Stop-Process -Id (Get-Content runtime/stock-current-eod/single-writer.lock | ConvertFrom-Json).pid",
+        "safeRestartCommand": "node --experimental-strip-types --env-file=.env scripts/data/stock/run-stock-current-eod-supervisor.ts",
+        "codeConfigVersion": "stock-current-eod:market-calendar-v1",
+        "autoRecoveryAllowed": true,
+        "executionMode": "continuous",
+        "requiredAutonomous": true
+      }
+    },
+    {
+      "asset": "ETF_FLOWS",
+      "owner": "GLOBAL_ETF_FLOWS",
+      "statusPath": "runtime/etf-flows/heartbeat.json",
+      "checkpointPath": "runtime/etf-flows/checkpoint.json",
+      "expectedRunning": true,
+      "expectedCadenceMs": 21600000,
+      "recovery": {
+        "command": "node",
+        "args": [
+          "--experimental-strip-types",
+          "--env-file=.env",
+          "scripts/data/etf-flows/run-global-etf-flows.ts"
+        ],
+        "workingDirectory": ".",
+        "checkpointPath": "runtime/etf-flows/checkpoint.json",
+        "expectedProcessPattern": "run-global-etf-flows.ts",
+        "singleWriterPath": "runtime/etf-flows/single-writer.lock",
+        "heartbeatPath": "runtime/etf-flows/heartbeat.json",
+        "targetProgressMetrics": [
+          "rows",
+          "checkpoint",
+          "lastSuccess"
+        ],
+        "stallThresholdMs": 25200000,
+        "safeStopCommand": "Stop-Process -Id (Get-Content runtime/etf-flows/single-writer.lock | ConvertFrom-Json).pid",
+        "safeRestartCommand": "node --experimental-strip-types --env-file=.env scripts/data/etf-flows/run-global-etf-flows.ts",
+        "codeConfigVersion": "global-etf-flows:prisma-protocol-compatible-v2:canonical-recovery-v3",
+        "autoRecoveryAllowed": true,
+        "executionMode": "continuous",
+        "requiredAutonomous": true
+      }
+    },
+    {
+      "asset": "SHIPPING_INDEX",
+      "owner": "GLOBAL_SHIPPING_INDEX",
+      "statusPath": "runtime/shipping-index/heartbeat.json",
+      "checkpointPath": "runtime/shipping-index/checkpoint.json",
+      "expectedRunning": true,
+      "expectedCadenceMs": 21600000,
+      "recovery": {
+        "command": "node",
+        "args": [
+          "--experimental-strip-types",
+          "--env-file=.env",
+          "scripts/data/shipping-index/run-global-shipping-index.ts"
+        ],
+        "workingDirectory": ".",
+        "checkpointPath": "runtime/shipping-index/checkpoint.json",
+        "expectedProcessPattern": "run-global-shipping-index.ts",
+        "singleWriterPath": "runtime/shipping-index/single-writer.lock",
+        "heartbeatPath": "runtime/shipping-index/heartbeat.json",
+        "targetProgressMetrics": [
+          "rows",
+          "checkpoint",
+          "coverage",
+          "lastSuccess"
+        ],
+        "stallThresholdMs": 25200000,
+        "safeStopCommand": "Stop-Process -Id (Get-Content runtime/shipping-index/single-writer.lock | ConvertFrom-Json).pid",
+        "safeRestartCommand": "node --experimental-strip-types --env-file=.env scripts/data/shipping-index/run-global-shipping-index.ts",
+        "codeConfigVersion": "global-shipping-index:desktop-handoff-v1",
+        "autoRecoveryAllowed": true
+      }
+    },
+    {
+      "asset": "SHARED_BIS",
+      "owner": "SHARED_BIS_OFFICIAL_NODE_WORKER",
+      "statusPath": "runtime/bis/heartbeat.json",
+      "checkpointPath": "runtime/bis/dataset-schedule.json",
+      "expectedRunning": true,
+      "expectedCadenceMs": 86400000,
+      "recovery": {
+        "command": "node",
+        "args": [
+          "--experimental-strip-types",
+          "--env-file=.env",
+          "scripts/data/bis/run-shared-bis-official.ts",
+          "--desktop-worker"
+        ],
+        "workingDirectory": ".",
+        "checkpointPath": "runtime/bis/dataset-schedule.json",
+        "expectedProcessPattern": "run-shared-bis-official.ts --desktop-worker",
+        "singleWriterPath": "runtime/bis/single-writer.lock",
+        "heartbeatPath": "runtime/bis/heartbeat.json",
+        "targetProgressMetrics": [
+          "datasets.POLICY_RATE.lastCheckpoint",
+          "datasets.FX_TURNOVER.lastCheckpoint",
+          "datasets.OTC_DERIVATIVES.lastCheckpoint",
+          "datasets.INTERNATIONAL_BANKING.lastCheckpoint",
+          "datasets.GLOBAL_LIQUIDITY.lastCheckpoint"
+        ],
+        "stallThresholdMs": 108000000,
+        "safeStopCommand": "Stop-Process -Id (Get-Content runtime/bis/single-writer.lock | ConvertFrom-Json).pid",
+        "safeRestartCommand": "node --experimental-strip-types --env-file=.env scripts/data/bis/run-shared-bis-official.ts --desktop-worker",
+        "codeConfigVersion": "shared-bis-official:desktop-handoff-v1:canonical-recovery-v3",
+        "autoRecoveryAllowed": true,
+        "executionMode": "publication",
+        "requiredAutonomous": true
+      }
+    },
+    {
+      "asset": "FINANCIAL",
+      "owner": "OFFICIAL_FINANCIAL_TWSE",
+      "statusPath": "runtime/official-financial/children/twse/heartbeat.json",
+      "checkpointPath": "runtime/official-financial/taiwan/twse/checkpoint-incremental.json",
+      "expectedRunning": true,
+      "expectedCadenceMs": 86400000,
+      "recovery": {
+        "command": "node",
+        "args": [
+          "--experimental-strip-types",
+          "--env-file=.env",
+          "scripts/data/financial/run-official-financial-supervisor.ts",
+          "--market=TWSE"
+        ],
+        "workingDirectory": ".",
+        "checkpointPath": "runtime/official-financial/taiwan/twse/checkpoint-incremental.json",
+        "expectedProcessPattern": "run-official-financial-supervisor.ts --market=TWSE",
+        "singleWriterPath": "runtime/official-financial/children/twse/single-writer.lock",
+        "heartbeatPath": "runtime/official-financial/children/twse/heartbeat.json",
+        "targetProgressMetrics": [
+          "targetValue.processed",
+          "targetValue.rows",
+          "targetValue.checkpoint"
+        ],
+        "stallThresholdMs": 108000000,
+        "safeStopCommand": "Stop-Process -Id (Get-Content runtime/official-financial/children/twse/single-writer.lock | ConvertFrom-Json).pid",
+        "safeRestartCommand": "node --experimental-strip-types --env-file=.env scripts/data/financial/run-official-financial-supervisor.ts --market=TWSE",
+        "codeConfigVersion": "official-financial-child:daily-v1:canonical-recovery-v3",
+        "autoRecoveryAllowed": true,
+        "executionMode": "scheduled",
+        "requiredAutonomous": true
+      }
+    },
+    {
+      "asset": "FINANCIAL",
+      "owner": "OFFICIAL_FINANCIAL_TPEX",
+      "statusPath": "runtime/official-financial/children/tpex/heartbeat.json",
+      "checkpointPath": "runtime/official-financial/taiwan/tpex/checkpoint-incremental.json",
+      "expectedRunning": true,
+      "expectedCadenceMs": 86400000,
+      "recovery": {
+        "command": "node",
+        "args": [
+          "--experimental-strip-types",
+          "--env-file=.env",
+          "scripts/data/financial/run-official-financial-supervisor.ts",
+          "--market=TPEX"
+        ],
+        "workingDirectory": ".",
+        "checkpointPath": "runtime/official-financial/taiwan/tpex/checkpoint-incremental.json",
+        "expectedProcessPattern": "run-official-financial-supervisor.ts --market=TPEX",
+        "singleWriterPath": "runtime/official-financial/children/tpex/single-writer.lock",
+        "heartbeatPath": "runtime/official-financial/children/tpex/heartbeat.json",
+        "targetProgressMetrics": [
+          "targetValue.processed",
+          "targetValue.rows",
+          "targetValue.checkpoint"
+        ],
+        "stallThresholdMs": 108000000,
+        "safeStopCommand": "Stop-Process -Id (Get-Content runtime/official-financial/children/tpex/single-writer.lock | ConvertFrom-Json).pid",
+        "safeRestartCommand": "node --experimental-strip-types --env-file=.env scripts/data/financial/run-official-financial-supervisor.ts --market=TPEX",
+        "codeConfigVersion": "official-financial-child:daily-v1:canonical-recovery-v3",
+        "autoRecoveryAllowed": true,
+        "executionMode": "scheduled",
+        "requiredAutonomous": true
+      }
+    },
+    {
+      "asset": "FINANCIAL",
+      "owner": "OFFICIAL_FINANCIAL_NASDAQ",
+      "statusPath": "runtime/official-financial/children/nasdaq/heartbeat.json",
+      "checkpointPath": "runtime/official-financial/children/nasdaq/schedule.json",
+      "expectedRunning": true,
+      "expectedCadenceMs": 86400000,
+      "recovery": {
+        "command": "node",
+        "args": [
+          "--experimental-strip-types",
+          "--env-file=.env",
+          "scripts/data/financial/run-official-financial-supervisor.ts",
+          "--market=NASDAQ"
+        ],
+        "workingDirectory": ".",
+        "checkpointPath": "runtime/official-financial/children/nasdaq/schedule.json",
+        "expectedProcessPattern": "run-official-financial-supervisor.ts --market=NASDAQ",
+        "singleWriterPath": "runtime/official-financial/children/nasdaq/single-writer.lock",
+        "heartbeatPath": "runtime/official-financial/children/nasdaq/heartbeat.json",
+        "targetProgressMetrics": [
+          "targetValue.checkpoint"
+        ],
+        "stallThresholdMs": 108000000,
+        "safeStopCommand": "Stop-Process -Id (Get-Content runtime/official-financial/children/nasdaq/single-writer.lock | ConvertFrom-Json).pid",
+        "safeRestartCommand": "node --experimental-strip-types --env-file=.env scripts/data/financial/run-official-financial-supervisor.ts --market=NASDAQ",
+        "codeConfigVersion": "official-financial-child:daily-v1:canonical-recovery-v3",
+        "autoRecoveryAllowed": true,
+        "executionMode": "scheduled",
+        "requiredAutonomous": true
+      }
+    },
+    {
+      "asset": "FINANCIAL",
+      "owner": "OFFICIAL_FINANCIAL_NYSE",
+      "statusPath": "runtime/official-financial/children/nyse/heartbeat.json",
+      "checkpointPath": "runtime/official-financial/children/nyse/schedule.json",
+      "expectedRunning": true,
+      "expectedCadenceMs": 86400000,
+      "recovery": {
+        "command": "node",
+        "args": [
+          "--experimental-strip-types",
+          "--env-file=.env",
+          "scripts/data/financial/run-official-financial-supervisor.ts",
+          "--market=NYSE"
+        ],
+        "workingDirectory": ".",
+        "checkpointPath": "runtime/official-financial/children/nyse/schedule.json",
+        "expectedProcessPattern": "run-official-financial-supervisor.ts --market=NYSE",
+        "singleWriterPath": "runtime/official-financial/children/nyse/single-writer.lock",
+        "heartbeatPath": "runtime/official-financial/children/nyse/heartbeat.json",
+        "targetProgressMetrics": [
+          "targetValue.checkpoint"
+        ],
+        "stallThresholdMs": 108000000,
+        "safeStopCommand": "Stop-Process -Id (Get-Content runtime/official-financial/children/nyse/single-writer.lock | ConvertFrom-Json).pid",
+        "safeRestartCommand": "node --experimental-strip-types --env-file=.env scripts/data/financial/run-official-financial-supervisor.ts --market=NYSE",
+        "codeConfigVersion": "official-financial-child:daily-v1:canonical-recovery-v3",
+        "autoRecoveryAllowed": true,
+        "executionMode": "scheduled",
+        "requiredAutonomous": true
+      }
+    },
+    {
+      "asset": "FINANCIAL",
+      "owner": "OFFICIAL_FINANCIAL_AMEX",
+      "statusPath": "runtime/official-financial/children/amex/heartbeat.json",
+      "checkpointPath": "runtime/official-financial/children/amex/schedule.json",
+      "expectedRunning": true,
+      "expectedCadenceMs": 86400000,
+      "recovery": {
+        "command": "node",
+        "args": [
+          "--experimental-strip-types",
+          "--env-file=.env",
+          "scripts/data/financial/run-official-financial-supervisor.ts",
+          "--market=AMEX"
+        ],
+        "workingDirectory": ".",
+        "checkpointPath": "runtime/official-financial/children/amex/schedule.json",
+        "expectedProcessPattern": "run-official-financial-supervisor.ts --market=AMEX",
+        "singleWriterPath": "runtime/official-financial/children/amex/single-writer.lock",
+        "heartbeatPath": "runtime/official-financial/children/amex/heartbeat.json",
+        "targetProgressMetrics": [
+          "targetValue.checkpoint"
+        ],
+        "stallThresholdMs": 108000000,
+        "safeStopCommand": "Stop-Process -Id (Get-Content runtime/official-financial/children/amex/single-writer.lock | ConvertFrom-Json).pid",
+        "safeRestartCommand": "node --experimental-strip-types --env-file=.env scripts/data/financial/run-official-financial-supervisor.ts --market=AMEX",
+        "codeConfigVersion": "official-financial-child:daily-v1:canonical-recovery-v3",
+        "autoRecoveryAllowed": true,
+        "executionMode": "scheduled",
+        "requiredAutonomous": true
+      }
+    },
+    {
+      "asset": "FIXED_INCOME_PUBLIC_EXPANSION",
+      "owner": "FIXED_INCOME_PUBLIC_EXPANSION",
+      "statusPath": "runtime/fixed-income/public-expansion/heartbeat.json",
+      "checkpointPath": "runtime/fixed-income/public-expansion/queue.json",
+      "expectedRunning": true,
+      "expectedCadenceMs": 900000,
+      "recovery": {
+        "command": "node",
+        "args": [
+          "--experimental-strip-types",
+          "--env-file=.env",
+          "scripts/data/bond/run-fixed-income-public-expansion.ts",
+          "--desktop-worker"
+        ],
+        "workingDirectory": ".",
+        "checkpointPath": "runtime/fixed-income/public-expansion/queue.json",
+        "expectedProcessPattern": "run-fixed-income-public-expansion.ts --desktop-worker",
+        "singleWriterPath": "runtime/fixed-income/public-expansion/supervisor.lock",
+        "heartbeatPath": "runtime/fixed-income/public-expansion/heartbeat.json",
+        "targetProgressMetrics": [
+          "targetValue.executable",
+          "targetValue.complete",
+          "targetValue.sourceLimited",
+          "targetValue.licenseLimited"
+        ],
+        "stallThresholdMs": 2700000,
+        "safeStopCommand": "Stop-Process -Id (Get-Content runtime/fixed-income/public-expansion/supervisor.lock | ConvertFrom-Json).pid",
+        "safeRestartCommand": "node --experimental-strip-types --env-file=.env scripts/data/bond/run-fixed-income-public-expansion.ts --desktop-worker",
+        "codeConfigVersion": "fixed-income-public-expansion:desktop-terminal-disposition-v1:canonical-recovery-v3",
+        "autoRecoveryAllowed": true,
+        "executionMode": "continuous",
+        "requiredAutonomous": true
+      }
+    },
+    {
+      "asset": "OPTIONS",
+      "owner": "GLOBAL_OPTIONS",
+      "statusPath": "runtime/options/heartbeat.json",
+      "checkpointPath": "runtime/options/checkpoint.json",
+      "expectedRunning": true,
+      "expectedCadenceMs": 900000,
+      "recovery": {
+        "command": "node",
+        "args": [
+          "--experimental-strip-types",
+          "--env-file=.env",
+          "scripts/data/options/run-global-options.ts",
+          "--scheduled-worker"
+        ],
+        "workingDirectory": ".",
+        "checkpointPath": "runtime/options/checkpoint.json",
+        "expectedProcessPattern": "run-global-options.ts --scheduled-worker",
+        "singleWriterPath": "runtime/options/single-writer.lock",
+        "heartbeatPath": "runtime/options/heartbeat.json",
+        "targetProgressMetrics": [
+          "checkpoint",
+          "rows",
+          "coverage",
+          "latest"
+        ],
+        "stallThresholdMs": 2700000,
+        "safeStopCommand": "Stop-Process -Id (Get-Content runtime/options/single-writer.lock | ConvertFrom-Json).pid",
+        "safeRestartCommand": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/data/options/start-global-options.ps1",
+        "codeConfigVersion": "global-options:prisma-protocol-compatible-v2",
+        "autoRecoveryAllowed": true
+      }
+    }
+  ]
+}

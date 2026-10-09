@@ -1,0 +1,42 @@
+{
+  "asset": "GLOBAL_REIT",
+  "version": 1,
+  "universeFrozen": true,
+  "entityCount": 20,
+  "mapping": {
+    "identities": "runtime/reit/data/reit_entities.json",
+    "fundamentals": "runtime/reit/data/reit_fundamentals.json",
+    "distributions": "runtime/reit/data/reit_distributions.json",
+    "analytics": "runtime/reit/data/reit_analytics.json",
+    "coverage": "runtime/reit/data/reit_coverage.json",
+    "propertyExposures": "runtime/reit/data/reit_property_exposures.json",
+    "properties": "runtime/reit/data/reit_properties.json"
+  },
+  "preservedCounts": {
+    "identities": 20,
+    "stockLinks": 20,
+    "historyRows": 103302,
+    "fundamentals": 10,
+    "distributions": 34,
+    "analytics": 256,
+    "coverageRows": 20
+  },
+  "schemaPackage": {
+    "status": "MISSING",
+    "requiredRelations": ["reit_entities", "reit_fundamentals", "reit_distributions", "reit_property_exposures", "reit_properties", "reit_analytics", "reit_coverage"],
+    "requirements": ["ADDITIVE_ONLY", "NO_DROP", "NO_RENAME", "VALID_STOCK_FK", "UNIQUE_GRAINS", "PROVENANCE_FIELDS", "VERIFICATION_STATE"]
+  },
+  "postApprovalCanarySequence": [
+    "SCHEMA_DEPLOY",
+    "SCHEMA_READBACK",
+    "WRITE_ONE_REIT_IDENTITY",
+    "READBACK_ONE_REIT_IDENTITY",
+    "IDEMPOTENT_REPLAY",
+    "PERSIST_20_IDENTITIES",
+    "PERSIST_EXISTING_FUNDAMENTALS_AND_DISTRIBUTIONS",
+    "PERSIST_COVERAGE_MATRIX",
+    "READBACK_DETERMINISTIC_10",
+    "P0_CLOSEOUT"
+  ],
+  "writesBeforeSchema": false
+}

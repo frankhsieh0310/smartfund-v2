@@ -1,0 +1,40 @@
+{
+  "version": 3,
+  "asset": "GLOBAL_INDEX",
+  "indexCount": 65,
+  "pollIntervalMs": 60000,
+  "databaseBackoffMs": [30000, 60000, 120000, 300000],
+  "boundedBatchSize": 5,
+  "sharedMarketDataInfrastructure": {
+    "contract": "config/shared-market-data-contract.json",
+    "reuseMode": "POLICY_AND_SCHEDULER_PATTERN_ONLY",
+    "newWriterCreated": false
+  },
+  "intraday": {
+    "grain": "5m",
+    "targetDelayMinutes": 5,
+    "volume": "NOT_APPLICABLE",
+    "ready": 0,
+    "constrained": 65,
+    "status": "SOURCE_CONSTRAINED",
+    "allowedStates": ["REALTIME", "DELAYED", "SOURCE_DELAYED", "EOD_ONLY", "SOURCE_CONSTRAINED", "ACCESS_CONSTRAINED", "LICENSE_CONSTRAINED"]
+  },
+  "domains": [
+    { "id": "CURRENT", "priority": "P0A", "status": "CURRENT_AND_AUTO_UPDATING", "runtime": "index" },
+    { "id": "INTRADAY_5M", "priority": "P0A", "status": "SOURCE_CONSTRAINED", "runtime": "index" },
+    { "id": "DAILY_HISTORY", "priority": "P0A", "status": "MAX_SOURCE_DEPTH_REACHED", "runtime": "index" },
+    { "id": "IDENTITY_VARIANT", "priority": "P0A", "status": "CONFIGURATION_CONSTRAINED", "runtime": "index" },
+    { "id": "METHODOLOGY", "priority": "P0A", "status": "SOURCE_CONSTRAINED", "runtime": "index" },
+    { "id": "CURRENT_CONSTITUENTS", "priority": "P0A", "status": "LICENSE_CONSTRAINED", "runtime": "index-constituents" },
+    { "id": "PIT_CONSTITUENTS", "priority": "P0A", "status": "TIME_DEPTH_CONSTRAINED", "runtime": "index-constituents" },
+    { "id": "CONSTITUENT_MAPPING", "priority": "P0A", "status": "MAPPING_CONSTRAINED", "runtime": "index-constituents" },
+    { "id": "PROVENANCE", "priority": "P0A", "status": "CURRENT_AND_AUTO_UPDATING" },
+    { "id": "REBALANCE", "priority": "P0B", "status": "TIME_DEPTH_CONSTRAINED", "runtime": "index-constituents" },
+    { "id": "PERFORMANCE", "priority": "P0B", "status": "CURRENT_AND_AUTO_UPDATING", "runtime": "index" },
+    { "id": "RISK", "priority": "P0B", "status": "CURRENT_AND_AUTO_UPDATING", "runtime": "index" },
+    { "id": "CONCENTRATION", "priority": "P0B", "status": "INPUT_CONSTRAINED", "runtime": "index-constituents" },
+    { "id": "MARKET_BREADTH", "priority": "P0B", "status": "INPUT_CONSTRAINED", "runtime": "market-breadth" },
+    { "id": "VOLATILITY_INDEX", "priority": "P0B", "status": "CURRENT_AND_AUTO_UPDATING", "runtime": "volatility" },
+    { "id": "CURRENCY_INDEX", "priority": "P0B", "status": "CURRENT_AND_AUTO_UPDATING", "runtime": "currency-index" }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "asset": "GLOBAL_SHARE_BUYBACK",
+  "runner": "scripts/data/share-buyback/run-global-share-buyback.ts",
+  "service": "smartfund-v2",
+  "timezone": "UTC",
+  "latestCron": "15 */6 * * *",
+  "incrementalCron": "35 */6 * * *",
+  "retryCron": "5 */2 * * *",
+  "newRailwayService": false
+}

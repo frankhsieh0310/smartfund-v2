@@ -5,6 +5,9 @@ The same market and job may have only one active owner at any time. A worker mus
 not start while its scoped lifecycle lock, heartbeat, or RUNNING/IN_PROGRESS run
 is active under another owner.
 
+Current lifecycle policy: `BUILD_PHASE = DESKTOP_FIRST`; `PRODUCTION_PHASE = CLOUD_FIRST`.
+This policy does not automatically reassign any existing Railway-owned worker or scope.
+
 ## Railway
 
 - Owns Daily jobs.

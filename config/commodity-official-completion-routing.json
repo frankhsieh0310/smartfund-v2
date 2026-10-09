@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "asset": "COMMODITY",
+  "dbPolicy": { "connection": "SUPABASE_TRANSACTION_POOLING_6543_PGBOUNCER", "maxConcurrency": 1 },
+  "batchSize": 100,
+  "scheduleDelayMs": 21600000,
+  "jobs": [
+    { "id": "EIA_FULL_ELIGIBLE", "source": "EIA", "state": "AUTO_CONTINUING", "owner": "energy-physical-supply-demand", "route": "EXISTING_WORKER", "scope": "all configured petroleum, natural gas, inventory, production, consumption, trade, refinery and electricity series; maximum source history" },
+    { "id": "USDA_PSD_FULL", "source": "USDA_WASDE", "state": "AUTO_CONTINUING", "owner": "commodity-official-completion", "route": "BULK_ZIP_CSV", "url": "https://apps.fas.usda.gov/psdonline/downloads/psd_alldata_csv.zip", "dataset": "USDA_FAS_PSD", "scope": "all countries, commodities, attributes and available history" },
+    { "id": "USDA_WASDE_VINTAGES", "source": "USDA_WASDE", "state": "WAITING_DEPENDENCY", "owner": "commodity-official-completion", "route": "OFFICIAL_RELEASE_ARCHIVE", "dependency": "USDA does not expose a stable machine-readable public archive containing every historical WASDE vintage/revision; PSD remains the canonical structured supply/use route" },
+    { "id": "USGS_FULL", "source": "USGS", "state": "AUTO_CONTINUING", "owner": "usgs-minerals", "route": "EXISTING_WORKER", "scope": "all configured eligible minerals and maximum official history; do not restart" },
+    { "id": "WORLD_BANK_LOCKED", "source": "WORLD_BANK", "state": "COMPLETE", "owner": "world-bank-pink-sheet", "route": "LOCKED_NO_RERUN" },
+    { "id": "FAOSTAT_PRODUCTION", "source": "FAO", "state": "AUTO_CONTINUING", "owner": "commodity-official-completion", "route": "BULK_ZIP_CSV", "url": "https://bulks-faostat.fao.org/production/Crops_Livestock_E_All_Data_(Normalized).zip", "dataset": "FAOSTAT_QCL", "scope": "all areas, relevant commodity identities, production, harvested area, yield, 1961-present" },
+    { "id": "FAOSTAT_BALANCES", "source": "FAO", "state": "AUTO_CONTINUING", "owner": "commodity-official-completion", "route": "BULK_ZIP_CSV", "url": "https://bulks-faostat.fao.org/production/Food_Balances_(2010-)_E_All_Data_(Normalized).zip", "dataset": "FAOSTAT_FBS", "scope": "all areas, relevant commodities, supply and utilization" },
+    { "id": "FAOSTAT_TRADE", "source": "FAO", "state": "AUTO_CONTINUING", "owner": "commodity-official-completion", "route": "BULK_ZIP_CSV", "url": "https://bulks-faostat.fao.org/production/Trade_CropsLivestock_E_All_Data_(Normalized).zip", "dataset": "FAOSTAT_TCL", "scope": "all reporters, partners, relevant agricultural commodities and history" },
+    { "id": "JODI_OIL_GAS", "source": "JODI", "state": "WAITING_DEPENDENCY", "owner": "commodity-official-completion", "route": "EXTERNAL_FILE_DROP", "dependency": "JODI bulk download requires acceptance through the official download service; set JODI_OFFICIAL_BULK_PATH only to the unmodified official Oil/Gas export", "scope": "all countries, products, flows and available history" },
+    { "id": "OPEC_PUBLIC", "source": "OPEC", "state": "SOURCE_NOT_PUBLIC", "owner": "commodity-official-completion", "route": "PUBLICATION_METADATA_ONLY", "dependency": "MOMR/ASB public reports are available, but no stable public structured full-history API/bulk dataset is published; metadata scheduler remains preserved" },
+    { "id": "UN_COMTRADE", "source": "UN_TRADE", "state": "WAITING_DEPENDENCY", "owner": "commodity-official-completion", "route": "OFFICIAL_API", "dependency": "Set UN_COMTRADE_API_KEY for complete eligible country/partner/history extraction beyond public preview limits", "scope": "all reporters, partners, mapped HS commodity codes, quantity, net weight, value and available history" },
+    { "id": "IEA_LICENSE", "source": "IEA", "state": "EXTERNALLY_BLOCKED", "owner": null, "route": "NONE", "dependency": "BLOCKED_LICENSE unless legitimate licensed access is configured" },
+    { "id": "DERIVED_ANALYTICS", "source": "DERIVED", "state": "AUTO_CONTINUING", "owner": "commodity deterministic lifecycle", "route": "AFTER_RAW_DEPENDENCIES", "scope": "days of supply, percentiles, 5Y/10Y seasonal ranges, growth, balances, dependence, concentration, utilization and seasonality where deterministic inputs exist" }
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "asset": "FX",
+  "priority": 9,
+  "existingFxPriority": 0,
+  "mode": "IDLE_ONLY_FAIL_CLOSED",
+  "claimOnlyWhenExistingFxQueueIdle": true,
+  "uncertainIdleMeansWait": true,
+  "fullUniverseTarget": "FULL_ELIGIBLE_COUNTRY_CURRENCY_UNIVERSE",
+  "fullHistoryTarget": "DEEPEST_RELIABLE_FREE_PUBLIC_HISTORY",
+  "database": {"poolMode":"SUPABASE_TRANSACTION_POOLING_6543_PGBOUNCER","maxConcurrency":1,"boundedBatching":true,"idempotentWrites":true,"holdConnectionDuringHttp":false},
+  "deduplication": {
+    "canonicalKey": ["metric","grain","country","currency","currency_pair","observation_date","reporting_period"],
+    "sourcePriority": ["DIRECT_NATIONAL_OFFICIAL","DIRECT_INTERNATIONAL_OFFICIAL","OFFICIAL_MARKET_INFRASTRUCTURE","SHARED_OFFICIAL_SMARTFUND_LAYER","SUPPLEMENTAL","DERIVED"],
+    "multipleLineagesAllowed": true,
+    "actualProxyMergeForbidden": true
+  },
+  "routes": [
+    {"id":"IMF_COFER","state":"QUEUED_IDLE_ONLY","source":"IMF_COFER_OFFICIAL","adapter":"EXISTING_IMF_INFRASTRUCTURE_EXTENSION","owner":"ORDINARY_MACRO_NODE_WORKER","metrics":["TOTAL_ALLOCATED_RESERVES","TOTAL_UNALLOCATED_RESERVES","RESERVE_CURRENCY_SHARE","RESERVE_CURRENCY_SHARE_CHANGE"],"checkpoint":"runtime/fx/public-expansion/imf-cofer.json"},
+    {"id":"JAPAN_MOF_INTERVENTION","state":"QUEUED_IDLE_ONLY","source":"JAPAN_MOF_FOREIGN_EXCHANGE_INTERVENTION_OPERATIONS","adapter":"OFFICIAL_TABULAR_RELEASE_ADAPTER","owner":"FX_PUBLIC_BACKGROUND_NODE_WORKER","semantic":"OFFICIAL_INTERVENTION_ACTUAL_OR_AGGREGATE_ONLY","checkpoint":"runtime/fx/public-expansion/japan-mof-intervention.json"},
+    {"id":"SNB_INTERVENTION","state":"QUEUED_IDLE_ONLY","source":"SNB_OFFICIAL_PUBLIC_DATA","adapter":"CENTRAL_BANK_OFFICIAL_SERIES_ADAPTER","owner":"FX_PUBLIC_BACKGROUND_NODE_WORKER","actualRule":"ONLY_EXPLICIT_SNB_DISCLOSURE","proxyRule":"DERIVED_TRUE_WITH_METHOD_VERSION_AND_INPUT_SERIES","checkpoint":"runtime/fx/public-expansion/snb-intervention.json"},
+    {"id":"GLOBAL_INTERVENTION_REGISTRY","state":"QUEUED_IDLE_ONLY","source":"GLOBAL_MACRO_CENTRAL_BANK_REGISTRY","adapter":"CENTRAL_BANK_INTERVENTION_ROUTER","owner":"FX_PUBLIC_BACKGROUND_NODE_WORKER","states":["OFFICIAL_INTERVENTION_ACTUAL","OFFICIAL_INTERVENTION_AGGREGATE","INTERVENTION_PROXY","SOURCE_NOT_PUBLIC","INPUT_GATED"],"checkpoint":"runtime/fx/public-expansion/global-intervention-registry.json"},
+    {"id":"CLS_PUBLIC_AGGREGATES","state":"QUEUED_IDLE_ONLY_PUBLIC_ONLY","source":"CLS_FREE_PUBLIC_AGGREGATE_STATISTICS","adapter":"OFFICIAL_MARKET_INFRASTRUCTURE_AGGREGATE_ADAPTER","owner":"FX_PUBLIC_BACKGROUND_NODE_WORKER","privateGrain":"EXTERNALLY_BLOCKED_LICENSE","checkpoint":"runtime/fx/public-expansion/cls-public.json"},
+    {"id":"FED_NYFED_SWAP_LINES","state":"QUEUED_IDLE_ONLY","source":"FED_NYFED_EXISTING","adapter":"EXISTING_FED_NYFED_INFRASTRUCTURE_EXTENSION","owner":"ORDINARY_MACRO_NODE_WORKER","metrics":["CENTRAL_BANK_LIQUIDITY_SWAP","TOTAL_SWAP_LINE_USAGE","USD_LIQUIDITY_USAGE"],"checkpoint":"runtime/fx/public-expansion/fed-nyfed-swap-lines.json"},
+    {"id":"CFTC_FX_POSITIONING_SHARED","state":"ROUTED_SHARED_READ_ONLY","source":"GLOBAL_FUTURES_POSITIONING","sourceOwner":"GLOBAL_FUTURES","owner":"GLOBAL_FX_CONSUMER","download":false,"checkpoint":"EXISTING_FUTURES_CHECKPOINT_UNCHANGED"},
+    {"id":"CME_FX_SHARED","state":"ROUTED_SHARED_READ_ONLY","source":"GLOBAL_FUTURES_CME","sourceOwner":"GLOBAL_FUTURES","owner":"GLOBAL_FX_CONSUMER","download":false,"checkpoint":"EXISTING_FUTURES_CHECKPOINT_UNCHANGED"},
+    {"id":"IMF_IIP","state":"EXTERNALLY_BLOCKED_AUTH","source":"IMF_IIP_SDMX_2_1_3_0","adapter":"EXISTING_IMF_INFRASTRUCTURE_AFTER_AUTH","owner":"ORDINARY_MACRO_NODE_WORKER","blocker":"IMF_BETA_PORTAL_API_CREDENTIAL_REQUIRED","checkpoint":"runtime/fx/public-expansion/imf-iip-access.json"},
+    {"id":"RESERVE_ADEQUACY","state":"QUEUED_IDLE_ONLY","source":"FX_RESERVES+WORLD_BANK_IDS+IMF+GLOBAL_MACRO_PUBLIC_MESH","adapter":"DETERMINISTIC_DERIVED_METRIC_LIFECYCLE","owner":"FX_EXTERNAL_VULNERABILITY_ORDINARY_NODE_WORKER","officialAraRule":"ONLY_WHEN_FULL_PUBLIC_IMF_METHODOLOGY_AND_INPUTS_REPRODUCIBLE","checkpoint":"runtime/fx/public-expansion/reserve-adequacy.json"},
+    {"id":"RESERVE_FORWARD_POSITIONS","state":"QUEUED_IDLE_ONLY","source":"IMF_IRFCL_AND_DIRECT_CENTRAL_BANK_RESERVE_TEMPLATES","adapter":"EXISTING_FX_RESERVES_INFRASTRUCTURE_EXTENSION","owner":"GLOBAL_FX_RESERVES","nonPublisherState":"SOURCE_NOT_PUBLIC","checkpoint":"runtime/fx/public-expansion/reserve-forward-positions.json"}
+  ],
+  "dataTrust": ["SOURCE","SOURCE_ROLE","SOURCE_IDENTIFIER","COUNTRY","CURRENCY","CURRENCY_PAIR","OBSERVATION_DATE","REPORTING_PERIOD","ANNOUNCEMENT_DATE","RELEASE_DATE","VINTAGE_DATE","RETRIEVED_AT","UNIT","FREQUENCY","OFFICIAL_DERIVED","ACTUAL_PROXY","PIT_CURRENT","REVISION_STATUS","RECONCILIATION_STATUS"],
+  "multilingual": {"owner":"ACTIVE_SHARED_LOCALE_MODEL","officialNamesOnly":true,"translateCodes":false,"massTranslation":false}
+}

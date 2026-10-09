@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "owner": "GLOBAL_INDEX",
+  "source": "U.S. Department of the Treasury",
+  "rights": "PUBLIC_STORAGE_ALLOWED_US_GOVERNMENT_WORK_ATTRIBUTION_REQUIRED",
+  "route": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/pages/xml?data=daily_treasury_yield_curve&field_tdr_date_value={YEAR}",
+  "benchmarks": [
+    {"id":"public-us-treasury-par-yield-1m","field":"BC_1MONTH","tenor":"1M"},
+    {"id":"public-us-treasury-par-yield-3m","field":"BC_3MONTH","tenor":"3M"},
+    {"id":"public-us-treasury-par-yield-6m","field":"BC_6MONTH","tenor":"6M"},
+    {"id":"public-us-treasury-par-yield-1y","field":"BC_1YEAR","tenor":"1Y"},
+    {"id":"public-us-treasury-par-yield-2y","field":"BC_2YEAR","tenor":"2Y"},
+    {"id":"public-us-treasury-par-yield-3y","field":"BC_3YEAR","tenor":"3Y"},
+    {"id":"public-us-treasury-par-yield-5y","field":"BC_5YEAR","tenor":"5Y"},
+    {"id":"public-us-treasury-par-yield-7y","field":"BC_7YEAR","tenor":"7Y"},
+    {"id":"public-us-treasury-par-yield-10y","field":"BC_10YEAR","tenor":"10Y"},
+    {"id":"public-us-treasury-par-yield-20y","field":"BC_20YEAR","tenor":"20Y"},
+    {"id":"public-us-treasury-par-yield-30y","field":"BC_30YEAR","tenor":"30Y"}
+  ]
+}

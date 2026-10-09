@@ -1,5 +1,7 @@
 .git
 .next
+.swc
+app/.well-known/workflow/v1
 node_modules
 artifacts
 debug

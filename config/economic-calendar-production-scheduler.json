@@ -1,0 +1,9 @@
+{
+  "asset":"GLOBAL_ECONOMIC_CALENDAR",
+  "timezone":"UTC",
+  "historicalBatchDays":31,
+  "pollIntervalMs":900000,
+  "retry":{"maxAttempts":8,"baseDelayMs":60000},
+  "archiveAfterDays":45,
+  "startupStage":"historical"
+}

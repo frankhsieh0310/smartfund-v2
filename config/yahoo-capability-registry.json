@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "identity": {
+    "STOCK": "stocks.yahoo_symbol",
+    "ETF": "etfs.code/provider symbol",
+    "FUND": "fund_master.provider_master_key",
+    "MARKET_INDEX": "asset-provider-registry.instrumentMappings",
+    "FX": "asset-provider-registry.instrumentMappings",
+    "FUTURES": "asset-provider-registry.instrumentMappings",
+    "CRYPTO": "asset-provider-registry.instrumentMappings"
+  },
+  "capabilities": [
+    { "assetType": "STOCK", "market": "GLOBAL", "module": "PRICE", "source": "YAHOO_CHART", "canonicalDestination": "stocks + stock_history", "syncMode": "MARKET_UNIVERSE", "changeDetection": "SOURCE_DATE", "enabled": true },
+    { "assetType": "STOCK", "market": "GLOBAL", "module": "DIVIDEND", "source": "YAHOO_CHART_EVENTS", "canonicalDestination": "stock_dividends", "syncMode": "MODULE_UNIVERSE", "changeDetection": "SOURCE_EVENT_FINGERPRINT", "enabled": false, "status": "NOT_CONNECTED" },
+    { "assetType": "STOCK", "market": "GLOBAL", "module": "SPLIT", "source": "YAHOO_CHART_EVENTS", "canonicalDestination": "stock_splits", "syncMode": "MODULE_UNIVERSE", "changeDetection": "SOURCE_EVENT_FINGERPRINT", "enabled": false, "status": "NOT_CONNECTED" },
+    { "assetType": "STOCK", "market": "GLOBAL", "module": "FUNDAMENTALS", "source": "YAHOO_QUOTE_SUMMARY", "canonicalDestination": "stock_fundamentals", "syncMode": "MODULE_UNIVERSE", "changeDetection": "SOURCE_HASH", "enabled": false, "status": "NOT_CONNECTED" },
+    { "assetType": "STOCK", "market": "GLOBAL", "module": "EARNINGS", "source": "YAHOO_QUOTE_SUMMARY", "canonicalDestination": "stock_earnings", "syncMode": "MODULE_UNIVERSE", "changeDetection": "SOURCE_HASH", "enabled": false, "status": "NOT_CONNECTED" },
+    { "assetType": "STOCK", "market": "GLOBAL", "module": "ANALYST", "source": "YAHOO_QUOTE_SUMMARY", "canonicalDestination": "analyst_estimates", "syncMode": "MODULE_UNIVERSE", "changeDetection": "SOURCE_HASH", "enabled": false, "status": "NOT_CONNECTED" },
+    { "assetType": "ETF", "market": "GLOBAL", "module": "PRICE", "source": "YAHOO_CHART", "canonicalDestination": "etfs + etf_history", "syncMode": "MODULE_UNIVERSE", "changeDetection": "SOURCE_DATE", "enabled": true },
+    { "assetType": "ETF", "market": "GLOBAL", "module": "DISTRIBUTION", "source": "YAHOO_CHART_EVENTS", "canonicalDestination": "etf_distribution_events", "syncMode": "MODULE_UNIVERSE", "changeDetection": "SOURCE_EVENT_FINGERPRINT", "enabled": true },
+    { "assetType": "ETF", "market": "GLOBAL", "module": "HOLDINGS", "source": "YAHOO_QUOTE_SUMMARY", "canonicalDestination": "etf_holdings", "syncMode": "MODULE_UNIVERSE", "changeDetection": "SOURCE_HASH", "enabled": true },
+    { "assetType": "FUND", "market": "GLOBAL", "module": "NAV", "source": "YAHOO_CHART", "canonicalDestination": "fund_nav_history", "syncMode": "MODULE_UNIVERSE", "changeDetection": "SOURCE_DATE", "enabled": true },
+    { "assetType": "FUND", "market": "GLOBAL", "module": "DISTRIBUTION", "source": "YAHOO_CHART_EVENTS", "canonicalDestination": "fund_distribution_observations", "syncMode": "MODULE_UNIVERSE", "changeDetection": "SOURCE_EVENT_FINGERPRINT", "enabled": true },
+    { "assetType": "FUND", "market": "GLOBAL", "module": "HOLDINGS", "source": "YAHOO_QUOTE_SUMMARY", "canonicalDestination": "fund_holdings", "syncMode": "MODULE_UNIVERSE", "changeDetection": "SOURCE_HASH", "enabled": true },
+    { "assetType": "MARKET_INDEX", "market": "GLOBAL", "module": "PRICE", "source": "YAHOO_CHART", "canonicalDestination": "market_master + market_history", "syncMode": "MODULE_UNIVERSE", "changeDetection": "SOURCE_DATE", "enabled": true },
+    { "assetType": "FX", "market": "GLOBAL", "module": "PRICE", "source": "YAHOO_CHART", "canonicalDestination": "market_data + market_history", "syncMode": "MODULE_UNIVERSE", "changeDetection": "SOURCE_DATE", "enabled": true },
+    { "assetType": "FUTURES", "market": "GLOBAL", "module": "PRICE", "source": "YAHOO_CHART", "canonicalDestination": "market_data + market_history", "syncMode": "MODULE_UNIVERSE", "changeDetection": "SOURCE_DATE", "enabled": true },
+    { "assetType": "CRYPTO", "market": "GLOBAL", "module": "PRICE", "source": "YAHOO_CHART", "canonicalDestination": "market_data + market_history", "syncMode": "MODULE_UNIVERSE", "changeDetection": "SOURCE_DATE", "enabled": true }
+  ]
+}

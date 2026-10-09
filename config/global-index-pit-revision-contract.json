@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "asset": "GLOBAL_INDEX",
+  "preserveOriginal": true,
+  "silentOverwrite": false,
+  "revisionFields": ["provider_published_at", "retrieved_at", "revision_number", "revision_status", "supersedes_observation_id", "reason"],
+  "querySemantics": ["PIT_AS_KNOWN", "LATEST_CORRECTED"],
+  "survivorshipPolicy": {"currentConstituentsForHistory": false, "deletedSecuritiesRetained": true, "terminatedIndexesRetained": true, "historicalWeightsRetained": true},
+  "owner": "GLOBAL_INDEX_CONSTITUENTS"
+}

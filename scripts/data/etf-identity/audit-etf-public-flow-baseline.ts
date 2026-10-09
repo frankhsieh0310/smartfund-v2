@@ -1,0 +1,10 @@
+import { promises as fs } from "node:fs";
+import path from "node:path";
+import { PrismaClient } from "@prisma/client";
+const db=new PrismaClient({datasources:{db:{url:process.env.DIRECT_URL??process.env.DATABASE_URL}}}),dir=path.join(process.cwd(),"runtime","etf-public-flow");await fs.mkdir(dir,{recursive:true});
+const flow=await db.$queryRawUnsafe<any[]>(`SELECT count(*)::int rows,count(DISTINCT etf_id)::int etfs,min(observation_date)::text earliest,max(observation_date)::text latest,count(*) FILTER(WHERE upper(coalesce(flow_method,'')) LIKE '%DERIVED%' OR upper(coalesce(flow_method,'')) LIKE '%IMPLIED%' OR calculation_inputs IS NOT NULL)::int derived FROM etf_flows`);
+const types=await db.$queryRawUnsafe<any[]>(`SELECT source,flow_method,count(*)::int rows,count(DISTINCT etf_id)::int etfs,min(observation_date)::text earliest,max(observation_date)::text latest FROM etf_flows GROUP BY source,flow_method ORDER BY rows DESC`);
+const currencies=await db.$queryRawUnsafe<any[]>(`SELECT currency,count(*)::int rows,count(DISTINCT etf_id)::int etfs FROM etf_flows GROUP BY currency ORDER BY rows DESC`);
+const creation=await db.$queryRawUnsafe<any[]>(`SELECT source,count(*)::int rows,count(DISTINCT etf_id)::int etfs,min(observation_date)::text earliest,max(observation_date)::text latest FROM etf_creation_redemptions GROUP BY source ORDER BY rows DESC`);
+const issuers=await db.$queryRawUnsafe<any[]>(`SELECT i.code,i.official_name,i.source_status,i.verification_status,i.license_status,count(m.etf_id)::int etfs FROM etf_issuers i LEFT JOIN etf_issuer_mappings m ON m.issuer_id=i.id GROUP BY i.id ORDER BY etfs DESC`);
+const report={generatedAt:new Date().toISOString(),flow:flow[0],types,currencies,creation,issuers};await fs.writeFile(path.join(dir,"baseline.json"),JSON.stringify(report,(_,v)=>typeof v==="bigint"?Number(v):v,2)+"\n");console.log(JSON.stringify(report,(_,v)=>typeof v==="bigint"?Number(v):v));await db.$disconnect();

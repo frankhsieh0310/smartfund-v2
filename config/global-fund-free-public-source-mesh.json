@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "asset": "GLOBAL_FUND",
+  "sourcePriority": {
+    "TAIWAN": ["FSC_DATA_GOV_OFFICIAL", "TDCC_OFFICIAL", "SITCA_OFFICIAL_ASSOCIATION", "ISSUER_OFFICIAL", "MONEYDJ_SUPPLEMENTAL"],
+    "US": ["SEC_OFFICIAL", "ISSUER_OFFICIAL", "SUPPLEMENTAL_PUBLIC"]
+  },
+  "sources": [
+    {"id":"FSC_DATA_GOV","family":"GOV_OPEN_DATA_ADAPTER","role":"REGULATOR_GOVERNMENT_OFFICIAL","status":"WAITING_DEPENDENCY","contract":"VERIFIED_DATASET_RESOURCE_URL_OR_SUPPORTED_CATALOG_GET_CONTRACT_REQUIRED","fullUniverse":true,"fullHistory":true},
+    {"id":"TDCC","family":"TDCC_OPEN_API_ADAPTER","role":"OFFICIAL_DEPOSITORY","status":"AUTO_CONTINUING","swagger":"https://openapi.tdcc.com.tw/tdcc-opendata-api-docs","fullUniverse":true,"fullHistory":true},
+    {"id":"SITCA","family":"SITCA_PUBLIC_DATA_ADAPTER","role":"OFFICIAL_INDUSTRY_ASSOCIATION","status":"WAITING_DEPENDENCY","contract":"VERIFIED_MACHINE_READABLE_DATASET_URL_REQUIRED; TESTED_LEGACY_PATH_NOT_DATASET","fullUniverse":true,"fullHistory":true},
+    {"id":"SEC","family":"SEC_INVESTMENT_COMPANY_ADAPTER","role":"REGULATOR_GOVERNMENT_OFFICIAL","status":"ALREADY_ACTIVE","fullUniverse":true,"fullHistory":true},
+    {"id":"MONEYDJ","family":"EXISTING_MONEYDJ_FUND_PUBLIC_DATA_LAYER","role":"SUPPLEMENTAL_PUBLIC","status":"AUTO_CONTINUING","fullUniverse":true,"fullHistory":true},
+    {"id":"ISSUER_DOCUMENTS","family":"PUBLIC_DOCUMENT_ADAPTER","role":"ISSUER_OFFICIAL","status":"AUTO_CONTINUING","fullUniverse":true,"fullHistory":true},
+    {"id":"ICI","family":"ICI_PUBLIC_STATS_ADAPTER","role":"OFFICIAL_INDUSTRY_ASSOCIATION","status":"EXTERNALLY_BLOCKED","contract":"OFFICIAL_SITE_HTTP_403_FOR_AUTOMATED_ACCESS; MACHINE_READABLE_PUBLIC_DOWNLOAD_CONTRACT_REQUIRED","scope":"INDUSTRY_ONLY","fullHistory":true}
+  ],
+  "canonicalDedup": {
+    "fundMatchOrder": ["REGULATORY_FUND_ID", "LEI_PLUS_OFFICIAL_FUND_NAME", "OFFICIAL_FUND_NAME_PLUS_ISSUER"],
+    "shareClassMatchOrder": ["ISIN", "REGULATORY_SHARE_CLASS_ID", "FUND_ID_PLUS_OFFICIAL_SHARE_CLASS_NAME_PLUS_CURRENCY_PLUS_DISTRIBUTION_STATUS"],
+    "neverMergeDifferentShareClasses": true,
+    "multipleSourceLineagesPerCanonical": true
+  },
+  "observationDedup": {
+    "identity": ["CANONICAL_FUND_ID", "CANONICAL_SHARE_CLASS_ID", "DOMAIN", "OBSERVATION_DATE", "CURRENCY", "UNIT", "GRAIN"],
+    "states": ["EXACT_DUPLICATE", "MATCHED", "REVISION_DIFFERENCE", "DATE_DIFFERENCE", "CURRENCY_DIFFERENCE", "SHARE_CLASS_GRAIN_DIFFERENCE", "CONFLICT_REVIEW_REQUIRED"],
+    "lowerPriorityNeverOverwritesHigherPriority": true,
+    "materialDifferencesNeverSilentlyMerged": true
+  },
+  "dataTrust": ["SOURCE","SOURCE_ROLE","SOURCE_PRIORITY","SOURCE_IDENTIFIER","FUND_ID","SHARE_CLASS_ID","AS_OF","OBSERVATION_DATE","REPORTING_PERIOD","DISCLOSURE_DATE","EFFECTIVE_DATE","RETRIEVED_AT","CURRENCY","UNIT","PIT_CURRENT","REVISION_STATUS","DISCLOSURE_SCOPE","RECONCILIATION_STATUS"],
+  "fullFundUniverseAssigned": true,
+  "fullShareClassUniverseAssigned": true,
+  "fullHistoryAssigned": true,
+  "incremental": true,
+  "scheduledRefresh": true,
+  "maxDbConcurrency": 1
+}

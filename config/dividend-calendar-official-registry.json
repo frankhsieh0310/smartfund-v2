@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "asset": "GLOBAL_DIVIDEND_CALENDAR",
+  "registries": [
+    { "id": "SEC", "country": "US", "baseUrl": "https://www.sec.gov", "resources": [{ "kind": "universe", "url": "https://www.sec.gov/files/company_tickers_exchange.json" }] },
+    { "id": "NYSE", "country": "US", "baseUrl": "https://www.nyse.com", "resources": [{ "kind": "calendar", "url": "https://www.nyse.com/api/corporate-actions/v1/event-calendar?eventType=Dividend" }] },
+    { "id": "NASDAQ", "country": "US", "baseUrl": "https://www.nasdaq.com", "resources": [{ "kind": "calendar", "url": "https://api.nasdaq.com/api/calendar/dividends" }] },
+    { "id": "LSE", "country": "GB", "baseUrl": "https://www.londonstockexchange.com", "resources": [{ "kind": "calendar", "url": "https://api.londonstockexchange.com/api/v1/pages?path=news-and-insights/dividend-calendar" }] },
+    { "id": "JPX", "country": "JP", "baseUrl": "https://www.jpx.co.jp", "resources": [{ "kind": "calendar", "url": "https://www.jpx.co.jp/english/listing/others/ex-rights/index.html" }] },
+    { "id": "HKEX", "country": "HK", "baseUrl": "https://www.hkex.com.hk", "resources": [{ "kind": "calendar", "url": "https://www.hkex.com.hk/Services/Trading/Securities/Overview/Trading-Calendar-and-Trading-Hours?sc_lang=en" }] },
+    { "id": "TWSE", "country": "TW", "baseUrl": "https://www.twse.com.tw", "resources": [{ "kind": "calendar", "url": "https://www.twse.com.tw/rwd/en/exRight/TWT49U?response=json" }] },
+    { "id": "TPEx", "country": "TW", "baseUrl": "https://www.tpex.org.tw", "resources": [{ "kind": "calendar", "url": "https://www.tpex.org.tw/www/en-us/exright/daily" }] },
+    { "id": "SGX", "country": "SG", "baseUrl": "https://www.sgx.com", "resources": [{ "kind": "calendar", "url": "https://www.sgx.com/securities/corporate-actions" }] },
+    { "id": "ASX", "country": "AU", "baseUrl": "https://www.asx.com.au", "resources": [{ "kind": "calendar", "url": "https://www.asx.com.au/markets/trade-our-cash-market/announcements" }] },
+    { "id": "KRX", "country": "KR", "baseUrl": "https://global.krx.co.kr", "resources": [{ "kind": "calendar", "url": "https://global.krx.co.kr/contents/GLB/05/0503/0503010000/GLB0503010000.jsp" }] }
+  ]
+}

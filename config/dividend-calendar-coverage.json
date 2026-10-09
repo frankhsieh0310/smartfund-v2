@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "fields": ["announcementDate", "exDividendDate", "recordDate", "paymentDate", "dividendAmount", "currency", "frequency", "dividendType"],
+  "dividendTypes": ["REGULAR", "SPECIAL"],
+  "stages": ["HISTORICAL", "UPCOMING", "INCREMENTAL", "RETRY", "ARCHIVE"],
+  "upcomingWindows": ["TODAY", "THIS_WEEK", "THIS_MONTH", "FUTURE"],
+  "features": ["archive", "retry", "checkpoint", "scheduler", "completionManifest"]
+}

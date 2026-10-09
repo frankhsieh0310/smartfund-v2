@@ -1,0 +1,2432 @@
+[
+  {
+    "file": "config/analyst-estimates-coverage.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/analyst-estimates-jurisdiction-matrix.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/analyst-estimates-official-registry.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/analyst-estimates-priority-universe.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/analyst-estimates-provider-license-register.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/analyst-estimates-scheduler.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/analyst-estimates-universe.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/asset-layer-dashboard.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/asset-provider-registry.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 2
+  },
+  {
+    "file": "config/bis-shared-official-registry.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/bond-production-event-strategies.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 2
+  },
+  {
+    "file": "config/central-bank-identities.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/central-bank-liquidity-contract.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/central-bank-liquidity-registry.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/central-bank-official-registry.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/central-bank-platform-contracts.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/central-bank-universe.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/commodity-background-public-expansion.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/commodity-coverage-matrix.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/commodity-dataset-registry.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/commodity-futures-coverage.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/commodity-futures-official-registry.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/commodity-futures-p0-products.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 2
+  },
+  {
+    "file": "config/commodity-futures-product-contract.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/commodity-futures-public-source-policy.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/commodity-futures-universe.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 2
+  },
+  {
+    "file": "config/commodity-futures-yahoo-mapping.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/commodity-ingestion-sources.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/commodity-official-completion-routing.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 2
+  },
+  {
+    "file": "config/commodity-official-source-registry.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 2
+  },
+  {
+    "file": "config/commodity-production-events.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 3
+  },
+  {
+    "file": "config/commodity-professional-platform.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/compare-engine.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 2
+  },
+  {
+    "file": "config/corporate-actions-action-readiness.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/corporate-actions-coverage.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/corporate-actions-official-registry.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/corporate-actions-professional-contract.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/corporate-actions-source-status.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/corporate-actions-universe.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/credit-spread-constrained-state.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/credit-spread-coverage.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/credit-spread-methodology.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/credit-spread-official-registry.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/credit-spread-product-contract.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/credit-spread-source-discovery.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/credit-spread-universe.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 2
+  },
+  {
+    "file": "config/cross-currency-basis-source-registry.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/crypto-free-public-data-mesh.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/crypto-platform.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/crypto-public-depth-expansion.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 2
+  },
+  {
+    "file": "config/currency-index-p0-contract.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 3
+  },
+  {
+    "file": "config/currency-index-platform.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/data-asset-coverage-audit.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/data-completion-dashboard.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/data-daily-schedule.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/data-orchestrator.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/dependency-graph.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/derivatives-taxonomy.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/dividend-calendar-coverage.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/dividend-calendar-official-registry.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/dividend-calendar-query-contract.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/dividend-calendar-scheduler.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/dividend-calendar-semantic-overlay-v4.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/dividend-calendar-universe.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/earnings-calendar-platform.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/earnings-calendar-production-canary-plan.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/earnings-calendar-source-state-matrix.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/economic-calendar-coverage.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/economic-calendar-official-registry.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/economic-calendar-p0-recovery.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/economic-calendar-production-scheduler.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/economic-calendar-universe.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/energy-physical-supply-demand.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 4
+  },
+  {
+    "file": "config/equity-index-futures-coverage.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/equity-index-futures-official-registry.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/equity-index-futures-p0-data-contract.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 2
+  },
+  {
+    "file": "config/equity-index-futures-production-scheduler.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/equity-index-futures-universe.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 5
+  },
+  {
+    "file": "config/equity-index-futures-venue-source-matrix.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 3
+  },
+  {
+    "file": "config/etf-flows-coverage.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/etf-flows-official-registry.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/etf-flows-universe.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/etf-full-universe-product-expansion.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/etf-holding-security-resolver.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 5
+  },
+  {
+    "file": "config/etf-holdings-coverage.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/etf-holdings-official-registry.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 3
+  },
+  {
+    "file": "config/etf-holdings-p0-contract.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/etf-holdings-platform.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/etf-public-source-expansion.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/etf-regulatory-identity-routing.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 2
+  },
+  {
+    "file": "config/etf-yahoo-full-universe.json",
+    "IMPORTED_BY_RUNTIME": "YES",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "YES",
+    "scriptRefCount": 3
+  },
+  {
+    "file": "config/etf-yahoo-product-modules.json",
+    "IMPORTED_BY_RUNTIME": "YES",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "YES",
+    "scriptRefCount": 9
+  },
+  {
+    "file": "config/exchange-warehouse-inventory-layer.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/fixed-income-authorized-public-benchmarks.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/fixed-income-bond-index-material-catalog.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 3
+  },
+  {
+    "file": "config/fixed-income-bond-index-public-universe.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/fixed-income-public-expansion-registry.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/fixed-income-public-market-data-routes.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/fixed-income-remaining-word-routes.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/formula-library.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/fund-classification-registry.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/fund-documents-registry.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/fund-fees-terms-registry.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/fund-holdings-sec-registry.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 3
+  },
+  {
+    "file": "config/fund-moneydj-disclosure-canary.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/fund-moneydj-p0-canary.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/fund-risk-performance-canary.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/futures-cot-root-crosswalk.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/futures-investing-public-catalog.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 2
+  },
+  {
+    "file": "config/futures-official-archive-registry.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/futures-options-on-futures.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/futures-positioning-registry.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 3
+  },
+  {
+    "file": "config/fx-investing-public-source.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/fx-official-fixing-sources.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/fx-platform.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 2
+  },
+  {
+    "file": "config/fx-reserves-professional-contract.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/fx-reserves-registry.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 3
+  },
+  {
+    "file": "config/gleif-shared-entity-source.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/global-asset-production-roadmap.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/global-asset-progress-dashboard.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/global-commodity-real-asset-orchestrator.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/global-commodity-universe.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/global-crypto-depth-orchestrator.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/global-data-acquisition-plan.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/global-data-dictionary.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/global-data-self-healing-action-contracts.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/global-etf-depth-orchestrator.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 3
+  },
+  {
+    "file": "config/global-fixed-income-orchestration.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/global-fund-background-public-expansion.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/global-fund-free-public-source-mesh.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/global-futures-depth-orchestrator.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 2
+  },
+  {
+    "file": "config/global-futures-public-expansion.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/global-fx-background-public-expansion.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/global-fx-depth-orchestrator.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/global-index-depth-orchestrator.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/global-index-pit-revision-contract.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/global-index-public-expansion.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/global-index-rebalance-calendar-contract.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/global-index-remaining-word-routes.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/global-individual-bond-registry.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 4
+  },
+  {
+    "file": "config/global-insider-coverage.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/global-insider-official-registry.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 2
+  },
+  {
+    "file": "config/global-insider-ownership-product-contracts.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/global-insider-ownership-source-matrix.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/global-insider-product-contract.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/global-insider-scheduler.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 2
+  },
+  {
+    "file": "config/global-insider-source-matrix.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/global-insider-universe.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/global-macro-alfred-true-vintage.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/global-macro-background-public-expansion.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/global-macro-expectations-vintage-pit.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/global-macro-public-mesh.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/global-missing-matrix.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/global-official-macro-source-registry.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/global-reit-canary.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/global-reit-canonical-persistence-plan.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/global-reit-coverage.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/global-reit-official-registry.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/global-reit-production-scheduler.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/global-reit-professional-core.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/global-reit-semantic-contracts.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/global-reit-source-matrix.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/global-reit-universe.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/global-runtime-supervisor.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 4
+  },
+  {
+    "file": "config/global-stock-depth-orchestrator.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 2
+  },
+  {
+    "file": "config/global-stock-p0-structural-contracts.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/global-stock-public-source-expansion.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/global-stock-remaining-word-routes.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/government-yield-registry.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 3
+  },
+  {
+    "file": "config/government-yield-source-metadata.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/historical-financial-coverage-dashboard.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/historical-financial-priority.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/historical-metric-priority.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/historical-source-priority.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/historical-source-registry.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/index-constituents-coverage.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/index-constituents-hsi-canary.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/index-constituents-hsi-review-20260213.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/index-constituents-hsi-review-20260522.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/index-constituents-methodology.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/index-constituents-official-registry.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/index-constituents-scheduler.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/index-constituents-source-matrix.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/index-constituents-universe.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/index-platform.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 5
+  },
+  {
+    "file": "config/institutional-holdings-platform.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 4
+  },
+  {
+    "file": "config/interest-futures-coverage-matrix.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/interest-futures-coverage.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/interest-futures-db-field-mapping.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/interest-futures-official-registry.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/interest-futures-p0-closeout-matrix.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/interest-futures-product-contracts.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/interest-futures-professional-depth-matrix.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/interest-futures-source-capability-matrix.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/interest-futures-source-constraints.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/interest-futures-source-status.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/interest-futures-universe.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 4
+  },
+  {
+    "file": "config/ipo-calendar-p0-contract.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/ipo-calendar-platform.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/ishares-bond-etf-products.json",
+    "IMPORTED_BY_RUNTIME": "YES",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "YES",
+    "scriptRefCount": 2
+  },
+  {
+    "file": "config/macro-all-official-sources-14.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/macro-economic-indicator-series.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/macro-economic-indicator-world-bank.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/macro-national-official-series.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/macro-public-country-balance-sheet.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 5
+  },
+  {
+    "file": "config/macro-sovereign-external-source-capabilities.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/margin-short-official-registry.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/margin-short-product-contract.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/margin-short-scheduler.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/market-breadth-coverage.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/market-breadth-market-identity.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/market-breadth-metric-registry.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/market-breadth-official-registry.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/market-breadth-product-contract.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/market-breadth-readiness.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/market-breadth-research-contracts.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/market-breadth-twse-source-capabilities.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/market-breadth-universe-contract.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/market-breadth-universe.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/money-market-professional-contract.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 2
+  },
+  {
+    "file": "config/money-market-rate-registry.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/money-supply-registry.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 2
+  },
+  {
+    "file": "config/money-supply-source-capabilities.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/moneydj-fund-public-layer.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 2
+  },
+  {
+    "file": "config/mops-missing-data-source-registry.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 3
+  },
+  {
+    "file": "config/mortgage-rates.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 4
+  },
+  {
+    "file": "config/ordinary-master-scheduler.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 2
+  },
+  {
+    "file": "config/production-yahoo-daily-jobs.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 6
+  },
+  {
+    "file": "config/provider-symbol-mappings.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/ranking-canonical-source-registry.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/ranking-definition-catalog.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/ranking-registry.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/ranking-source-manifest.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/raw-financial-data.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/sec-investment-company-shared.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/securities-lending-coverage.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/securities-lending-license-register.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/securities-lending-metric-taxonomy.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/securities-lending-official-registry.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/securities-lending-product-contracts.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/securities-lending-scheduler.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/securities-lending-source-matrix.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/securities-lending-universe.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/share-buyback-coverage.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/share-buyback-market-source-matrix.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/share-buyback-official-registry.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/share-buyback-product-contract.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/share-buyback-production-scheduler.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/share-buyback-universe.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/shared-market-data-contract.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/shipping-index-platform.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/sovereign-debt-aggregates.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 4
+  },
+  {
+    "file": "config/sovereign-debt-contracts.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/stock-data-specification-lock.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/stock-data-specification.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/stock-guidance-production-foundation.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/stock-market-event-strategy.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/taifex-official-completion.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 2
+  },
+  {
+    "file": "config/taifex-positioning-ingestion.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/treasury-fiscal-operations.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 2
+  },
+  {
+    "file": "config/usgs-minerals-bootstrap.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/volatility-archive-retention.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/volatility-canonical-identity.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 2
+  },
+  {
+    "file": "config/volatility-platform.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/volatility-product-contract.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/watchlist-alert-engine.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/worker-assignments.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "YES",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 1
+  },
+  {
+    "file": "config/yahoo-financial-ingestion-plan.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/yahoo-global-daily-test-universe.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  },
+  {
+    "file": "config/yahoo-historical-financial-audit.json",
+    "IMPORTED_BY_RUNTIME": "NO",
+    "USED_BY_CRON": "NO",
+    "USED_BY_WORKFLOW": "NO",
+    "USED_ONLY_BY_SCRIPT": "NO",
+    "PRODUCTION_REQUIRED": "NO",
+    "scriptRefCount": 0
+  }
+]

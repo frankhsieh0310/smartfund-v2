@@ -1,0 +1,107 @@
+{
+  "version": 4,
+  "asset": "GLOBAL_FIXED_INCOME",
+  "mode": "INCREMENTAL_ONLY",
+  "orchestrationOnly": true,
+  "createsWriter": false,
+  "codeRequiredForContinuation": false,
+  "remainingWordRouteManifest": "config/fixed-income-remaining-word-routes.json",
+  "remainingWordCompletion": "runtime/fixed-income/remaining-word-completion.json",
+  "policies": {
+    "reuseExistingWorkers": true,
+    "resumeFromCheckpoint": true,
+    "boundedBatching": true,
+    "databaseBackoff": true,
+    "maximumSourceDepth": true,
+    "changedInputsOnlyForAnalytics": true,
+    "oneWriterPerDomainOrScope": true,
+    "dataReimport": false,
+    "historyRebuild": false,
+    "universeRebuild": false,
+    "syntheticBondIdentities": false,
+    "unsafePriceYieldDerivation": false
+  },
+  "workItemKey": [
+    "instrumentOrSeriesId",
+    "domain",
+    "checkpoint"
+  ],
+  "domains": [
+    {
+      "id": "BONDS",
+      "owner": "EXISTING_BOND_OWNERS_BY_SCOPE",
+      "worker": "scripts/data/bond/run-production-bond-event-worker.ts",
+      "checkpoint": "runtime/bond/global-individual-bond-queue/checkpoint.json",
+      "ownershipEvidence": "runtime/bond/ownership-health-projection.json",
+      "state": "CURRENT_AND_AUTO_UPDATING"
+    },
+    {
+      "id": "YIELD_CURVE",
+      "owner": "macro-production-daily",
+      "worker": "scripts/data/daily/run-production-macro-daily.ts",
+      "checkpoint": "runtime/government-yield/health.json",
+      "state": "CURRENT_AND_AUTO_UPDATING"
+    },
+    {
+      "id": "SOVEREIGN",
+      "owner": "EXISTING_SOVEREIGN_DEBT_SUPERVISOR",
+      "worker": "scripts/data/sovereign-debt-aggregates/run-sovereign-debt-aggregates.ts",
+      "checkpoint": "runtime/sovereign-debt-aggregates/status.json",
+      "state": "CURRENT_AND_AUTO_UPDATING"
+    },
+    {
+      "id": "CREDIT_SPREAD",
+      "owner": "global-credit-spread-official",
+      "worker": "scripts/data/credit-spread/run-credit-spread.ts",
+      "checkpoint": "runtime/credit-spread/checkpoint.json",
+      "state": "CURRENT_AND_AUTO_UPDATING"
+    },
+    {
+      "id": "CREDIT_DERIVATIVES",
+      "owner": "EXISTING_CREDIT_DERIVATIVES_SUPERVISOR",
+      "worker": "scripts/data/credit-derivatives/run-global-credit-derivatives.ts",
+      "checkpoint": "runtime/credit-derivatives/checkpoint.json",
+      "state": "TRANSACTION_BASED",
+      "marketQuoteState": "LICENSE_CONSTRAINED"
+    },
+    {
+      "id": "MORTGAGE_RATES",
+      "owner": "EXISTING_MORTGAGE_RATES_SUPERVISOR",
+      "worker": "scripts/data/mortgage-rates/run-mortgage-rates.ts",
+      "checkpoint": "runtime/mortgage-rates/checkpoint.json",
+      "state": "CURRENT_AND_AUTO_UPDATING"
+    },
+    {
+      "id": "CREDIT_RATINGS",
+      "owner": "UNASSIGNED_NO_EXISTING_AUTHORIZED_FEED",
+      "state": "LICENSE_CONSTRAINED",
+      "writer": null
+    }
+  ],
+  "crossAssetBoundaries": {
+    "bondBenchmarkIndices": "GLOBAL_INDEX/FIXED_INCOME_INDEX",
+    "creditDerivativeIndices": "GLOBAL_FIXED_INCOME/CREDIT_DERIVATIVES",
+    "policyRates": "GLOBAL_MACRO",
+    "interestRateFutures": "GLOBAL_FUTURES",
+    "relationship": "LOGICAL_REFERENCE_ONLY"
+  },
+  "allowedTerminalStates": [
+    "CURRENT_AND_AUTO_UPDATING",
+    "MAX_SOURCE_DEPTH_REACHED",
+    "REALTIME",
+    "DELAYED",
+    "TRANSACTION_BASED",
+    "EOD_ONLY",
+    "SOURCE_CONSTRAINED",
+    "ACCESS_CONSTRAINED",
+    "LICENSE_CONSTRAINED",
+    "TIME_DEPTH_CONSTRAINED",
+    "INPUT_CONSTRAINED",
+    "MAPPING_CONSTRAINED",
+    "CONFIGURATION_CONSTRAINED",
+    "DERIVATION_NOT_READY",
+    "NOT_RATED",
+    "NOT_APPLICABLE"
+  ],
+  "unknownAllowed": false
+}

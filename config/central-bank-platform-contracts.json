@@ -1,0 +1,12 @@
+{
+  "asset":"GLOBAL CENTRAL BANK POLICY RATES",
+  "identityContract":["centralBankId","officialName","country","jurisdiction","region","currency","officialWebsite","officialDataUrl","externalIdentifier","status","startDate","endDate","source","verificationStatus"],
+  "rateTypeIdentityContract":["seriesId","centralBankId","rateType","officialRateName","currency","unit","frequency","status","sourceExternalId","source","verificationStatus"],
+  "rateTypes":["TARGET_RATE","TARGET_RANGE_LOWER","TARGET_RANGE_UPPER","POLICY_RATE","DEPOSIT_RATE","LENDING_RATE","DISCOUNT_RATE","OVERNIGHT_RATE","REPO_RATE","REVERSE_REPO_RATE","EFFECTIVE_RATE","OTHER"],
+  "policyEventContract":{"relation":"central_bank_policy_events","fields":["eventId","centralBankId","seriesId","announcementDate","effectiveDate","previousRate","newRate","changeBps","decisionType","source","sourceRecordId","verificationStatus"],"decisionTypes":["HIKE","CUT","HOLD","RANGE_CHANGE","FACILITY_CHANGE","FRAMEWORK_CHANGE","OTHER"],"announcementDateRule":"NULL unless explicitly supplied by the official source","effectiveDateRule":"Never infer announcementDate from observationDate"},
+  "qualityStates":["PARSE_CANDIDATE","SEMANTICS_VERIFIED","PRODUCTION_VERIFIED","SOURCE_PENDING","QUALITY_REJECTED"],
+  "freshnessStates":["CURRENT","WAITING_FOR_POLICY_DECISION","WAITING_FOR_SOURCE_PUBLICATION","SOURCE_DELAYED","STALE","UNKNOWN"],
+  "analytics":["CHANGE_LAST_DECISION_BPS","CHANGE_1M_BPS","CHANGE_3M_BPS","CHANGE_YTD_BPS","CHANGE_1Y_BPS","LAST_HIKE_DATE","LAST_CUT_DATE","LAST_DECISION_DATE"],
+  "displayPolicyRateRule":"Use the official primary policy series for the institution; preserve target bounds and facility rates as separate raw canonical series. Never substitute midpoint, upper bound, or deposit facility without an institution-specific verified rule.",
+  "productContract":{"detail":["central bank","country","currency","current policy rates","rate types","target bounds","latest decision","change bps","history chart","decision history","freshness","source","coverage state"],"search":["bank","country","currency"],"screener":["region","currency","current policy rate","last change bps","last decision type"],"compare":["current rate","last change","YTD bps","1Y bps","latest decision date"],"ranking":"CONTRACT_ONLY_RATE_TYPE_SPECIFIC"}
+}

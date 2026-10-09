@@ -1,0 +1,30 @@
+{
+  "asset": "GLOBAL_ANALYST_ESTIMATES",
+  "version": 1,
+  "policy": "Never infer or redistribute analyst consensus without an explicit licensed source.",
+  "sources": [
+    {
+      "id": "SEC_EDGAR",
+      "kind": "regulator_filing",
+      "coverage": ["US", "foreign_issuers_filing_with_SEC"],
+      "baseUrl": "https://data.sec.gov/submissions/CIK{cik}.json",
+      "forms": ["8-K", "10-Q", "10-K", "6-K", "20-F", "40-F"],
+      "provides": ["Guidance", "Company Official Disclosure"],
+      "status": "active",
+      "limits": { "requestsPerSecond": 8 }
+    },
+    {
+      "id": "COMPANY_INVESTOR_RELATIONS",
+      "kind": "issuer_official",
+      "provides": ["Guidance", "Earnings Release", "Investor Presentation"],
+      "status": "per_issuer_registry"
+    },
+    {
+      "id": "LICENSED_ANALYST_CONSENSUS",
+      "kind": "licensed_provider_adapter",
+      "provides": ["Revenue Estimate", "EPS Estimate", "EBITDA Estimate", "Net Income Estimate", "Target Price", "Consensus Rating", "Buy", "Hold", "Sell", "Revision"],
+      "status": "disabled_until_licensed",
+      "requiredEnvironment": ["ANALYST_ESTIMATES_PROVIDER_URL", "ANALYST_ESTIMATES_PROVIDER_TOKEN"]
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "asset": "GLOBAL_CORPORATE_ACTIONS",
+  "version": 1,
+  "canonicalGrain": ["security", "event", "eventTerms", "relatedSecurityOrParty", "effectiveDates", "revisionOrCancellation", "sourceVersion"],
+  "actionTaxonomy": [
+    "CASH_DIVIDEND", "STOCK_DIVIDEND", "SPECIAL_DIVIDEND", "STOCK_SPLIT", "REVERSE_SPLIT",
+    "RIGHTS_ISSUE", "BONUS_ISSUE", "SPINOFF", "MERGER", "ACQUISITION", "TENDER_OFFER",
+    "SHARE_BUYBACK", "NAME_CHANGE", "TICKER_CHANGE", "ISIN_CHANGE", "DELISTING", "LISTING",
+    "CAPITAL_REDUCTION", "REORGANIZATION", "LIQUIDATION", "OTHER"
+  ],
+  "eventStatuses": ["ANNOUNCED", "CONFIRMED", "PENDING", "EFFECTIVE", "PAID", "COMPLETED", "CANCELLED", "SUPERSEDED", "UNKNOWN"],
+  "revisionTypes": ["CORRECTION", "DATE_CHANGE", "AMOUNT_CHANGE", "RATIO_CHANGE", "STATUS_CHANGE", "CANCELLATION", "SUPERSESSION", "SOURCE_UPDATE", "OTHER"],
+  "dateSemantics": ["announcementDate", "exDate", "recordDate", "effectiveDate", "paymentDate"],
+  "dividendTerms": ["cashAmount", "currency", "exDate", "recordDate", "paymentDate", "announcementDate", "distributionType"],
+  "splitTerms": ["ratioNumerator", "ratioDenominator"],
+  "rightsTerms": ["subscriptionRatio", "subscriptionPrice", "currency", "recordDate", "exDate", "exerciseStart", "exerciseEnd"],
+  "relationshipTypes": ["ACQUIRER", "TARGET", "SURVIVING_SECURITY", "CANCELLED_SECURITY", "NEW_SECURITY", "SPINOFF_PARENT", "SPINOFF_CHILD"],
+  "identifierChangeTerms": ["oldValue", "newValue", "effectiveDate"],
+  "dedup": {
+    "key": ["securityId", "actionType", "effectiveDateOrExDate", "amountOrRatio", "relatedSecurityIdentity", "sourceRecordId"],
+    "confidence": ["EXACT_DUPLICATE", "LIKELY_SAME_EVENT", "DISTINCT_EVENT", "AMBIGUOUS"],
+    "autoMerge": ["EXACT_DUPLICATE"]
+  },
+  "search": ["ticker", "securityName", "actionType", "market", "dateRange"],
+  "filter": ["actionType", "market", "country", "dateRange", "upcomingOrCompleted", "status", "source"],
+  "compare": ["eventFrequency", "dividendHistory", "splitHistory", "upcomingEvents"],
+  "ranking": ["corporateActionFrequency", "dividendFrequency", "splitFrequency"],
+  "detail": ["securityIdentity", "upcomingActions", "historicalActions", "dateSemantics", "amountOrRatio", "relatedParties", "status", "revisionHistory", "source", "freshness", "coverageState"]
+}

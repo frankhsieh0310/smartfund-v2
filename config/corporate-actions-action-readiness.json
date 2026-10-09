@@ -1,0 +1,27 @@
+{
+  "asset": "GLOBAL_CORPORATE_ACTIONS",
+  "version": 3,
+  "states": [
+    {"actionType":"CASH_DIVIDEND","state":"SOURCE_CONSTRAINED","reason":"SEC XBRL period facts are not individual dividend lifecycle events"},
+    {"actionType":"STOCK_DIVIDEND","state":"CANARY_READY","reason":"TWSE public report supports stock distribution terms but no exact universe identity match"},
+    {"actionType":"SPECIAL_DIVIDEND","state":"SOURCE_CONSTRAINED","reason":"No verified classifier in active adapter"},
+    {"actionType":"STOCK_SPLIT","state":"SOURCE_CONSTRAINED","reason":"SEC ratio is source-supported but event dates and cross-filing dedup remain unresolved"},
+    {"actionType":"REVERSE_SPLIT","state":"SOURCE_CONSTRAINED","reason":"No verified active adapter"},
+    {"actionType":"RIGHTS_ISSUE","state":"CANARY_READY","reason":"TWSE public report exposes subscription terms; canonical identity unavailable"},
+    {"actionType":"BONUS_ISSUE","state":"CANARY_READY","reason":"TWSE public report exposes distribution rate; canonical identity unavailable"},
+    {"actionType":"SPINOFF","state":"LICENSE_CONSTRAINED","reason":"Verified structured exchange feed required"},
+    {"actionType":"MERGER","state":"LICENSE_CONSTRAINED","reason":"Verified structured exchange feed required"},
+    {"actionType":"ACQUISITION","state":"LICENSE_CONSTRAINED","reason":"Verified structured exchange feed required"},
+    {"actionType":"TENDER_OFFER","state":"LICENSE_CONSTRAINED","reason":"Verified structured exchange feed required"},
+    {"actionType":"SHARE_BUYBACK","state":"SOURCE_CONSTRAINED","reason":"SEC period execution totals are not program authorization events"},
+    {"actionType":"NAME_CHANGE","state":"LICENSE_CONSTRAINED","reason":"Exchange reference-data feed required"},
+    {"actionType":"TICKER_CHANGE","state":"LICENSE_CONSTRAINED","reason":"Exchange reference-data feed required"},
+    {"actionType":"ISIN_CHANGE","state":"LICENSE_CONSTRAINED","reason":"Licensed identifier lineage required"},
+    {"actionType":"DELISTING","state":"LICENSE_CONSTRAINED","reason":"Exchange reference-data feed required"},
+    {"actionType":"LISTING","state":"LICENSE_CONSTRAINED","reason":"Exchange reference-data feed required"},
+    {"actionType":"CAPITAL_REDUCTION","state":"CANARY_READY","reason":"TWSE public report exists; canonical identity unavailable"},
+    {"actionType":"REORGANIZATION","state":"LICENSE_CONSTRAINED","reason":"Verified structured exchange feed required"},
+    {"actionType":"LIQUIDATION","state":"LICENSE_CONSTRAINED","reason":"Verified structured exchange feed required"},
+    {"actionType":"OTHER","state":"NOT_APPLICABLE","reason":"Fail-closed taxonomy fallback is not production-ready"}
+  ]
+}

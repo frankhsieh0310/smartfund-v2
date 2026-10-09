@@ -75,10 +75,11 @@ export async function GET(request: Request) {
               coalesce(i.preferences->>'watchlist_only','true') <> 'true'
               or exists (select 1 from consensus_push_symbol_subscriptions s
                           where s.installation_id = i.installation_id and s.is_active and s.symbol = $1)
+              or coalesce(i.preferences->'people','[]'::jsonb) @> jsonb_build_array($3::text)
             )
             and not exists (select 1 from consensus_inapp_notifications n
                              where n.installation_id = i.installation_id and n.alert_candidate_id = $2)`,
-        [c.symbol, c.id],
+        [c.symbol, c.id, c.person_id],
       )) as unknown as Install[];
 
       const copy = buildFlipCopy({ symbol: c.symbol, person: c.person, flipType: c.flip_type });

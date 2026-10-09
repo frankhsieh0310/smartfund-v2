@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "asset": "GLOBAL_SECURITIES_LENDING",
+  "markets": ["TWSE", "NYSE", "NASDAQ", "LSE", "HKEX", "JPX", "KRX", "SGX", "ASX"],
+  "fields": ["borrowRate", "borrowFee", "utilization", "loanBalance", "sharesAvailable", "daysToCover", "shortAvailability", "recall"],
+  "identity": ["source", "market", "symbol", "asOfDate"],
+  "units": { "borrowRate": "percentAnnualized", "borrowFee": "percentAnnualized", "utilization": "percent", "loanBalance": "shares", "sharesAvailable": "shares", "daysToCover": "days", "shortAvailability": "shares", "recall": "boolean" }
+}

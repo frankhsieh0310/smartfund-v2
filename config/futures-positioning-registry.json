@@ -1,0 +1,18 @@
+{
+  "asset": "GLOBAL_FUTURES_POSITIONING",
+  "publisher": "U.S. Commodity Futures Trading Commission",
+  "officialBaseUrl": "https://www.cftc.gov",
+  "reports": [
+    { "code": "legacy", "firstYear": 1986, "latest": "/dea/newcot/deafut.txt", "historical": "/files/dea/history/deacot{year}.zip" },
+    { "code": "disaggregated", "firstYear": 2009, "latest": "/dea/newcot/f_disagg.txt", "historical": "/files/dea/history/fut_disagg_txt_{year}.zip" },
+    { "code": "tff", "firstYear": 2006, "latest": "/dea/newcot/FinFutWk.txt", "historical": "/files/dea/history/fut_fin_txt_{year}.zip" }
+  ],
+  "universe": {
+    "equity_index": "S&P|NASDAQ|DOW|RUSSELL|NIKKEI|MSCI|VIX",
+    "treasury": "TREASURY|TREASURY NOTE|TREASURY BOND|SOFR|FED FUNDS",
+    "fx": "EURO FX|JAPANESE YEN|BRITISH POUND|SWISS FRANC|CANADIAN DOLLAR|AUSTRALIAN DOLLAR|NEW ZEALAND DOLLAR|MEXICAN PESO|BRAZILIAN REAL|U.S. DOLLAR INDEX",
+    "metals": "GOLD|SILVER|COPPER",
+    "energy": "CRUDE OIL|WTI|NATURAL GAS",
+    "agriculture": "CORN|WHEAT|SOY|CATTLE|HOGS|COTTON|SUGAR|COCOA|COFFEE|OATS|RICE|ORANGE JUICE"
+  }
+}

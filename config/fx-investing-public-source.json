@@ -1,0 +1,19 @@
+{
+  "version": "FX_INVESTING_PUBLIC_SOURCE_V1",
+  "asset": "FX",
+  "owner": "FX_INVESTING_PUBLIC_DATA_OWNER",
+  "source": "INVESTING_COM",
+  "landingUrl": "https://www.investing.com/currencies/",
+  "termsUrl": "https://www.investing.com/about-us/terms-and-conditions",
+  "robotsUrl": "https://www.investing.com/robots.txt",
+  "marketDataObservationIngestionEnabled": false,
+  "reason": "STORAGE_AND_COMMERCIAL_SERVING_RIGHTS_NOT_VERIFIED",
+  "maxDbConcurrency": 1,
+  "protectedOwners": [
+    "STANDALONE_FX",
+    "FX_OFFICIAL_FIXINGS",
+    "FX_DERIVED_CROSS_RATES",
+    "FX_FORWARD_POINTS",
+    "FX_CARRY_CIP_ANALYTICS"
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "assetClass": "GLOBAL COMMODITY FUTURES",
+  "policy": "official-exchange-sources-only",
+  "exchanges": [
+    {"id":"CME_GROUP","name":"CME Group","timezone":"America/Chicago","url":"https://www.cmegroup.com/markets/agriculture.html"},
+    {"id":"COMEX","name":"COMEX","timezone":"America/Chicago","url":"https://www.cmegroup.com/markets/metals.html"},
+    {"id":"NYMEX","name":"NYMEX","timezone":"America/Chicago","url":"https://www.cmegroup.com/markets/energy.html"},
+    {"id":"ICE","name":"ICE Futures","timezone":"America/New_York","url":"https://www.ice.com/futures-us"},
+    {"id":"LME","name":"London Metal Exchange","timezone":"Europe/London","url":"https://www.lme.com/en/Market-Data"},
+    {"id":"CBOT","name":"Chicago Board of Trade","timezone":"America/Chicago","url":"https://www.cmegroup.com/markets/agriculture.html"},
+    {"id":"KCBT","name":"Kansas City Board of Trade","timezone":"America/Chicago","url":"https://www.cmegroup.com/markets/agriculture/grains/kc-hrw-wheat.html"},
+    {"id":"MGEX","name":"Minneapolis Grain Exchange","timezone":"America/Chicago","url":"https://www.mgex.com/market-data/"},
+    {"id":"TOCOM","name":"Tokyo Commodity Exchange","timezone":"Asia/Tokyo","url":"https://www.jpx.co.jp/english/markets/derivatives/"},
+    {"id":"DCE","name":"Dalian Commodity Exchange","timezone":"Asia/Shanghai","url":"http://www.dce.com.cn/DCE/Products/"},
+    {"id":"SHFE","name":"Shanghai Futures Exchange","timezone":"Asia/Shanghai","url":"https://www.shfe.com.cn/eng/MarketData/"},
+    {"id":"CZCE","name":"Zhengzhou Commodity Exchange","timezone":"Asia/Shanghai","url":"http://english.czce.com.cn/enportal/MarketData/Futures/DailyTradingData/H690303index_1.htm"},
+    {"id":"SGX","name":"Singapore Exchange","timezone":"Asia/Singapore","url":"https://www.sgx.com/derivatives/delayed-prices-futures"}
+  ]
+}

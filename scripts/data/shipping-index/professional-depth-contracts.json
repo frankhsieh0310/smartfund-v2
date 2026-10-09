@@ -1,0 +1,135 @@
+{
+  "version": 1,
+  "asset": "GLOBAL_BALTIC_SHIPPING_INDEX",
+  "contextIndicatorRelation": "shipping_market_observations",
+  "targetUniverseRelation": "shipping_indices",
+  "observationRelation": "shipping_index_observations",
+  "derivedRelation": "shipping_index_derived",
+  "sourcePolicy": {
+    "maxCandidatesPerProvider": 2,
+    "noUnofficialMirrors": true,
+    "noProtectedPageScraping": true,
+    "licensePendingIsFailure": false
+  },
+  "providerStates": {
+    "BALTIC_EXCHANGE": {
+      "sourceStatus": "LICENSE_REQUIRED",
+      "licenseStatus": "LICENSE_PENDING",
+      "automatedIngestion": false
+    },
+    "FREIGHTOS": {
+      "sourceStatus": "LICENSE_REQUIRED",
+      "licenseStatus": "LICENSE_PENDING",
+      "automatedIngestion": false
+    },
+    "DREWRY": {
+      "sourceStatus": "LICENSE_REQUIRED",
+      "licenseStatus": "LICENSE_PENDING",
+      "automatedIngestion": false
+    },
+    "SSE": {
+      "sourceStatus": "PUBLIC_DELAYED",
+      "licenseStatus": "TERMS_REVIEW_REQUIRED",
+      "automatedIngestion": false,
+      "termsEvidence": "Official FAQ permits delayed viewing but restricts extraction, republication and commercial reuse without written authorization."
+    },
+    "HARPEX": {
+      "sourceStatus": "PUBLIC_PARTIAL",
+      "licenseStatus": "TERMS_REVIEW_REQUIRED",
+      "automatedIngestion": false
+    }
+  },
+  "methodologyContract": {
+    "fields": ["indexId", "provider", "methodologyUrl", "indexObjective", "segment", "vesselClass", "routeScope", "calculationMethod", "weightingMethod", "basketDefinition", "publicationFrequency", "reviewFrequency", "effectiveDate", "source", "licenseStatus"]
+  },
+  "routeContract": {
+    "fields": ["routeId", "indexId", "routeName", "origin", "destination", "vesselClass", "cargoType", "freightType", "unit", "currency", "provider", "sourceStatus"],
+    "rateSemantics": ["INDEX_LEVEL", "FREIGHT_RATE", "TIME_CHARTER_EQUIVALENT", "VOYAGE_RATE", "CONTAINER_RATE", "TANKER_RATE"]
+  },
+  "eventContract": {
+    "eventTypes": ["LAUNCH", "TERMINATION", "METHODOLOGY_CHANGE", "ROUTE_BASKET_CHANGE", "WEIGHT_CHANGE", "NAME_CHANGE", "PUBLICATION_CHANGE", "OTHER"]
+  },
+  "analyticsContract": {
+    "change": ["CHANGE_1D", "CHANGE_1W", "CHANGE_1M", "CHANGE_3M", "CHANGE_6M", "CHANGE_YTD", "CHANGE_1Y", "CHANGE_3Y", "CHANGE_5Y", "CHANGE_10Y"],
+    "riskTrend": ["VOLATILITY_30D_OR_12W", "VOLATILITY_90D", "VOLATILITY_1Y", "MAX_DRAWDOWN_1Y", "MAX_DRAWDOWN_3Y", "MAX_DRAWDOWN_5Y", "MOVING_AVERAGE_20", "MOVING_AVERAGE_60", "52_WEEK_HIGH", "52_WEEK_LOW", "PERCENTILE_1Y", "PERCENTILE_3Y", "REBASED_100"],
+    "frequencyAware": true,
+    "sourceObservationImmutable": true
+  },
+  "productContracts": {
+    "detail": ["identity", "provider", "segment", "vesselClass", "routeScope", "current", "history", "frequency", "change", "riskTrend", "methodology", "freshness", "provenance", "licenseState"],
+    "search": ["name", "symbol", "provider", "segment", "vesselClass", "route"],
+    "screener": ["segment", "provider", "vesselClass", "frequency", "1W", "1M", "3M", "1Y", "volatility", "trend"],
+    "compare": ["current", "frequency", "1W", "1M", "3M", "YTD", "1Y", "volatility", "drawdown", "rebase100"],
+    "ranking": ["1W", "1M", "3M", "YTD", "1Y", "volatility", "percentile"]
+  },
+  "v4Governance": {
+    "verifiedAt": "2026-08-10T00:00:00.000Z",
+    "productionWriteAllowed": false,
+    "legalPublicObservationCanary": "NONE_MACHINE_ACCESSIBLE_AND_COMMERCIAL_USE_SAFE_CONFIRMED",
+    "sourceDocuments": {
+      "BALTIC_BENCHMARKS": "https://www.balticexchange.com/en/data-services/Methodology/benchmark-administration-activities.html",
+      "BALTIC_GMB": "https://emissions.balticexchange.com/content/dam/balticexchange/consumer/documents/data-services/documentation/ocean-bulk-guides-policies/GMB.pdf",
+      "BALTIC_INDICES": "https://www.balticexchange.com/en/data-services/market-information0/indices.html",
+      "BALTIC_ROUTES": "https://www.balticexchange.com/en/data-services/routes.html",
+      "FBX_METHOD": "https://www.freightos.com/freightos-baltic-index/",
+      "FBX_TERMS": "https://www.freightos.com/freightos-data-terms-conditions/",
+      "FBX_GUIDE": "https://www.balticexchange.com/content/dam/balticexchange/consumer/documents/data-services/documentation/fbx-guides---polices/FBX%20Guide.pdf",
+      "SSE_SCFi": "https://www.sse.net.cn/index/singleIndex?indexType=scfi",
+      "SSE_CCFI": "https://www.sse.net.cn/index/singleIndex?indexType=ccfi",
+      "SSE_TERMS": "https://en.sse.net.cn/indices/fqaennew.jsp",
+      "SSE_SCFi_METHOD": "https://en.sse.net.cn/indices/intro_scfitt.htm",
+      "DREWRY_WCI_METHOD": "https://www.drewry.co.uk/logistics-executive-briefing/logistics-executive-briefing-articles/world-container-index-methodology",
+      "DREWRY_WCI": "https://www.drewry.co.uk/trackers-and-indices/latest-trackers-and-indices/world-container-index-assessed-by-drewry",
+      "HARPEX": "https://www.harperpetersen.com/container"
+    },
+    "rightsProfiles": {
+      "BALTIC_LICENSED": { "identityRights":"PUBLIC_OFFICIAL", "methodologyRights":"PUBLIC_OFFICIAL", "currentLevelRights":"LICENSE_REQUIRED", "historyStorageRights":"LICENSE_REQUIRED", "displayRights":"LICENSE_REQUIRED", "redistributionRights":"LICENSE_REQUIRED", "commercialUseRights":"LICENSE_REQUIRED", "routeDataRights":"LICENSE_REQUIRED", "publicStructuralMetadata":"PUBLIC_OFFICIAL" },
+      "FBX_LICENSED": { "identityRights":"PUBLIC_OFFICIAL", "methodologyRights":"PUBLIC_OFFICIAL", "currentLevelRights":"PUBLIC_NONCOMMERCIAL_ONLY", "historyStorageRights":"LICENSE_REQUIRED", "displayRights":"TERMS_REVIEW_REQUIRED", "redistributionRights":"PUBLIC_NONCOMMERCIAL_ONLY_WITH_CREDIT_AND_LINK", "commercialUseRights":"LICENSE_REQUIRED", "routeDataRights":"LICENSE_REQUIRED", "apiRights":"ACCESS_CONSTRAINED" },
+      "SSE_TERMS": { "identityRights":"PUBLIC_OFFICIAL", "methodologyRights":"PUBLIC_OFFICIAL", "currentLevelRights":"PUBLIC_NONCOMMERCIAL_ONLY", "historyStorageRights":"ACCESS_CONSTRAINED", "displayRights":"TERMS_REVIEW_REQUIRED", "redistributionRights":"LICENSE_REQUIRED", "commercialUseRights":"LICENSE_REQUIRED", "routeDataRights":"TERMS_REVIEW_REQUIRED", "automatedAccess":"NOT_ALLOWED_WITHOUT_WRITTEN_AUTHORIZATION" },
+      "DREWRY_LICENSED": { "identityRights":"PUBLIC_OFFICIAL", "methodologyRights":"PUBLIC_OFFICIAL", "currentLevelRights":"PUBLIC_NONCOMMERCIAL_ONLY", "historyStorageRights":"LICENSE_REQUIRED", "displayRights":"TERMS_REVIEW_REQUIRED", "redistributionRights":"LICENSE_REQUIRED", "commercialUseRights":"LICENSE_REQUIRED", "routeDataRights":"LICENSE_REQUIRED" },
+      "HARPEX_TERMS": { "identityRights":"PUBLIC_OFFICIAL", "methodologyRights":"PUBLIC_OFFICIAL", "currentLevelRights":"PUBLIC_NONCOMMERCIAL_ONLY", "historyStorageRights":"ACCESS_CONSTRAINED", "displayRights":"TERMS_REVIEW_REQUIRED", "redistributionRights":"TERMS_REVIEW_REQUIRED", "commercialUseRights":"TERMS_REVIEW_REQUIRED", "routeDataRights":"TERMS_REVIEW_REQUIRED", "automatedAccess":"UNRESOLVED" }
+    },
+    "identityProfiles": [
+      { "canonicalCode":"BDI", "officialName":"Baltic Dry Index", "provider":"Baltic Exchange Information Services Limited", "indexFamily":"DRY_BULK_COMPOSITE", "marketSegment":"DRY_BULK", "vesselClass":"COMPOSITE_CAPESIZE_PANAMAX_SUPRAMAX", "cargoType":"DRY_BULK", "geographicScope":"GLOBAL_ROUTES", "rateType":"INDEX_LEVEL", "currency":null, "unit":"INDEX_POINTS", "publicationFrequency":"DAILY_BUSINESS_DAYS", "publicationTimezone":"Europe/London", "publicationTime":"13:00", "status":"ACTIVE", "rightsProfile":"BALTIC_LICENSED", "methodologyState":"PUBLIC_METADATA_VERIFIED", "historyBoundary":"HISTORY_LICENSE_REQUIRED", "provenanceRefs":["BALTIC_GMB","BALTIC_BENCHMARKS"] },
+      { "canonicalCode":"BCI", "officialName":"Baltic Capesize Index", "provider":"Baltic Exchange Information Services Limited", "indexFamily":"CAPESIZE", "marketSegment":"DRY_BULK", "vesselClass":"CAPESIZE", "cargoType":"DRY_BULK", "geographicScope":"GLOBAL_ROUTES", "rateType":"INDEX_LEVEL", "currency":null, "unit":"INDEX_POINTS", "publicationFrequency":"DAILY_BUSINESS_DAYS", "publicationTimezone":"Europe/London", "publicationTime":"11:00", "status":"ACTIVE", "rightsProfile":"BALTIC_LICENSED", "methodologyState":"PUBLIC_METADATA_VERIFIED", "historyBoundary":"HISTORY_LICENSE_REQUIRED", "provenanceRefs":["BALTIC_BENCHMARKS","BALTIC_ROUTES"] },
+      { "canonicalCode":"BPI", "officialName":"Baltic Panamax Index", "provider":"Baltic Exchange Information Services Limited", "indexFamily":"PANAMAX", "marketSegment":"DRY_BULK", "vesselClass":"PANAMAX", "cargoType":"DRY_BULK", "geographicScope":"GLOBAL_ROUTES", "rateType":"INDEX_LEVEL", "currency":null, "unit":"INDEX_POINTS", "publicationFrequency":"DAILY_BUSINESS_DAYS", "publicationTimezone":"Europe/London", "publicationTime":"13:00", "status":"ACTIVE", "rightsProfile":"BALTIC_LICENSED", "methodologyState":"PUBLIC_METADATA_VERIFIED", "historyBoundary":"HISTORY_LICENSE_REQUIRED", "provenanceRefs":["BALTIC_BENCHMARKS","BALTIC_ROUTES"] },
+      { "canonicalCode":"BSI", "officialName":"Baltic Supramax Index", "provider":"Baltic Exchange Information Services Limited", "indexFamily":"SUPRAMAX", "marketSegment":"DRY_BULK", "vesselClass":"SUPRAMAX", "cargoType":"DRY_BULK", "geographicScope":"GLOBAL_ROUTES", "rateType":"INDEX_LEVEL", "currency":null, "unit":"INDEX_POINTS", "publicationFrequency":"DAILY_BUSINESS_DAYS", "publicationTimezone":"Europe/London", "publicationTime":"13:00", "status":"ACTIVE", "rightsProfile":"BALTIC_LICENSED", "methodologyState":"PUBLIC_METADATA_VERIFIED", "historyBoundary":"HISTORY_LICENSE_REQUIRED", "provenanceRefs":["BALTIC_BENCHMARKS","BALTIC_ROUTES"] },
+      { "canonicalCode":"BHSI", "officialName":"Baltic Handysize Index", "provider":"Baltic Exchange Information Services Limited", "indexFamily":"HANDYSIZE", "marketSegment":"DRY_BULK", "vesselClass":"HANDYSIZE", "cargoType":"DRY_BULK", "geographicScope":"GLOBAL_ROUTES", "rateType":"INDEX_LEVEL", "currency":null, "unit":"INDEX_POINTS", "publicationFrequency":"DAILY_BUSINESS_DAYS", "publicationTimezone":"Europe/London", "publicationTime":"13:00", "status":"ACTIVE", "rightsProfile":"BALTIC_LICENSED", "methodologyState":"PUBLIC_METADATA_VERIFIED", "historyBoundary":"HISTORY_LICENSE_REQUIRED", "provenanceRefs":["BALTIC_BENCHMARKS","BALTIC_ROUTES"] },
+      { "canonicalCode":"BCTI", "officialName":"Baltic Clean Tanker Index", "provider":"Baltic Exchange Information Services Limited", "indexFamily":"CLEAN_TANKER", "marketSegment":"TANKER", "vesselClass":"MR_LR1_LR2", "cargoType":"CLEAN_PETROLEUM_PRODUCTS", "geographicScope":"GLOBAL_ROUTES", "rateType":"INDEX_LEVEL_FROM_WORLDSCALE_AND_TCE_ROUTES", "currency":null, "unit":"INDEX_POINTS", "publicationFrequency":"DAILY_BUSINESS_DAYS", "publicationTimezone":"Europe/London", "publicationTime":"16:00", "status":"ACTIVE", "rightsProfile":"BALTIC_LICENSED", "methodologyState":"PUBLIC_METADATA_VERIFIED", "historyBoundary":"HISTORY_LICENSE_REQUIRED", "provenanceRefs":["BALTIC_INDICES","BALTIC_ROUTES","BALTIC_BENCHMARKS"] },
+      { "canonicalCode":"BDTI", "officialName":"Baltic Dirty Tanker Index", "provider":"Baltic Exchange Information Services Limited", "indexFamily":"DIRTY_TANKER", "marketSegment":"TANKER", "vesselClass":"VLCC_SUEZMAX_AFRAMAX", "cargoType":"CRUDE_AND_DIRTY_PETROLEUM_PRODUCTS", "geographicScope":"GLOBAL_ROUTES", "rateType":"INDEX_LEVEL_FROM_WORLDSCALE_AND_TCE_ROUTES", "currency":null, "unit":"INDEX_POINTS", "publicationFrequency":"DAILY_BUSINESS_DAYS", "publicationTimezone":"Europe/London", "publicationTime":"16:00", "status":"ACTIVE", "rightsProfile":"BALTIC_LICENSED", "methodologyState":"PUBLIC_METADATA_VERIFIED", "historyBoundary":"HISTORY_LICENSE_REQUIRED", "provenanceRefs":["BALTIC_INDICES","BALTIC_ROUTES","BALTIC_BENCHMARKS"] },
+      { "canonicalCode":"BLNG", "officialName":"Baltic Liquefied Natural Gas", "provider":"Baltic Exchange Information Services Limited", "indexFamily":"LNG", "marketSegment":"GAS", "vesselClass":"LNG_CARRIER", "cargoType":"LNG", "geographicScope":"GLOBAL_ROUTES", "rateType":"TIME_CHARTER", "currency":"USD", "unit":"USD_PER_DAY", "publicationFrequency":"DAILY_BUSINESS_DAYS", "publicationTimezone":"Europe/London", "publicationTime":"11:00", "status":"ACTIVE", "rightsProfile":"BALTIC_LICENSED", "methodologyState":"PUBLIC_METADATA_VERIFIED", "historyBoundary":"HISTORY_LICENSE_REQUIRED", "provenanceRefs":["BALTIC_INDICES","BALTIC_ROUTES","BALTIC_BENCHMARKS"] },
+      { "canonicalCode":"BLPG", "officialName":"Baltic Liquefied Petroleum Gas", "provider":"Baltic Exchange Information Services Limited", "indexFamily":"LPG", "marketSegment":"GAS", "vesselClass":"LPG_CARRIER", "cargoType":"LPG", "geographicScope":"GLOBAL_ROUTES", "rateType":"VOYAGE_RATE", "currency":"USD", "unit":"USD_PER_TON", "publicationFrequency":"DAILY_BUSINESS_DAYS", "publicationTimezone":"Europe/London", "publicationTime":"16:00", "status":"ACTIVE", "rightsProfile":"BALTIC_LICENSED", "methodologyState":"PUBLIC_METADATA_VERIFIED", "historyBoundary":"HISTORY_LICENSE_REQUIRED", "provenanceRefs":["BALTIC_INDICES","BALTIC_ROUTES","BALTIC_BENCHMARKS"] },
+      { "canonicalCode":"FBX", "officialName":"Freightos Baltic Global Container Index", "provider":"Freightos / Baltic Exchange", "indexFamily":"CONTAINER_FREIGHT", "marketSegment":"CONTAINER", "vesselClass":"STANDARD_40FT_CONTAINER", "cargoType":"FREIGHT_ALL_KIND", "geographicScope":"GLOBAL_12_TRADE_LANES", "rateType":"SPOT_CONTAINER", "currency":"USD", "unit":"USD_PER_FEU", "publicationFrequency":"DAILY_WITH_WEEKLY_AVERAGE", "publicationTimezone":"UTC", "publicationTime":"14:00", "status":"ACTIVE", "rightsProfile":"FBX_LICENSED", "methodologyState":"PUBLIC_METHOD_VERIFIED", "historyBoundary":"HISTORY_LICENSE_REQUIRED", "provenanceRefs":["FBX_METHOD","FBX_TERMS","FBX_GUIDE"] },
+      { "canonicalCode":"SCFI", "officialName":"Shanghai Containerized Freight Index", "provider":"Shanghai Shipping Exchange Institute (Preparatory)", "indexFamily":"CONTAINER_FREIGHT", "marketSegment":"CONTAINER", "vesselClass":"CONTAINER", "cargoType":"FREIGHT_ALL_KIND", "geographicScope":"SHANGHAI_EXPORT_ROUTES", "rateType":"SPOT_CONTAINER", "currency":"USD_FOR_ROUTE_RATES", "unit":"COMPOSITE_INDEX_POINTS_AND_ROUTE_USD_PER_TEU_OR_FEU", "publicationFrequency":"WEEKLY_FRIDAY", "publicationTimezone":"Asia/Shanghai", "publicationTime":"15:00", "status":"ACTIVE", "rightsProfile":"SSE_TERMS", "methodologyState":"PUBLIC_METHOD_VERIFIED", "historyBoundary":"HISTORY_ACCESS_CONSTRAINED_SUBSCRIPTION", "provenanceRefs":["SSE_SCFi","SSE_SCFi_METHOD","SSE_TERMS"] },
+      { "canonicalCode":"CCFI", "officialName":"China Containerized Freight Index", "provider":"Shanghai Shipping Exchange Institute (Preparatory)", "indexFamily":"CONTAINER_FREIGHT", "marketSegment":"CONTAINER", "vesselClass":"CONTAINER", "cargoType":"EXPORT_CONTAINER_FREIGHT", "geographicScope":"CHINA_EXPORT_ROUTES", "rateType":"CONTAINER_FREIGHT_INDEX", "currency":null, "unit":"INDEX_POINTS", "publicationFrequency":"WEEKLY_FRIDAY", "publicationTimezone":"Asia/Shanghai", "publicationTime":"PROVIDER_CALENDAR", "status":"ACTIVE", "rightsProfile":"SSE_TERMS", "methodologyState":"PUBLIC_METADATA_VERIFIED", "historyBoundary":"HISTORY_ACCESS_CONSTRAINED_SUBSCRIPTION", "provenanceRefs":["SSE_CCFI","SSE_TERMS"] },
+      { "canonicalCode":"WCI", "officialName":"World Container Index assessed by Drewry", "provider":"Drewry Supply Chain Advisors", "indexFamily":"CONTAINER_FREIGHT", "marketSegment":"CONTAINER", "vesselClass":"STANDARD_40FT_CONTAINER", "cargoType":"DRY_FREIGHT_ALL_KIND", "geographicScope":"EIGHT_EAST_WEST_ROUTES", "rateType":"SPOT_CONTAINER", "currency":"USD", "unit":"USD_PER_40FT_CONTAINER", "publicationFrequency":"WEEKLY", "publicationTimezone":"Europe/London", "publicationTime":"THURSDAY_PROVIDER_SCHEDULE", "status":"ACTIVE", "rightsProfile":"DREWRY_LICENSED", "methodologyState":"PUBLIC_METHOD_VERIFIED", "historyBoundary":"HISTORY_LICENSE_REQUIRED", "provenanceRefs":["DREWRY_WCI_METHOD","DREWRY_WCI"] },
+      { "canonicalCode":"HARPEX", "officialName":"HARPEX (Harper Petersen Charter Rates Index)", "provider":"Harper Petersen", "indexFamily":"CONTAINER_CHARTER", "marketSegment":"CHARTER", "vesselClass":"CONTAINER_SIZE_CLASSES_700_TO_8500_TEU", "cargoType":"NOT_APPLICABLE_CHARTER", "geographicScope":"GLOBAL_CHARTER_MARKET", "rateType":"TIME_CHARTER", "currency":"USD", "unit":"INDEX_POINTS_AND_USD_CHARTER_RATES", "publicationFrequency":"WEEKLY", "publicationTimezone":"Europe/Berlin", "publicationTime":"PROVIDER_SCHEDULE", "status":"ACTIVE", "rightsProfile":"HARPEX_TERMS", "methodologyState":"PUBLIC_METHOD_VERIFIED", "historyBoundary":"HISTORY_ACCESS_CONSTRAINED_SUBSCRIPTION", "provenanceRefs":["HARPEX"] }
+    ],
+    "routeTaxonomy": { "dimensions":["ORIGIN_REGION","DESTINATION_REGION","ORIGIN_PORT","DESTINATION_PORT","VESSEL_CLASS","CARGO_TYPE","ROUTE_TYPE","HEADHAUL_BACKHAUL","ROUND_VOYAGE","ONE_WAY","TIME_CHARTER","VOYAGE_CHARTER","SPOT_CONTAINER","CHARTER_CONTAINER"], "membershipPolicy":"VERIFIED_SOURCE_ONLY", "weightsPolicy":"NO_INFERENCE" },
+    "rateSemantics": ["INDEX_LEVEL","USD_PER_DAY","USD_PER_TON","USD_PER_TEU","USD_PER_FEU","TIME_CHARTER_EQUIVALENT","WORLDSCALE","OTHER"],
+    "canonicalGrains": { "identity":["shipping_index_id"], "observation":["shipping_index_id","observation_date","source_version"], "derived":["shipping_index_id","as_of_date","metric","window","formula_version"] },
+    "observationFields": ["index_id","observation_date","value","unit","currency","source","source_record_id","source_reference","retrieved_at","parser_version","source_version","verification_state","route_id","vessel_class","rate_type"],
+    "constraintStates": ["PRODUCTION_READY","SOURCE_CONSTRAINED_READY","LICENSE_CONSTRAINED_READY","TERMS_CONSTRAINED_READY","ACCESS_CONSTRAINED_READY","TIME_DEPTH_CONSTRAINED_READY","NOT_READY"],
+    "provenanceDomains": ["IDENTITY_PROVENANCE","METHODOLOGY_PROVENANCE","OBSERVATION_PROVENANCE","ROUTE_PROVENANCE","LICENSE_TERMS_PROVENANCE"],
+    "freshnessStates": ["CURRENT","WAITING_FOR_NEXT_PUBLICATION","MARKET_HOLIDAY","SOURCE_DELAYED","SOURCE_CONSTRAINED","LICENSE_CONSTRAINED","TERMS_CONSTRAINED","ACCESS_CONSTRAINED"],
+    "researchContracts": {
+      "performance":["1D","1W","1M","3M","6M","YTD","1Y","3Y","5Y","10Y","ABSOLUTE_CHANGE","PERCENT_CHANGE"],
+      "volatility":["20D_VOL","60D_VOL","1Y_VOL","ABSOLUTE_UNIT_VOL"],
+      "rangePercentile":["52W_HIGH","52W_LOW","52W_POSITION","3Y_RANGE","5Y_RANGE","LEVEL_PERCENTILE_1Y","LEVEL_PERCENTILE_3Y","LEVEL_PERCENTILE_5Y","LEVEL_PERCENTILE_10Y","CHANGE_PERCENTILE"],
+      "events":["RATE_SPIKE","RATE_COLLAPSE","ROUTE_ADDITION","ROUTE_REMOVAL","WEIGHT_CHANGE","VESSEL_DEFINITION_CHANGE","CALCULATION_CHANGE","BASE_CHANGE"],
+      "dryBulk":["BCI_MINUS_BPI","BPI_MINUS_BSI","BSI_MINUS_BHSI","SUBINDEX_DISPERSION","MAX_MIN_DIFFERENTIAL","CROSS_SUBINDEX_STDDEV"],
+      "tanker":["CLEAN_MINUS_DIRTY","CLEAN_DIRTY_RATIO"],
+      "gas":["BLNG_CHANGE","BLPG_CHANGE","BLNG_BLPG_RELATIVE_CHANGE"],
+      "container":["ROLLING_CORRELATION","RELATIVE_CHANGE","DIVERGENCE"],
+      "charterFreight":["CHARTER_INDEX_CHANGE","FREIGHT_INDEX_CHANGE","ROLLING_CORRELATION"],
+      "routeConcentration":["TOP_ROUTE_WEIGHT","TOP3_ROUTE_WEIGHT","HHI","EFFECTIVE_ROUTE_COUNT"],
+      "regime":["VERY_LOW","LOW","NORMAL","HIGH","EXTREME","RISING","FALLING","STABLE"],
+      "cycle":["PEAK_DATE","TROUGH_DATE","PEAK_TO_TROUGH_CHANGE","TROUGH_TO_PEAK_CHANGE","DAYS_SINCE_PEAK","DAYS_SINCE_TROUGH"],
+      "correlationWindows":["30D","90D","1Y","3Y"],
+      "guardrails":["NO_CAUSAL_LABELS","NO_INCOMPATIBLE_UNIT_RANKING","NO_SYNTHETIC_CONTAINER_COMPOSITE","PERSIST_SAMPLE_COUNT","FREQUENCY_AWARE"]
+    },
+    "crossAssetDependencies": ["COMMODITY_PRICES","COMMODITY_INVENTORY","ENERGY_PHYSICAL","GLOBAL_TRADE","PORT_DATA","EQUITY_INDICES","GLOBAL_FX","INTEREST_RATES"],
+    "qualityChecks": ["DUPLICATE_OBSERVATION_GRAIN","IMPOSSIBLE_NEGATIVE_VALUE","UNIT_MISMATCH","CURRENCY_MISMATCH","FUTURE_DATE","PUBLICATION_CALENDAR_VIOLATION","SOURCE_VERSION_CONFLICT","ROUTE_IDENTITY_CONFLICT","METHODOLOGY_VERSION_CONFLICT"],
+    "migrationStaticValidation": { "migration":"20260810120000_add_shipping_index_canonical_depth", "additiveOnly":true, "noDrop":true, "noRename":true, "noDestructiveAlter":true, "foreignKeysPresent":true, "uniqueObservationGrainPresent":true, "observationGrain":["index_id","observation_date","source_version"], "derivedGrain":["index_id","observation_date","metric","window","formula_version"], "indexesPresent":true, "provenanceColumnsPresent":true, "parserAndSourceVersionColumnsPresent":true, "verificationColumnsPresent":true, "constraintStateInCoverage":true, "packageValid":true, "safeAfterLedger":"REQUIRES_LEDGER_RECONCILIATION_AND_EXPLICIT_APPROVAL" }
+  }
+}

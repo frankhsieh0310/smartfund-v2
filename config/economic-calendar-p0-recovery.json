@@ -1,0 +1,23 @@
+{
+  "asset": "GLOBAL_ECONOMIC_CALENDAR",
+  "eventLayerIntervalMs": 900000,
+  "canonicalSchedule": "EVENT_LAYER_15_MINUTES",
+  "legacyProjectionSchedule": "SEPARATE_SCOPE_6_HOURS",
+  "singleWriterPerScope": true,
+  "maxCanarySeries": 10,
+  "maxUpcomingCanaryEvents": 10,
+  "maxProviderFamilies": 8,
+  "officialAdapters": [
+    {"id":"BLS_ICS","family":"US","providerId":"BLS","url":"https://www.bls.gov/schedule/news_release/bls.ics","timezone":"America/New_York","status":"ACTIVE"},
+    {"id":"BEA_SCHEDULE","family":"US","providerId":"BEA","url":"https://www.bea.gov/news/schedule/full","timezone":"America/New_York","status":"ACTIVE"},
+    {"id":"FED_G17","family":"US","providerId":"FED","url":"https://www.federalreserve.gov/releases/g17/","timezone":"America/New_York","status":"ACTIVE"},
+    {"id":"OECD_CLI","family":"MULTI_JURISDICTION","providerId":"OECD","url":"https://www.oecd.org/en/data/datasets/oecd-composite-leading-indicators-clis.html","timezone":"CET","status":"ACTIVE"},
+    {"id":"EUROSTAT_CALENDAR","family":"EURO_AREA","providerId":"EUROSTAT","url":"https://ec.europa.eu/eurostat/en/news/release-calendar","timezone":"Europe/Luxembourg","status":"ARCHITECTURE_READY"},
+    {"id":"ONS_CALENDAR","family":"UK","providerId":"ONS","url":"https://www.ons.gov.uk/releasecalendar","timezone":"Europe/London","status":"ARCHITECTURE_READY"},
+    {"id":"BOJ_CALENDAR","family":"JAPAN","providerId":"BOJ","url":"https://www.boj.or.jp/en/about/calendar/index.htm","timezone":"Asia/Tokyo","status":"ARCHITECTURE_READY"},
+    {"id":"NBS_CALENDAR","family":"CHINA","providerId":"NBS_CN","url":"https://www.stats.gov.cn/english/PressRelease/","timezone":"Asia/Shanghai","status":"ARCHITECTURE_READY"},
+    {"id":"DGBAS_CALENDAR","family":"TAIWAN","providerId":"DGBAS_TW","url":"https://eng.dgbas.gov.tw/","timezone":"Asia/Taipei","status":"ARCHITECTURE_READY"},
+    {"id":"STATCAN_CALENDAR","family":"CANADA","providerId":"STATCAN","url":"https://www150.statcan.gc.ca/n1/dai-quo/cal2-eng.htm","timezone":"America/Toronto","status":"ARCHITECTURE_READY"},
+    {"id":"ABS_CALENDAR","family":"AUSTRALIA","providerId":"ABS","url":"https://www.abs.gov.au/release-calendar","timezone":"Australia/Sydney","status":"ARCHITECTURE_READY"}
+  ]
+}

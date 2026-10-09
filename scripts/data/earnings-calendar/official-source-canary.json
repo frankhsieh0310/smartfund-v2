@@ -1,0 +1,25 @@
+{
+  "sources": [
+    {
+      "id": "APPLE_NEWSROOM_Q3_2026",
+      "stock": { "ticker": "AAPL", "exchange": "NASDAQ", "country": "US" },
+      "url": "https://www.apple.com/newsroom/2026/07/apple-reports-third-quarter-results/",
+      "sourceType": "COMPANY_IR_OFFICIAL",
+      "licenseStatus": "PUBLIC_OFFICIAL",
+      "expected": {
+        "announcementDate": "2026-07-30",
+        "fiscalYear": 2026,
+        "fiscalQuarter": "Q3",
+        "periodEnd": "2026-06-27",
+        "releaseTiming": "TIME_SPECIFIC",
+        "callTime": "14:00 PT",
+        "epsType": "GAAP_DILUTED",
+        "epsActual": "2.02",
+        "revenueReportedValue": "109.4",
+        "revenueReportedUnit": "USD_BILLION",
+        "revenueActual": "109400000000",
+        "revenueCurrency": "USD"
+      }
+    }
+  ]
+}

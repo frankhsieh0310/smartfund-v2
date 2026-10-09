@@ -1,0 +1,9 @@
+{
+  "version": 2,
+  "asset": "GLOBAL_ETF_HOLDINGS",
+  "statuses": ["COMPLETE","PARTIAL","TOP_HOLDINGS_ONLY","BLOCKED_LICENSE","BLOCKED_AUTH","SOURCE_NOT_PROVIDED","PARSE_FAILURE","RETRY_PENDING"],
+  "dimensions": ["latestHoldings","historicalHoldings","fullHoldings","topHoldingsOnly","weight","quantity","marketValue","countryAllocation","sectorAllocation","industryAllocation","assetAllocation","durationAllocation","creditRatingAllocation","maturityAllocation","currencyExposure","derivatives","cash","holdingsChange","overlap","archive","retry","checkpoint","scheduler","missingReason"],
+  "default": "SOURCE_NOT_PROVIDED",
+  "identityPolicy": "Reuse canonical Etf.id; unmatched records enter ETF_MAPPING_QUEUE; never create from name alone",
+  "holdingTypes": ["EQUITY","BOND","CASH","FX_FORWARD","FUTURES","OPTIONS","SWAP","REPO","COMMODITY","FUND","OTHER"]
+}

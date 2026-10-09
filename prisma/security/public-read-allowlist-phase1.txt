@@ -1,0 +1,8 @@
+# Public-read allowlist — RLS Security Phase 1
+
+Approved direct publishable-key table reads: 0
+
+The current Web Supabase client is used for Auth only. Market/reference data is
+served through server-side Prisma/API routes. SELECT grants on non-server-only
+tables are left unchanged during Phase 1 pending a per-route Phase 2 review;
+this file must not be interpreted as granting public access to any table.

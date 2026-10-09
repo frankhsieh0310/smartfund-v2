@@ -20,7 +20,7 @@ function MockDashboardSection() {
     <section className="py-28 bg-[#0B1220]">
       <div className="max-w-[1200px] mx-auto px-10">
         <div className="text-center mb-12">
-          <div className="text-[13px] tracking-[8px] text-[#F5B700] font-semibold mb-3">AFTER LOGIN</div>
+          <div className="text-[13px] tracking-[8px] text-[#F5B700] font-semibold mb-3">登入後工作區</div>
           <h2 className="text-[32px] font-black text-white mb-3">登入後，你的首頁會長這樣</h2>
           <p className="text-[16px] text-slate-400">你建立的每一組投資條件，隨時重新執行，查看最新符合商品</p>
         </div>
@@ -97,7 +97,7 @@ function ComparisonSection() {
             <div className="space-y-4">
               {left.map((item, i) => (
                 <div key={i} className={`flex items-center gap-4 ${item.step === "✕" ? "opacity-50" : ""}`}>
-                  <span className={`w-8 h-8 rounded-full flex items-center justify-center text-[13px] font-bold shrink-0 ${item.step === "✕" ? "bg-red-100 text-red-500" : "bg-slate-200 text-slate-500"}`}>
+                  <span className={`w-8 h-8 rounded-full flex items-center justify-center text-[13px] font-bold shrink-0 ${item.step === "✕" ? "bg-red-500/10 text-red-400" : "bg-white/[0.06] text-slate-400"}`}>
                     {item.step}
                   </span>
                   <span className={`text-[15px] ${item.step === "✕" ? "text-red-500 font-semibold" : "text-slate-600"}`}>{item.text}</span>
@@ -136,7 +136,7 @@ function WhyCriteriaSection() {
     <section className="py-28 bg-[#F5F7FA]">
       <div className="max-w-[1200px] mx-auto px-10">
         <div className="text-center mb-12">
-          <div className="text-[13px] tracking-[8px] text-[#F5B700] font-semibold mb-3">WHY SMARTMATCH</div>
+          <div className="text-[13px] tracking-[8px] text-[#F5B700] font-semibold mb-3">選擇 SmartMatch 的理由</div>
           <h2 className="text-[32px] font-black text-[#0a1628] mb-3">為什麼要建立自己的投資條件？</h2>
           <p className="text-[16px] text-slate-500">SmartMatch 不提供投資建議，只幫你執行你自己定義的條件</p>
         </div>

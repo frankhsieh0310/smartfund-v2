@@ -1,0 +1,33 @@
+{
+  "source": "USGS_NMIC",
+  "dataset": "USGS_DATA_SERIES_140",
+  "landingPage": "https://www.usgs.gov/centers/national-minerals-information-center/historical-statistics-mineral-commodities-united",
+  "canary": {
+    "commodity": "COPPER",
+    "workbookUrl": "https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/atoms/files/ds140-2017-coppe.xlsx",
+    "publicationAsOf": "2018-12-13",
+    "maxObservations": 3
+  },
+  "canonicalTargets": [
+    { "identity": "COPPER", "label": "Copper" },
+    { "identity": "ALUMINUM", "label": "Aluminum" },
+    { "identity": "NICKEL", "label": "Nickel" },
+    { "identity": "ZINC", "label": "Zinc" },
+    { "identity": "GOLD", "label": "Gold" },
+    { "identity": "SILVER", "label": "Silver" },
+    { "identity": "POTASH", "label": "Potash" },
+    { "identity": "PHOSPHATE_ROCK", "label": "Phosphate rock" },
+    { "identity": "RARE_EARTHS", "label": "Rare earths" }
+  ],
+  "metrics": [
+    "Primary production",
+    "Imports",
+    "Exports",
+    "Stocks",
+    "Consumption",
+    "Apparent consumption",
+    "World production"
+  ],
+  "batch": { "maxObservations": 25, "maxDbConcurrency": 1 },
+  "schedule": { "successDelayMs": 21600000, "retryDelayMs": 1800000 }
+}

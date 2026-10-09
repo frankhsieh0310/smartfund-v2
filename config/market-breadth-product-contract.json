@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "coreP0Metrics": ["ADVANCING_ISSUES", "DECLINING_ISSUES", "UNCHANGED_ISSUES", "ADVANCE_DECLINE_LINE", "BREADTH_RATIO"],
+  "extendedP1Metrics": ["NEW_HIGH_52W", "NEW_LOW_52W", "UP_VOLUME", "DOWN_VOLUME", "UNCHANGED_VOLUME", "TRIN", "MCCLELLAN_OSCILLATOR", "MCCLELLAN_SUMMATION"],
+  "mcclellanTier": "P1_ADVANCED_BREADTH",
+  "p0DepthPolicy": "Functional sufficiency; no arbitrary one-calendar-year requirement.",
+  "p0FunctionalMinimum": ["verified current breadth", "usable ordered history", "advance-decline line", "breadth ratio", "validated McClellan oscillator", "validated McClellan summation", "provenance", "freshness", "coverage matrix", "incremental path"],
+  "constrainedMetricPolicy": "Return explicit unavailable state; never coerce to zero.",
+  "detail": ["market", "advancing", "declining", "unchanged", "advanceDeclineLine", "newHigh52w", "newLow52w", "upVolume", "downVolume", "trin", "mcclellanOscillator", "mcclellanSummation", "history", "freshness", "provenance", "inputCoverage"],
+  "search": ["market", "officialName", "country", "region"],
+  "screener": ["breadthRatio", "newHighLowRatio", "trin", "mcclellanOscillator", "advanceDeclineTrend"],
+  "compare": ["markets", "metricCode", "observationDate"],
+  "ranking": ["strongestBreadth", "weakestBreadth", "highestNewHighRatio", "lowestTrin"],
+  "disclosure": ["sourceType", "source", "verificationStatus", "qualityStatus", "freshnessStatus"]
+}
