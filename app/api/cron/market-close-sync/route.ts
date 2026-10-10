@@ -30,7 +30,7 @@ import { loadExchangeCalendarRegistry, SUFFIX_TO_JOB_ID, NO_SUFFIX_EXCHANGE_FALL
 import { findEligibleTradeDate, pickClosedCandle, localDateFromUnix, isDefinitelyClosed } from "@/lib/market-close-sync/marketTime";
 import { fetchSparkBatch, SPARK_MAX_SYMBOLS_PER_BATCH } from "@/lib/market-close-sync/sparkClient";
 import { classify } from "@/lib/market-close-sync/shadowCompare";
-import { emptyState, advanceSweep, isMarketDone, type MarketCompletionState } from "@/lib/market-close-sync/completionState";
+import { emptyState, advanceSweep, isMarketDone, computeDbGapIds, type MarketCompletionState, type FinalOrPendingClassification } from "@/lib/market-close-sync/completionState";
 import { classifyMarketPriority, orderMarketsForInvocation, isDueForRecheck, PER_MARKET_BUDGET_FRACTION, fifteenMinuteBucketKey } from "@/lib/market-close-sync/scheduling";
 import { isHongKongCurrencyCounter, isCoreUniverseMemberFromCounts, SUFFIX_ACTIVITY_MEASURE } from "@/lib/market-close-sync/coreUniverse";
 import { resolvePrice, type PriceSource } from "@/lib/market-close-sync/priceSource";
@@ -70,17 +70,37 @@ const CORE_UNIVERSE_LOOKBACK_DAYS = 20;
 // not reloaded (there is no mechanism, nor a need, to keep watching a date this pipeline has already
 // finished with).
 type QuoteResolution = { etfId: string; targetLocalDate: string; symbol: string; price: number };
-type PersistedState = { v: 2; lastDoneDate: string | null; inProgress: MarketCompletionState | null; quoteResolutions?: QuoteResolution[] };
+// Task W4: lastDoneDate is now only a FAST-PATH HINT, never trusted on its own — every invocation
+// re-verifies it against a real DB query (see dbGapIdsFor below) before treating a market as actually
+// done for that date. lastDoneDateTerminalNonWrite carries forward exactly the terminalNonWrite map
+// the sweep had accumulated AT THE MOMENT lastDoneDate was set, since completionState.ts's
+// MarketCompletionState (and its terminalNonWrite) is discarded once a market moves past
+// targetLocalDate — without this, the DB-gap check would have no way to know an ETF was legitimately
+// SOURCE_MISSING/NO_TRADE_ON_TARGET/UNIT_MISMATCH/PRICE_JUMP_REVIEW for a date that's no longer "in
+// progress".
+type PersistedState = {
+  v: 3;
+  lastDoneDate: string | null;
+  lastDoneDateTerminalNonWrite: Record<string, FinalOrPendingClassification>;
+  inProgress: MarketCompletionState | null;
+  quoteResolutions?: QuoteResolution[];
+};
 
 function parsePersistedState(raw: string | null): PersistedState {
-  if (!raw) return { v: 2, lastDoneDate: null, inProgress: null };
+  if (!raw) return { v: 3, lastDoneDate: null, lastDoneDateTerminalNonWrite: {}, inProgress: null };
   try {
     const parsed = JSON.parse(raw);
-    if (parsed && parsed.v === 2) return parsed as PersistedState;
+    if (parsed && parsed.v === 3) return parsed as PersistedState;
+    // v2 (pre-Task-W4) or v1 or garbage — a market marked done under the old rules was never
+    // DB-gap-verified, so it is deliberately NOT carried forward as lastDoneDate here: re-deriving a
+    // trustworthy lastDoneDateTerminalNonWrite from a v2 record is not possible (that map didn't
+    // exist yet), and treating an unverified old "done" as still done would be exactly the bug this
+    // task fixes. A fresh start costs one extra DB-gap-verified pass per market, not a correctness
+    // problem.
   } catch {
-    // old v1 text or garbage — treated as a fresh start.
+    // garbage — treated as a fresh start.
   }
-  return { v: 2, lastDoneDate: null, inProgress: null };
+  return { v: 3, lastDoneDate: null, lastDoneDateTerminalNonWrite: {}, inProgress: null };
 }
 
 type SourceSwitch = { symbol: string; quotePrice: number; barClose: number; diff: number };
@@ -240,6 +260,12 @@ type MarketDetail = {
   yahooConsistentCount: number; // resolved price/date this invocation would have matched Yahoo's live quote
   yahooInconsistentCount: number;
   yahooInconsistentSamples: Array<{ symbol: string; ourDate: string; ourPrice: number; yahooDate: string; yahooPrice: number }>;
+  // Task W4: core-universe ETFs still missing a real etf_history row (and not a confirmed
+  // terminal-non-write classification) for this market's most recent checkpoint-reported lastDoneDate
+  // — the DB-ground-truth gap count, computed every invocation regardless of whether this market got
+  // a processing turn. Should trend to 0 after enough passes; a market stuck non-zero in SHADOW mode
+  // (which never writes) is expected whenever any ETF classified NEW/CHANGED/DB_DISCONTINUITY there.
+  dbGapCount: number;
 };
 
 const emptyCounts = (): Record<ShadowClassification, number> => ({ NEW: 0, CHANGED: 0, SAME: 0, SOURCE_MISSING: 0, NO_BAR_FOR_TARGET_DATE: 0, DB_NEWER: 0, NO_TRADE_ON_TARGET: 0, UNIT_MISMATCH: 0, PRICE_JUMP_REVIEW: 0, DB_DISCONTINUITY: 0 });
@@ -338,6 +364,33 @@ async function lookupLastKnownClose(etfIds: string[]): Promise<Map<string, numbe
   return result;
 }
 
+/** Task W4: a market's core-universe ETF ids — same filter the main sweep candidate query and the
+ * existing coreUniverseBefore/After reporting pass both already use (is_active + data_source match
+ * + coreUniverseIds membership + not an HK currency counter), factored out so the DB-gap check (which
+ * needs this list too) doesn't duplicate the filter logic, only the (cheap, read-only) query. */
+async function lookupMarketCoreUniverseIds(suffixPatterns: string[], fallbackExchanges: string[], coreUniverseIds: Set<string>): Promise<string[]> {
+  if (suffixPatterns.length === 0 && fallbackExchanges.length === 0) return [];
+  const rows = await prisma.$queryRawUnsafe<Array<{ id: string; data_source: string }>>(
+    `SELECT id, data_source FROM etfs
+      WHERE is_active = true AND data_source IS NOT NULL
+        AND (data_source LIKE ANY($1) OR (data_source NOT LIKE '%.%' AND exchange = ANY($2)))`,
+    suffixPatterns, fallbackExchanges,
+  );
+  return rows.filter((r) => coreUniverseIds.has(r.id) && !isHongKongCurrencyCounter(r.data_source)).map((r) => r.id);
+}
+
+/** Task W4: which of `etfIds` have an etf_history row for EXACTLY targetLocalDate (no ±window — this
+ * is the ground truth the completion decision now rests on, deliberately stricter than
+ * lookupDbRowsForTargetDate's windowed lookup used for classification). */
+async function lookupDbPresentIdsExact(etfIds: string[], targetLocalDate: string): Promise<Set<string>> {
+  if (etfIds.length === 0) return new Set();
+  const rows = await prisma.$queryRawUnsafe<Array<{ etf_id: string }>>(
+    `SELECT DISTINCT etf_id FROM etf_history WHERE etf_id = ANY($1) AND date = $2::date AND close IS NOT NULL`,
+    etfIds, targetLocalDate,
+  );
+  return new Set(rows.map((r) => r.etf_id));
+}
+
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -352,6 +405,8 @@ type MarketContext = {
   quoteResolutions: Map<string, QuoteResolution>;
   suffixPatterns: string[];
   fallbackExchanges: string[];
+  dbGapCount: number; // Task W4: the gap count Pass 0 already computed for this market, before any turn this invocation
+  lastDoneDateTerminalNonWrite: Record<string, FinalOrPendingClassification>;
 };
 
 export async function GET(request: Request) {
@@ -388,30 +443,52 @@ export async function GET(request: Request) {
   // Pass 0: resolve eligibility + load checkpoint state for every considered market. No network
   // calls here — just cheap per-market reads — so every market's priority can be classified before
   // deciding this invocation's processing order (Task L item 2: unswept markets before due rechecks).
+  //
+  // Task W4: checkpoint's lastDoneDate is now only a FAST-PATH HINT, never trusted to skip a market
+  // on its own. Whenever lastDoneDate is set, this pass re-verifies it against a real DB query
+  // (lookupDbPresentIdsExact) before honoring ALREADY_DONE — if the DB is missing rows for ETFs that
+  // aren't also a confirmed terminal-non-write classification, the market is REOPENED for exactly
+  // that date (not advanced to a new date) so the gap gets a real repair pass, never silently skipped.
   const contexts: MarketContext[] = [];
   for (const jobId of consideredJobIds) {
     const job = jobById(registry, jobId);
     if (!job) continue;
 
-    const checkpointKey = `market-close-sync:${jobId}`;
+    const checkpointKey = `market-close-sync:${jobId}:${currentRunMode()}`;
     const before = await readCheckpoint(checkpointKey);
     const persisted = parsePersistedState(before?.lastSymbol ?? null);
     const lastDoneDate = persisted.lastDoneDate;
+    const suffixPatterns = (suffixesByJob.get(jobId) ?? []).map((s) => `%${s}`);
+    const fallbackExchanges = fallbackExchangesByJob.get(jobId) ?? [];
 
-    const eligibility = findEligibleTradeDate(job, now, (d) => lastDoneDate != null && d <= lastDoneDate);
+    let dbGapCount = 0;
+    let gapRepairTargetDate: string | null = null;
+    if (lastDoneDate != null) {
+      const marketCoreIds = await lookupMarketCoreUniverseIds(suffixPatterns, fallbackExchanges, coreUniverseIds);
+      const dbPresentIds = await lookupDbPresentIdsExact(marketCoreIds, lastDoneDate);
+      const gapIds = computeDbGapIds(marketCoreIds, dbPresentIds, persisted.lastDoneDateTerminalNonWrite);
+      dbGapCount = gapIds.length;
+      if (dbGapCount > 0) gapRepairTargetDate = lastDoneDate;
+    }
+
+    const eligibility = gapRepairTargetDate != null
+      ? ({ eligible: true, targetLocalDate: gapRepairTargetDate } as const)
+      : findEligibleTradeDate(job, now, (d) => lastDoneDate != null && d <= lastDoneDate);
     if (!eligibility.eligible) {
       marketDetails.push({
         jobId, status: "NOT_ELIGIBLE", notEligibleReason: eligibility.reason, targetLocalDate: null,
         requested: 0, classifications: emptyCounts(), fetchErrorCount: 0, pendingCount: 0,
         sourceMissingSymbols: [], noBarSymbols: [], noTradeSymbols: [], newSymbols: [], changedSymbols: [], unitMismatchSamples: [], priceJumpReviewSamples: [], dbDiscontinuitySamples: [], historyWritten: 0, etfsUpdated: 0, performanceRecomputed: 0, doneForToday: eligibility.reason === "ALREADY_DONE",
         barCount: 0, quoteFinalCount: 0, noTradeOnTargetCount: 0, sourceSwitches: [], yahooConsistentCount: 0, yahooInconsistentCount: 0, yahooInconsistentSamples: [],
+        dbGapCount,
       });
       continue;
     }
     const { targetLocalDate } = eligibility;
-    const state: MarketCompletionState = persisted.inProgress && persisted.inProgress.targetLocalDate === targetLocalDate
-      ? persisted.inProgress
-      : emptyState(targetLocalDate);
+    const isGapRepairPass = gapRepairTargetDate === targetLocalDate;
+    const state: MarketCompletionState = isGapRepairPass
+      ? { ...emptyState(targetLocalDate), terminalNonWrite: persisted.lastDoneDateTerminalNonWrite }
+      : (persisted.inProgress && persisted.inProgress.targetLocalDate === targetLocalDate ? persisted.inProgress : emptyState(targetLocalDate));
     const quoteResolutions = new Map<string, QuoteResolution>(
       (persisted.quoteResolutions ?? [])
         .filter((q) => q.targetLocalDate === targetLocalDate)
@@ -419,9 +496,8 @@ export async function GET(request: Request) {
     );
 
     contexts.push({
-      jobId, job, checkpointKey, lastDoneDate, targetLocalDate, state, quoteResolutions,
-      suffixPatterns: (suffixesByJob.get(jobId) ?? []).map((s) => `%${s}`),
-      fallbackExchanges: fallbackExchangesByJob.get(jobId) ?? [],
+      jobId, job, checkpointKey, lastDoneDate, targetLocalDate, state, quoteResolutions, dbGapCount,
+      suffixPatterns, fallbackExchanges, lastDoneDateTerminalNonWrite: persisted.lastDoneDateTerminalNonWrite,
     });
   }
 
@@ -432,6 +508,7 @@ export async function GET(request: Request) {
   const nowMsForPriority = Date.now();
   const withPriority = contexts.map((ctx) => ({ item: ctx, priority: classifyMarketPriority(ctx.state, nowMsForPriority) }));
   const priorityByJobId = new Map(withPriority.map((w) => [w.item.jobId, w.priority]));
+  const dbGapCountByJobId = new Map(contexts.map((ctx) => [ctx.jobId, ctx.dbGapCount]));
   const orderedContexts = orderMarketsForInvocation(withPriority);
 
   for (const ctx of orderedContexts) {
@@ -609,10 +686,30 @@ export async function GET(request: Request) {
       }
     }
 
-    const marketDone = isMarketDone(state);
+    const sweepLevelDone = isMarketDone(state);
+    // Task W4 item 1/2: sweepComplete + empty pending is only a CANDIDATE for "done" — never trusted
+    // on its own. Re-verify against the DB before ever advancing lastDoneDate: in SHADOW mode this
+    // can legitimately never clear (shadow writes nothing, so a NEW/CHANGED classification there
+    // never gets an etf_history row of its OWN making — only WAITING for some other pipeline to have
+    // independently written that exact date satisfies it), which is the correct, intentional
+    // consequence of item 3 (shadow and write must never share a "done" state).
+    let marketDone = false;
+    let finalDbGapCount = ctx.dbGapCount;
+    if (sweepLevelDone) {
+      const marketCoreIds = await lookupMarketCoreUniverseIds(ctx.suffixPatterns, ctx.fallbackExchanges, coreUniverseIds);
+      const dbPresentIds = await lookupDbPresentIdsExact(marketCoreIds, targetLocalDate);
+      const gapIds = computeDbGapIds(marketCoreIds, dbPresentIds, state.terminalNonWrite);
+      finalDbGapCount = gapIds.length;
+      marketDone = finalDbGapCount === 0;
+    }
     const nextPersisted: PersistedState = marketDone
-      ? { v: 2, lastDoneDate: targetLocalDate, inProgress: null, quoteResolutions: Array.from(quoteResolutions.values()) }
-      : { v: 2, lastDoneDate, inProgress: state, quoteResolutions: Array.from(quoteResolutions.values()) };
+      ? { v: 3, lastDoneDate: targetLocalDate, lastDoneDateTerminalNonWrite: state.terminalNonWrite, inProgress: null, quoteResolutions: Array.from(quoteResolutions.values()) }
+      // Not genuinely done (sweep incomplete, OR sweep-complete but a DB gap remains): never advance
+      // lastDoneDate past where it already was. If the sweep itself did complete but a gap remains,
+      // keep the FRESH state (with its now-larger terminalNonWrite) as inProgress rather than
+      // persisted.inProgress — bare sweepComplete=true + empty pending would otherwise make next
+      // invocation's Phase 1/Phase 2 loops both no-ops, silently repeating this same stuck gap forever.
+      : { v: 3, lastDoneDate, lastDoneDateTerminalNonWrite: ctx.lastDoneDateTerminalNonWrite, inProgress: sweepLevelDone ? { ...emptyState(targetLocalDate), terminalNonWrite: state.terminalNonWrite } : state, quoteResolutions: Array.from(quoteResolutions.values()) };
     await writeCheckpoint(JOB, checkpointKey, runId, {
       lastSymbol: JSON.stringify(nextPersisted),
       processed: requested,
@@ -626,6 +723,7 @@ export async function GET(request: Request) {
       priorityKind: priorityByJobId.get(jobId)?.kind,
       barCount, quoteFinalCount, noTradeOnTargetCount, sourceSwitches, yahooConsistentCount, yahooInconsistentCount, yahooInconsistentSamples,
       unitMismatchSamples, priceJumpReviewSamples, dbDiscontinuitySamples, historyWritten, etfsUpdated, performanceRecomputed,
+      dbGapCount: finalDbGapCount,
     });
     if (fetchFailedThisMarket) continue;
     if (Date.now() - startedMs > TIME_BUDGET_MS) { timeBudgetStop = true; break; }
@@ -643,6 +741,7 @@ export async function GET(request: Request) {
       sourceMissingSymbols: [], noBarSymbols: [], noTradeSymbols: [], newSymbols: [], changedSymbols: [], unitMismatchSamples: [], priceJumpReviewSamples: [], dbDiscontinuitySamples: [], historyWritten: 0, etfsUpdated: 0, performanceRecomputed: 0, doneForToday: false,
       priorityKind: priority?.kind,
       barCount: 0, quoteFinalCount: 0, noTradeOnTargetCount: 0, sourceSwitches: [], yahooConsistentCount: 0, yahooInconsistentCount: 0, yahooInconsistentSamples: [],
+      dbGapCount: dbGapCountByJobId.get(jobId) ?? 0,
     });
   }
 

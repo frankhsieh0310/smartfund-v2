@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { emptyState, advanceSweep, isMarketDone, NO_BAR_CONFIRM_DELAY_MS } from "../completionState.ts";
+import { emptyState, advanceSweep, isMarketDone, computeDbGapIds, NO_BAR_CONFIRM_DELAY_MS } from "../completionState.ts";
 
 function test(name: string, fn: () => void) {
   try { fn(); console.log(`PASS: ${name}`); } catch (e) { console.log(`FAIL: ${name} — ${(e as Error).message}`); process.exitCode = 1; }
@@ -107,6 +107,64 @@ test("mixed market: market only completes once EVERY ETF (final + both confirmed
   assert.equal(isMarketDone(s), false); // c still pending
   s = advanceSweep(s, { ok: true, isLastBatch: true, observations: [{ etfId: "c", symbol: "C", classification: "NO_BAR_FOR_TARGET_DATE" }] }, nowMs + NO_BAR_CONFIRM_DELAY_MS + 1);
   assert.equal(isMarketDone(s), true);
+});
+
+test("Task W4: SOURCE_MISSING/NO_TRADE_ON_TARGET/UNIT_MISMATCH/PRICE_JUMP_REVIEW are tracked in terminalNonWrite once final; NEW/CHANGED/SAME/DB_NEWER/DB_DISCONTINUITY are not", () => {
+  const nowMs = Date.now();
+  let s = advanceSweep(emptyState("2026-10-09"), {
+    ok: true, isLastBatch: false,
+    observations: [
+      { etfId: "a", symbol: "A", classification: "SOURCE_MISSING" }, // pending (1st observation)
+      { etfId: "b", symbol: "B", classification: "NO_TRADE_ON_TARGET" },
+      { etfId: "c", symbol: "C", classification: "UNIT_MISMATCH" },
+      { etfId: "d", symbol: "D", classification: "PRICE_JUMP_REVIEW" },
+      { etfId: "e", symbol: "E", classification: "NEW" },
+      { etfId: "f", symbol: "F", classification: "SAME" },
+      { etfId: "g", symbol: "G", classification: "DB_DISCONTINUITY" },
+    ],
+  }, nowMs);
+  assert.deepEqual(s.terminalNonWrite, { b: "NO_TRADE_ON_TARGET", c: "UNIT_MISMATCH", d: "PRICE_JUMP_REVIEW" });
+  // confirm SOURCE_MISSING on a separate later pass -> now terminal-non-write too
+  s = advanceSweep(s, { ok: true, isLastBatch: true, observations: [{ etfId: "a", symbol: "A", classification: "SOURCE_MISSING" }] }, nowMs + 1000);
+  assert.deepEqual(s.terminalNonWrite, { a: "SOURCE_MISSING", b: "NO_TRADE_ON_TARGET", c: "UNIT_MISMATCH", d: "PRICE_JUMP_REVIEW" });
+});
+
+test("Task W4: computeDbGapIds — missing from both the DB and terminalNonWrite is a real gap; present in either is not", () => {
+  const core = ["a", "b", "c", "d"];
+  const dbPresent = new Set(["a"]);
+  const terminalNonWrite = { b: "SOURCE_MISSING" as const };
+  assert.deepEqual(computeDbGapIds(core, dbPresent, terminalNonWrite), ["c", "d"]);
+});
+
+test("Task W4: the exact scenario this task fixes — checkpoint says done (sweepComplete, no pending), but the DB is missing a row for one core-universe ETF that classified NEW — computeDbGapIds must still report it as missing", () => {
+  const nowMs = Date.now();
+  const s = advanceSweep(emptyState("2026-10-09"), {
+    ok: true, isLastBatch: true,
+    observations: [
+      { etfId: "a", symbol: "A", classification: "SAME" }, // DB already has this one
+      { etfId: "b", symbol: "B", classification: "NEW" },  // shadow mode: classified NEW but NEVER written
+    ],
+  }, nowMs);
+  // Old rule: isMarketDone(s) alone would say "done" — sweepComplete true, pending empty.
+  assert.equal(isMarketDone(s), true);
+  // New rule: the DB only actually has "a" (shadow mode never wrote "b"'s NEW classification), and
+  // "b" is not in terminalNonWrite (NEW is deliberately excluded) — so it must still show as a gap,
+  // meaning route.ts's gap-reverify must keep this market open and reprocess "b" rather than trusting
+  // isMarketDone and advancing lastDoneDate.
+  const dbPresent = new Set(["a"]); // "b" was never written — shadow mode
+  const gap = computeDbGapIds(["a", "b"], dbPresent, s.terminalNonWrite);
+  assert.deepEqual(gap, ["b"]);
+});
+
+test("Task W4: once write mode actually writes the NEW ETF's row, the same gap check reports it as resolved", () => {
+  const nowMs = Date.now();
+  const s = advanceSweep(emptyState("2026-10-09"), {
+    ok: true, isLastBatch: true,
+    observations: [{ etfId: "b", symbol: "B", classification: "NEW" }],
+  }, nowMs);
+  const dbPresentAfterWrite = new Set(["b"]); // write mode actually wrote it this time
+  const gap = computeDbGapIds(["b"], dbPresentAfterWrite, s.terminalNonWrite);
+  assert.deepEqual(gap, []);
 });
 
 console.log("COMPLETION_STATE_TESTS_DONE");

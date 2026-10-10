@@ -36,44 +36,83 @@ export type FinalOrPendingClassification = "NEW" | "CHANGED" | "SAME" | "DB_NEWE
 
 export const NO_BAR_CONFIRM_DELAY_MS = 6 * 60 * 60 * 1000;
 
+// Task W4: classifications that will NEVER produce an etf_history row for targetLocalDate, in
+// EITHER run mode — SOURCE_MISSING (no price found anywhere), NO_TRADE_ON_TARGET (the market simply
+// didn't trade that day), UNIT_MISMATCH/PRICE_JUMP_REVIEW (sanity-rejected, record-only). A plain
+// "does the DB have a row for this date" check can never see these as resolved, so their ETF ids are
+// tracked separately and must be treated as satisfying "done" alongside an actual DB row. NEW,
+// CHANGED, SAME, DB_NEWER and DB_DISCONTINUITY are deliberately excluded: each of those either
+// already corresponds to an existing DB row (SAME/DB_NEWER) or is EXPECTED to produce one once write
+// mode actually writes it (NEW/CHANGED/DB_DISCONTINUITY) — if write mode never writes it (shadow
+// mode, by design, never does), the DB-gap check must keep seeing it as missing, not "done".
+const TERMINAL_NON_WRITE_CLASSIFICATIONS = new Set<FinalOrPendingClassification>([
+  "SOURCE_MISSING", "NO_TRADE_ON_TARGET", "UNIT_MISMATCH", "PRICE_JUMP_REVIEW",
+]);
+
 export type MarketCompletionState = {
   targetLocalDate: string;
   cursorEtfId: string; // forward sweep cursor; meaningless once sweepComplete is true
   sweepComplete: boolean; // true once the forward cursor scan has reached the end of the candidate universe at least once
   pending: PendingEntry[];
+  // Task W4: etfId -> the terminal-non-write classification it was CONFIRMED as (SOURCE_MISSING only
+  // added here once past its 2-observation confirmation, same as applyObservation's own pending ->
+  // final transition). Accumulates across the whole sweep for targetLocalDate; never cleared until a
+  // new targetLocalDate's state is started. Used by the DB-gap check (route.ts) to recognize an ETF
+  // as done even though it will never get an etf_history row for this date.
+  terminalNonWrite: Record<string, FinalOrPendingClassification>;
 };
 
 export function emptyState(targetLocalDate: string): MarketCompletionState {
-  return { targetLocalDate, cursorEtfId: "", sweepComplete: false, pending: [] };
+  return { targetLocalDate, cursorEtfId: "", sweepComplete: false, pending: [], terminalNonWrite: {} };
+}
+
+/** Pure: which of `coreUniverseEtfIds` are still missing real data for targetLocalDate — present
+ * neither as a DB row (`dbPresentIds`, from an actual etf_history query) nor as a confirmed
+ * terminal-non-write classification. This is the single source of truth Task W4 requires: checkpoint
+ * state (sweepComplete, lastDoneDate) may use this as a fast-path hint, but must never substitute for
+ * it — a market is only truly done for a date once this returns an empty array. */
+export function computeDbGapIds(
+  coreUniverseEtfIds: string[],
+  dbPresentIds: ReadonlySet<string>,
+  terminalNonWrite: Record<string, FinalOrPendingClassification>,
+): string[] {
+  return coreUniverseEtfIds.filter((id) => !dbPresentIds.has(id) && terminalNonWrite[id] === undefined);
 }
 
 function applyObservation(
   pending: PendingEntry[],
+  terminalNonWrite: Record<string, FinalOrPendingClassification>,
   etfId: string,
   symbol: string,
   classification: FinalOrPendingClassification,
   nowMs: number,
-): { pending: PendingEntry[] } {
+): { pending: PendingEntry[]; terminalNonWrite: Record<string, FinalOrPendingClassification> } {
   const existing = pending.find((p) => p.etfId === etfId);
   const withoutExisting = pending.filter((p) => p.etfId !== etfId);
 
-  if (classification === "NEW" || classification === "CHANGED" || classification === "SAME" || classification === "DB_NEWER" || classification === "NO_TRADE_ON_TARGET" || classification === "UNIT_MISMATCH" || classification === "PRICE_JUMP_REVIEW" || classification === "DB_DISCONTINUITY") {
-    return { pending: withoutExisting }; // final the first time, always
+  if (classification === "NEW" || classification === "CHANGED" || classification === "SAME" || classification === "DB_NEWER" || classification === "DB_DISCONTINUITY") {
+    return { pending: withoutExisting, terminalNonWrite }; // final the first time; expected to correspond to a DB row
+  }
+
+  if (TERMINAL_NON_WRITE_CLASSIFICATIONS.has(classification) && classification !== "SOURCE_MISSING") {
+    return { pending: withoutExisting, terminalNonWrite: { ...terminalNonWrite, [etfId]: classification } };
   }
 
   if (classification === "SOURCE_MISSING") {
-    if (existing?.state === "SOURCE_MISSING_PENDING") return { pending: withoutExisting }; // second confirmation -> final
-    return { pending: [...withoutExisting, { etfId, symbol, state: "SOURCE_MISSING_PENDING", firstSeenAtMs: nowMs }] };
+    if (existing?.state === "SOURCE_MISSING_PENDING") {
+      return { pending: withoutExisting, terminalNonWrite: { ...terminalNonWrite, [etfId]: classification } }; // second confirmation -> final
+    }
+    return { pending: [...withoutExisting, { etfId, symbol, state: "SOURCE_MISSING_PENDING", firstSeenAtMs: nowMs }], terminalNonWrite };
   }
 
   // NO_BAR_FOR_TARGET_DATE
   if (existing?.state === "NO_BAR_PENDING" && nowMs - existing.firstSeenAtMs >= NO_BAR_CONFIRM_DELAY_MS) {
-    return { pending: withoutExisting }; // re-observed past the cooling-off window -> final
+    return { pending: withoutExisting, terminalNonWrite }; // re-observed past the cooling-off window -> final (not terminal-non-write: a bar may still arrive)
   }
   // Keep (or start) the pending entry, preserving the ORIGINAL firstSeenAtMs so the 6h window is
   // measured from when this ETF was first seen without a bar, never reset by a later re-check.
   const firstSeenAtMs = existing?.state === "NO_BAR_PENDING" ? existing.firstSeenAtMs : nowMs;
-  return { pending: [...withoutExisting, { etfId, symbol, state: "NO_BAR_PENDING", firstSeenAtMs }] };
+  return { pending: [...withoutExisting, { etfId, symbol, state: "NO_BAR_PENDING", firstSeenAtMs }], terminalNonWrite };
 }
 
 export type BatchOutcome =
@@ -87,12 +126,16 @@ export type BatchOutcome =
 export function advanceSweep(state: MarketCompletionState, outcome: BatchOutcome, nowMs: number, newCursorEtfId?: string): MarketCompletionState {
   if (!outcome.ok) return state;
   let pending = state.pending;
+  let terminalNonWrite = state.terminalNonWrite;
   for (const obs of outcome.observations) {
-    pending = applyObservation(pending, obs.etfId, obs.symbol, obs.classification, nowMs).pending;
+    const applied = applyObservation(pending, terminalNonWrite, obs.etfId, obs.symbol, obs.classification, nowMs);
+    pending = applied.pending;
+    terminalNonWrite = applied.terminalNonWrite;
   }
   return {
     ...state,
     pending,
+    terminalNonWrite,
     sweepComplete: state.sweepComplete || outcome.isLastBatch,
     cursorEtfId: outcome.isLastBatch ? state.cursorEtfId : newCursorEtfId ?? state.cursorEtfId,
   };
