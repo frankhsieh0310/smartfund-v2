@@ -49,7 +49,12 @@ export type SparkCandle = {
 // confirmed EARLIER than the target date, the market simply didn't trade that day. classify() never
 // sees this case (there is no DB-vs-source price to compare — it's a statement about market
 // activity, not price), so it is never one of classify()'s own return values.
-export type ShadowClassification = "NEW" | "CHANGED" | "SAME" | "SOURCE_MISSING" | "NO_BAR_FOR_TARGET_DATE" | "DB_NEWER" | "NO_TRADE_ON_TARGET";
+// Task O: UNIT_MISMATCH/PRICE_JUMP_REVIEW are decided by priceSanity.ts, after a price has already
+// resolved (BAR or QUOTE_FINAL) but before classify() would otherwise bucket it as NEW/CHANGED/SAME/
+// DB_NEWER — a resolved price that fails the sanity check against the ETF's own last known DB close
+// is diverted into one of these two record-only review buckets instead, so it never inflates the
+// normal classification counts with data that's actually suspect.
+export type ShadowClassification = "NEW" | "CHANGED" | "SAME" | "SOURCE_MISSING" | "NO_BAR_FOR_TARGET_DATE" | "DB_NEWER" | "NO_TRADE_ON_TARGET" | "UNIT_MISMATCH" | "PRICE_JUMP_REVIEW";
 
 export type ShadowRow = {
   etfId: string;

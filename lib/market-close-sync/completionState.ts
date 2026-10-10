@@ -10,10 +10,13 @@
 // classification fixes even existed to tell SOURCE_MISSING apart from a transient same-day
 // publication lag. This module makes "done" a real, confirmed state:
 //
-//   FINAL (trusted the first time they're observed): NEW, CHANGED, SAME, DB_NEWER, and (Task N)
+//   FINAL (trusted the first time they're observed): NEW, CHANGED, SAME, DB_NEWER, (Task N)
 //   NO_TRADE_ON_TARGET — once "now" is past the target date's own close+delay and the live quote's
 //   own date is confirmed EARLIER than the target date, there is nothing left to wait for: the
-//   market simply didn't trade that day, and no later re-check can change that fact.
+//   market simply didn't trade that day, and no later re-check can change that fact — and (Task O)
+//   UNIT_MISMATCH/PRICE_JUMP_REVIEW, both record-only review buckets for a price that already
+//   resolved but failed the sanity check against the ETF's own last known DB close; re-checking
+//   later wouldn't un-flag a one-day data anomaly, so these are final the first time too.
 //   PROVISIONAL (need a second look before they count as done):
 //     - SOURCE_MISSING: must be re-observed as SOURCE_MISSING on a SEPARATE later pass before it's
 //       trusted — a single observation only starts the pending clock.
@@ -29,7 +32,7 @@ export type PendingState = "SOURCE_MISSING_PENDING" | "NO_BAR_PENDING";
 
 export type PendingEntry = { etfId: string; symbol: string; state: PendingState; firstSeenAtMs: number };
 
-export type FinalOrPendingClassification = "NEW" | "CHANGED" | "SAME" | "DB_NEWER" | "SOURCE_MISSING" | "NO_BAR_FOR_TARGET_DATE" | "NO_TRADE_ON_TARGET";
+export type FinalOrPendingClassification = "NEW" | "CHANGED" | "SAME" | "DB_NEWER" | "SOURCE_MISSING" | "NO_BAR_FOR_TARGET_DATE" | "NO_TRADE_ON_TARGET" | "UNIT_MISMATCH" | "PRICE_JUMP_REVIEW";
 
 export const NO_BAR_CONFIRM_DELAY_MS = 6 * 60 * 60 * 1000;
 
@@ -54,7 +57,7 @@ function applyObservation(
   const existing = pending.find((p) => p.etfId === etfId);
   const withoutExisting = pending.filter((p) => p.etfId !== etfId);
 
-  if (classification === "NEW" || classification === "CHANGED" || classification === "SAME" || classification === "DB_NEWER" || classification === "NO_TRADE_ON_TARGET") {
+  if (classification === "NEW" || classification === "CHANGED" || classification === "SAME" || classification === "DB_NEWER" || classification === "NO_TRADE_ON_TARGET" || classification === "UNIT_MISMATCH" || classification === "PRICE_JUMP_REVIEW") {
     return { pending: withoutExisting }; // final the first time, always
   }
 

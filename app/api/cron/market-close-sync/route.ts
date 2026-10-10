@@ -32,7 +32,19 @@ import { emptyState, advanceSweep, isMarketDone, type MarketCompletionState } fr
 import { classifyMarketPriority, orderMarketsForInvocation, isDueForRecheck, PER_MARKET_BUDGET_FRACTION } from "@/lib/market-close-sync/scheduling";
 import { isHongKongCurrencyCounter, isCoreUniverseMemberFromCounts, SUFFIX_ACTIVITY_MEASURE } from "@/lib/market-close-sync/coreUniverse";
 import { resolvePrice, type PriceSource } from "@/lib/market-close-sync/priceSource";
+import { checkPriceSanity } from "@/lib/market-close-sync/priceSanity";
 import type { ShadowClassification, ExchangeCalendarJob, SparkCandle } from "@/lib/market-close-sync/types";
+
+const YAHOO_CONSISTENCY_RELATIVE_TOLERANCE = 0.001; // 0.1%
+
+function isPriceWithinTolerance(a: number, b: number): boolean {
+  const scale = Math.max(Math.abs(a), Math.abs(b), 1e-9);
+  return Math.abs(a - b) / scale <= YAHOO_CONSISTENCY_RELATIVE_TOLERANCE;
+}
+
+function daysBetweenLocalDates(earlier: string, later: string): number {
+  return Math.round((Date.parse(`${later}T00:00:00Z`) - Date.parse(`${earlier}T00:00:00Z`)) / 86_400_000);
+}
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -82,6 +94,7 @@ function resolveAndClassify(
   etf: { id: string; data_source: string },
   candle: SparkCandle | undefined,
   dbRows: Map<string, { date: string; close: number }>,
+  lastKnownCloses: Map<string, number>,
   job: ExchangeCalendarJob,
   targetLocalDate: string,
   now: Date,
@@ -90,6 +103,7 @@ function resolveAndClassify(
 ): {
   classification: ShadowClassification; sourceUsed: PriceSource | null; yahooMatch: boolean | null;
   yahooDetail?: { ourDate: string; ourPrice: number; yahooDate: string; yahooPrice: number };
+  sanityDetail?: { newPrice: number; lastKnownClose: number };
 } {
   const sparkSymbolPresent = candle !== undefined;
   const points = candle?.points ?? [];
@@ -113,11 +127,23 @@ function resolveAndClassify(
   // "price we'd have written" to compare in the first place. For a QUOTE_FINAL resolution this is
   // true by construction (the resolved price IS the live quote); for a BAR resolution it genuinely
   // tests whether the finalized daily bar still agrees with Yahoo's current live quote.
+  //
+  // Task O widens what counts as "consistent", per live evidence this round showing most
+  // "mismatches" were never real discrepancies:
+  //   - price tolerance is now RELATIVE 0.1%, not an absolute cent — a 50000-point Korean bond ETF
+  //     moving by 3 units is well within rounding/precision noise, not a real divergence.
+  //   - our resolved date one calendar day AFTER Yahoo's live quote date, with the SAME price, is
+  //     also consistent — this is a daily bar that simply carried the prior close forward because
+  //     the target day itself had no new trade (a thinly-traded instrument's quiet day), not a
+  //     pipeline error; Yahoo's own live quote just hasn't moved on yet.
   let yahooMatch: boolean | null = null;
   let yahooDetail: { ourDate: string; ourPrice: number; yahooDate: string; yahooPrice: number } | undefined;
   if (resolved.kind === "RESOLVED" && candle?.regularMarketTimeUnix != null && candle?.regularMarketPrice != null) {
     const quoteLocalDate = localDateFromUnix(candle.regularMarketTimeUnix, job.timezone);
-    yahooMatch = quoteLocalDate === targetLocalDate && Math.abs(candle.regularMarketPrice - resolved.price) < 0.01;
+    const priceClose = isPriceWithinTolerance(candle.regularMarketPrice, resolved.price);
+    const sameDayMatch = quoteLocalDate === targetLocalDate && priceClose;
+    const oneDayCarryForwardMatch = priceClose && daysBetweenLocalDates(quoteLocalDate, targetLocalDate) === 1;
+    yahooMatch = sameDayMatch || oneDayCarryForwardMatch;
     if (!yahooMatch) {
       yahooDetail = { ourDate: targetLocalDate, ourPrice: resolved.price, yahooDate: quoteLocalDate, yahooPrice: candle.regularMarketPrice };
     }
@@ -138,6 +164,23 @@ function resolveAndClassify(
     // win if Spark had nothing for this symbol whatsoever), but when the symbol IS present and we've
     // confirmed it simply didn't trade, that's immediately final, independent of whatever's in DB.
     return { classification: sparkSymbolPresent ? "NO_TRADE_ON_TARGET" : "SOURCE_MISSING", sourceUsed: null, yahooMatch: null };
+  }
+
+  // Task O rule 1 (price sanity): a resolved price is checked against the ETF's own last known DB
+  // close BEFORE it's allowed to become NEW/CHANGED/SAME/DB_NEWER. A ~100x (or ~1/100x) ratio is a
+  // near-certain pence/pound unit mismatch; anything else beyond ±50% is held for human review.
+  // Both are final, record-only classifications — shadow mode writes nothing regardless, so "不寫入"
+  // is already structurally guaranteed; what this adds is keeping suspect prices OUT of the normal
+  // classification counts.
+  if (resolved.kind === "RESOLVED") {
+    const lastKnownClose = lastKnownCloses.get(etf.id) ?? null;
+    const sanity = checkPriceSanity(resolved.price, lastKnownClose);
+    if (sanity) {
+      return {
+        classification: sanity, sourceUsed: resolved.source, yahooMatch, yahooDetail,
+        sanityDetail: lastKnownClose != null ? { newPrice: resolved.price, lastKnownClose } : undefined,
+      };
+    }
   }
 
   const sparkDate = resolved.kind === "RESOLVED" ? targetLocalDate : null;
@@ -162,6 +205,8 @@ type MarketDetail = {
   noTradeSymbols: string[];
   newSymbols: string[];
   changedSymbols: string[];
+  unitMismatchSamples: Array<{ symbol: string; newPrice: number; lastKnownClose: number }>;
+  priceJumpReviewSamples: Array<{ symbol: string; newPrice: number; lastKnownClose: number }>;
   doneForToday: boolean;
   priorityKind?: "SWEEP" | "RECHECK_DUE" | "WAITING" | "DONE";
   coreUniverseBefore?: number; // active+data_source candidates matching this market's suffix pattern, before the core filter
@@ -175,7 +220,7 @@ type MarketDetail = {
   yahooInconsistentSamples: Array<{ symbol: string; ourDate: string; ourPrice: number; yahooDate: string; yahooPrice: number }>;
 };
 
-const emptyCounts = (): Record<ShadowClassification, number> => ({ NEW: 0, CHANGED: 0, SAME: 0, SOURCE_MISSING: 0, NO_BAR_FOR_TARGET_DATE: 0, DB_NEWER: 0, NO_TRADE_ON_TARGET: 0 });
+const emptyCounts = (): Record<ShadowClassification, number> => ({ NEW: 0, CHANGED: 0, SAME: 0, SOURCE_MISSING: 0, NO_BAR_FOR_TARGET_DATE: 0, DB_NEWER: 0, NO_TRADE_ON_TARGET: 0, UNIT_MISMATCH: 0, PRICE_JUMP_REVIEW: 0 });
 
 async function computeUnmapped(registry: Awaited<ReturnType<typeof loadExchangeCalendarRegistry>>) {
   const rows = await prisma.$queryRawUnsafe<Array<{ data_source: string; exchange: string | null }>>(
@@ -248,6 +293,24 @@ async function lookupDbRowsForTargetDate(etfIds: string[], targetLocalDate: stri
   return result;
 }
 
+/** Task O: the ETF's single most recent known close in etf_history, with NO date-window
+ * restriction at all (unlike lookupDbRowsForTargetDate, which only looks within
+ * ±DB_DATE_WINDOW_DAYS of the target date) — this is deliberately the broadest possible anchor for
+ * "what did we last see this instrument trade at", since a genuine data gap of several days must
+ * not blind the sanity check to a real unit-mismatch or price-jump the moment trading resumes. */
+async function lookupLastKnownClose(etfIds: string[]): Promise<Map<string, number>> {
+  if (etfIds.length === 0) return new Map();
+  const rows = await prisma.$queryRawUnsafe<Array<{ etf_id: string; close: unknown }>>(
+    `SELECT DISTINCT ON (etf_id) etf_id, close FROM etf_history
+      WHERE etf_id = ANY($1) AND close IS NOT NULL
+      ORDER BY etf_id, date DESC`,
+    etfIds,
+  );
+  const result = new Map<string, number>();
+  for (const row of rows) result.set(row.etf_id, Number(row.close));
+  return result;
+}
+
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -313,7 +376,7 @@ export async function GET(request: Request) {
       marketDetails.push({
         jobId, status: "NOT_ELIGIBLE", notEligibleReason: eligibility.reason, targetLocalDate: null,
         requested: 0, classifications: emptyCounts(), fetchErrorCount: 0, pendingCount: 0,
-        sourceMissingSymbols: [], noBarSymbols: [], noTradeSymbols: [], newSymbols: [], changedSymbols: [], doneForToday: eligibility.reason === "ALREADY_DONE",
+        sourceMissingSymbols: [], noBarSymbols: [], noTradeSymbols: [], newSymbols: [], changedSymbols: [], unitMismatchSamples: [], priceJumpReviewSamples: [], doneForToday: eligibility.reason === "ALREADY_DONE",
         barCount: 0, quoteFinalCount: 0, noTradeOnTargetCount: 0, sourceSwitches: [], yahooConsistentCount: 0, yahooInconsistentCount: 0, yahooInconsistentSamples: [],
       });
       continue;
@@ -368,6 +431,8 @@ export async function GET(request: Request) {
     let yahooConsistentCount = 0;
     let yahooInconsistentCount = 0;
     const yahooInconsistentSamples: Array<{ symbol: string; ourDate: string; ourPrice: number; yahooDate: string; yahooPrice: number }> = [];
+    const unitMismatchSamples: Array<{ symbol: string; newPrice: number; lastKnownClose: number }> = [];
+    const priceJumpReviewSamples: Array<{ symbol: string; newPrice: number; lastKnownClose: number }> = [];
     const sourceSwitches: SourceSwitch[] = [];
     const { quoteResolutions } = ctx;
 
@@ -411,12 +476,13 @@ export async function GET(request: Request) {
 
       const byCandle = new Map(batch.candles.map((c) => [c.symbol, c]));
       const dbRows = await lookupDbRowsForTargetDate(candidates.map((c) => c.id), targetLocalDate);
+      const lastKnownCloses = await lookupLastKnownClose(candidates.map((c) => c.id));
 
       const observations: Array<{ etfId: string; symbol: string; classification: ShadowClassification }> = [];
       for (const etf of candidates) {
         requested++;
-        const { classification: c, sourceUsed, yahooMatch, yahooDetail } = resolveAndClassify(
-          etf, byCandle.get(etf.data_source), dbRows, job, targetLocalDate, now, quoteResolutions, sourceSwitches,
+        const { classification: c, sourceUsed, yahooMatch, yahooDetail, sanityDetail } = resolveAndClassify(
+          etf, byCandle.get(etf.data_source), dbRows, lastKnownCloses, job, targetLocalDate, now, quoteResolutions, sourceSwitches,
         );
         counts[c]++;
         if (sourceUsed === "BAR") barCount++;
@@ -433,6 +499,8 @@ export async function GET(request: Request) {
         if (c === "NO_TRADE_ON_TARGET" && noTradeSymbols.length < 20) noTradeSymbols.push(etf.data_source);
         if (c === "NEW" && newSymbols.length < 20) newSymbols.push(etf.data_source);
         if (c === "CHANGED" && changedSymbols.length < 20) changedSymbols.push(etf.data_source);
+        if (c === "UNIT_MISMATCH" && sanityDetail && unitMismatchSamples.length < 20) unitMismatchSamples.push({ symbol: etf.data_source, ...sanityDetail });
+        if (c === "PRICE_JUMP_REVIEW" && sanityDetail && priceJumpReviewSamples.length < 20) priceJumpReviewSamples.push({ symbol: etf.data_source, ...sanityDetail });
       }
       state = advanceSweep(state, { ok: true, isLastBatch, observations }, Date.now(), lastRawId);
       if (isLastBatch) break;
@@ -460,12 +528,13 @@ export async function GET(request: Request) {
 
         const byCandle = new Map(batch.candles.map((c) => [c.symbol, c]));
         const dbRows = await lookupDbRowsForTargetDate(chunk.map((p) => p.etfId), targetLocalDate);
+        const lastKnownCloses = await lookupLastKnownClose(chunk.map((p) => p.etfId));
 
         const observations: Array<{ etfId: string; symbol: string; classification: ShadowClassification }> = [];
         for (const p of chunk) {
           requested++;
-          const { classification: c, sourceUsed, yahooMatch, yahooDetail } = resolveAndClassify(
-            { id: p.etfId, data_source: p.symbol }, byCandle.get(p.symbol), dbRows, job, targetLocalDate, now, quoteResolutions, sourceSwitches,
+          const { classification: c, sourceUsed, yahooMatch, yahooDetail, sanityDetail } = resolveAndClassify(
+            { id: p.etfId, data_source: p.symbol }, byCandle.get(p.symbol), dbRows, lastKnownCloses, job, targetLocalDate, now, quoteResolutions, sourceSwitches,
           );
           counts[c]++;
           if (sourceUsed === "BAR") barCount++;
@@ -482,6 +551,8 @@ export async function GET(request: Request) {
           if (c === "NO_TRADE_ON_TARGET" && noTradeSymbols.length < 20) noTradeSymbols.push(p.symbol);
           if (c === "NEW" && newSymbols.length < 20) newSymbols.push(p.symbol);
           if (c === "CHANGED" && changedSymbols.length < 20) changedSymbols.push(p.symbol);
+          if (c === "UNIT_MISMATCH" && sanityDetail && unitMismatchSamples.length < 20) unitMismatchSamples.push({ symbol: p.symbol, ...sanityDetail });
+          if (c === "PRICE_JUMP_REVIEW" && sanityDetail && priceJumpReviewSamples.length < 20) priceJumpReviewSamples.push({ symbol: p.symbol, ...sanityDetail });
         }
         state = advanceSweep(state, { ok: true, isLastBatch: true, observations }, Date.now());
       }
@@ -503,6 +574,7 @@ export async function GET(request: Request) {
       pendingCount: state.pending.length, sourceMissingSymbols, noBarSymbols, noTradeSymbols, newSymbols, changedSymbols, doneForToday: marketDone,
       priorityKind: priorityByJobId.get(jobId)?.kind,
       barCount, quoteFinalCount, noTradeOnTargetCount, sourceSwitches, yahooConsistentCount, yahooInconsistentCount, yahooInconsistentSamples,
+      unitMismatchSamples, priceJumpReviewSamples,
     });
     if (fetchFailedThisMarket) continue;
     if (Date.now() - startedMs > TIME_BUDGET_MS) { timeBudgetStop = true; break; }
@@ -517,7 +589,7 @@ export async function GET(request: Request) {
     const priority = priorityByJobId.get(jobId);
     marketDetails.push({
       jobId, status: "NOT_REACHED", targetLocalDate: null, requested: 0, classifications: emptyCounts(), fetchErrorCount: 0, pendingCount: 0,
-      sourceMissingSymbols: [], noBarSymbols: [], noTradeSymbols: [], newSymbols: [], changedSymbols: [], doneForToday: false,
+      sourceMissingSymbols: [], noBarSymbols: [], noTradeSymbols: [], newSymbols: [], changedSymbols: [], unitMismatchSamples: [], priceJumpReviewSamples: [], doneForToday: false,
       priorityKind: priority?.kind,
       barCount: 0, quoteFinalCount: 0, noTradeOnTargetCount: 0, sourceSwitches: [], yahooConsistentCount: 0, yahooInconsistentCount: 0, yahooInconsistentSamples: [],
     });

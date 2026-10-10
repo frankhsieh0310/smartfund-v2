@@ -17,11 +17,19 @@ const MON_FRI = [1, 2, 3, 4, 5];
 
 export const SUPPLEMENTAL_MARKETS: ExchangeCalendarJob[] = [
   {
-    // ESTIMATED basis: Tel Aviv Stock Exchange trades Sunday-Thursday (Israeli work week), not
-    // Mon-Fri — this is the one entry here with a non-standard weekday set.
+    // Task O: corrected from the original ESTIMATED Sunday-Thursday assumption (the traditional
+    // Israeli work week) to Monday-Friday, based on live evidence this round — the Tel Aviv Stock
+    // Exchange actually moved its trading week to Monday-Friday in 2026, aligning with
+    // international markets. Checked 3 .TA ETFs' (HRL-F77.TA, KSM-F111.TA, IS-FF701.TA) last 4
+    // weeks of real Spark daily bars: ZERO Sunday closes across all three symbols for the entire
+    // month (the old schedule's day), while Monday/Tuesday/Wednesday/Thursday all show closes every
+    // week, and Friday (2026-10-09) already shows a real close for all three — the new schedule's
+    // day already active. Evidence (per symbol, weekday -> trading days with a close in the
+    // sample): KSM-F111.TA and IS-FF701.TA both {Mon:3, Tue:4, Wed:5, Thu:5, Fri:1}; HRL-F77.TA
+    // {Mon:3, Tue:4, Wed:4, Thu:4, Fri:1} — Sun:0 for all three.
     id: "supplemental-tel-aviv", market: "Tel Aviv", exchange: "Tel Aviv", exchanges: [], country: "IL",
     timezone: "Asia/Jerusalem", regularSession: { open: "09:59", close: "17:30" }, stabilizationDelayMinutes: 30,
-    weekdays: [0, 1, 2, 3, 4], holidays: [], schedulerEnabled: true,
+    weekdays: MON_FRI, holidays: [], schedulerEnabled: true,
   },
   {
     // ESTIMATED basis: Bolsa Mexicana de Valores regular session, local time.

@@ -18,6 +18,19 @@ test("Task N: NO_TRADE_ON_TARGET is final the first time it's observed, same as 
   assert.equal(s.pending.length, 0);
 });
 
+test("Task O: UNIT_MISMATCH and PRICE_JUMP_REVIEW are both final the first time, never re-checked", () => {
+  const nowMs = Date.now();
+  const s = advanceSweep(emptyState("2026-10-09"), {
+    ok: true, isLastBatch: true,
+    observations: [
+      { etfId: "a", symbol: "A", classification: "UNIT_MISMATCH" },
+      { etfId: "b", symbol: "B", classification: "PRICE_JUMP_REVIEW" },
+    ],
+  }, nowMs);
+  assert.equal(isMarketDone(s), true);
+  assert.equal(s.pending.length, 0);
+});
+
 test("a market is NOT done while the sweep itself hasn't reached its last batch, even with zero pending", () => {
   const nowMs = Date.now();
   const s = advanceSweep(emptyState("2026-10-09"), { ok: true, isLastBatch: false, observations: [{ etfId: "a", symbol: "A", classification: "SAME" }] }, nowMs);
