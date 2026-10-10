@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { resolvePrice } from "../priceSource.ts";
-import { localDateFromUnix } from "../marketTime.ts";
+import { localDateFromUnix, isDefinitelyClosed } from "../marketTime.ts";
 import type { ExchangeCalendarJob } from "../types.ts";
 
 function test(name: string, fn: () => void) {
@@ -13,115 +13,93 @@ const HK_JOB: ExchangeCalendarJob = {
   stabilizationDelayMinutes: 45, weekdays: [1, 2, 3, 4, 5], holidays: [], schedulerEnabled: true,
 };
 
-// 2026-10-09T08:08:06Z = 2026-10-09 16:08:06 HKT — the real, live-fetched regularMarketTime for
-// 2800.HK this round, 1m54s before the job's nominal "16:10" close but inside HKEX's documented
-// random Closing Auction window (16:08-16:10), hence the 16:00 override.
-const REAL_2800_HK_QUOTE_TS = 1791533286;
-const REAL_2800_HK_PRICE = 24.84;
+function helpers() {
+  return { localDateFromUnix, isDefinitelyClosed };
+}
 
-test("2800.HK fixture: daily bar missing for the target date, live quote at 16:08:06 HKT resolves via QUOTE_AFTER_CLOSE at the 16:00 override boundary", () => {
+// Task N's own worked fixture: last trade at 14:30 HKT on the target date (2026-10-09).
+// 2026-10-09T06:30:00Z = 14:30:00 HKT.
+const LAST_TRADE_1430_TS = Date.UTC(2026, 9, 9, 6, 30, 0) / 1000;
+const LAST_TRADE_PRICE = 24.5;
+
+test("rule 2: last trade at 14:30 (same day), checked AFTER close+delay -> adopted as QUOTE_FINAL", () => {
+  // now = 2026-10-09T09:00:00Z = 17:00 HKT, well past close(16:10)+delay(45min)=16:55.
+  const now = new Date(Date.UTC(2026, 9, 9, 9, 0, 0));
   const resolved = resolvePrice({
-    job: HK_JOB, targetLocalDate: "2026-10-09", barClose: null,
-    quoteRegularMarketTimeUnix: REAL_2800_HK_QUOTE_TS, quoteRegularMarketPrice: REAL_2800_HK_PRICE,
-    localDateFromUnix,
+    job: HK_JOB, targetLocalDate: "2026-10-09", now, barClose: null,
+    quoteRegularMarketTimeUnix: LAST_TRADE_1430_TS, quoteRegularMarketPrice: LAST_TRADE_PRICE,
+    ...helpers(),
   });
-  assert.deepEqual(resolved, { source: "QUOTE_AFTER_CLOSE", price: 24.84 });
+  assert.deepEqual(resolved, { kind: "RESOLVED", source: "QUOTE_FINAL", price: 24.5 });
 });
 
-test("2800.HK fixture: the SAME quote would NOT resolve under the job's literal (unoverridden) 16:10 close — proves the override is load-bearing, not redundant", () => {
-  const jobWithoutOverride = { ...HK_JOB, id: "not-overridden-test-id" };
+test("rule 2: the SAME last-trade-at-14:30 quote, checked BEFORE close+delay -> NOT adopted (unresolved)", () => {
+  // now = 2026-10-09T07:00:00Z = 15:00 HKT, still before close(16:10)+delay(45min)=16:55.
+  const now = new Date(Date.UTC(2026, 9, 9, 7, 0, 0));
   const resolved = resolvePrice({
-    job: jobWithoutOverride, targetLocalDate: "2026-10-09", barClose: null,
-    quoteRegularMarketTimeUnix: REAL_2800_HK_QUOTE_TS, quoteRegularMarketPrice: REAL_2800_HK_PRICE,
-    localDateFromUnix,
+    job: HK_JOB, targetLocalDate: "2026-10-09", now, barClose: null,
+    quoteRegularMarketTimeUnix: LAST_TRADE_1430_TS, quoteRegularMarketPrice: LAST_TRADE_PRICE,
+    ...helpers(),
   });
-  assert.equal(resolved, null);
+  assert.deepEqual(resolved, { kind: "UNRESOLVED" });
 });
 
-test("rule 1: a non-null daily bar always wins, even when a same-day after-close quote also exists", () => {
+test("rule 3: checked after close+delay, but the quote's own local date is EARLIER than target -> NO_TRADE_ON_TARGET", () => {
+  // now = 2026-10-10T09:00:00Z = 17:00 HKT on the 10th, well past the 9th's close+delay.
+  const now = new Date(Date.UTC(2026, 9, 10, 9, 0, 0));
+  // The quote itself is still dated the 8th (2026-10-08T07:00:00Z = 15:00 HKT 10/8) — nothing traded
+  // on the 9th at all.
+  const staleQuoteTs = Date.UTC(2026, 9, 8, 7, 0, 0) / 1000;
   const resolved = resolvePrice({
-    job: HK_JOB, targetLocalDate: "2026-10-09", barClose: 24.90,
-    quoteRegularMarketTimeUnix: REAL_2800_HK_QUOTE_TS, quoteRegularMarketPrice: REAL_2800_HK_PRICE,
-    localDateFromUnix,
+    job: HK_JOB, targetLocalDate: "2026-10-09", now, barClose: null,
+    quoteRegularMarketTimeUnix: staleQuoteTs, quoteRegularMarketPrice: 24.0,
+    ...helpers(),
   });
-  assert.deepEqual(resolved, { source: "BAR", price: 24.90 });
+  assert.deepEqual(resolved, { kind: "NO_TRADE_ON_TARGET" });
 });
 
-test("rule 2 negative test: a quote timestamped BEFORE the market's close is never adopted", () => {
-  // Same calendar day, but 14:00 HKT — well before even the 16:00 override, let alone 16:10.
-  const beforeCloseTs = Date.UTC(2026, 9, 9, 6, 0, 0) / 1000; // 2026-10-09T06:00:00Z = 14:00 HKT
+test("rule 1: a non-null daily bar always wins, even past close+delay with a same-day quote also present", () => {
+  const now = new Date(Date.UTC(2026, 9, 9, 9, 0, 0));
   const resolved = resolvePrice({
-    job: HK_JOB, targetLocalDate: "2026-10-09", barClose: null,
-    quoteRegularMarketTimeUnix: beforeCloseTs, quoteRegularMarketPrice: 24.5,
-    localDateFromUnix,
+    job: HK_JOB, targetLocalDate: "2026-10-09", now, barClose: 24.90,
+    quoteRegularMarketTimeUnix: LAST_TRADE_1430_TS, quoteRegularMarketPrice: LAST_TRADE_PRICE,
+    ...helpers(),
   });
-  assert.equal(resolved, null);
+  assert.deepEqual(resolved, { kind: "RESOLVED", source: "BAR", price: 24.90 });
 });
 
-test("rule 2: a quote whose LOCAL DATE doesn't match the target date is never adopted, regardless of time-of-day", () => {
-  // The quote's own timestamp lands on 2026-10-08, not the target 2026-10-09 — must not be adopted
-  // as a stand-in just because its time-of-day looks like "after close".
-  const wrongDayTs = Date.UTC(2026, 9, 8, 9, 0, 0) / 1000; // 2026-10-08T09:00:00Z = 17:00 HKT (after close, wrong day)
+test("rule 4: no quote at all, past close+delay -> stays unresolved, never guessed", () => {
+  const now = new Date(Date.UTC(2026, 9, 9, 9, 0, 0));
   const resolved = resolvePrice({
-    job: HK_JOB, targetLocalDate: "2026-10-09", barClose: null,
-    quoteRegularMarketTimeUnix: wrongDayTs, quoteRegularMarketPrice: 24.5,
-    localDateFromUnix,
-  });
-  assert.equal(resolved, null);
-});
-
-test("rule 3: neither a bar nor a usable quote exists -> unresolved (null), never backfilled", () => {
-  const resolved = resolvePrice({
-    job: HK_JOB, targetLocalDate: "2026-10-09", barClose: null,
+    job: HK_JOB, targetLocalDate: "2026-10-09", now, barClose: null,
     quoteRegularMarketTimeUnix: null, quoteRegularMarketPrice: null,
-    localDateFromUnix,
+    ...helpers(),
   });
-  assert.equal(resolved, null);
+  assert.deepEqual(resolved, { kind: "UNRESOLVED" });
 });
 
-test("France (CW8.PA): the literal configured close is used with no override — a 6-second-after-close quote still resolves (second-level precision, not minute-truncated)", () => {
-  const FR_JOB: ExchangeCalendarJob = {
-    id: "france-yahoo-daily", market: "France", exchange: "Euronext Paris", exchanges: ["PAR"], country: "FR",
-    timezone: "Europe/Paris", regularSession: { open: "09:00", close: "17:35" },
-    stabilizationDelayMinutes: 45, weekdays: [1, 2, 3, 4, 5], holidays: [], schedulerEnabled: true,
-  };
-  // 2026-10-09T15:35:06Z = 2026-10-09 17:35:06 Paris — real, live-fetched CW8.PA regularMarketTime,
-  // exactly 6 seconds after the configured "17:35:00" close.
+test("rule 4: a quote dated AFTER the target date says nothing about the target day -> stays unresolved, not NO_TRADE_ON_TARGET", () => {
+  const now = new Date(Date.UTC(2026, 9, 10, 9, 0, 0));
+  // Quote dated the 10th while we're asking about the 9th.
+  const futureQuoteTs = Date.UTC(2026, 9, 10, 7, 0, 0) / 1000;
   const resolved = resolvePrice({
-    job: FR_JOB, targetLocalDate: "2026-10-09", barClose: null,
-    quoteRegularMarketTimeUnix: 1791560106, quoteRegularMarketPrice: 715.8,
-    localDateFromUnix,
+    job: HK_JOB, targetLocalDate: "2026-10-09", now, barClose: null,
+    quoteRegularMarketTimeUnix: futureQuoteTs, quoteRegularMarketPrice: 25.0,
+    ...helpers(),
   });
-  assert.deepEqual(resolved, { source: "QUOTE_AFTER_CLOSE", price: 715.8 });
+  assert.deepEqual(resolved, { kind: "UNRESOLVED" });
 });
 
-test("France (CW8.PA): the same quote one second earlier (exactly AT close) is rejected — strictly after, never at-or-after", () => {
-  const FR_JOB: ExchangeCalendarJob = {
-    id: "france-yahoo-daily", market: "France", exchange: "Euronext Paris", exchanges: ["PAR"], country: "FR",
-    timezone: "Europe/Paris", regularSession: { open: "09:00", close: "17:35" },
-    stabilizationDelayMinutes: 45, weekdays: [1, 2, 3, 4, 5], holidays: [], schedulerEnabled: true,
-  };
+test("rule 2/3 gate: before close+delay, even a quote dated strictly earlier than target is NOT yet declared NO_TRADE_ON_TARGET", () => {
+  // now still before close+delay on the target date itself (same-day early check).
+  const now = new Date(Date.UTC(2026, 9, 9, 7, 0, 0)); // 15:00 HKT, before 16:55 close+delay
+  const staleQuoteTs = Date.UTC(2026, 9, 8, 7, 0, 0) / 1000;
   const resolved = resolvePrice({
-    job: FR_JOB, targetLocalDate: "2026-10-09", barClose: null,
-    quoteRegularMarketTimeUnix: 1791560100, quoteRegularMarketPrice: 715.8, // 17:35:00 exactly
-    localDateFromUnix,
+    job: HK_JOB, targetLocalDate: "2026-10-09", now, barClose: null,
+    quoteRegularMarketTimeUnix: staleQuoteTs, quoteRegularMarketPrice: 24.0,
+    ...helpers(),
   });
-  assert.equal(resolved, null);
-});
-
-test("Germany (EUNL.DE): the 17:30 override resolves a quote the literal (unoverridden) 22:00 config close never would", () => {
-  const DE_JOB: ExchangeCalendarJob = {
-    id: "germany-yahoo-daily", market: "Germany", exchange: "Xetra", exchanges: ["GER"], country: "DE",
-    timezone: "Europe/Berlin", regularSession: { open: "09:00", close: "22:00" },
-    stabilizationDelayMinutes: 45, weekdays: [1, 2, 3, 4, 5], holidays: [], schedulerEnabled: true,
-  };
-  // 2026-10-09T15:35:55Z = 17:35:55 Berlin — real, live-fetched EUNL.DE regularMarketTime.
-  const resolved = resolvePrice({
-    job: DE_JOB, targetLocalDate: "2026-10-09", barClose: null,
-    quoteRegularMarketTimeUnix: 1791560155, quoteRegularMarketPrice: 131.64,
-    localDateFromUnix,
-  });
-  assert.deepEqual(resolved, { source: "QUOTE_AFTER_CLOSE", price: 131.64 });
+  assert.deepEqual(resolved, { kind: "UNRESOLVED" });
 });
 
 console.log("PRICE_SOURCE_TESTS_DONE");

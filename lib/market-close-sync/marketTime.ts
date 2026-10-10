@@ -47,8 +47,13 @@ function addLocalDays(localDate: string, deltaDays: number): string {
 
 /** Is this `localDate` (for `job`'s market) definitely closed-and-past-stabilization-delay as of
  * `now`? A date strictly before `now`'s own local date is trivially closed (it's entirely in the
- * past). `now`'s own local date additionally needs the close+delay wall-clock check. */
-function isDefinitelyClosed(job: ExchangeCalendarJob, localDate: string, now: Date): boolean {
+ * past). `now`'s own local date additionally needs the close+delay wall-clock check.
+ *
+ * Exported for Task N's priceSource.ts rule 2/3: "現在時間已晚於該市場收盤+延遲時間" reuses this
+ * EXACT definition (close + stabilizationDelayMinutes) rather than introducing a second, bespoke
+ * threshold — this is the same close+delay boundary findEligibleTradeDate already uses to decide
+ * eligibility, kept as the one shared definition of "is this trading day's close decided yet." */
+export function isDefinitelyClosed(job: ExchangeCalendarJob, localDate: string, now: Date): boolean {
   const { date: nowLocalDate, time: nowLocalTime } = localNow(now, job.timezone);
   if (localDate < nowLocalDate) return true;
   if (localDate > nowLocalDate) return false; // a future date can never be closed

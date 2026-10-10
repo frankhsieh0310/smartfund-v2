@@ -10,7 +10,10 @@
 // classification fixes even existed to tell SOURCE_MISSING apart from a transient same-day
 // publication lag. This module makes "done" a real, confirmed state:
 //
-//   FINAL (trusted the first time they're observed): NEW, CHANGED, SAME, DB_NEWER.
+//   FINAL (trusted the first time they're observed): NEW, CHANGED, SAME, DB_NEWER, and (Task N)
+//   NO_TRADE_ON_TARGET — once "now" is past the target date's own close+delay and the live quote's
+//   own date is confirmed EARLIER than the target date, there is nothing left to wait for: the
+//   market simply didn't trade that day, and no later re-check can change that fact.
 //   PROVISIONAL (need a second look before they count as done):
 //     - SOURCE_MISSING: must be re-observed as SOURCE_MISSING on a SEPARATE later pass before it's
 //       trusted — a single observation only starts the pending clock.
@@ -26,7 +29,7 @@ export type PendingState = "SOURCE_MISSING_PENDING" | "NO_BAR_PENDING";
 
 export type PendingEntry = { etfId: string; symbol: string; state: PendingState; firstSeenAtMs: number };
 
-export type FinalOrPendingClassification = "NEW" | "CHANGED" | "SAME" | "DB_NEWER" | "SOURCE_MISSING" | "NO_BAR_FOR_TARGET_DATE";
+export type FinalOrPendingClassification = "NEW" | "CHANGED" | "SAME" | "DB_NEWER" | "SOURCE_MISSING" | "NO_BAR_FOR_TARGET_DATE" | "NO_TRADE_ON_TARGET";
 
 export const NO_BAR_CONFIRM_DELAY_MS = 6 * 60 * 60 * 1000;
 
@@ -51,7 +54,7 @@ function applyObservation(
   const existing = pending.find((p) => p.etfId === etfId);
   const withoutExisting = pending.filter((p) => p.etfId !== etfId);
 
-  if (classification === "NEW" || classification === "CHANGED" || classification === "SAME" || classification === "DB_NEWER") {
+  if (classification === "NEW" || classification === "CHANGED" || classification === "SAME" || classification === "DB_NEWER" || classification === "NO_TRADE_ON_TARGET") {
     return { pending: withoutExisting }; // final the first time, always
   }
 

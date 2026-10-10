@@ -11,6 +11,13 @@ test("a FINAL classification (NEW) completes the market as soon as the sweep's l
   assert.equal(isMarketDone(s), true);
 });
 
+test("Task N: NO_TRADE_ON_TARGET is final the first time it's observed, same as NEW/CHANGED/SAME/DB_NEWER", () => {
+  const nowMs = Date.now();
+  const s = advanceSweep(emptyState("2026-10-09"), { ok: true, isLastBatch: true, observations: [{ etfId: "a", symbol: "A", classification: "NO_TRADE_ON_TARGET" }] }, nowMs);
+  assert.equal(isMarketDone(s), true);
+  assert.equal(s.pending.length, 0);
+});
+
 test("a market is NOT done while the sweep itself hasn't reached its last batch, even with zero pending", () => {
   const nowMs = Date.now();
   const s = advanceSweep(emptyState("2026-10-09"), { ok: true, isLastBatch: false, observations: [{ etfId: "a", symbol: "A", classification: "SAME" }] }, nowMs);

@@ -44,7 +44,12 @@ export type SparkCandle = {
 // that simply don't include a bar for the target date (NO_BAR_FOR_TARGET_DATE) — these have very
 // different implications (a dead/delisted symbol vs. a transient same-day publication lag) and must
 // not be collapsed into one bucket.
-export type ShadowClassification = "NEW" | "CHANGED" | "SAME" | "SOURCE_MISSING" | "NO_BAR_FOR_TARGET_DATE" | "DB_NEWER";
+// Task N: NO_TRADE_ON_TARGET is decided entirely by priceSource.ts, before classify() is even
+// called — once "now" is past the target date's close+delay and the live quote's own local date is
+// confirmed EARLIER than the target date, the market simply didn't trade that day. classify() never
+// sees this case (there is no DB-vs-source price to compare — it's a statement about market
+// activity, not price), so it is never one of classify()'s own return values.
+export type ShadowClassification = "NEW" | "CHANGED" | "SAME" | "SOURCE_MISSING" | "NO_BAR_FOR_TARGET_DATE" | "DB_NEWER" | "NO_TRADE_ON_TARGET";
 
 export type ShadowRow = {
   etfId: string;

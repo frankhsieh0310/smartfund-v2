@@ -25,7 +25,7 @@ import { isAuthorizedCron, unauthorizedCron } from "@/lib/cron/authorize";
 import { prisma } from "@/lib/prisma";
 import { beginRun, finishRun, hourBucketKey, readCheckpoint, writeCheckpoint } from "@/lib/cloud-ingestion/runContext";
 import { loadExchangeCalendarRegistry, SUFFIX_TO_JOB_ID, NO_SUFFIX_EXCHANGE_FALLBACK, resolveJobForEtf, jobById } from "@/lib/market-close-sync/marketConfig";
-import { findEligibleTradeDate, pickClosedCandle, localDateFromUnix } from "@/lib/market-close-sync/marketTime";
+import { findEligibleTradeDate, pickClosedCandle, localDateFromUnix, isDefinitelyClosed } from "@/lib/market-close-sync/marketTime";
 import { fetchSparkBatch, SPARK_MAX_SYMBOLS_PER_BATCH } from "@/lib/market-close-sync/sparkClient";
 import { classify } from "@/lib/market-close-sync/shadowCompare";
 import { emptyState, advanceSweep, isMarketDone, type MarketCompletionState } from "@/lib/market-close-sync/completionState";
@@ -69,13 +69,15 @@ function parsePersistedState(raw: string | null): PersistedState {
 
 type SourceSwitch = { symbol: string; quotePrice: number; barClose: number; diff: number };
 
-/** Resolves one ETF's price (rule 1: BAR, rule 2: QUOTE_AFTER_CLOSE, rule 3: unresolved) and
- * classifies it against the DB row exactly as before — classify() itself is unaware of which source
- * won; it only ever sees an already-resolved (date, close) pair or null. Also applies rule 4: if this
- * resolves to BAR for an etf_id+date that quoteResolutions still remembers as QUOTE_AFTER_CLOSE, logs
- * the switch and the price delta, then forgets it (the bar is authoritative from here on). Mutates
- * quoteResolutions and sourceSwitches in place — called once per candidate, in both the sweep and the
- * recheck phase, so the two phases can never drift into different resolution logic. */
+/** Resolves one ETF's price (rule 1: BAR, rule 2: QUOTE_FINAL, rule 3: NO_TRADE_ON_TARGET, rule 4:
+ * unresolved — see priceSource.ts) and classifies it against the DB row. classify() is never called
+ * for a NO_TRADE_ON_TARGET resolution — there is no DB-vs-source price comparison to make, it's a
+ * statement about market activity, not price, and NO_TRADE_ON_TARGET is already its own final
+ * ShadowClassification (see completionState.ts). Also applies Task M's rule 4: if this resolves to
+ * BAR for an etf_id+date that quoteResolutions still remembers as QUOTE_FINAL, logs the switch and
+ * the price delta, then forgets it. Mutates quoteResolutions and sourceSwitches in place — called
+ * once per candidate, in both the sweep and the recheck phase, so the two phases can never drift
+ * into different resolution logic. */
 function resolveAndClassify(
   etf: { id: string; data_source: string },
   candle: SparkCandle | undefined,
@@ -85,7 +87,10 @@ function resolveAndClassify(
   now: Date,
   quoteResolutions: Map<string, QuoteResolution>,
   sourceSwitches: SourceSwitch[],
-): { classification: ShadowClassification; sourceUsed: PriceSource | null } {
+): {
+  classification: ShadowClassification; sourceUsed: PriceSource | null; yahooMatch: boolean | null;
+  yahooDetail?: { ourDate: string; ourPrice: number; yahooDate: string; yahooPrice: number };
+} {
   const sparkSymbolPresent = candle !== undefined;
   const points = candle?.points ?? [];
   const picked = pickClosedCandle(points, job, targetLocalDate, now);
@@ -94,26 +99,51 @@ function resolveAndClassify(
   const dbClose = dbRow?.close ?? null;
 
   const resolved = resolvePrice({
-    job, targetLocalDate, barClose: picked?.close ?? null,
+    job, targetLocalDate, now, barClose: picked?.close ?? null,
     quoteRegularMarketTimeUnix: candle?.regularMarketTimeUnix ?? null,
     quoteRegularMarketPrice: candle?.regularMarketPrice ?? null,
-    localDateFromUnix,
+    localDateFromUnix, isDefinitelyClosed,
   });
 
+  // "與 Yahoo 一致率": if this invocation HAD written its resolved (date, price) to etf_history,
+  // would it equal what Yahoo's own live quote (Spark's meta.regularMarketTime/regularMarketPrice —
+  // the same field Yahoo's own web page reads) shows right now? Computed from data already in hand
+  // this batch (no extra network calls). Only meaningful when a price actually resolved — null
+  // (not applicable) for SOURCE_MISSING/NO_BAR_FOR_TARGET_DATE/NO_TRADE_ON_TARGET, which have no
+  // "price we'd have written" to compare in the first place. For a QUOTE_FINAL resolution this is
+  // true by construction (the resolved price IS the live quote); for a BAR resolution it genuinely
+  // tests whether the finalized daily bar still agrees with Yahoo's current live quote.
+  let yahooMatch: boolean | null = null;
+  let yahooDetail: { ourDate: string; ourPrice: number; yahooDate: string; yahooPrice: number } | undefined;
+  if (resolved.kind === "RESOLVED" && candle?.regularMarketTimeUnix != null && candle?.regularMarketPrice != null) {
+    const quoteLocalDate = localDateFromUnix(candle.regularMarketTimeUnix, job.timezone);
+    yahooMatch = quoteLocalDate === targetLocalDate && Math.abs(candle.regularMarketPrice - resolved.price) < 0.01;
+    if (!yahooMatch) {
+      yahooDetail = { ourDate: targetLocalDate, ourPrice: resolved.price, yahooDate: quoteLocalDate, yahooPrice: candle.regularMarketPrice };
+    }
+  }
+
   const priorQuote = quoteResolutions.get(etf.id);
-  if (resolved?.source === "BAR" && priorQuote?.targetLocalDate === targetLocalDate) {
+  if (resolved.kind === "RESOLVED" && resolved.source === "BAR" && priorQuote?.targetLocalDate === targetLocalDate) {
     if (sourceSwitches.length < 20) {
       sourceSwitches.push({ symbol: etf.data_source, quotePrice: priorQuote.price, barClose: resolved.price, diff: resolved.price - priorQuote.price });
     }
     quoteResolutions.delete(etf.id);
-  } else if (resolved?.source === "QUOTE_AFTER_CLOSE") {
+  } else if (resolved.kind === "RESOLVED" && resolved.source === "QUOTE_FINAL") {
     quoteResolutions.set(etf.id, { etfId: etf.id, targetLocalDate, symbol: etf.data_source, price: resolved.price });
   }
 
-  const sparkDate = resolved ? targetLocalDate : null;
-  const sparkClose = resolved?.price ?? null;
+  if (resolved.kind === "NO_TRADE_ON_TARGET") {
+    // Not a price comparison at all — sparkSymbolPresent still matters (SOURCE_MISSING must still
+    // win if Spark had nothing for this symbol whatsoever), but when the symbol IS present and we've
+    // confirmed it simply didn't trade, that's immediately final, independent of whatever's in DB.
+    return { classification: sparkSymbolPresent ? "NO_TRADE_ON_TARGET" : "SOURCE_MISSING", sourceUsed: null, yahooMatch: null };
+  }
+
+  const sparkDate = resolved.kind === "RESOLVED" ? targetLocalDate : null;
+  const sparkClose = resolved.kind === "RESOLVED" ? resolved.price : null;
   const classification = classify({ dbDate, dbClose, sparkSymbolPresent, sparkDate, sparkClose });
-  return { classification, sourceUsed: resolved?.source ?? null };
+  return { classification, sourceUsed: resolved.kind === "RESOLVED" ? resolved.source : null, yahooMatch, yahooDetail };
 }
 
 type MarketStatus = "ELIGIBLE" | "NOT_ELIGIBLE" | "NOT_REACHED";
@@ -129,6 +159,7 @@ type MarketDetail = {
   pendingCount: number;
   sourceMissingSymbols: string[];
   noBarSymbols: string[];
+  noTradeSymbols: string[];
   newSymbols: string[];
   changedSymbols: string[];
   doneForToday: boolean;
@@ -136,11 +167,15 @@ type MarketDetail = {
   coreUniverseBefore?: number; // active+data_source candidates matching this market's suffix pattern, before the core filter
   coreUniverseAfter?: number; // same, after the core-universe + HK-counter filter
   barCount: number; // resolved via rule 1 (daily bar)
-  quoteAfterCloseCount: number; // resolved via rule 2 (live quote, after close, bar not yet published)
-  sourceSwitches: SourceSwitch[]; // rule 4: a later BAR superseded an earlier QUOTE_AFTER_CLOSE for the same etf+date
+  quoteFinalCount: number; // resolved via rule 2 (live quote, past close+delay, bar not yet published)
+  noTradeOnTargetCount: number; // rule 3: confirmed no trade occurred on the target date
+  sourceSwitches: SourceSwitch[]; // Task M rule 4: a later BAR superseded an earlier QUOTE_FINAL for the same etf+date
+  yahooConsistentCount: number; // resolved price/date this invocation would have matched Yahoo's live quote
+  yahooInconsistentCount: number;
+  yahooInconsistentSamples: Array<{ symbol: string; ourDate: string; ourPrice: number; yahooDate: string; yahooPrice: number }>;
 };
 
-const emptyCounts = (): Record<ShadowClassification, number> => ({ NEW: 0, CHANGED: 0, SAME: 0, SOURCE_MISSING: 0, NO_BAR_FOR_TARGET_DATE: 0, DB_NEWER: 0 });
+const emptyCounts = (): Record<ShadowClassification, number> => ({ NEW: 0, CHANGED: 0, SAME: 0, SOURCE_MISSING: 0, NO_BAR_FOR_TARGET_DATE: 0, DB_NEWER: 0, NO_TRADE_ON_TARGET: 0 });
 
 async function computeUnmapped(registry: Awaited<ReturnType<typeof loadExchangeCalendarRegistry>>) {
   const rows = await prisma.$queryRawUnsafe<Array<{ data_source: string; exchange: string | null }>>(
@@ -278,8 +313,8 @@ export async function GET(request: Request) {
       marketDetails.push({
         jobId, status: "NOT_ELIGIBLE", notEligibleReason: eligibility.reason, targetLocalDate: null,
         requested: 0, classifications: emptyCounts(), fetchErrorCount: 0, pendingCount: 0,
-        sourceMissingSymbols: [], noBarSymbols: [], newSymbols: [], changedSymbols: [], doneForToday: eligibility.reason === "ALREADY_DONE",
-        barCount: 0, quoteAfterCloseCount: 0, sourceSwitches: [],
+        sourceMissingSymbols: [], noBarSymbols: [], noTradeSymbols: [], newSymbols: [], changedSymbols: [], doneForToday: eligibility.reason === "ALREADY_DONE",
+        barCount: 0, quoteFinalCount: 0, noTradeOnTargetCount: 0, sourceSwitches: [], yahooConsistentCount: 0, yahooInconsistentCount: 0, yahooInconsistentSamples: [],
       });
       continue;
     }
@@ -321,13 +356,18 @@ export async function GET(request: Request) {
     const counts = emptyCounts();
     const sourceMissingSymbols: string[] = [];
     const noBarSymbols: string[] = [];
+    const noTradeSymbols: string[] = [];
     const newSymbols: string[] = [];
     const changedSymbols: string[] = [];
     let requested = 0;
     let fetchErrorCount = 0;
     let fetchFailedThisMarket = false;
     let barCount = 0;
-    let quoteAfterCloseCount = 0;
+    let quoteFinalCount = 0;
+    let noTradeOnTargetCount = 0;
+    let yahooConsistentCount = 0;
+    let yahooInconsistentCount = 0;
+    const yahooInconsistentSamples: Array<{ symbol: string; ourDate: string; ourPrice: number; yahooDate: string; yahooPrice: number }> = [];
     const sourceSwitches: SourceSwitch[] = [];
     const { quoteResolutions } = ctx;
 
@@ -375,15 +415,22 @@ export async function GET(request: Request) {
       const observations: Array<{ etfId: string; symbol: string; classification: ShadowClassification }> = [];
       for (const etf of candidates) {
         requested++;
-        const { classification: c, sourceUsed } = resolveAndClassify(
+        const { classification: c, sourceUsed, yahooMatch, yahooDetail } = resolveAndClassify(
           etf, byCandle.get(etf.data_source), dbRows, job, targetLocalDate, now, quoteResolutions, sourceSwitches,
         );
         counts[c]++;
         if (sourceUsed === "BAR") barCount++;
-        if (sourceUsed === "QUOTE_AFTER_CLOSE") quoteAfterCloseCount++;
+        if (sourceUsed === "QUOTE_FINAL") quoteFinalCount++;
+        if (c === "NO_TRADE_ON_TARGET") noTradeOnTargetCount++;
+        if (yahooMatch === true) yahooConsistentCount++;
+        if (yahooMatch === false) {
+          yahooInconsistentCount++;
+          if (yahooDetail && yahooInconsistentSamples.length < 5) yahooInconsistentSamples.push({ symbol: etf.data_source, ...yahooDetail });
+        }
         observations.push({ etfId: etf.id, symbol: etf.data_source, classification: c });
         if (c === "SOURCE_MISSING" && sourceMissingSymbols.length < 20) sourceMissingSymbols.push(etf.data_source);
         if (c === "NO_BAR_FOR_TARGET_DATE" && noBarSymbols.length < 20) noBarSymbols.push(etf.data_source);
+        if (c === "NO_TRADE_ON_TARGET" && noTradeSymbols.length < 20) noTradeSymbols.push(etf.data_source);
         if (c === "NEW" && newSymbols.length < 20) newSymbols.push(etf.data_source);
         if (c === "CHANGED" && changedSymbols.length < 20) changedSymbols.push(etf.data_source);
       }
@@ -417,15 +464,22 @@ export async function GET(request: Request) {
         const observations: Array<{ etfId: string; symbol: string; classification: ShadowClassification }> = [];
         for (const p of chunk) {
           requested++;
-          const { classification: c, sourceUsed } = resolveAndClassify(
+          const { classification: c, sourceUsed, yahooMatch, yahooDetail } = resolveAndClassify(
             { id: p.etfId, data_source: p.symbol }, byCandle.get(p.symbol), dbRows, job, targetLocalDate, now, quoteResolutions, sourceSwitches,
           );
           counts[c]++;
           if (sourceUsed === "BAR") barCount++;
-          if (sourceUsed === "QUOTE_AFTER_CLOSE") quoteAfterCloseCount++;
+          if (sourceUsed === "QUOTE_FINAL") quoteFinalCount++;
+          if (c === "NO_TRADE_ON_TARGET") noTradeOnTargetCount++;
+          if (yahooMatch === true) yahooConsistentCount++;
+          if (yahooMatch === false) {
+            yahooInconsistentCount++;
+            if (yahooDetail && yahooInconsistentSamples.length < 5) yahooInconsistentSamples.push({ symbol: p.symbol, ...yahooDetail });
+          }
           observations.push({ etfId: p.etfId, symbol: p.symbol, classification: c });
           if (c === "SOURCE_MISSING" && sourceMissingSymbols.length < 20) sourceMissingSymbols.push(p.symbol);
           if (c === "NO_BAR_FOR_TARGET_DATE" && noBarSymbols.length < 20) noBarSymbols.push(p.symbol);
+          if (c === "NO_TRADE_ON_TARGET" && noTradeSymbols.length < 20) noTradeSymbols.push(p.symbol);
           if (c === "NEW" && newSymbols.length < 20) newSymbols.push(p.symbol);
           if (c === "CHANGED" && changedSymbols.length < 20) changedSymbols.push(p.symbol);
         }
@@ -440,15 +494,15 @@ export async function GET(request: Request) {
     await writeCheckpoint(JOB, checkpointKey, runId, {
       lastSymbol: JSON.stringify(nextPersisted),
       processed: requested,
-      succeeded: counts.SAME + counts.CHANGED + counts.NEW + counts.DB_NEWER,
+      succeeded: counts.SAME + counts.CHANGED + counts.NEW + counts.DB_NEWER + counts.NO_TRADE_ON_TARGET,
       failed: counts.SOURCE_MISSING + counts.NO_BAR_FOR_TARGET_DATE + fetchErrorCount,
     });
 
     marketDetails.push({
       jobId, status: "ELIGIBLE", targetLocalDate, requested, classifications: counts, fetchErrorCount,
-      pendingCount: state.pending.length, sourceMissingSymbols, noBarSymbols, newSymbols, changedSymbols, doneForToday: marketDone,
+      pendingCount: state.pending.length, sourceMissingSymbols, noBarSymbols, noTradeSymbols, newSymbols, changedSymbols, doneForToday: marketDone,
       priorityKind: priorityByJobId.get(jobId)?.kind,
-      barCount, quoteAfterCloseCount, sourceSwitches,
+      barCount, quoteFinalCount, noTradeOnTargetCount, sourceSwitches, yahooConsistentCount, yahooInconsistentCount, yahooInconsistentSamples,
     });
     if (fetchFailedThisMarket) continue;
     if (Date.now() - startedMs > TIME_BUDGET_MS) { timeBudgetStop = true; break; }
@@ -463,9 +517,9 @@ export async function GET(request: Request) {
     const priority = priorityByJobId.get(jobId);
     marketDetails.push({
       jobId, status: "NOT_REACHED", targetLocalDate: null, requested: 0, classifications: emptyCounts(), fetchErrorCount: 0, pendingCount: 0,
-      sourceMissingSymbols: [], noBarSymbols: [], newSymbols: [], changedSymbols: [], doneForToday: false,
+      sourceMissingSymbols: [], noBarSymbols: [], noTradeSymbols: [], newSymbols: [], changedSymbols: [], doneForToday: false,
       priorityKind: priority?.kind,
-      barCount: 0, quoteAfterCloseCount: 0, sourceSwitches: [],
+      barCount: 0, quoteFinalCount: 0, noTradeOnTargetCount: 0, sourceSwitches: [], yahooConsistentCount: 0, yahooInconsistentCount: 0, yahooInconsistentSamples: [],
     });
   }
 
