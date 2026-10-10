@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { checkPriceSanity } from "../priceSanity.ts";
+import { checkPriceSanity, reviewPriceJump } from "../priceSanity.ts";
 
 function test(name: string, fn: () => void) {
   try { fn(); console.log(`PASS: ${name}`); } catch (e) { console.log(`FAIL: ${name} — ${(e as Error).message}`); process.exitCode = 1; }
@@ -50,6 +50,23 @@ test("UNIT_MISMATCH takes priority over PRICE_JUMP_REVIEW when both thresholds w
 
 test("a ratio just outside the unit-mismatch band (e.g. 94x) falls through to PRICE_JUMP_REVIEW instead", () => {
   assert.equal(checkPriceSanity(9400, 100), "PRICE_JUMP_REVIEW");
+});
+
+test("Task P DXJ scenario: DB's stale last close (180.55) makes 60.71 look like a huge drop, but Yahoo's own previous close (60.677) agrees closely -> reclassified DB_DISCONTINUITY, writable", () => {
+  assert.equal(checkPriceSanity(60.71, 180.55), "PRICE_JUMP_REVIEW"); // confirms this WOULD be held back under the Task O check alone
+  assert.equal(reviewPriceJump(60.71, 60.677), "DB_DISCONTINUITY");
+});
+
+test("reviewPriceJump: Yahoo's own previous close ALSO shows a >50% jump -> no independent corroboration, stays PRICE_JUMP_REVIEW", () => {
+  assert.equal(reviewPriceJump(60.71, 180.55), "PRICE_JUMP_REVIEW");
+});
+
+test("reviewPriceJump: no Yahoo previous-close data at all -> conservative default, stays PRICE_JUMP_REVIEW", () => {
+  assert.equal(reviewPriceJump(60.71, null), "PRICE_JUMP_REVIEW");
+});
+
+test("reviewPriceJump: exactly at the 50% boundary against Yahoo's own previous close is NOT flagged (at-or-below passes)", () => {
+  assert.equal(reviewPriceJump(150, 100), "DB_DISCONTINUITY");
 });
 
 console.log("PRICE_SANITY_TESTS_DONE");

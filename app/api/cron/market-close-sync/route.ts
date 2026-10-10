@@ -1,8 +1,10 @@
-// Market-close-sync — SHADOW MODE ONLY. Confirms, per eligible closed market, what Yahoo Spark would
-// write vs what etf_history/etfs already have — and logs the comparison. Writes NOTHING to
-// etf_history, etf_performance, or etfs. The only writes anywhere in this route are the existing
-// run-log/checkpoint tables via beginRun/finishRun/writeCheckpoint (lib/cloud-ingestion/runContext),
-// reused unmodified.
+// Market-close-sync. Confirms, per eligible closed market, what Yahoo Spark would write vs what
+// etf_history/etfs already have, and logs the comparison. SHADOW MODE BY DEFAULT: unless the
+// MARKET_CLOSE_SYNC_WRITE environment variable is exactly "on" (lib/market-close-sync/writeGate.ts),
+// this route writes NOTHING to etf_history/etfs/etf_performances — only the existing run-log/
+// checkpoint tables via beginRun/finishRun/writeCheckpoint (lib/cloud-ingestion/runContext), reused
+// unmodified. Task P adds the opt-in write path (lib/market-close-sync/priceWriter.ts) — see its own
+// header for exactly what gets written and when.
 //
 // ETF-only, per task scope. No stock/fund handling here.
 //
@@ -32,7 +34,9 @@ import { emptyState, advanceSweep, isMarketDone, type MarketCompletionState } fr
 import { classifyMarketPriority, orderMarketsForInvocation, isDueForRecheck, PER_MARKET_BUDGET_FRACTION } from "@/lib/market-close-sync/scheduling";
 import { isHongKongCurrencyCounter, isCoreUniverseMemberFromCounts, SUFFIX_ACTIVITY_MEASURE } from "@/lib/market-close-sync/coreUniverse";
 import { resolvePrice, type PriceSource } from "@/lib/market-close-sync/priceSource";
-import { checkPriceSanity } from "@/lib/market-close-sync/priceSanity";
+import { checkPriceSanity, reviewPriceJump } from "@/lib/market-close-sync/priceSanity";
+import { isWriteEnabled, currentRunMode } from "@/lib/market-close-sync/writeGate";
+import { writeBatchIfEnabled, type WritablePrice } from "@/lib/market-close-sync/priceWriter";
 import type { ShadowClassification, ExchangeCalendarJob, SparkCandle } from "@/lib/market-close-sync/types";
 
 const YAHOO_CONSISTENCY_RELATIVE_TOLERANCE = 0.001; // 0.1%
@@ -104,6 +108,7 @@ function resolveAndClassify(
   classification: ShadowClassification; sourceUsed: PriceSource | null; yahooMatch: boolean | null;
   yahooDetail?: { ourDate: string; ourPrice: number; yahooDate: string; yahooPrice: number };
   sanityDetail?: { newPrice: number; lastKnownClose: number };
+  resolvedPrice: number | null; // Task P: whatever price actually resolved (any RESOLVED kind), for the write path to use directly — never recomputed a second time.
 } {
   const sparkSymbolPresent = candle !== undefined;
   const points = candle?.points ?? [];
@@ -163,22 +168,35 @@ function resolveAndClassify(
     // Not a price comparison at all — sparkSymbolPresent still matters (SOURCE_MISSING must still
     // win if Spark had nothing for this symbol whatsoever), but when the symbol IS present and we've
     // confirmed it simply didn't trade, that's immediately final, independent of whatever's in DB.
-    return { classification: sparkSymbolPresent ? "NO_TRADE_ON_TARGET" : "SOURCE_MISSING", sourceUsed: null, yahooMatch: null };
+    return { classification: sparkSymbolPresent ? "NO_TRADE_ON_TARGET" : "SOURCE_MISSING", sourceUsed: null, yahooMatch: null, resolvedPrice: null };
   }
 
   // Task O rule 1 (price sanity): a resolved price is checked against the ETF's own last known DB
   // close BEFORE it's allowed to become NEW/CHANGED/SAME/DB_NEWER. A ~100x (or ~1/100x) ratio is a
-  // near-certain pence/pound unit mismatch; anything else beyond ±50% is held for human review.
-  // Both are final, record-only classifications — shadow mode writes nothing regardless, so "不寫入"
-  // is already structurally guaranteed; what this adds is keeping suspect prices OUT of the normal
-  // classification counts.
+  // near-certain pence/pound unit mismatch, held unconditionally (never written, even once Task P's
+  // write path is on). Anything else beyond ±50% gets Task P's second opinion: Yahoo's OWN previous
+  // close (chartPreviousClose). If Yahoo's own day-over-day move agrees with the new price, the
+  // "jump" only existed relative to our own stale DB value — reclassified DB_DISCONTINUITY, which IS
+  // written (the DXJ scenario this round: DB's stale 180.55 made 60.71 look like a huge drop, but
+  // Yahoo's own previous close of 60.677 shows this is just the DB catching up). If Yahoo's own data
+  // shows the same size of jump too, there's no independent corroboration — stays PRICE_JUMP_REVIEW,
+  // never written.
   if (resolved.kind === "RESOLVED") {
     const lastKnownClose = lastKnownCloses.get(etf.id) ?? null;
     const sanity = checkPriceSanity(resolved.price, lastKnownClose);
-    if (sanity) {
+    if (sanity === "UNIT_MISMATCH") {
       return {
-        classification: sanity, sourceUsed: resolved.source, yahooMatch, yahooDetail,
+        classification: "UNIT_MISMATCH", sourceUsed: resolved.source, yahooMatch, yahooDetail,
         sanityDetail: lastKnownClose != null ? { newPrice: resolved.price, lastKnownClose } : undefined,
+        resolvedPrice: resolved.price,
+      };
+    }
+    if (sanity === "PRICE_JUMP_REVIEW") {
+      const outcome = reviewPriceJump(resolved.price, candle?.chartPreviousClose ?? null);
+      return {
+        classification: outcome, sourceUsed: resolved.source, yahooMatch, yahooDetail,
+        sanityDetail: lastKnownClose != null ? { newPrice: resolved.price, lastKnownClose } : undefined,
+        resolvedPrice: resolved.price,
       };
     }
   }
@@ -186,7 +204,7 @@ function resolveAndClassify(
   const sparkDate = resolved.kind === "RESOLVED" ? targetLocalDate : null;
   const sparkClose = resolved.kind === "RESOLVED" ? resolved.price : null;
   const classification = classify({ dbDate, dbClose, sparkSymbolPresent, sparkDate, sparkClose });
-  return { classification, sourceUsed: resolved.kind === "RESOLVED" ? resolved.source : null, yahooMatch, yahooDetail };
+  return { classification, sourceUsed: resolved.kind === "RESOLVED" ? resolved.source : null, yahooMatch, yahooDetail, resolvedPrice: resolved.kind === "RESOLVED" ? resolved.price : null };
 }
 
 type MarketStatus = "ELIGIBLE" | "NOT_ELIGIBLE" | "NOT_REACHED";
@@ -207,6 +225,10 @@ type MarketDetail = {
   changedSymbols: string[];
   unitMismatchSamples: Array<{ symbol: string; newPrice: number; lastKnownClose: number }>;
   priceJumpReviewSamples: Array<{ symbol: string; newPrice: number; lastKnownClose: number }>;
+  dbDiscontinuitySamples: Array<{ symbol: string; newPrice: number; lastKnownClose: number }>;
+  historyWritten: number;
+  etfsUpdated: number;
+  performanceRecomputed: number;
   doneForToday: boolean;
   priorityKind?: "SWEEP" | "RECHECK_DUE" | "WAITING" | "DONE";
   coreUniverseBefore?: number; // active+data_source candidates matching this market's suffix pattern, before the core filter
@@ -220,7 +242,12 @@ type MarketDetail = {
   yahooInconsistentSamples: Array<{ symbol: string; ourDate: string; ourPrice: number; yahooDate: string; yahooPrice: number }>;
 };
 
-const emptyCounts = (): Record<ShadowClassification, number> => ({ NEW: 0, CHANGED: 0, SAME: 0, SOURCE_MISSING: 0, NO_BAR_FOR_TARGET_DATE: 0, DB_NEWER: 0, NO_TRADE_ON_TARGET: 0, UNIT_MISMATCH: 0, PRICE_JUMP_REVIEW: 0 });
+const emptyCounts = (): Record<ShadowClassification, number> => ({ NEW: 0, CHANGED: 0, SAME: 0, SOURCE_MISSING: 0, NO_BAR_FOR_TARGET_DATE: 0, DB_NEWER: 0, NO_TRADE_ON_TARGET: 0, UNIT_MISMATCH: 0, PRICE_JUMP_REVIEW: 0, DB_DISCONTINUITY: 0 });
+
+// Task P: the only QueryFn adapter needed for lib/market-close-sync/priceWriter.ts — a thin wrapper
+// around the same prisma.$queryRawUnsafe every read-only lookup in this route already uses, so the
+// write path shares the exact same DB connection/client, never a second one.
+const writerQuery = (sql: string, params: unknown[]) => prisma.$queryRawUnsafe<any[]>(sql, ...params);
 
 async function computeUnmapped(registry: Awaited<ReturnType<typeof loadExchangeCalendarRegistry>>) {
   const rows = await prisma.$queryRawUnsafe<Array<{ data_source: string; exchange: string | null }>>(
@@ -349,7 +376,7 @@ export async function GET(request: Request) {
     checkpointBefore: null,
   });
   if (skipped) {
-    return Response.json({ ok: true, job: JOB, skipped: true, reason: "run_key already present this hour", runKey, unmappedTotal, unmappedBySuffix });
+    return Response.json({ ok: true, job: JOB, skipped: true, reason: "run_key already present this hour", runKey, unmappedTotal, unmappedBySuffix, runMode: currentRunMode() });
   }
 
   const consideredJobIds = [...new Set([...Object.values(SUFFIX_TO_JOB_ID), ...Object.values(NO_SUFFIX_EXCHANGE_FALLBACK)])];
@@ -376,7 +403,7 @@ export async function GET(request: Request) {
       marketDetails.push({
         jobId, status: "NOT_ELIGIBLE", notEligibleReason: eligibility.reason, targetLocalDate: null,
         requested: 0, classifications: emptyCounts(), fetchErrorCount: 0, pendingCount: 0,
-        sourceMissingSymbols: [], noBarSymbols: [], noTradeSymbols: [], newSymbols: [], changedSymbols: [], unitMismatchSamples: [], priceJumpReviewSamples: [], doneForToday: eligibility.reason === "ALREADY_DONE",
+        sourceMissingSymbols: [], noBarSymbols: [], noTradeSymbols: [], newSymbols: [], changedSymbols: [], unitMismatchSamples: [], priceJumpReviewSamples: [], dbDiscontinuitySamples: [], historyWritten: 0, etfsUpdated: 0, performanceRecomputed: 0, doneForToday: eligibility.reason === "ALREADY_DONE",
         barCount: 0, quoteFinalCount: 0, noTradeOnTargetCount: 0, sourceSwitches: [], yahooConsistentCount: 0, yahooInconsistentCount: 0, yahooInconsistentSamples: [],
       });
       continue;
@@ -433,7 +460,12 @@ export async function GET(request: Request) {
     const yahooInconsistentSamples: Array<{ symbol: string; ourDate: string; ourPrice: number; yahooDate: string; yahooPrice: number }> = [];
     const unitMismatchSamples: Array<{ symbol: string; newPrice: number; lastKnownClose: number }> = [];
     const priceJumpReviewSamples: Array<{ symbol: string; newPrice: number; lastKnownClose: number }> = [];
+    const dbDiscontinuitySamples: Array<{ symbol: string; newPrice: number; lastKnownClose: number }> = [];
     const sourceSwitches: SourceSwitch[] = [];
+    let historyWritten = 0;
+    let etfsUpdated = 0;
+    let performanceRecomputed = 0;
+    const writeEnabledThisRun = isWriteEnabled();
     const { quoteResolutions } = ctx;
 
     // Phase 1: forward sweep, now filtered to the core universe (coreUniverseIds) and excluding
@@ -479,9 +511,10 @@ export async function GET(request: Request) {
       const lastKnownCloses = await lookupLastKnownClose(candidates.map((c) => c.id));
 
       const observations: Array<{ etfId: string; symbol: string; classification: ShadowClassification }> = [];
+      const batchWritable: WritablePrice[] = [];
       for (const etf of candidates) {
         requested++;
-        const { classification: c, sourceUsed, yahooMatch, yahooDetail, sanityDetail } = resolveAndClassify(
+        const { classification: c, sourceUsed, yahooMatch, yahooDetail, sanityDetail, resolvedPrice } = resolveAndClassify(
           etf, byCandle.get(etf.data_source), dbRows, lastKnownCloses, job, targetLocalDate, now, quoteResolutions, sourceSwitches,
         );
         counts[c]++;
@@ -501,7 +534,16 @@ export async function GET(request: Request) {
         if (c === "CHANGED" && changedSymbols.length < 20) changedSymbols.push(etf.data_source);
         if (c === "UNIT_MISMATCH" && sanityDetail && unitMismatchSamples.length < 20) unitMismatchSamples.push({ symbol: etf.data_source, ...sanityDetail });
         if (c === "PRICE_JUMP_REVIEW" && sanityDetail && priceJumpReviewSamples.length < 20) priceJumpReviewSamples.push({ symbol: etf.data_source, ...sanityDetail });
+        if (c === "DB_DISCONTINUITY" && sanityDetail && dbDiscontinuitySamples.length < 20) dbDiscontinuitySamples.push({ symbol: etf.data_source, ...sanityDetail });
+        if (sourceUsed && resolvedPrice != null) {
+          batchWritable.push({ etfId: etf.id, symbol: etf.data_source, classification: c, targetLocalDate, price: resolvedPrice, source: sourceUsed });
+        }
       }
+      // Task P: one batched write call per Spark batch, never per row — matching "批次寫入，不逐筆".
+      const writeResult = await writeBatchIfEnabled(writerQuery, batchWritable, now.toISOString(), writeEnabledThisRun);
+      historyWritten += writeResult.historyWritten;
+      etfsUpdated += writeResult.etfsUpdated;
+      performanceRecomputed += writeResult.performanceRecomputed;
       state = advanceSweep(state, { ok: true, isLastBatch, observations }, Date.now(), lastRawId);
       if (isLastBatch) break;
     }
@@ -531,9 +573,10 @@ export async function GET(request: Request) {
         const lastKnownCloses = await lookupLastKnownClose(chunk.map((p) => p.etfId));
 
         const observations: Array<{ etfId: string; symbol: string; classification: ShadowClassification }> = [];
+        const chunkWritable: WritablePrice[] = [];
         for (const p of chunk) {
           requested++;
-          const { classification: c, sourceUsed, yahooMatch, yahooDetail, sanityDetail } = resolveAndClassify(
+          const { classification: c, sourceUsed, yahooMatch, yahooDetail, sanityDetail, resolvedPrice } = resolveAndClassify(
             { id: p.etfId, data_source: p.symbol }, byCandle.get(p.symbol), dbRows, lastKnownCloses, job, targetLocalDate, now, quoteResolutions, sourceSwitches,
           );
           counts[c]++;
@@ -553,7 +596,15 @@ export async function GET(request: Request) {
           if (c === "CHANGED" && changedSymbols.length < 20) changedSymbols.push(p.symbol);
           if (c === "UNIT_MISMATCH" && sanityDetail && unitMismatchSamples.length < 20) unitMismatchSamples.push({ symbol: p.symbol, ...sanityDetail });
           if (c === "PRICE_JUMP_REVIEW" && sanityDetail && priceJumpReviewSamples.length < 20) priceJumpReviewSamples.push({ symbol: p.symbol, ...sanityDetail });
+          if (c === "DB_DISCONTINUITY" && sanityDetail && dbDiscontinuitySamples.length < 20) dbDiscontinuitySamples.push({ symbol: p.symbol, ...sanityDetail });
+          if (sourceUsed && resolvedPrice != null) {
+            chunkWritable.push({ etfId: p.etfId, symbol: p.symbol, classification: c, targetLocalDate, price: resolvedPrice, source: sourceUsed });
+          }
         }
+        const writeResult = await writeBatchIfEnabled(writerQuery, chunkWritable, now.toISOString(), writeEnabledThisRun);
+        historyWritten += writeResult.historyWritten;
+        etfsUpdated += writeResult.etfsUpdated;
+        performanceRecomputed += writeResult.performanceRecomputed;
         state = advanceSweep(state, { ok: true, isLastBatch: true, observations }, Date.now());
       }
     }
@@ -574,7 +625,7 @@ export async function GET(request: Request) {
       pendingCount: state.pending.length, sourceMissingSymbols, noBarSymbols, noTradeSymbols, newSymbols, changedSymbols, doneForToday: marketDone,
       priorityKind: priorityByJobId.get(jobId)?.kind,
       barCount, quoteFinalCount, noTradeOnTargetCount, sourceSwitches, yahooConsistentCount, yahooInconsistentCount, yahooInconsistentSamples,
-      unitMismatchSamples, priceJumpReviewSamples,
+      unitMismatchSamples, priceJumpReviewSamples, dbDiscontinuitySamples, historyWritten, etfsUpdated, performanceRecomputed,
     });
     if (fetchFailedThisMarket) continue;
     if (Date.now() - startedMs > TIME_BUDGET_MS) { timeBudgetStop = true; break; }
@@ -589,7 +640,7 @@ export async function GET(request: Request) {
     const priority = priorityByJobId.get(jobId);
     marketDetails.push({
       jobId, status: "NOT_REACHED", targetLocalDate: null, requested: 0, classifications: emptyCounts(), fetchErrorCount: 0, pendingCount: 0,
-      sourceMissingSymbols: [], noBarSymbols: [], noTradeSymbols: [], newSymbols: [], changedSymbols: [], unitMismatchSamples: [], priceJumpReviewSamples: [], doneForToday: false,
+      sourceMissingSymbols: [], noBarSymbols: [], noTradeSymbols: [], newSymbols: [], changedSymbols: [], unitMismatchSamples: [], priceJumpReviewSamples: [], dbDiscontinuitySamples: [], historyWritten: 0, etfsUpdated: 0, performanceRecomputed: 0, doneForToday: false,
       priorityKind: priority?.kind,
       barCount: 0, quoteFinalCount: 0, noTradeOnTargetCount: 0, sourceSwitches: [], yahooConsistentCount: 0, yahooInconsistentCount: 0, yahooInconsistentSamples: [],
     });
@@ -615,17 +666,32 @@ export async function GET(request: Request) {
   const totalRequested = marketDetails.reduce((s, m) => s + m.requested, 0);
   const totalFetchErrors = marketDetails.reduce((s, m) => s + m.fetchErrorCount, 0);
   const totalFailed = marketDetails.reduce((s, m) => s + m.classifications.SOURCE_MISSING + m.classifications.NO_BAR_FOR_TARGET_DATE, 0) + totalFetchErrors;
+  // Task P: these were always hardcoded 0 in every prior task — shadow mode never wrote anything.
+  // Now they reflect the REAL write counts, which are non-zero only when MARKET_CLOSE_SYNC_WRITE=on
+  // actually caused writeBatchIfEnabled to reach the DB — see writeGate.ts/priceWriter.ts.
+  const totalHistoryWritten = marketDetails.reduce((s, m) => s + m.historyWritten, 0);
+  const totalEtfsUpdated = marketDetails.reduce((s, m) => s + m.etfsUpdated, 0);
+  const totalPerformanceRecomputed = marketDetails.reduce((s, m) => s + m.performanceRecomputed, 0);
+  const runMode = currentRunMode();
   await finishRun(runId, JOB, "YAHOO_SPARK", startedMs, {
     status,
     attempted: totalRequested,
     completed: totalRequested - totalFailed,
-    inserted: 0,
-    updated: 0,
+    inserted: totalHistoryWritten,
+    updated: totalEtfsUpdated,
     failed: totalFailed,
     retryableFailures: totalFetchErrors,
     checkpointAfter: null,
-    details: { time_budget_stop: timeBudgetStop, rate_limit_stop: rateLimitStop, markets: marketDetails, unmapped_total: unmappedTotal, unmapped_by_suffix: unmappedBySuffix, core_universe_size: coreUniverseIds.size },
+    details: {
+      time_budget_stop: timeBudgetStop, rate_limit_stop: rateLimitStop, markets: marketDetails,
+      unmapped_total: unmappedTotal, unmapped_by_suffix: unmappedBySuffix, core_universe_size: coreUniverseIds.size,
+      run_mode: runMode, history_written: totalHistoryWritten, etfs_updated: totalEtfsUpdated, performance_recomputed: totalPerformanceRecomputed,
+    },
   });
 
-  return Response.json({ ok: true, job: JOB, runId, status, timeBudgetStop, rateLimitStop, markets: marketDetails, unmappedTotal, unmappedBySuffix, universeTotal, coreUniverseSize: coreUniverseIds.size });
+  return Response.json({
+    ok: true, job: JOB, runId, status, runMode, timeBudgetStop, rateLimitStop, markets: marketDetails,
+    unmappedTotal, unmappedBySuffix, universeTotal, coreUniverseSize: coreUniverseIds.size,
+    historyWritten: totalHistoryWritten, etfsUpdated: totalEtfsUpdated, performanceRecomputed: totalPerformanceRecomputed,
+  });
 }

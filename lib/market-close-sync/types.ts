@@ -1,6 +1,6 @@
-// Shared types for the market-close-sync shadow pipeline. ETF-only. No price-table writes anywhere
-// in this module tree — see app/api/cron/market-close-sync/route.ts for the read-only DB access and
-// the run-log-only write path.
+// Shared types for the market-close-sync pipeline. ETF-only. Task P adds an opt-in write path
+// (lib/market-close-sync/priceWriter.ts, gated by MARKET_CLOSE_SYNC_WRITE — off by default, shadow
+// mode unchanged) — see app/api/cron/market-close-sync/route.ts for the gate and the write call site.
 
 export type ExchangeCalendarJob = {
   id: string;
@@ -37,6 +37,10 @@ export type SparkCandle = {
   // symbol. Consumed by lib/market-close-sync/priceSource.ts's QUOTE_AFTER_CLOSE rule.
   regularMarketTimeUnix: number | null;
   regularMarketPrice: number | null;
+  // Task P: Yahoo's own previous-session close (Spark meta.chartPreviousClose) — an independent
+  // second opinion, from Yahoo itself, for whether a big move away from the ETF's own last DB close
+  // is a real data problem or just a stale DB catching up. null when Spark's meta omitted it.
+  chartPreviousClose: number | null;
 };
 
 // SOURCE_MISSING split in two per task J: Spark can either omit the symbol entirely from its result
@@ -54,7 +58,13 @@ export type SparkCandle = {
 // DB_NEWER — a resolved price that fails the sanity check against the ETF's own last known DB close
 // is diverted into one of these two record-only review buckets instead, so it never inflates the
 // normal classification counts with data that's actually suspect.
-export type ShadowClassification = "NEW" | "CHANGED" | "SAME" | "SOURCE_MISSING" | "NO_BAR_FOR_TARGET_DATE" | "DB_NEWER" | "NO_TRADE_ON_TARGET" | "UNIT_MISMATCH" | "PRICE_JUMP_REVIEW";
+// Task P: when a resolved price fails the Task O sanity check against the ETF's OWN last DB close
+// (PRICE_JUMP_REVIEW territory) but Yahoo's own previous-session close (chartPreviousClose) agrees
+// with the new price within the same ±50% band, the "jump" is just the DB catching up after a stale
+// gap, not a real data problem — reclassified DB_DISCONTINUITY, which (unlike PRICE_JUMP_REVIEW) IS
+// written when the write switch is on. UNIT_MISMATCH never gets this second opinion — it stays
+// unwritten unconditionally, per task scope.
+export type ShadowClassification = "NEW" | "CHANGED" | "SAME" | "SOURCE_MISSING" | "NO_BAR_FOR_TARGET_DATE" | "DB_NEWER" | "NO_TRADE_ON_TARGET" | "UNIT_MISMATCH" | "PRICE_JUMP_REVIEW" | "DB_DISCONTINUITY";
 
 export type ShadowRow = {
   etfId: string;

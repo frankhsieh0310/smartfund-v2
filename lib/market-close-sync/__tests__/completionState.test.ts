@@ -31,6 +31,13 @@ test("Task O: UNIT_MISMATCH and PRICE_JUMP_REVIEW are both final the first time,
   assert.equal(s.pending.length, 0);
 });
 
+test("Task P: DB_DISCONTINUITY is also final the first time", () => {
+  const nowMs = Date.now();
+  const s = advanceSweep(emptyState("2026-10-09"), { ok: true, isLastBatch: true, observations: [{ etfId: "a", symbol: "A", classification: "DB_DISCONTINUITY" }] }, nowMs);
+  assert.equal(isMarketDone(s), true);
+  assert.equal(s.pending.length, 0);
+});
+
 test("a market is NOT done while the sweep itself hasn't reached its last batch, even with zero pending", () => {
   const nowMs = Date.now();
   const s = advanceSweep(emptyState("2026-10-09"), { ok: true, isLastBatch: false, observations: [{ etfId: "a", symbol: "A", classification: "SAME" }] }, nowMs);

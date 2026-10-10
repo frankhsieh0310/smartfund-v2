@@ -37,3 +37,21 @@ export function checkPriceSanity(newPrice: number, lastKnownClose: number | null
   if (changeFraction > PRICE_JUMP_THRESHOLD_FRACTION) return "PRICE_JUMP_REVIEW";
   return null;
 }
+
+// Task P: a PRICE_JUMP_REVIEW gets a second opinion from an INDEPENDENT source — Yahoo's own
+// previous-session close (Spark meta.chartPreviousClose, or the prior daily bar) — before it's
+// permanently held back. The DXJ scenario this round is the textbook case: DB's last known close was
+// 180.55 (badly stale — the DB simply hadn't been updated in a while), today's new price is 60.71,
+// which looks like a huge drop against the stale DB value; but Yahoo's OWN previous close was 60.677
+// — the "jump" only exists relative to our own out-of-date record, not in reality. Reclassifying
+// this DB_DISCONTINUITY (written, flagged for later review) rather than leaving it stuck as
+// PRICE_JUMP_REVIEW (never written) is exactly what lets the DB catch back up instead of staying
+// permanently wrong. If Yahoo's own data ALSO shows the same size of jump, there's no independent
+// corroboration that this is just DB staleness — stays PRICE_JUMP_REVIEW, unwritten.
+export type JumpReviewOutcome = "DB_DISCONTINUITY" | "PRICE_JUMP_REVIEW";
+
+export function reviewPriceJump(newPrice: number, yahooPreviousClose: number | null): JumpReviewOutcome {
+  if (yahooPreviousClose == null || yahooPreviousClose === 0) return "PRICE_JUMP_REVIEW"; // no independent corroboration available — stay conservative
+  const changeFraction = Math.abs(newPrice - yahooPreviousClose) / yahooPreviousClose;
+  return changeFraction <= PRICE_JUMP_THRESHOLD_FRACTION ? "DB_DISCONTINUITY" : "PRICE_JUMP_REVIEW";
+}

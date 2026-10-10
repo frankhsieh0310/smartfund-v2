@@ -32,7 +32,7 @@ export type PendingState = "SOURCE_MISSING_PENDING" | "NO_BAR_PENDING";
 
 export type PendingEntry = { etfId: string; symbol: string; state: PendingState; firstSeenAtMs: number };
 
-export type FinalOrPendingClassification = "NEW" | "CHANGED" | "SAME" | "DB_NEWER" | "SOURCE_MISSING" | "NO_BAR_FOR_TARGET_DATE" | "NO_TRADE_ON_TARGET" | "UNIT_MISMATCH" | "PRICE_JUMP_REVIEW";
+export type FinalOrPendingClassification = "NEW" | "CHANGED" | "SAME" | "DB_NEWER" | "SOURCE_MISSING" | "NO_BAR_FOR_TARGET_DATE" | "NO_TRADE_ON_TARGET" | "UNIT_MISMATCH" | "PRICE_JUMP_REVIEW" | "DB_DISCONTINUITY";
 
 export const NO_BAR_CONFIRM_DELAY_MS = 6 * 60 * 60 * 1000;
 
@@ -57,7 +57,7 @@ function applyObservation(
   const existing = pending.find((p) => p.etfId === etfId);
   const withoutExisting = pending.filter((p) => p.etfId !== etfId);
 
-  if (classification === "NEW" || classification === "CHANGED" || classification === "SAME" || classification === "DB_NEWER" || classification === "NO_TRADE_ON_TARGET" || classification === "UNIT_MISMATCH" || classification === "PRICE_JUMP_REVIEW") {
+  if (classification === "NEW" || classification === "CHANGED" || classification === "SAME" || classification === "DB_NEWER" || classification === "NO_TRADE_ON_TARGET" || classification === "UNIT_MISMATCH" || classification === "PRICE_JUMP_REVIEW" || classification === "DB_DISCONTINUITY") {
     return { pending: withoutExisting }; // final the first time, always
   }
 

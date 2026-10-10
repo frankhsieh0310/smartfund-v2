@@ -43,6 +43,9 @@ export async function fetchSparkBatch(symbols: string[]): Promise<SparkBatchResu
         // QUOTE_AFTER_CLOSE rule in priceSource.ts when the daily bar isn't published yet.
         regularMarketTimeUnix: typeof resp?.meta?.regularMarketTime === "number" ? resp.meta.regularMarketTime : null,
         regularMarketPrice: typeof resp?.meta?.regularMarketPrice === "number" ? resp.meta.regularMarketPrice : null,
+        // Task P: Yahoo's own previous-session close — an independent second opinion for the
+        // PRICE_JUMP_REVIEW -> DB_DISCONTINUITY reclassification in priceSanity.ts.
+        chartPreviousClose: typeof resp?.meta?.chartPreviousClose === "number" ? resp.meta.chartPreviousClose : null,
       };
     });
     return { httpStatus: res.status, rateLimited: false, candles, error: null };
