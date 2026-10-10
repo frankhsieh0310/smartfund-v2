@@ -25,13 +25,13 @@
 
 import { isAuthorizedCron, unauthorizedCron } from "@/lib/cron/authorize";
 import { prisma } from "@/lib/prisma";
-import { beginRun, finishRun, hourBucketKey, readCheckpoint, writeCheckpoint } from "@/lib/cloud-ingestion/runContext";
+import { beginRun, finishRun, readCheckpoint, writeCheckpoint } from "@/lib/cloud-ingestion/runContext";
 import { loadExchangeCalendarRegistry, SUFFIX_TO_JOB_ID, NO_SUFFIX_EXCHANGE_FALLBACK, resolveJobForEtf, jobById } from "@/lib/market-close-sync/marketConfig";
 import { findEligibleTradeDate, pickClosedCandle, localDateFromUnix, isDefinitelyClosed } from "@/lib/market-close-sync/marketTime";
 import { fetchSparkBatch, SPARK_MAX_SYMBOLS_PER_BATCH } from "@/lib/market-close-sync/sparkClient";
 import { classify } from "@/lib/market-close-sync/shadowCompare";
 import { emptyState, advanceSweep, isMarketDone, type MarketCompletionState } from "@/lib/market-close-sync/completionState";
-import { classifyMarketPriority, orderMarketsForInvocation, isDueForRecheck, PER_MARKET_BUDGET_FRACTION } from "@/lib/market-close-sync/scheduling";
+import { classifyMarketPriority, orderMarketsForInvocation, isDueForRecheck, PER_MARKET_BUDGET_FRACTION, fifteenMinuteBucketKey } from "@/lib/market-close-sync/scheduling";
 import { isHongKongCurrencyCounter, isCoreUniverseMemberFromCounts, SUFFIX_ACTIVITY_MEASURE } from "@/lib/market-close-sync/coreUniverse";
 import { resolvePrice, type PriceSource } from "@/lib/market-close-sync/priceSource";
 import { checkPriceSanity, reviewPriceJump } from "@/lib/market-close-sync/priceSanity";
@@ -366,7 +366,7 @@ export async function GET(request: Request) {
   const marketDetails: MarketDetail[] = [];
   let timeBudgetStop = false;
   let rateLimitStop = false;
-  const runKey = hourBucketKey("market-close-sync");
+  const runKey = fifteenMinuteBucketKey("market-close-sync", now);
   const { runId, skipped } = await beginRun({
     jobName: JOB,
     provider: "YAHOO_SPARK",
@@ -376,7 +376,7 @@ export async function GET(request: Request) {
     checkpointBefore: null,
   });
   if (skipped) {
-    return Response.json({ ok: true, job: JOB, skipped: true, reason: "run_key already present this hour", runKey, unmappedTotal, unmappedBySuffix, runMode: currentRunMode() });
+    return Response.json({ ok: true, job: JOB, skipped: true, reason: "run_key already present this 15-minute window", runKey, unmappedTotal, unmappedBySuffix, runMode: currentRunMode() });
   }
 
   const consideredJobIds = [...new Set([...Object.values(SUFFIX_TO_JOB_ID), ...Object.values(NO_SUFFIX_EXCHANGE_FALLBACK)])];

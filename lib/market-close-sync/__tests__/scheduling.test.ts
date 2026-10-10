@@ -3,6 +3,7 @@ import { emptyState, advanceSweep } from "../completionState.ts";
 import {
   classifyMarketPriority, orderMarketsForInvocation, isDueForRecheck,
   simulateRoundsToSweepAll, PER_MARKET_BUDGET_FRACTION, SOURCE_MISSING_MIN_RECHECK_DELAY_MS,
+  fifteenMinuteBucketKey,
 } from "../scheduling.ts";
 import { NO_BAR_CONFIRM_DELAY_MS } from "../completionState.ts";
 
@@ -128,6 +129,29 @@ test("fairness simulation: every market eventually reaches zero remaining batche
     budgetLeft -= take;
   }
   assert.ok(remaining.slice(1).every((r) => r === 0), "all four small markets must fully finish within round 1");
+});
+
+test("fifteenMinuteBucketKey: two invocations in the same 15-minute window produce the same key", () => {
+  const a = fifteenMinuteBucketKey("market-close-sync", new Date("2026-10-10T13:31:29.283Z"));
+  const b = fifteenMinuteBucketKey("market-close-sync", new Date("2026-10-10T13:44:59.999Z"));
+  assert.equal(a, b);
+});
+
+test("fifteenMinuteBucketKey: two invocations 15 minutes apart produce different keys", () => {
+  const a = fifteenMinuteBucketKey("market-close-sync", new Date("2026-10-10T13:31:29.283Z"));
+  const b = fifteenMinuteBucketKey("market-close-sync", new Date("2026-10-10T13:46:30.160Z"));
+  assert.notEqual(a, b);
+});
+
+test("fifteenMinuteBucketKey: a run just before and just after the top of the hour produce different keys", () => {
+  const a = fifteenMinuteBucketKey("market-close-sync", new Date("2026-10-10T12:59:59.999Z"));
+  const b = fifteenMinuteBucketKey("market-close-sync", new Date("2026-10-10T13:00:00.000Z"));
+  assert.notEqual(a, b);
+});
+
+test("fifteenMinuteBucketKey: bucket boundary is exactly :00/:15/:30/:45", () => {
+  assert.equal(fifteenMinuteBucketKey("x", new Date("2026-10-10T13:14:59.999Z")), fifteenMinuteBucketKey("x", new Date("2026-10-10T13:00:00.000Z")));
+  assert.notEqual(fifteenMinuteBucketKey("x", new Date("2026-10-10T13:14:59.999Z")), fifteenMinuteBucketKey("x", new Date("2026-10-10T13:15:00.000Z")));
 });
 
 console.log("SCHEDULING_TESTS_DONE");

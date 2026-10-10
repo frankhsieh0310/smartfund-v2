@@ -69,6 +69,19 @@ export function orderMarketsForInvocation<T>(markets: Array<{ item: T; priority:
  * until the whole invocation's `totalBatchBudget` is exhausted. Returns the number of invocations
  * needed before every market's sweep is fully consumed.
  */
+// Task W2: the shared lib/cloud-ingestion/runContext.ts `hourBucketKey` dedups by calendar UTC HOUR,
+// not by the cron's actual 15-minute interval (vercel.json), so two invocations in the same hour
+// collapse onto one run_key and the later one's row silently overwrites the earlier one's via
+// beginRun's ON CONFLICT...DO UPDATE — confirmed live in Production (Task P2/W: only the LAST
+// invocation per hour was independently recoverable from production_scheduler_runs). Fixed here
+// rather than in runContext.ts: that file is shared by other cron jobs this task is not authorized
+// to touch, so market-close-sync computes its own finer-grained key instead of changing shared infra.
+export function fifteenMinuteBucketKey(prefix: string, now: Date = new Date()): string {
+  const bucketMinute = Math.floor(now.getUTCMinutes() / 15) * 15;
+  const datePart = now.toISOString().slice(0, 13); // YYYY-MM-DDTHH
+  return `${prefix}:${datePart}:${String(bucketMinute).padStart(2, "0")}`;
+}
+
 export function simulateRoundsToSweepAll(marketBatchCounts: number[], perMarketBatchCap: number, totalBatchBudget: number): number {
   const remaining = [...marketBatchCounts];
   let rounds = 0;
