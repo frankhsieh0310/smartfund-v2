@@ -32,6 +32,11 @@ export type SparkCandle = {
   // Every (timestamp, close) pair Spark returned for this symbol, unfiltered — date alignment and
   // intraday rejection happen one level up, against the market's own timezone, never by array index.
   points: Array<{ timestampUnix: number; close: number | null }>;
+  // Task M: Spark's own per-symbol meta.regularMarketTime/regularMarketPrice — the live/latest quote,
+  // independent of the daily bar array above. null when Spark's response carried no meta for this
+  // symbol. Consumed by lib/market-close-sync/priceSource.ts's QUOTE_AFTER_CLOSE rule.
+  regularMarketTimeUnix: number | null;
+  regularMarketPrice: number | null;
 };
 
 // SOURCE_MISSING split in two per task J: Spark can either omit the symbol entirely from its result

@@ -25,13 +25,14 @@ import { isAuthorizedCron, unauthorizedCron } from "@/lib/cron/authorize";
 import { prisma } from "@/lib/prisma";
 import { beginRun, finishRun, hourBucketKey, readCheckpoint, writeCheckpoint } from "@/lib/cloud-ingestion/runContext";
 import { loadExchangeCalendarRegistry, SUFFIX_TO_JOB_ID, NO_SUFFIX_EXCHANGE_FALLBACK, resolveJobForEtf, jobById } from "@/lib/market-close-sync/marketConfig";
-import { findEligibleTradeDate, pickClosedCandle } from "@/lib/market-close-sync/marketTime";
+import { findEligibleTradeDate, pickClosedCandle, localDateFromUnix } from "@/lib/market-close-sync/marketTime";
 import { fetchSparkBatch, SPARK_MAX_SYMBOLS_PER_BATCH } from "@/lib/market-close-sync/sparkClient";
 import { classify } from "@/lib/market-close-sync/shadowCompare";
 import { emptyState, advanceSweep, isMarketDone, type MarketCompletionState } from "@/lib/market-close-sync/completionState";
 import { classifyMarketPriority, orderMarketsForInvocation, isDueForRecheck, PER_MARKET_BUDGET_FRACTION } from "@/lib/market-close-sync/scheduling";
 import { isHongKongCurrencyCounter, isCoreUniverseMemberFromCounts, SUFFIX_ACTIVITY_MEASURE } from "@/lib/market-close-sync/coreUniverse";
-import type { ShadowClassification } from "@/lib/market-close-sync/types";
+import { resolvePrice, type PriceSource } from "@/lib/market-close-sync/priceSource";
+import type { ShadowClassification, ExchangeCalendarJob, SparkCandle } from "@/lib/market-close-sync/types";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -44,7 +45,16 @@ const REQUEST_DELAY_MS = 300;
 const DB_DATE_WINDOW_DAYS = 2;
 const CORE_UNIVERSE_LOOKBACK_DAYS = 20;
 
-type PersistedState = { v: 2; lastDoneDate: string | null; inProgress: MarketCompletionState | null };
+// Task M: quoteResolutions tracks, for etf_ids currently resolved via QUOTE_AFTER_CLOSE, which
+// targetLocalDate+price that was — purely this shadow pipeline's own bookkeeping (never written to
+// etf_history). When a LATER invocation sees a real daily bar for the SAME etf_id+date, rule 4 fires:
+// the bar wins, and the difference between it and the earlier quote is logged (see sourceSwitches on
+// MarketDetail), never silently dropped. Entries are only ever kept for the market's CURRENT
+// targetLocalDate — once a date is fully done and the market moves on, its old entries are simply
+// not reloaded (there is no mechanism, nor a need, to keep watching a date this pipeline has already
+// finished with).
+type QuoteResolution = { etfId: string; targetLocalDate: string; symbol: string; price: number };
+type PersistedState = { v: 2; lastDoneDate: string | null; inProgress: MarketCompletionState | null; quoteResolutions?: QuoteResolution[] };
 
 function parsePersistedState(raw: string | null): PersistedState {
   if (!raw) return { v: 2, lastDoneDate: null, inProgress: null };
@@ -55,6 +65,55 @@ function parsePersistedState(raw: string | null): PersistedState {
     // old v1 text or garbage — treated as a fresh start.
   }
   return { v: 2, lastDoneDate: null, inProgress: null };
+}
+
+type SourceSwitch = { symbol: string; quotePrice: number; barClose: number; diff: number };
+
+/** Resolves one ETF's price (rule 1: BAR, rule 2: QUOTE_AFTER_CLOSE, rule 3: unresolved) and
+ * classifies it against the DB row exactly as before — classify() itself is unaware of which source
+ * won; it only ever sees an already-resolved (date, close) pair or null. Also applies rule 4: if this
+ * resolves to BAR for an etf_id+date that quoteResolutions still remembers as QUOTE_AFTER_CLOSE, logs
+ * the switch and the price delta, then forgets it (the bar is authoritative from here on). Mutates
+ * quoteResolutions and sourceSwitches in place — called once per candidate, in both the sweep and the
+ * recheck phase, so the two phases can never drift into different resolution logic. */
+function resolveAndClassify(
+  etf: { id: string; data_source: string },
+  candle: SparkCandle | undefined,
+  dbRows: Map<string, { date: string; close: number }>,
+  job: ExchangeCalendarJob,
+  targetLocalDate: string,
+  now: Date,
+  quoteResolutions: Map<string, QuoteResolution>,
+  sourceSwitches: SourceSwitch[],
+): { classification: ShadowClassification; sourceUsed: PriceSource | null } {
+  const sparkSymbolPresent = candle !== undefined;
+  const points = candle?.points ?? [];
+  const picked = pickClosedCandle(points, job, targetLocalDate, now);
+  const dbRow = dbRows.get(etf.id);
+  const dbDate = dbRow?.date ?? null;
+  const dbClose = dbRow?.close ?? null;
+
+  const resolved = resolvePrice({
+    job, targetLocalDate, barClose: picked?.close ?? null,
+    quoteRegularMarketTimeUnix: candle?.regularMarketTimeUnix ?? null,
+    quoteRegularMarketPrice: candle?.regularMarketPrice ?? null,
+    localDateFromUnix,
+  });
+
+  const priorQuote = quoteResolutions.get(etf.id);
+  if (resolved?.source === "BAR" && priorQuote?.targetLocalDate === targetLocalDate) {
+    if (sourceSwitches.length < 20) {
+      sourceSwitches.push({ symbol: etf.data_source, quotePrice: priorQuote.price, barClose: resolved.price, diff: resolved.price - priorQuote.price });
+    }
+    quoteResolutions.delete(etf.id);
+  } else if (resolved?.source === "QUOTE_AFTER_CLOSE") {
+    quoteResolutions.set(etf.id, { etfId: etf.id, targetLocalDate, symbol: etf.data_source, price: resolved.price });
+  }
+
+  const sparkDate = resolved ? targetLocalDate : null;
+  const sparkClose = resolved?.price ?? null;
+  const classification = classify({ dbDate, dbClose, sparkSymbolPresent, sparkDate, sparkClose });
+  return { classification, sourceUsed: resolved?.source ?? null };
 }
 
 type MarketStatus = "ELIGIBLE" | "NOT_ELIGIBLE" | "NOT_REACHED";
@@ -76,6 +135,9 @@ type MarketDetail = {
   priorityKind?: "SWEEP" | "RECHECK_DUE" | "WAITING" | "DONE";
   coreUniverseBefore?: number; // active+data_source candidates matching this market's suffix pattern, before the core filter
   coreUniverseAfter?: number; // same, after the core-universe + HK-counter filter
+  barCount: number; // resolved via rule 1 (daily bar)
+  quoteAfterCloseCount: number; // resolved via rule 2 (live quote, after close, bar not yet published)
+  sourceSwitches: SourceSwitch[]; // rule 4: a later BAR superseded an earlier QUOTE_AFTER_CLOSE for the same etf+date
 };
 
 const emptyCounts = (): Record<ShadowClassification, number> => ({ NEW: 0, CHANGED: 0, SAME: 0, SOURCE_MISSING: 0, NO_BAR_FOR_TARGET_DATE: 0, DB_NEWER: 0 });
@@ -162,6 +224,7 @@ type MarketContext = {
   lastDoneDate: string | null;
   targetLocalDate: string;
   state: MarketCompletionState;
+  quoteResolutions: Map<string, QuoteResolution>;
   suffixPatterns: string[];
   fallbackExchanges: string[];
 };
@@ -216,6 +279,7 @@ export async function GET(request: Request) {
         jobId, status: "NOT_ELIGIBLE", notEligibleReason: eligibility.reason, targetLocalDate: null,
         requested: 0, classifications: emptyCounts(), fetchErrorCount: 0, pendingCount: 0,
         sourceMissingSymbols: [], noBarSymbols: [], newSymbols: [], changedSymbols: [], doneForToday: eligibility.reason === "ALREADY_DONE",
+        barCount: 0, quoteAfterCloseCount: 0, sourceSwitches: [],
       });
       continue;
     }
@@ -223,9 +287,14 @@ export async function GET(request: Request) {
     const state: MarketCompletionState = persisted.inProgress && persisted.inProgress.targetLocalDate === targetLocalDate
       ? persisted.inProgress
       : emptyState(targetLocalDate);
+    const quoteResolutions = new Map<string, QuoteResolution>(
+      (persisted.quoteResolutions ?? [])
+        .filter((q) => q.targetLocalDate === targetLocalDate)
+        .map((q) => [q.etfId, q]),
+    );
 
     contexts.push({
-      jobId, job, checkpointKey, lastDoneDate, targetLocalDate, state,
+      jobId, job, checkpointKey, lastDoneDate, targetLocalDate, state, quoteResolutions,
       suffixPatterns: (suffixesByJob.get(jobId) ?? []).map((s) => `%${s}`),
       fallbackExchanges: fallbackExchangesByJob.get(jobId) ?? [],
     });
@@ -257,6 +326,10 @@ export async function GET(request: Request) {
     let requested = 0;
     let fetchErrorCount = 0;
     let fetchFailedThisMarket = false;
+    let barCount = 0;
+    let quoteAfterCloseCount = 0;
+    const sourceSwitches: SourceSwitch[] = [];
+    const { quoteResolutions } = ctx;
 
     // Phase 1: forward sweep, now filtered to the core universe (coreUniverseIds) and excluding
     // Hong Kong's duplicate currency-counter listings — both decided once per etf_id up front, not
@@ -296,22 +369,18 @@ export async function GET(request: Request) {
         break;
       }
 
-      const bySymbol = new Map(batch.candles.map((c) => [c.symbol, c.points]));
+      const byCandle = new Map(batch.candles.map((c) => [c.symbol, c]));
       const dbRows = await lookupDbRowsForTargetDate(candidates.map((c) => c.id), targetLocalDate);
 
       const observations: Array<{ etfId: string; symbol: string; classification: ShadowClassification }> = [];
       for (const etf of candidates) {
         requested++;
-        const sparkSymbolPresent = bySymbol.has(etf.data_source);
-        const points = bySymbol.get(etf.data_source) ?? [];
-        const picked = pickClosedCandle(points, job, targetLocalDate, now);
-        const dbRow = dbRows.get(etf.id);
-        const dbDate = dbRow?.date ?? null;
-        const dbClose = dbRow?.close ?? null;
-        const sparkDate = picked ? targetLocalDate : null;
-        const sparkClose = picked?.close ?? null;
-        const c = classify({ dbDate, dbClose, sparkSymbolPresent, sparkDate, sparkClose });
+        const { classification: c, sourceUsed } = resolveAndClassify(
+          etf, byCandle.get(etf.data_source), dbRows, job, targetLocalDate, now, quoteResolutions, sourceSwitches,
+        );
         counts[c]++;
+        if (sourceUsed === "BAR") barCount++;
+        if (sourceUsed === "QUOTE_AFTER_CLOSE") quoteAfterCloseCount++;
         observations.push({ etfId: etf.id, symbol: etf.data_source, classification: c });
         if (c === "SOURCE_MISSING" && sourceMissingSymbols.length < 20) sourceMissingSymbols.push(etf.data_source);
         if (c === "NO_BAR_FOR_TARGET_DATE" && noBarSymbols.length < 20) noBarSymbols.push(etf.data_source);
@@ -342,22 +411,18 @@ export async function GET(request: Request) {
           break;
         }
 
-        const bySymbol = new Map(batch.candles.map((c) => [c.symbol, c.points]));
+        const byCandle = new Map(batch.candles.map((c) => [c.symbol, c]));
         const dbRows = await lookupDbRowsForTargetDate(chunk.map((p) => p.etfId), targetLocalDate);
 
         const observations: Array<{ etfId: string; symbol: string; classification: ShadowClassification }> = [];
         for (const p of chunk) {
           requested++;
-          const sparkSymbolPresent = bySymbol.has(p.symbol);
-          const points = bySymbol.get(p.symbol) ?? [];
-          const picked = pickClosedCandle(points, job, targetLocalDate, now);
-          const dbRow = dbRows.get(p.etfId);
-          const dbDate = dbRow?.date ?? null;
-          const dbClose = dbRow?.close ?? null;
-          const sparkDate = picked ? targetLocalDate : null;
-          const sparkClose = picked?.close ?? null;
-          const c = classify({ dbDate, dbClose, sparkSymbolPresent, sparkDate, sparkClose });
+          const { classification: c, sourceUsed } = resolveAndClassify(
+            { id: p.etfId, data_source: p.symbol }, byCandle.get(p.symbol), dbRows, job, targetLocalDate, now, quoteResolutions, sourceSwitches,
+          );
           counts[c]++;
+          if (sourceUsed === "BAR") barCount++;
+          if (sourceUsed === "QUOTE_AFTER_CLOSE") quoteAfterCloseCount++;
           observations.push({ etfId: p.etfId, symbol: p.symbol, classification: c });
           if (c === "SOURCE_MISSING" && sourceMissingSymbols.length < 20) sourceMissingSymbols.push(p.symbol);
           if (c === "NO_BAR_FOR_TARGET_DATE" && noBarSymbols.length < 20) noBarSymbols.push(p.symbol);
@@ -370,8 +435,8 @@ export async function GET(request: Request) {
 
     const marketDone = isMarketDone(state);
     const nextPersisted: PersistedState = marketDone
-      ? { v: 2, lastDoneDate: targetLocalDate, inProgress: null }
-      : { v: 2, lastDoneDate, inProgress: state };
+      ? { v: 2, lastDoneDate: targetLocalDate, inProgress: null, quoteResolutions: Array.from(quoteResolutions.values()) }
+      : { v: 2, lastDoneDate, inProgress: state, quoteResolutions: Array.from(quoteResolutions.values()) };
     await writeCheckpoint(JOB, checkpointKey, runId, {
       lastSymbol: JSON.stringify(nextPersisted),
       processed: requested,
@@ -383,6 +448,7 @@ export async function GET(request: Request) {
       jobId, status: "ELIGIBLE", targetLocalDate, requested, classifications: counts, fetchErrorCount,
       pendingCount: state.pending.length, sourceMissingSymbols, noBarSymbols, newSymbols, changedSymbols, doneForToday: marketDone,
       priorityKind: priorityByJobId.get(jobId)?.kind,
+      barCount, quoteAfterCloseCount, sourceSwitches,
     });
     if (fetchFailedThisMarket) continue;
     if (Date.now() - startedMs > TIME_BUDGET_MS) { timeBudgetStop = true; break; }
@@ -399,6 +465,7 @@ export async function GET(request: Request) {
       jobId, status: "NOT_REACHED", targetLocalDate: null, requested: 0, classifications: emptyCounts(), fetchErrorCount: 0, pendingCount: 0,
       sourceMissingSymbols: [], noBarSymbols: [], newSymbols: [], changedSymbols: [], doneForToday: false,
       priorityKind: priority?.kind,
+      barCount: 0, quoteAfterCloseCount: 0, sourceSwitches: [],
     });
   }
 

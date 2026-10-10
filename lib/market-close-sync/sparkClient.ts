@@ -39,6 +39,10 @@ export async function fetchSparkBatch(symbols: string[]): Promise<SparkBatchResu
         // never assumed to align with any other symbol's arrays, which is the actual misalignment
         // risk this session already confirmed (9047.HK silently dropping two interior days).
         points: timestamps.map((timestampUnix, i) => ({ timestampUnix, close: closes[i] ?? null })),
+        // Task M: Spark's live/latest quote, independent of the daily bar array — feeds the
+        // QUOTE_AFTER_CLOSE rule in priceSource.ts when the daily bar isn't published yet.
+        regularMarketTimeUnix: typeof resp?.meta?.regularMarketTime === "number" ? resp.meta.regularMarketTime : null,
+        regularMarketPrice: typeof resp?.meta?.regularMarketPrice === "number" ? resp.meta.regularMarketPrice : null,
       };
     });
     return { httpStatus: res.status, rateLimited: false, candles, error: null };
