@@ -35,7 +35,7 @@ import { classifyMarketPriority, orderMarketsForInvocation, isDueForRecheck, PER
 import { isHongKongCurrencyCounter, isCoreUniverseMemberFromCounts, SUFFIX_ACTIVITY_MEASURE } from "@/lib/market-close-sync/coreUniverse";
 import { resolvePrice, type PriceSource } from "@/lib/market-close-sync/priceSource";
 import { checkPriceSanity, reviewPriceJump } from "@/lib/market-close-sync/priceSanity";
-import { isWriteEnabled, currentRunMode } from "@/lib/market-close-sync/writeGate";
+import { isWriteEnabled, currentRunMode, writeEnvDiagnostic } from "@/lib/market-close-sync/writeGate";
 import { writeBatchIfEnabled, type WritablePrice } from "@/lib/market-close-sync/priceWriter";
 import type { ShadowClassification, ExchangeCalendarJob, SparkCandle } from "@/lib/market-close-sync/types";
 
@@ -368,34 +368,56 @@ async function lookupLastKnownClose(etfIds: string[]): Promise<Map<string, numbe
  * existing coreUniverseBefore/After reporting pass both already use (is_active + data_source match
  * + coreUniverseIds membership + not an HK currency counter), factored out so the DB-gap check (which
  * needs this list too) doesn't duplicate the filter logic, only the (cheap, read-only) query. */
+// Task W6: every etfs.id in this table is a UUID-shaped string stored in a plain `text` column
+// (VERIFIED live: 16,834/16,834 rows match the UUID regex, 100%, no exceptions by market) — Prisma's
+// query engine detects UUID-shaped string arrays passed to $queryRawUnsafe and can encode them on the
+// wire as `uuid[]`, which then fails against the real `text` column with "operator does not exist:
+// text = uuid" (a known Prisma raw-query quirk, confirmed via package.json: @prisma/client 5.14.0).
+// This hit in Production intermittently (not every invocation — consistent with Prisma's engine only
+// applying the detection in some code paths) and an explicit `::text[]` SQL-level cast (Task W5) did
+// NOT reliably fix it, since the mismatch happens at parameter wire-encoding, before the cast in the
+// query text is ever applied. Fix: stop handwriting SQL with array bind parameters for these two
+// lookups entirely — use Prisma's own typed query builder (findMany/where/in), which serializes
+// `in` filters through its normal, already-correct code path, never through the UUID-sniffing one.
 async function lookupMarketCoreUniverseIds(suffixPatterns: string[], fallbackExchanges: string[], coreUniverseIds: Set<string>): Promise<string[]> {
   if (suffixPatterns.length === 0 && fallbackExchanges.length === 0) return [];
-  // Task W5: explicit ::text[] casts on both array parameters — PgBouncer transaction-mode pooling
-  // (this project's DATABASE_URL has pgbouncer=true) reuses backend connections across invocations,
-  // and an untyped bind parameter to ANY(...) left Postgres to infer its element type from whatever
-  // other prepared statement happened to share the pooled connection's cache; live Production hit
-  // this exact failure ("operator does not exist: text = uuid") on every invocation after this
-  // function's first deploy. An explicit cast removes the ambiguity rather than relying on inference.
-  const rows = await prisma.$queryRawUnsafe<Array<{ id: string; data_source: string }>>(
-    `SELECT id, data_source FROM etfs
-      WHERE is_active = true AND data_source IS NOT NULL
-        AND (data_source LIKE ANY($1::text[]) OR (data_source NOT LIKE '%.%' AND exchange = ANY($2::text[])))`,
-    suffixPatterns, fallbackExchanges,
-  );
-  return rows.filter((r) => coreUniverseIds.has(r.id) && !isHongKongCurrencyCounter(r.data_source)).map((r) => r.id);
+  const suffixes = suffixPatterns.map((p) => (p.startsWith("%") ? p.slice(1) : p)); // caller passes "%${suffix}" LIKE patterns; endsWith needs the bare suffix
+  const rows = await prisma.etf.findMany({
+    where: {
+      isActive: true,
+      dataSource: { not: null },
+      OR: [
+        ...suffixes.map((suffix) => ({ dataSource: { endsWith: suffix } })),
+        ...(fallbackExchanges.length > 0 ? [{ dataSource: { not: { contains: "." } }, exchange: { in: fallbackExchanges } }] : []),
+      ],
+    },
+    select: { id: true, dataSource: true },
+  });
+  // dataSource is never actually null here (the where clause excludes it) — the ?? is only to
+  // satisfy TypeScript, which can't narrow Prisma's return type from the where filter alone.
+  return rows.filter((r) => coreUniverseIds.has(r.id) && !isHongKongCurrencyCounter(r.dataSource ?? "")).map((r) => r.id);
 }
+
+const DB_GAP_BATCH_SIZE = 1000; // Task W6: Prisma findMany/where-in batch size for the DB-gap presence check
 
 /** Task W4: which of `etfIds` have an etf_history row for EXACTLY targetLocalDate (no ±window — this
  * is the ground truth the completion decision now rests on, deliberately stricter than
- * lookupDbRowsForTargetDate's windowed lookup used for classification). Task W5: explicit ::text[]
- * cast on the id array, same reasoning as lookupMarketCoreUniverseIds above. */
+ * lookupDbRowsForTargetDate's windowed lookup used for classification). Task W6: Prisma
+ * findMany/where-in, batched at 1,000 ids per call, instead of a handwritten `= ANY($1)` — see the
+ * comment on lookupMarketCoreUniverseIds above for why. */
 async function lookupDbPresentIdsExact(etfIds: string[], targetLocalDate: string): Promise<Set<string>> {
   if (etfIds.length === 0) return new Set();
-  const rows = await prisma.$queryRawUnsafe<Array<{ etf_id: string }>>(
-    `SELECT DISTINCT etf_id FROM etf_history WHERE etf_id = ANY($1::text[]) AND date = $2::date AND close IS NOT NULL`,
-    etfIds, targetLocalDate,
-  );
-  return new Set(rows.map((r) => r.etf_id));
+  const result = new Set<string>();
+  for (let i = 0; i < etfIds.length; i += DB_GAP_BATCH_SIZE) {
+    const batch = etfIds.slice(i, i + DB_GAP_BATCH_SIZE);
+    const rows = await prisma.etfHistory.findMany({
+      where: { etfId: { in: batch }, date: new Date(`${targetLocalDate}T00:00:00.000Z`), close: { not: null } },
+      select: { etfId: true },
+      distinct: ["etfId"],
+    });
+    for (const r of rows) result.add(r.etfId);
+  }
+  return result;
 }
 
 function sleep(ms: number) {
@@ -779,6 +801,11 @@ export async function GET(request: Request) {
   const totalEtfsUpdated = marketDetails.reduce((s, m) => s + m.etfsUpdated, 0);
   const totalPerformanceRecomputed = marketDetails.reduce((s, m) => s + m.performanceRecomputed, 0);
   const runMode = currentRunMode();
+  // Task W6: logs exactly what this invocation itself read for the write switch, and which
+  // deployment it ran on — answers "did it actually see MARKET_CLOSE_SYNC_WRITE=on" from the run log
+  // alone, without guessing from runMode (which is just isWriteEnabled() restated) or from Vercel's
+  // own deploy history.
+  const writeEnvDiag = writeEnvDiagnostic();
   await finishRun(runId, JOB, "YAHOO_SPARK", startedMs, {
     status,
     attempted: totalRequested,
@@ -792,6 +819,8 @@ export async function GET(request: Request) {
       time_budget_stop: timeBudgetStop, rate_limit_stop: rateLimitStop, markets: marketDetails,
       unmapped_total: unmappedTotal, unmapped_by_suffix: unmappedBySuffix, core_universe_size: coreUniverseIds.size,
       run_mode: runMode, history_written: totalHistoryWritten, etfs_updated: totalEtfsUpdated, performance_recomputed: totalPerformanceRecomputed,
+      write_env_read_exactly_on: writeEnvDiag.readExactlyOn, write_env_var_present: writeEnvDiag.envVarPresent,
+      deployment_id: writeEnvDiag.deploymentId, deployment_url: writeEnvDiag.deploymentUrl,
     },
   });
 

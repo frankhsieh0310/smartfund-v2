@@ -39,7 +39,7 @@ export async function writeEtfHistoryBatch(query: QueryFn, rows: WritablePrice[]
   const payload = rows.map((r) => ({ etf_id: r.etfId, date: r.targetLocalDate, close: r.price, source: r.source }));
   const result = await query(
     `INSERT INTO etf_history (id, etf_id, date, price, close, source, known_at)
-     SELECT gen_random_uuid()::text, x.etf_id::uuid, x.date::date, x.close, x.close, x.source, $2::timestamptz
+     SELECT gen_random_uuid()::text, x.etf_id, x.date::date, x.close, x.close, x.source, $2::timestamptz
        FROM jsonb_to_recordset($1::jsonb) AS x(etf_id text, date text, close numeric, source text)
      ON CONFLICT (etf_id, date) DO UPDATE SET
        close = EXCLUDED.close, price = EXCLUDED.price, source = EXCLUDED.source, known_at = EXCLUDED.known_at
@@ -54,14 +54,29 @@ export async function writeEtfHistoryBatch(query: QueryFn, rows: WritablePrice[]
  * target date is strictly newer than whatever calendar date price_updated_at currently reflects (or
  * price_updated_at is still null, e.g. a genuinely new ETF). A batch containing an older target date
  * than what's already stored is simply excluded from the UPDATE by its own WHERE clause — this
- * function never needs to pre-filter by date itself, the SQL guard is unconditional and per-row. */
+ * function never needs to pre-filter by date itself, the SQL guard is unconditional and per-row.
+ *
+ * Task W6: THE actual, deterministic root cause of every Production crash this and the surrounding
+ * tasks chased ("operator does not exist: text = uuid") — `etfs.id` is a plain `text` column
+ * (VERIFIED: 16,834/16,834 rows, no uuid column anywhere in this schema), but the WHERE clause below
+ * used to compare it against `x.etf_id::uuid`, an explicit cast to a REAL uuid value. Postgres allows
+ * uuid -> text as an ASSIGNMENT cast (which is why the INSERT statements elsewhere in this file, with
+ * the same `x.etf_id::uuid` pattern, never failed — they're inserting into a text column, not
+ * comparing), but there is no equality OPERATOR for text = uuid in a WHERE/comparison context. This
+ * function is only ever reached once write mode is on AND a batch actually has a writable
+ * (NEW/CHANGED/DB_DISCONTINUITY) row — exactly why shadow-mode runs, and write-mode runs whose batch
+ * happened to be all SOURCE_MISSING/NO_BAR/etc, never hit it, while the one invocation that finally
+ * had both write-mode-on and a real writable row crashed deterministically, every time. Reproduced
+ * live (BEGIN...ROLLBACK, no trace left) before this fix and confirmed gone after removing the
+ * erroneous cast — `x.etf_id` is already `text` per its own jsonb_to_recordset column declaration, so
+ * no cast at all is needed or correct here. */
 export async function updateEtfsLatestForward(query: QueryFn, rows: WritablePrice[], nowIso: string): Promise<number> {
   if (rows.length === 0) return 0;
   const payload = rows.map((r) => ({ etf_id: r.etfId, close: r.price, target_date: r.targetLocalDate }));
   const result = await query(
     `UPDATE etfs SET latest_price = x.close, price_updated_at = $2::timestamptz, updated_at = $2::timestamptz
        FROM jsonb_to_recordset($1::jsonb) AS x(etf_id text, close numeric, target_date text)
-      WHERE etfs.id = x.etf_id::uuid
+      WHERE etfs.id = x.etf_id
         AND (etfs.price_updated_at IS NULL OR x.target_date::date > etfs.price_updated_at::date)
       RETURNING etfs.id`,
     [JSON.stringify(payload), nowIso],
@@ -70,12 +85,20 @@ export async function updateEtfsLatestForward(query: QueryFn, rows: WritablePric
 }
 
 /** The last close on or before `date` for a batch of ETFs — one query per distinct base date,
- * covering every ETF in the batch at once (DISTINCT ON), never one query per ETF per period. */
+ * covering every ETF in the batch at once (DISTINCT ON), never one query per ETF per period.
+ * Task W6: explicit ::text[] cast on the id array — this was the ONE raw query in the write path
+ * still missing it (etf_id is a plain `text` column, but every value is UUID-shaped; Prisma's raw
+ * query parameter encoding can mis-infer a `uuid[]` wire type for such an array, which then fails
+ * with "operator does not exist: text = uuid" against the real text column — confirmed root cause of
+ * the Production crash this task fixes, and the reason it only ever hit on a WRITE-mode invocation
+ * with an actual writable batch: this function is only reached from recomputeEtfPerformanceBatch,
+ * itself only reached from writeBatchIfEnabled when write is enabled AND something is writable —
+ * every earlier shadow-mode-only or empty-batch run simply never executed this query at all). */
 async function lookupCloseOnOrBeforeBatch(query: QueryFn, etfIds: string[], date: string): Promise<Map<string, number>> {
   if (etfIds.length === 0) return new Map();
   const rows = await query(
     `SELECT DISTINCT ON (etf_id) etf_id, close FROM etf_history
-      WHERE etf_id = ANY($1) AND date <= $2::date AND close IS NOT NULL
+      WHERE etf_id = ANY($1::text[]) AND date <= $2::date AND close IS NOT NULL
       ORDER BY etf_id, date DESC`,
     [etfIds, date],
   );
@@ -120,7 +143,7 @@ export async function recomputeEtfPerformanceBatch(
 
   const result = await query(
     `INSERT INTO etf_performances (id, etf_id, date, price, return_1d, return_1m, return_3m, return_6m, return_1y, return_3y, created_at)
-     SELECT gen_random_uuid(), x.etf_id::uuid, x.date::date, x.price, x.r_1d, x.r_1m, x.r_3m, x.r_6m, x.r_1y, x.r_3y, $2::timestamptz
+     SELECT gen_random_uuid()::text, x.etf_id, x.date::date, x.price, x.r_1d, x.r_1m, x.r_3m, x.r_6m, x.r_1y, x.r_3y, $2::timestamptz
        FROM jsonb_to_recordset($1::jsonb) AS x(etf_id text, date text, price numeric, r_1d numeric, r_1m numeric, r_3m numeric, r_6m numeric, r_1y numeric, r_3y numeric)
      ON CONFLICT (etf_id, date) DO UPDATE SET
        price = EXCLUDED.price, return_1d = EXCLUDED.return_1d, return_1m = EXCLUDED.return_1m,

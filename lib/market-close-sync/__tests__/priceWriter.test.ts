@@ -111,6 +111,13 @@ const sample = (classification: WritablePrice["classification"], etfId = "etf-1"
     assert.ok(calls[0].sql.includes("target_date::date > etfs.price_updated_at::date"));
   });
 
+  await test("Task W6: updateEtfsLatestForward's WHERE clause never casts etf_id to ::uuid — etfs.id is a plain text column (confirmed live: 16,834/16,834 rows UUID-shaped text, no uuid column anywhere in this schema), and WHERE etfs.id = x.etf_id::uuid crashed every Production write with \"operator does not exist: text = uuid\" the one time a batch actually had a writable row", async () => {
+    const { query, calls } = mockQuery([{ id: "a" }]);
+    await updateEtfsLatestForward(query, [sample("NEW", "a")], NOW_ISO);
+    assert.ok(!calls[0].sql.includes("etf_id::uuid"), "etfs.id = x.etf_id must compare text to text, never text to an explicit ::uuid cast");
+    assert.ok(calls[0].sql.includes("etfs.id = x.etf_id"));
+  });
+
   await test("recomputeEtfPerformanceBatch: looks up a base close for all 6 periods, batched per distinct target date, then one upsert", async () => {
     const { query, calls } = mockQuery({ "DISTINCT ON": [{ etf_id: "a", close: 90 }], etf_performances: [{ x: 1 }] });
     const n = await recomputeEtfPerformanceBatch(query, [{ etfId: "a", targetLocalDate: "2026-10-09", targetClose: 100 }], NOW_ISO);
