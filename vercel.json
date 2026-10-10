@@ -1,7 +1,8 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "functions": {
-    "app/api/mobile/reverse-holdings/route.ts": { "regions": ["sin1"] }
+    "app/api/mobile/reverse-holdings/route.ts": { "regions": ["sin1"] },
+    "app/api/cron/market-close-sync/route.ts": { "regions": ["sin1"] }
   },
   "crons": [
     { "path": "/api/workflows/bootstrap?workflow=poc", "schedule": "0 5 * * *" },
