@@ -370,10 +370,16 @@ async function lookupLastKnownClose(etfIds: string[]): Promise<Map<string, numbe
  * needs this list too) doesn't duplicate the filter logic, only the (cheap, read-only) query. */
 async function lookupMarketCoreUniverseIds(suffixPatterns: string[], fallbackExchanges: string[], coreUniverseIds: Set<string>): Promise<string[]> {
   if (suffixPatterns.length === 0 && fallbackExchanges.length === 0) return [];
+  // Task W5: explicit ::text[] casts on both array parameters — PgBouncer transaction-mode pooling
+  // (this project's DATABASE_URL has pgbouncer=true) reuses backend connections across invocations,
+  // and an untyped bind parameter to ANY(...) left Postgres to infer its element type from whatever
+  // other prepared statement happened to share the pooled connection's cache; live Production hit
+  // this exact failure ("operator does not exist: text = uuid") on every invocation after this
+  // function's first deploy. An explicit cast removes the ambiguity rather than relying on inference.
   const rows = await prisma.$queryRawUnsafe<Array<{ id: string; data_source: string }>>(
     `SELECT id, data_source FROM etfs
       WHERE is_active = true AND data_source IS NOT NULL
-        AND (data_source LIKE ANY($1) OR (data_source NOT LIKE '%.%' AND exchange = ANY($2)))`,
+        AND (data_source LIKE ANY($1::text[]) OR (data_source NOT LIKE '%.%' AND exchange = ANY($2::text[])))`,
     suffixPatterns, fallbackExchanges,
   );
   return rows.filter((r) => coreUniverseIds.has(r.id) && !isHongKongCurrencyCounter(r.data_source)).map((r) => r.id);
@@ -381,11 +387,12 @@ async function lookupMarketCoreUniverseIds(suffixPatterns: string[], fallbackExc
 
 /** Task W4: which of `etfIds` have an etf_history row for EXACTLY targetLocalDate (no ±window — this
  * is the ground truth the completion decision now rests on, deliberately stricter than
- * lookupDbRowsForTargetDate's windowed lookup used for classification). */
+ * lookupDbRowsForTargetDate's windowed lookup used for classification). Task W5: explicit ::text[]
+ * cast on the id array, same reasoning as lookupMarketCoreUniverseIds above. */
 async function lookupDbPresentIdsExact(etfIds: string[], targetLocalDate: string): Promise<Set<string>> {
   if (etfIds.length === 0) return new Set();
   const rows = await prisma.$queryRawUnsafe<Array<{ etf_id: string }>>(
-    `SELECT DISTINCT etf_id FROM etf_history WHERE etf_id = ANY($1) AND date = $2::date AND close IS NOT NULL`,
+    `SELECT DISTINCT etf_id FROM etf_history WHERE etf_id = ANY($1::text[]) AND date = $2::date AND close IS NOT NULL`,
     etfIds, targetLocalDate,
   );
   return new Set(rows.map((r) => r.etf_id));
