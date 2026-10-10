@@ -34,7 +34,12 @@ export type SparkCandle = {
   points: Array<{ timestampUnix: number; close: number | null }>;
 };
 
-export type ShadowClassification = "NEW" | "CHANGED" | "SAME" | "SOURCE_MISSING" | "DB_NEWER";
+// SOURCE_MISSING split in two per task J: Spark can either omit the symbol entirely from its result
+// array (genuinely has nothing for this ticker right now) or return the symbol with real candles
+// that simply don't include a bar for the target date (NO_BAR_FOR_TARGET_DATE) — these have very
+// different implications (a dead/delisted symbol vs. a transient same-day publication lag) and must
+// not be collapsed into one bucket.
+export type ShadowClassification = "NEW" | "CHANGED" | "SAME" | "SOURCE_MISSING" | "NO_BAR_FOR_TARGET_DATE" | "DB_NEWER";
 
 export type ShadowRow = {
   etfId: string;

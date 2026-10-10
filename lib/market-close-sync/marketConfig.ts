@@ -48,6 +48,16 @@ export const SUFFIX_TO_JOB_ID: Record<string, string> = {
   // suffix-based lookup.
   ".DU": "germany-yahoo-daily",
   ".AQ": "united-kingdom-yahoo-daily",
+  // Task J, item 5: ".XC" and ".IL" both applied to the UK (united-kingdom-yahoo-daily) session per
+  // explicit task instruction. Basis: ".XC" is Yahoo's suffix for Cboe Europe's UK/London order book
+  // (the ETF table's own "Cboe UK" label, 1,068 ETFs, trades the same London hours as the job's other
+  // UK venues LSE/CXE/AQS/IOB). ".IL" is Yahoo's suffix for London-listed international ETCs/ETNs
+  // (commodity/currency trackers quoted on LSE's International Order Book) — same London trading
+  // calendar as the job already governs via its "IOB" code. Confidence: HIGH for ".XC" (venue name
+  // match), MEDIUM for ".IL" (session-hours correspondence via IOB, not an exact job.exchanges code
+  // match) — applied per explicit instruction, not an independent new guess.
+  ".XC": "united-kingdom-yahoo-daily",
+  ".IL": "united-kingdom-yahoo-daily",
   // Supplemental (no stock-config counterpart at all; see supplementalMarkets.ts):
   ".TA": "supplemental-tel-aviv",
   ".MX": "supplemental-mexico",

@@ -118,49 +118,58 @@ test("(a) 2026-10-09T16:12:00Z: Tokyo, Hong Kong, Shanghai all target 2026-10-09
   const now = new Date("2026-10-09T16:12:00Z");
   for (const job of [TOKYO_JOB, HK_JOB, SHANGHAI_JOB]) {
     const result = findEligibleTradeDate(job, now, NEVER_DONE);
-    assert.ok(result, `expected ${job.market} to be eligible`);
-    assert.equal(result!.targetLocalDate, "2026-10-09", `expected ${job.market} target date 2026-10-09`);
+    assert.equal(result.eligible, true, `expected ${job.market} to be eligible`);
+    assert.equal((result as any).targetLocalDate, "2026-10-09", `expected ${job.market} target date 2026-10-09`);
   }
 });
 
 test("(b) Same instant: Korea has 2026-10-09 as a configured holiday — target rolls back to the prior real trading day, 2026-10-08", () => {
   const now = new Date("2026-10-09T16:12:00Z");
   const result = findEligibleTradeDate(KOREA_JOB, now, NEVER_DONE);
-  assert.ok(result, "expected Korea to be eligible via the prior trading day");
-  assert.equal(result!.targetLocalDate, "2026-10-08");
+  assert.equal(result.eligible, true, "expected Korea to be eligible via the prior trading day");
+  assert.equal((result as any).targetLocalDate, "2026-10-08");
 });
 
-test("(b-ii) Same instant, but 2026-10-08 is already marked done for Korea — nothing left in the lookback window (10-05 and 10-09 are holidays too) => null", () => {
+test("(b-ii) Same instant, but 2026-10-08 is already marked done for Korea — nothing left in the lookback window (10-05 and 10-09 are holidays too) => not eligible, reason ALREADY_DONE", () => {
   const now = new Date("2026-10-09T16:12:00Z");
   const result = findEligibleTradeDate(KOREA_JOB, now, (d) => d <= "2026-10-08");
-  assert.equal(result, null, "expected null once the only real candidate in range is already done");
+  assert.equal(result.eligible, false, "expected not eligible once the only real candidate in range is already done");
+  assert.equal((result as any).reason, "ALREADY_DONE");
 });
 
 test("(c) Same instant: US market (still mid-session in ET) targets the prior trading day, 2026-10-08, not today", () => {
   const now = new Date("2026-10-09T16:12:00Z"); // 12:12 ET — NYSE still open
   const result = findEligibleTradeDate(US_JOB, now, NEVER_DONE);
-  assert.ok(result, "expected the US market to still be eligible via the prior trading day");
-  assert.equal(result!.targetLocalDate, "2026-10-08");
+  assert.equal(result.eligible, true, "expected the US market to still be eligible via the prior trading day");
+  assert.equal((result as any).targetLocalDate, "2026-10-08");
 });
 
 test("(d) Saturday: any market rolls back to the most recent Friday", () => {
   const now = new Date("2026-10-10T12:00:00Z"); // a Saturday, UTC
   const result = findEligibleTradeDate(GENERIC_UTC_JOB, now, NEVER_DONE);
-  assert.ok(result);
-  assert.equal(result!.targetLocalDate, "2026-10-09");
+  assert.equal(result.eligible, true);
+  assert.equal((result as any).targetLocalDate, "2026-10-09");
 });
 
 test("(d) Sunday: any market still rolls back to the same most recent Friday", () => {
   const now = new Date("2026-10-11T12:00:00Z"); // the following Sunday, UTC
   const result = findEligibleTradeDate(GENERIC_UTC_JOB, now, NEVER_DONE);
-  assert.ok(result);
-  assert.equal(result!.targetLocalDate, "2026-10-09");
+  assert.equal(result.eligible, true);
+  assert.equal((result as any).targetLocalDate, "2026-10-09");
 });
 
-test("findEligibleTradeDate returns null once the most recent eligible date is already marked done (fully caught up)", () => {
+test("findEligibleTradeDate reports reason=ALREADY_DONE once the most recent eligible date is already marked done (fully caught up)", () => {
   const now = new Date("2026-10-08T06:30:00Z"); // 14:30 Asia/Taipei — past close+delay, 2026-10-08 is a real trading day
   const result = findEligibleTradeDate(TWSE_JOB, now, (d) => d <= "2026-10-08");
-  assert.equal(result, null);
+  assert.equal(result.eligible, false);
+  assert.equal((result as any).reason, "ALREADY_DONE");
+});
+
+test("findEligibleTradeDate reports reason=NOT_YET_CLOSED when the only candidate in range is today, still before close+delay", () => {
+  const now = new Date("2026-10-08T02:00:00Z"); // 10:00 Asia/Taipei — market still open, no prior day in a 1-day lookback
+  const result = findEligibleTradeDate(TWSE_JOB, now, NEVER_DONE, 1);
+  assert.equal(result.eligible, false);
+  assert.equal((result as any).reason, "NOT_YET_CLOSED");
 });
 
 console.log("MARKET_TIME_TESTS_DONE");

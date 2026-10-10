@@ -70,14 +70,23 @@ const DEFAULT_TRADING_DAY_LOOKBACK = 5;
  * midnight in a market's own timezone, could report a market ineligible merely because tomorrow's
  * session hasn't closed yet — even though yesterday's real close was still sitting there unsynced).
  */
+export type TradeDateResult =
+  | { eligible: true; targetLocalDate: string }
+  | { eligible: false; reason: "NOT_YET_CLOSED" | "ALREADY_DONE" | "NO_TRADING_DAY_IN_WINDOW" };
+
+/** Task J, item 6: distinguishes WHY a market isn't eligible right now, so the route can report
+ * NOT_ELIGIBLE (with a reason) separately from NOT_REACHED (never got a turn before the time
+ * budget ran out — a route-level concern, not something this function knows about). */
 export function findEligibleTradeDate(
   job: ExchangeCalendarJob,
   now: Date,
   isDoneForDate: (localDate: string) => boolean,
   maxTradingDayLookback: number = DEFAULT_TRADING_DAY_LOOKBACK,
-): { targetLocalDate: string } | null {
+): TradeDateResult {
   const { date: nowLocalDate } = localNow(now, job.timezone);
   let tradingDaysSeen = 0;
+  let sawNotYetClosed = false;
+  let sawAlreadyDone = false;
   // Calendar-day cap well above maxTradingDayLookback so a long holiday cluster can't infinite-loop;
   // 3x the trading-day target is generous (covers even a 2-week holiday block around a 5-day lookback).
   const calendarDayCap = maxTradingDayLookback * 3 + 10;
@@ -85,11 +94,13 @@ export function findEligibleTradeDate(
     const candidate = addLocalDays(nowLocalDate, -back);
     if (!isTradingDay(job, candidate)) continue;
     tradingDaysSeen++;
-    if (!isDefinitelyClosed(job, candidate, now)) continue; // today, not closed yet — not a candidate
-    if (isDoneForDate(candidate)) continue; // already synced — keep scanning older days for a gap
-    return { targetLocalDate: candidate };
+    if (!isDefinitelyClosed(job, candidate, now)) { sawNotYetClosed = true; continue; }
+    if (isDoneForDate(candidate)) { sawAlreadyDone = true; continue; } // already synced — keep scanning older days for a gap
+    return { eligible: true, targetLocalDate: candidate };
   }
-  return null;
+  if (sawAlreadyDone) return { eligible: false, reason: "ALREADY_DONE" };
+  if (sawNotYetClosed) return { eligible: false, reason: "NOT_YET_CLOSED" };
+  return { eligible: false, reason: "NO_TRADING_DAY_IN_WINDOW" };
 }
 
 /**
