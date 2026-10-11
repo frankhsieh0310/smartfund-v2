@@ -331,6 +331,40 @@ async function computeCoreUniverse(): Promise<Set<string>> {
   return core;
 }
 
+/** Task X4 — the ONE authorized exception during this feature's 10-trading-day acceptance freeze:
+ * computeCoreUniverse() itself (the query text, the decision logic above) is UNTOUCHED. Only WHERE
+ * the id list comes from changes — cached once per calendar day in the checkpoint table (no schema
+ * change), every other invocation that day reuses it. Live measurement this session found this exact
+ * query taking 80-120s against the real DB (safety margin vs. the DB's 120s statement_timeout: 98%,
+ * confirmed via live SHOW statement_timeout) — on a quiet day with zero actual Spark sweep work, this
+ * one query was ~100% of every invocation's 83-128s runtime. Item B.2's explicit requirement: a
+ * cache-read failure of ANY kind (corrupt JSON, missing checkpoint, anything) must fall back to the
+ * original live computeCoreUniverse() call, never block or skip the sweep. */
+async function getCoreUniverseCachedForToday(today: string): Promise<Set<string>> {
+  const cacheKey = `market-close-sync:core-universe-cache:${today}`;
+  try {
+    const cached = await readCheckpoint(cacheKey);
+    if (cached?.lastSymbol) {
+      const parsed = JSON.parse(cached.lastSymbol);
+      if (parsed?.date === today && Array.isArray(parsed?.ids)) return new Set(parsed.ids);
+    }
+  } catch {
+    // corrupt/unreadable cache entry — fall through to the live query below, same as a cache miss.
+  }
+
+  const ids = await computeCoreUniverse();
+  try {
+    await writeCheckpoint(JOB, cacheKey, `core-universe-cache:${today}`, {
+      lastSymbol: JSON.stringify({ date: today, ids: [...ids] }),
+      processed: ids.size, succeeded: ids.size, failed: 0,
+    });
+  } catch {
+    // caching is purely an optimization — if the write itself fails, today's already-computed ids
+    // are still returned below; only the NEXT invocation pays the full query cost again.
+  }
+  return ids;
+}
+
 async function lookupDbRowsForTargetDate(etfIds: string[], targetLocalDate: string): Promise<Map<string, { date: string; close: number }>> {
   if (etfIds.length === 0) return new Map();
   const windowStart = new Date(`${targetLocalDate}T00:00:00Z`);
@@ -450,7 +484,7 @@ export async function GET(request: Request) {
   const now = new Date();
   const registry = await loadExchangeCalendarRegistry();
   const { unmappedTotal, unmappedBySuffix, universeTotal } = await computeUnmapped(registry);
-  const coreUniverseIds = await computeCoreUniverse();
+  const coreUniverseIds = await getCoreUniverseCachedForToday(now.toISOString().slice(0, 10));
 
   const marketDetails: MarketDetail[] = [];
   let timeBudgetStop = false;
