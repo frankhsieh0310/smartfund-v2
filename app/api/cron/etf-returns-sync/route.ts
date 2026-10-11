@@ -201,37 +201,56 @@ export async function GET(request: Request) {
   let failureStateMap: EtfFailureStateMap = {};
   let lastProcessedDate: LastProcessedDateMap = {};
   let preexistingSkipNoPerfBackfillDone = false;
+  let backfilledIds: string[] = [];
   try {
     const persisted = before?.lastSymbol ? JSON.parse(before.lastSymbol) : null;
     if (persisted?.failureState) failureStateMap = persisted.failureState;
     if (persisted?.lastProcessedDate) lastProcessedDate = persisted.lastProcessedDate;
     if (persisted?.preexistingSkipNoPerfBackfillDone) preexistingSkipNoPerfBackfillDone = true;
+    if (Array.isArray(persisted?.backfilledIds)) backfilledIds = persisted.backfilledIds;
   } catch { /* corrupt/old checkpoint — start fresh rather than block the sweep */ }
 
   // Task X5 Part 2c (one-time, user-approved): ETFs already in SKIP_NO_PERF state before this
   // deploy were classified NO_FUND_PERFORMANCE under the OLD code, which never wrote any row at all
   // for that outcome — so they're missing the all-null row Part B.3 now writes on first
   // determination. Backfill them exactly once: no new Yahoo calls (the outcome is already known from
-  // the persisted failureStateMap), just a batched write. The flag is persisted immediately, not at
-  // the end of this run, so a crash partway through the main loop below can never cause a repeat.
+  // the persisted failureStateMap), just a batched write. Bounded by its OWN small time budget
+  // (counted from this invocation's startedMs, same clock the main loop uses) — an unbounded version
+  // of this loop was deployed once and caused a live 300s Vercel function timeout on every single
+  // invocation (255 SKIP_NO_PERF entries, two sequential DB round-trips each, no budget check at
+  // all), which blocked the entire pipeline since this block runs before beginRun. Progress is
+  // tracked incrementally in `backfilledIds` and persisted after every invocation's chunk — not only
+  // once the whole list is done — so a slow connection just spreads this bootstrap step over a few
+  // extra invocations instead of ever blocking anything.
+  const BACKFILL_TIME_BUDGET_MS = 30_000;
   if (!preexistingSkipNoPerfBackfillDone) {
     const preexistingSkipIds = Object.keys(failureStateMap).filter((id) => failureStateMap[id]?.kind === "SKIP_NO_PERF");
+    const alreadyBackfilled = new Set(backfilledIds);
+    const remaining = preexistingSkipIds.filter((id) => !alreadyBackfilled.has(id));
     let backfillWritten = 0;
-    for (const etfId of preexistingSkipIds) {
+    let backfillProcessedThisInvocation = 0;
+    for (const etfId of remaining) {
+      if (Date.now() - startedMs > BACKFILL_TIME_BUDGET_MS) break;
       try {
         const writeDate = await resolveWriteDate(etfId, today);
         const candidate: WriteCandidate = { etfId, date: writeDate, returns: ALL_NULL_RETURNS };
         const writeResult = await writeBatchIfEnabled(writerQuery, [candidate], new Date().toISOString(), writeEnabledThisRun);
         backfillWritten += writeResult.written;
       } catch { /* one bad backfill candidate never blocks the rest or the main sweep below */ }
+      alreadyBackfilled.add(etfId);
+      backfillProcessedThisInvocation++;
     }
-    preexistingSkipNoPerfBackfillDone = true;
+    if (alreadyBackfilled.size >= preexistingSkipIds.length) preexistingSkipNoPerfBackfillDone = true;
+    backfilledIds = [...alreadyBackfilled]; // keep in sync so the end-of-run checkpoint write below doesn't regress this
     try {
       await writeCheckpoint(JOB, CHECKPOINT_KEY, `backfill:${today}`, {
-        lastSymbol: JSON.stringify({ failureState: failureStateMap, lastProcessedDate, preexistingSkipNoPerfBackfillDone: true }),
-        processed: preexistingSkipIds.length, succeeded: backfillWritten, failed: 0,
+        lastSymbol: JSON.stringify({
+          failureState: failureStateMap, lastProcessedDate,
+          preexistingSkipNoPerfBackfillDone, backfilledIds,
+        }),
+        processed: backfillProcessedThisInvocation, succeeded: backfillWritten, failed: 0,
       });
-    } catch { /* checkpoint write failure here just means this backfill may retry once more next invocation — not fatal */ }
+    } catch { /* checkpoint write failure here just means this backfill chunk may repeat next invocation — not fatal */ }
   }
 
   const missingIds = missingForToday(coreIdsArray, lastProcessedDate, today);
@@ -327,7 +346,7 @@ export async function GET(request: Request) {
   }
 
   await writeCheckpoint(JOB, CHECKPOINT_KEY, runId, {
-    lastSymbol: JSON.stringify({ failureState: failureStateMap, lastProcessedDate, preexistingSkipNoPerfBackfillDone }),
+    lastSymbol: JSON.stringify({ failureState: failureStateMap, lastProcessedDate, preexistingSkipNoPerfBackfillDone, backfilledIds }),
     processed: attempted, succeeded: written, failed: noFundPerformanceCount + transientFailureCount + writeErrorCount,
   });
 
