@@ -2,20 +2,22 @@
 // into etf_performances (1M/3M/YTD/1Y/3Y/5Y; 3Y/5Y are Yahoo's own ANNUALIZED figures, confirmed live
 // this session against an independently-computed CAGR). Never computes a return itself.
 //
-// Column ownership (Task X5 Part B, user-approved): this pipeline owns return_1m/3m/ytd/1y/3y/5y on
-// etf_performances (direct overwrite, including null — see returnsWriter.ts) and the matching six
-// columns on `etfs` (COALESCE, feeding /api/rankings/performance). return_1d/return_6m on
-// etf_performances belong exclusively to app/api/cron/cloud-etf-price/route.ts and are never
-// referenced here. lib/yahoo/etfEnrich.ts no longer writes any return_* column at all.
+// Column ownership (Task X5/X6, user-approved): this pipeline owns return_1m/3m/ytd/1y/3y/5y on
+// BOTH etf_performances and `etfs` (feeding /api/rankings/performance) — direct overwrite on both,
+// including null (see returnsWriter.ts and batchHelpers.ts's writeEtfsRankingColumnsBatch).
+// return_1d on etf_performances belongs exclusively to app/api/cron/cloud-etf-price/route.ts.
+// return_6m is cloud-etf-price's own self-computed value on etf_performances, synced (never
+// recomputed) onto `etfs.return_6m` by this pipeline (batchHelpers.ts's fetchLatestReturn6mBatch).
+// lib/yahoo/etfEnrich.ts no longer writes any return_* column at all.
 //
 // SHADOW MODE BY DEFAULT: unless ETF_RETURNS_SYNC_WRITE is exactly "on"
 // (lib/etf-returns-sync/writeGate.ts), this route fetches and classifies but writes nothing.
 //
 // Completion tracking (Task X5 Part 2a): an ETF counts as "done for today" based on its own
 // `lastProcessedDate` entry (persisted in the checkpoint, set only on an actual successful write) —
-// NOT on whether etf_performances has a row dated today, because resolveWriteDate below can
-// deliberately write onto an earlier date to merge with cloud-etf-price's own row, which would
-// otherwise make that etf look "missing" forever.
+// NOT on whether etf_performances has a row dated today, because date alignment (batchHelpers.ts's
+// resolveWriteDatesBatch) can deliberately write onto an earlier date to merge with cloud-etf-price's
+// own row, which would otherwise make that etf look "missing" forever.
 
 import { isAuthorizedCron, unauthorizedCron } from "@/lib/cron/authorize";
 import { prisma } from "@/lib/prisma";
@@ -28,6 +30,9 @@ import {
   nextStateAfterOutcome, orderForInvocation, type EtfFailureStateMap,
 } from "@/lib/etf-returns-sync/failureState";
 import { missingForToday, type LastProcessedDateMap } from "@/lib/etf-returns-sync/completion";
+import {
+  resolveWriteDatesBatch, fetchLatestReturn6mBatch, writeEtfsRankingColumnsBatch, type EtfsRankingEntry,
+} from "@/lib/etf-returns-sync/batchHelpers";
 
 const JOB = "ETF_RETURNS_SYNC";
 const TIME_BUDGET_MS = 240_000;
@@ -94,15 +99,6 @@ async function getCandidateIdsCachedForToday(today: string): Promise<Set<string>
 // of creating a new one at today's date. This is exactly why completion tracking (missingForToday,
 // below) cannot be based on etf_performances' own `date` column — see Task X5 Part 2a.
 const DATE_ALIGNMENT_WINDOW_DAYS = 3;
-async function resolveWriteDate(etfId: string, today: string): Promise<string> {
-  const rows = await prisma.etfPerformance.findMany({
-    where: { etfId, date: { gte: new Date(Date.now() - DATE_ALIGNMENT_WINDOW_DAYS * 24 * 60 * 60 * 1000) } },
-    orderBy: { date: "desc" },
-    take: 1,
-    select: { date: true },
-  });
-  return rows[0] ? rows[0].date.toISOString().slice(0, 10) : today;
-}
 
 const UA = "Mozilla/5.0";
 
@@ -156,29 +152,9 @@ const ALL_NULL_RETURNS: TrailingReturns = {
   r1d: null, r1m: null, r3m: null, r6m: null, rytd: null, r1y: null, r3y: null, r5y: null,
 };
 
-// Task X5 Part 2b (user-approved): lib/yahoo/etfEnrich.ts used to be the only writer of these six
-// `etfs` flattened columns (confirmed VERIFIED: app/api/rankings/performance/route.ts's
-// ETF_PERIOD_COLUMN reads exactly return_1m/3m/6m/1y/3y/5y off `etfs`, nothing else does). Now that
-// etfEnrich.ts no longer writes any return_*, this pipeline takes over — same columns, same
-// COALESCE-never-overwrite-with-null semantics etfEnrich.ts always used here (deliberately NOT the
-// direct-overwrite rule used for etf_performances above: that rule exists specifically to fix the
-// 0-vs-null conflation bug for THAT table; parseTrailingReturns already guarantees a clean null
-// reaches here, so COALESCE is safe and, for this ranking-display table, the more conservative
-// choice — never erase a real ranking value this pipeline doesn't have an opinion on). r6m is always
-// null here (Yahoo's trailingReturns has no 6-month figure in this module, same gap etfEnrich.ts
-// always had), so this is a harmless no-op for that one column, same as before.
-async function writeEtfsRankingColumns(etfId: string, returns: TrailingReturns): Promise<void> {
-  try {
-    await prisma.$executeRawUnsafe(
-      `UPDATE etfs SET
-         return_1m = COALESCE($2, return_1m), return_3m = COALESCE($3, return_3m), return_6m = COALESCE($4, return_6m),
-         return_ytd = COALESCE($5, return_ytd), return_1y = COALESCE($6, return_1y),
-         return_3y = COALESCE($7, return_3y), return_5y = COALESCE($8, return_5y), updated_at = NOW()
-       WHERE id = $1`,
-      etfId, returns.r1m, returns.r3m, returns.r6m, returns.rytd, returns.r1y, returns.r3y, returns.r5y,
-    );
-  } catch { /* ranking-column refresh is best-effort; never block the main return_* sweep */ }
-}
+// resolveWriteDatesBatch / fetchLatestReturn6mBatch / writeEtfsRankingColumnsBatch moved to
+// lib/etf-returns-sync/batchHelpers.ts (Task X6 Part B/C) so they're unit-testable without pulling
+// in this route's Next.js/Prisma imports.
 
 export async function GET(request: Request) {
   if (!isAuthorizedCron(request)) return unauthorizedCron();
@@ -210,36 +186,38 @@ export async function GET(request: Request) {
     if (Array.isArray(persisted?.backfilledIds)) backfilledIds = persisted.backfilledIds;
   } catch { /* corrupt/old checkpoint — start fresh rather than block the sweep */ }
 
-  // Task X5 Part 2c (one-time, user-approved): ETFs already in SKIP_NO_PERF state before this
-  // deploy were classified NO_FUND_PERFORMANCE under the OLD code, which never wrote any row at all
-  // for that outcome — so they're missing the all-null row Part B.3 now writes on first
+  // Task X5 Part 2c / Task X6 Part B.2 (user-approved): ETFs already in SKIP_NO_PERF state before
+  // this deploy were classified NO_FUND_PERFORMANCE under the OLD code, which never wrote any row at
+  // all for that outcome — so they're missing the all-null row Part B.3 now writes on first
   // determination. Backfill them exactly once: no new Yahoo calls (the outcome is already known from
-  // the persisted failureStateMap), just a batched write. Bounded by its OWN small time budget
-  // (counted from this invocation's startedMs, same clock the main loop uses) — an unbounded version
-  // of this loop was deployed once and caused a live 300s Vercel function timeout on every single
-  // invocation (255 SKIP_NO_PERF entries, two sequential DB round-trips each, no budget check at
-  // all), which blocked the entire pipeline since this block runs before beginRun. Progress is
-  // tracked incrementally in `backfilledIds` and persisted after every invocation's chunk — not only
-  // once the whole list is done — so a slow connection just spreads this bootstrap step over a few
-  // extra invocations instead of ever blocking anything.
-  const BACKFILL_TIME_BUDGET_MS = 30_000;
+  // the persisted failureStateMap). Originally one query per etf (2 sequential DB round-trips each,
+  // no time-budget check) — live-measured at ~2.5s/etf, which caused a real 300s Vercel function
+  // timeout on every invocation with 255 entries pending, since this block runs before beginRun and
+  // blocked the whole pipeline. Fixed by batching the entire backfill into a handful of queries
+  // total regardless of list size (one for dates, one write, one r6m sync, one etfs update), so it
+  // now finishes in a couple of seconds and the incremental/time-budget machinery is no longer
+  // needed — kept only as a defensive fallback via `backfilledIds` in case this list ever grows large
+  // enough to need spreading across invocations again.
+  const dateAlignmentCutoffIso = new Date(Date.now() - DATE_ALIGNMENT_WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
   if (!preexistingSkipNoPerfBackfillDone) {
     const preexistingSkipIds = Object.keys(failureStateMap).filter((id) => failureStateMap[id]?.kind === "SKIP_NO_PERF");
     const alreadyBackfilled = new Set(backfilledIds);
     const remaining = preexistingSkipIds.filter((id) => !alreadyBackfilled.has(id));
     let backfillWritten = 0;
-    let backfillProcessedThisInvocation = 0;
-    for (const etfId of remaining) {
-      if (Date.now() - startedMs > BACKFILL_TIME_BUDGET_MS) break;
+    if (remaining.length > 0) {
       try {
-        const writeDate = await resolveWriteDate(etfId, today);
-        const candidate: WriteCandidate = { etfId, date: writeDate, returns: ALL_NULL_RETURNS };
-        const writeResult = await writeBatchIfEnabled(writerQuery, [candidate], new Date().toISOString(), writeEnabledThisRun);
-        backfillWritten += writeResult.written;
-      } catch { /* one bad backfill candidate never blocks the rest or the main sweep below */ }
-      alreadyBackfilled.add(etfId);
-      backfillProcessedThisInvocation++;
+        const dateMap = await resolveWriteDatesBatch(writerQuery, remaining, dateAlignmentCutoffIso);
+        const candidates: WriteCandidate[] = remaining.map((etfId) => ({ etfId, date: dateMap.get(etfId) ?? today, returns: ALL_NULL_RETURNS }));
+        const writeResult = await writeBatchIfEnabled(writerQuery, candidates, new Date().toISOString(), writeEnabledThisRun);
+        backfillWritten = writeResult.written;
+        if (writeEnabledThisRun && writeResult.written > 0) {
+          const r6mMap = await fetchLatestReturn6mBatch(writerQuery, remaining);
+          const entries: EtfsRankingEntry[] = remaining.map((etfId) => ({ etfId, returns: ALL_NULL_RETURNS, return6mSync: r6mMap.get(etfId) ?? null }));
+          await writeEtfsRankingColumnsBatch(writerQuery, entries);
+        }
+      } catch { /* a failed backfill batch just retries next invocation — never blocks the main sweep below */ }
     }
+    for (const id of remaining) alreadyBackfilled.add(id);
     if (alreadyBackfilled.size >= preexistingSkipIds.length) preexistingSkipNoPerfBackfillDone = true;
     backfilledIds = [...alreadyBackfilled]; // keep in sync so the end-of-run checkpoint write below doesn't regress this
     try {
@@ -248,7 +226,7 @@ export async function GET(request: Request) {
           failureState: failureStateMap, lastProcessedDate,
           preexistingSkipNoPerfBackfillDone, backfilledIds,
         }),
-        processed: backfillProcessedThisInvocation, succeeded: backfillWritten, failed: 0,
+        processed: remaining.length, succeeded: backfillWritten, failed: 0,
       });
     } catch { /* checkpoint write failure here just means this backfill chunk may repeat next invocation — not fatal */ }
   }
@@ -287,6 +265,35 @@ export async function GET(request: Request) {
   let timeBudgetStop = false;
   let rateLimitStop = false;
 
+  // Task X6 Part B: the per-etf resolveWriteDate + writeBatchIfEnabled + writeEtfsRankingColumns
+  // sequence (3 DB round-trips per etf) was the main cause of the ~53/run throughput regression —
+  // Yahoo fetches themselves are unavoidably sequential (rate-limit pacing below), but the DB side of
+  // each success doesn't need to be. Buffered here and flushed in FLUSH_BATCH_SIZE-sized batches
+  // (one query each for date resolution, the upsert, the r6m sync, and the etfs update — 4 queries
+  // per ~40 etfs instead of 3 per etf) so DB overhead drops by roughly FLUSH_BATCH_SIZE x. A flush
+  // failure reports the whole buffered batch as writeErrorCount, same error-isolation philosophy as
+  // before (Task X B.3), just at this coarser, throughput-driven grain.
+  const FLUSH_BATCH_SIZE = 40;
+  let pending: Array<{ etfId: string; returns: TrailingReturns }> = [];
+
+  async function flushPending() {
+    if (pending.length === 0) return;
+    const ids = pending.map((p) => p.etfId);
+    const dateMap = await resolveWriteDatesBatch(writerQuery, ids, dateAlignmentCutoffIso);
+    const candidates: WriteCandidate[] = pending.map((p) => ({ etfId: p.etfId, date: dateMap.get(p.etfId) ?? today, returns: p.returns }));
+    const writeResult = await writeBatchIfEnabled(writerQuery, candidates, new Date().toISOString(), writeEnabledThisRun);
+    written += writeResult.written;
+    writeErrorCount += writeResult.writeErrorCount;
+    droppedFieldCount += writeResult.droppedFieldCount;
+    if (writeEnabledThisRun && writeResult.written > 0) {
+      for (const p of pending) lastProcessedDate[p.etfId] = today;
+      const r6mMap = await fetchLatestReturn6mBatch(writerQuery, ids);
+      const entries: EtfsRankingEntry[] = pending.map((p) => ({ etfId: p.etfId, returns: p.returns, return6mSync: r6mMap.get(p.etfId) ?? null }));
+      await writeEtfsRankingColumnsBatch(writerQuery, entries);
+    }
+    pending = [];
+  }
+
   for (const etfId of orderedMissing) {
     if (Date.now() - startedMs > TIME_BUDGET_MS) { timeBudgetStop = true; break; }
     if (rateLimitStop) break;
@@ -309,16 +316,7 @@ export async function GET(request: Request) {
 
     if (fetchResult.outcomeKind === "SUCCESS") {
       const returns = parseTrailingReturns(fetchResult.result);
-      const writeDate = await resolveWriteDate(row.id, today);
-      const candidate: WriteCandidate = { etfId: row.id, date: writeDate, returns };
-      const writeResult = await writeBatchIfEnabled(writerQuery, [candidate], new Date().toISOString(), writeEnabledThisRun);
-      written += writeResult.written;
-      writeErrorCount += writeResult.writeErrorCount;
-      droppedFieldCount += writeResult.droppedFieldCount;
-      if (writeEnabledThisRun && writeResult.written > 0) {
-        lastProcessedDate[row.id] = today;
-        await writeEtfsRankingColumns(row.id, returns);
-      }
+      pending.push({ etfId: row.id, returns });
     } else if (fetchResult.outcomeKind === "NO_FUND_PERFORMANCE") {
       noFundPerformanceCount++;
       // Task X5 Part B.3: record "Yahoo has no data" as an explicit all-null row, but only on the
@@ -326,13 +324,8 @@ export async function GET(request: Request) {
       // the 7-day skip window reopens, which would otherwise create a fresh dated row every 7 days
       // for an ETF that will never have fund performance data.
       if (!wasAlreadySkipNoPerf) {
-        const writeDate = await resolveWriteDate(row.id, today);
-        const candidate: WriteCandidate = { etfId: row.id, date: writeDate, returns: ALL_NULL_RETURNS };
-        const writeResult = await writeBatchIfEnabled(writerQuery, [candidate], new Date().toISOString(), writeEnabledThisRun);
-        written += writeResult.written;
-        writeErrorCount += writeResult.writeErrorCount;
+        pending.push({ etfId: row.id, returns: ALL_NULL_RETURNS });
         noFundPerformanceFirstWriteCount++;
-        if (writeEnabledThisRun && writeResult.written > 0) lastProcessedDate[row.id] = today;
       }
     } else {
       transientFailureCount++;
@@ -342,8 +335,11 @@ export async function GET(request: Request) {
     if (nextState) failureStateMap[etfId] = nextState;
     else delete failureStateMap[etfId];
 
+    if (pending.length >= FLUSH_BATCH_SIZE) await flushPending();
+
     await sleep(REQUEST_DELAY_MS);
   }
+  await flushPending();
 
   await writeCheckpoint(JOB, CHECKPOINT_KEY, runId, {
     lastSymbol: JSON.stringify({ failureState: failureStateMap, lastProcessedDate, preexistingSkipNoPerfBackfillDone, backfilledIds }),
