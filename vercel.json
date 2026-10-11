@@ -18,6 +18,7 @@
     { "path": "/api/cron/yahoo-fx?phase=discovery", "schedule": "0 6 * * 0" },
     { "path": "/api/cron/market-close-sync", "schedule": "*/15 * * * *" },
     { "path": "/api/cron/etf-returns-sync", "schedule": "*/15 * * * *" },
-    { "path": "/api/cron/us-fund-nav-sync", "schedule": "*/15 23,0,1,2,3 * * *" }
+    { "path": "/api/cron/us-fund-nav-sync", "schedule": "*/15 23,0,1,2,3 * * *" },
+    { "path": "/api/cron/sitca-nav-sync", "schedule": "33 * * * *" }
   ]
 }

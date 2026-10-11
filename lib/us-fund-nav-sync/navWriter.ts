@@ -28,14 +28,22 @@ export async function writeFundNavBatch(query: QueryFn, candidates: FundNavCandi
        WHERE fund_history.nav IS DISTINCT FROM EXCLUDED.nav`,
       [JSON.stringify(payload), nowIso],
     );
-    // Newer-date-only: same rule lib/cloud-ingestion/fundNav.ts's persistFundNav already uses for
-    // SITCA, applied here for Spark too — a same-or-older date from this pipeline can never move
-    // funds.latest_nav backward or clobber a value another pipeline already advanced past it.
+    // Newer-date-OR-same-date-different-value: Task Z fix — originally a stricter "newer date only"
+    // rule than lib/yahoo/fundIngest.ts's own yahoo-fund-full-sweep write (which also updates when
+    // the date matches but the nav value differs). That asymmetry meant a same-date disagreement
+    // between the two pipelines' Yahoo sources (chart API vs Spark) could leave fund_history holding
+    // one value while funds.latest_nav stayed at whichever pipeline wrote first — now aligned to the
+    // same rule fundIngest.ts and lib/cloud-ingestion/fundNav.ts's persistFundNav both already use,
+    // so all three pipelines agree on when funds.latest_nav may change. Still never moves the date
+    // backward.
     await query(
       `UPDATE funds AS f SET
          latest_nav = x.nav, latest_nav_date = x.date::date, nav_updated_at = $2::timestamptz, last_nav_source = 'SPARK'
        FROM jsonb_to_recordset($1::jsonb) AS x(fund_id text, date text, nav numeric)
-       WHERE f.id = x.fund_id AND (f.latest_nav_date IS NULL OR f.latest_nav_date < x.date::date)`,
+       WHERE f.id = x.fund_id AND (
+         f.latest_nav_date IS NULL OR f.latest_nav_date < x.date::date
+         OR (f.latest_nav_date = x.date::date AND f.latest_nav IS DISTINCT FROM x.nav)
+       )`,
       [JSON.stringify(payload), nowIso],
     );
     return { written: candidates.length, writeErrorCount: 0, writeErrorFundIds: [] };

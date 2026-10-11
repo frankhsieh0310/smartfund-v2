@@ -27,7 +27,7 @@ function mockQuery(impl?: (sql: string, params: any[]) => any[]): { query: Query
     assert.deepEqual(r, { written: 0, writeErrorCount: 0, writeErrorFundIds: [] });
   });
 
-  test("writeFundNavBatch: two queries (fund_history upsert + newer-only funds update), batched", async () => {
+  test("writeFundNavBatch: two queries (fund_history upsert + newer-or-same-date-different-value funds update), batched", async () => {
     const { query, calls } = mockQuery();
     const r = await writeFundNavBatch(query, [{ fundId: "a", symbol: "AFDAX", date: "2026-10-09", nav: 51.83 }], "2026-10-11T00:00:00Z");
     assert.equal(calls.length, 2);
@@ -35,6 +35,9 @@ function mockQuery(impl?: (sql: string, params: any[]) => any[]): { query: Query
     assert.ok(calls[0].sql.includes("ON CONFLICT (fund_id, date)"));
     assert.ok(calls[1].sql.includes("UPDATE funds"));
     assert.ok(calls[1].sql.includes("latest_nav_date IS NULL OR f.latest_nav_date < x.date::date"));
+    // Task Z: aligned with fundIngest.ts/fundNav.ts's own rule — also updates on a same-date value
+    // disagreement, not just a strictly newer date.
+    assert.ok(calls[1].sql.includes("f.latest_nav_date = x.date::date AND f.latest_nav IS DISTINCT FROM x.nav"));
     assert.equal(r.written, 1);
   });
 
