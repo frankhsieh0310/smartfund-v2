@@ -1,13 +1,15 @@
 /**
  * Read-only verification for lib/tw-official/etfReverse.ts.
- * Every query runs inside BEGIN READ ONLY ... ROLLBACK (application_name=taskJ-readonly-verify).
+ * Every query runs inside BEGIN READ ONLY ... ROLLBACK (application_name=taskJ2-readonly-verify).
  * Requires DATABASE_URL in the environment (e.g. `npx tsx --env-file=<path to .env> scripts/tw-official/verify-etf-reverse.ts`);
  * the value is never printed.
  */
 import pg from "pg";
 import { getOfficialEtfHoldingsCount, getOfficialEtfReverse, HEADER_ROW_CODES, TwOfficialError, type SqlRunner } from "../../lib/tw-official/etfReverse";
 
-const APP_NAME = "taskJ-readonly-verify";
+const APP_NAME = "taskJ2-readonly-verify";
+const FUTURE_DATED_ETF = "00401A";
+const taipeiToday = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Taipei", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 const EXPECTED_ETFS: Record<string, number> = { "2330": 64, "2317": 38, "2454": 65, "8069": 10 };
 const EXPECTED_STOCKS: Record<string, number> = { "0050": 50, "006208": 50, "00878": 29, "00919": 40 };
 
@@ -38,6 +40,12 @@ async function verifyWithPg() {
       check(`${ticker} totalEtfs`, r.totalEtfs === EXPECTED_ETFS[ticker], `got ${r.totalEtfs}, expected ${EXPECTED_ETFS[ticker]}`);
       for (const it of r.items.slice(0, 10)) {
         console.log(`     ${it.etfCode.padEnd(8)} ${it.etfName.slice(0, 18).padEnd(18)} w=${it.weight} date=${it.asOfDate}${it.dateIsFuture ? " (FUTURE)" : ""} stockCount=${it.holdingsCount.stockCount} total=${it.holdingsCount.totalPositions} provider=${it.provider ?? "null"}`);
+      }
+      if (ticker === "2330" || ticker === "2454") {
+        const today = taipeiToday();
+        check(`${ticker} latestAsOfDate not in future`, r.latestAsOfDate != null && r.latestAsOfDate <= today && r.latestAsOfDate === "2026-10-08", `latestAsOfDate=${r.latestAsOfDate} today=${today} expected=2026-10-08`);
+        const future = r.items.find((i) => i.etfCode === FUTURE_DATED_ETF);
+        check(`${ticker} keeps ${FUTURE_DATED_ETF} with dateIsFuture=true`, Boolean(future) && future?.dateIsFuture === true, future ? `asOfDate=${future.asOfDate} dateIsFuture=${future.dateIsFuture} weight=${future.weight}` : "missing");
       }
       if (ticker === "2330") {
         const e0050 = r.items.find((i) => i.etfCode === "0050");

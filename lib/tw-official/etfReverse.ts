@@ -150,7 +150,8 @@ export async function getOfficialEtfReverse(
     ticker: String(input.ticker).trim().toUpperCase(),
     bareCode,
     totalEtfs: all.length,
-    latestAsOfDate: all.reduce<string | null>((max, item) => (max == null || item.asOfDate > max ? item.asOfDate : max), null),
+    // 只用不晚於今天（台北時間）的持股日期；未來日期的列仍保留在 items（dateIsFuture=true）。
+    latestAsOfDate: all.reduce<string | null>((max, item) => (!item.dateIsFuture && (max == null || item.asOfDate > max) ? item.asOfDate : max), null),
     source: OFFICIAL_SOURCE,
     items: all.slice(offset, offset + limit),
     page,
