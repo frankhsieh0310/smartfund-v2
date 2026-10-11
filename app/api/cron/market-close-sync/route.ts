@@ -248,7 +248,12 @@ type MarketDetail = {
   dbDiscontinuitySamples: Array<{ symbol: string; newPrice: number; lastKnownClose: number }>;
   historyWritten: number;
   etfsUpdated: number;
-  performanceRecomputed: number;
+  // Task W7: market-close-sync no longer writes etf_performances at all (returns are sourced from
+  // Yahoo separately); writeErrorCount/writeErrorEtfIds replace it — a batch whose write threw is
+  // recorded here (never propagated) and its etfIds simply remain missing from the DB-gap check, so
+  // a later invocation retries them automatically with no separate retry bookkeeping.
+  writeErrorCount: number;
+  writeErrorEtfIds: string[];
   doneForToday: boolean;
   priorityKind?: "SWEEP" | "RECHECK_DUE" | "WAITING" | "DONE";
   coreUniverseBefore?: number; // active+data_source candidates matching this market's suffix pattern, before the core filter
@@ -507,7 +512,7 @@ export async function GET(request: Request) {
       marketDetails.push({
         jobId, status: "NOT_ELIGIBLE", notEligibleReason: eligibility.reason, targetLocalDate: null,
         requested: 0, classifications: emptyCounts(), fetchErrorCount: 0, pendingCount: 0,
-        sourceMissingSymbols: [], noBarSymbols: [], noTradeSymbols: [], newSymbols: [], changedSymbols: [], unitMismatchSamples: [], priceJumpReviewSamples: [], dbDiscontinuitySamples: [], historyWritten: 0, etfsUpdated: 0, performanceRecomputed: 0, doneForToday: eligibility.reason === "ALREADY_DONE",
+        sourceMissingSymbols: [], noBarSymbols: [], noTradeSymbols: [], newSymbols: [], changedSymbols: [], unitMismatchSamples: [], priceJumpReviewSamples: [], dbDiscontinuitySamples: [], historyWritten: 0, etfsUpdated: 0, writeErrorCount: 0, writeErrorEtfIds: [], doneForToday: eligibility.reason === "ALREADY_DONE",
         barCount: 0, quoteFinalCount: 0, noTradeOnTargetCount: 0, sourceSwitches: [], yahooConsistentCount: 0, yahooInconsistentCount: 0, yahooInconsistentSamples: [],
         dbGapCount,
       });
@@ -570,7 +575,8 @@ export async function GET(request: Request) {
     const sourceSwitches: SourceSwitch[] = [];
     let historyWritten = 0;
     let etfsUpdated = 0;
-    let performanceRecomputed = 0;
+    let writeErrorCount = 0;
+    const writeErrorEtfIds: string[] = [];
     const writeEnabledThisRun = isWriteEnabled();
     const { quoteResolutions } = ctx;
 
@@ -649,7 +655,8 @@ export async function GET(request: Request) {
       const writeResult = await writeBatchIfEnabled(writerQuery, batchWritable, now.toISOString(), writeEnabledThisRun);
       historyWritten += writeResult.historyWritten;
       etfsUpdated += writeResult.etfsUpdated;
-      performanceRecomputed += writeResult.performanceRecomputed;
+      writeErrorCount += writeResult.writeErrorCount;
+      writeErrorEtfIds.push(...writeResult.writeErrorEtfIds);
       state = advanceSweep(state, { ok: true, isLastBatch, observations }, Date.now(), lastRawId);
       if (isLastBatch) break;
     }
@@ -710,7 +717,8 @@ export async function GET(request: Request) {
         const writeResult = await writeBatchIfEnabled(writerQuery, chunkWritable, now.toISOString(), writeEnabledThisRun);
         historyWritten += writeResult.historyWritten;
         etfsUpdated += writeResult.etfsUpdated;
-        performanceRecomputed += writeResult.performanceRecomputed;
+        writeErrorCount += writeResult.writeErrorCount;
+        writeErrorEtfIds.push(...writeResult.writeErrorEtfIds);
         state = advanceSweep(state, { ok: true, isLastBatch: true, observations }, Date.now());
       }
     }
@@ -751,7 +759,7 @@ export async function GET(request: Request) {
       pendingCount: state.pending.length, sourceMissingSymbols, noBarSymbols, noTradeSymbols, newSymbols, changedSymbols, doneForToday: marketDone,
       priorityKind: priorityByJobId.get(jobId)?.kind,
       barCount, quoteFinalCount, noTradeOnTargetCount, sourceSwitches, yahooConsistentCount, yahooInconsistentCount, yahooInconsistentSamples,
-      unitMismatchSamples, priceJumpReviewSamples, dbDiscontinuitySamples, historyWritten, etfsUpdated, performanceRecomputed,
+      unitMismatchSamples, priceJumpReviewSamples, dbDiscontinuitySamples, historyWritten, etfsUpdated, writeErrorCount, writeErrorEtfIds,
       dbGapCount: finalDbGapCount,
     });
     if (fetchFailedThisMarket) continue;
@@ -767,7 +775,7 @@ export async function GET(request: Request) {
     const priority = priorityByJobId.get(jobId);
     marketDetails.push({
       jobId, status: "NOT_REACHED", targetLocalDate: null, requested: 0, classifications: emptyCounts(), fetchErrorCount: 0, pendingCount: 0,
-      sourceMissingSymbols: [], noBarSymbols: [], noTradeSymbols: [], newSymbols: [], changedSymbols: [], unitMismatchSamples: [], priceJumpReviewSamples: [], dbDiscontinuitySamples: [], historyWritten: 0, etfsUpdated: 0, performanceRecomputed: 0, doneForToday: false,
+      sourceMissingSymbols: [], noBarSymbols: [], noTradeSymbols: [], newSymbols: [], changedSymbols: [], unitMismatchSamples: [], priceJumpReviewSamples: [], dbDiscontinuitySamples: [], historyWritten: 0, etfsUpdated: 0, writeErrorCount: 0, writeErrorEtfIds: [], doneForToday: false,
       priorityKind: priority?.kind,
       barCount: 0, quoteFinalCount: 0, noTradeOnTargetCount: 0, sourceSwitches: [], yahooConsistentCount: 0, yahooInconsistentCount: 0, yahooInconsistentSamples: [],
       dbGapCount: dbGapCountByJobId.get(jobId) ?? 0,
@@ -799,7 +807,7 @@ export async function GET(request: Request) {
   // actually caused writeBatchIfEnabled to reach the DB — see writeGate.ts/priceWriter.ts.
   const totalHistoryWritten = marketDetails.reduce((s, m) => s + m.historyWritten, 0);
   const totalEtfsUpdated = marketDetails.reduce((s, m) => s + m.etfsUpdated, 0);
-  const totalPerformanceRecomputed = marketDetails.reduce((s, m) => s + m.performanceRecomputed, 0);
+  const totalWriteErrorCount = marketDetails.reduce((s, m) => s + m.writeErrorCount, 0);
   const runMode = currentRunMode();
   // Task W6: logs exactly what this invocation itself read for the write switch, and which
   // deployment it ran on — answers "did it actually see MARKET_CLOSE_SYNC_WRITE=on" from the run log
@@ -818,7 +826,7 @@ export async function GET(request: Request) {
     details: {
       time_budget_stop: timeBudgetStop, rate_limit_stop: rateLimitStop, markets: marketDetails,
       unmapped_total: unmappedTotal, unmapped_by_suffix: unmappedBySuffix, core_universe_size: coreUniverseIds.size,
-      run_mode: runMode, history_written: totalHistoryWritten, etfs_updated: totalEtfsUpdated, performance_recomputed: totalPerformanceRecomputed,
+      run_mode: runMode, history_written: totalHistoryWritten, etfs_updated: totalEtfsUpdated, write_error_count: totalWriteErrorCount,
       write_env_read_exactly_on: writeEnvDiag.readExactlyOn, write_env_var_present: writeEnvDiag.envVarPresent,
       deployment_id: writeEnvDiag.deploymentId, deployment_url: writeEnvDiag.deploymentUrl,
     },
@@ -827,6 +835,6 @@ export async function GET(request: Request) {
   return Response.json({
     ok: true, job: JOB, runId, status, runMode, timeBudgetStop, rateLimitStop, markets: marketDetails,
     unmappedTotal, unmappedBySuffix, universeTotal, coreUniverseSize: coreUniverseIds.size,
-    historyWritten: totalHistoryWritten, etfsUpdated: totalEtfsUpdated, performanceRecomputed: totalPerformanceRecomputed,
+    historyWritten: totalHistoryWritten, etfsUpdated: totalEtfsUpdated, writeErrorCount: totalWriteErrorCount,
   });
 }

@@ -1,11 +1,17 @@
-// Task P: the ONLY place in this feature that writes to etf_history/etfs/etf_performances — never
-// called at all unless lib/market-close-sync/writeGate.ts's isWriteEnabled() is true. Every function
-// here takes a QueryFn (same abstraction lib/yahoo/etfHistory.ts already uses) so unit tests inject
-// a mock that records calls without ever touching a real database — this module is never exercised
-// against a real DB during this task; only mocked tests and static review.
+// Task P: the ONLY place in this feature that writes to etf_history/etfs — never called at all
+// unless lib/market-close-sync/writeGate.ts's isWriteEnabled() is true. Every function here takes a
+// QueryFn (same abstraction lib/yahoo/etfHistory.ts already uses) so unit tests inject a mock that
+// records calls without ever touching a real database.
+//
+// Task W7: this module no longer touches etf_performances at all. Live Production hit a numeric
+// field overflow ("A field with precision 8, scale 4 must round to an absolute value less than
+// 10^4") computing a return percentage against a near-zero base close — a data problem in
+// performanceCalc's own math, not a write-path bug, and the task's own decision is to stop computing
+// returns here entirely; they'll be sourced from Yahoo's own numbers in a separate task instead. The
+// old recomputeEtfPerformanceBatch/lookupCloseOnOrBeforeBatch functions (and the performanceCalc
+// import) are removed rather than left dead, since nothing here ever calls them again.
 
 import type { ShadowClassification } from "./types.ts";
-import { PERFORMANCE_PERIODS, PERFORMANCE_PERIOD_DAYS, baseDateFor, computeReturn } from "./performanceCalc.ts";
 
 export type QueryFn = (sql: string, params: any[]) => Promise<any[]>;
 
@@ -84,100 +90,46 @@ export async function updateEtfsLatestForward(query: QueryFn, rows: WritablePric
   return result.length;
 }
 
-/** The last close on or before `date` for a batch of ETFs — one query per distinct base date,
- * covering every ETF in the batch at once (DISTINCT ON), never one query per ETF per period.
- * Task W6: explicit ::text[] cast on the id array — this was the ONE raw query in the write path
- * still missing it (etf_id is a plain `text` column, but every value is UUID-shaped; Prisma's raw
- * query parameter encoding can mis-infer a `uuid[]` wire type for such an array, which then fails
- * with "operator does not exist: text = uuid" against the real text column — confirmed root cause of
- * the Production crash this task fixes, and the reason it only ever hit on a WRITE-mode invocation
- * with an actual writable batch: this function is only reached from recomputeEtfPerformanceBatch,
- * itself only reached from writeBatchIfEnabled when write is enabled AND something is writable —
- * every earlier shadow-mode-only or empty-batch run simply never executed this query at all). */
-async function lookupCloseOnOrBeforeBatch(query: QueryFn, etfIds: string[], date: string): Promise<Map<string, number>> {
-  if (etfIds.length === 0) return new Map();
-  const rows = await query(
-    `SELECT DISTINCT ON (etf_id) etf_id, close FROM etf_history
-      WHERE etf_id = ANY($1::text[]) AND date <= $2::date AND close IS NOT NULL
-      ORDER BY etf_id, date DESC`,
-    [etfIds, date],
-  );
-  const m = new Map<string, number>();
-  for (const r of rows) m.set(r.etf_id, Number(r.close));
-  return m;
-}
-
-/** Recomputes etf_performances ONLY for the ETFs just written this batch (never the whole
- * universe), per the task's "只為本次有寫入的ETF重算". Groups by targetLocalDate (in practice a
- * single invocation only ever has one target date per market) so each of the 6 periods needs just
- * one batched base-close lookup covering every ETF in that date's group, not 6×N per-ETF queries. */
-export async function recomputeEtfPerformanceBatch(
-  query: QueryFn,
-  rows: Array<{ etfId: string; targetLocalDate: string; targetClose: number }>,
-  nowIso: string,
-): Promise<number> {
-  if (rows.length === 0) return 0;
-
-  const byDate = new Map<string, Array<{ etfId: string; targetLocalDate: string; targetClose: number }>>();
-  for (const r of rows) {
-    const group = byDate.get(r.targetLocalDate);
-    if (group) group.push(r);
-    else byDate.set(r.targetLocalDate, [r]);
-  }
-
-  const perfRows: Array<Record<string, unknown>> = [];
-  for (const [date, group] of byDate) {
-    const etfIds = group.map((g) => g.etfId);
-    const baseClosesByPeriod = new Map<string, Map<string, number>>();
-    for (const period of PERFORMANCE_PERIODS) {
-      baseClosesByPeriod.set(period, await lookupCloseOnOrBeforeBatch(query, etfIds, baseDateFor(date, PERFORMANCE_PERIOD_DAYS[period])));
-    }
-    for (const g of group) {
-      const entry: Record<string, unknown> = { etf_id: g.etfId, date: g.targetLocalDate, price: g.targetClose };
-      for (const period of PERFORMANCE_PERIODS) {
-        entry[`r_${period.toLowerCase()}`] = computeReturn(g.targetClose, baseClosesByPeriod.get(period)!.get(g.etfId) ?? null);
-      }
-      perfRows.push(entry);
-    }
-  }
-
-  const result = await query(
-    `INSERT INTO etf_performances (id, etf_id, date, price, return_1d, return_1m, return_3m, return_6m, return_1y, return_3y, created_at)
-     SELECT gen_random_uuid()::text, x.etf_id, x.date::date, x.price, x.r_1d, x.r_1m, x.r_3m, x.r_6m, x.r_1y, x.r_3y, $2::timestamptz
-       FROM jsonb_to_recordset($1::jsonb) AS x(etf_id text, date text, price numeric, r_1d numeric, r_1m numeric, r_3m numeric, r_6m numeric, r_1y numeric, r_3y numeric)
-     ON CONFLICT (etf_id, date) DO UPDATE SET
-       price = EXCLUDED.price, return_1d = EXCLUDED.return_1d, return_1m = EXCLUDED.return_1m,
-       return_3m = EXCLUDED.return_3m, return_6m = EXCLUDED.return_6m, return_1y = EXCLUDED.return_1y, return_3y = EXCLUDED.return_3y
-     RETURNING 1`,
-    [JSON.stringify(perfRows), nowIso],
-  );
-  return result.length;
-}
-
-export type WriteBatchResult = { historyWritten: number; etfsUpdated: number; performanceRecomputed: number };
+export type WriteBatchResult = {
+  historyWritten: number;
+  etfsUpdated: number;
+  // Task W7: error isolation — a batch whose write throws (e.g. a future data anomaly neither of us
+  // has seen yet) is recorded here rather than propagated. route.ts never aborts the invocation for
+  // it: the affected etfIds simply stay missing from etf_history for this target date, and the
+  // existing DB-truth gap check (Task W4/W6 — computeDbGapIds, re-verified against the real DB every
+  // invocation, never trusting checkpoint alone) will pick them right back up and retry them on a
+  // later invocation, with no special-case "retry" bookkeeping needed here at all.
+  writeErrorCount: number;
+  writeErrorEtfIds: string[];
+};
 
 /** The single entry point route.ts calls per batch — every other function in this file is only ever
  * reached through here. `writeEnabled` is passed in explicitly (the caller reads
  * writeGate.isWriteEnabled() once per invocation) rather than read from process.env again in here,
  * so tests can exercise both branches directly without mutating global env state per call. When
  * disabled, or when nothing in the batch is writable, every underlying write function call count is
- * exactly zero — there is no code path that reaches query() at all in either case. */
+ * exactly zero — there is no code path that reaches query() at all in either case.
+ *
+ * Task W7: catches any error from the two writes and reports it as writeErrorCount/writeErrorEtfIds
+ * instead of throwing — one bad batch (e.g. the numeric-overflow class of surprise this task was
+ * written in response to, though that specific case no longer reaches this file at all since
+ * etf_performances writes were removed entirely) must never kill the whole invocation and strand
+ * every market scheduled after it. */
 export async function writeBatchIfEnabled(
   query: QueryFn,
   candidates: WritablePrice[],
   nowIso: string,
   writeEnabled: boolean,
 ): Promise<WriteBatchResult> {
-  if (!writeEnabled) return { historyWritten: 0, etfsUpdated: 0, performanceRecomputed: 0 };
+  if (!writeEnabled) return { historyWritten: 0, etfsUpdated: 0, writeErrorCount: 0, writeErrorEtfIds: [] };
   const writable = filterWritable(candidates);
-  if (writable.length === 0) return { historyWritten: 0, etfsUpdated: 0, performanceRecomputed: 0 };
+  if (writable.length === 0) return { historyWritten: 0, etfsUpdated: 0, writeErrorCount: 0, writeErrorEtfIds: [] };
 
-  const historyWritten = await writeEtfHistoryBatch(query, writable, nowIso);
-  const etfsUpdated = await updateEtfsLatestForward(query, writable, nowIso);
-  const performanceRecomputed = await recomputeEtfPerformanceBatch(
-    query,
-    writable.map((w) => ({ etfId: w.etfId, targetLocalDate: w.targetLocalDate, targetClose: w.price })),
-    nowIso,
-  );
-  return { historyWritten, etfsUpdated, performanceRecomputed };
+  try {
+    const historyWritten = await writeEtfHistoryBatch(query, writable, nowIso);
+    const etfsUpdated = await updateEtfsLatestForward(query, writable, nowIso);
+    return { historyWritten, etfsUpdated, writeErrorCount: 0, writeErrorEtfIds: [] };
+  } catch {
+    return { historyWritten: 0, etfsUpdated: 0, writeErrorCount: writable.length, writeErrorEtfIds: writable.map((w) => w.etfId) };
+  }
 }

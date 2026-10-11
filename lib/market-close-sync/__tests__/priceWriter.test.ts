@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import {
   isWritableClassification, filterWritable, writeBatchIfEnabled,
-  writeEtfHistoryBatch, updateEtfsLatestForward, recomputeEtfPerformanceBatch,
+  writeEtfHistoryBatch, updateEtfsLatestForward,
   type WritablePrice, type QueryFn,
 } from "../priceWriter.ts";
 
@@ -60,22 +60,22 @@ const sample = (classification: WritablePrice["classification"], etfId = "etf-1"
     const { query, calls } = mockQuery();
     const result = await writeBatchIfEnabled(query, [sample("NEW"), sample("CHANGED")], NOW_ISO, false);
     assert.equal(calls.length, 0);
-    assert.deepEqual(result, { historyWritten: 0, etfsUpdated: 0, performanceRecomputed: 0 });
+    assert.deepEqual(result, { historyWritten: 0, etfsUpdated: 0, writeErrorCount: 0, writeErrorEtfIds: [] });
   });
 
   await test("writeBatchIfEnabled: write enabled but batch has only UNIT_MISMATCH/PRICE_JUMP_REVIEW/SAME -> still 0 calls", async () => {
     const { query, calls } = mockQuery();
     const result = await writeBatchIfEnabled(query, [sample("UNIT_MISMATCH"), sample("PRICE_JUMP_REVIEW"), sample("SAME")], NOW_ISO, true);
     assert.equal(calls.length, 0);
-    assert.deepEqual(result, { historyWritten: 0, etfsUpdated: 0, performanceRecomputed: 0 });
+    assert.deepEqual(result, { historyWritten: 0, etfsUpdated: 0, writeErrorCount: 0, writeErrorEtfIds: [] });
   });
 
   await test("writeBatchIfEnabled: write enabled, a mixed batch only ever writes the NEW/CHANGED/DB_DISCONTINUITY rows", async () => {
-    const { query, calls } = mockQuery({ etf_history: [{ x: 1 }], "UPDATE etfs": [{ id: "a" }, { id: "b" }], etf_performances: [{ x: 1 }, { x: 1 }] });
+    const { query, calls } = mockQuery({ etf_history: [{ x: 1 }], "UPDATE etfs": [{ id: "a" }, { id: "b" }] });
     const batch = [sample("NEW", "a"), sample("CHANGED", "b"), sample("UNIT_MISMATCH", "c"), sample("PRICE_JUMP_REVIEW", "d"), sample("SAME", "e")];
     const result = await writeBatchIfEnabled(query, batch, NOW_ISO, true);
-    // history insert + etfs update + performance recompute's own base-close lookups (6 periods) + its insert = 1 + 1 + 6 + 1 = 9 calls total
-    assert.ok(calls.length > 0);
+    // history insert + etfs update = 2 calls total (Task W7: no more performance-recompute calls)
+    assert.equal(calls.length, 2);
     // every call's params must only ever reference etf ids "a"/"b" — "c"/"d"/"e" never appear anywhere.
     for (const call of calls) {
       const serialized = JSON.stringify(call.params);
@@ -85,6 +85,23 @@ const sample = (classification: WritablePrice["classification"], etfId = "etf-1"
     }
     assert.equal(result.historyWritten, 1);
     assert.equal(result.etfsUpdated, 2);
+    assert.equal(result.writeErrorCount, 0);
+  });
+
+  await test("Task W7: writeBatchIfEnabled never writes etf_performances — that table is no longer touched by this module at all", async () => {
+    const { query, calls } = mockQuery({ etf_history: [{ x: 1 }], "UPDATE etfs": [{ id: "a" }] });
+    await writeBatchIfEnabled(query, [sample("NEW", "a")], NOW_ISO, true);
+    for (const call of calls) assert.ok(!call.sql.includes("etf_performances"), "no call should ever reference etf_performances");
+  });
+
+  await test("Task W7: writeBatchIfEnabled isolates a write failure — catches the error, reports writeErrorCount/writeErrorEtfIds, never throws", async () => {
+    const query: QueryFn = async () => { throw new Error("simulated numeric field overflow"); };
+    const batch = [sample("NEW", "a"), sample("CHANGED", "b")];
+    const result = await writeBatchIfEnabled(query, batch, NOW_ISO, true);
+    assert.equal(result.historyWritten, 0);
+    assert.equal(result.etfsUpdated, 0);
+    assert.equal(result.writeErrorCount, 2);
+    assert.deepEqual(result.writeErrorEtfIds.sort(), ["a", "b"]);
   });
 
   await test("writeEtfHistoryBatch: SQL uses ON CONFLICT (etf_id, date) with a WHERE value-changed guard, batched (one call for the whole set)", async () => {
@@ -116,18 +133,6 @@ const sample = (classification: WritablePrice["classification"], etfId = "etf-1"
     await updateEtfsLatestForward(query, [sample("NEW", "a")], NOW_ISO);
     assert.ok(!calls[0].sql.includes("etf_id::uuid"), "etfs.id = x.etf_id must compare text to text, never text to an explicit ::uuid cast");
     assert.ok(calls[0].sql.includes("etfs.id = x.etf_id"));
-  });
-
-  await test("recomputeEtfPerformanceBatch: looks up a base close for all 6 periods, batched per distinct target date, then one upsert", async () => {
-    const { query, calls } = mockQuery({ "DISTINCT ON": [{ etf_id: "a", close: 90 }], etf_performances: [{ x: 1 }] });
-    const n = await recomputeEtfPerformanceBatch(query, [{ etfId: "a", targetLocalDate: "2026-10-09", targetClose: 100 }], NOW_ISO);
-    // 6 base-close lookups (1D/1M/3M/6M/1Y/3Y) + 1 final upsert = 7 calls for a single ETF/date.
-    assert.equal(calls.length, 7);
-    assert.equal(n, 1);
-    const upsertCall = calls[calls.length - 1];
-    assert.ok(upsertCall.sql.includes("etf_performances"));
-    assert.ok(upsertCall.sql.includes("return_1d"));
-    assert.ok(upsertCall.sql.includes("return_3y"));
   });
 
   console.log("PRICE_WRITER_TESTS_DONE");
