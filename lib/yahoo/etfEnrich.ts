@@ -142,37 +142,14 @@ async function writeEtfEnrichData(
   // NAV write here — no dated etf_history row is created from this source, since any date we could
   // attach (market-close date, today, ingestion time) would not be NAV's own source date.
 
-  // 2) performance -> etf_performances + etfs trailing returns
-  const trailing = perf.trailingReturns ?? {};
-  const p = {
-    r1m: pct(trailing.oneMonth), r3m: pct(trailing.threeMonth), r6m: pct(trailing.sixMonth),
-    rytd: pct(trailing.ytd), r1y: pct(trailing.oneYear), r3y: pct(trailing.threeYear), r5y: pct(trailing.fiveYear),
-  };
-  if (Object.values(p).some((v) => v != null)) {
-    const d = new Date().toISOString().slice(0, 10);
-    await query(
-      `INSERT INTO etf_performances (id, etf_id, date, return_1m, return_3m, return_6m, return_ytd, return_1y, return_3y, return_5y, created_at)
-       VALUES (gen_random_uuid()::text, $1, $2::date, $3, $4, $5, $6, $7, $8, $9, NOW())
-       ON CONFLICT (etf_id, date) DO UPDATE SET
-         return_1m = COALESCE(EXCLUDED.return_1m, etf_performances.return_1m),
-         return_3m = COALESCE(EXCLUDED.return_3m, etf_performances.return_3m),
-         return_6m = COALESCE(EXCLUDED.return_6m, etf_performances.return_6m),
-         return_ytd = COALESCE(EXCLUDED.return_ytd, etf_performances.return_ytd),
-         return_1y = COALESCE(EXCLUDED.return_1y, etf_performances.return_1y),
-         return_3y = COALESCE(EXCLUDED.return_3y, etf_performances.return_3y),
-         return_5y = COALESCE(EXCLUDED.return_5y, etf_performances.return_5y)`,
-      [input.etfId, d, p.r1m, p.r3m, p.r6m, p.rytd, p.r1y, p.r3y, p.r5y],
-    );
-    await query(
-      `UPDATE etfs SET
-         return_1m = COALESCE($2, return_1m), return_3m = COALESCE($3, return_3m), return_6m = COALESCE($4, return_6m),
-         return_ytd = COALESCE($5, return_ytd), return_1y = COALESCE($6, return_1y),
-         return_3y = COALESCE($7, return_3y), return_5y = COALESCE($8, return_5y), updated_at = NOW()
-       WHERE id = $1`,
-      [input.etfId, p.r1m, p.r3m, p.r6m, p.rytd, p.r1y, p.r3y, p.r5y],
-    );
-    out.performanceWritten = 1;
-  }
+  // 2) performance -> Task X5 Part B (user-approved): this pipeline no longer writes any return_*
+  // column at all, to either etf_performances or etfs. Column ownership is now split between
+  // lib/etf-returns-sync/returnsWriter.ts (return_1m/3m/ytd/1y/3y/5y, direct overwrite incl. NULL —
+  // the two pipelines writing the same etf_performances return_* columns with different COALESCE
+  // semantics was exactly what let a stale 0 get stuck forever) and
+  // app/api/cron/cloud-etf-price/route.ts (return_1d/6m, self-computed, Yahoo has no such figures).
+  // Everything else in this function (metadata, holdings, sector/credit allocations below) is
+  // unchanged.
 
   // 3) top holdings -> etf_holding_snapshots (date-unknown) + etf_holdings
   const holdings = (Array.isArray(th.holdings) ? th.holdings : [])

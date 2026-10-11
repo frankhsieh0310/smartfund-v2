@@ -53,13 +53,34 @@ const allNull: TrailingReturns = { r1d: null, r1m: null, r3m: null, r6m: null, r
     assert.deepEqual(result, { written: 0, droppedFieldCount: 0, writeErrorCount: 0, writeErrorEtfIds: [] });
   });
 
-  await test("writeReturnsBatch: SQL uses ON CONFLICT (etf_id, date) with COALESCE — same shape as the existing Yahoo enrichment pipeline, batched (one call for the whole set)", async () => {
+  await test("writeReturnsBatch: SQL uses ON CONFLICT (etf_id, date) with a DIRECT overwrite (no COALESCE) for the six owned columns, batched (one call for the whole set)", async () => {
     const { query, calls } = mockQuery();
     await writeReturnsBatch(query, [{ etfId: "a", date: "2026-10-09", returns: { ...allNull, r1m: 1.5 } }], "2026-10-11T00:00:00Z");
     assert.equal(calls.length, 1);
     assert.ok(calls[0].sql.includes("ON CONFLICT (etf_id, date)"));
-    assert.ok(calls[0].sql.includes("COALESCE(EXCLUDED.return_1m"));
+    assert.ok(calls[0].sql.includes("return_1m = EXCLUDED.return_1m"));
+    assert.ok(!calls[0].sql.includes("COALESCE"));
     assert.ok(calls[0].sql.includes("jsonb_to_recordset"));
+  });
+
+  await test("writeReturnsBatch: never references return_1d or return_6m — those columns belong exclusively to cloud-etf-price", async () => {
+    const { query, calls } = mockQuery();
+    await writeReturnsBatch(query, [{ etfId: "a", date: "2026-10-09", returns: { ...allNull, r1m: 1.5, r1d: 9.9, r6m: 8.8 } }], "2026-10-11T00:00:00Z");
+    assert.ok(!calls[0].sql.includes("return_1d"));
+    assert.ok(!calls[0].sql.includes("return_6m"));
+    const payload = JSON.parse(calls[0].params[0]);
+    assert.equal(payload[0].return_1d, undefined);
+    assert.equal(payload[0].return_6m, undefined);
+  });
+
+  await test("writeReturnsBatch: a NULL from Yahoo overwrites a previously-stuck 0 (direct overwrite, not COALESCE)", async () => {
+    const { query, calls } = mockQuery();
+    // A null r1y here must appear as an actual NULL in the SET clause's target (EXCLUDED.return_1y),
+    // which — unlike the old COALESCE(EXCLUDED.x, old.x) — Postgres will apply even though it's null.
+    await writeReturnsBatch(query, [{ etfId: "a", date: "2026-10-09", returns: { ...allNull, r1y: null } }], "2026-10-11T00:00:00Z");
+    assert.ok(calls[0].sql.includes("return_1y = EXCLUDED.return_1y"));
+    const payload = JSON.parse(calls[0].params[0]);
+    assert.equal(payload[0].return_1y, null);
   });
 
   await test("writeReturnsBatch: an out-of-range field is dropped (null) before the write, reported via droppedFieldCount, row is still written", async () => {

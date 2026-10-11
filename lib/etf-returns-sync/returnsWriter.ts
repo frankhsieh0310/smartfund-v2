@@ -1,9 +1,20 @@
-// Task X: the ONLY place in this feature that writes to etf_performances — never called unless
-// writeGate.isWriteEnabled() is true. Mirrors the existing lib/yahoo/etfEnrich.ts upsert exactly
-// (same table, same ON CONFLICT (etf_id, date) DO UPDATE ... COALESCE pattern, so this feature never
-// clobbers a non-null value the Yahoo ETF enrichment pipeline already wrote for other columns like
-// nav/price/volatility/sharpe/aum that this feature never touches) — deliberately NOT a new pipeline
-// design, just the existing, already-proven-safe upsert shape, scoped to the return_* columns only.
+// Task X5 Part B: the ONLY place in this feature that writes to etf_performances — never called
+// unless writeGate.isWriteEnabled() is true.
+//
+// Column ownership (user-approved, Task X5): this pipeline owns return_1m/3m/ytd/1y/3y/5y only, and
+// writes them as a DIRECT OVERWRITE — including NULL — never COALESCE. COALESCE only protects
+// against NULL overwriting a real value; it cannot protect against a literal 0 (Yahoo's own
+// "no data" placeholder, see parseReturns.ts) silently sticking forever once written, which is
+// exactly the bug this change fixes. Yahoo's own value (even when that value is "no data", i.e.
+// null) is always the final word for these six columns now.
+//
+// return_1d and return_6m are deliberately NEVER included in this INSERT/UPDATE at all — Yahoo's
+// trailingReturns has no 1-day or 6-month figure, and those two columns are now owned exclusively by
+// app/api/cron/cloud-etf-price/route.ts (self-computed from price history). Touching them here,
+// even to write NULL, would erase that pipeline's own values. return_1d is still parsed into
+// TrailingReturns.r1d for type/test continuity but is never part of the write payload.
+// price/nav/volatility/sharpe/beta/alpha/max_drawdown/dividend_yield/aum are untouched, as before —
+// this feature has never written them and still doesn't.
 
 export type QueryFn = (sql: string, params: any[]) => Promise<any[]>;
 
@@ -50,13 +61,13 @@ export type WriteBatchResult = {
   writeErrorEtfIds: string[];
 };
 
-/** One batched UPSERT per call, same ON CONFLICT (etf_id, date) DO UPDATE ... COALESCE shape as the
- * existing Yahoo ETF enrichment pipeline's writeEtfEnrichData — never introduces a second, divergent
- * way of writing this table. Task X item B.3: error isolation — the whole batch INSERT is wrapped in
- * one try/catch; if Postgres rejects it for any reason this function didn't already sanitize away,
- * every etfId in the batch is reported as writeErrorCount and simply retried on a later invocation
- * (no row for today's date -> the DB-truth completion check in route.ts picks it back up), never
- * thrown up to abort the whole invocation. */
+/** One batched UPSERT per call. Task X5 Part B: return_1m/3m/ytd/1y/3y/5y are a DIRECT OVERWRITE
+ * (no COALESCE) — Yahoo's own value, including null, always wins for these six columns. return_1d
+ * and return_6m are never referenced at all (owned by cloud-etf-price). Error isolation unchanged
+ * from Task X B.3: the whole batch INSERT is wrapped in one try/catch; if Postgres rejects it for any
+ * reason this function didn't already sanitize away, every etfId in the batch is reported as
+ * writeErrorCount and simply retried on a later invocation (no row for today's date -> the DB-truth
+ * completion check in route.ts picks it back up), never thrown up to abort the whole invocation. */
 export async function writeReturnsBatch(query: QueryFn, candidates: WriteCandidate[], nowIso: string): Promise<WriteBatchResult> {
   if (candidates.length === 0) return { written: 0, droppedFieldCount: 0, writeErrorCount: 0, writeErrorEtfIds: [] };
 
@@ -66,28 +77,26 @@ export async function writeReturnsBatch(query: QueryFn, candidates: WriteCandida
     droppedFieldCount += droppedFields.length;
     return {
       etf_id: c.etfId, date: c.date,
-      return_1d: sanitized.r1d, return_1m: sanitized.r1m, return_3m: sanitized.r3m, return_6m: sanitized.r6m,
+      return_1m: sanitized.r1m, return_3m: sanitized.r3m,
       return_ytd: sanitized.rytd, return_1y: sanitized.r1y, return_3y: sanitized.r3y, return_5y: sanitized.r5y,
     };
   });
 
   try {
     await query(
-      `INSERT INTO etf_performances (id, etf_id, date, return_1d, return_1m, return_3m, return_6m, return_ytd, return_1y, return_3y, return_5y, created_at)
-       SELECT gen_random_uuid()::text, x.etf_id, x.date::date, x.return_1d, x.return_1m, x.return_3m, x.return_6m, x.return_ytd, x.return_1y, x.return_3y, x.return_5y, $2::timestamptz
+      `INSERT INTO etf_performances (id, etf_id, date, return_1m, return_3m, return_ytd, return_1y, return_3y, return_5y, created_at)
+       SELECT gen_random_uuid()::text, x.etf_id, x.date::date, x.return_1m, x.return_3m, x.return_ytd, x.return_1y, x.return_3y, x.return_5y, $2::timestamptz
          FROM jsonb_to_recordset($1::jsonb) AS x(
-           etf_id text, date text, return_1d numeric, return_1m numeric, return_3m numeric, return_6m numeric,
+           etf_id text, date text, return_1m numeric, return_3m numeric,
            return_ytd numeric, return_1y numeric, return_3y numeric, return_5y numeric
          )
        ON CONFLICT (etf_id, date) DO UPDATE SET
-         return_1d = COALESCE(EXCLUDED.return_1d, etf_performances.return_1d),
-         return_1m = COALESCE(EXCLUDED.return_1m, etf_performances.return_1m),
-         return_3m = COALESCE(EXCLUDED.return_3m, etf_performances.return_3m),
-         return_6m = COALESCE(EXCLUDED.return_6m, etf_performances.return_6m),
-         return_ytd = COALESCE(EXCLUDED.return_ytd, etf_performances.return_ytd),
-         return_1y = COALESCE(EXCLUDED.return_1y, etf_performances.return_1y),
-         return_3y = COALESCE(EXCLUDED.return_3y, etf_performances.return_3y),
-         return_5y = COALESCE(EXCLUDED.return_5y, etf_performances.return_5y)
+         return_1m = EXCLUDED.return_1m,
+         return_3m = EXCLUDED.return_3m,
+         return_ytd = EXCLUDED.return_ytd,
+         return_1y = EXCLUDED.return_1y,
+         return_3y = EXCLUDED.return_3y,
+         return_5y = EXCLUDED.return_5y
        RETURNING 1`,
       [JSON.stringify(payload), nowIso],
     );

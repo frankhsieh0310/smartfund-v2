@@ -208,6 +208,11 @@ export async function GET(request: Request) {
       const points = history
         .filter((x) => x.price != null)
         .map((x) => ({ date: x.date, price: Number(x.price) }));
+      // Task X5 Part B (user-approved): return_1m/3m/1y/3y are now owned exclusively by
+      // lib/etf-returns-sync/returnsWriter.ts (Yahoo's own trailingReturns, direct overwrite incl.
+      // NULL). This pipeline keeps return_1d and return_6m — Yahoo's trailingReturns has no 1-day or
+      // 6-month figure, so those two stay self-computed from price history here, same as before.
+      // price and every other write in this route are unchanged.
       await prisma.etfPerformance.upsert({
         where: { etfId_date: { etfId: etf.id, date: utcDate(latest.date) } },
         create: {
@@ -215,20 +220,12 @@ export async function GET(request: Request) {
           date: utcDate(latest.date),
           price: latest.close,
           return1d: periodReturn(points, 1),
-          return1m: periodReturn(points, 30),
-          return3m: periodReturn(points, 91),
           return6m: periodReturn(points, 183),
-          return1y: periodReturn(points, 365),
-          return3y: periodReturn(points, 1096),
         },
         update: {
           price: latest.close,
           return1d: periodReturn(points, 1),
-          return1m: periodReturn(points, 30),
-          return3m: periodReturn(points, 91),
           return6m: periodReturn(points, 183),
-          return1y: periodReturn(points, 365),
-          return3y: periodReturn(points, 1096),
         },
       });
       inserted += candles.length;
