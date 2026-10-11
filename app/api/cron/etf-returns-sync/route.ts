@@ -66,21 +66,38 @@ async function computeRecentlyPricedIds(): Promise<Set<string>> {
 
 const CANDIDATE_LIST_CACHE_KEY = "etf-returns-sync:candidate-list-cache";
 
-/** Task X3 item B.2: computed at most once per calendar day and cached in the checkpoint table (no
- * new table, no schema change) — every other invocation that same day reuses the cached id list. */
+/** Task X3 item B.2 (original) cached this once per calendar day, discarding and recomputing from
+ * scratch on the first invocation of a new day — found live (2026-10-11/12 overnight check) to miss
+ * any ETF whose price_updated_at crosses into the 7-day window LATER the same day (VERIFIED:
+ * BTC2.AS's price refreshed at 09:19:30, after that day's 07:45:06 cache snapshot, so it sat on a
+ * stale pre-fix row until the next day's cache recompute — 164 ETFs were in the same situation at
+ * the time this was found). Fixed to an incremental merge: every invocation re-runs the underlying
+ * query (cheap — Task X3 measured it at ~451ms, a single indexed-column scan, nothing like the old
+ * etf_history-based query this cache was originally built to avoid) and UNIONS it into whatever is
+ * already cached for today, instead of replacing it. Once an ETF is in today's list it stays there
+ * even if its price_updated_at later ages back out of the 7-day window mid-day — a conservative
+ * choice (never shrinks the list intra-day) that matches the original cache's own one-way daily
+ * reset semantics. The checkpoint is only rewritten when the merged set actually changed, so a
+ * steady-state day (no newly-eligible ETFs) doesn't churn the checkpoint table every 15 minutes. */
 async function getCandidateIdsCachedForToday(today: string): Promise<Set<string>> {
   const cached = await readCheckpoint(CANDIDATE_LIST_CACHE_KEY);
+  let existingIds: string[] = [];
+  let cacheIsFromToday = false;
   try {
     const parsed = cached?.lastSymbol ? JSON.parse(cached.lastSymbol) : null;
-    if (parsed?.date === today && Array.isArray(parsed?.ids)) return new Set(parsed.ids);
-  } catch { /* corrupt/old cache entry — recompute below */ }
+    if (parsed?.date === today && Array.isArray(parsed?.ids)) { existingIds = parsed.ids; cacheIsFromToday = true; }
+  } catch { /* corrupt/old cache entry — treat as empty, recompute+merge below */ }
 
-  const ids = await computeRecentlyPricedIds();
-  await writeCheckpoint(JOB, CANDIDATE_LIST_CACHE_KEY, `cache:${today}`, {
-    lastSymbol: JSON.stringify({ date: today, ids: [...ids] }),
-    processed: ids.size, succeeded: ids.size, failed: 0,
-  });
-  return ids;
+  const freshIds = await computeRecentlyPricedIds();
+  const merged = new Set([...existingIds, ...freshIds]);
+
+  if (!cacheIsFromToday || merged.size !== existingIds.length) {
+    await writeCheckpoint(JOB, CANDIDATE_LIST_CACHE_KEY, `cache:${today}`, {
+      lastSymbol: JSON.stringify({ date: today, ids: [...merged] }),
+      processed: merged.size, succeeded: merged.size, failed: 0,
+    });
+  }
+  return merged;
 }
 
 // missingForToday / LastProcessedDateMap moved to lib/etf-returns-sync/completion.ts (Task X5 Part
