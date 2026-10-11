@@ -16,15 +16,21 @@
 import { isAuthorizedCron, unauthorizedCron } from "@/lib/cron/authorize";
 import { prisma } from "@/lib/prisma";
 import { beginRun, finishRun, readCheckpoint, writeCheckpoint } from "@/lib/cloud-ingestion/runContext";
-import { fetchQuoteSummary, newRateStats, rawNum, type RateStats } from "@/lib/yahoo/productSession";
+import { rawNum } from "@/lib/yahoo/productSession";
+import { getAuth, invalidateAuth } from "@/lib/services/dataProviders/yahoo/yahooClient";
 import { isWriteEnabled, currentRunMode, writeEnvDiagnostic } from "@/lib/etf-returns-sync/writeGate";
 import { writeBatchIfEnabled, type WriteCandidate, type TrailingReturns } from "@/lib/etf-returns-sync/returnsWriter";
+import {
+  SUFFIX_ACTIVITY_MEASURE, isCoreUniverseMemberFromCounts, isHongKongCurrencyCounter,
+} from "@/lib/market-close-sync/coreUniverse";
+import {
+  nextStateAfterOutcome, orderForInvocation, type EtfFailureStateMap,
+} from "@/lib/etf-returns-sync/failureState";
 
 const JOB = "ETF_RETURNS_SYNC";
 const TIME_BUDGET_MS = 240_000;
 const REQUEST_DELAY_MS = 400; // matches the existing Yahoo ETF enrichment pipeline's own pacing
 const CORE_UNIVERSE_LOOKBACK_DAYS = 20;
-const CORE_UNIVERSE_MIN_ACTIVE_DAYS = 15;
 const CHECKPOINT_KEY = "etf-returns-sync:cursor";
 
 const writerQuery = (sql: string, params: unknown[]) => prisma.$queryRawUnsafe<any[]>(sql, ...params);
@@ -33,31 +39,37 @@ function todayLocalDate(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-/** Task X's own core-universe definition (20 trading days lookback, >=15 active) — a self-contained
- * equivalent of lib/market-close-sync/coreUniverse.ts's rule, deliberately NOT imported from there so
- * this feature stays fully independent of that pipeline (per the task's "不修改既有管線" — and
- * importing from it would couple this feature's correctness to a module whose tuning this task never
- * reviewed). Uses Prisma's own query builder (findMany/groupBy-equivalent via raw aggregation is
- * still needed for the window-function logic, but ids are handled as Prisma-typed scalars, never a
- * raw array bind parameter, avoiding the exact class of issue Task W6 found). */
+/** Task X2 item B.4: core-universe membership now uses the EXACT SAME decision functions
+ * market-close-sync uses (lib/market-close-sync/coreUniverse.ts — imported, never modified), so the
+ * two pipelines agree on which ETFs are "worth syncing daily". Still this feature's own SQL query
+ * (not market-close-sync's route.ts, which isn't an importable module) but applying the identical
+ * per-suffix close-vs-volume activity rule and HK-currency-counter exclusion. */
 async function computeCoreUniverseIds(): Promise<Set<string>> {
-  const rows = await prisma.$queryRawUnsafe<Array<{ etf_id: string; days_available: bigint; active_days: bigint }>>(
+  const closeBasedSuffixes = Object.keys(SUFFIX_ACTIVITY_MEASURE);
+  const closeBasedPatterns = closeBasedSuffixes.map((s) => `%${s}`);
+  const rows = await prisma.$queryRawUnsafe<Array<{ etf_id: string; data_source: string; days_available: bigint; active_days: bigint }>>(
     `WITH ranked AS (
-       SELECT h.etf_id, h.volume, h.close,
+       SELECT h.etf_id, e.data_source, h.volume, h.close,
               row_number() OVER (PARTITION BY h.etf_id ORDER BY h.date DESC) AS rn
        FROM etf_history h
        JOIN etfs e ON e.id = h.etf_id
        WHERE e.is_active = true AND e.data_source IS NOT NULL
+     ),
+     scored AS (
+       SELECT etf_id, data_source,
+              CASE WHEN data_source LIKE ANY($1) THEN (close IS NOT NULL)
+                   ELSE (volume IS NOT NULL AND volume > 0) END AS traded_positive
+       FROM ranked WHERE rn <= $2
      )
-     SELECT etf_id,
-            count(*) FILTER (WHERE rn <= $1) AS days_available,
-            count(*) FILTER (WHERE rn <= $1 AND ((volume IS NOT NULL AND volume > 0) OR close IS NOT NULL)) AS active_days
-     FROM ranked WHERE rn <= $1 GROUP BY etf_id`,
-    CORE_UNIVERSE_LOOKBACK_DAYS,
+     SELECT etf_id, data_source, count(*) AS days_available, count(*) FILTER (WHERE traded_positive) AS active_days
+     FROM scored GROUP BY etf_id, data_source`,
+    closeBasedPatterns, CORE_UNIVERSE_LOOKBACK_DAYS,
   );
   const core = new Set<string>();
   for (const r of rows) {
-    if (Number(r.days_available) >= CORE_UNIVERSE_MIN_ACTIVE_DAYS && Number(r.active_days) >= CORE_UNIVERSE_MIN_ACTIVE_DAYS) core.add(r.etf_id);
+    if (isCoreUniverseMemberFromCounts(Number(r.days_available), Number(r.active_days)) && !isHongKongCurrencyCounter(r.data_source)) {
+      core.add(r.etf_id);
+    }
   }
   return core;
 }
@@ -78,6 +90,49 @@ async function lookupMissingForDate(coreIds: string[], date: string): Promise<st
     for (const r of rows) present.add(r.etfId);
   }
   return coreIds.filter((id) => !present.has(id));
+}
+
+const UA = "Mozilla/5.0";
+
+export type FetchAttemptResult = {
+  outcomeKind: "SUCCESS" | "NO_FUND_PERFORMANCE" | "TRANSIENT_FAILURE";
+  rateLimited: boolean; // 401/403/429 after exhausting retries — caller stops the whole invocation, same as market-close-sync's sparkClient contract
+  result: any | null;
+};
+
+/** Task X2 item A: live investigation this session found the 47% failure rate was 100% HTTP 404
+ * with Yahoo's own "No fundamentals data found for symbol: X" message — never a genuine
+ * symbol-format problem or program bug. Classifying that precisely requires the raw response body,
+ * which lib/yahoo/productSession.ts's fetchQuoteSummary doesn't expose to its caller — so this
+ * feature does its own raw fetch, reusing the SAME getAuth/invalidateAuth crumb primitives that
+ * module (and the whole existing Yahoo ETF enrichment pipeline) already relies on, rather than
+ * reinventing crumb negotiation. */
+async function fetchFundPerformanceRaw(symbol: string): Promise<FetchAttemptResult> {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const auth = await getAuth();
+    if (!auth) { if (attempt < 2) { await sleep(1000); continue; } return { outcomeKind: "TRANSIENT_FAILURE", rateLimited: false, result: null }; }
+    let r: Response;
+    try {
+      r = await fetch(
+        `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(symbol)}?modules=fundPerformance&crumb=${encodeURIComponent(auth.crumb)}`,
+        { headers: { "user-agent": UA, accept: "application/json", cookie: auth.cookie }, signal: AbortSignal.timeout(20_000) },
+      );
+    } catch {
+      if (attempt < 2) continue;
+      return { outcomeKind: "TRANSIENT_FAILURE", rateLimited: false, result: null };
+    }
+    if (r.status === 401 || r.status === 403) { invalidateAuth(); if (attempt < 2) continue; return { outcomeKind: "TRANSIENT_FAILURE", rateLimited: true, result: null }; }
+    if (r.status === 429) { if (attempt < 2) { await sleep((attempt + 1) * 4000); continue; } return { outcomeKind: "TRANSIENT_FAILURE", rateLimited: true, result: null }; }
+    const text = await r.text();
+    if (r.status === 404 && text.includes("No fundamentals data found")) return { outcomeKind: "NO_FUND_PERFORMANCE", rateLimited: false, result: null };
+    if (!r.ok) { if (attempt < 2 && r.status >= 500) { await sleep((attempt + 1) * 4000); continue; } return { outcomeKind: "TRANSIENT_FAILURE", rateLimited: false, result: null }; }
+    let json: any;
+    try { json = JSON.parse(text); } catch { return { outcomeKind: "TRANSIENT_FAILURE", rateLimited: false, result: null }; }
+    const result = json?.quoteSummary?.result?.[0];
+    if (!result?.fundPerformance?.trailingReturns) return { outcomeKind: "TRANSIENT_FAILURE", rateLimited: false, result: null };
+    return { outcomeKind: "SUCCESS", rateLimited: false, result };
+  }
+  return { outcomeKind: "TRANSIENT_FAILURE", rateLimited: false, result: null };
 }
 
 function parseTrailingReturns(result: any): TrailingReturns {
@@ -128,20 +183,21 @@ export async function GET(request: Request) {
     return Response.json({ ok: true, job: JOB, runId, status: "COMPLETED", runMode: currentRunMode(), missingCount: 0, coreUniverseSize: coreUniverseIds.size });
   }
 
-  // Checkpoint cursor: purely a speed hint for ordering within/across invocations on the SAME day —
-  // reset whenever the date changes (a new day's missing-set is unrelated to yesterday's cursor
-  // position). Never consulted to decide "done" — lookupMissingForDate's fresh DB query already did
-  // that, unconditionally, above.
+  // Task X2 item B: persisted failure-state map (lib/etf-returns-sync/failureState.ts) replaces the
+  // old plain id-cursor. A never-attempted ETF (no entry) is always eligible; an entry's own
+  // skipUntilDate/nextRetryAtMs decides eligibility for everything else. The map has no "today"
+  // field of its own — it's checked fresh against `today` every invocation, so it survives across
+  // calendar days exactly as item B.1/B.2 require (a 7-day skip, or a backoff that spans midnight).
   const before = await readCheckpoint(CHECKPOINT_KEY);
-  let cursor = "";
+  let failureStateMap: EtfFailureStateMap = {};
   try {
     const persisted = before?.lastSymbol ? JSON.parse(before.lastSymbol) : null;
-    if (persisted?.date === today) cursor = persisted.cursor ?? "";
-  } catch { /* corrupt/old checkpoint — start a fresh sweep */ }
+    if (persisted?.failureState) failureStateMap = persisted.failureState;
+  } catch { /* corrupt/old checkpoint — start a fresh map rather than block the sweep */ }
 
-  const sortedMissing = [...missingSet].sort();
-  const startIdx = Math.max(0, sortedMissing.findIndex((id) => id > cursor));
-  const orderedMissing = startIdx === -1 ? sortedMissing : sortedMissing.slice(startIdx);
+  const nowMsForOrdering = Date.now();
+  const orderedMissing = orderForInvocation(missingIds, failureStateMap, today, nowMsForOrdering);
+  const notYetDueCount = missingIds.length - orderedMissing.length;
 
   const rows = await prisma.$queryRawUnsafe<EtfRow[]>(
     `SELECT id, code, data_source FROM etfs WHERE id = ANY($1::text[])`,
@@ -149,58 +205,75 @@ export async function GET(request: Request) {
   );
   const rowById = new Map(rows.map((r) => [r.id, r]));
 
-  const stats: RateStats = newRateStats();
-  let attempted = 0, written = 0, fetchFailed = 0, writeErrorCount = 0, droppedFieldCount = 0;
-  let lastProcessedId = cursor;
+  let attempted = 0, written = 0, noFundPerformanceCount = 0, transientFailureCount = 0, writeErrorCount = 0, droppedFieldCount = 0;
   let timeBudgetStop = false;
+  let rateLimitStop = false;
 
   for (const etfId of orderedMissing) {
     if (Date.now() - startedMs > TIME_BUDGET_MS) { timeBudgetStop = true; break; }
+    if (rateLimitStop) break;
     const row = rowById.get(etfId);
-    if (!row) { lastProcessedId = etfId; continue; } // stale id, no longer a real etfs row — skip, never blocks the sweep
+    if (!row) continue; // stale id, no longer a real etfs row — never blocks the sweep, no state recorded
 
     attempted++;
+    let fetchResult: FetchAttemptResult;
     try {
-      const res = await fetchQuoteSummary(row.data_source, ["fundPerformance"], stats);
-      if (!res) {
-        fetchFailed++;
-      } else {
-        const returns = parseTrailingReturns(res.result);
-        const candidate: WriteCandidate = { etfId: row.id, date: today, returns };
-        const writeResult = await writeBatchIfEnabled(writerQuery, [candidate], new Date().toISOString(), writeEnabledThisRun);
-        written += writeResult.written;
-        writeErrorCount += writeResult.writeErrorCount;
-        droppedFieldCount += writeResult.droppedFieldCount;
-      }
+      fetchResult = await fetchFundPerformanceRaw(row.data_source);
     } catch {
-      fetchFailed++; // never propagated — Task X item B.3's error isolation: one ETF's failure never aborts the sweep
+      fetchResult = { outcomeKind: "TRANSIENT_FAILURE", rateLimited: false, result: null };
     }
-    lastProcessedId = etfId;
+    if (fetchResult.rateLimited) {
+      rateLimitStop = true; // Task X's own A4 rule, applied here too: never retry around a 401/403/429, stop this invocation
+      break;
+    }
+
+    if (fetchResult.outcomeKind === "SUCCESS") {
+      const returns = parseTrailingReturns(fetchResult.result);
+      const candidate: WriteCandidate = { etfId: row.id, date: today, returns };
+      const writeResult = await writeBatchIfEnabled(writerQuery, [candidate], new Date().toISOString(), writeEnabledThisRun);
+      written += writeResult.written;
+      writeErrorCount += writeResult.writeErrorCount;
+      droppedFieldCount += writeResult.droppedFieldCount;
+    } else if (fetchResult.outcomeKind === "NO_FUND_PERFORMANCE") {
+      noFundPerformanceCount++;
+    } else {
+      transientFailureCount++;
+    }
+
+    const nextState = nextStateAfterOutcome(failureStateMap[etfId], fetchResult.outcomeKind, today, Date.now());
+    if (nextState) failureStateMap[etfId] = nextState;
+    else delete failureStateMap[etfId];
+
     await sleep(REQUEST_DELAY_MS);
   }
 
   await writeCheckpoint(JOB, CHECKPOINT_KEY, runId, {
-    lastSymbol: JSON.stringify({ date: today, cursor: lastProcessedId }),
-    processed: attempted, succeeded: written, failed: fetchFailed + writeErrorCount,
+    lastSymbol: JSON.stringify({ failureState: failureStateMap }),
+    processed: attempted, succeeded: written, failed: noFundPerformanceCount + transientFailureCount + writeErrorCount,
   });
 
-  const status = timeBudgetStop ? "PARTIAL" : "COMPLETED";
+  const status = rateLimitStop || timeBudgetStop ? "PARTIAL" : "COMPLETED";
   const writeEnvDiag = writeEnvDiagnostic();
+  const fetchFailed = noFundPerformanceCount + transientFailureCount;
   await finishRun(runId, JOB, "YAHOO_QUOTE_SUMMARY", startedMs, {
-    status, attempted, completed: written, inserted: written, updated: 0, failed: fetchFailed + writeErrorCount, retryableFailures: fetchFailed,
+    status, attempted, completed: written, inserted: written, updated: 0, failed: fetchFailed + writeErrorCount, retryableFailures: transientFailureCount,
     checkpointAfter: null,
     details: {
       run_mode: currentRunMode(), core_universe_size: coreUniverseIds.size, missing_count_at_start: missingIds.length,
-      attempted, written, fetch_failed: fetchFailed, write_error_count: writeErrorCount, dropped_field_count: droppedFieldCount,
-      rate_stats: stats, write_env_read_exactly_on: writeEnvDiag.readExactlyOn, write_env_var_present: writeEnvDiag.envVarPresent,
+      not_yet_due_count: notYetDueCount, attempted, written,
+      no_fund_performance_count: noFundPerformanceCount, transient_failure_count: transientFailureCount,
+      write_error_count: writeErrorCount, dropped_field_count: droppedFieldCount, rate_limit_stop: rateLimitStop,
+      failure_state_map_size: Object.keys(failureStateMap).length,
+      write_env_read_exactly_on: writeEnvDiag.readExactlyOn, write_env_var_present: writeEnvDiag.envVarPresent,
       deployment_id: writeEnvDiag.deploymentId, deployment_url: writeEnvDiag.deploymentUrl,
     },
   });
 
   return Response.json({
     ok: true, job: JOB, runId, status, runMode: currentRunMode(),
-    coreUniverseSize: coreUniverseIds.size, missingCountAtStart: missingIds.length,
-    attempted, written, fetchFailed, writeErrorCount, droppedFieldCount, timeBudgetStop,
+    coreUniverseSize: coreUniverseIds.size, missingCountAtStart: missingIds.length, notYetDueCount,
+    attempted, written, noFundPerformanceCount, transientFailureCount, writeErrorCount, droppedFieldCount,
+    timeBudgetStop, rateLimitStop,
   });
 }
 
