@@ -21,16 +21,13 @@ import { getAuth, invalidateAuth } from "@/lib/services/dataProviders/yahoo/yaho
 import { isWriteEnabled, currentRunMode, writeEnvDiagnostic } from "@/lib/etf-returns-sync/writeGate";
 import { writeBatchIfEnabled, type WriteCandidate, type TrailingReturns } from "@/lib/etf-returns-sync/returnsWriter";
 import {
-  SUFFIX_ACTIVITY_MEASURE, isCoreUniverseMemberFromCounts, isHongKongCurrencyCounter,
-} from "@/lib/market-close-sync/coreUniverse";
-import {
   nextStateAfterOutcome, orderForInvocation, type EtfFailureStateMap,
 } from "@/lib/etf-returns-sync/failureState";
 
 const JOB = "ETF_RETURNS_SYNC";
 const TIME_BUDGET_MS = 240_000;
 const REQUEST_DELAY_MS = 400; // matches the existing Yahoo ETF enrichment pipeline's own pacing
-const CORE_UNIVERSE_LOOKBACK_DAYS = 20;
+const RECENT_PRICE_WINDOW_DAYS = 7;
 const CHECKPOINT_KEY = "etf-returns-sync:cursor";
 
 const writerQuery = (sql: string, params: unknown[]) => prisma.$queryRawUnsafe<any[]>(sql, ...params);
@@ -39,39 +36,41 @@ function todayLocalDate(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-/** Task X2 item B.4: core-universe membership now uses the EXACT SAME decision functions
- * market-close-sync uses (lib/market-close-sync/coreUniverse.ts — imported, never modified), so the
- * two pipelines agree on which ETFs are "worth syncing daily". Still this feature's own SQL query
- * (not market-close-sync's route.ts, which isn't an importable module) but applying the identical
- * per-suffix close-vs-volume activity rule and HK-currency-counter exclusion. */
-async function computeCoreUniverseIds(): Promise<Set<string>> {
-  const closeBasedSuffixes = Object.keys(SUFFIX_ACTIVITY_MEASURE);
-  const closeBasedPatterns = closeBasedSuffixes.map((s) => `%${s}`);
-  const rows = await prisma.$queryRawUnsafe<Array<{ etf_id: string; data_source: string; days_available: bigint; active_days: bigint }>>(
-    `WITH ranked AS (
-       SELECT h.etf_id, e.data_source, h.volume, h.close,
-              row_number() OVER (PARTITION BY h.etf_id ORDER BY h.date DESC) AS rn
-       FROM etf_history h
-       JOIN etfs e ON e.id = h.etf_id
-       WHERE e.is_active = true AND e.data_source IS NOT NULL
-     ),
-     scored AS (
-       SELECT etf_id, data_source,
-              CASE WHEN data_source LIKE ANY($1) THEN (close IS NOT NULL)
-                   ELSE (volume IS NOT NULL AND volume > 0) END AS traded_positive
-       FROM ranked WHERE rn <= $2
-     )
-     SELECT etf_id, data_source, count(*) AS days_available, count(*) FILTER (WHERE traded_positive) AS active_days
-     FROM scored GROUP BY etf_id, data_source`,
-    closeBasedPatterns, CORE_UNIVERSE_LOOKBACK_DAYS,
-  );
-  const core = new Set<string>();
-  for (const r of rows) {
-    if (isCoreUniverseMemberFromCounts(Number(r.days_available), Number(r.active_days)) && !isHongKongCurrencyCounter(r.data_source)) {
-      core.add(r.etf_id);
-    }
-  }
-  return core;
+/** Task X3 item B.1: the etf_history-based core-universe query (even in market-close-sync's own,
+ * already-"proven" shape) measured 80-120 SECONDS live against the real DB this session — a full
+ * sequential scan + sort of all 18M+ etf_history rows, far over the 5s target, and almost certainly
+ * why Production's etf-returns-sync crashed with a statement timeout. Replaced entirely: the
+ * candidate list is now just `etfs` rows whose price_updated_at falls within the last 7 days — a
+ * single-table, indexed-column query, no etf_history join, no window function, no full-table scan.
+ * This is intentionally a DIFFERENT (simpler, looser) membership rule than market-close-sync's own
+ * core-universe definition — not imported from lib/market-close-sync/coreUniverse.ts, and market-
+ * close-sync's code is not touched by this task at all (explicit freeze during its acceptance
+ * window). */
+async function computeRecentlyPricedIds(): Promise<Set<string>> {
+  const rows = await prisma.etf.findMany({
+    where: { isActive: true, dataSource: { not: null }, priceUpdatedAt: { gte: new Date(Date.now() - RECENT_PRICE_WINDOW_DAYS * 24 * 60 * 60 * 1000) } },
+    select: { id: true },
+  });
+  return new Set(rows.map((r) => r.id));
+}
+
+const CANDIDATE_LIST_CACHE_KEY = "etf-returns-sync:candidate-list-cache";
+
+/** Task X3 item B.2: computed at most once per calendar day and cached in the checkpoint table (no
+ * new table, no schema change) — every other invocation that same day reuses the cached id list. */
+async function getCandidateIdsCachedForToday(today: string): Promise<Set<string>> {
+  const cached = await readCheckpoint(CANDIDATE_LIST_CACHE_KEY);
+  try {
+    const parsed = cached?.lastSymbol ? JSON.parse(cached.lastSymbol) : null;
+    if (parsed?.date === today && Array.isArray(parsed?.ids)) return new Set(parsed.ids);
+  } catch { /* corrupt/old cache entry — recompute below */ }
+
+  const ids = await computeRecentlyPricedIds();
+  await writeCheckpoint(JOB, CANDIDATE_LIST_CACHE_KEY, `cache:${today}`, {
+    lastSymbol: JSON.stringify({ date: today, ids: [...ids] }),
+    processed: ids.size, succeeded: ids.size, failed: 0,
+  });
+  return ids;
 }
 
 /** DB-truth: which core-universe ETFs are still missing a return row for `date`. Prisma
@@ -161,7 +160,7 @@ export async function GET(request: Request) {
   const today = todayLocalDate();
   const writeEnabledThisRun = isWriteEnabled();
 
-  const coreUniverseIds = await computeCoreUniverseIds();
+  const coreUniverseIds = await getCandidateIdsCachedForToday(today);
   const coreIdsArray = [...coreUniverseIds];
   const missingIds = await lookupMissingForDate(coreIdsArray, today);
   const missingSet = new Set(missingIds);
