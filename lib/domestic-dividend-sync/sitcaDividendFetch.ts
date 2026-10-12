@@ -27,7 +27,11 @@ function extractHiddenField(html: string, name: string): string {
 /** All "YYYYMM" option values currently offered by the page's own year-month dropdown -- discovered
  * live, never hardcoded, so this naturally picks up new months as SITCA publishes them. */
 export function extractAvailableMonths(html: string): string[] {
-  const re = /<option value="(\d{6})">/g;
+  // SITCA renders the currently-selected option (always the newest month) with its attributes in a
+  // different order -- <option selected="selected" value="...">, not <option value="...">. A regex
+  // anchored to "<option value=" immediately would silently drop exactly that one option every time,
+  // permanently hiding the newest month. Match value="..." anywhere inside the <option ...> tag instead.
+  const re = /<option\b[^>]*\bvalue="(\d{6})"/g;
   const months: string[] = [];
   let m: RegExpExecArray | null;
   while ((m = re.exec(html))) months.push(m[1]);

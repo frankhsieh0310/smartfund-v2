@@ -10,6 +10,13 @@ test("extractAvailableMonths: parses YYYYMM option values, deduped", () => {
   assert.deepEqual(extractAvailableMonths(html), ["202206", "202207"]);
 });
 
+test("extractAvailableMonths: picks up the currently-selected option (attribute order differs)", () => {
+  // Real SITCA markup: the selected (= newest) option carries selected="selected" BEFORE value="...",
+  // unlike every other <option value="..."> in the same dropdown.
+  const html = `<option value="202607">2026 年 07 月</option>\r\n\t\t\t\t<option selected="selected" value="202608">2026 年 08 月</option>\r\n\r\n\t\t\t</select>`;
+  assert.deepEqual(extractAvailableMonths(html), ["202607", "202608"]);
+});
+
 const SAMPLE_TABLE_HTML = `
 <div>...</div>
 <td colspan="2" align="center">

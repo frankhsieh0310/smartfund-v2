@@ -36,6 +36,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# live-investigation/backfill scratch scripts and ad-hoc DB exports -- never committed
+/scratch
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

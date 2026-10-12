@@ -60,7 +60,18 @@ export async function GET(request: Request) {
 
   const availableMonths = await fetchAvailableMonths();
   const completedMonths = await loadCompletedMonths(query);
-  const pendingMonths = availableMonths.filter((m) => !completedMonths.has(m)).sort();
+  // One-off recheck escape hatch (e.g. months a prior run skipped due to a transient fetch timeout, or
+  // a month the currency fix at 2026-10-12 now has new eligible candidates for): listed months are
+  // re-fetched and re-matched even though completedMonths already has them, but writer.ts's existing
+  // per-row dedup still means only genuinely missing rows get written -- nothing already in
+  // fund_distribution_observations is touched or re-inserted. Remove the env var once done; it has no
+  // effect on the normal pending-months flow when unset.
+  const recheckMonths = (process.env.DOMESTIC_DIVIDEND_SYNC_RECHECK_MONTHS ?? "")
+    .split(",").map((m) => m.trim()).filter((m) => /^\d{6}$/.test(m));
+  const pendingMonths = [...new Set([
+    ...availableMonths.filter((m) => !completedMonths.has(m)),
+    ...recheckMonths,
+  ])].sort();
 
   const funds = await prisma.$queryRawUnsafe<FundRow[]>(
     `SELECT id, code, name, currency FROM funds WHERE COALESCE(data_provider, '') NOT IN ('yahoo', 'SEC')`,
@@ -123,6 +134,7 @@ export async function GET(request: Request) {
     checkpointAfter: null,
     details: {
       run_mode: currentRunMode(), available_months: availableMonths.length, pending_months_before_run: pendingMonths.length,
+      recheck_months: recheckMonths,
       months_attempted: monthsAttempted, months_completed: monthsCompleted, rows_fetched: rowsFetched,
       unmatched_count: unmatchedCount, currency_mismatch_count: currencyMismatchCount, error_count: errorCount,
       rate_limited: rateLimited, http_status: httpStatus,
