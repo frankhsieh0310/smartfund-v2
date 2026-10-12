@@ -61,14 +61,12 @@ const emptyMetrics = { priceOrNav: null, changePercent: null, asOfDate: null };
 
 async function searchDerivatives(query: string): Promise<DomainPayload> {
   const contains = { contains: query, mode: "insensitive" as const };
-  const [futures, options] = await Promise.all([
-    prisma.futuresContract.findMany({ where: { OR: [{ contractSymbol: contains }, { underlying: contains }] }, orderBy: [{ expiration: "asc" }, { id: "asc" }], take: MAX_CANDIDATES_PER_DOMAIN }),
-    prisma.optionContract.findMany({ where: { OR: [{ contractSymbol: contains }, { underlying: contains }] }, orderBy: [{ expiration: "asc" }, { id: "asc" }], take: MAX_CANDIDATES_PER_DOMAIN }),
-  ]);
-  return identityPayload([
-    ...futures.map((row) => ({ identity: { assetType: "DERIVATIVES" as const, id: row.id, symbol: row.contractSymbol, name: row.contractSymbol, displayName: `${row.underlying} ${row.contractSymbol}`, currency: row.currency, market: row.exchange, country: null }, metrics: emptyMetrics, source: row.source })),
-    ...options.map((row) => ({ identity: { assetType: "DERIVATIVES" as const, id: row.id, symbol: row.contractSymbol, name: row.contractSymbol, displayName: `${row.underlying} ${row.callPut} ${row.strike}`, currency: row.currency, market: row.exchange, country: null }, metrics: emptyMetrics, source: null })),
-  ]);
+  // Options removed from search per explicit decision (option_observations/option_contracts being
+  // decommissioned) -- futures-only now.
+  const futures = await prisma.futuresContract.findMany({ where: { OR: [{ contractSymbol: contains }, { underlying: contains }] }, orderBy: [{ expiration: "asc" }, { id: "asc" }], take: MAX_CANDIDATES_PER_DOMAIN });
+  return identityPayload(
+    futures.map((row) => ({ identity: { assetType: "DERIVATIVES" as const, id: row.id, symbol: row.contractSymbol, name: row.contractSymbol, displayName: `${row.underlying} ${row.contractSymbol}`, currency: row.currency, market: row.exchange, country: null }, metrics: emptyMetrics, source: row.source })),
+  );
 }
 
 async function searchFixedIncome(query: string): Promise<DomainPayload> {

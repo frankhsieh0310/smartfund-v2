@@ -6,6 +6,7 @@ import { getFxDetail, getFxHistory } from '@/lib/data-platform/web/fxService';
 import { getIndexDetail, getIndexHistory } from '@/lib/data-platform/web/indexService';
 import { getStockDetail, getStockHistory } from '@/lib/data-platform/web/stockService';
 import { getGovernmentYieldDetail } from '@/lib/services/governmentYieldService';
+import { WebDataError } from '@/lib/data-platform/web/errors';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -57,15 +58,9 @@ async function derivativeDetail(assetId: string) {
     const previousValue = numberOrNull(previous?.settlement ?? previous?.close);
     return { subtype: 'FUTURES' as const, data: { identity: { assetType: 'DERIVATIVES' as const, id: future.id, symbol: future.contractSymbol, name: future.contractSymbol, displayName: `${future.underlying} ${future.contractSymbol}`, currency: future.currency, market: future.exchange, country: null }, metrics: { priceOrNav: current, change: current != null && previousValue != null ? current - previousValue : null, changePercent: current != null && previousValue ? ((current / previousValue) - 1) * 100 : null, currency: future.currency, asOfDate: latest?.observedAt.toISOString() ?? null }, liteMetrics: [{ key: 'subtype', label: 'Derivative Type', value: 'FUTURES' }, { key: 'underlying', label: 'Underlying', value: future.underlying }, { key: 'expiry', label: 'Expiry', value: future.expiration?.toISOString().slice(0, 10) ?? null }, { key: 'volume', label: 'Volume', value: latest?.volume?.toString() ?? null }, { key: 'openInterest', label: 'Open Interest', value: latest?.openInterest?.toString() ?? null }] }, meta: meta(latest?.observedAt ?? null, latest?.source ?? future.source, latest ? 'FULL' : 'UNKNOWN'), error: null };
   }
-  const option = await prisma.optionContract.findFirst({ where: { OR: [{ id: assetId }, { contractSymbol: assetId }] }, include: { observations: { orderBy: { observedAt: 'desc' }, take: 2 } } });
-  if (!option) throw new Error('Derivative contract not found.');
-  const latest = option.observations[0];
-  const previous = option.observations[1];
-  const current = numberOrNull(latest?.midpoint ?? latest?.last ?? latest?.close ?? latest?.settlementPrice);
-  const previousValue = numberOrNull(previous?.midpoint ?? previous?.last ?? previous?.close ?? previous?.settlementPrice);
-  const change = current != null && previousValue != null ? current - previousValue : null;
-  const changePercent = change != null && previousValue != null && previousValue !== 0 ? (change / previousValue) * 100 : null;
-  return { subtype: 'OPTIONS' as const, data: { identity: { assetType: 'DERIVATIVES' as const, id: option.id, symbol: option.contractSymbol, name: option.contractSymbol, displayName: `${option.underlying} ${option.callPut} ${option.strike}`, currency: option.currency, market: option.exchange, country: null }, metrics: { priceOrNav: current, change, changePercent, currency: option.currency, asOfDate: latest?.observedAt.toISOString() ?? null }, liteMetrics: [{ key: 'subtype', label: 'Derivative Type', value: 'OPTIONS' }, { key: 'underlying', label: 'Underlying', value: option.underlying }, { key: 'callPut', label: 'Call / Put', value: option.callPut }, { key: 'strike', label: 'Strike', value: Number(option.strike) }, { key: 'expiry', label: 'Expiry', value: option.expiration.toISOString().slice(0, 10) }, { key: 'bid', label: 'Bid', value: numberOrNull(latest?.bid) }, { key: 'ask', label: 'Ask', value: numberOrNull(latest?.ask) }, { key: 'iv', label: 'Implied Volatility', value: numberOrNull(latest?.impliedVolatility) }, { key: 'openInterest', label: 'Open Interest', value: latest?.openInterest?.toString() ?? null }, { key: 'volume', label: 'Volume', value: latest?.volume?.toString() ?? null }, { key: 'delta', label: 'Delta', value: numberOrNull(latest?.delta) }, { key: 'gamma', label: 'Gamma', value: numberOrNull(latest?.gamma) }, { key: 'theta', label: 'Theta', value: numberOrNull(latest?.theta) }, { key: 'vega', label: 'Vega', value: numberOrNull(latest?.vega) }, { key: 'rho', label: 'Rho', value: numberOrNull(latest?.rho) }] }, meta: meta(latest?.observedAt ?? null, latest?.source ?? null, 'PARTIAL_CURRENT'), error: null };
+  // Options decommissioned (option_contracts/option_observations being dropped) -- an old link to an
+  // option contract id now resolves as NOT_FOUND, not an internal error.
+  throw new WebDataError('NOT_FOUND', 'Derivative contract not found.');
 }
 
 async function resolveDetail(assetId: string, assetType: AssetType, period: Period | null) {
@@ -131,10 +126,8 @@ async function directHistory(assetId: string, assetType: 'MACRO' | 'COMMODITY' |
       const rows = await prisma.futuresObservation.findMany({ where: { contractId: future.id, ...(from ? { observedAt: { gte: from } } : {}), OR: [{ settlement: { not: null } }, { close: { not: null } }] }, orderBy: { observedAt: 'asc' }, take: 5000 });
       return { points: sample(rows.map((row) => ({ date: row.observedAt.toISOString(), value: Number(row.settlement ?? row.close) }))), meta: meta(rows.at(-1)?.observedAt ?? null, rows.at(-1)?.source ?? future.source, rows.length ? 'FULL' : 'UNKNOWN') };
     }
-    const option = await prisma.optionContract.findFirst({ where: { OR: [{ id: assetId }, { contractSymbol: assetId }] } });
-    if (!option) throw new Error('Derivative contract not found.');
-    const rows = await prisma.optionObservation.findMany({ where: { contractId: option.id, ...(from ? { observedAt: { gte: from } } : {}), OR: [{ midpoint: { not: null } }, { last: { not: null } }, { close: { not: null } }, { settlementPrice: { not: null } }] }, orderBy: { observedAt: 'asc' }, take: 5000 });
-    return { points: sample(rows.map((row) => ({ date: row.observedAt.toISOString(), value: Number(row.midpoint ?? row.last ?? row.close ?? row.settlementPrice) }))), meta: meta(rows.at(-1)?.observedAt ?? null, rows.at(-1)?.source ?? null, 'PARTIAL_CURRENT') };
+    // Options decommissioned -- an old link to an option contract id now resolves as NOT_FOUND.
+    throw new WebDataError('NOT_FOUND', 'Derivative contract not found.');
   }
   if (assetType === 'MACRO') {
     const series = await prisma.economicSeries.findFirst({ where: { OR: [{ id: assetId }, { seriesId: assetId }, { code: assetId }] } });
