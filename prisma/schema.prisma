@@ -226,7 +226,6 @@ model Etf {
   isActive            Boolean                 @default(true) @map("is_active")
   createdAt           DateTime                @default(now()) @map("created_at")
   updatedAt           DateTime                @updatedAt @map("updated_at")
-  optionContracts     OptionContract[]        @relation("OptionEtfUnderlying")
   latestNav           Decimal?                @map("latest_nav") @db.Decimal(14, 4)
   latestPrice         Decimal?                @map("latest_price") @db.Decimal(14, 4)
   premium             Decimal?                @db.Decimal(8, 4)
@@ -3075,7 +3074,6 @@ model Stock {
   earningsEvents      EarningsCalendarEvent[]
   earningsActuals     EarningsActualResult[]
   earningsCoverage    EarningsCoverage?
-  optionContracts     OptionContract[]               @relation("OptionStockUnderlying")
   securityLinks       StockSecurityLink[]
 
   @@unique([ticker, exchange])
@@ -4083,7 +4081,6 @@ model FuturesContract {
   updatedAt           DateTime               @updatedAt @map("updated_at")
   observations        FuturesObservation[]
   carbonMappings      CarbonFuturesMapping[]
-  optionContracts     OptionContract[]       @relation("OptionFutureUnderlying")
 
   @@unique([exchange, contractSymbol])
   @@index([rootSymbol, contractMonth])
@@ -4186,167 +4183,6 @@ model FuturesPositioningObservation {
   @@map("futures_positioning_observations")
 }
 
-model OptionContract {
-  id                 String                     @id @default(uuid()) @db.Uuid
-  underlying         String
-  underlyingType     String                     @map("underlying_type")
-  underlyingIdentity Json                       @map("underlying_identity")
-  stockId            String?                    @map("stock_id")
-  etfId              String?                    @map("etf_id")
-  globalIndexId      String?                    @map("global_index_id")
-  futuresContractId  String?                    @map("futures_contract_id") @db.Uuid
-  optionProductId    String?                    @map("option_product_id")
-  exchange           String
-  currency           String
-  multiplier         Int
-  contractSymbol     String                     @unique @map("contract_symbol")
-  expiration         DateTime                   @db.Date
-  strike             Decimal                    @db.Decimal(24, 8)
-  callPut            String                     @map("call_put")
-  exerciseStyle      String?                    @map("exercise_style")
-  settlementStyle    String?                    @map("settlement_style")
-  deliverable        Json?
-  listingDate        DateTime?                  @map("listing_date") @db.Date
-  status             String                     @default("UNKNOWN")
-  expirationClass    String                     @default("UNKNOWN") @map("expiration_class")
-  sourceIdentity     Json                       @map("source_identity")
-  createdAt          DateTime                   @default(now()) @map("created_at")
-  updatedAt          DateTime                   @updatedAt @map("updated_at")
-  observations       OptionObservation[]
-  latestObservation  OptionLatestObservation?
-  lifecycleEvents    OptionLifecycleEvent[]
-  adjustments        OptionContractAdjustment[]
-  stockUnderlying    Stock?                     @relation("OptionStockUnderlying", fields: [stockId], references: [id])
-  etfUnderlying      Etf?                       @relation("OptionEtfUnderlying", fields: [etfId], references: [id])
-  indexUnderlying    GlobalIndexRegistry?       @relation("OptionIndexUnderlying", fields: [globalIndexId], references: [id])
-  futureUnderlying   FuturesContract?           @relation("OptionFutureUnderlying", fields: [futuresContractId], references: [id])
-
-  @@index([underlying, expiration])
-  @@index([stockId])
-  @@index([etfId])
-  @@index([globalIndexId])
-  @@index([futuresContractId])
-  @@map("option_contracts")
-}
-
-model FuturesOptionProduct {
-  id                  String   @id @default(uuid()) @db.Uuid
-  exchange            String
-  officialProductId   String   @map("official_product_id")
-  officialProductCode String   @map("official_product_code")
-  officialProductName String   @map("official_product_name")
-  futuresRootId       String   @map("futures_root_id") @db.Uuid
-  relationshipType    String   @map("relationship_type")
-  multiplier          String?
-  settlementStyle     String?  @map("settlement_style")
-  exerciseStyle       String?  @map("exercise_style")
-  source              String
-  sourceUrl           String   @map("source_url")
-  verificationStatus  String   @map("verification_status")
-  licenseStatus       String   @map("license_status")
-  createdAt           DateTime @default(now()) @map("created_at")
-  updatedAt           DateTime @updatedAt @map("updated_at")
-
-  @@unique([exchange, officialProductId])
-  @@index([futuresRootId])
-  @@map("futures_option_products")
-}
-
-model OptionObservation {
-  id                 String         @id @default(uuid()) @db.Uuid
-  contractId         String         @map("contract_id") @db.Uuid
-  observedAt         DateTime       @map("observed_at")
-  tradeDate          DateTime?      @map("trade_date") @db.Date
-  open               Decimal?       @db.Decimal(24, 8)
-  high               Decimal?       @db.Decimal(24, 8)
-  low                Decimal?       @db.Decimal(24, 8)
-  close              Decimal?       @db.Decimal(24, 8)
-  bid                Decimal?       @db.Decimal(24, 8)
-  ask                Decimal?       @db.Decimal(24, 8)
-  last               Decimal?       @db.Decimal(24, 8)
-  volume             BigInt?
-  openInterest       BigInt?        @map("open_interest")
-  impliedVolatility  Decimal?       @map("implied_volatility") @db.Decimal(24, 10)
-  underlyingPrice    Decimal?       @map("underlying_price") @db.Decimal(24, 8)
-  moneyness          Decimal?       @db.Decimal(24, 10)
-  intrinsicValue     Decimal?       @map("intrinsic_value") @db.Decimal(24, 8)
-  extrinsicValue     Decimal?       @map("extrinsic_value") @db.Decimal(24, 8)
-  delta              Decimal?       @db.Decimal(24, 10)
-  gamma              Decimal?       @db.Decimal(24, 10)
-  theta              Decimal?       @db.Decimal(24, 10)
-  vega               Decimal?       @db.Decimal(24, 10)
-  rho                Decimal?       @db.Decimal(24, 10)
-  greeksSource       String?        @map("greeks_source")
-  greeksMethod       String?        @map("greeks_method")
-  midpoint           Decimal?       @db.Decimal(24, 8)
-  bidAskSpread       Decimal?       @map("bid_ask_spread") @db.Decimal(24, 8)
-  spreadPct          Decimal?       @map("spread_pct") @db.Decimal(24, 10)
-  liquidityState     String         @default("UNKNOWN") @map("liquidity_state")
-  liquidityRule      String?        @map("liquidity_rule")
-  daysToExpiry       Int?           @map("days_to_expiry")
-  settlementPrice    Decimal?       @map("settlement_price") @db.Decimal(24, 8)
-  settlementDate     DateTime?      @map("settlement_date") @db.Date
-  settlementSource   String?        @map("settlement_source")
-  sourceUrl          String?        @map("source_url")
-  sourceRecordId     String?        @map("source_record_id")
-  sourceTimestamp    DateTime?      @map("source_timestamp")
-  retrievedAt        DateTime       @default(now()) @map("retrieved_at")
-  payloadChecksum    String?        @map("payload_checksum")
-  verificationStatus String         @default("UNKNOWN") @map("verification_status")
-  freshnessStatus    String         @default("UNKNOWN") @map("freshness_status")
-  sourceDelay        String         @default("DELAYED") @map("source_delay")
-  source             String
-  sourceKey          String         @unique @map("source_key")
-  createdAt          DateTime       @default(now()) @map("created_at")
-  updatedAt          DateTime       @updatedAt @map("updated_at")
-  contract           OptionContract @relation(fields: [contractId], references: [id])
-
-  @@unique([contractId, observedAt, source])
-  @@index([observedAt])
-  @@map("option_observations")
-}
-
-model OptionLatestObservation {
-  contractId      String         @id @map("contract_id") @db.Uuid
-  observationId   String         @unique @map("observation_id") @db.Uuid
-  observedAt      DateTime       @map("observed_at")
-  freshnessStatus String         @map("freshness_status")
-  updatedAt       DateTime       @updatedAt @map("updated_at")
-  contract        OptionContract @relation(fields: [contractId], references: [id])
-
-  @@index([observedAt])
-  @@map("option_latest_observations")
-}
-
-model OptionLifecycleEvent {
-  id                 String         @id @default(uuid()) @db.Uuid
-  contractId         String         @map("contract_id") @db.Uuid
-  eventType          String         @map("event_type")
-  effectiveAt        DateTime       @map("effective_at")
-  source             String
-  verificationStatus String         @default("UNKNOWN") @map("verification_status")
-  createdAt          DateTime       @default(now()) @map("created_at")
-  contract           OptionContract @relation(fields: [contractId], references: [id])
-
-  @@unique([contractId, eventType, effectiveAt])
-  @@index([effectiveAt])
-  @@map("option_lifecycle_events")
-}
-
-model OptionContractAdjustment {
-  id                 String         @id @default(uuid()) @db.Uuid
-  contractId         String         @map("contract_id") @db.Uuid
-  adjustmentType     String         @map("adjustment_type")
-  effectiveDate      DateTime       @map("effective_date") @db.Date
-  details            Json?
-  source             String
-  verificationStatus String         @default("UNKNOWN") @map("verification_status")
-  createdAt          DateTime       @default(now()) @map("created_at")
-  contract           OptionContract @relation(fields: [contractId], references: [id])
-
-  @@unique([contractId, adjustmentType, effectiveDate])
-  @@map("option_contract_adjustments")
-}
 
 // GLOBAL_INDEX is deliberately isolated from Stock/ETF/Fund and legacy daily-only IndexHistory.
 model GlobalIndexRegistry {
@@ -4378,7 +4214,6 @@ model GlobalIndexRegistry {
   metadata           Json?
   createdAt          DateTime         @default(now()) @map("created_at")
   updatedAt          DateTime         @updatedAt @map("updated_at")
-  optionContracts    OptionContract[] @relation("OptionIndexUnderlying")
 
   @@unique([symbol, returnType, currency])
   @@index([region, active])

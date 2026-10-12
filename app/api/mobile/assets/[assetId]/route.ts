@@ -21,6 +21,11 @@ type HistoryResponse = Awaited<ReturnType<typeof getStockHistory>> | Awaited<Ret
 const fromFor = (period: Period) => { const days = PERIOD_DAYS[period]; return days === null ? undefined : new Date(Date.now() - days * 86_400_000); };
 const numberOrNull = (value: unknown) => value == null || !Number.isFinite(Number(value)) ? null : Number(value);
 const sample = <T,>(rows: T[], limit = 240): T[] => rows.length <= limit ? rows : Array.from({ length: limit }, (_, index) => rows[Math.round(index * (rows.length - 1) / (limit - 1))]);
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+// FuturesContract.id is a Postgres uuid column -- comparing it against a non-UUID assetId throws a
+// Prisma validation error instead of just finding no match, so the id branch is only included when
+// assetId actually looks like a UUID.
+const idOrSymbolFilter = (assetId: string) => (UUID_RE.test(assetId) ? [{ id: assetId }, { contractSymbol: assetId }] : [{ contractSymbol: assetId }]);
 const meta = (asOfDate: Date | null, source: string | null, coverageStatus: 'FULL' | 'PARTIAL_CURRENT' | 'UNKNOWN' = 'FULL') => ({ asOfDate: asOfDate?.toISOString() ?? null, lastUpdated: asOfDate?.toISOString() ?? null, freshnessStatus: asOfDate ? 'CURRENT' as const : 'UNKNOWN' as const, source, coverageStatus });
 
 async function marketDetail(assetId: string, assetType: 'COMMODITY' | 'CRYPTO') {
@@ -50,7 +55,7 @@ async function fixedIncomeDetail(assetId: string) {
 }
 
 async function derivativeDetail(assetId: string) {
-  const future = await prisma.futuresContract.findFirst({ where: { OR: [{ id: assetId }, { contractSymbol: assetId }] }, include: { observations: { orderBy: { observedAt: 'desc' }, take: 2 } } });
+  const future = await prisma.futuresContract.findFirst({ where: { OR: idOrSymbolFilter(assetId) }, include: { observations: { orderBy: { observedAt: 'desc' }, take: 2 } } });
   if (future) {
     const latest = future.observations[0];
     const previous = future.observations[1];
@@ -121,7 +126,7 @@ async function directHistory(assetId: string, assetType: 'MACRO' | 'COMMODITY' |
     return { points, meta: meta(latestDate, String((detail.identity as Record<string, unknown>).officialSource), points.length ? 'FULL' : 'UNKNOWN') };
   }
   if (assetType === 'DERIVATIVES') {
-    const future = await prisma.futuresContract.findFirst({ where: { OR: [{ id: assetId }, { contractSymbol: assetId }] } });
+    const future = await prisma.futuresContract.findFirst({ where: { OR: idOrSymbolFilter(assetId) } });
     if (future) {
       const rows = await prisma.futuresObservation.findMany({ where: { contractId: future.id, ...(from ? { observedAt: { gte: from } } : {}), OR: [{ settlement: { not: null } }, { close: { not: null } }] }, orderBy: { observedAt: 'asc' }, take: 5000 });
       return { points: sample(rows.map((row) => ({ date: row.observedAt.toISOString(), value: Number(row.settlement ?? row.close) }))), meta: meta(rows.at(-1)?.observedAt ?? null, rows.at(-1)?.source ?? future.source, rows.length ? 'FULL' : 'UNKNOWN') };
