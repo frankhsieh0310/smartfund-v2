@@ -1,17 +1,24 @@
-// Alternative-source fund holdings sync (offshore funds only, this round). Replaces nothing yet --
-// writes to the SAME `holdings` table as the existing MoneyDJ pipeline (lib/cloud-ingestion/
-// fundHoldings.ts) but under its own `source` value, so both coexist and can be compared before any
-// cutover decision. SHADOW MODE BY DEFAULT: unless HOLDINGS_ALT_SOURCE_WRITE is exactly "on", this
-// route fetches/matches but writes nothing (see lib/holdings-alt-source/writeGate.ts).
+// Alternative-source fund holdings sync (offshore + domestic funds, via Yahoo奇摩基金). Replaces
+// nothing yet -- writes to the SAME `holdings` table as the existing MoneyDJ pipeline (lib/cloud-
+// ingestion/fundHoldings.ts) but under its own `source` value, so both coexist and can be compared
+// before any cutover decision. SHADOW MODE BY DEFAULT: unless HOLDINGS_ALT_SOURCE_WRITE is exactly
+// "on", this route fetches/matches but writes nothing (see lib/holdings-alt-source/writeGate.ts).
+//
+// Two independent mapping sources feed the SAME fetch/write logic (fundId + yahooFundId is all either
+// needs): offshore funds use the pre-built offshore-nav-sync:yahoo-mapping checkpoint; domestic funds
+// use the existing fund_provider_mappings(provider='yahoo') rows directly (confirmed live: provider_code
+// + ":FO" works as a yahooFundId with no new discovery sweep needed -- see domesticYahooMapping.ts).
 //
 // This is NOT wired into vercel.json's crons -- adding it there would be an existing-schedule change,
 // out of scope for this branch. It exists as a callable route for manual/future triggering only.
 //
-// Domestic (SITCA top-10) and ETF constituent sources were researched but not implemented this round
-// -- see scratch/overnight-report-20261013.md Part 2 for what was found and why.
+// ETF constituent sources: no new work needed, lib/etf-holdings-engine/ already covers this via
+// official per-issuer disclosure. SITCA top-10 domestic holdings: researched, not found/implemented
+// this round -- see scratch/overnight-report-20261013.md Part 2.
 import { prisma } from "@/lib/prisma";
 import { beginRun, finishRun } from "@/lib/cloud-ingestion/runContext";
 import { loadMapping } from "@/lib/offshore-nav-sync/mapping";
+import { loadDomesticYahooMapping } from "@/lib/holdings-alt-source/domesticYahooMapping";
 import { fetchYahooOffshoreHoldings, YahooRateLimitedError, YAHOO_HOLDINGS_SOURCE } from "@/lib/holdings-alt-source/yahooOffshoreHoldings";
 import { writeYahooOffshoreHoldings, type QueryFn } from "@/lib/holdings-alt-source/writer";
 import { isWriteEnabled, currentRunMode } from "@/lib/holdings-alt-source/writeGate";
@@ -43,7 +50,8 @@ export async function GET(request: Request) {
     return Response.json({ ok: true, job: JOB, skipped: true, reason: "run_key already present and running", runKey, runMode: currentRunMode() });
   }
 
-  const mapping = await loadMapping(query);
+  const [offshoreMapping, domesticMapping] = await Promise.all([loadMapping(query), loadDomesticYahooMapping(query)]);
+  const mapping = [...offshoreMapping, ...domesticMapping];
 
   let attempted = 0, fetched = 0, written = 0, errorCount = 0, rateLimited = false;
   let httpStatus: number | null = null;
@@ -73,8 +81,16 @@ export async function GET(request: Request) {
   await finishRun(runId, JOB, YAHOO_HOLDINGS_SOURCE, startedMs, {
     status, attempted, completed: fetched, inserted: written, updated: 0, failed: errorCount,
     retryableFailures: rateLimited ? mapping.length - attempted : 0, checkpointAfter: null,
-    details: { run_mode: currentRunMode(), mapping_size: mapping.length, fetched, written, error_count: errorCount, rate_limited: rateLimited, http_status: httpStatus },
+    details: {
+      run_mode: currentRunMode(), mapping_size: mapping.length, offshore_mapping_size: offshoreMapping.length,
+      domestic_mapping_size: domesticMapping.length, fetched, written, error_count: errorCount,
+      rate_limited: rateLimited, http_status: httpStatus,
+    },
   });
 
-  return Response.json({ ok: true, job: JOB, runId, status, runMode: currentRunMode(), mappingSize: mapping.length, attempted, fetched, written, errorCount, rateLimited, httpStatus });
+  return Response.json({
+    ok: true, job: JOB, runId, status, runMode: currentRunMode(), mappingSize: mapping.length,
+    offshoreMappingSize: offshoreMapping.length, domesticMappingSize: domesticMapping.length,
+    attempted, fetched, written, errorCount, rateLimited, httpStatus,
+  });
 }
