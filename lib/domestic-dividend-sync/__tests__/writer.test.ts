@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { writeDividendBatch, writeBatchIfEnabled, SOURCE } from "../writer.ts";
+import { writeDividendBatch, writeBatchIfEnabled, SOURCE, WRITE_CHUNK_SIZE } from "../writer.ts";
 import type { DividendMatchResult } from "../types.ts";
 
 function test(name: string, fn: () => Promise<void> | void) {
@@ -29,12 +29,32 @@ const candidate = (fundId: string, exDate: string): DividendMatchResult => ({
     assert.equal(result.written, 0);
   });
 
+  await test("writeDividendBatch: many candidates in one chunk -> exactly ONE INSERT round-trip (batched, not per-row)", async () => {
+    let selectCalls = 0, insertCalls = 0;
+    const query = async (sql: string, params: any[]) => {
+      if (sql.includes("SELECT fund_id")) { selectCalls++; return []; }
+      insertCalls++;
+      const payload = JSON.parse(params[0]);
+      return payload.map((_: unknown, i: number) => ({ id: `row-${i}` }));
+    };
+    // 900+ candidates, as the user explicitly asked to simulate (realistic historical-backfill scale)
+    const candidates = Array.from({ length: 937 }, (_, i) => candidate(`f${i % 50}`, `2026-${String((i % 12) + 1).padStart(2, "0")}-${String((i % 27) + 1).padStart(2, "0")}`));
+    const start = Date.now();
+    const result = await writeDividendBatch(query, candidates);
+    const elapsedMs = Date.now() - start;
+    assert.equal(selectCalls, 1);
+    assert.equal(insertCalls, Math.ceil(937 / WRITE_CHUNK_SIZE)); // chunked round-trips, not 937
+    assert.equal(result.written, 937);
+    console.log(`    (937 candidates batched in ${insertCalls} INSERT round-trip(s), ${elapsedMs}ms with a mock query)`);
+  });
+
   await test("writeDividendBatch: skips a (fund_id, ex_date) pair that already exists for this source", async () => {
     let insertCalls = 0;
-    const query = async (sql: string) => {
+    const query = async (sql: string, params: any[]) => {
       if (sql.includes("SELECT fund_id")) return [{ fund_id: "f1", ex_date: "2026-08-18" }];
       insertCalls++;
-      return [];
+      const payload = JSON.parse(params[0]);
+      return payload.map((_: unknown, i: number) => ({ id: `row-${i}` }));
     };
     const result = await writeDividendBatch(query, [candidate("f1", "2026-08-18"), candidate("f1", "2026-09-18")]);
     assert.equal(insertCalls, 1);

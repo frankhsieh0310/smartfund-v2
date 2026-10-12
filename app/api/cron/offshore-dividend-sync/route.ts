@@ -7,17 +7,19 @@
 // return_of_capital, source); no DDL, no new table. SHADOW MODE BY DEFAULT: unless
 // OFFSHORE_DIVIDEND_SYNC_WRITE is exactly "on", this route fetches and classifies but writes nothing.
 //
-// One daily window (unlike offshore-nav-sync's 13 ticks/day): a 240s wall-clock budget per invocation,
-// >=1.1s spacing between funds. Completion is a same-day "already attempted" set (its own checkpoint
-// key, same convention as offshore-nav-sync's now-fixed write-mode-gated version). Dedup against
-// double-writing the same distribution event is enforced in the writer (no unique constraint exists,
-// so it's a SELECT-before-INSERT on (fund_id, ex_date, source)).
+// INCIDENT 2026-10-12 12:08 UTC: the original version accumulated every candidate and wrote them all
+// in one pass at the very end, one row per round-trip. That run hit Vercel's 300s maxDuration after
+// only 51/~330 candidates were written (confirmed via `vercel logs`: "Task timed out after 300
+// seconds"). Fixed two ways: (1) writer.ts now does one multi-row INSERT per chunk instead of one
+// round-trip per row; (2) this route flushes a chunk to the DB as soon as it fills, instead of only at
+// the very end, so a run that gets cut off still keeps whatever it already wrote. TIME_BUDGET_MS
+// dropped from 240s to 150s so flush+wrap-up time can never again be squeezed against the 300s wall.
 import { isAuthorizedCron, unauthorizedCron } from "@/lib/cron/authorize";
 import { prisma } from "@/lib/prisma";
 import { beginRun, finishRun } from "@/lib/cloud-ingestion/runContext";
 import { loadDailyProgress, saveDailyProgress } from "@/lib/offshore-dividend-sync/completion";
 import { fetchOffshoreDistributions, RateLimitedError } from "@/lib/offshore-dividend-sync/fetchClear";
-import { writeBatchIfEnabled, type QueryFn, type DistributionWriteCandidate } from "@/lib/offshore-dividend-sync/writer";
+import { writeBatchIfEnabled, WRITE_CHUNK_SIZE, type QueryFn, type DistributionWriteCandidate } from "@/lib/offshore-dividend-sync/writer";
 import { isWriteEnabled, currentRunMode } from "@/lib/offshore-dividend-sync/writeGate";
 
 export const runtime = "nodejs";
@@ -26,7 +28,7 @@ export const dynamic = "force-dynamic";
 
 const JOB = "OFFSHORE_DIVIDEND_SYNC";
 const PROVIDER = "FUNDCLEAR_TDCC_OFFSHORE";
-const TIME_BUDGET_MS = 240_000;
+const TIME_BUDGET_MS = 150_000;
 const REQUEST_SPACING_MS = 1_100;
 const query: QueryFn = (sql, params) => prisma.$queryRawUnsafe<any[]>(sql, ...params);
 
@@ -49,13 +51,10 @@ export async function GET(request: Request) {
   const today = new Date().toISOString().slice(0, 10);
   const { startDate, endDate } = yearMonthRange();
 
-  // Unique per invocation (not time-bucketed) -- learned from offshore-nav-sync's hour-bucket bug
-  // earlier this session: a shared bucket key silently discards every run's audit detail but the
-  // last one within that bucket, even though the real writes all happened.
   const runKey = `offshore-dividend-sync:${new Date(startedMs).toISOString()}`;
   const { runId, skipped } = await beginRun({
     jobName: JOB, provider: PROVIDER, runKey,
-    universeCount: 0, batchSize: 200, checkpointBefore: null,
+    universeCount: 0, batchSize: WRITE_CHUNK_SIZE, checkpointBefore: null,
   });
   if (skipped) {
     return Response.json({ ok: true, job: JOB, skipped: true, reason: "run_key already present and running", runKey, runMode: currentRunMode() });
@@ -74,8 +73,23 @@ export async function GET(request: Request) {
   let rateLimited = false;
   let httpStatus: number | null = null;
   const newlyAttempted = new Set<string>();
-  const candidates: DistributionWriteCandidate[] = [];
   let fundsWithNewCandidates = 0;
+  let totalWritten = 0, totalSkippedExisting = 0, totalWriteErrorCount = 0, totalCandidateCount = 0;
+  let pendingBuffer: DistributionWriteCandidate[] = [];
+
+  async function flush() {
+    if (pendingBuffer.length === 0) return;
+    const result = await writeBatchIfEnabled(query, pendingBuffer, writeEnabledThisRun);
+    totalWritten += result.written;
+    totalSkippedExisting += result.skippedExisting;
+    totalWriteErrorCount += result.writeErrorCount;
+    pendingBuffer = [];
+    // Persist progress as we go too, so a cut-off run doesn't lose today's attempted-set either.
+    if (writeEnabledThisRun) {
+      const merged = new Set([...attemptedToday, ...newlyAttempted]);
+      await saveDailyProgress(query, today, merged);
+    }
+  }
 
   for (const f of pending) {
     if (Date.now() - startedMs > TIME_BUDGET_MS) break;
@@ -86,10 +100,12 @@ export async function GET(request: Request) {
       if (!result || result.records.length === 0) { noDistributionCount++; await sleep(REQUEST_SPACING_MS); continue; }
       let any = false;
       for (const record of result.records) {
-        candidates.push({ fundId: f.id, currency: result.currency, record });
+        pendingBuffer.push({ fundId: f.id, currency: result.currency, record });
+        totalCandidateCount++;
         any = true;
       }
       if (any) fundsWithNewCandidates++;
+      if (pendingBuffer.length >= WRITE_CHUNK_SIZE) await flush();
     } catch (e) {
       if (e instanceof RateLimitedError) {
         rateLimited = true;
@@ -102,25 +118,20 @@ export async function GET(request: Request) {
     await sleep(REQUEST_SPACING_MS);
   }
 
-  const writeResult = await writeBatchIfEnabled(query, candidates, writeEnabledThisRun);
-
-  const mergedAttempted = new Set([...attemptedToday, ...newlyAttempted]);
-  if (writeEnabledThisRun) {
-    await saveDailyProgress(query, today, mergedAttempted);
-  }
+  await flush(); // final partial chunk
 
   const status = "COMPLETED";
   await finishRun(runId, JOB, PROVIDER, startedMs, {
-    status, attempted, completed: writeResult.written, inserted: writeResult.written, updated: 0,
-    failed: errorCount + writeResult.writeErrorCount, retryableFailures: rateLimited ? pending.length - attempted : 0,
+    status, attempted, completed: totalWritten, inserted: totalWritten, updated: 0,
+    failed: errorCount + totalWriteErrorCount, retryableFailures: rateLimited ? pending.length - attempted : 0,
     checkpointAfter: null,
     details: {
       run_mode: currentRunMode(), universe_count: candidateFunds.length, pending_before_run: pending.length,
       attempted, no_distribution_count: noDistributionCount, error_count: errorCount,
       rate_limited: rateLimited, http_status: httpStatus,
-      funds_with_candidates: fundsWithNewCandidates, candidate_record_count: candidates.length,
-      written: writeResult.written, skipped_existing: writeResult.skippedExisting, write_error_count: writeResult.writeErrorCount,
-      attempted_today_total: mergedAttempted.size,
+      funds_with_candidates: fundsWithNewCandidates, candidate_record_count: totalCandidateCount,
+      written: totalWritten, skipped_existing: totalSkippedExisting, write_error_count: totalWriteErrorCount,
+      attempted_today_total: new Set([...attemptedToday, ...newlyAttempted]).size,
     },
   });
 
@@ -128,7 +139,7 @@ export async function GET(request: Request) {
     ok: true, job: JOB, runId, status, runMode: currentRunMode(),
     universeCount: candidateFunds.length, pendingBeforeRun: pending.length, attempted,
     noDistributionCount, errorCount, rateLimited, httpStatus,
-    fundsWithCandidates: fundsWithNewCandidates, candidateRecordCount: candidates.length,
-    written: writeResult.written, skippedExisting: writeResult.skippedExisting, writeErrorCount: writeResult.writeErrorCount,
+    fundsWithCandidates: fundsWithNewCandidates, candidateRecordCount: totalCandidateCount,
+    written: totalWritten, skippedExisting: totalSkippedExisting, writeErrorCount: totalWriteErrorCount,
   });
 }

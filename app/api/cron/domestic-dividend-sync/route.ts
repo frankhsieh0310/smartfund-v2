@@ -13,6 +13,12 @@
 // caught up only the newest month is ever missing. Matching is code-first/name-fallback, identical
 // convention to sitca-nav-sync. A row is only written if SITCA's 配息幣別 matches funds.currency
 // exactly -- a mismatch is skipped and counted, never guessed at or written anyway.
+//
+// Writes flush per month (not once at the very end) and in multi-row chunks (writer.ts), same fix
+// applied here as the offshore-dividend-sync 2026-10-12 timeout incident: a cut-off run keeps whatever
+// months it already matched and wrote instead of losing everything buffered in memory. If the
+// ~50-month backfill can't finish in one invocation, the completed-months checkpoint picks up exactly
+// where it left off on the next trigger -- no special-cased "resume" logic needed.
 import { isAuthorizedCron, unauthorizedCron } from "@/lib/cron/authorize";
 import { prisma } from "@/lib/prisma";
 import { beginRun, finishRun } from "@/lib/cloud-ingestion/runContext";
@@ -21,7 +27,7 @@ import { matchDividendRows } from "@/lib/domestic-dividend-sync/matching";
 import { loadCompletedMonths, saveCompletedMonths } from "@/lib/domestic-dividend-sync/completion";
 import { writeBatchIfEnabled, type QueryFn } from "@/lib/domestic-dividend-sync/writer";
 import { isWriteEnabled, currentRunMode } from "@/lib/domestic-dividend-sync/writeGate";
-import type { DividendMatchResult, FundRow } from "@/lib/domestic-dividend-sync/types";
+import type { FundRow } from "@/lib/domestic-dividend-sync/types";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -29,7 +35,7 @@ export const dynamic = "force-dynamic";
 
 const JOB = "DOMESTIC_DIVIDEND_SYNC";
 const PROVIDER = "SITCA_FSC_OFFICIAL_MONTHLY";
-const TIME_BUDGET_MS = 240_000;
+const TIME_BUDGET_MS = 150_000;
 const REQUEST_SPACING_MS = 1_100;
 const query: QueryFn = (sql, params) => prisma.$queryRawUnsafe<any[]>(sql, ...params);
 
@@ -60,7 +66,6 @@ export async function GET(request: Request) {
     `SELECT id, code, name, currency FROM funds WHERE COALESCE(data_provider, '') NOT IN ('yahoo', 'SEC')`,
   );
 
-  const allCandidates: DividendMatchResult[] = [];
   let monthsAttempted = 0;
   let monthsCompleted = 0;
   let rowsFetched = 0;
@@ -69,6 +74,8 @@ export async function GET(request: Request) {
   let errorCount = 0;
   let rateLimited = false;
   let httpStatus: number | null = null;
+  let totalCandidateCount = 0;
+  let totalWritten = 0, totalSkippedExisting = 0, totalWriteErrorCount = 0;
   const newlyCompleted = new Set<string>();
 
   for (const month of pendingMonths) {
@@ -79,12 +86,25 @@ export async function GET(request: Request) {
       rowsFetched += rows.length;
       const { matched, unmatched } = matchDividendRows(rows, funds);
       unmatchedCount += unmatched.length;
+      const monthCandidates = [];
       for (const m of matched) {
         if (m.sitcaCurrency !== m.fundCurrency) { currencyMismatchCount++; continue; }
-        allCandidates.push(m);
+        monthCandidates.push(m);
       }
+      totalCandidateCount += monthCandidates.length;
+
+      const writeResult = await writeBatchIfEnabled(query, monthCandidates, writeEnabledThisRun);
+      totalWritten += writeResult.written;
+      totalSkippedExisting += writeResult.skippedExisting;
+      totalWriteErrorCount += writeResult.writeErrorCount;
+
       monthsCompleted++;
-      if (writeEnabledThisRun) newlyCompleted.add(month);
+      if (writeEnabledThisRun) {
+        newlyCompleted.add(month);
+        // Persist as each month finishes, not only at the very end -- a cut-off run keeps every month
+        // it actually completed instead of losing that progress along with the in-memory buffer.
+        await saveCompletedMonths(query, new Set([...completedMonths, ...newlyCompleted]));
+      }
     } catch (e) {
       if (e instanceof RateLimitedError) {
         rateLimited = true;
@@ -96,25 +116,18 @@ export async function GET(request: Request) {
     await sleep(REQUEST_SPACING_MS);
   }
 
-  const writeResult = await writeBatchIfEnabled(query, allCandidates, writeEnabledThisRun);
-
-  if (writeEnabledThisRun && newlyCompleted.size > 0) {
-    const merged = new Set([...completedMonths, ...newlyCompleted]);
-    await saveCompletedMonths(query, merged);
-  }
-
   const status = "COMPLETED";
   await finishRun(runId, JOB, PROVIDER, startedMs, {
-    status, attempted: monthsAttempted, completed: monthsCompleted, inserted: writeResult.written, updated: 0,
-    failed: errorCount + writeResult.writeErrorCount, retryableFailures: rateLimited ? pendingMonths.length - monthsAttempted : 0,
+    status, attempted: monthsAttempted, completed: monthsCompleted, inserted: totalWritten, updated: 0,
+    failed: errorCount + totalWriteErrorCount, retryableFailures: rateLimited ? pendingMonths.length - monthsAttempted : 0,
     checkpointAfter: null,
     details: {
       run_mode: currentRunMode(), available_months: availableMonths.length, pending_months_before_run: pendingMonths.length,
       months_attempted: monthsAttempted, months_completed: monthsCompleted, rows_fetched: rowsFetched,
       unmatched_count: unmatchedCount, currency_mismatch_count: currencyMismatchCount, error_count: errorCount,
       rate_limited: rateLimited, http_status: httpStatus,
-      candidate_record_count: allCandidates.length, written: writeResult.written,
-      skipped_existing: writeResult.skippedExisting, write_error_count: writeResult.writeErrorCount,
+      candidate_record_count: totalCandidateCount, written: totalWritten,
+      skipped_existing: totalSkippedExisting, write_error_count: totalWriteErrorCount,
       completed_months_total: writeEnabledThisRun ? completedMonths.size + newlyCompleted.size : completedMonths.size,
     },
   });
@@ -123,7 +136,7 @@ export async function GET(request: Request) {
     ok: true, job: JOB, runId, status, runMode: currentRunMode(),
     availableMonths: availableMonths.length, pendingMonthsBeforeRun: pendingMonths.length,
     monthsAttempted, monthsCompleted, rowsFetched, unmatchedCount, currencyMismatchCount, errorCount,
-    rateLimited, httpStatus, candidateRecordCount: allCandidates.length,
-    written: writeResult.written, skippedExisting: writeResult.skippedExisting, writeErrorCount: writeResult.writeErrorCount,
+    rateLimited, httpStatus, candidateRecordCount: totalCandidateCount,
+    written: totalWritten, skippedExisting: totalSkippedExisting, writeErrorCount: totalWriteErrorCount,
   });
 }

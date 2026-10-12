@@ -2,15 +2,7 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "functions": {
     "app/api/mobile/reverse-holdings/route.ts": { "regions": ["sin1"] },
-    "app/api/cron/market-close-sync/route.ts": { "regions": ["sin1"] },
-    "app/api/cron/etf-returns-sync/route.ts": { "memory": 512 },
-    "app/api/cron/us-fund-nav-sync/route.ts": { "memory": 512 },
-    "app/api/cron/sitca-nav-sync/route.ts": { "memory": 512 },
-    "app/api/cron/offshore-nav-sync/route.ts": { "memory": 512 },
-    "app/api/cron/consensus-live-ingest/route.ts": { "memory": 512 },
-    "app/api/cron/daily-health-report/route.ts": { "memory": 512 },
-    "app/api/cron/offshore-dividend-sync/route.ts": { "memory": 512 },
-    "app/api/cron/domestic-dividend-sync/route.ts": { "memory": 512 }
+    "app/api/cron/market-close-sync/route.ts": { "regions": ["sin1"] }
   },
   "crons": [
     { "path": "/api/workflows/bootstrap?workflow=poc", "schedule": "0 5 * * *" },

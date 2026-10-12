@@ -4,6 +4,15 @@
 // then only INSERT rows that are genuinely new. No DDL needed -- every column this pipeline writes
 // (ex_date, record_date, pay_date, distribution_amount, distribution_currency, income_component,
 // return_of_capital, source) already exists on the table.
+//
+// Batched, not per-row: the original per-row INSERT loop (one round-trip per row, ~1.1s observed per
+// row against this connection) was what caused the 2026-10-12 12:08 UTC run to blow through Vercel's
+// 300s maxDuration after only 51/~330 candidates -- confirmed live via `vercel logs` showing
+// "Task timed out after 300 seconds", the run-log row stuck IN_PROGRESS, and exactly 51 rows actually
+// persisted. Each chunk is now a single multi-row INSERT via jsonb_to_recordset, so a chunk of up to
+// CHUNK rows costs one round-trip instead of CHUNK of them. Error isolation is per-CHUNK (one bad
+// chunk's exception doesn't block the next), not per-row -- a reasonable trade for a pipeline where
+// row-level failure is rare (the gate on required columns already happened in fetchClear.ts).
 import type { FundclearDistributionRecord } from "./types";
 
 export type QueryFn = (sql: string, params: any[]) => Promise<any[]>;
@@ -15,6 +24,7 @@ export type DistributionWriteCandidate = {
 };
 
 export const SOURCE = "FUNDCLEAR_TDCC_OFFSHORE";
+export const WRITE_CHUNK_SIZE = 200;
 
 export async function writeDistributionBatch(query: QueryFn, candidates: DistributionWriteCandidate[]): Promise<{ written: number; skippedExisting: number; writeErrorCount: number }> {
   if (candidates.length === 0) return { written: 0, skippedExisting: 0, writeErrorCount: 0 };
@@ -31,30 +41,37 @@ export async function writeDistributionBatch(query: QueryFn, candidates: Distrib
 
   let written = 0;
   let writeErrorCount = 0;
-  const CHUNK = 200;
-  for (let i = 0; i < toInsert.length; i += CHUNK) {
-    const chunk = toInsert.slice(i, i + CHUNK);
-    // Per-row try/catch inside each chunk: one bad row (or one bad chunk, if the DB call itself
-    // throws) never blocks the rest of this chunk or any other chunk -- same error-isolation
-    // convention as every other pipeline this session touched.
-    for (const c of chunk) {
-      try {
-        await query(
-          `INSERT INTO fund_distribution_observations
-             (id, fund_id, ex_date, record_date, pay_date, distribution_amount, distribution_currency,
-              distribution_type, income_component, return_of_capital, source, source_record_id, created_at, updated_at)
-           VALUES (gen_random_uuid()::text, $1, $2::date, $3::date, $4::date, $5, $6, 'REGULAR', $7, $8, $9, $10, NOW(), NOW())`,
-          [
-            c.fundId, c.record.exDate, c.record.baseDate, c.record.payDate,
-            c.record.amount, c.currency,
-            c.record.incomeRatioPct, c.record.returnOfCapitalRatioPct,
-            SOURCE, `${c.fundId}:${c.record.exDate}`,
-          ],
-        );
-        written++;
-      } catch {
-        writeErrorCount++;
-      }
+  for (let i = 0; i < toInsert.length; i += WRITE_CHUNK_SIZE) {
+    const chunk = toInsert.slice(i, i + WRITE_CHUNK_SIZE);
+    const payload = chunk.map((c) => ({
+      fund_id: c.fundId,
+      ex_date: c.record.exDate,
+      record_date: c.record.baseDate,
+      pay_date: c.record.payDate,
+      distribution_amount: c.record.amount,
+      distribution_currency: c.currency,
+      income_component: c.record.incomeRatioPct,
+      return_of_capital: c.record.returnOfCapitalRatioPct,
+      source_record_id: `${c.fundId}:${c.record.exDate}`,
+    }));
+    try {
+      const rows = await query(
+        `INSERT INTO fund_distribution_observations
+           (id, fund_id, ex_date, record_date, pay_date, distribution_amount, distribution_currency,
+            distribution_type, income_component, return_of_capital, source, source_record_id, created_at, updated_at)
+         SELECT gen_random_uuid()::text, x.fund_id, x.ex_date::date, x.record_date::date, x.pay_date::date,
+                x.distribution_amount::numeric, x.distribution_currency, 'REGULAR',
+                x.income_component::numeric, x.return_of_capital::numeric, $2, x.source_record_id, NOW(), NOW()
+         FROM jsonb_to_recordset($1::jsonb) AS x(
+           fund_id text, ex_date text, record_date text, pay_date text, distribution_amount numeric,
+           distribution_currency text, income_component numeric, return_of_capital numeric, source_record_id text
+         )
+         RETURNING id`,
+        [JSON.stringify(payload), SOURCE],
+      );
+      written += rows.length;
+    } catch {
+      writeErrorCount += chunk.length;
     }
   }
   return { written, skippedExisting, writeErrorCount };
