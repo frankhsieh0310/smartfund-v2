@@ -12,9 +12,10 @@
 // fetches and classifies but writes nothing.
 import { isAuthorizedCron, unauthorizedCron } from "@/lib/cron/authorize";
 import { prisma } from "@/lib/prisma";
-import { beginRun, finishRun, hourBucketKey } from "@/lib/cloud-ingestion/runContext";
+import { beginRun, finishRun } from "@/lib/cloud-ingestion/runContext";
 import { loadMapping } from "@/lib/offshore-nav-sync/mapping";
 import { loadDailyProgress, saveDailyProgress } from "@/lib/offshore-nav-sync/completion";
+import { loadKnownNoData, saveKnownNoData, isOnCooldown } from "@/lib/offshore-nav-sync/knownNoData";
 import { fetchOffshoreNav, RateLimitedError } from "@/lib/offshore-nav-sync/navFetch";
 import { checkOffshoreNavSanity } from "@/lib/offshore-nav-sync/navSanity";
 import { isWriteEnabled, currentRunMode } from "@/lib/offshore-nav-sync/writeGate";
@@ -41,13 +42,17 @@ export async function GET(request: Request) {
   const writeEnabledThisRun = isWriteEnabled();
   const today = new Date().toISOString().slice(0, 10);
 
-  const runKey = hourBucketKey("offshore-nav-sync");
+  // Unique per invocation (not hour-bucketed) -- an hour bucket meant sequential same-hour triggers
+  // overwrote each other's audit row via the ON CONFLICT(run_key) upsert, silently discarding the
+  // per-run details of every run but the last one within that hour even though their real NAV writes
+  // all genuinely happened. beginRun's own RUNNING+fresh guard still prevents true concurrent overlap.
+  const runKey = `offshore-nav-sync:${new Date(startedMs).toISOString()}`;
   const { runId, skipped } = await beginRun({
     jobName: JOB, provider: "YAHOO_FUND_PRICE_HISTORY", runKey,
     universeCount: 0, batchSize: 200, checkpointBefore: null,
   });
   if (skipped) {
-    return Response.json({ ok: true, job: JOB, skipped: true, reason: "run_key already present this hour", runKey, runMode: currentRunMode() });
+    return Response.json({ ok: true, job: JOB, skipped: true, reason: "run_key already present and running", runKey, runMode: currentRunMode() });
   }
 
   const mapping = await loadMapping(query);
@@ -61,7 +66,11 @@ export async function GET(request: Request) {
   }
 
   const attemptedToday = await loadDailyProgress(query, today);
-  const pending = mapping.filter((m) => !attemptedToday.has(m.fundId));
+  const knownNoData = await loadKnownNoData(query);
+  const nowDate = new Date(startedMs);
+  const onCooldown = (fundId: string) => isOnCooldown(fundId, knownNoData, nowDate);
+  const pending = mapping.filter((m) => !attemptedToday.has(m.fundId) && !onCooldown(m.fundId));
+  const cooldownSkippedCount = mapping.filter((m) => !attemptedToday.has(m.fundId) && onCooldown(m.fundId)).length;
 
   const fundIds = pending.map((m) => m.fundId);
   const navRows = fundIds.length
@@ -87,8 +96,16 @@ export async function GET(request: Request) {
     attempted++;
     try {
       const result = await fetchOffshoreNav(m.yahooFundId);
-      newlyAttempted.add(m.fundId);
-      if (!result) { noDataCount++; await sleep(REQUEST_SPACING_MS); continue; }
+      // Only a real (write-enabled) attempt consumes today's slot -- a shadow-mode run still fetches
+      // (to classify/report) but must not block a later write-mode run from re-attempting this fund.
+      if (writeEnabledThisRun) newlyAttempted.add(m.fundId);
+      if (!result) {
+        noDataCount++;
+        if (writeEnabledThisRun) knownNoData.set(m.fundId, nowDate.toISOString());
+        await sleep(REQUEST_SPACING_MS);
+        continue;
+      }
+      if (writeEnabledThisRun) knownNoData.delete(m.fundId); // started returning data again
       const lastKnown = latestNavByFundId.get(m.fundId) ?? null;
       const sanity = checkOffshoreNavSanity(result.nav, lastKnown);
       if (sanity === "JUMP_REVIEW") { jumpReviewCount++; await sleep(REQUEST_SPACING_MS); continue; }
@@ -100,7 +117,7 @@ export async function GET(request: Request) {
         break; // stop immediately on 401/403/429, do not sleep further
       }
       errorCount++;
-      newlyAttempted.add(m.fundId);
+      if (writeEnabledThisRun) newlyAttempted.add(m.fundId);
     }
     await sleep(REQUEST_SPACING_MS);
   }
@@ -108,7 +125,10 @@ export async function GET(request: Request) {
   const writeResult = await writeBatchIfEnabled(query, candidates, new Date().toISOString(), writeEnabledThisRun);
 
   const mergedAttempted = new Set([...attemptedToday, ...newlyAttempted]);
-  await saveDailyProgress(query, today, mergedAttempted);
+  if (writeEnabledThisRun) {
+    await saveDailyProgress(query, today, mergedAttempted);
+    await saveKnownNoData(query, knownNoData);
+  }
 
   const status = "COMPLETED";
   await finishRun(runId, JOB, "YAHOO_FUND_PRICE_HISTORY", startedMs, {
@@ -120,7 +140,7 @@ export async function GET(request: Request) {
       attempted, no_data_count: noDataCount, jump_review_count: jumpReviewCount, error_count: errorCount,
       rate_limited: rateLimited, http_status: httpStatus,
       write_candidate_count: candidates.length, written: writeResult.written, write_error_count: writeResult.writeErrorCount,
-      attempted_today_total: mergedAttempted.size,
+      attempted_today_total: mergedAttempted.size, cooldown_skipped_count: cooldownSkippedCount,
     },
   });
 
