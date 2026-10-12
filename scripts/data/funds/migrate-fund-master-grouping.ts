@@ -4,8 +4,9 @@
 // down to one master, because the old regex stripped from the first occurrence of a share-class-like
 // word (Advisor/Inv/Inst/Select) instead of only a trailing suffix.
 //
-// This migration ONLY rewrites fund_share_classes.master_fund_id and fund_master rows for the 811
-// affected rows under those 5 OLD masters. It never touches:
+// This migration ONLY rewrites fund_share_classes.master_fund_id and fund_master rows for the rows
+// still affected under those 5 OLD masters (see EXPECTED_AFFECTED_ROWS below for why this number
+// drifts down over time on its own). It never touches:
 //   - the `holdings` table (no Yahoo holdings value is read, written, or recomputed)
 //   - any other fund_master group (the 5 previously-confirmed-correct 東方匯理/路博邁 TW groups
 //     and the ~9,133 other masters are untouched — every statement in this script is scoped with
@@ -36,7 +37,13 @@ const OLD_BROKEN_MASTER_IDS: Record<string, string> = {
   "b9d702f4-936a-45db-b2c4-39cd4e9dcf2e": "Columbia",
   "8b4329d0-6f05-4135-8c94-36eb70004df4": "VALIC Company",
 };
-const EXPECTED_AFFECTED_ROWS = 811;
+// Was 811 at the time this script was first written. The ongoing daily yahoo-fund-full-sweep /
+// yahoo-fund-enrich-repair crons already self-heal this bug on every re-ingest (fundIngest.ts's "keep
+// master link current" UPDATE recomputes masterStem() with the already-fixed regex and re-links the
+// share class) -- 318 of the original 811 have already been corrected that way, confirmed live via
+// freshly-created correct masters (e.g. "Fidelity Advisor Corporate Bond", created 2026-10-10).
+// Re-verified against production on 2026-10-12: 493 rows remain under the 5 old broken masters.
+const EXPECTED_AFFECTED_ROWS = 493;
 const YAHOO_FUND_HOLDINGS_SOURCES = ["YAHOO_QUOTE_SUMMARY", "YAHOO_TW_FUND"];
 
 type AffectedRow = {
@@ -56,6 +63,7 @@ type NewCluster = {
   rows: AffectedRow[];
   representativeFundId: string;
   representativeHasHoldings: boolean;
+  matchedExistingMasterId: string | null; // set in step 6 if a live master already has this provider_master_key
 };
 
 function familyFromProviderMasterKey(key: string): string {
@@ -79,6 +87,7 @@ function buildPlan(rows: AffectedRow[]): NewCluster[] {
         rows: [],
         representativeFundId: "",
         representativeHasHoldings: false,
+        matchedExistingMasterId: null,
       });
     }
     clusters.get(key)!.rows.push(r);
@@ -132,9 +141,33 @@ async function main() {
     }
     console.log(`MIGRATION_GUARD: PASS — ${rows.length} affected rows across exactly the 5 confirmed-broken masters`);
 
-    // --- Step 4: build the new grouping plan (pure function, same as the diagnosis dry-run). ---
+    // --- Step 4: build the new grouping plan. buildPlan() calls masterStem() imported directly from
+    //     lib/yahoo/fundIngest.ts (same module the live ingest route uses) -- not a reimplementation,
+    //     so this migration's stem computation is guaranteed identical to what today's/tomorrow's
+    //     ingest run would compute for the same fund name. ---
     const plan = buildPlan(rows);
+    console.log(`MASTERSTEM_SOURCE: imported directly from lib/yahoo/fundIngest.ts (same function the live ingest route calls) -- not a separate reimplementation.`);
     console.log(`DRY_RUN_NEW_MASTER_COUNT: ${plan.length}`);
+
+    // --- Step 4b: duplicate-group guard among the clusters THIS migration would create -- if two
+    //     distinct clusters resolve to the identical canonical_name, that's two masters for what a
+    //     human would read as the same fund, which is exactly the kind of grouping error this
+    //     migration exists to fix, not reintroduce. ---
+    const canonicalNameByCluster = new Map<NewCluster, string>();
+    for (const c of plan) {
+      const sampleName = c.rows[0].name;
+      canonicalNameByCluster.set(c, (sampleName.replace(SUFFIX_RE, "").trim() || sampleName).slice(0, 240));
+    }
+    const nameCounts = new Map<string, number>();
+    for (const name of canonicalNameByCluster.values()) nameCounts.set(name, (nameCounts.get(name) ?? 0) + 1);
+    const duplicateNames = [...nameCounts.entries()].filter(([, n]) => n > 1);
+    if (duplicateNames.length) {
+      console.error("MIGRATION_GUARD: ABORT — two or more new clusters share an identical canonical_name:", duplicateNames);
+      await query("ROLLBACK");
+      process.exitCode = 1;
+      return;
+    }
+    console.log("DUPLICATE_NAME_GUARD: PASS — no two new clusters share a canonical_name");
 
     // --- Step 5: pick a representative_fund_id per new cluster. Never arbitrary across funds —
     //     only ever a member of THIS cluster, and preferentially the member that actually carries
@@ -164,13 +197,34 @@ async function main() {
       }
     }
 
-    // --- Step 6: insert the new fund_master rows. ---
+    // --- Step 6: resolve each cluster to a fund_master row -- REUSE an existing one if the daily
+    //     self-healing ingest already created it (same provider_master_key lookup the live ingest
+    //     code uses), only INSERT a brand new row when no such master exists yet. This is the same
+    //     "SELECT-then-INSERT" pattern as fundIngest.ts itself, so a fund whose sibling share classes
+    //     were already auto-corrected by today's/yesterday's cron run gets folded into that same
+    //     master instead of spawning a duplicate. ---
     const newMasterIdByClusterKey = new Map<NewCluster, string>();
+    let matchedExistingCount = 0;
+    let createdNewCount = 0;
     for (const cluster of plan) {
+      const providerMasterKey = `YAHOO:${cluster.family}|${cluster.stem}`.slice(0, 200);
+      // Exclude the 5 old broken masters themselves from the match -- a thin/generic fund name (e.g.
+      // a bare "Fidelity" with no product/class detail at all) can legitimately re-derive the exact
+      // same stem the old regex produced, which would otherwise "match" the very master this
+      // migration is retiring and leave that row stuck on it after Step 8 tombstones the key.
+      const existing = await query(
+        `SELECT id::text FROM fund_master WHERE provider_master_key = $1 AND id != ALL($2::text[]) LIMIT 1`,
+        [providerMasterKey, Object.keys(OLD_BROKEN_MASTER_IDS)],
+      );
+      if (existing[0]) {
+        cluster.matchedExistingMasterId = existing[0].id;
+        newMasterIdByClusterKey.set(cluster, existing[0].id);
+        matchedExistingCount++;
+        continue;
+      }
       const sampleName = cluster.rows[0].name;
       const canonicalName = (sampleName.replace(SUFFIX_RE, "").trim() || sampleName).slice(0, 240);
       const currency = cluster.rows.find((r) => r.fund_id === cluster.representativeFundId)?.currency ?? cluster.rows[0].currency;
-      const providerMasterKey = `YAHOO:${cluster.family}|${cluster.stem}`.slice(0, 200);
       const inserted = await query(
         `INSERT INTO fund_master (id, canonical_name, base_currency, provider_master_key, representative_fund_id, created_at, updated_at)
          VALUES (gen_random_uuid()::text, $1, $2, $3, $4, NOW(), NOW())
@@ -178,7 +232,19 @@ async function main() {
         [canonicalName, currency, providerMasterKey, cluster.representativeFundId],
       );
       newMasterIdByClusterKey.set(cluster, inserted[0].id);
+      createdNewCount++;
     }
+    const matchedExistingRowCount = plan.filter((c) => c.matchedExistingMasterId).reduce((n, c) => n + c.rows.length, 0);
+    const createdNewRowCount = plan.filter((c) => !c.matchedExistingMasterId).reduce((n, c) => n + c.rows.length, 0);
+    console.log(`\nMASTER_RESOLUTION: ${matchedExistingCount} clusters (${matchedExistingRowCount} rows) matched an EXISTING master; ${createdNewCount} clusters (${createdNewRowCount} rows) needed a NEW master.`);
+
+    // Snapshot how many members each matched-existing master already had BEFORE Step 7 moves our
+    // rows onto it -- needed so Step 9's "rows now on new masters" check isn't fooled by members that
+    // were already there (e.g. from the daily self-healing ingest) rather than added by this run.
+    const matchedExistingIds = [...new Set(plan.map((c) => c.matchedExistingMasterId).filter((id): id is string => !!id))];
+    const preExistingMemberCount = matchedExistingIds.length
+      ? (await query(`SELECT count(*)::int AS n FROM fund_share_classes WHERE master_fund_id = ANY($1::text[])`, [matchedExistingIds]))[0].n
+      : 0;
 
     // --- Step 7: repoint the 811 share classes at their new master. ---
     let totalUpdated = 0;
@@ -226,14 +292,17 @@ async function main() {
       [newMasterIds],
     );
 
-    const totalRowsOk = totalUpdated === EXPECTED_AFFECTED_ROWS && nowOnNew === EXPECTED_AFFECTED_ROWS && stillOnOld === 0;
+    // nowOnNew legitimately includes members a matched-existing master already had before this run --
+    // those rows were correct before this migration touched anything and are not something it added.
+    const expectedNowOnNew = EXPECTED_AFFECTED_ROWS + preExistingMemberCount;
+    const totalRowsOk = totalUpdated === EXPECTED_AFFECTED_ROWS && nowOnNew === expectedNowOnNew && stillOnOld === 0;
     const representativeOk = representativeIntegrity.length === 0;
     const clusterCountOk = newMasterIds.length === plan.length;
 
     console.log("\nVERIFICATION:");
-    console.log("  rows updated:", totalUpdated, "(expected", EXPECTED_AFFECTED_ROWS, ") ->", totalRowsOk ? "PASS" : "FAIL");
+    console.log("  rows updated:", totalUpdated, "(expected", EXPECTED_AFFECTED_ROWS, ") ->", totalUpdated === EXPECTED_AFFECTED_ROWS ? "PASS" : "FAIL");
     console.log("  rows still on old masters:", stillOnOld, "-> expected 0 ->", stillOnOld === 0 ? "PASS" : "FAIL");
-    console.log("  rows now on new masters:", nowOnNew, "-> expected", EXPECTED_AFFECTED_ROWS, "->", nowOnNew === EXPECTED_AFFECTED_ROWS ? "PASS" : "FAIL");
+    console.log("  rows now on new masters:", nowOnNew, "-> expected", expectedNowOnNew, `(= ${EXPECTED_AFFECTED_ROWS} moved + ${preExistingMemberCount} pre-existing on matched masters) ->`, nowOnNew === expectedNowOnNew ? "PASS" : "FAIL");
     console.log("  representative_fund_id integrity (0 violations expected):", representativeIntegrity.length, "->", representativeOk ? "PASS" : "FAIL");
     console.log("  new master count matches plan:", newMasterIds.length, "==", plan.length, "->", clusterCountOk ? "PASS" : "FAIL");
 
