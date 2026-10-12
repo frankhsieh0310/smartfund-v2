@@ -9,7 +9,8 @@
     "app/api/cron/offshore-nav-sync/route.ts": { "memory": 512 },
     "app/api/cron/consensus-live-ingest/route.ts": { "memory": 512 },
     "app/api/cron/daily-health-report/route.ts": { "memory": 512 },
-    "app/api/cron/offshore-dividend-sync/route.ts": { "memory": 512 }
+    "app/api/cron/offshore-dividend-sync/route.ts": { "memory": 512 },
+    "app/api/cron/domestic-dividend-sync/route.ts": { "memory": 512 }
   },
   "crons": [
     { "path": "/api/workflows/bootstrap?workflow=poc", "schedule": "0 5 * * *" },
@@ -29,6 +30,7 @@
     { "path": "/api/cron/sitca-nav-sync", "schedule": "33 * * * *" },
     { "path": "/api/cron/offshore-nav-sync", "schedule": "*/15 1-3 * * *" },
     { "path": "/api/cron/offshore-nav-sync", "schedule": "0 4 * * *" },
-    { "path": "/api/cron/offshore-dividend-sync", "schedule": "30 5 * * *" }
+    { "path": "/api/cron/offshore-dividend-sync", "schedule": "*/15 5-7 * * *" },
+    { "path": "/api/cron/domestic-dividend-sync", "schedule": "0 2 1-10 * *" }
   ]
 }
