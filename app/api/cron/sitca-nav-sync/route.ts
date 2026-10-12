@@ -70,7 +70,14 @@ export async function GET(request: Request) {
     return Response.json({ ok: false, job: JOB, runId, status: "FAILED", error: String(e?.message ?? e) }, { status: 502 });
   }
 
-  const fundRows = await prisma.$queryRawUnsafe<FundRow[]>(`SELECT id, code, name, currency FROM funds WHERE currency = 'TWD'`);
+  // Candidate pool is NOT restricted by currency (fixed: used to be `WHERE currency = 'TWD'`, which
+  // meant a fund whose currency had been corrected away from 'TWD' would silently fall out of this
+  // query forever, even though it's still a legitimate SITCA-matched domestic/TDCC-listed fund).
+  // Same non-currency condition as the mobile API's fund-list filter (data_provider exclusion) — the
+  // in-memory currency gate below is what actually decides write eligibility per row.
+  const fundRows = await prisma.$queryRawUnsafe<FundRow[]>(
+    `SELECT id, code, name, currency FROM funds WHERE COALESCE(data_provider, '') NOT IN ('yahoo', 'SEC')`,
+  );
   const { matched, unmatched } = matchSitcaRows(rows, fundRows);
 
   // Currency gate (user-approved Step 1, Task Z write-enable pre-check Part b): funds.currency is
