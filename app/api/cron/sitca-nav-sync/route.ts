@@ -70,18 +70,29 @@ export async function GET(request: Request) {
     return Response.json({ ok: false, job: JOB, runId, status: "FAILED", error: String(e?.message ?? e) }, { status: 502 });
   }
 
-  const fundRows = await prisma.$queryRawUnsafe<FundRow[]>(`SELECT id, code, name FROM funds WHERE currency = 'TWD'`);
+  const fundRows = await prisma.$queryRawUnsafe<FundRow[]>(`SELECT id, code, name, currency FROM funds WHERE currency = 'TWD'`);
   const { matched, unmatched } = matchSitcaRows(rows, fundRows);
+
+  // Currency gate (user-approved Step 1, Task Z write-enable pre-check Part b): funds.currency is
+  // fund-family-level, not per-share-class, so a SITCA row denominated in e.g. USD/JPY/CNY will
+  // disagree with a TWD-tagged fund row even when the match itself (name/class) is correct. Per the
+  // explicit rule, these are reported and skipped — never written — until the underlying funds.currency
+  // data-quality gap (Part 2 investigation) is fixed.
+  let currencyMismatchCount = 0;
+  const currencyOk = matched.filter((m) => {
+    if (m.sitcaCurrency === m.fundCurrency) return true;
+    currencyMismatchCount++;
+    return false;
+  });
 
   // Sanity check against each fund's own current latest_nav before it's allowed into the write
   // batch — same two-failure-mode philosophy as market-close-sync's priceSanity.ts, with a stricter
   // 20% threshold appropriate for a fund NAV (lib/sitca-nav-sync/navSanity.ts).
-  const fundById = new Map(fundRows.map((f) => [f.id, f]));
   const latestNavByFundId = new Map<string, number | null>();
-  if (matched.length > 0) {
+  if (currencyOk.length > 0) {
     const navRows = await prisma.$queryRawUnsafe<Array<{ id: string; latest_nav: string | null }>>(
       `SELECT id, latest_nav::text FROM funds WHERE id = ANY($1::text[])`,
-      [...new Set(matched.map((m) => m.fundId))],
+      [...new Set(currencyOk.map((m) => m.fundId))],
     );
     for (const r of navRows) latestNavByFundId.set(r.id, r.latest_nav != null ? Number(r.latest_nav) : null);
   }
@@ -89,7 +100,7 @@ export async function GET(request: Request) {
   const candidates: SitcaMatchedCandidate[] = [];
   let unitMismatchCount = 0;
   let jumpReviewCount = 0;
-  for (const m of matched) {
+  for (const m of currencyOk) {
     const lastKnown = latestNavByFundId.get(m.fundId) ?? null;
     const sanity = checkNavSanity(m.nav, lastKnown);
     if (sanity === "UNIT_MISMATCH") { unitMismatchCount++; continue; }
@@ -109,7 +120,8 @@ export async function GET(request: Request) {
     details: {
       run_mode: currentRunMode(), csv_row_count: rows.length, twd_fund_count: fundRows.length,
       matched_count: matched.length, matched_by_code: matchedByCode, matched_by_name: matchedByName,
-      unmatched_count: unmatched.length, unit_mismatch_count: unitMismatchCount, jump_review_count: jumpReviewCount,
+      unmatched_count: unmatched.length, currency_mismatch_count: currencyMismatchCount,
+      unit_mismatch_count: unitMismatchCount, jump_review_count: jumpReviewCount,
       write_candidate_count: candidates.length, written: writeResult.written, write_error_count: writeResult.writeErrorCount,
     },
   });
@@ -118,7 +130,7 @@ export async function GET(request: Request) {
     ok: true, job: JOB, runId, status, runMode: currentRunMode(),
     csvRowCount: rows.length, twdFundCount: fundRows.length,
     matchedCount: matched.length, matchedByCode, matchedByName, unmatchedCount: unmatched.length,
-    unitMismatchCount, jumpReviewCount, writeCandidateCount: candidates.length,
+    currencyMismatchCount, unitMismatchCount, jumpReviewCount, writeCandidateCount: candidates.length,
     written: writeResult.written, writeErrorCount: writeResult.writeErrorCount,
   });
 }

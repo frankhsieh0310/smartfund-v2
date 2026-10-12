@@ -19,12 +19,13 @@ export function parseSitcaCsv(csv: string): SitcaRawRow[] {
     const name = row["基金名稱"]?.trim();
     const navRaw = row["基金淨值"]?.trim();
     const rawDate = row["日期"]?.trim();
-    if (!taxId || !name || !navRaw || !rawDate) continue;
+    const currency = row["幣別"]?.trim();
+    if (!taxId || !name || !navRaw || !rawDate || !currency) continue;
     if (!/^\d{8}$/.test(rawDate)) continue;
     const nav = Number(navRaw);
     if (!Number.isFinite(nav) || nav <= 0) continue;
     rows.push({
-      taxId, name, nav,
+      taxId, name, nav, currency,
       navDate: `${rawDate.slice(0, 4)}-${rawDate.slice(4, 6)}-${rawDate.slice(6, 8)}`,
     });
   }
