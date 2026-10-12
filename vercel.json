@@ -23,6 +23,7 @@
     { "path": "/api/cron/offshore-nav-sync", "schedule": "*/15 1-3 * * *" },
     { "path": "/api/cron/offshore-nav-sync", "schedule": "0 4 * * *" },
     { "path": "/api/cron/offshore-dividend-sync", "schedule": "*/15 5-7 * * *" },
-    { "path": "/api/cron/domestic-dividend-sync", "schedule": "0 2 * * *" }
+    { "path": "/api/cron/domestic-dividend-sync", "schedule": "0 2 * * *" },
+    { "path": "/api/cron/holdings-alt-source-sync", "schedule": "52 * * * *" }
   ]
 }
