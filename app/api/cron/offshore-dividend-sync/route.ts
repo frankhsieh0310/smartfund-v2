@@ -17,7 +17,7 @@
 import { isAuthorizedCron, unauthorizedCron } from "@/lib/cron/authorize";
 import { prisma } from "@/lib/prisma";
 import { beginRun, finishRun } from "@/lib/cloud-ingestion/runContext";
-import { loadDailyProgress, saveDailyProgress } from "@/lib/offshore-dividend-sync/completion";
+import { loadRotationProgress, saveRotationProgress, selectRotationBatch } from "@/lib/offshore-dividend-sync/completion";
 import { fetchOffshoreDistributions, RateLimitedError } from "@/lib/offshore-dividend-sync/fetchClear";
 import { writeBatchIfEnabled, WRITE_CHUNK_SIZE, type QueryFn, type DistributionWriteCandidate } from "@/lib/offshore-dividend-sync/writer";
 import { isWriteEnabled, currentRunMode } from "@/lib/offshore-dividend-sync/writeGate";
@@ -48,7 +48,6 @@ export async function GET(request: Request) {
 
   const startedMs = Date.now();
   const writeEnabledThisRun = isWriteEnabled();
-  const today = new Date().toISOString().slice(0, 10);
   const { startDate, endDate } = yearMonthRange();
 
   const runKey = `offshore-dividend-sync:${new Date(startedMs).toISOString()}`;
@@ -64,8 +63,8 @@ export async function GET(request: Request) {
     `SELECT id, code FROM funds WHERE data_provider = 'tdcc-offshore' AND is_active = true`,
   );
 
-  const attemptedToday = await loadDailyProgress(query, today);
-  const pending = candidateFunds.filter((f) => !attemptedToday.has(f.id));
+  const processedBefore = await loadRotationProgress(query);
+  const { pending, cycleWillReset, startingProcessed } = selectRotationBatch(candidateFunds, processedBefore);
 
   let attempted = 0;
   let noDistributionCount = 0;
@@ -87,10 +86,10 @@ export async function GET(request: Request) {
     totalDuplicatesCollapsed += result.duplicatesCollapsed;
     allConflicts.push(...result.conflicts);
     pendingBuffer = [];
-    // Persist progress as we go too, so a cut-off run doesn't lose today's attempted-set either.
+    // Persist progress as we go too, so a cut-off run doesn't lose this cycle's progress either.
     if (writeEnabledThisRun) {
-      const merged = new Set([...attemptedToday, ...newlyAttempted]);
-      await saveDailyProgress(query, today, merged);
+      const merged = new Set([...startingProcessed, ...newlyAttempted]);
+      await saveRotationProgress(query, runId, merged);
     }
   }
 
@@ -135,7 +134,8 @@ export async function GET(request: Request) {
       funds_with_candidates: fundsWithNewCandidates, candidate_record_count: totalCandidateCount,
       written: totalWritten, skipped_existing: totalSkippedExisting, write_error_count: totalWriteErrorCount,
       duplicates_collapsed: totalDuplicatesCollapsed, conflicts: allConflicts,
-      attempted_today_total: new Set([...attemptedToday, ...newlyAttempted]).size,
+      cycle_processed_total: new Set([...startingProcessed, ...newlyAttempted]).size,
+      cycle_reset: cycleWillReset,
     },
   });
 
@@ -146,5 +146,6 @@ export async function GET(request: Request) {
     fundsWithCandidates: fundsWithNewCandidates, candidateRecordCount: totalCandidateCount,
     written: totalWritten, skippedExisting: totalSkippedExisting, writeErrorCount: totalWriteErrorCount,
     duplicatesCollapsed: totalDuplicatesCollapsed, conflicts: allConflicts,
+    cycleReset: cycleWillReset,
   });
 }
