@@ -259,31 +259,6 @@ export function FeaturesSection() {
         </div>
       </section>
 
-      {/* ══ FOOTER ══════════════════════════════════════════════════ */}
-      <footer className="relative z-10 bg-[#060e1e] border-t border-white/[0.06] py-10">
-        <div className="max-w-[1600px] mx-auto px-10">
-          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-            <div>
-              <div className="text-[24px] font-black text-white">Smart<span className="text-[#F5B700]">Match</span></div>
-              <div className="text-[14px] text-slate-500 mt-1">瑞宇智庫｜Investment Intelligence Platform</div>
-            </div>
-            <div className="flex flex-wrap gap-6 text-[16px] text-slate-500">
-              <Link href="/markets" className="hover:text-slate-300 transition-colors">市場中心</Link>
-              <Link href="/etf"     className="hover:text-slate-300 transition-colors">ETF資料庫</Link>
-              <Link href="/funds"   className="hover:text-slate-300 transition-colors">基金資料庫</Link>
-              <Link href="/compare" className="hover:text-slate-300 transition-colors">比較中心</Link>
-              <Link href="/quiz"    className="hover:text-slate-300 transition-colors">人格分析</Link>
-              <Link href="/clients" className="hover:text-slate-300 transition-colors">客戶管理</Link>
-              <Link href="/pricing" className="hover:text-slate-300 transition-colors">方案說明</Link>
-              <a href="mailto:contact@smartmatch.tw" className="hover:text-slate-300 transition-colors">聯絡我們</a>
-            </div>
-            <div className="text-[13px] text-slate-600 text-right">
-              <div>以上資料為示意範例，不構成投資建議</div>
-              <div className="mt-1">© 2026 SmartMatch｜瑞宇智庫 版權所有</div>
-            </div>
-          </div>
-        </div>
-      </footer>
     </>
   );
 }
