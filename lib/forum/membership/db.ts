@@ -1,31 +1,13 @@
-// Raw `pg` data access for forum membership — deliberately NOT added to prisma/schema.prisma
-// (decision 6 in docs/specs/paid-member-forum-spec.md § 決定紀錄: dedicated `forum` schema, accessed
-// via its own pg Pool, isolated from the shared `public` schema Prisma already manages).
+// Raw `pg` data access for billing membership — deliberately NOT added to prisma/schema.prisma
+// (decision 6 in docs/specs/paid-member-forum-spec.md § 決定紀錄: dedicated schema, accessed via a
+// shared pg Pool, isolated from the `public` schema Prisma already manages).
 //
-// IMPORTANT: this queries `forum.memberships`, a table that does not exist yet — it is only defined
-// in the DDL draft (docs/specs/forum-schema-draft.sql) pending the user's approval per CLAUDE.md's
-// migration-approval rule. Every function here will fail at runtime with a "relation does not exist"
-// error until that DDL is reviewed and applied by the user. Do not run these against production before
-// then.
+// Queries `billing.memberships` (applied 2026-10-13 — see docs/specs/forum-billing-schema-applied.sql;
+// moved here from the original `forum.memberships` draft per the user's decision, since other paid
+// features such as dividend reminders will also read this table).
 
-import { Pool } from "pg";
+import { getForumPool } from "../pgPool.ts";
 import type { MembershipStatus } from "./events.ts";
-
-let pool: Pool | null = null;
-
-function getPool(): Pool {
-  if (!pool) {
-    pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
-      max: 2,
-      idleTimeoutMillis: 10_000,
-      connectionTimeoutMillis: 5_000,
-      statement_timeout: 3_000,
-      application_name: "forum-membership",
-    });
-  }
-  return pool;
-}
 
 export interface MembershipRow {
   status: MembershipStatus;
@@ -38,8 +20,8 @@ export async function upsertMembershipFromWebhook(params: {
   status: MembershipStatus;
   expiresAt: Date | null;
 }): Promise<void> {
-  await getPool().query(
-    `INSERT INTO forum.memberships (app_user_id, status, expires_at, updated_at)
+  await getForumPool().query(
+    `INSERT INTO billing.memberships (app_user_id, status, expires_at, updated_at)
      VALUES ($1, $2, $3, now())
      ON CONFLICT (app_user_id)
      DO UPDATE SET status = EXCLUDED.status, expires_at = EXCLUDED.expires_at, updated_at = now()`,
@@ -49,8 +31,8 @@ export async function upsertMembershipFromWebhook(params: {
 
 /** Server-side-authoritative membership lookup — always re-derives ACTIVE vs EXPIRED from expires_at. */
 export async function getMembershipStatus(appUserId: string): Promise<MembershipRow | null> {
-  const result = await getPool().query<{ status: MembershipStatus; expires_at: Date | null }>(
-    `SELECT status, expires_at FROM forum.memberships WHERE app_user_id = $1`,
+  const result = await getForumPool().query<{ status: MembershipStatus; expires_at: Date | null }>(
+    `SELECT status, expires_at FROM billing.memberships WHERE app_user_id = $1`,
     [appUserId],
   );
   const row = result.rows[0];

@@ -1,12 +1,14 @@
 -- ============================================================================
--- Forum / Paid-membership schema — DRAFT ONLY. DO NOT EXECUTE.
+-- Forum / Paid-membership schema — ORIGINAL DRAFT, SUPERSEDED. Kept for history only.
 -- ============================================================================
--- Status: pending the user's review and explicit approval (see CLAUDE.md's migration-approval rule
--- and docs/specs/paid-member-forum-spec.md § 決定紀錄 / § 十). No part of this file has been run
--- against any database, local or production, by Claude.
+-- SUPERSEDED on 2026-10-13: the user approved and this was actually executed with one change —
+-- `memberships` moved out of `forum` into its own new `billing` schema, since other paid features
+-- (e.g. dividend reminders) will also need it. See docs/specs/forum-billing-schema-applied.sql for
+-- what was actually run, and docs/specs/forum-billing-rollback.sql for the saved-only rollback.
 --
 -- Design basis: docs/specs/paid-member-forum-spec.md 第十節草案，逐表轉為可執行 DDL，並新增
--- forum.memberships（RevenueCat 會員身分，決定記錄第 1 項新增需求，原規格草案未列）。
+-- forum.memberships（RevenueCat 會員身分，決定記錄第 1 項新增需求，原規格草案未列；後於 2026-10-13
+-- 執行時依使用者指示移至 billing.memberships，此檔案的 forum.memberships 定義已不代表實際狀態）。
 --
 -- Isolation: dedicated `forum` Postgres schema, separate from the shared `public` schema the
 -- TW-stock app's Prisma models live in (see spec § 0-4 / 決定紀錄 第 6 項). Accessed via a plain
@@ -16,9 +18,11 @@
 -- and REVOKE ALL FROM anon, authenticated, since all access goes through the Next.js server (service
 -- role / direct DB connection), never through a Supabase client SDK call from the app.
 --
--- NOTE on the FK to the existing users table: prisma/schema.prisma's `User` model has no `@@map`,
--- so its real Postgres table name is `"User"` (capital U, public schema) — VERIFIED by reading
--- prisma/schema.prisma directly, not `public.users` as the original spec draft informally wrote it.
+-- CORRECTED 2026-10-13: this draft originally claimed the FK target table was `public."User"`
+-- (capital U), reasoning that the Prisma `User` model has no `@@map`. That was WRONG — the model
+-- does have `@@map("users")` further down in the model block (missed on first read); live-DB
+-- information_schema inspection confirmed the real table is `public.users` (lowercase), primary key
+-- `id` of type `text`. Fixed below to `public.users(id)`.
 -- ============================================================================
 
 BEGIN;
@@ -30,7 +34,7 @@ CREATE SCHEMA IF NOT EXISTS forum;
 -- ----------------------------------------------------------------------------
 CREATE TABLE forum.memberships (
   id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  app_user_id   text NOT NULL UNIQUE REFERENCES public."User"(id) ON DELETE CASCADE,
+  app_user_id   text NOT NULL UNIQUE REFERENCES public.users(id) ON DELETE CASCADE,
   status        text NOT NULL CHECK (status IN ('ACTIVE', 'EXPIRED')),
   expires_at    timestamptz NULL,
   updated_at    timestamptz NOT NULL DEFAULT now()
@@ -45,7 +49,7 @@ REVOKE ALL ON forum.memberships FROM anon, authenticated;
 -- ----------------------------------------------------------------------------
 CREATE TABLE forum.profiles (
   id                   uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id              text NOT NULL UNIQUE REFERENCES public."User"(id) ON DELETE CASCADE,
+  user_id              text NOT NULL UNIQUE REFERENCES public.users(id) ON DELETE CASCADE,
   nickname             text NOT NULL,
   nickname_changed_at  timestamptz NULL,
   status               text NOT NULL DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE', 'SUSPENDED', 'BANNED', 'DELETED')),
@@ -200,7 +204,10 @@ CREATE TABLE forum.suspensions (
   created_by    text NOT NULL
 );
 CREATE INDEX idx_suspensions_profile ON forum.suspensions (profile_id);
-CREATE INDEX idx_suspensions_active ON forum.suspensions (ends_at) WHERE ends_at IS NULL OR ends_at > now();
+-- Plain (non-partial) index: a partial predicate using now() is rejected by Postgres because
+-- now() is STABLE, not IMMUTABLE, and index predicates require an immutable expression. (Confirmed
+-- by actually attempting this DDL on 2026-10-13 — see docs/specs/forum-billing-schema-applied.sql.)
+CREATE INDEX idx_suspensions_active ON forum.suspensions (ends_at);
 
 ALTER TABLE forum.suspensions ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON forum.suspensions FROM anon, authenticated;

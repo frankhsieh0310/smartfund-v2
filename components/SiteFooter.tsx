@@ -32,6 +32,10 @@ export function SiteFooter() {
           <p>統一編號：93639659</p>
           <p>地址：新北市三重區重新路2段21號11樓</p>
           <p>聯絡信箱：<a href="mailto:contact@smartmatch.tw" className="break-all underline underline-offset-4 hover:text-white">contact@smartmatch.tw</a></p>
+          <p className="flex gap-4 pt-1">
+            <Link href="/privacy" className="underline underline-offset-4 hover:text-white">隱私權政策</Link>
+            <Link href="/terms" className="underline underline-offset-4 hover:text-white">服務條款</Link>
+          </p>
         </address>
       </div>
     </footer>
