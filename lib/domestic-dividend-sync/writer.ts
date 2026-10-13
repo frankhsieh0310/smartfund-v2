@@ -8,16 +8,20 @@
 // an order of magnitude more candidates during the historical backfill, so the same bug here would be
 // far worse).
 //
-// 2026-10-13 fix: two SITCA data quirks found live force a within-batch dedup pass BEFORE the
-// existing-in-DB check below (see lib/dividend-sync-shared/batchDedup.ts for the full root-cause
-// writeup). Same-key/same-amount collisions (SITCA republish, payDate off by a day) collapse to one
-// row; same-key/different-amount collisions (e.g. 88315292B/D 2024-03, two real independent events
-// that happen to share an exDate) are excluded from the write and reported as conflicts instead of
-// guessed at. The INSERT also now carries an ON CONFLICT clause targeting the Stage-2 partial unique
-// index on (fund_id, ex_date, source) WHERE source IN (...) -- until that index exists, Postgres throws
-// 42P10 and the chunk is retried once without ON CONFLICT so writes keep working unchanged.
+// 2026-10-13 fix: a SITCA data quirk found live (same fund+recordDate+exDate republished with an
+// identical amount, payDate off by a day) forces a within-batch dedup pass BEFORE the existing-in-DB
+// check below (see lib/dividend-sync-shared/batchDedup.ts for the full root-cause writeup). The INSERT
+// also now carries an ON CONFLICT clause targeting the Stage-2 partial unique index on (fund_id,
+// record_date, ex_date, source) WHERE source IN (...) -- until that index exists, Postgres throws 42P10
+// and the chunk is retried once without ON CONFLICT so writes keep working unchanged.
+//
+// 2026-10-13 CORRECTION: the key was originally (fund_id, ex_date) only. That's wrong -- exDate is NOT
+// unique per fund (confirmed live for 88315292B/D, 2024-03: two genuinely independent distributions,
+// different record_date/baseDate month and amount, that happen to share one exDate). Grouping on
+// exDate alone would have misfiled that legitimate pair as a conflict and permanently blocked it once
+// the Stage-2 index existed. record_date (基準日) is now part of the key throughout.
 import type { DividendMatchResult } from "./types";
-import { dedupBatchByFundExDate, isMissingUniqueConstraintError, type DedupConflict } from "../dividend-sync-shared/batchDedup.ts";
+import { dedupBatchByFundRecordExDate, isMissingUniqueConstraintError, type DedupConflict } from "../dividend-sync-shared/batchDedup.ts";
 
 export type QueryFn = (sql: string, params: any[]) => Promise<any[]>;
 
@@ -45,25 +49,25 @@ function insertSql(withOnConflict: boolean): string {
             distribution_type, source, source_record_id, created_at, updated_at)
          SELECT ${INSERT_COLUMNS_SELECT}
          ${INSERT_SOURCE_TABLE}
-         ${withOnConflict ? `ON CONFLICT (fund_id, ex_date, source) WHERE source = '${SOURCE}' DO NOTHING` : ""}
+         ${withOnConflict ? `ON CONFLICT (fund_id, record_date, ex_date, source) WHERE source = '${SOURCE}' DO NOTHING` : ""}
          RETURNING id`;
 }
 
 export async function writeDividendBatch(query: QueryFn, candidates: DividendMatchResult[]): Promise<WriteDividendBatchResult> {
   if (candidates.length === 0) return { written: 0, skippedExisting: 0, writeErrorCount: 0, duplicatesCollapsed: 0, conflicts: [] };
 
-  const deduped = dedupBatchByFundExDate(candidates, (c) => ({ fundId: c.fundId, exDate: c.row.exDate, amount: c.row.amount }));
+  const deduped = dedupBatchByFundRecordExDate(candidates, (c) => ({ fundId: c.fundId, recordDate: c.row.baseDate, exDate: c.row.exDate, amount: c.row.amount }));
 
   const fundIds = [...new Set(deduped.toWrite.map((c) => c.fundId))];
   const existingRows = fundIds.length
     ? await query(
-        `SELECT fund_id, ex_date::text AS ex_date FROM fund_distribution_observations WHERE fund_id = ANY($1::text[]) AND source = $2`,
+        `SELECT fund_id, record_date::text AS record_date, ex_date::text AS ex_date FROM fund_distribution_observations WHERE fund_id = ANY($1::text[]) AND source = $2`,
         [fundIds, SOURCE],
       )
     : [];
-  const existingKeys = new Set(existingRows.map((r) => `${r.fund_id}::${r.ex_date}`));
+  const existingKeys = new Set(existingRows.map((r) => `${r.fund_id}::${r.record_date}::${r.ex_date}`));
 
-  const toInsert = deduped.toWrite.filter((c) => !existingKeys.has(`${c.fundId}::${c.row.exDate}`));
+  const toInsert = deduped.toWrite.filter((c) => !existingKeys.has(`${c.fundId}::${c.row.baseDate}::${c.row.exDate}`));
   const skippedExisting = candidates.length - toInsert.length - deduped.duplicatesCollapsed - deduped.conflicts.reduce((n, c) => n + c.count, 0);
 
   let written = 0;
@@ -77,7 +81,7 @@ export async function writeDividendBatch(query: QueryFn, candidates: DividendMat
       pay_date: c.row.payDate,
       distribution_amount: c.row.amount,
       distribution_currency: c.sitcaCurrency,
-      source_record_id: `${c.fundId}:${c.row.exDate}`,
+      source_record_id: `${c.fundId}:${c.row.baseDate}:${c.row.exDate}`,
     }));
     try {
       let rows: any[];

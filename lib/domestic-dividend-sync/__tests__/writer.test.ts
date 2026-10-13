@@ -48,10 +48,10 @@ const candidate = (fundId: string, exDate: string): DividendMatchResult => ({
     console.log(`    (937 candidates batched in ${insertCalls} INSERT round-trip(s), ${elapsedMs}ms with a mock query)`);
   });
 
-  await test("writeDividendBatch: skips a (fund_id, ex_date) pair that already exists for this source", async () => {
+  await test("writeDividendBatch: skips a (fund_id, record_date, ex_date) tuple that already exists for this source", async () => {
     let insertCalls = 0;
     const query = async (sql: string, params: any[]) => {
-      if (sql.includes("SELECT fund_id")) return [{ fund_id: "f1", ex_date: "2026-08-18" }];
+      if (sql.includes("SELECT fund_id")) return [{ fund_id: "f1", record_date: "2026-08-24", ex_date: "2026-08-18" }];
       insertCalls++;
       const payload = JSON.parse(params[0]);
       return payload.map((_: unknown, i: number) => ({ id: `row-${i}` }));
@@ -60,6 +60,25 @@ const candidate = (fundId: string, exDate: string): DividendMatchResult => ({
     assert.equal(insertCalls, 1);
     assert.equal(result.written, 1);
     assert.equal(result.skippedExisting, 1);
+  });
+
+  await test("writeDividendBatch: same fundId+exDate but different baseDate (基準日) -- two real distributions, both written", async () => {
+    let insertCalls = 0;
+    const query = async (sql: string, params: any[]) => {
+      if (sql.includes("SELECT fund_id")) return [];
+      insertCalls++;
+      const payload = JSON.parse(params[0]);
+      return payload.map((_: unknown, i: number) => ({ id: `row-${i}` }));
+    };
+    // Regression case for 88315292B/D 2024-03: same exDate, different baseDate/amount -- must NOT be
+    // treated as a conflict or collapsed, because baseDate (基準日) distinguishes two real events.
+    const a: DividendMatchResult = { ...candidate("88315292B", "2024-03-04"), row: { ...candidate("88315292B", "2024-03-04").row, baseDate: "2024-03-01", amount: 0.10147 } };
+    const b: DividendMatchResult = { ...candidate("88315292B", "2024-03-04"), row: { ...candidate("88315292B", "2024-03-04").row, baseDate: "2024-04-01", amount: 0.09417 } };
+    const result = await writeDividendBatch(query, [a, b]);
+    assert.equal(insertCalls, 1);
+    assert.equal(result.written, 2);
+    assert.equal(result.duplicatesCollapsed, 0);
+    assert.equal(result.conflicts.length, 0);
   });
 
   await test("writeDividendBatch: same-batch duplicate (same fundId+exDate+amount) collapses to one write", async () => {

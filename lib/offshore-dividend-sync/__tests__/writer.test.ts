@@ -121,15 +121,38 @@ const sampleCandidate = (fundId: string, exDate: string) => ({
     assert.equal(result.writeErrorCount, 1);
   });
 
-  await test("writeDistributionBatch: skips a (fund_id, ex_date) pair that already exists for this source", async () => {
+  await test("writeDistributionBatch: skips a (fund_id, record_date, ex_date) tuple that already exists for this source", async () => {
     const query = async (sql: string, params: any[]) => {
-      if (sql.includes("SELECT fund_id")) return [{ fund_id: "f1", ex_date: "2026-10-08" }];
+      if (sql.includes("SELECT fund_id")) return [{ fund_id: "f1", record_date: "2026-09-30", ex_date: "2026-10-08" }];
       const payload = JSON.parse(params[0]);
       return payload.map((_: unknown, i: number) => ({ id: `row-${i}` }));
     };
     const result = await writeDistributionBatch(query, [sampleCandidate("f1", "2026-10-08"), sampleCandidate("f1", "2026-11-08")]);
     assert.equal(result.written, 1);
     assert.equal(result.skippedExisting, 1);
+  });
+
+  await test("writeDistributionBatch: same fundId+exDate but different recordDate (基準日) -- two real distributions, both written", async () => {
+    let insertCalls = 0;
+    const query = async (sql: string, params: any[]) => {
+      if (sql.includes("SELECT fund_id")) return [];
+      insertCalls++;
+      const payload = JSON.parse(params[0]);
+      return payload.map((_: unknown, i: number) => ({ id: `row-${i}` }));
+    };
+    // Regression case for 88315292B/D 2024-03: same exDate, different recordDate/amount -- must NOT be
+    // treated as a conflict or collapsed, because recordDate distinguishes two real events.
+    const a = sampleCandidate("88315292B", "2024-03-04");
+    a.record.baseDate = "2024-03-01";
+    a.record.amount = 0.10147;
+    const b = sampleCandidate("88315292B", "2024-03-04");
+    b.record.baseDate = "2024-04-01";
+    b.record.amount = 0.09417;
+    const result = await writeDistributionBatch(query, [a, b]);
+    assert.equal(insertCalls, 1);
+    assert.equal(result.written, 2);
+    assert.equal(result.duplicatesCollapsed, 0);
+    assert.equal(result.conflicts.length, 0);
   });
 
   await test("writeDistributionBatch: a whole chunk failing never blocks a later chunk", async () => {

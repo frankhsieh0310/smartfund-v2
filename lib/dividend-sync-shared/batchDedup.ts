@@ -1,18 +1,25 @@
 // Shared within-batch dedup for domestic-dividend-sync and offshore-dividend-sync writers. Root cause
 // (confirmed live against SITCA's own source, 2026-10-13): SITCA's monthly table can list the same
-// fund+exDate twice with IDENTICAL amount (payDate off by a day -- looks like an upstream republish),
-// and separately, exDate is NOT always unique per fund -- two genuinely independent distribution events
-// (different baseDate month, different payDate, different amount) can coincidentally share an exDate
-// (confirmed for 88315292B/D, 2024-03). The existing SELECT-existing-then-filter dedup only catches
-// candidates against rows ALREADY in the DB -- it does nothing for two colliding rows arriving in the
-// SAME batch, which is exactly the SITCA-republish case. This module groups a batch by (fundId, exDate)
-// before that DB check runs: same-amount groups collapse to one (keep the last -- the later position in
-// SITCA's own listing order is the more-recently-published row), differing-amount groups are excluded
-// entirely and reported as conflicts (no heuristic "pick the right one" -- both can be independently
-// real, as 88315292B/D proved, so forcing a choice would silently write wrong data).
-export type DedupKey = { fundId: string; exDate: string; amount: number };
+// fund+recordDate(基準日)+exDate twice with IDENTICAL amount (payDate off by a day -- looks like an
+// upstream republish). The existing SELECT-existing-then-filter dedup only catches candidates against
+// rows ALREADY in the DB -- it does nothing for two colliding rows arriving in the SAME batch, which is
+// exactly that case. This module groups a batch by (fundId, recordDate, exDate) before that DB check
+// runs: same-key/same-amount groups collapse to one (keep the last -- the later position in SITCA's own
+// listing order is the more-recently-published row), same-key/different-amount groups are excluded
+// entirely and reported as conflicts (no heuristic "pick the right one").
+//
+// 2026-10-13 CORRECTION: the key was originally (fundId, exDate) only, on the assumption that exDate is
+// unique per fund. It is NOT -- confirmed live for 88315292B/D (2024-03): two genuinely independent
+// distribution events (different recordDate/baseDate month, different payDate, different amount) can
+// coincidentally share the SAME exDate. Grouping by (fundId, exDate) alone misfiled that pair as a
+// "conflict" and would have blocked both from writing, and the Stage-2 unique index would have
+// permanently rejected the second one. recordDate (基準日, SITCA's own reporting-period anchor) is part
+// of the key SITCA itself treats as distinguishing two distributions, so it must be part of ours too --
+// confirmed via a live DB recheck that record_date is 0% NULL for both affected sources, so no COALESCE
+// is needed.
+export type DedupKey = { fundId: string; recordDate: string; exDate: string; amount: number };
 
-export type DedupConflict = { fundId: string; exDate: string; amounts: number[]; count: number };
+export type DedupConflict = { fundId: string; recordDate: string; exDate: string; amounts: number[]; count: number };
 
 export type DedupResult<T> = {
   toWrite: T[];
@@ -20,12 +27,12 @@ export type DedupResult<T> = {
   duplicatesCollapsed: number;
 };
 
-export function dedupBatchByFundExDate<T>(candidates: T[], keyOf: (c: T) => DedupKey): DedupResult<T> {
+export function dedupBatchByFundRecordExDate<T>(candidates: T[], keyOf: (c: T) => DedupKey): DedupResult<T> {
   const groups = new Map<string, T[]>();
   const order: string[] = [];
   for (const c of candidates) {
-    const { fundId, exDate } = keyOf(c);
-    const key = `${fundId}::${exDate}`;
+    const { fundId, recordDate, exDate } = keyOf(c);
+    const key = `${fundId}::${recordDate}::${exDate}`;
     const arr = groups.get(key);
     if (arr) {
       arr.push(c);
@@ -51,8 +58,8 @@ export function dedupBatchByFundExDate<T>(candidates: T[], keyOf: (c: T) => Dedu
       toWrite.push(group[group.length - 1]);
       duplicatesCollapsed += group.length - 1;
     } else {
-      const { fundId, exDate } = keyOf(group[0]);
-      conflicts.push({ fundId, exDate, amounts: uniqueAmounts, count: group.length });
+      const { fundId, recordDate, exDate } = keyOf(group[0]);
+      conflicts.push({ fundId, recordDate, exDate, amounts: uniqueAmounts, count: group.length });
     }
   }
 
