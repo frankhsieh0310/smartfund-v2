@@ -9,11 +9,17 @@
 // use the existing fund_provider_mappings(provider='yahoo') rows directly (confirmed live: provider_code
 // + ":FO" works as a yahooFundId with no new discovery sweep needed -- see domesticYahooMapping.ts).
 //
-// Selection: oldest-fetched-or-never-fetched first, skipping funds with a REAL (fund_id, source) row in
-// `holdings` less than FRESH_DAYS old -- shadow-mode runs never write, so they can never make a fund
-// look "already fetched" (see selection.ts). Scheduled hourly at :52 (vercel.json); 150s time budget
-// per invocation, picks up where it left off next hour via the same freshness query (no separate
-// checkpoint needed -- the `holdings` table rows ARE the checkpoint).
+// Selection splits by mode:
+//  - WRITE mode: oldest-fetched-or-never-fetched first, skipping funds with a REAL (fund_id, source) row
+//    in `holdings` less than FRESH_DAYS old (selection.ts). The `holdings` table rows ARE the checkpoint
+//    -- no separate state needed.
+//  - SHADOW mode: never writes, so the holdings-table check above would see the SAME "never fetched"
+//    batch every single run forever -- shadow coverage would never advance past the first ~33 funds.
+//    Instead uses its own rotation cursor (shadowCursor.ts, production_scheduler_checkpoints key
+//    "holdings-alt-source-sync:shadow-cursor") that tracks which fundIds a shadow run has VISITED in
+//    the current cycle, independent of `holdings` entirely. Wraps back to the start once every fund in
+//    the universe has been visited. This cursor has zero effect on write-mode selection.
+// Scheduled hourly at :52 (vercel.json); 150s time budget per invocation.
 //
 // ETF constituent sources: no new work needed, lib/etf-holdings-engine/ already covers this via
 // official per-issuer disclosure. SITCA top-10 domestic holdings: researched, not found/implemented
@@ -23,6 +29,7 @@ import { beginRun, finishRun } from "@/lib/cloud-ingestion/runContext";
 import { loadMapping } from "@/lib/offshore-nav-sync/mapping";
 import { loadDomesticYahooMapping } from "@/lib/holdings-alt-source/domesticYahooMapping";
 import { selectOldestFirst } from "@/lib/holdings-alt-source/selection";
+import { loadShadowCursor, saveShadowCursor, selectShadowBatch } from "@/lib/holdings-alt-source/shadowCursor";
 import { fetchYahooOffshoreHoldings, YahooRateLimitedError, YAHOO_HOLDINGS_SOURCE } from "@/lib/holdings-alt-source/yahooOffshoreHoldings";
 import { writeYahooOffshoreHoldings, type QueryFn } from "@/lib/holdings-alt-source/writer";
 import { isWriteEnabled, currentRunMode } from "@/lib/holdings-alt-source/writeGate";
@@ -58,7 +65,19 @@ export async function GET(request: Request) {
 
   const [offshoreMapping, domesticMapping] = await Promise.all([loadMapping(query), loadDomesticYahooMapping(query)]);
   const combined = [...offshoreMapping, ...domesticMapping];
-  const sorted = await selectOldestFirst(query, combined, YAHOO_HOLDINGS_SOURCE, FRESH_DAYS);
+
+  let sorted: Array<{ fundId: string; code: string; yahooFundId: string }>;
+  let shadowCursorBefore: Awaited<ReturnType<typeof loadShadowCursor>> | null = null;
+  let shadowCycleWillReset = false;
+  if (writeEnabledThisRun) {
+    sorted = await selectOldestFirst(query, combined, YAHOO_HOLDINGS_SOURCE, FRESH_DAYS);
+  } else {
+    shadowCursorBefore = await loadShadowCursor(query);
+    const picked = selectShadowBatch(combined, shadowCursorBefore);
+    sorted = picked.batch;
+    shadowCycleWillReset = picked.cycleWillReset;
+    shadowCursorBefore = picked.startingState; // already reset to empty here if the cycle wrapped
+  }
 
   let attempted = 0, fetched = 0, written = 0, writableRowCount = 0, errorCount = 0, rateLimited = false;
   let httpStatus: number | null = null;
@@ -66,10 +85,12 @@ export async function GET(request: Request) {
   let stoppedReason: string | null = null;
   let offshoreAttempted = 0, offshoreFetched = 0, domesticAttempted = 0, domesticFetched = 0;
   const offshoreFundIds = new Set(offshoreMapping.map((m) => m.fundId));
+  const visitedThisRun: string[] = [];
 
   for (const entry of sorted) {
     if (Date.now() - startedMs > TIME_BUDGET_MS) { stoppedReason = "TIME_BUDGET_EXCEEDED"; break; }
     attempted++;
+    visitedThisRun.push(entry.fundId);
     const isOffshore = offshoreFundIds.has(entry.fundId);
     if (isOffshore) offshoreAttempted++; else domesticAttempted++;
     try {
@@ -101,6 +122,11 @@ export async function GET(request: Request) {
     await sleep(REQUEST_SPACING_MS);
   }
 
+  if (!writeEnabledThisRun && shadowCursorBefore) {
+    const updatedProcessed = [...new Set([...shadowCursorBefore.processedFundIds, ...visitedThisRun])];
+    await saveShadowCursor(query, runId, { processedFundIds: updatedProcessed, cycleStartedAt: shadowCursorBefore.cycleStartedAt });
+  }
+
   const status = "COMPLETED";
   const runtimeMs = Date.now() - startedMs;
   await finishRun(runId, JOB, YAHOO_HOLDINGS_SOURCE, startedMs, {
@@ -112,6 +138,8 @@ export async function GET(request: Request) {
       domestic_attempted: domesticAttempted, domestic_fetched: domesticFetched, fetched, written,
       writable_row_count: writableRowCount, error_count: errorCount, rate_limited: rateLimited, http_status: httpStatus,
       stopped_reason: stoppedReason, runtime_seconds: Math.round(runtimeMs / 1000), fresh_days: FRESH_DAYS,
+      shadow_cycle_reset: shadowCycleWillReset,
+      shadow_cycle_processed_before_this_run: shadowCursorBefore?.processedFundIds.length ?? null,
     },
   });
 
@@ -121,5 +149,6 @@ export async function GET(request: Request) {
     offshoreAttempted, offshoreFetched, domesticAttempted, domesticFetched,
     attempted, fetched, written, writableRowCount, errorCount, rateLimited, httpStatus, stoppedReason,
     runtimeSeconds: Math.round(runtimeMs / 1000),
+    shadowCycleReset: shadowCycleWillReset,
   });
 }
