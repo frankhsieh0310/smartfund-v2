@@ -1,0 +1,59 @@
+{
+  "_comment": "草稿，僅供人工審閱，刻意不放在應用程式會讀取的路徑。正式版本需逐條覆核後搬到正式設定位置，並沿用此處的版本號/changelog 慣例。詞彙皆為範例，非窮舉清單，上線前需大幅擴充與在地化審閱。",
+  "version": "0.1.0-draft",
+  "lastUpdated": "2026-10-13",
+  "changelog": [
+    { "version": "0.1.0-draft", "date": "2026-10-13", "note": "初版草稿，隨 paid-member-forum-spec.md 一併送審" }
+  ],
+  "normalization": {
+    "steps": [
+      "全形轉半形（數字、英文字母、標點）",
+      "移除/壓縮空白與分隔符號（含插入符號規避，如 0912-xxx-xxx、0 9 1 2）",
+      "簡體轉繁體後再比對一次",
+      "常見諧音/注音文替代字展開",
+      "中文數字/全形數字/拆字電話號碼展開比對"
+    ],
+    "note": "本檔案只列出比對用詞彙，正規化程式邏輯另外實作，不在本檔案內。"
+  },
+  "categories": {
+    "fraud_redirect": {
+      "action": "BLOCK",
+      "description": "防詐騙導流：聯絡方式、外部連結、招攬用語",
+      "patterns": {
+        "phone_like": ["電話格式(由正規化後的程式規則偵測，非固定清單)"],
+        "email_like": ["Email格式(由正規化後的程式規則偵測，非固定清單)"],
+        "messaging_apps": ["LINE", "微信", "WeChat", "Telegram", "WhatsApp", "Skype", "Messenger"],
+        "solicitation_terms": ["加我", "加好友", "帶單", "跟單", "保證獲利", "穩賺", "內線消息", "飆股報牌", "付費社團", "付費群"],
+        "private_contact_terms_blocked_outright": ["私訊", "私我", "PM我", "站內信", "DM我"],
+        "notify_only_standalone_terms": ["老師", "群組"]
+      },
+      "whitelisted_domains": ["smartmatch.tw", "smartfund-v2.vercel.app", "smartmatchpilot.com"]
+    },
+    "stock_trading_advice": {
+      "action": "CONDITIONAL_BLOCK",
+      "description": "個股代號/名稱 + 交易用語出現在 30 字範圍內才擋；純資料面用語不擋",
+      "window_chars": 30,
+      "trading_verbs_blocked": ["買進", "買入", "賣出", "出場", "進場", "目標價", "明牌", "飆股", "跟進", "出清", "停損", "停利", "加碼", "減碼"],
+      "data_terms_not_blocked": ["配息", "持股", "成分股", "追蹤誤差", "淨值", "殖利率", "費用率", "規模", "成立日期"],
+      "notify_only_combo": ["代號+長期持有", "代號+基本面"]
+    },
+    "profanity": {
+      "action": "MIXED",
+      "description": "人身攻擊/歧視直接擋；口語讚美類只通知",
+      "block_outright": {
+        "personal_attack_examples": ["白痴", "智障", "去死", "廢物", "垃圾人"],
+        "discrimination_examples": ["(依性別/族群/性向/身心障礙之歧視用語，需在地化人工補完，不在此列出完整清單)"]
+      },
+      "notify_only_examples": ["屌", "猛", "狂", "神"]
+    }
+  },
+  "thresholds": {
+    "same_user_blocked_attempts_notify_admin": {
+      "count": 3,
+      "window_minutes": 10
+    },
+    "report_count_auto_hide": 3,
+    "report_response_target_hours": 24,
+    "report_reminder_after_hours": 20
+  }
+}
