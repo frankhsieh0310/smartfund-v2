@@ -33,12 +33,28 @@ export interface FundListItem {
   source: string | null;
 }
 
+// 2026-10-14 QA-round-1 fix: 4,577 offshore foreign-currency share classes (data_provider='yahoo')
+// were bulk-imported once (2026-07-24) and never covered by any ongoing NAV sync since -- see
+// docs/specs/offshore-fund-classification.md. Classified against TDCC's own official offshore-fund
+// list (opendata.tdcc.com.tw): 3,711 are TDCC-approved but simply not synced yet (pending approval to
+// extend offshore-nav-sync's coverage), 866 are not in TDCC's current list at all. Hiding this WHOLE
+// stale set from listings/search for now (not deleting, not distinguishing the two sub-groups here)
+// is simplest and self-correcting: once the 3,711 are approved and synced they become fresh and this
+// condition naturally stops hiding them, while the 866 stay hidden indefinitely (correctly, since
+// they're never going to get synced). NOT applied to the DB -- display layer only.
+const STALE_UNSYNCED_OFFSHORE_FUND_DAYS = 14;
+
 export async function getFundList(query: FundListQuery = {}): Promise<ServiceResponse<FundListItem[]>> {
   const { page, pageSize, skip } = normalizePagination(query.page, query.pageSize);
   const term = query.query?.trim();
   const direction: Prisma.SortOrder = query.direction === "desc" ? "desc" : "asc";
   const where = {
     isActive: true,
+    NOT: {
+      dataProvider: "yahoo",
+      lastNavSource: null,
+      latestNavDate: { lt: new Date(Date.now() - STALE_UNSYNCED_OFFSHORE_FUND_DAYS * 86_400_000) },
+    },
     ...(query.company ? { company: query.company } : {}),
     ...(query.currency ? { currency: query.currency } : {}),
     ...(query.category ? { category: query.category } : {}),
