@@ -1,0 +1,10 @@
+{
+  "asset":"GLOBAL_ETF",
+  "batchSize":10,
+  "maxDbConcurrency":1,
+  "requestPacingMs":1200,
+  "modules":["fundProfile","topHoldings","fundPerformance","defaultKeyStatistics","summaryDetail","assetProfile","price"],
+  "dailyModules":["summaryDetail","price"],
+  "weeklyModules":["topHoldings","fundPerformance","defaultKeyStatistics"],
+  "monthlyModules":["fundProfile","assetProfile"]
+}

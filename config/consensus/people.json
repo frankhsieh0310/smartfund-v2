@@ -1,0 +1,798 @@
+{
+  "_note": "SmartMatch consensus-radar person whitelist (Phase 1, ~44). Maintainable config. category: POLICY|TECH|FINANCE|ENERGY|INDUSTRY|INVESTOR. role titles are kept stable; ingestion corrects seat changes. priority: lower = higher.",
+  "people": [
+    {
+      "slug": "donald-trump",
+      "display_name": "Donald Trump",
+      "category": "POLICY",
+      "organization": "United States Government",
+      "role": "US President",
+      "country": "US",
+      "aliases": [
+        "President Trump"
+      ],
+      "source_priorities": [
+        "whitehouse-briefing",
+        "reuters",
+        "cnbc",
+        "bloomberg"
+      ],
+      "priority": 1
+    },
+    {
+      "slug": "scott-bessent",
+      "display_name": "Scott Bessent",
+      "category": "POLICY",
+      "organization": "US Department of the Treasury",
+      "role": "US Treasury Secretary",
+      "country": "US",
+      "aliases": [
+        "Treasury Secretary Bessent",
+        "Secretary Bessent",
+        "Scott K. H. Bessent"
+      ],
+      "source_priorities": [
+        "treasury-press",
+        "reuters",
+        "bloomberg"
+      ],
+      "priority": 5
+    },
+    {
+      "slug": "jerome-powell",
+      "display_name": "Jerome Powell",
+      "category": "POLICY",
+      "organization": "Federal Reserve",
+      "role": "Fed Chair",
+      "country": "US",
+      "aliases": [
+        "Chair Powell",
+        "Jay Powell",
+        "Chairman Powell",
+        "Jerome H. Powell"
+      ],
+      "source_priorities": [
+        "fed-speeches",
+        "reuters",
+        "cnbc"
+      ],
+      "priority": 2
+    },
+    {
+      "slug": "christopher-waller",
+      "display_name": "Christopher Waller",
+      "category": "POLICY",
+      "organization": "Federal Reserve",
+      "role": "Fed Governor",
+      "country": "US",
+      "aliases": [
+        "Governor Waller",
+        "Christopher J. Waller",
+        "Christopher Waller"
+      ],
+      "source_priorities": [
+        "fed-speeches",
+        "reuters"
+      ],
+      "priority": 20
+    },
+    {
+      "slug": "john-williams",
+      "display_name": "John C. Williams",
+      "category": "POLICY",
+      "organization": "Federal Reserve Bank of New York",
+      "role": "New York Fed President",
+      "country": "US",
+      "aliases": [
+        "John Williams",
+        "John C. Williams",
+        "President Williams"
+      ],
+      "source_priorities": [
+        "fed-speeches",
+        "reuters"
+      ],
+      "priority": 20
+    },
+    {
+      "slug": "michelle-bowman",
+      "display_name": "Michelle Bowman",
+      "category": "POLICY",
+      "organization": "Federal Reserve",
+      "role": "Fed Vice Chair for Supervision",
+      "country": "US",
+      "aliases": [
+        "Governor Bowman",
+        "Michelle W. Bowman",
+        "Vice Chair Bowman"
+      ],
+      "source_priorities": [
+        "fed-speeches",
+        "reuters"
+      ],
+      "priority": 25
+    },
+    {
+      "slug": "howard-lutnick",
+      "display_name": "Howard Lutnick",
+      "category": "POLICY",
+      "organization": "US Department of Commerce",
+      "role": "US Commerce Secretary",
+      "country": "US",
+      "aliases": [
+        "Commerce Secretary Lutnick",
+        "Secretary Lutnick",
+        "Howard W. Lutnick"
+      ],
+      "source_priorities": [
+        "commerce-press",
+        "reuters",
+        "bloomberg"
+      ],
+      "priority": 15
+    },
+    {
+      "slug": "jamieson-greer",
+      "display_name": "Jamieson Greer",
+      "category": "POLICY",
+      "organization": "Office of the US Trade Representative",
+      "role": "US Trade Representative",
+      "country": "US",
+      "aliases": [
+        "USTR Greer",
+        "Ambassador Greer",
+        "Trade Representative Greer"
+      ],
+      "source_priorities": [
+        "ustr-press",
+        "reuters"
+      ],
+      "priority": 25
+    },
+    {
+      "slug": "jensen-huang",
+      "display_name": "Jensen Huang",
+      "name_en": "Jensen Huang",
+      "category": "TECH",
+      "organization": "NVIDIA",
+      "role": "Founder & CEO",
+      "country": "US",
+      "aliases": [
+        "Jensen Huang",
+        "Jen-Hsun Huang"
+      ],
+      "source_priorities": [
+        "nvidia-newsroom",
+        "nvidia-ir",
+        "cnbc",
+        "reuters"
+      ],
+      "priority": 1
+    },
+    {
+      "slug": "satya-nadella",
+      "display_name": "Satya Nadella",
+      "category": "TECH",
+      "organization": "Microsoft",
+      "role": "Chairman & CEO",
+      "country": "US",
+      "aliases": [
+        "Satya Nadella"
+      ],
+      "source_priorities": [
+        "microsoft-news",
+        "microsoft-ir",
+        "cnbc"
+      ],
+      "priority": 3
+    },
+    {
+      "slug": "sundar-pichai",
+      "display_name": "Sundar Pichai",
+      "category": "TECH",
+      "organization": "Alphabet",
+      "role": "CEO",
+      "country": "US",
+      "aliases": [
+        "Sundar Pichai"
+      ],
+      "source_priorities": [
+        "alphabet-ir",
+        "reuters",
+        "cnbc"
+      ],
+      "priority": 5
+    },
+    {
+      "slug": "mark-zuckerberg",
+      "display_name": "Mark Zuckerberg",
+      "category": "TECH",
+      "organization": "Meta Platforms",
+      "role": "Founder & CEO",
+      "country": "US",
+      "aliases": [
+        "Zuck"
+      ],
+      "source_priorities": [
+        "meta-ir",
+        "reuters",
+        "cnbc"
+      ],
+      "priority": 6
+    },
+    {
+      "slug": "tim-cook",
+      "display_name": "Tim Cook",
+      "category": "TECH",
+      "organization": "Apple",
+      "role": "CEO",
+      "country": "US",
+      "aliases": [
+        "Timothy D. Cook",
+        "Timothy Cook",
+        "Tim Cook"
+      ],
+      "source_priorities": [
+        "apple-newsroom",
+        "apple-ir",
+        "reuters"
+      ],
+      "priority": 4
+    },
+    {
+      "slug": "elon-musk",
+      "display_name": "Elon Musk",
+      "category": "TECH",
+      "organization": "Tesla",
+      "role": "CEO",
+      "country": "US",
+      "aliases": [
+        "Elon Musk"
+      ],
+      "source_priorities": [
+        "tesla-ir",
+        "reuters",
+        "cnbc"
+      ],
+      "priority": 2
+    },
+    {
+      "slug": "lisa-su",
+      "display_name": "Lisa Su",
+      "category": "TECH",
+      "organization": "AMD",
+      "role": "Chair & CEO",
+      "country": "US",
+      "aliases": [
+        "Dr. Lisa Su",
+        "Lisa T. Su",
+        "Lisa Su"
+      ],
+      "source_priorities": [
+        "amd-ir",
+        "reuters",
+        "cnbc"
+      ],
+      "priority": 8
+    },
+    {
+      "slug": "hock-tan",
+      "display_name": "Hock Tan",
+      "category": "TECH",
+      "organization": "Broadcom",
+      "role": "President & CEO",
+      "country": "US",
+      "aliases": [
+        "Hock E. Tan"
+      ],
+      "source_priorities": [
+        "broadcom-ir",
+        "reuters"
+      ],
+      "priority": 10
+    },
+    {
+      "slug": "sam-altman",
+      "display_name": "Sam Altman",
+      "category": "TECH",
+      "organization": "OpenAI",
+      "role": "CEO",
+      "country": "US",
+      "aliases": [
+        "Samuel Altman",
+        "OpenAI CEO Sam Altman",
+        "Altman"
+      ],
+      "source_priorities": [
+        "cnbc",
+        "wallstreetcn",
+        "economic-daily-news"
+      ],
+      "priority": 9
+    },
+    {
+      "slug": "larry-ellison",
+      "display_name": "Larry Ellison",
+      "category": "TECH",
+      "organization": "Oracle",
+      "role": "Chairman & CTO",
+      "country": "US",
+      "aliases": [
+        "Lawrence Ellison",
+        "Oracle founder Larry Ellison",
+        "Oracle co-founder Larry Ellison",
+        "Ellison"
+      ],
+      "source_priorities": [
+        "oracle-ir",
+        "sec-oracle",
+        "cnbc",
+        "reuters"
+      ],
+      "priority": 10
+    },
+    {
+      "slug": "cc-wei",
+      "display_name": "C.C. Wei",
+      "category": "TECH",
+      "organization": "TSMC",
+      "role": "Chairman & CEO",
+      "country": "TW",
+      "aliases": [
+        "Che-Chia Wei",
+        "C. C. Wei"
+      ],
+      "source_priorities": [
+        "tsmc-ir",
+        "reuters",
+        "cnbc"
+      ],
+      "priority": 3
+    },
+    {
+      "slug": "andy-jassy",
+      "display_name": "Andy Jassy",
+      "category": "TECH",
+      "organization": "Amazon",
+      "role": "President & CEO",
+      "country": "US",
+      "aliases": [
+        "Andrew R. Jassy",
+        "Andrew Jassy",
+        "Andy Jassy"
+      ],
+      "source_priorities": [
+        "amazon-ir",
+        "reuters",
+        "cnbc"
+      ],
+      "priority": 7
+    },
+    {
+      "slug": "cristiano-amon",
+      "display_name": "Cristiano Amon",
+      "category": "TECH",
+      "organization": "Qualcomm",
+      "role": "President & CEO",
+      "country": "US",
+      "aliases": [],
+      "source_priorities": [
+        "qualcomm-ir",
+        "reuters"
+      ],
+      "priority": 18
+    },
+    {
+      "slug": "lip-bu-tan",
+      "display_name": "Lip-Bu Tan",
+      "category": "TECH",
+      "organization": "Intel",
+      "role": "CEO",
+      "country": "US",
+      "aliases": [
+        "Lip Bu Tan"
+      ],
+      "source_priorities": [
+        "intel-ir",
+        "reuters",
+        "cnbc"
+      ],
+      "priority": 12
+    },
+    {
+      "slug": "warren-buffett",
+      "display_name": "Warren Buffett",
+      "category": "INVESTOR",
+      "organization": "Berkshire Hathaway",
+      "role": "Chairman & CEO",
+      "country": "US",
+      "aliases": [
+        "the Oracle of Omaha",
+        "Warren E. Buffett",
+        "Warren Buffett"
+      ],
+      "source_priorities": [
+        "berkshire-letters",
+        "cnbc",
+        "reuters"
+      ],
+      "priority": 2
+    },
+    {
+      "slug": "jamie-dimon",
+      "display_name": "Jamie Dimon",
+      "category": "FINANCE",
+      "organization": "JPMorgan Chase",
+      "role": "Chairman & CEO",
+      "country": "US",
+      "aliases": [
+        "James Dimon",
+        "Jamie Dimon"
+      ],
+      "source_priorities": [
+        "jpmorgan-ir",
+        "cnbc",
+        "reuters",
+        "bloomberg"
+      ],
+      "priority": 3
+    },
+    {
+      "slug": "larry-fink",
+      "display_name": "Larry Fink",
+      "category": "FINANCE",
+      "organization": "BlackRock",
+      "role": "Chairman & CEO",
+      "country": "US",
+      "aliases": [
+        "Laurence Fink",
+        "Laurence D. Fink",
+        "Larry Fink"
+      ],
+      "source_priorities": [
+        "blackrock-ir",
+        "cnbc",
+        "reuters"
+      ],
+      "priority": 4
+    },
+    {
+      "slug": "david-solomon",
+      "display_name": "David Solomon",
+      "category": "FINANCE",
+      "organization": "Goldman Sachs",
+      "role": "Chairman & CEO",
+      "country": "US",
+      "aliases": [
+        "David M. Solomon",
+        "David Solomon"
+      ],
+      "source_priorities": [
+        "goldman-ir",
+        "cnbc",
+        "reuters"
+      ],
+      "priority": 8
+    },
+    {
+      "slug": "ted-pick",
+      "display_name": "Ted Pick",
+      "category": "FINANCE",
+      "organization": "Morgan Stanley",
+      "role": "CEO",
+      "country": "US",
+      "aliases": [
+        "Edward Pick"
+      ],
+      "source_priorities": [
+        "morganstanley-ir",
+        "cnbc",
+        "reuters"
+      ],
+      "priority": 12
+    },
+    {
+      "slug": "brian-moynihan",
+      "display_name": "Brian Moynihan",
+      "category": "FINANCE",
+      "organization": "Bank of America",
+      "role": "Chair & CEO",
+      "country": "US",
+      "aliases": [],
+      "source_priorities": [
+        "bofa-ir",
+        "cnbc",
+        "reuters"
+      ],
+      "priority": 14
+    },
+    {
+      "slug": "jane-fraser",
+      "display_name": "Jane Fraser",
+      "category": "FINANCE",
+      "organization": "Citigroup",
+      "role": "CEO",
+      "country": "US",
+      "aliases": [],
+      "source_priorities": [
+        "citi-ir",
+        "cnbc",
+        "reuters"
+      ],
+      "priority": 16
+    },
+    {
+      "slug": "stephen-schwarzman",
+      "display_name": "Stephen Schwarzman",
+      "category": "FINANCE",
+      "organization": "Blackstone",
+      "role": "Chairman & CEO",
+      "country": "US",
+      "aliases": [
+        "Steve Schwarzman"
+      ],
+      "source_priorities": [
+        "blackstone-ir",
+        "bloomberg",
+        "reuters"
+      ],
+      "priority": 18
+    },
+    {
+      "slug": "ray-dalio",
+      "display_name": "Ray Dalio",
+      "category": "INVESTOR",
+      "organization": "Bridgewater Associates",
+      "role": "Founder",
+      "country": "US",
+      "aliases": [],
+      "source_priorities": [
+        "reuters",
+        "bloomberg",
+        "cnbc"
+      ],
+      "priority": 10
+    },
+    {
+      "slug": "bill-ackman",
+      "display_name": "Bill Ackman",
+      "category": "INVESTOR",
+      "organization": "Pershing Square Capital Management",
+      "role": "Founder & CEO",
+      "country": "US",
+      "aliases": [
+        "William Ackman"
+      ],
+      "source_priorities": [
+        "pershing-square",
+        "cnbc",
+        "reuters"
+      ],
+      "priority": 9
+    },
+    {
+      "slug": "howard-marks",
+      "display_name": "Howard Marks",
+      "category": "INVESTOR",
+      "organization": "Oaktree Capital Management",
+      "role": "Co-Chairman",
+      "country": "US",
+      "aliases": [],
+      "source_priorities": [
+        "oaktree-memos",
+        "bloomberg",
+        "cnbc"
+      ],
+      "priority": 12
+    },
+    {
+      "slug": "cathie-wood",
+      "display_name": "Cathie Wood",
+      "category": "INVESTOR",
+      "organization": "ARK Invest",
+      "role": "Founder & CEO",
+      "country": "US",
+      "aliases": [
+        "Catherine Wood"
+      ],
+      "source_priorities": [
+        "ark-research",
+        "cnbc",
+        "bloomberg"
+      ],
+      "priority": 11
+    },
+    {
+      "slug": "stanley-druckenmiller",
+      "display_name": "Stanley Druckenmiller",
+      "category": "INVESTOR",
+      "organization": "Duquesne Family Office",
+      "role": "Chairman & CEO",
+      "country": "US",
+      "aliases": [
+        "Druck"
+      ],
+      "source_priorities": [
+        "bloomberg",
+        "cnbc",
+        "reuters"
+      ],
+      "priority": 15
+    },
+    {
+      "slug": "david-tepper",
+      "display_name": "David Tepper",
+      "category": "INVESTOR",
+      "organization": "Appaloosa Management",
+      "role": "Founder & President",
+      "country": "US",
+      "aliases": [],
+      "source_priorities": [
+        "cnbc",
+        "bloomberg",
+        "reuters"
+      ],
+      "priority": 18
+    },
+    {
+      "slug": "ken-griffin",
+      "display_name": "Ken Griffin",
+      "category": "INVESTOR",
+      "organization": "Citadel",
+      "role": "Founder & CEO",
+      "country": "US",
+      "aliases": [
+        "Kenneth Griffin"
+      ],
+      "source_priorities": [
+        "bloomberg",
+        "cnbc",
+        "reuters"
+      ],
+      "priority": 16
+    },
+    {
+      "slug": "darren-woods",
+      "display_name": "Darren Woods",
+      "category": "ENERGY",
+      "organization": "ExxonMobil",
+      "role": "Chairman & CEO",
+      "country": "US",
+      "aliases": [],
+      "source_priorities": [
+        "exxon-ir",
+        "reuters",
+        "bloomberg"
+      ],
+      "priority": 12
+    },
+    {
+      "slug": "mike-wirth",
+      "display_name": "Mike Wirth",
+      "category": "ENERGY",
+      "organization": "Chevron",
+      "role": "Chairman & CEO",
+      "country": "US",
+      "aliases": [
+        "Michael Wirth"
+      ],
+      "source_priorities": [
+        "chevron-ir",
+        "reuters",
+        "bloomberg"
+      ],
+      "priority": 14
+    },
+    {
+      "slug": "vicki-hollub",
+      "display_name": "Vicki Hollub",
+      "category": "ENERGY",
+      "organization": "Occidental Petroleum",
+      "role": "President & CEO",
+      "country": "US",
+      "aliases": [],
+      "source_priorities": [
+        "oxy-ir",
+        "reuters",
+        "bloomberg"
+      ],
+      "priority": 20
+    },
+    {
+      "slug": "amin-nasser",
+      "display_name": "Amin H. Nasser",
+      "category": "ENERGY",
+      "organization": "Saudi Aramco",
+      "role": "President & CEO",
+      "country": "SA",
+      "aliases": [
+        "Amin Nasser"
+      ],
+      "source_priorities": [
+        "reuters",
+        "bloomberg"
+      ],
+      "priority": 18
+    },
+    {
+      "slug": "mary-barra",
+      "display_name": "Mary Barra",
+      "category": "INDUSTRY",
+      "organization": "General Motors",
+      "role": "Chair & CEO",
+      "country": "US",
+      "aliases": [],
+      "source_priorities": [
+        "gm-ir",
+        "reuters",
+        "cnbc"
+      ],
+      "priority": 14
+    },
+    {
+      "slug": "jim-farley",
+      "display_name": "Jim Farley",
+      "category": "INDUSTRY",
+      "organization": "Ford Motor",
+      "role": "President & CEO",
+      "country": "US",
+      "aliases": [
+        "James Farley"
+      ],
+      "source_priorities": [
+        "ford-ir",
+        "reuters",
+        "cnbc"
+      ],
+      "priority": 15
+    },
+    {
+      "slug": "doug-mcmillon",
+      "display_name": "Doug McMillon",
+      "category": "INDUSTRY",
+      "organization": "Walmart",
+      "role": "President & CEO",
+      "country": "US",
+      "aliases": [],
+      "source_priorities": [
+        "walmart-ir",
+        "reuters",
+        "cnbc"
+      ],
+      "priority": 16
+    },
+    {
+      "slug": "jim-fitterling",
+      "display_name": "Jim Fitterling",
+      "category": "INDUSTRY",
+      "organization": "Dow Inc.",
+      "role": "Chair & CEO",
+      "country": "US",
+      "aliases": [
+        "James Fitterling"
+      ],
+      "source_priorities": [
+        "dow-ir",
+        "reuters"
+      ],
+      "priority": 24
+    },
+    {
+      "slug": "bill-mcdermott",
+      "display_name": "Bill McDermott",
+      "category": "INDUSTRY",
+      "organization": "ServiceNow",
+      "role": "Chairman & CEO",
+      "country": "US",
+      "aliases": [
+        "William McDermott"
+      ],
+      "source_priorities": [
+        "servicenow-ir",
+        "cnbc",
+        "reuters"
+      ],
+      "priority": 22
+    }
+  ]
+}

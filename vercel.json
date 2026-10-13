@@ -1,0 +1,31 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "app/api/mobile/reverse-holdings/route.ts": { "regions": ["sin1"] },
+    "app/api/cron/market-close-sync/route.ts": { "regions": ["sin1"] }
+  },
+  "crons": [
+    { "path": "/api/workflows/bootstrap?workflow=poc", "schedule": "0 5 * * *" },
+    { "path": "/api/workflows/bootstrap?workflow=consensus", "schedule": "20 16 * * *" },
+    { "path": "/api/cron/consensus-live-ingest", "schedule": "*/5 * * * *" },
+    { "path": "/api/workflows/bootstrap?workflow=yahoo-etf-full-sweep", "schedule": "0 3 * * *" },
+    { "path": "/api/workflows/bootstrap?workflow=yahoo-etf-enrich-repair", "schedule": "30 3 * * *" },
+    { "path": "/api/workflows/bootstrap?workflow=yahoo-fund-full-sweep", "schedule": "0 4 * * *" },
+    { "path": "/api/workflows/bootstrap?workflow=yahoo-fund-enrich-repair", "schedule": "30 4 * * *" },
+    { "path": "/api/workflows/bootstrap?workflow=yahoo-etf-distribution-backfill", "schedule": "0 5 * * 0" },
+    { "path": "/api/cron/yahoo-fx?phase=quote", "schedule": "0 21 * * 1-5" },
+    { "path": "/api/cron/yahoo-fx?phase=history", "schedule": "30 21 * * 1-5" },
+    { "path": "/api/cron/yahoo-fx?phase=discovery", "schedule": "0 6 * * 0" },
+    { "path": "/api/cron/market-close-sync", "schedule": "*/15 * * * *" },
+    { "path": "/api/cron/etf-returns-sync", "schedule": "*/15 * * * *" },
+    { "path": "/api/cron/us-fund-nav-sync", "schedule": "*/15 23,0,1,2,3 * * *" },
+    { "path": "/api/cron/sitca-nav-sync", "schedule": "33 * * * *" },
+    { "path": "/api/cron/offshore-nav-sync", "schedule": "*/15 1-3 * * *" },
+    { "path": "/api/cron/offshore-nav-sync", "schedule": "0 4 * * *" },
+    { "path": "/api/cron/offshore-dividend-sync", "schedule": "*/15 5-8 * * *" },
+    { "path": "/api/cron/domestic-dividend-sync", "schedule": "0 2 * * *" },
+    { "path": "/api/cron/holdings-alt-source-sync", "schedule": "52 * * * *" },
+    { "path": "/api/cron/market-close-sync-backfill", "schedule": "7,37 * * * *" },
+    { "path": "/api/cron/daily-health-report", "schedule": "30 0 * * *" }
+  ]
+}

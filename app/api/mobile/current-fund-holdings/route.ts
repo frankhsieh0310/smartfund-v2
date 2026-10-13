@@ -1,0 +1,4 @@
+import { prisma } from "@/lib/prisma";
+const headers={"Access-Control-Allow-Origin":"*","Cache-Control":"no-store"};
+export async function GET(){const rows=await prisma.$queryRawUnsafe<Array<Record<string,unknown>>>(`WITH latest AS(SELECT fund_id,max(as_of_date) as_of_date FROM holdings WHERE fund_id IS NOT NULL AND source LIKE 'MONEYDJ%' GROUP BY fund_id) SELECT h.*,f.code AS fund_code,f.name AS fund_name,s.industry FROM holdings h JOIN latest l ON l.fund_id=h.fund_id AND l.as_of_date=h.as_of_date JOIN funds f ON f.id=h.fund_id LEFT JOIN securities s ON s.id=h.security_id WHERE h.source LIKE 'MONEYDJ%' ORDER BY f.code,h.rank NULLS LAST LIMIT 10000`);return Response.json({data:rows,meta:{currentOnly:true,source:'MONEYDJ',rows:rows.length}},{headers})}
+export async function OPTIONS(){return new Response(null,{status:204,headers})}

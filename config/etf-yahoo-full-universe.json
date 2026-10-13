@@ -1,0 +1,15 @@
+{
+  "asset": "GLOBAL_ETF",
+  "universe": 12802,
+  "batchSize": 25,
+  "maxDbConcurrency": 1,
+  "requestPacingMs": 900,
+  "retryDelaysMs": [5000, 15000],
+  "dailyOwner": "scripts/data/global-etf/run-global-etf-latest.ts",
+  "symbolSuffixes": {
+    "NYSEArca":"", "NasdaqGM":"", "NasdaqGS":"", "NasdaqCM":"", "CboeUS":"", "Cboe US":"", "NYSE":"", "AMEX":"",
+    "LSE":".L", "CboeUK":".L", "Cboe UK":".L", "Tokyo":".T", "JPX":".T", "HKSE":".HK",
+    "Toronto":".TO", "TSX":".TO", "ASX":".AX", "Xetra":".DE", "Frankfurt":".F", "Paris":".PA",
+    "Amsterdam":".AS", "Milan":".MI", "Swiss":".SW", "TWSE":".TW", "TPEx":".TWO", "TPEX":".TWO"
+  }
+}
