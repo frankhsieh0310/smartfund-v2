@@ -1,10 +1,10 @@
 import { spawn } from "node:child_process";
-import { PrismaClient } from "@prisma/client";
+import { loadWorkerRegistry, type WorkerNode, type WorkerScope } from "../governance/worker-ownership.ts";
 
 type Market = "NASDAQ" | "NYSE" | "AMEX";
 
-const prisma = new PrismaClient({ datasources: { db: { url: process.env.DIRECT_URL ?? process.env.DATABASE_URL } } });
 const US_MARKETS: Market[] = ["NASDAQ", "NYSE", "AMEX"];
+const DRY_RUN = process.argv.includes("--dry-run");
 
 function run(script: string, args: string[]): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -14,19 +14,43 @@ function run(script: string, args: string[]): Promise<void> {
   });
 }
 
-async function nextUsMarket(): Promise<Market | null> {
-  for (const market of US_MARKETS) {
-    const jobId = `official-financial-${market.toLowerCase()}-historical`;
-    const rows = await prisma.$queryRawUnsafe<Array<{ complete: boolean }>>(
-      "SELECT EXISTS(SELECT 1 FROM production_scheduler_runs WHERE job_id = $1 AND status = 'COMPLETED' AND validation_status = 'PASS') AS complete",
-      jobId,
-    );
-    if (!rows[0]?.complete) return market;
-  }
-  return null;
+function scopes(node: WorkerNode): WorkerScope[] {
+  return [...(node.assignment ? [node.assignment] : []), ...(node.scopedAssignments ?? [])];
+}
+
+function ownerFor(nodes: WorkerNode[], expected: WorkerScope): WorkerNode | undefined {
+  return nodes.find((node) => scopes(node).some((scope) =>
+    scope.domain.toUpperCase() === expected.domain &&
+    scope.market.toUpperCase() === expected.market &&
+    scope.mode.toUpperCase() === expected.mode,
+  ));
 }
 
 async function main(): Promise<void> {
+  const nodeId = process.env.SMARTFUND_NODE_ID?.trim();
+  if (nodeId !== "railway-production") throw new Error(`RAILWAY_NODE_ID_REQUIRED:${nodeId ?? "MISSING"}`);
+  const registry = await loadWorkerRegistry();
+  for (const market of US_MARKETS) {
+    const owner = ownerFor(registry.nodes, { domain: "FINANCIAL", market, mode: "HISTORICAL" });
+    console.log(JSON.stringify({
+      pipeline: `official-financial-${market.toLowerCase()}-historical`,
+      status: "SKIPPED_BY_OWNERSHIP",
+      owner: owner?.nodeId ?? null,
+      railwayOwner: false,
+    }));
+  }
+  if (DRY_RUN) {
+    for (const market of US_MARKETS) {
+      const owner = ownerFor(registry.nodes, { domain: "FINANCIAL", market, mode: "INCREMENTAL" });
+      if (owner?.nodeId !== nodeId || owner.status !== "ACTIVE") {
+        throw new Error(`RAILWAY_INCREMENTAL_OWNERSHIP_INVALID:${market}:${owner?.nodeId ?? "NONE"}:${owner?.status ?? "NONE"}`);
+      }
+      console.log(JSON.stringify({ pipeline: `official-financial-${market.toLowerCase()}-incremental`, status: "DRY_RUN_WOULD_RUN", owner: nodeId, databaseWrites: 0 }));
+    }
+    console.log(JSON.stringify({ status: "DRY_RUN_COMPLETE", historicalStarted: 0, incrementalValidated: US_MARKETS.length, databaseWrites: 0 }));
+    return;
+  }
+
   const taiwan = await Promise.allSettled([
     run("scripts/data/financial/backfill-taiwan-official-financial.ts", ["--apply", "--resume", "--incremental", "--markets=TWSE"]),
     run("scripts/data/financial/backfill-taiwan-official-financial.ts", ["--apply", "--resume", "--incremental", "--markets=TPEX"]),
@@ -35,17 +59,12 @@ async function main(): Promise<void> {
     if (result.status === "rejected") console.error(JSON.stringify({ pipeline: index === 0 ? "TWSE_FINANCIAL_INCREMENTAL" : "TPEX_FINANCIAL_INCREMENTAL", status: "FAILED", error: String(result.reason) }));
   }
 
-  const market = await nextUsMarket();
-  if (!market) {
-    for (const incrementalMarket of US_MARKETS) {
-      await run("scripts/data/financial/run-production-sec-financial.ts", [`--market=${incrementalMarket}`, "--incremental", "--max-symbols=100"]);
-    }
-    return;
+  for (const incrementalMarket of US_MARKETS) {
+    await run("scripts/data/financial/run-production-sec-financial.ts", [`--market=${incrementalMarket}`, "--incremental", "--max-symbols=100"]);
   }
-  await run("scripts/data/financial/run-production-sec-financial.ts", [`--market=${market}`, "--max-symbols=50"]);
 }
 
 main().catch((error: unknown) => {
   console.error(error);
   process.exitCode = 1;
-}).finally(() => prisma.$disconnect());
+});

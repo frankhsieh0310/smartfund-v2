@@ -30,13 +30,76 @@ on:
     - cron: "30 10 * * 1-5" # MOPS financial incremental — 18:30 Taipei, after-hours filing check (weekdays)
     - cron: "30 14 * * 1-5" # MOPS financial incremental (2nd pass) — 22:30 Taipei, catches late filers same day
     - cron: "0 13 * * *"    # SEC EDGAR financial incremental (discovery + bounded issuer refresh) — daily
+    - cron: "30 11 * * 1-5" # Function 2: Taiwan ETF official daily holdings — 19:30 Taipei, weekdays only
+    # FX quote (2026-09-12): Vercel Hobby rejected `0 */2 * * 1-5` outright ("Hobby accounts are
+    # limited to daily cron jobs") — same sub-daily limitation as everything else in this file, same
+    # fix. This IS the primary FX quote trigger; Vercel's own daily quote cron (vercel.json,
+    # 0 21 * * 1-5) is kept only as a safety net if this workflow ever fails to fire. Both call the
+    # same idempotent, stale-guarded route, so a same-day double-run is a safe no-op, not corruption.
+    - cron: "0 */2 * * 1-5" # FX quote (390 Yahoo-direct pairs, auto-chains 162 derived-cross) — every 2h weekdays
+    # Crypto: daily bounded history and marketcap slices (UTC); quote is manual only.
+    - cron: "39 0 * * *"        # marketcap: daily 08:39 Taipei, max 250 markets
+    - cron: "23 0 * * *"        # history: daily 08:23 Taipei, existing small batches
+    # Global Index history: daily incremental, same 00:xx UTC slot family as the crypto jobs above
+    # (00:26, between crypto-history and crypto-marketcap) — well after every major market's close
+    # (US ~20:00-21:00 UTC is the latest of the 16 major indices) so Yahoo's daily candle is already
+    # finalized by the time this fires. Market-level job over the existing 52-index registry, not
+    # per-index; checkpoint/resume + per-index failure isolation already live in the route itself.
+    - cron: "26 0 * * *"        # index history: daily 08:26 Taipei, existing checkpointed batches
+    # Commodity Core Universe (18 fixed roots): one trigger per EXCHANGE-GROUP close, not per
+    # symbol and not a single all-18 sweep (different commodity groups settle at very different
+    # times of day, so one shared time either fires too early for some or unnecessarily late for
+    # others). Same single logical owner (yahoo-commodity route + one engine) as before — grouping
+    # only changes the schedule, not the pipeline. Each time is the LATEST possible UTC settlement
+    # across that group's real exchange (i.e. winter/non-DST US offset, later in UTC than summer)
+    # plus a 20-30min buffer, so a group never fires before its own settlement in either DST state.
+    # Weekdays only; the route's own finalized-candle guard (reject high==low / zero-volume
+    # placeholder bars) is the second line of defense against an in-progress session.
+    - cron: "40 19 * * 1-5"     # Commodity: CBOT (Corn/Wheat/Soybeans/Soybean Oil) — day-session settle ~1:20pm CT = 19:20 UTC winter
+    - cron: "0 20 * * 1-5"      # Commodity: COMEX/NYMEX (WTI, Nat Gas, Gold, Silver, Copper, Platinum, Palladium) — settle 1:30-2:30pm ET = 18:30-19:30 UTC winter
+    - cron: "20 20 * * 1-5"     # Commodity: CME Livestock (Live Cattle, Lean Hogs) — Chicago settle ~1-2pm CT = 19:00-20:00 UTC winter
+    - cron: "0 21 * * 1-5"      # Commodity: ICE (Coffee, Cocoa, Sugar, Cotton, Brent) — NY softs ~1-2pm ET + ICE Europe Brent, safe latest bound
+    # Yahoo Taiwan "international index" page (22 fixed symbols): one trigger per MARKET close,
+    # not per index. Each time is picked at/after that market's LATEST possible UTC close (i.e. its
+    # winter/non-DST offset, which is later in UTC than its summer/DST offset) plus a 10-20min
+    # buffer for Yahoo to finalize the daily bar — so a market never fires before its own close in
+    # either DST state. Weekdays only (Mon-Fri UTC always lines up with the local trading weekday
+    # for every zone below, since none of these trigger times cross UTC midnight relative to the
+    # local session). Same idempotent/checkpointed route as the sweep above; Yahoo's own state
+    # (no new candle -> NOOP) handles exchange holidays without a holiday calendar here.
+    - cron: "20 6 * * 1-5"      # Index: Japan (^N225) — close 15:00 JST = 06:00 UTC
+    - cron: "45 6 * * 1-5"      # Index: Korea (^KS11) — close 15:30 KST = 06:30 UTC
+    - cron: "20 7 * * 1-5"      # Index: China A/B shares (SSE+SZSE, 6 symbols) — close 15:00 CST = 07:00 UTC
+    - cron: "45 7 * * 1-5"      # Index: Philippines (PSEI.PS) — close 15:30 PHT = 07:30 UTC
+    - cron: "25 8 * * 1-5"      # Index: Hong Kong (^HSI) — close 16:10 HKT = 08:10 UTC
+    - cron: "15 9 * * 1-5"      # Index: SE Asia (^JKSE, ^KLSE, ^STI) — close 09:00 UTC (all three coincide)
+    - cron: "15 10 * * 1-5"     # Index: India (^BSESN) — close 15:30 IST = 10:00 UTC
+    - cron: "5 16 * * 1-5"      # Index: Russia (RTSI.ME) — nominal MOEX close ~15:50 UTC (source frozen since 2022, expect NOOP)
+    - cron: "50 16 * * 1-5"     # Index: Europe (^GDAXI, ^FTSE, ^FCHI) — latest winter close 16:30-16:35 UTC
+    - cron: "15 21 * * 1-5"     # Index: US (^DJI, ^GSPC, ^IXIC, ^SOX) — latest winter close 21:00 UTC
+    # Macro/BIS automatic schedule removed (macro-bis-daily / macro-release-window-us): not one of
+    # SmartMatch's six core features, and both jobs were failing on missing DATABASE_URL every run.
+    # The jobs, their scripts, the macro API route, and all existing macro data are untouched —
+    # only the automatic trigger is gone. Still runnable on demand via workflow_dispatch (job=all),
+    # or restore the cron lines below (and the macro-bis-daily / macro-release-window-us
+    # workflow_dispatch options) to bring the schedule back:
+    #   - cron: "10 5 * * *"        # Macro/BIS daily source check, all days
+    #   - cron: "30 13 * * 1-5"     # US release window: check 1 (T+0)
+    #   - cron: "40 13 * * 1-5"     # US release window: check 2 (T+10)
+    #   - cron: "50 13 * * 1-5"     # US release window: check 3 (T+20)
+    #   - cron: "10 14 * * 1-5"     # US release window: check 4 (T+40, final bounded retry)
   workflow_dispatch:
     inputs:
       job:
         description: "Which job to run"
         type: choice
         default: all
-        options: [both, etf-price, moneydj-fund, moneydj-etf, global-etf-holdings, fund-holdings, fund-nav, consensus-ingest, consensus-aggregate, consensus-performance, consensus-flips, consensus-backfill, tw-fundamentals-refresh, global-pe-recompute, mops-financial-incremental, sec-financial-incremental, all]
+        options: [both, etf-price, moneydj-fund, moneydj-etf, global-etf-holdings, fund-holdings, fund-nav, consensus-ingest, consensus-aggregate, consensus-performance, consensus-flips, consensus-backfill, tw-fundamentals-refresh, global-pe-recompute, mops-financial-incremental, sec-financial-incremental, etf-official-holdings, fx-quote, crypto-quote, crypto-marketcap, crypto-history, index-history, index-japan, index-korea, index-china, index-philippines, index-hongkong, index-sea, index-india, index-russia, index-europe, index-us, commodity-cbot, commodity-comex-nymex, commodity-livestock, commodity-ice, all]
+      issuer:
+        description: "ETF issuer to run (etf-official-holdings job only; ignored by every other job)"
+        type: choice
+        default: all
+        options: [all, Cathay, JPMorgan, Allianz, UPAMC, AB, Fubon, CTBC, KGI, First, FHT, SinoPac, Yuanta, Capital, Mega, Taishin, Nomura, BlackRock]
 
 concurrency:
   group: cloud-data-ingestion
@@ -61,6 +124,23 @@ jobs:
         id: pick
         run: |
           case "${{ github.event.schedule }}" in
+            "39 0 * * *") echo "job=crypto-marketcap" >> "$GITHUB_OUTPUT" ;;
+            "23 0 * * *") echo "job=crypto-history" >> "$GITHUB_OUTPUT" ;;
+            "26 0 * * *") echo "job=index-history" >> "$GITHUB_OUTPUT" ;;
+            "40 19 * * 1-5") echo "job=commodity-cbot" >> "$GITHUB_OUTPUT" ;;
+            "0 20 * * 1-5") echo "job=commodity-comex-nymex" >> "$GITHUB_OUTPUT" ;;
+            "20 20 * * 1-5") echo "job=commodity-livestock" >> "$GITHUB_OUTPUT" ;;
+            "0 21 * * 1-5") echo "job=commodity-ice" >> "$GITHUB_OUTPUT" ;;
+            "20 6 * * 1-5") echo "job=index-japan" >> "$GITHUB_OUTPUT" ;;
+            "45 6 * * 1-5") echo "job=index-korea" >> "$GITHUB_OUTPUT" ;;
+            "20 7 * * 1-5") echo "job=index-china" >> "$GITHUB_OUTPUT" ;;
+            "45 7 * * 1-5") echo "job=index-philippines" >> "$GITHUB_OUTPUT" ;;
+            "25 8 * * 1-5") echo "job=index-hongkong" >> "$GITHUB_OUTPUT" ;;
+            "15 9 * * 1-5") echo "job=index-sea" >> "$GITHUB_OUTPUT" ;;
+            "15 10 * * 1-5") echo "job=index-india" >> "$GITHUB_OUTPUT" ;;
+            "5 16 * * 1-5") echo "job=index-russia" >> "$GITHUB_OUTPUT" ;;
+            "50 16 * * 1-5") echo "job=index-europe" >> "$GITHUB_OUTPUT" ;;
+            "15 21 * * 1-5") echo "job=index-us" >> "$GITHUB_OUTPUT" ;;
             "7 * * * *")  echo "job=fund-holdings" >> "$GITHUB_OUTPUT" ;;
             "17 * * * *") echo "job=etf-price" >> "$GITHUB_OUTPUT" ;;
             "27 * * * *") echo "job=fund-nav" >> "$GITHUB_OUTPUT" ;;
@@ -77,6 +157,8 @@ jobs:
             "30 10 * * 1-5") echo "job=mops-financial-incremental" >> "$GITHUB_OUTPUT" ;;
             "30 14 * * 1-5") echo "job=mops-financial-incremental" >> "$GITHUB_OUTPUT" ;;
             "0 13 * * *") echo "job=sec-financial-incremental" >> "$GITHUB_OUTPUT" ;;
+            "0 */2 * * 1-5") echo "job=fx-quote" >> "$GITHUB_OUTPUT" ;;
+            "30 11 * * 1-5") echo "job=etf-official-holdings" >> "$GITHUB_OUTPUT" ;;
             *)            echo "job=${{ github.event.inputs.job || 'all' }}" >> "$GITHUB_OUTPUT" ;;
           esac
 
@@ -246,6 +328,188 @@ jobs:
                "${BASE_URL}/api/cron/cloud-sec-financial-incremental" | tee sec-financial-incremental-response.json
           echo
 
+      - name: FX quote (390 Yahoo-direct pairs, auto-chains 162 derived-cross)
+        if: ${{ contains(fromJSON('["fx-quote","all"]'), steps.pick.outputs.job) }}
+        run: |
+          set -euo pipefail
+          # Observed live to take up to ~250s for a full 390-pair sweep on Vercel — max-time is
+          # comfortably above that and above the route's own maxDuration (280s), so curl never hangs
+          # up on a still-running function. No retry: a partial run already checkpoints cleanly and
+          # a retry would just re-hit the same in-progress dedup window.
+          curl --fail-with-body --show-error --silent \
+               --connect-timeout 15 --max-time 320 \
+               -H "Authorization: Bearer ${SECRET}" \
+               "${BASE_URL}/api/cron/yahoo-fx?phase=quote" | tee fx-quote-response.json
+          echo
+
+      - name: Index history (52-index registry, incremental, checkpointed)
+        if: ${{ contains(fromJSON('["index-history","all"]'), steps.pick.outputs.job) }}
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --show-error --silent \
+               --connect-timeout 15 --max-time 300 \
+               -H "Authorization: Bearer ${SECRET}" \
+               "${BASE_URL}/api/cron/yahoo-index?phase=history" | tee index-history-response.json
+          echo
+
+      - name: Commodity — CBOT close (Corn, Wheat, Soybeans, Soybean Oil)
+        if: ${{ contains(fromJSON('["commodity-cbot","all"]'), steps.pick.outputs.job) }}
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --show-error --silent \
+               --connect-timeout 15 --max-time 300 \
+               -H "Authorization: Bearer ${SECRET}" \
+               "${BASE_URL}/api/cron/yahoo-commodity?phase=history&group=cbot&symbols=ZC=F,ZW=F,ZS=F,ZL=F" | tee commodity-cbot-response.json
+          echo
+
+      - name: Commodity — COMEX/NYMEX close (WTI, Nat Gas, Gold, Silver, Copper, Platinum, Palladium)
+        if: ${{ contains(fromJSON('["commodity-comex-nymex","all"]'), steps.pick.outputs.job) }}
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --show-error --silent \
+               --connect-timeout 15 --max-time 300 \
+               -H "Authorization: Bearer ${SECRET}" \
+               "${BASE_URL}/api/cron/yahoo-commodity?phase=history&group=comex-nymex&symbols=CL=F,NG=F,GC=F,SI=F,HG=F,PL=F,PA=F" | tee commodity-comex-nymex-response.json
+          echo
+
+      - name: Commodity — CME Livestock close (Live Cattle, Lean Hogs)
+        if: ${{ contains(fromJSON('["commodity-livestock","all"]'), steps.pick.outputs.job) }}
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --show-error --silent \
+               --connect-timeout 15 --max-time 300 \
+               -H "Authorization: Bearer ${SECRET}" \
+               "${BASE_URL}/api/cron/yahoo-commodity?phase=history&group=livestock&symbols=LE=F,HE=F" | tee commodity-livestock-response.json
+          echo
+
+      - name: Commodity — ICE close (Coffee, Cocoa, Sugar, Cotton, Brent)
+        if: ${{ contains(fromJSON('["commodity-ice","all"]'), steps.pick.outputs.job) }}
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --show-error --silent \
+               --connect-timeout 15 --max-time 300 \
+               -H "Authorization: Bearer ${SECRET}" \
+               "${BASE_URL}/api/cron/yahoo-commodity?phase=history&group=ice&symbols=KC=F,CC=F,SB=F,CT=F,BZ=F" | tee commodity-ice-response.json
+          echo
+
+      - name: Index — Japan market close (^N225)
+        if: ${{ contains(fromJSON('["index-japan","all"]'), steps.pick.outputs.job) }}
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --show-error --silent \
+               --connect-timeout 15 --max-time 120 \
+               -H "Authorization: Bearer ${SECRET}" \
+               "${BASE_URL}/api/cron/yahoo-index?phase=history&market=japan&symbols=%5EN225" | tee index-japan-response.json
+          echo
+
+      - name: Index — Korea market close (^KS11)
+        if: ${{ contains(fromJSON('["index-korea","all"]'), steps.pick.outputs.job) }}
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --show-error --silent \
+               --connect-timeout 15 --max-time 120 \
+               -H "Authorization: Bearer ${SECRET}" \
+               "${BASE_URL}/api/cron/yahoo-index?phase=history&market=korea&symbols=%5EKS11" | tee index-korea-response.json
+          echo
+
+      - name: Index — China A/B shares market close (SSE+SZSE)
+        if: ${{ contains(fromJSON('["index-china","all"]'), steps.pick.outputs.job) }}
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --show-error --silent \
+               --connect-timeout 15 --max-time 150 \
+               -H "Authorization: Bearer ${SECRET}" \
+               "${BASE_URL}/api/cron/yahoo-index?phase=history&market=china&symbols=000001.SS,000002.SS,000003.SS,399001.SZ,399107.SZ,399108.SZ" | tee index-china-response.json
+          echo
+
+      - name: Index — Philippines market close (PSEI.PS)
+        if: ${{ contains(fromJSON('["index-philippines","all"]'), steps.pick.outputs.job) }}
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --show-error --silent \
+               --connect-timeout 15 --max-time 120 \
+               -H "Authorization: Bearer ${SECRET}" \
+               "${BASE_URL}/api/cron/yahoo-index?phase=history&market=philippines&symbols=PSEI.PS" | tee index-philippines-response.json
+          echo
+
+      - name: Index — Hong Kong market close (^HSI)
+        if: ${{ contains(fromJSON('["index-hongkong","all"]'), steps.pick.outputs.job) }}
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --show-error --silent \
+               --connect-timeout 15 --max-time 120 \
+               -H "Authorization: Bearer ${SECRET}" \
+               "${BASE_URL}/api/cron/yahoo-index?phase=history&market=hongkong&symbols=%5EHSI" | tee index-hongkong-response.json
+          echo
+
+      - name: Index — SE Asia market close (^JKSE, ^KLSE, ^STI)
+        if: ${{ contains(fromJSON('["index-sea","all"]'), steps.pick.outputs.job) }}
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --show-error --silent \
+               --connect-timeout 15 --max-time 150 \
+               -H "Authorization: Bearer ${SECRET}" \
+               "${BASE_URL}/api/cron/yahoo-index?phase=history&market=sea&symbols=%5EJKSE,%5EKLSE,%5ESTI" | tee index-sea-response.json
+          echo
+
+      - name: Index — India market close (^BSESN)
+        if: ${{ contains(fromJSON('["index-india","all"]'), steps.pick.outputs.job) }}
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --show-error --silent \
+               --connect-timeout 15 --max-time 120 \
+               -H "Authorization: Bearer ${SECRET}" \
+               "${BASE_URL}/api/cron/yahoo-index?phase=history&market=india&symbols=%5EBSESN" | tee index-india-response.json
+          echo
+
+      - name: Index — Russia market close (RTSI.ME, source frozen since 2022 — expect NOOP)
+        if: ${{ contains(fromJSON('["index-russia","all"]'), steps.pick.outputs.job) }}
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --show-error --silent \
+               --connect-timeout 15 --max-time 120 \
+               -H "Authorization: Bearer ${SECRET}" \
+               "${BASE_URL}/api/cron/yahoo-index?phase=history&market=russia&symbols=RTSI.ME" | tee index-russia-response.json
+          echo
+
+      - name: Index — Europe market close (^GDAXI, ^FTSE, ^FCHI)
+        if: ${{ contains(fromJSON('["index-europe","all"]'), steps.pick.outputs.job) }}
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --show-error --silent \
+               --connect-timeout 15 --max-time 150 \
+               -H "Authorization: Bearer ${SECRET}" \
+               "${BASE_URL}/api/cron/yahoo-index?phase=history&market=europe&symbols=%5EGDAXI,%5EFTSE,%5EFCHI" | tee index-europe-response.json
+          echo
+
+      - name: Index — US market close (^DJI, ^GSPC, ^IXIC, ^SOX)
+        if: ${{ contains(fromJSON('["index-us","all"]'), steps.pick.outputs.job) }}
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --show-error --silent \
+               --connect-timeout 15 --max-time 150 \
+               -H "Authorization: Bearer ${SECRET}" \
+               "${BASE_URL}/api/cron/yahoo-index?phase=history&market=us&symbols=%5EDJI,%5EGSPC,%5EIXIC,%5ESOX" | tee index-us-response.json
+          echo
+
+      - name: Crypto bounded slice
+        # Keep legacy all/both semantics unchanged; manual Crypto runs select a phase explicitly.
+        if: ${{ startsWith(steps.pick.outputs.job, 'crypto-') }}
+        env:
+          CRYPTO_JOB: ${{ steps.pick.outputs.job }}
+          CRYPTO_INVOCATION_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          phase="${CRYPTO_JOB#crypto-}"
+          case "$phase" in quote|marketcap|history) ;; *) exit 1 ;; esac
+          curl --fail-with-body --show-error --silent \
+               --connect-timeout 15 --max-time 320 \
+               -H "Authorization: Bearer ${SECRET}" \
+               -H "x-crypto-invocation-id: ${CRYPTO_INVOCATION_ID}" \
+               "${BASE_URL}/api/cron/yahoo-crypto?phase=${phase}" | tee "crypto-${phase}-response.json"
+          # A 200 PARTIAL response must not hide provider/symbol failures in Actions.
+          jq -e '.ok == true and ((.failedMarkets // []) | length == 0)' "crypto-${phase}-response.json" >/dev/null
+
       - name: Upload responses
         if: always()
         uses: actions/upload-artifact@v4
@@ -254,3 +518,114 @@ jobs:
           path: "*-response.json"
           if-no-files-found: ignore
           retention-days: 7
+
+  # Function 2: Taiwan ETF Official Daily Holdings — one matrix job per issuer (fail-fast: false), each
+  # independently time-boxed and checkpointed server-side (app/api/cron/etf-official-holdings?issuer=).
+  # Replaces the old single cross-issuer batch loop: all 17 issuers' official sources were already
+  # individually verified to have no bulk/multi-fund endpoint, so this is purely an orchestration
+  # change — one slow/stuck issuer can no longer block or share a time budget with any other issuer.
+  # GitHub resolves job.if BEFORE strategy.matrix expands for that job, so a job.if referencing
+  # `matrix.*` fails the whole workflow at startup with "Unrecognized named-value: 'matrix'" — no step
+  # ever runs, no Production API is ever called. This prep job computes the issuer LIST itself (one
+  # name for a manual single-issuer dispatch, all 17 for a schedule run or issuer=all), and the real
+  # job below consumes that list via fromJSON() in strategy.matrix — its own if never references matrix.
+  etf-issuer-matrix-setup:
+    if: ${{ github.event.schedule == '30 11 * * 1-5' || github.event.inputs.job == 'etf-official-holdings' || github.event.inputs.job == 'all' }}
+    runs-on: ubuntu-latest
+    outputs:
+      issuers: ${{ steps.set.outputs.issuers }}
+    steps:
+      - id: set
+        run: |
+          set -euo pipefail
+          # Mega official site blocks cloud/datacenter egress (Vercel + GitHub 403);
+          # Mega is updated via DESKTOP fallback. Excluded from the schedule/issuer=all list below —
+          # manual single-issuer dispatch (issuer=Mega) still works, for diagnostics only.
+          all='["Cathay","JPMorgan","Allianz","UPAMC","AB","Fubon","CTBC","KGI","First","FHT","SinoPac","Yuanta","Capital","Taishin","Nomura","BlackRock"]'
+          selected="${{ github.event.inputs.issuer }}"
+          if [ -z "${selected}" ] || [ "${selected}" = "all" ]; then
+            echo "issuers=${all}" >> "$GITHUB_OUTPUT"
+          else
+            echo "issuers=[\"${selected}\"]" >> "$GITHUB_OUTPUT"
+          fi
+
+  etf-official-holdings:
+    needs: etf-issuer-matrix-setup
+    if: ${{ github.event.schedule == '30 11 * * 1-5' || github.event.inputs.job == 'etf-official-holdings' || github.event.inputs.job == 'all' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      # All 17 issuer legs hitting the same Vercel project concurrently was the actual systemic
+      # blocker: 14 of 17 timed out at curl's own 240s ceiling with 0 bytes received (exit 28) — not an
+      # issuer-side or route-side failure, concurrency contention against the single Production
+      # deployment. Capping concurrent legs bounds that contention; fail-fast stays false so one
+      # issuer's outcome still never affects any other's.
+      max-parallel: 3
+      matrix:
+        issuer: ${{ fromJSON(needs.etf-issuer-matrix-setup.outputs.issuers) }}
+    env:
+      BASE_URL: https://smartfund-v2.vercel.app
+      SECRET: ${{ secrets.SMARTFUND_CRON_SECRET }}
+    steps:
+      - name: Guard — secret present
+        run: |
+          if [ -z "${SECRET}" ]; then
+            echo "::error::SMARTFUND_CRON_SECRET is not set on this repository."
+            exit 1
+          fi
+
+      - name: "ETF official holdings — ${{ matrix.issuer }}"
+        run: |
+          set -euo pipefail
+          # Each call does real, time-boxed work server-side (WORK_BUDGET_MS in the route) and
+          # checkpoints per ticker — no sleep/poll here. Loops until this issuer's own reachedEnd=true;
+          # the 90-minute job timeout above is the hard backstop against an unbounded loop, and 200 is
+          # a generous sanity cap well beyond what any single issuer's own ticker count could need.
+          #
+          # skip_streak is a defensive guard against a DIFFERENT failure mode than reachedEnd itself:
+          # `skipped: true` (route.ts's run_key double-trigger guard) means this call made ZERO
+          # progress. One or two in a row can be benign (a near-simultaneous retry racing the prior
+          # call's own in-flight request), but several in a row means the loop is genuinely spinning
+          # with no progress — stop well short of burning the whole 200-call sanity cap on no-op calls.
+          # This is deliberately NOT "skipped => reachedEnd=true": a skip is never treated as done, only
+          # as "stop retrying without progress" — the actual fix for why a legitimate same-day retry
+          # could get skipped at all belongs in route.ts/runContext.ts's run_key lifecycle, not here.
+          reached_end=false
+          call=0
+          skip_streak=0
+          while [ "${reached_end}" != "true" ]; do
+            call=$((call + 1))
+            if [ "${call}" -gt 200 ]; then
+              echo "::error::${{ matrix.issuer }} did not reach reachedEnd=true within 200 calls — stopping."
+              exit 1
+            fi
+            echo "${{ matrix.issuer }} call ${call}"
+            curl --fail-with-body --show-error --silent \
+                 --connect-timeout 15 --max-time 240 \
+                 -H "Authorization: Bearer ${SECRET}" \
+                 "${BASE_URL}/api/cron/etf-official-holdings?issuer=${{ matrix.issuer }}" \
+                 | tee "etf-${{ matrix.issuer }}-response-${call}.json"
+            echo
+            if jq -e '.reachedEnd == true' "etf-${{ matrix.issuer }}-response-${call}.json" > /dev/null; then
+              reached_end=true
+            elif jq -e '.skipped == true' "etf-${{ matrix.issuer }}-response-${call}.json" > /dev/null; then
+              skip_streak=$((skip_streak + 1))
+              if [ "${skip_streak}" -ge 5 ]; then
+                echo "::error::${{ matrix.issuer }} got ${skip_streak} consecutive skipped (no-progress) responses — stopping without reachedEnd=true."
+                exit 1
+              fi
+            else
+              skip_streak=0
+            fi
+          done
+
+      - name: Upload responses
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: etf-official-holdings-${{ matrix.issuer }}-${{ github.run_id }}
+          path: "etf-${{ matrix.issuer }}-response-*.json"
+          if-no-files-found: ignore
+          retention-days: 7
+
