@@ -22,17 +22,53 @@ export function parseBackfillDates(envValue: string | undefined): string[] {
 
 export type CandidatePair = { etfId: string; date: string };
 
-/** Which (etfId, date) combinations, among all candidate ETFs x requested dates, are NOT already
- * present in etf_history -- the only ones this pass may write. `existingPairs` is a set of
- * "etfId::date" keys, already queried from the real DB. */
-export function computeMissingPairs(candidateEtfIds: string[], dates: string[], existingPairs: ReadonlySet<string>): CandidatePair[] {
+/** 2026-10-13 correction: the original version counted EVERY configured date as a gap for EVERY
+ * candidate, with no concept of "this date was never a trading day" or "we already asked Yahoo and it
+ * genuinely has nothing for this one". Confirmed live: 2026-10-09/10/11 (Fri/Sat/Sun -- Taiwan's 國慶日
+ * fell on a Saturday, so the Friday became a bridge holiday) have ZERO Yahoo data for 0050.TW itself,
+ * meaning the whole market was closed, not a data gap -- yet the old logic counted all 347 candidates
+ * x all 3 of those dates as "missing" forever, since Yahoo will never produce a close for a day the
+ * exchange never opened. `alreadyComplete` could never become true with those dates in the list, and
+ * the temporary every-30-min cron (vercel.json) would have run indefinitely. Two independent filters
+ * now apply before something counts as a real gap:
+ *   1. filterTradingDates() -- the date itself must be a genuine trading day (below).
+ *   2. confirmedNoData -- this exact (etfId, date) must not already be a confirmed "Yahoo has nothing
+ *      for this one specific symbol on this trading day" result from a prior run (e.g. the fund simply
+ *      didn't trade that day, or -- 00838B -- Yahoo has no data for the symbol at all, ever).
+ */
+export function computeMissingPairs(
+  candidateEtfIds: string[],
+  dates: string[],
+  existingPairs: ReadonlySet<string>,
+  confirmedNoData: ReadonlySet<string> = new Set(),
+): CandidatePair[] {
   const missing: CandidatePair[] = [];
   for (const etfId of candidateEtfIds) {
     for (const date of dates) {
-      if (!existingPairs.has(`${etfId}::${date}`)) missing.push({ etfId, date });
+      const key = `${etfId}::${date}`;
+      if (!existingPairs.has(key) && !confirmedNoData.has(key)) missing.push({ etfId, date });
     }
   }
   return missing;
+}
+
+/** Which of `dates` are genuine trading days, per the caller's own trading-day reference set (built
+ * from 0050.TW's own Yahoo chart data -- if the single most heavily-traded TW ETF has no bar for a
+ * date, the exchange simply wasn't open that day; this is a live, self-updating substitute for a
+ * hardcoded holiday calendar, consistent with how the rest of this pipeline already trusts Yahoo as
+ * its source of truth). A date absent from the reference set is dropped from the backfill target list
+ * entirely -- never counted as a gap, never fetched, never blocks `alreadyComplete`. */
+export function filterTradingDates(dates: readonly string[], tradingDays: ReadonlySet<string>): string[] {
+  return dates.filter((d) => tradingDays.has(d));
+}
+
+/** Of the dates actually requested for one symbol this run, which ones Yahoo's response had NO close
+ * for at all. Since the caller only ever requests confirmed trading days (filterTradingDates already
+ * ran), a date missing here means this ONE symbol didn't trade that day (or -- 00838B -- Yahoo has
+ * nothing for the symbol whatsoever) -- a real, confirmed non-availability the caller should persist so
+ * a later run never re-asks Yahoo the same question forever. */
+export function computeConfirmedNoData(requestedDates: readonly string[], closes: ReadonlyMap<string, number>): string[] {
+  return requestedDates.filter((d) => !closes.has(d));
 }
 
 export type YahooChartPoint = { dateKey: string; close: number | null };
