@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { checkPipelineRunLog, evaluateFreshness, type QueryFn } from "../checks.ts";
+import { checkPipelineRunLog, evaluateFreshness, checkEtfDataSourceGap, type QueryFn } from "../checks.ts";
 
 function test(name: string, fn: () => Promise<void> | void) {
   const p = Promise.resolve().then(fn);
@@ -63,5 +63,39 @@ function test(name: string, fn: () => Promise<void> | void) {
     const r = evaluateFreshness("test", old, 3);
     assert.equal(r.anomaly, true);
     assert.ok(r.anomalyReason?.startsWith("STALE_"));
+  });
+
+  test("checkEtfDataSourceGap: no NULL rows -> no anomaly", async () => {
+    const query: QueryFn = async () => [];
+    const r = await checkEtfDataSourceGap(query);
+    assert.equal(r.anomaly, false);
+    assert.equal(r.nullCount, 0);
+  });
+
+  test("checkEtfDataSourceGap: only the known gap (00838B) -> NOT an anomaly", async () => {
+    const query: QueryFn = async () => [{ code: "00838B" }];
+    const r = await checkEtfDataSourceGap(query);
+    assert.equal(r.anomaly, false);
+    assert.deepEqual(r.knownCodes, ["00838B"]);
+    assert.deepEqual(r.newCodes, []);
+  });
+
+  test("checkEtfDataSourceGap: a new, undocumented gap alongside the known one -> anomaly, known code excluded from newCodes", async () => {
+    const query: QueryFn = async () => [{ code: "00838B" }, { code: "00999Z" }];
+    const r = await checkEtfDataSourceGap(query);
+    assert.equal(r.anomaly, true);
+    assert.deepEqual(r.newCodes, ["00999Z"]);
+    assert.deepEqual(r.knownCodes, ["00838B"]);
+    assert.equal(r.nullCount, 2);
+  });
+
+  test("checkEtfDataSourceGap: codes list caps at 10 for display, but nullCount reflects the true total", async () => {
+    const rows = Array.from({ length: 15 }, (_, i) => ({ code: `0${1000 + i}X` }));
+    const query: QueryFn = async () => rows;
+    const r = await checkEtfDataSourceGap(query);
+    assert.equal(r.nullCount, 15);
+    assert.equal(r.codes.length, 10);
+    assert.equal(r.newCodes.length, 15);
+    assert.equal(r.anomaly, true);
   });
 })();

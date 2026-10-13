@@ -46,6 +46,36 @@ export async function checkPipelineRunLog(query: QueryFn, jobId: string): Promis
   };
 }
 
+export type DataSourceGapResult = {
+  nullCount: number;
+  codes: string[]; // up to 10, for display
+  knownCodes: string[]; // already-documented gaps (e.g. a suspected-delisted symbol) -- never re-raised as a fresh anomaly
+  newCodes: string[]; // anything NOT already documented -- these alone drive `anomaly`
+  anomaly: boolean;
+};
+
+// 2026-10-13: 33 TPEx ETFs were found with etfs.data_source = NULL (silently excluded from
+// market-close-sync's core universe -- see lib/market-close-sync/coreUniverse.ts). 32 were backfilled;
+// 00838B could not be (Yahoo has no data for 00838B.TWO at all, "No data found, symbol may be
+// delisted"). Listed here so it surfaces every day as a known, already-investigated data point
+// ("known/suspected delisted") rather than a fresh warning that looks identical to a brand-new gap.
+export const KNOWN_DATA_SOURCE_GAPS: ReadonlySet<string> = new Set(["00838B"]);
+
+// is_active TWSE/TPEx ETFs missing a data_source entirely fall out of market-close-sync's core
+// universe without ANY error, log line, or alert (confirmed live 2026-10-13 -- this is exactly how 33
+// funds went unnoticed for days). This check exists so a NEW gap (as opposed to the one already
+// known and backfilled) is never silent again.
+export async function checkEtfDataSourceGap(query: QueryFn): Promise<DataSourceGapResult> {
+  const rows = await query(
+    `SELECT code FROM etfs WHERE is_active = true AND exchange IN ('TWSE','TPEx') AND data_source IS NULL ORDER BY code`,
+    [],
+  );
+  const allCodes: string[] = rows.map((r) => r.code);
+  const knownCodes = allCodes.filter((c) => KNOWN_DATA_SOURCE_GAPS.has(c));
+  const newCodes = allCodes.filter((c) => !KNOWN_DATA_SOURCE_GAPS.has(c));
+  return { nullCount: allCodes.length, codes: allCodes.slice(0, 10), knownCodes, newCodes, anomaly: newCodes.length > 0 };
+}
+
 export type DataFreshnessResult = {
   label: string;
   latestDate: string | null;

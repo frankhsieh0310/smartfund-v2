@@ -12,7 +12,7 @@
 import { isAuthorizedCron, unauthorizedCron } from "@/lib/cron/authorize";
 import { prisma } from "@/lib/prisma";
 import { beginRun, finishRun } from "@/lib/cloud-ingestion/runContext";
-import { checkPipelineRunLog, evaluateFreshness, type QueryFn } from "@/lib/daily-health-report/checks";
+import { checkPipelineRunLog, evaluateFreshness, checkEtfDataSourceGap, type QueryFn } from "@/lib/daily-health-report/checks";
 import { notifyAnomaly } from "@/lib/daily-health-report/notify";
 
 export const runtime = "nodejs";
@@ -63,15 +63,22 @@ export async function GET(request: Request) {
     `SELECT to_char(max(latest_nav_date), 'YYYY-MM-DD') AS max_date FROM funds WHERE COALESCE(data_provider, '') NOT IN ('yahoo', 'SEC')`,
   );
   const domesticFundFreshness = evaluateFreshness("domestic_fund_nav", domesticFundFreshRow[0]?.max_date ?? null, 4);
+  const etfDataSourceGap = await checkEtfDataSourceGap(query);
 
   const anomalies = [
     ...pipelineHealth.filter((p) => p.anomaly).map((p) => ({ type: "PIPELINE", jobId: p.jobId, reasons: p.anomalyReasons })),
     ...[stockFreshness, domesticFundFreshness].filter((f) => f.anomaly).map((f) => ({ type: "FRESHNESS", label: f.label, reason: f.anomalyReason })),
+    ...(etfDataSourceGap.anomaly ? [{ type: "ETF_DATA_SOURCE_GAP", newCodes: etfDataSourceGap.newCodes }] : []),
   ];
 
   let notifyResult = null;
   if (anomalies.length > 0) {
-    notifyResult = await notifyAnomaly(`Daily health report ${today}: ${anomalies.length} anomalies`);
+    const lines = [`Daily health report ${today}: ${anomalies.length} anomalies`];
+    for (const p of pipelineHealth) if (p.anomaly) lines.push(`- PIPELINE ${p.jobId}: ${p.anomalyReasons.join(", ")}`);
+    for (const f of [stockFreshness, domesticFundFreshness]) if (f.anomaly) lines.push(`- FRESHNESS ${f.label}: ${f.anomalyReason}`);
+    if (etfDataSourceGap.anomaly) lines.push(`- ETF data_source NULL (new, not yet investigated): ${etfDataSourceGap.newCodes.join(", ")}`);
+    if (etfDataSourceGap.knownCodes.length > 0) lines.push(`(known/suspected-delisted, not a new warning: ${etfDataSourceGap.knownCodes.join(", ")})`);
+    notifyResult = await notifyAnomaly(lines.join("\n"));
   }
 
   const status = anomalies.length > 0 ? "PARTIAL" : "COMPLETED";
@@ -80,9 +87,9 @@ export async function GET(request: Request) {
     inserted: 0, updated: 0, failed: anomalies.length, retryableFailures: 0, checkpointAfter: null,
     details: {
       date: today, pipeline_health: pipelineHealth, stock_freshness: stockFreshness, domestic_fund_freshness: domesticFundFreshness,
-      anomaly_count: anomalies.length, anomalies, notify_result: notifyResult,
+      etf_data_source_gap: etfDataSourceGap, anomaly_count: anomalies.length, anomalies, notify_result: notifyResult,
     },
   });
 
-  return Response.json({ ok: true, job: JOB, runId, status, anomalyCount: anomalies.length, anomalies, notifyResult });
+  return Response.json({ ok: true, job: JOB, runId, status, anomalyCount: anomalies.length, anomalies, etfDataSourceGap, notifyResult });
 }

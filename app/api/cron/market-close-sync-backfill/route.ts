@@ -78,6 +78,7 @@ export async function GET(request: Request) {
   const existingPairs = new Set(existingRows.map((r) => `${r.etf_id}::${r.date.toISOString().slice(0, 10)}`));
 
   const missing = computeMissingPairs(candidateIds, dates, existingPairs);
+  const alreadyComplete = missing.length === 0;
   const missingByEtf = new Map<string, string[]>();
   for (const pair of missing) missingByEtf.set(pair.etfId, [...(missingByEtf.get(pair.etfId) ?? []), pair.date]);
   const candidateById = new Map(candidates.map((c) => [c.id, c]));
@@ -132,7 +133,7 @@ export async function GET(request: Request) {
     status, attempted: symbolsAttempted, completed: pairsWritten, inserted: pairsWritten, updated: etfsPriceUpdated,
     failed: symbolsFetchFailed + (writeErrorCount > 0 ? 1 : 0), retryableFailures: 0, checkpointAfter: null,
     details: {
-      dates, candidate_count: candidates.length, missing_pair_count: missing.length,
+      dates, candidate_count: candidates.length, missing_pair_count: missing.length, already_complete: alreadyComplete,
       symbols_attempted: symbolsAttempted, symbols_fetch_failed: symbolsFetchFailed,
       pairs_written: pairsWritten, etfs_price_updated: etfsPriceUpdated, write_error_count: writeErrorCount,
     },
@@ -140,6 +141,6 @@ export async function GET(request: Request) {
 
   return Response.json({
     ok: true, job: JOB, runId, status, dates, candidateCount: candidates.length, missingPairCount: missing.length,
-    symbolsAttempted, symbolsFetchFailed, pairsWritten, etfsPriceUpdated, writeErrorCount,
+    alreadyComplete, symbolsAttempted, symbolsFetchFailed, pairsWritten, etfsPriceUpdated, writeErrorCount,
   });
 }
