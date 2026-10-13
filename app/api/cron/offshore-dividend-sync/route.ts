@@ -74,7 +74,8 @@ export async function GET(request: Request) {
   let httpStatus: number | null = null;
   const newlyAttempted = new Set<string>();
   let fundsWithNewCandidates = 0;
-  let totalWritten = 0, totalSkippedExisting = 0, totalWriteErrorCount = 0, totalCandidateCount = 0;
+  let totalWritten = 0, totalSkippedExisting = 0, totalWriteErrorCount = 0, totalCandidateCount = 0, totalDuplicatesCollapsed = 0;
+  const allConflicts: Array<{ fundId: string; exDate: string; amounts: number[]; count: number }> = [];
   let pendingBuffer: DistributionWriteCandidate[] = [];
 
   async function flush() {
@@ -83,6 +84,8 @@ export async function GET(request: Request) {
     totalWritten += result.written;
     totalSkippedExisting += result.skippedExisting;
     totalWriteErrorCount += result.writeErrorCount;
+    totalDuplicatesCollapsed += result.duplicatesCollapsed;
+    allConflicts.push(...result.conflicts);
     pendingBuffer = [];
     // Persist progress as we go too, so a cut-off run doesn't lose today's attempted-set either.
     if (writeEnabledThisRun) {
@@ -131,6 +134,7 @@ export async function GET(request: Request) {
       rate_limited: rateLimited, http_status: httpStatus,
       funds_with_candidates: fundsWithNewCandidates, candidate_record_count: totalCandidateCount,
       written: totalWritten, skipped_existing: totalSkippedExisting, write_error_count: totalWriteErrorCount,
+      duplicates_collapsed: totalDuplicatesCollapsed, conflicts: allConflicts,
       attempted_today_total: new Set([...attemptedToday, ...newlyAttempted]).size,
     },
   });
@@ -141,5 +145,6 @@ export async function GET(request: Request) {
     noDistributionCount, errorCount, rateLimited, httpStatus,
     fundsWithCandidates: fundsWithNewCandidates, candidateRecordCount: totalCandidateCount,
     written: totalWritten, skippedExisting: totalSkippedExisting, writeErrorCount: totalWriteErrorCount,
+    duplicatesCollapsed: totalDuplicatesCollapsed, conflicts: allConflicts,
   });
 }

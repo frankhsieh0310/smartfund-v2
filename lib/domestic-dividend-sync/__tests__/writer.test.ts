@@ -62,6 +62,79 @@ const candidate = (fundId: string, exDate: string): DividendMatchResult => ({
     assert.equal(result.skippedExisting, 1);
   });
 
+  await test("writeDividendBatch: same-batch duplicate (same fundId+exDate+amount) collapses to one write", async () => {
+    let insertCalls = 0;
+    const query = async (sql: string, params: any[]) => {
+      if (sql.includes("SELECT fund_id")) return [];
+      insertCalls++;
+      const payload = JSON.parse(params[0]);
+      return payload.map((_: unknown, i: number) => ({ id: `row-${i}` }));
+    };
+    // Mirrors the live SITCA-republish case confirmed 2026-10-13: identical fundId/exDate/amount, only
+    // payDate differs by a day.
+    const a = candidate("f1", "2026-08-18");
+    const b = { ...a, row: { ...a.row, payDate: "2026-09-05" } };
+    const result = await writeDividendBatch(query, [a, b]);
+    assert.equal(insertCalls, 1);
+    assert.equal(result.written, 1);
+    assert.equal(result.duplicatesCollapsed, 1);
+    assert.equal(result.conflicts.length, 0);
+  });
+
+  await test("writeDividendBatch: same-batch conflict (same fundId+exDate, different amount) is NOT written, logged instead", async () => {
+    let insertCalls = 0;
+    const query = async (sql: string, params: any[]) => {
+      if (sql.includes("SELECT fund_id")) return [];
+      insertCalls++;
+      const payload = JSON.parse(params[0]);
+      return payload.map((_: unknown, i: number) => ({ id: `row-${i}` }));
+    };
+    // Mirrors the live 88315292B/D 2024-03 case: same exDate, genuinely two independent distribution
+    // events with different amounts -- neither is guessed at as "correct".
+    const a = candidate("f1", "2026-08-18");
+    const b = { ...a, row: { ...a.row, amount: 0.2 } };
+    const result = await writeDividendBatch(query, [a, b]);
+    assert.equal(insertCalls, 0);
+    assert.equal(result.written, 0);
+    assert.equal(result.conflicts.length, 1);
+    assert.deepEqual(result.conflicts[0].amounts.slice().sort(), [0.1, 0.2]);
+    assert.equal(result.conflicts[0].count, 2);
+  });
+
+  await test("writeDividendBatch: ON CONFLICT 42P10 (unique index not yet created) falls back to a plain INSERT", async () => {
+    let attempts = 0;
+    const query = async (sql: string, params: any[]) => {
+      if (sql.includes("SELECT fund_id")) return [];
+      attempts++;
+      if (attempts === 1) {
+        assert.match(sql, /ON CONFLICT/);
+        const e: any = new Error("no unique or exclusion constraint matching the ON CONFLICT specification");
+        e.code = "42P10";
+        throw e;
+      }
+      assert.doesNotMatch(sql, /ON CONFLICT/);
+      const payload = JSON.parse(params[0]);
+      return payload.map((_: unknown, i: number) => ({ id: `row-${i}` }));
+    };
+    const result = await writeDividendBatch(query, [candidate("f1", "2026-08-18")]);
+    assert.equal(attempts, 2);
+    assert.equal(result.written, 1);
+    assert.equal(result.writeErrorCount, 0);
+  });
+
+  await test("writeDividendBatch: a non-42P10 insert error does NOT retry, just fails the chunk", async () => {
+    let attempts = 0;
+    const query = async (sql: string, params: any[]) => {
+      if (sql.includes("SELECT fund_id")) return [];
+      attempts++;
+      throw new Error("connection reset");
+    };
+    const result = await writeDividendBatch(query, [candidate("f1", "2026-08-18")]);
+    assert.equal(attempts, 1);
+    assert.equal(result.written, 0);
+    assert.equal(result.writeErrorCount, 1);
+  });
+
   await test("SOURCE constant matches the route's PROVIDER label convention", () => {
     assert.equal(SOURCE, "SITCA_FSC_OFFICIAL_MONTHLY");
   });

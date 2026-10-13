@@ -86,7 +86,8 @@ export async function GET(request: Request) {
   let rateLimited = false;
   let httpStatus: number | null = null;
   let totalCandidateCount = 0;
-  let totalWritten = 0, totalSkippedExisting = 0, totalWriteErrorCount = 0;
+  let totalWritten = 0, totalSkippedExisting = 0, totalWriteErrorCount = 0, totalDuplicatesCollapsed = 0;
+  const allConflicts: Array<{ month: string; fundId: string; exDate: string; amounts: number[]; count: number }> = [];
   const newlyCompleted = new Set<string>();
 
   for (const month of pendingMonths) {
@@ -108,6 +109,8 @@ export async function GET(request: Request) {
       totalWritten += writeResult.written;
       totalSkippedExisting += writeResult.skippedExisting;
       totalWriteErrorCount += writeResult.writeErrorCount;
+      totalDuplicatesCollapsed += writeResult.duplicatesCollapsed;
+      for (const c of writeResult.conflicts) allConflicts.push({ month, ...c });
 
       monthsCompleted++;
       if (writeEnabledThisRun) {
@@ -140,6 +143,7 @@ export async function GET(request: Request) {
       rate_limited: rateLimited, http_status: httpStatus,
       candidate_record_count: totalCandidateCount, written: totalWritten,
       skipped_existing: totalSkippedExisting, write_error_count: totalWriteErrorCount,
+      duplicates_collapsed: totalDuplicatesCollapsed, conflicts: allConflicts,
       completed_months_total: writeEnabledThisRun ? completedMonths.size + newlyCompleted.size : completedMonths.size,
     },
   });
@@ -150,5 +154,6 @@ export async function GET(request: Request) {
     monthsAttempted, monthsCompleted, rowsFetched, unmatchedCount, currencyMismatchCount, errorCount,
     rateLimited, httpStatus, candidateRecordCount: totalCandidateCount,
     written: totalWritten, skippedExisting: totalSkippedExisting, writeErrorCount: totalWriteErrorCount,
+    duplicatesCollapsed: totalDuplicatesCollapsed, conflicts: allConflicts,
   });
 }
