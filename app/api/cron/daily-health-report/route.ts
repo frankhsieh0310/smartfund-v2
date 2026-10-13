@@ -12,8 +12,9 @@
 import { isAuthorizedCron, unauthorizedCron } from "@/lib/cron/authorize";
 import { prisma } from "@/lib/prisma";
 import { beginRun, finishRun } from "@/lib/cloud-ingestion/runContext";
-import { checkPipelineRunLog, evaluateFreshness, checkEtfDataSourceGap, type QueryFn } from "@/lib/daily-health-report/checks";
+import { checkPipelineRunLog, evaluateFreshness, checkEtfDataSourceGap, evaluateYahooTwReturnConsistency, type QueryFn, type YahooTwReturnSample } from "@/lib/daily-health-report/checks";
 import { notifyAnomaly } from "@/lib/daily-health-report/notify";
+import { fetchYahooTwPerformance } from "@/lib/yahoo/twPerformancePage";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -65,10 +66,32 @@ export async function GET(request: Request) {
   const domesticFundFreshness = evaluateFreshness("domestic_fund_nav", domesticFundFreshRow[0]?.max_date ?? null, 4);
   const etfDataSourceGap = await checkEtfDataSourceGap(query);
 
+  // 2026-10-13 QA-round-1 addition: 3 random TWD-listed ETFs, our stored return_1y vs Yahoo奇摩's own
+  // displayed value (docs/specs/yahoo-return-discrepancy.md) -- catches a parser regression (e.g. a
+  // Yahoo奇摩 page redesign) or a sudden, large data error, not the few-point drift that's expected
+  // and already documented. Requests are sequential with a 3s+ gap (same courtesy as the offshore NAV
+  // fetcher) and a 401/403/429 aborts the remaining samples for today rather than hammering Yahoo.
+  const sampleRows = await prisma.$queryRawUnsafe<Array<{ code: string; data_source: string; return_1y: number | null }>>(
+    `SELECT code, data_source, return_1y FROM etfs WHERE is_active = true AND currency = 'TWD' AND data_source IS NOT NULL ORDER BY random() LIMIT 3`,
+  );
+  const yahooTwSamples: YahooTwReturnSample[] = [];
+  for (const row of sampleRows) {
+    try {
+      const perf = await fetchYahooTwPerformance(row.data_source);
+      yahooTwSamples.push({ code: row.code, ourReturn1y: row.return_1y, yahooTwReturn1y: perf?.navReturn.y1 ?? null, fetchFailed: perf === null });
+    } catch {
+      yahooTwSamples.push({ code: row.code, ourReturn1y: row.return_1y, yahooTwReturn1y: null, fetchFailed: true });
+      break; // rate-limited or similar -- stop hitting Yahoo for the rest of today's sample
+    }
+    await new Promise((r) => setTimeout(r, 3200));
+  }
+  const yahooTwCheck = evaluateYahooTwReturnConsistency(yahooTwSamples);
+
   const anomalies = [
     ...pipelineHealth.filter((p) => p.anomaly).map((p) => ({ type: "PIPELINE", jobId: p.jobId, reasons: p.anomalyReasons })),
     ...[stockFreshness, domesticFundFreshness].filter((f) => f.anomaly).map((f) => ({ type: "FRESHNESS", label: f.label, reason: f.anomalyReason })),
     ...(etfDataSourceGap.anomaly ? [{ type: "ETF_DATA_SOURCE_GAP", newCodes: etfDataSourceGap.newCodes }] : []),
+    ...(yahooTwCheck.anomaly ? [{ type: "YAHOO_TW_RETURN_MISMATCH", mismatches: yahooTwCheck.mismatches }] : []),
   ];
 
   let notifyResult = null;
@@ -78,6 +101,7 @@ export async function GET(request: Request) {
     for (const f of [stockFreshness, domesticFundFreshness]) if (f.anomaly) lines.push(`- FRESHNESS ${f.label}: ${f.anomalyReason}`);
     if (etfDataSourceGap.anomaly) lines.push(`- ETF data_source NULL (new, not yet investigated): ${etfDataSourceGap.newCodes.join(", ")}`);
     if (etfDataSourceGap.knownCodes.length > 0) lines.push(`(known/suspected-delisted, not a new warning: ${etfDataSourceGap.knownCodes.join(", ")})`);
+    if (yahooTwCheck.anomaly) for (const m of yahooTwCheck.mismatches) lines.push(`- YAHOO_TW_RETURN_MISMATCH ${m.code}: ours=${m.ourReturn1y} yahooTw=${m.yahooTwReturn1y} fetchFailed=${m.fetchFailed}`);
     notifyResult = await notifyAnomaly(lines.join("\n"));
   }
 
@@ -87,9 +111,9 @@ export async function GET(request: Request) {
     inserted: 0, updated: 0, failed: anomalies.length, retryableFailures: 0, checkpointAfter: null,
     details: {
       date: today, pipeline_health: pipelineHealth, stock_freshness: stockFreshness, domestic_fund_freshness: domesticFundFreshness,
-      etf_data_source_gap: etfDataSourceGap, anomaly_count: anomalies.length, anomalies, notify_result: notifyResult,
+      etf_data_source_gap: etfDataSourceGap, yahoo_tw_return_check: yahooTwCheck, anomaly_count: anomalies.length, anomalies, notify_result: notifyResult,
     },
   });
 
-  return Response.json({ ok: true, job: JOB, runId, status, anomalyCount: anomalies.length, anomalies, etfDataSourceGap, notifyResult });
+  return Response.json({ ok: true, job: JOB, runId, status, anomalyCount: anomalies.length, anomalies, etfDataSourceGap, yahooTwCheck, notifyResult });
 }

@@ -95,3 +95,32 @@ export function evaluateFreshness(label: string, latestDateIso: string | null, m
   const anomaly = staleDays > maxStaleDays;
   return { label, latestDate: latestDateIso, staleDays, anomaly: anomaly ? true : false, anomalyReason: anomaly ? `STALE_${staleDays}D` : null };
 }
+
+export type YahooTwReturnSample = {
+  code: string;
+  ourReturn1y: number | null;
+  yahooTwReturn1y: number | null; // null when the fetch itself failed/was rate-limited
+  fetchFailed: boolean;
+};
+
+export type YahooTwReturnCheckResult = {
+  samples: YahooTwReturnSample[];
+  /** Any sample whose |diff| exceeds this, or whose fetch failed, is flagged. */
+  mismatches: Array<YahooTwReturnSample & { diff: number | null }>;
+  anomaly: boolean;
+};
+
+// Per docs/specs/yahoo-return-discrepancy.md: our stored return_1y (Yahoo global API) and Yahoo奇摩's
+// own displayed value are known to NOT always agree exactly (different basis date, NAV- vs
+// price-based calculation) -- a few points of drift is expected, not an anomaly. This threshold is
+// for catching a REAL regression (e.g. the parser breaking after a Yahoo奇摩 page redesign, or a
+// figure suddenly off by tens of points), not for chasing exact equality with a source that this
+// project's own investigation found is never going to match exactly.
+const MISMATCH_THRESHOLD_PCT_POINTS = 15;
+
+export function evaluateYahooTwReturnConsistency(samples: YahooTwReturnSample[]): YahooTwReturnCheckResult {
+  const mismatches = samples
+    .map((s) => ({ ...s, diff: s.ourReturn1y != null && s.yahooTwReturn1y != null ? Math.abs(s.ourReturn1y - s.yahooTwReturn1y) : null }))
+    .filter((s) => s.fetchFailed || s.diff === null || s.diff > MISMATCH_THRESHOLD_PCT_POINTS);
+  return { samples, mismatches, anomaly: mismatches.length > 0 };
+}

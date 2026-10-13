@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { checkPipelineRunLog, evaluateFreshness, checkEtfDataSourceGap, type QueryFn } from "../checks.ts";
+import { checkPipelineRunLog, evaluateFreshness, checkEtfDataSourceGap, evaluateYahooTwReturnConsistency, type QueryFn } from "../checks.ts";
 
 function test(name: string, fn: () => Promise<void> | void) {
   const p = Promise.resolve().then(fn);
@@ -97,5 +97,37 @@ function test(name: string, fn: () => Promise<void> | void) {
     assert.equal(r.codes.length, 10);
     assert.equal(r.newCodes.length, 15);
     assert.equal(r.anomaly, true);
+  });
+
+  test("evaluateYahooTwReturnConsistency: a small drift (within threshold) is not an anomaly", async () => {
+    const r = evaluateYahooTwReturnConsistency([
+      { code: "0050", ourReturn1y: 98.71, yahooTwReturn1y: 89.64, fetchFailed: false },
+    ]);
+    assert.equal(r.anomaly, false);
+    assert.equal(r.mismatches.length, 0);
+  });
+
+  test("evaluateYahooTwReturnConsistency: a drift beyond the threshold IS an anomaly", async () => {
+    const r = evaluateYahooTwReturnConsistency([
+      { code: "006208", ourReturn1y: 108.44, yahooTwReturn1y: 89.8, fetchFailed: false },
+    ]);
+    assert.equal(r.anomaly, true);
+    assert.equal(r.mismatches.length, 1);
+    assert.ok(r.mismatches[0]!.diff! > 15);
+  });
+
+  test("evaluateYahooTwReturnConsistency: a failed fetch is always an anomaly regardless of diff", async () => {
+    const r = evaluateYahooTwReturnConsistency([
+      { code: "0056", ourReturn1y: 69.38, yahooTwReturn1y: null, fetchFailed: true },
+    ]);
+    assert.equal(r.anomaly, true);
+  });
+
+  test("evaluateYahooTwReturnConsistency: all samples clean -> no anomaly", async () => {
+    const r = evaluateYahooTwReturnConsistency([
+      { code: "0050", ourReturn1y: 98.71, yahooTwReturn1y: 89.64, fetchFailed: false },
+      { code: "0056", ourReturn1y: 69.38, yahooTwReturn1y: 72.07, fetchFailed: false },
+    ]);
+    assert.equal(r.anomaly, false);
   });
 })();
