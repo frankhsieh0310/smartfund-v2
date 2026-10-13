@@ -14,8 +14,9 @@
 // domestic/offshore funds (checked: no other route/script inserts into fund_performances), so there
 // is no column-ownership conflict to manage here, unlike etf_performances.
 //
-// NOT added to vercel.json yet -- scheduling is a separate decision for the user once they approve
-// opening the write path.
+// Scheduled hourly at :41 (vercel.json) -- user-approved round-4 instruction: 150s time budget per
+// invocation, >=3s request spacing, round-robin via the existing cursor (already-processed codes sort
+// to the end via `code > afterCode`; wraps to the start once a full pass completes).
 import { prisma } from "@/lib/prisma";
 import { isAuthorizedCron, unauthorizedCron } from "@/lib/cron/authorize";
 import { beginRun, finishRun, readCheckpoint, writeCheckpoint } from "@/lib/cloud-ingestion/runContext";
@@ -30,7 +31,7 @@ export const dynamic = "force-dynamic";
 const JOB = "FUND_RETURNS_SYNC";
 const CHECKPOINT_KEY = "fund-returns-sync:cursor";
 const REQUEST_DELAY_MS = 3_200;
-const TIME_BUDGET_MS = 260_000;
+const TIME_BUDGET_MS = 150_000;
 const query = (sql: string, params: any[]) => prisma.$queryRawUnsafe<any[]>(sql, ...params);
 
 function isWriteEnabled(): boolean {

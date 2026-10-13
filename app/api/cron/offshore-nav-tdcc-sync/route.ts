@@ -13,14 +13,22 @@
 // 'YAHOO_FUND_PRICE_HISTORY', so the two sources are never confused in later audits.
 //
 // SHADOW MODE BY DEFAULT: unless OFFSHORE_NAV_TDCC_SYNC_WRITE is exactly "on", fetches/matches but
-// writes nothing. NOT added to vercel.json yet -- opening the write path and scheduling are separate
-// decisions for the user. Manually cross-checked 2 funds live against fundclear.com.tw's own search UI
-// 2026-10-14 (both exact match) -- see lib/offshore-nav-sync/tdccBatchSource.ts's header comment.
+// writes nothing. Scheduled twice daily at 10:30/18:30 Taipei (vercel.json) -- opening the write path
+// is still a separate, explicit user decision made after confirming a clean first shadow run. Manually
+// cross-checked 2 funds live against fundclear.com.tw's own search UI 2026-10-14 (both exact match) --
+// see lib/offshore-nav-sync/tdccBatchSource.ts's header comment.
+//
+// Fund-ownership split from offshore-nav-sync (round-4, user-approved): offshore-nav-sync's own
+// 876-fund Yahoo mapping (lib/offshore-nav-sync/mapping.ts's loadMapping()) is the pre-existing,
+// actively-synced population -- this job explicitly excludes every fundId in that mapping, so the same
+// fund is never written by both pipelines. See lib/offshore-nav-sync/tdccBatchSource.ts's
+// excludeOverlapWithYahooMapping() and its test.
 import { prisma } from "@/lib/prisma";
 import { isAuthorizedCron, unauthorizedCron } from "@/lib/cron/authorize";
 import { beginRun, finishRun } from "@/lib/cloud-ingestion/runContext";
-import { fetchTdccNavCsv, parseTdccNavCsv, TDCC_NAV_SOURCE } from "@/lib/offshore-nav-sync/tdccBatchSource";
+import { fetchTdccNavCsv, parseTdccNavCsv, excludeOverlapWithYahooMapping, TDCC_NAV_SOURCE } from "@/lib/offshore-nav-sync/tdccBatchSource";
 import { writeTdccNavBatch } from "@/lib/offshore-nav-sync/navWriter";
+import { loadMapping } from "@/lib/offshore-nav-sync/mapping";
 import type { OffshoreNavCandidate } from "@/lib/offshore-nav-sync/types";
 
 export const runtime = "nodejs";
@@ -46,10 +54,11 @@ export async function GET(request: Request) {
   });
   if (skipped) return Response.json({ ok: true, job: JOB, skipped: true });
 
-  const candidateFunds = await query(
-    `SELECT id, name FROM funds WHERE data_provider = 'yahoo' AND updated_at < CURRENT_DATE - INTERVAL '14 days'`,
-    [],
-  );
+  const [rawCandidateFunds, yahooMapping] = await Promise.all([
+    query(`SELECT id, name FROM funds WHERE data_provider = 'yahoo' AND updated_at < CURRENT_DATE - INTERVAL '14 days'`, []),
+    loadMapping(query),
+  ]);
+  const candidateFunds = excludeOverlapWithYahooMapping(rawCandidateFunds, yahooMapping.map((m) => m.fundId));
 
   const csvText = await fetchTdccNavCsv();
   const byName = parseTdccNavCsv(csvText);
@@ -71,11 +80,15 @@ export async function GET(request: Request) {
   await finishRun(runId, JOB, TDCC_NAV_SOURCE, startedMs, {
     status: "COMPLETED", attempted: candidateFunds.length, completed: result.written, inserted: result.written,
     updated: 0, failed: result.writeErrorCount, retryableFailures: 0, checkpointAfter: null,
-    details: { writeEnabled, staleCandidateCount: candidateFunds.length, csvUniqueFundNames: byName.size, matched, writableRowCount: matched },
+    details: {
+      writeEnabled, rawStaleCandidateCount: rawCandidateFunds.length, yahooMappingExcludedCount: rawCandidateFunds.length - candidateFunds.length,
+      staleCandidateCount: candidateFunds.length, csvUniqueFundNames: byName.size, matched, writableRowCount: matched,
+    },
   });
 
   return Response.json({
     ok: true, job: JOB, runId, writeEnabled,
+    rawStaleCandidateCount: rawCandidateFunds.length, yahooMappingExcludedCount: rawCandidateFunds.length - candidateFunds.length,
     staleCandidateCount: candidateFunds.length, csvUniqueFundNames: byName.size, matched,
     writableRowCount: matched, written: result.written, writeErrorCount: result.writeErrorCount,
   });

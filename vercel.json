@@ -27,6 +27,9 @@
     { "path": "/api/cron/holdings-alt-source-sync", "schedule": "52 * * * *" },
     { "path": "/api/cron/daily-health-report", "schedule": "30 0 * * *" },
     { "path": "/api/cron/tw-etf-day-change", "schedule": "10 6 * * 1-5" },
-    { "path": "/api/cron/tw-etf-day-change", "schedule": "10 8 * * 1-5" }
+    { "path": "/api/cron/tw-etf-day-change", "schedule": "10 8 * * 1-5" },
+    { "path": "/api/cron/offshore-nav-tdcc-sync", "schedule": "31 2 * * *" },
+    { "path": "/api/cron/offshore-nav-tdcc-sync", "schedule": "31 10 * * *" },
+    { "path": "/api/cron/fund-returns-sync", "schedule": "41 * * * *" }
   ]
 }

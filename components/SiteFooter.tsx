@@ -20,7 +20,7 @@ export function SiteFooter() {
             <a href="mailto:contact@smartmatch.tw" className="transition-colors hover:text-slate-300">聯絡我們</a>
           </div>
           <div className="min-w-0 text-[13px] text-slate-400 lg:text-right">
-            <div>以上資料為示意範例，不構成投資建議</div>
+            <div>本站資料僅供參考，不構成投資建議。</div>
             <div className="mt-1">© 2026 SmartMatch｜瑞宇智庫有限公司 版權所有</div>
           </div>
         </div>

@@ -64,3 +64,16 @@ export async function fetchTdccNavCsv(): Promise<string> {
   if (!res.ok) throw new Error(`TDCC_NAV_CSV_HTTP_${res.status}`);
   return res.text();
 }
+
+/** Round-4, user-approved fund-ownership rule: a fund already in offshore-nav-sync's own 876-fund
+ * Yahoo mapping (lib/offshore-nav-sync/mapping.ts's loadMapping()) must NEVER also be written by this
+ * TDCC-sourced pipeline, even if it happens to look "stale" by updated_at (e.g. during a transient
+ * offshore-nav-sync outage) -- the two pipelines must never compete to write the same fund's NAV.
+ * Filters explicitly by fundId rather than relying on the staleness window as an implicit proxy. */
+export function excludeOverlapWithYahooMapping<T extends { id: string }>(
+  candidateFunds: T[],
+  yahooMappedFundIds: Iterable<string>,
+): T[] {
+  const excluded = new Set(yahooMappedFundIds);
+  return candidateFunds.filter((f) => !excluded.has(f.id));
+}
