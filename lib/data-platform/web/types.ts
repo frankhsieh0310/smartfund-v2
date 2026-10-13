@@ -31,6 +31,8 @@ export interface SummaryMetrics {
   performance1M: number | null;
   performance3M: number | null;
   performance1Y: number | null;
+  /** Authoritative (Yahoo-sourced) trailing dividend yield, percent units. Null when not available. */
+  dividendYield: number | null;
 }
 
 export interface Provenance {

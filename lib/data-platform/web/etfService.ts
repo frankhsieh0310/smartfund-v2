@@ -7,7 +7,7 @@ import { buildProvenance } from "./provenance.ts";
 import { isoOrNull, numberOrNull, type CanonicalIdentity, type HistoryQuery, type ListQuery, type ServiceResponse, type SummaryMetrics } from "./types.ts";
 
 const etfIdentity = (row: { id: string; code: string; name: string; currency: string; exchange: string | null; region: string | null }): CanonicalIdentity => ({ assetType: "ETF", id: row.id, symbol: row.code, name: row.name, displayName: row.name, currency: row.currency, market: row.exchange, country: row.region });
-const etfMetrics = (row: { latestPrice: unknown; latestNav: unknown; currency: string; priceUpdatedAt: Date | null; return1m: unknown; return3m: unknown; return1y: unknown }): SummaryMetrics => ({ priceOrNav: numberOrNull(row.latestPrice ?? row.latestNav), change: null, changePercent: null, currency: row.currency, asOfDate: isoOrNull(row.priceUpdatedAt), performance1M: numberOrNull(row.return1m), performance3M: numberOrNull(row.return3m), performance1Y: numberOrNull(row.return1y) });
+const etfMetrics = (row: { latestPrice: unknown; latestNav: unknown; currency: string; priceUpdatedAt: Date | null; return1m: unknown; return3m: unknown; return1y: unknown; dividendYield: unknown }): SummaryMetrics => ({ priceOrNav: numberOrNull(row.latestPrice ?? row.latestNav), change: null, changePercent: null, currency: row.currency, asOfDate: isoOrNull(row.priceUpdatedAt), performance1M: numberOrNull(row.return1m), performance3M: numberOrNull(row.return3m), performance1Y: numberOrNull(row.return1y), dividendYield: numberOrNull(row.dividendYield) });
 
 export type EtfListQuery = ListQuery & {
   exchange?: string;

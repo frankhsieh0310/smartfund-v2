@@ -10,7 +10,7 @@ function identity(row: { id: string; ticker: string; yahooSymbol: string; compan
 }
 
 function metrics(row: { latestClose: unknown; latestDate: Date | null; currency: string }): SummaryMetrics {
-  return { priceOrNav: numberOrNull(row.latestClose), change: null, changePercent: null, currency: row.currency, asOfDate: isoOrNull(row.latestDate), performance1M: null, performance3M: null, performance1Y: null };
+  return { priceOrNav: numberOrNull(row.latestClose), change: null, changePercent: null, currency: row.currency, asOfDate: isoOrNull(row.latestDate), performance1M: null, performance3M: null, performance1Y: null, dividendYield: null };
 }
 
 export async function getStockList(query: ListQuery = {}): Promise<ServiceResponse<Array<{ identity: CanonicalIdentity; metrics: SummaryMetrics }>>> {

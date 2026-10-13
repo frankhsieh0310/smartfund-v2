@@ -39,7 +39,7 @@ function fxMetrics(row: FxPairRow, quote: FxQuoteRow): SummaryMetrics {
   const prev = numberOrNull(meta?.previousClose);
   const change = price != null && prev != null ? price - prev : null;
   const changePercent = change != null && prev ? (change / prev) * 100 : null;
-  return { priceOrNav: price, change, changePercent, currency: row.quoteCurrency, asOfDate: isoOrNull(quote?.quotedAt), performance1M: null, performance3M: null, performance1Y: null };
+  return { priceOrNav: price, change, changePercent, currency: row.quoteCurrency, asOfDate: isoOrNull(quote?.quotedAt), performance1M: null, performance3M: null, performance1Y: null, dividendYield: null };
 }
 
 async function latestQuotesFor(symbols: string[]): Promise<Map<string, FxQuoteRow>> {

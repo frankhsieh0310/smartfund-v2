@@ -8,7 +8,7 @@ import { isoOrNull, numberOrNull, type CanonicalIdentity, type HistoryQuery, typ
 import { mapFundMainCategory, type FundMainCategory } from "./fundCategoryMapping.ts";
 
 const fundIdentity = (row: { id: string; code: string | null; isin: string | null; name: string; currency: string; domicile: string | null; region: string | null }): CanonicalIdentity => ({ assetType: "FUND", id: row.id, symbol: row.code ?? row.isin ?? row.id, name: row.name, displayName: row.name, currency: row.currency, market: row.domicile, country: row.region ?? row.domicile });
-const fundMetrics = (row: { latestNav: unknown; currency: string; latestNavDate: Date | null; return1y: unknown }): SummaryMetrics => ({ priceOrNav: numberOrNull(row.latestNav), change: null, changePercent: null, currency: row.currency, asOfDate: isoOrNull(row.latestNavDate), performance1M: null, performance3M: null, performance1Y: numberOrNull(row.return1y) });
+const fundMetrics = (row: { latestNav: unknown; currency: string; latestNavDate: Date | null; return1y: unknown; dividendYieldA?: unknown }): SummaryMetrics => ({ priceOrNav: numberOrNull(row.latestNav), change: null, changePercent: null, currency: row.currency, asOfDate: isoOrNull(row.latestNavDate), performance1M: null, performance3M: null, performance1Y: numberOrNull(row.return1y), dividendYield: numberOrNull(row.dividendYieldA) });
 
 export type FundListQuery = ListQuery & {
   company?: string;
@@ -98,6 +98,8 @@ export interface FundDetailData {
   fundCategory: FundMainCategory;
   fundSubcategory: string | null;
   riskRating: number | null;
+  /** Authoritative (Yahoo-sourced) annualized trailing dividend yield, percent units. */
+  dividendYield: number | null;
   nav: FundSection<{ value: number | null; currency: string | null; date: string | null }>;
   history: FundSection<Array<{ date: string; nav: number | null }>> & { range: FundDetailRange; maxPoints: number };
   performance: FundSection<{ return1M: number | null; return3M: number | null; return6M: number | null; returnYtd: number | null; return1Y: number | null; return3YAnnualized: number | null; return5YAnnualized: number | null; semantics: "NAV_RETURN" }>;
@@ -163,7 +165,7 @@ export async function getFundDetail(identifier: string, relationLimit = 20, rang
     ? chronologicalHistory
     : Array.from({ length: FUND_DETAIL_LIMITS.history }, (_, index) => chronologicalHistory[Math.round(index * (chronologicalHistory.length - 1) / (FUND_DETAIL_LIMITS.history - 1))]);
   const data: FundDetailData = {
-    identity: { ...fundIdentity(row), isin: row.isin, code: row.code }, company: row.company.trim() || null, assetClass: classificationAssetClass, category: row.category, fundCategory: mapFundMainCategory(row.category), fundSubcategory: row.category, riskRating: row.riskLevel,
+    identity: { ...fundIdentity(row), isin: row.isin, code: row.code }, company: row.company.trim() || null, assetClass: classificationAssetClass, category: row.category, fundCategory: mapFundMainCategory(row.category), fundSubcategory: row.category, riskRating: row.riskLevel, dividendYield: numberOrNull(row.dividendYieldA),
     nav: { coverage: row.latestNav === null ? "UNAVAILABLE" : "AVAILABLE", data: { value: numberOrNull(row.latestNav), currency: row.currency, date: isoOrNull(row.latestNavDate) }, provenance },
     history: { coverage: sectionCoverage(historyRows.length, historyRows.length < 2), range, maxPoints: FUND_DETAIL_LIMITS.history, data: sampledHistory.map((item) => ({ date: item.date.toISOString(), nav: numberOrNull(item.nav) })), provenance: historyProvenance },
     performance: { coverage: latestReturns && [latestReturns.return1m, latestReturns.return3m, latestReturns.return6m, latestReturns.returnYtd, latestReturns.return1y, latestReturns.return3y, latestReturns.return5y].some((value) => value !== null) ? "AVAILABLE" : "UNAVAILABLE", data: { return1M: numberOrNull(latestReturns?.return1m), return3M: numberOrNull(latestReturns?.return3m), return6M: numberOrNull(latestReturns?.return6m), returnYtd: numberOrNull(latestReturns?.returnYtd), return1Y: numberOrNull(latestReturns?.return1y), return3YAnnualized: numberOrNull(latestReturns?.return3y), return5YAnnualized: numberOrNull(latestReturns?.return5y), semantics: "NAV_RETURN" }, provenance: performanceProvenance },
