@@ -278,8 +278,19 @@ export async function GET(request: Request) {
   const orderedMissing = orderForInvocation(missingIds, failureStateMap, today, nowMsForOrdering);
   const notYetDueCount = missingIds.length - orderedMissing.length;
 
-  const rows = await prisma.$queryRawUnsafe<EtfRow[]>(
-    `SELECT id, code, data_source FROM etfs WHERE id = ANY($1::text[])`,
+  // 2026-10-14 QA-round-1 follow-up: 58 of the 92 duplicate-ETF pairs' KEPT bare-code row (the one
+  // actually shown to users, per decision 4-1) has a data_source with NO .TW/.TWO suffix at all
+  // (e.g. "006208", not "006208.TW") -- there is no Yahoo symbol to query for it directly, so it was
+  // silently stuck on old/stale performance data even before this round. Its hidden duplicate twin
+  // (e.g. "006208.TW") DOES have a working data_source. yahooSymbolOverride borrows that twin's
+  // data_source purely as a lookup key for the fetch below -- nothing is written back to the bare
+  // row's own data_source column, this is read-only borrowing for one HTTP call.
+  const rows = await prisma.$queryRawUnsafe<Array<EtfRow & { yahoo_symbol_override: string | null }>>(
+    `SELECT bare.id, bare.code, bare.data_source,
+            CASE WHEN bare.data_source !~ '\\.(TW|TWO)$'
+                 THEN (SELECT suf.data_source FROM etfs suf WHERE suf.code = bare.code || '.TW' OR suf.code = bare.code || '.TWO' LIMIT 1)
+                 ELSE NULL END AS yahoo_symbol_override
+       FROM etfs bare WHERE bare.id = ANY($1::text[])`,
     orderedMissing,
   );
   const rowById = new Map(rows.map((r) => [r.id, r]));
@@ -325,12 +336,13 @@ export async function GET(request: Request) {
     if (!row) continue; // stale id, no longer a real etfs row — never blocks the sweep, no state recorded
 
     attempted++;
-    const isTwListed = /\.(TW|TWO)$/.test(row.data_source);
+    const yahooSymbol = row.yahoo_symbol_override ?? row.data_source;
+    const isTwListed = /\.(TW|TWO)$/.test(yahooSymbol);
     let fetchResult: FetchAttemptResult;
     let twReturns: TrailingReturns | null = null;
     if (isTwListed) {
       try {
-        const perf = await fetchYahooTwPerformance(row.data_source);
+        const perf = await fetchYahooTwPerformance(yahooSymbol);
         if (perf) {
           twReturns = {
             r1d: null, // Yahoo奇摩's performance page has no 1-day figure (owned by cloud-etf-price)
@@ -350,7 +362,7 @@ export async function GET(request: Request) {
       }
     } else {
       try {
-        fetchResult = await fetchFundPerformanceRaw(row.data_source);
+        fetchResult = await fetchFundPerformanceRaw(yahooSymbol);
       } catch {
         fetchResult = { outcomeKind: "TRANSIENT_FAILURE", rateLimited: false, result: null };
       }
