@@ -1,20 +1,21 @@
 // Day-change (漲跌/漲跌幅) exactly as Yahoo奇摩's own main quote page displays it, per the user's
-// "照抄 Yahoo奇摩" rule. Superseded the first attempt at this fix (reading chart.result[0].meta's
-// chartPreviousClose/regularMarketPrice from Yahoo's GLOBAL chart API) after re-verifying against the
-// live page for 6 TW ETFs post-close: the global API's previousClose routinely disagreed with
-// Yahoo奇摩's own displayed "昨收" by enough to throw the computed day-change off by 2-4x, and even
-// flipped sign once (0056.TW). Yahoo奇摩's own "昨收" + "成交" fields, read directly from this same
-// page, matched all 6 tickers exactly. See docs/specs/yahoo-return-discrepancy.md.
+// "照抄 Yahoo奇摩，不得自己計算" rule.
 //
-// Like twPerformancePage.ts, this is read from the server-rendered HTML directly (no separate XHR
-// found for this page either), using the same plain two-span "<label>...</label><span>value</span>"
-// pattern Yahoo奇摩 uses throughout its quote pages.
+// History: first attempt read Yahoo's GLOBAL chart API meta (chartPreviousClose/regularMarketPrice)
+// -- disagreed with the page by 2-4x, one sign flip. Second attempt subtracted this page's own
+// "昨收"/"成交" fields ourselves -- numerically matched all 6 spot-checked tickers, but the user
+// then explicitly ruled out ANY subtraction, even of two values both read from Yahoo奇摩 itself: the
+// page already computes and displays "漲跌"/"漲跌幅" directly, so this reads THOSE fields verbatim
+// instead of re-deriving them from two other fields.
+//
+// These two fields render as "<span class="...trend-(up|down)...">(arrow icon)<value></span>" --
+// the +/- sign is conveyed only by the "trend-up"/"trend-down" CSS class and the arrow icon's
+// border-direction, never a literal "-" character in the text, so the class name is read to apply
+// the sign to the always-positive-looking number.
 
 export interface YahooTwDayChange {
-  currentPrice: number;
-  previousClose: number;
-  changePercent: number;
   change: number;
+  changePercent: number;
 }
 
 export class YahooTwQuoteRateLimitedError extends Error {
@@ -25,9 +26,17 @@ export class YahooTwQuoteRateLimitedError extends Error {
   }
 }
 
-function extractLabeledValue(html: string, label: string): number | null {
-  const match = html.match(new RegExp(`>${label}<\\/span><span[^>]*>([0-9.]+)<\\/span>`));
-  return match ? Number(match[1]) : null;
+function extractTrendValue(html: string, label: string, hasPercent: boolean): number | null {
+  const startIdx = html.indexOf(`>${label}</span>`);
+  if (startIdx === -1) return null;
+  // The label's own value sits within the next ~400 chars (the two nested spans for the trend
+  // icon + value); bounded so e.g. "漲跌" doesn't accidentally match inside "漲跌幅"'s own markup.
+  const chunk = html.slice(startIdx, startIdx + 400);
+  const valueMatch = hasPercent ? chunk.match(/>([0-9.]+)%<\/span>/) : chunk.match(/>([0-9.]+)<\/span>/);
+  if (!valueMatch) return null;
+  const magnitude = Number(valueMatch[1]);
+  if (chunk.includes("trend-down")) return -magnitude;
+  return magnitude; // "trend-up" or no trend class (flat/0) both read as positive magnitude
 }
 
 /** symbol must include the Yahoo suffix, e.g. "0050.TW", "00679B.TWO". */
@@ -38,11 +47,12 @@ export async function fetchYahooTwDayChange(symbol: string): Promise<YahooTwDayC
   if (!res.ok) return null;
 
   const html = await res.text();
-  const currentPrice = extractLabeledValue(html, "成交");
-  const previousClose = extractLabeledValue(html, "昨收");
-  if (currentPrice === null || previousClose === null || previousClose === 0) return null;
+  // "漲跌幅" must be read before "漲跌" is searched for, and read independently -- both labels start
+  // with the same two characters, but indexOf(">漲跌</span>") only matches the exact 2-character
+  // label (not the 3-character "漲跌幅"), so the two extractions don't collide.
+  const changePercent = extractTrendValue(html, "漲跌幅", true);
+  const change = extractTrendValue(html, "漲跌", false);
+  if (changePercent === null || change === null) return null;
 
-  const change = currentPrice - previousClose;
-  const changePercent = (change / previousClose) * 100;
-  return { currentPrice, previousClose, changePercent, change };
+  return { change, changePercent };
 }

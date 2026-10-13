@@ -26,6 +26,8 @@
     { "path": "/api/cron/domestic-dividend-sync", "schedule": "0 2 * * *" },
     { "path": "/api/cron/holdings-alt-source-sync", "schedule": "52 * * * *" },
     { "path": "/api/cron/market-close-sync-backfill", "schedule": "7,37 * * * *" },
-    { "path": "/api/cron/daily-health-report", "schedule": "30 0 * * *" }
+    { "path": "/api/cron/daily-health-report", "schedule": "30 0 * * *" },
+    { "path": "/api/cron/tw-etf-day-change", "schedule": "10 6 * * 1-5" },
+    { "path": "/api/cron/tw-etf-day-change", "schedule": "10 8 * * 1-5" }
   ]
 }
