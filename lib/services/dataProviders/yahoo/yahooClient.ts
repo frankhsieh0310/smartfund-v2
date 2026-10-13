@@ -38,6 +38,12 @@ export interface YahooChartResult {
   httpStatus: number;
   contentType: string | null;
   candles: YahooChartCandle[];
+  /** Yahoo's OWN previous-close figure (chart.result[0].meta.chartPreviousClose) -- use this for
+   * day-change instead of deriving a "previous" point from our own candle history: it's Yahoo's own
+   * basis, so it can't diverge from what Yahoo itself (or Yahoo奇摩) displays for day-over-day change. */
+  previousClose: number | null;
+  /** Yahoo's OWN current/last price figure (chart.result[0].meta.regularMarketPrice). */
+  regularMarketPrice: number | null;
 }
 
 export interface YahooQuoteResult {
@@ -252,6 +258,8 @@ export async function fetchYahooChart(
     exchangeName: result.meta?.exchangeName ?? null,
     timezone: result.meta?.exchangeTimezoneName ?? null,
     instrumentType: result.meta?.instrumentType ?? null,
+    previousClose: result.meta?.chartPreviousClose ?? null,
+    regularMarketPrice: result.meta?.regularMarketPrice ?? null,
     httpStatus: res.status,
     contentType: res.headers.get("content-type"),
     candles,
@@ -398,6 +406,8 @@ export async function fetchYahooChartPeriod(
     exchangeName: result.meta?.exchangeName ?? null,
     timezone: result.meta?.exchangeTimezoneName ?? null,
     instrumentType: result.meta?.instrumentType ?? null,
+    previousClose: result.meta?.chartPreviousClose ?? null,
+    regularMarketPrice: result.meta?.regularMarketPrice ?? null,
     httpStatus: res.status,
     contentType: res.headers.get("content-type"),
     candles: timestamps.map((ts, i) => ({

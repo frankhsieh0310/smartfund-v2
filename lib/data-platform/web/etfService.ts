@@ -109,8 +109,19 @@ export async function getEtfDetail(code: string): Promise<ServiceResponse<{ iden
   const previous = row.history[1];
   const latestValue = numberOrNull(latest?.price ?? latest?.nav ?? row.latestPrice ?? row.latestNav);
   const previousValue = numberOrNull(previous?.price ?? previous?.nav);
-  const change = latestValue != null && previousValue != null ? latestValue - previousValue : null;
-  const changePercent = change != null && previousValue != null && previousValue !== 0 ? (change / previousValue) * 100 : null;
+  // 2026-10-13 QA-round-1 fix: prefer the authoritative day-change already written by
+  // app/api/cron/cloud-etf-price/route.ts (Yahoo's own previousClose/regularMarketPrice — see that
+  // route's comment) over deriving one from our own two-row EtfHistory diff, which can disagree with
+  // Yahoo's own basis around non-trading-day gaps. Falls back to the diff only when that figure is
+  // not yet available for this ETF.
+  const latestPerformance = await prisma.etfPerformance.findFirst({ where: { etfId: row.id }, orderBy: { date: "desc" }, select: { return1d: true } });
+  const authoritativeChangePercent = numberOrNull(latestPerformance?.return1d);
+  const changePercent = authoritativeChangePercent ?? (previousValue != null && previousValue !== 0 && latestValue != null ? ((latestValue - previousValue) / previousValue) * 100 : null);
+  // Absolute change derived from the authoritative percent (previousImplied = latest / (1 + pct/100)),
+  // not a second independently-sourced number — this is unit conversion of the one authoritative value.
+  const change = changePercent != null && latestValue != null
+    ? (authoritativeChangePercent != null ? latestValue - latestValue / (1 + changePercent / 100) : latestValue - (previousValue as number))
+    : null;
   const latestHolding = await prisma.holding.findFirst({ where: { etfId: row.id }, orderBy: [{ asOfDate: "desc" }, { rank: "asc" }], select: { asOfDate: true } });
   const holdings = latestHolding ? await prisma.holding.findMany({ where: { etfId: row.id, asOfDate: latestHolding.asOfDate }, orderBy: { rank: "asc" }, select: { holdingName: true, ticker: true, weight: true, sector: true, assetType: true } }) : [];
   const allocation = <T extends string>(keyFor: (holding: typeof holdings[number]) => T | null) => [...holdings.reduce((values, holding) => { const label = keyFor(holding); const weight = numberOrNull(holding.weight); if (label && weight != null) values.set(label, (values.get(label) ?? 0) + weight); return values; }, new Map<T, number>())].map(([label, weight]) => ({ label, weight })).sort((left, right) => right.weight - left.weight);

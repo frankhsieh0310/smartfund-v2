@@ -208,10 +208,22 @@ export async function GET(request: Request) {
       const points = history
         .filter((x) => x.price != null)
         .map((x) => ({ date: x.date, price: Number(x.price) }));
+      // 2026-10-13 QA-round-1 fix: return_1d now prefers Yahoo's OWN previousClose/regularMarketPrice
+      // (chart.result[0].meta — same response this route already fetches for the candle series, no
+      // extra Yahoo call) over a self-derived "previous row in our own history" diff. The two bases
+      // are not guaranteed to agree (gaps/holidays can make our own "previous row" differ from
+      // Yahoo's own concept of the prior session), and an independent audit found cases where our
+      // self-computed day-change didn't match Yahoo's displayed figure. Falls back to the old
+      // self-computed periodReturn only when Yahoo's meta fields are unavailable (rare).
+      const yahooDayChange =
+        response.previousClose != null && response.regularMarketPrice != null && response.previousClose !== 0
+          ? ((response.regularMarketPrice / response.previousClose) - 1) * 100
+          : null;
+      const return1d = yahooDayChange ?? periodReturn(points, 1);
       // Task X5 Part B (user-approved): return_1m/3m/1y/3y are now owned exclusively by
       // lib/etf-returns-sync/returnsWriter.ts (Yahoo's own trailingReturns, direct overwrite incl.
       // NULL). This pipeline keeps return_1d and return_6m — Yahoo's trailingReturns has no 1-day or
-      // 6-month figure, so those two stay self-computed from price history here, same as before.
+      // 6-month figure, so return_6m stays self-computed from price history here, same as before.
       // price and every other write in this route are unchanged.
       await prisma.etfPerformance.upsert({
         where: { etfId_date: { etfId: etf.id, date: utcDate(latest.date) } },
@@ -219,12 +231,12 @@ export async function GET(request: Request) {
           etfId: etf.id,
           date: utcDate(latest.date),
           price: latest.close,
-          return1d: periodReturn(points, 1),
+          return1d,
           return6m: periodReturn(points, 183),
         },
         update: {
           price: latest.close,
-          return1d: periodReturn(points, 1),
+          return1d,
           return6m: periodReturn(points, 183),
         },
       });
