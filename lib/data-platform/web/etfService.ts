@@ -39,12 +39,33 @@ type AssetMetricRow = { etf_id: string; observation_date: Date; aum: unknown; sh
 type FlowCoverageRow = { etf_id: string; observation_date: Date };
 type ReadyRow = { id: string; latest_date: Date | null; history_ready: boolean };
 
+// 2026-10-13 QA-round-1 dedup fix: 92 TW ETFs exist as TWO rows -- a bare code ("006208") and a
+// Yahoo-suffixed code ("006208.TW"/".TWO") for the same real-world ETF, from two independent
+// ingestion pipelines. Per the user's decision, the bare-code row (market-close-sync's own, the
+// "official" one) is kept and the suffixed duplicate is hidden from listings/search -- DISPLAY LAYER
+// ONLY, no rows are deleted (that's a separate DDL-approval-gated cleanup, see
+// docs/specs/etf-dedup-cleanup-draft.sql). One exception: 00981D's bare row is missing
+// dividend_yield that its suffixed twin has -- excluded from hiding until that gap is backfilled, so
+// hiding it doesn't blank a field that was actually populated.
+const DEDUP_BACKFILL_PENDING = new Set(["00981D"]);
+
+async function getSuffixedDuplicateCodesToHide(): Promise<string[]> {
+  const rows = await prisma.$queryRawUnsafe<Array<{ code: string }>>(`
+    SELECT suffixed.code FROM etfs suffixed
+    WHERE suffixed.code ~ '\\.(TW|TWO)$'
+      AND EXISTS (SELECT 1 FROM etfs bare WHERE bare.code = regexp_replace(suffixed.code, '\\.(TW|TWO)$', ''))
+  `);
+  return rows.map((r) => r.code).filter((code) => !DEDUP_BACKFILL_PENDING.has(code.replace(/\.(TW|TWO)$/, "")));
+}
+
 export async function getEtfList(query: EtfListQuery = {}): Promise<ServiceResponse<EtfListItem[]>> {
   const { page, pageSize, skip } = normalizePagination(query.page, query.pageSize);
   const term = query.query?.trim();
   const direction: Prisma.SortOrder = query.direction === "desc" ? "desc" : "asc";
+  const hiddenDuplicateCodes = await getSuffixedDuplicateCodesToHide();
   const where = {
     isActive: true,
+    ...(hiddenDuplicateCodes.length ? { code: { notIn: hiddenDuplicateCodes } } : {}),
     ...(query.exchange ? { exchange: query.exchange } : {}),
     ...(query.currency ? { currency: query.currency } : {}),
     ...(query.issuer ? { provider: query.issuer } : {}),

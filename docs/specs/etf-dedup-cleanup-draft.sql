@@ -1,0 +1,40 @@
+-- ============================================================================
+-- ETF duplicate-row cleanup — DRAFT ONLY. DO NOT EXECUTE without approval.
+-- ============================================================================
+-- Background: 92 TW ETFs exist as two rows each -- a bare code ("006208") and a Yahoo-suffixed code
+-- ("006208.TW" / ".TWO") for the same real-world ETF. Decision 4-1: keep the bare-code row
+-- (market-close-sync's own "official" record), remove the suffixed duplicate.
+--
+-- VERIFIED field-by-field comparison (2026-10-13, read-only): of the 92 pairs, 91 have the bare row
+-- at least as complete as the suffixed row for return_1y/dividend_yield/aum/latest_price/latest_nav/
+-- premium and holdings rows. ONE exception: 00981D's BARE row is missing dividend_yield that its
+-- SUFFIXED row has -- that one must have its dividend_yield backfilled onto the bare row BEFORE this
+-- cleanup runs, or deleting its suffixed row would blank a populated field. 00981D is EXCLUDED from
+-- this draft's DELETE list until that backfill happens (tracked separately, see etfService.ts's
+-- `DEDUP_BACKFILL_PENDING`).
+--
+-- Affected row count once 00981D's backfill is done: 91 `etfs` rows deleted, plus whatever rows in
+-- dependent tables (etf_history, etf_performances, holdings, etf_holding_snapshots, etc.) reference
+-- those 91 etf_id values via ON DELETE CASCADE (not individually counted here -- run the SELECT below
+-- yourself before approving, to see the live count at execution time, since new data accrues daily).
+--
+-- This file intentionally does NOT include the actual DELETE statement list (91 explicit UUIDs) --
+-- regenerate it immediately before running, from a fresh read-only query, since the exact duplicate
+-- set can shift day to day as new ETFs are added. The query below is what generates that list.
+-- ============================================================================
+
+-- Read-only: regenerate the exact list of suffixed-duplicate etf ids to delete, right before running.
+-- SELECT suffixed.id, suffixed.code, suffixed.name
+-- FROM etfs suffixed
+-- WHERE suffixed.code ~ '\.(TW|TWO)$'
+--   AND EXISTS (SELECT 1 FROM etfs bare WHERE bare.code = regexp_replace(suffixed.code, '\.(TW|TWO)$', ''))
+--   AND regexp_replace(suffixed.code, '\.(TW|TWO)$', '') != '00981D';
+
+-- Then, once 00981D is backfilled and the ids above are confirmed fresh:
+-- BEGIN;
+-- DELETE FROM etfs WHERE id = ANY($1::text[]);  -- $1 = the id list from the SELECT above
+-- COMMIT;
+
+-- Backfill 00981D's bare row first (separate, smaller, safe write — do this BEFORE the cleanup above):
+-- UPDATE etfs SET dividend_yield = (SELECT dividend_yield FROM etfs WHERE code LIKE '00981D.%' LIMIT 1)
+-- WHERE code = '00981D' AND dividend_yield IS NULL;
