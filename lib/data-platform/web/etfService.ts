@@ -49,6 +49,11 @@ type ReadyRow = { id: string; latest_date: Date | null; history_ready: boolean }
 // hiding it doesn't blank a field that was actually populated.
 const DEDUP_BACKFILL_PENDING = new Set(["00981D"]);
 
+// 2026-10-14: 6 securities-firm rows the user identified as misclassified as ETFs (their codes follow
+// TWSE's 020xxx warrant/other-security numbering, not a real ETF) -- display-layer hide only, per
+// decision 3-3. Database untouched.
+const MISCLASSIFIED_NON_ETF_CODES = new Set(["020000.TW", "020012.TW", "020028.TW", "020030.TW", "020031.TW", "020034.TW"]);
+
 async function getSuffixedDuplicateCodesToHide(): Promise<string[]> {
   const rows = await prisma.$queryRawUnsafe<Array<{ code: string }>>(`
     SELECT suffixed.code FROM etfs suffixed
@@ -62,7 +67,7 @@ export async function getEtfList(query: EtfListQuery = {}): Promise<ServiceRespo
   const { page, pageSize, skip } = normalizePagination(query.page, query.pageSize);
   const term = query.query?.trim();
   const direction: Prisma.SortOrder = query.direction === "desc" ? "desc" : "asc";
-  const hiddenDuplicateCodes = await getSuffixedDuplicateCodesToHide();
+  const hiddenDuplicateCodes = [...(await getSuffixedDuplicateCodesToHide()), ...MISCLASSIFIED_NON_ETF_CODES];
   const where = {
     isActive: true,
     ...(hiddenDuplicateCodes.length ? { code: { notIn: hiddenDuplicateCodes } } : {}),

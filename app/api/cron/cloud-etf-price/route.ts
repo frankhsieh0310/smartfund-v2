@@ -208,18 +208,17 @@ export async function GET(request: Request) {
       const points = history
         .filter((x) => x.price != null)
         .map((x) => ({ date: x.date, price: Number(x.price) }));
-      // 2026-10-13 QA-round-1 fix: return_1d now prefers Yahoo's OWN previousClose/regularMarketPrice
-      // (chart.result[0].meta — same response this route already fetches for the candle series, no
-      // extra Yahoo call) over a self-derived "previous row in our own history" diff. The two bases
-      // are not guaranteed to agree (gaps/holidays can make our own "previous row" differ from
-      // Yahoo's own concept of the prior session), and an independent audit found cases where our
-      // self-computed day-change didn't match Yahoo's displayed figure. Falls back to the old
-      // self-computed periodReturn only when Yahoo's meta fields are unavailable (rare).
-      const yahooDayChange =
-        response.previousClose != null && response.regularMarketPrice != null && response.previousClose !== 0
-          ? ((response.regularMarketPrice / response.previousClose) - 1) * 100
-          : null;
-      const return1d = yahooDayChange ?? periodReturn(points, 1);
+      // 2026-10-13 QA-round-1: a first attempt here used Yahoo's chart.result[0].meta
+      // previousClose/regularMarketPrice as the "authoritative" day-change basis instead of this
+      // self-computed diff. REVERTED 2026-10-14: re-verified post-close against Yahoo奇摩's own
+      // displayed day-change for 6 TW ETFs and that chart-meta basis disagreed badly (off by 2-4x,
+      // one outright sign flip on 0056.TW) with what Yahoo奇摩 itself shows. Yahoo奇摩's own
+      // 昨收/成交 fields (a different page entirely) are the ones that match exactly -- see
+      // lib/yahoo/twQuotePage.ts and app/api/cron/tw-etf-day-change/route.ts, a new, separate,
+      // dedicated job that owns return_1d for TW-listed ETFs from that source instead. This route
+      // keeps the plain self-computed figure for every OTHER ETF (non-TW, where Yahoo奇摩 has no
+      // page), same as the original pre-QA-round-1 behavior.
+      const return1d = periodReturn(points, 1);
       // Task X5 Part B (user-approved): return_1m/3m/1y/3y are now owned exclusively by
       // lib/etf-returns-sync/returnsWriter.ts (Yahoo's own trailingReturns, direct overwrite incl.
       // NULL). This pipeline keeps return_1d and return_6m — Yahoo's trailingReturns has no 1-day or

@@ -23,6 +23,7 @@ import { isAuthorizedCron, unauthorizedCron } from "@/lib/cron/authorize";
 import { prisma } from "@/lib/prisma";
 import { beginRun, finishRun, readCheckpoint, writeCheckpoint } from "@/lib/cloud-ingestion/runContext";
 import { parseTrailingReturns } from "@/lib/etf-returns-sync/parseReturns";
+import { fetchYahooTwPerformance, YahooTwRateLimitedError } from "@/lib/yahoo/twPerformancePage";
 import { getAuth, invalidateAuth } from "@/lib/services/dataProviders/yahoo/yahooClient";
 import { isWriteEnabled, currentRunMode, writeEnvDiagnostic } from "@/lib/etf-returns-sync/writeGate";
 import { writeBatchIfEnabled, type WriteCandidate, type TrailingReturns } from "@/lib/etf-returns-sync/returnsWriter";
@@ -37,6 +38,12 @@ import {
 const JOB = "ETF_RETURNS_SYNC";
 const TIME_BUDGET_MS = 240_000;
 const REQUEST_DELAY_MS = 400; // matches the existing Yahoo ETF enrichment pipeline's own pacing
+// 2026-10-14 QA-round-1: TW-listed ETFs (data_source ending .TW/.TWO) now source their returns from
+// Yahoo奇摩's own page (lib/yahoo/twPerformancePage.ts) instead of the global API's trailingReturns
+// -- see docs/specs/yahoo-return-discrepancy.md. Per the user's instruction this specific call gets
+// its own, more conservative 3s+ spacing (distinct from REQUEST_DELAY_MS above, which still applies
+// to the unchanged global-API path used for non-TW ETFs).
+const YAHOO_TW_REQUEST_DELAY_MS = 3_200;
 const RECENT_PRICE_WINDOW_DAYS = 7;
 const CHECKPOINT_KEY = "etf-returns-sync:cursor";
 
@@ -318,11 +325,35 @@ export async function GET(request: Request) {
     if (!row) continue; // stale id, no longer a real etfs row — never blocks the sweep, no state recorded
 
     attempted++;
+    const isTwListed = /\.(TW|TWO)$/.test(row.data_source);
     let fetchResult: FetchAttemptResult;
-    try {
-      fetchResult = await fetchFundPerformanceRaw(row.data_source);
-    } catch {
-      fetchResult = { outcomeKind: "TRANSIENT_FAILURE", rateLimited: false, result: null };
+    let twReturns: TrailingReturns | null = null;
+    if (isTwListed) {
+      try {
+        const perf = await fetchYahooTwPerformance(row.data_source);
+        if (perf) {
+          twReturns = {
+            r1d: null, // Yahoo奇摩's performance page has no 1-day figure (owned by cloud-etf-price)
+            r1m: perf.navReturn.m1, r3m: perf.navReturn.m3, r6m: perf.navReturn.m6,
+            rytd: perf.navReturn.ytd, r1y: perf.navReturn.y1, r3y: perf.navReturn.y3, r5y: perf.navReturn.y5,
+          };
+          fetchResult = { outcomeKind: "SUCCESS", rateLimited: false, result: null };
+        } else {
+          fetchResult = { outcomeKind: "NO_FUND_PERFORMANCE", rateLimited: false, result: null };
+        }
+      } catch (e) {
+        if (e instanceof YahooTwRateLimitedError) {
+          fetchResult = { outcomeKind: "TRANSIENT_FAILURE", rateLimited: true, result: null };
+        } else {
+          fetchResult = { outcomeKind: "TRANSIENT_FAILURE", rateLimited: false, result: null };
+        }
+      }
+    } else {
+      try {
+        fetchResult = await fetchFundPerformanceRaw(row.data_source);
+      } catch {
+        fetchResult = { outcomeKind: "TRANSIENT_FAILURE", rateLimited: false, result: null };
+      }
     }
     if (fetchResult.rateLimited) {
       rateLimitStop = true; // Task X's own A4 rule, applied here too: never retry around a 401/403/429, stop this invocation
@@ -332,7 +363,7 @@ export async function GET(request: Request) {
     const wasAlreadySkipNoPerf = failureStateMap[etfId]?.kind === "SKIP_NO_PERF";
 
     if (fetchResult.outcomeKind === "SUCCESS") {
-      const returns = parseTrailingReturns(fetchResult.result);
+      const returns = twReturns ?? parseTrailingReturns(fetchResult.result);
       pending.push({ etfId: row.id, returns });
     } else if (fetchResult.outcomeKind === "NO_FUND_PERFORMANCE") {
       noFundPerformanceCount++;
@@ -354,7 +385,7 @@ export async function GET(request: Request) {
 
     if (pending.length >= FLUSH_BATCH_SIZE) await flushPending();
 
-    await sleep(REQUEST_DELAY_MS);
+    await sleep(isTwListed ? YAHOO_TW_REQUEST_DELAY_MS : REQUEST_DELAY_MS);
   }
   await flushPending();
 
