@@ -1,14 +1,23 @@
 import { getForumPool } from "../pgPool.ts";
 import type { PoolClient } from "pg";
+import { sendTelegramMessage } from "../telegram/client.ts";
 
 /**
- * Placeholder for the Telegram admin bot (week 3 per docs/specs/launch-plan-30days.md — not built
- * yet). For now this only logs server-side so NOTIFY-level filter hits and admin-attention events
- * are not silently dropped; replace the body with an actual Telegram sendMessage call once the bot
- * exists (see docs/specs/paid-member-forum-spec.md § 六).
+ * Sends a NOTIFY-level filter hit (or other admin-attention event) to the Telegram admin bot's chat.
+ * Always logs server-side too, so nothing is lost if FORUM_ADMIN_CHAT_ID/FORUM_ADMIN_BOT_TOKEN aren't
+ * configured yet or the Telegram API call fails — this must never throw and block the caller's own
+ * request (a post/reply that passed the filter with a NOTIFY verdict should still succeed).
  */
 export function notifyAdmin(reason: string, context: Record<string, unknown>): void {
   console.warn(`[forum:notifyAdmin] ${reason}`, context);
+
+  const chatId = process.env.FORUM_ADMIN_CHAT_ID;
+  if (!chatId) return;
+
+  const text = `⚠️ ${reason}\n${JSON.stringify(context, null, 2)}`;
+  sendTelegramMessage(chatId, text).catch((e) => {
+    console.error("[forum:notifyAdmin] failed to send Telegram notification", e);
+  });
 }
 
 export type ModerationActionType =
