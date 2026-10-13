@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { SiteFooter } from "@/components/SiteFooter";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -50,6 +51,7 @@ export default function RootLayout({
         {/* 所有頁面內容在 z-10，永遠在背景上層 */}
         <div style={{ position: "relative", zIndex: 10 }}>
           {children}
+          <SiteFooter />
         </div>
 
       </body>
