@@ -144,8 +144,11 @@ export async function updateCommodityHistory(
             c.open, c.high, c.low, c.close, c.adjClose ?? null, c.volume ?? null,
             `https://query1.finance.yahoo.com/v8/finance/chart/${root.yahooSymbol}`,
           );
+          // Task X9 review fix: only count a row as "written" when a write actually happened --
+          // previously incremented unconditionally, so shadow-mode responses misleadingly reported
+          // rowsWritten as if real writes occurred.
+          wrote++;
         }
-        wrote++;
       }
       rowsWritten += wrote;
       updatedRoots++;

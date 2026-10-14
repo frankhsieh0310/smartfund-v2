@@ -95,8 +95,11 @@ export async function updateCommodityTechnical(
           root.rootId, root.yahooSymbol, result.latestDate.toISOString(),
           JSON.stringify(result.metrics), COMMODITY_TECHNICAL_SOURCE,
         );
+        // Task X9 review fix: only count as "updated" when a write actually happened -- previously
+        // incremented unconditionally, so shadow-mode responses misleadingly reported updatedRoots
+        // as if real writes occurred.
+        updatedRoots++;
       }
-      updatedRoots++;
     } catch (error) {
       skippedRoots.push({ rootId: root.rootId, symbol: root.yahooSymbol, reason: String(error) });
     }
