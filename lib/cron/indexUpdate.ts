@@ -106,8 +106,11 @@ export async function updateIndexQuotes(cursor: string | null, batchSize = 20, s
         create: { indexId: row.id, currentLevel: r.regularMarketPrice, previousClose: r.previousClose, change, changePercent, asOfDate: incomingAt, source: "YAHOO_SPARK", freshnessStatus: "CURRENT", verificationStatus: "UNVERIFIED", licenseStatus: "SUPPLEMENTAL_UNVERIFIED" },
         update: { currentLevel: r.regularMarketPrice, previousClose: r.previousClose, change, changePercent, asOfDate: incomingAt, source: "YAHOO_SPARK", freshnessStatus: "CURRENT" },
       });
+      // Review fix: only count as "updated" when a write actually happened -- previously
+      // incremented unconditionally, so shadow-mode responses misleadingly reported updatedIndexes
+      // as if real writes occurred.
+      updatedIndexes++;
     }
-    updatedIndexes++;
   }
 
   return { requestedIndexes: rows.length, updatedIndexes, staleSkipped, noNewData, failedIndexes, lastId: wrapped ? null : rows.at(-1)!.id, wrapped };
@@ -204,14 +207,17 @@ export async function updateIndexHistory(cursor: string | null, batchSize = 2, s
       timing.parse_ms = Date.now() - parseStart;
 
       const writeStart = Date.now();
-      // Task X9: same shadow-mode gate as updateIndexQuotes above -- the fetch/parse work above
-      // still runs so shadow metrics (rowsWritten "would write" count etc.) stay meaningful.
-      if (writeEnabled) { for (const s of statements) await db.$executeRawUnsafe(s.sql, ...s.params); }
+      // Review fix: rowsWritten/updatedIndexes now only count real writes -- previously
+      // incremented unconditionally even in shadow mode (writeEnabled=false), which misleadingly
+      // reported counts as if writes had happened.
+      if (writeEnabled) {
+        for (const s of statements) await db.$executeRawUnsafe(s.sql, ...s.params);
+        rowsWritten += toWrite.length;
+        updatedIndexes++;
+      }
       timing.write_ms = Date.now() - writeStart;
       timing.candles = toWrite.length;
       timing.statements = statements.length;
-      rowsWritten += toWrite.length;
-      updatedIndexes++;
       timings.push(timing);
     } catch (error) {
       timings.push(timing);
