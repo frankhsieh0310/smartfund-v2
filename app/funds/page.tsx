@@ -54,7 +54,11 @@ export default async function FundsPage({ searchParams }: { searchParams: Search
     loadError = true;
   }
 
-  const rows = (result?.data ?? []).filter((row) => row.publicReady);
+  // 2026-10-14 QA round-4 fix: same bug as app/etf/page.tsx -- filtering by publicReady here
+  // silently hid rows from the exact page `pagination.total` says should be there. Each row already
+  // renders its own honest freshness badge (<Status value={fund.freshnessStatus}/> below), which is
+  // the intended way to surface a stale/incomplete row, not hiding it outright.
+  const rows = result?.data ?? [];
   const pagination = result?.pagination;
   const hasFilters = Boolean(query || company || currency || category || risk);
 

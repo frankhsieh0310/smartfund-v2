@@ -34,7 +34,13 @@ export default async function EtfPage({ searchParams }: { searchParams: SearchPa
   try {
     [result, options] = await Promise.all([getEtfList({ query, exchange, currency, issuer, category, page, pageSize, sort, direction }), getEtfFilterOptions()]);
   } catch { loadError = true; }
-  const rows = (result?.data ?? []).filter((row) => row.publicReady);
+  // 2026-10-14 QA round-4 fix: this used to drop every row where publicReady was false, which
+  // silently hid rows from the exact page `pagination.total` says should be there -- `總共 16,726
+  // 檔 ETF` with an EMPTY list is exactly that contradiction, confirmed live while walking the site.
+  // Each row already renders its own honest freshness badge (<Status value={etf.freshnessStatus}/>
+  // below, "資料延遲"/"暫無資料"/etc.) -- that's the intended way to surface a stale/incomplete row,
+  // not hiding it outright.
+  const rows = result?.data ?? [];
   const pagination = result?.pagination;
   const hasFilters = Boolean(query || exchange || currency || issuer || category);
 
