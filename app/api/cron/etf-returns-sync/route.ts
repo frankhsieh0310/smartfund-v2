@@ -45,6 +45,11 @@ const REQUEST_DELAY_MS = 400; // matches the existing Yahoo ETF enrichment pipel
 // to the unchanged global-API path used for non-TW ETFs).
 const YAHOO_TW_REQUEST_DELAY_MS = 3_200;
 const RECENT_PRICE_WINDOW_DAYS = 7;
+// Task X7: bump this ONLY when the actual data source or calculation changes (e.g. switching Yahoo
+// pages, changing which navReturn/trailingReturns field feeds return_1y, etc.) -- never automatically
+// on every deploy. A bump forces every TW-listed ETF to be reprocessed once, same-day, regardless of
+// its lastProcessedDate; see lib/etf-returns-sync/completion.ts's missingForToday.
+const ETF_RETURNS_SOURCE_VERSION = "yahoo-tw-v1";
 const CHECKPOINT_KEY = "etf-returns-sync:cursor";
 
 const writerQuery = (sql: string, params: unknown[]) => prisma.$queryRawUnsafe<any[]>(sql, ...params);
@@ -211,9 +216,6 @@ export async function GET(request: Request) {
     if (persisted?.preexistingSkipNoPerfBackfillDone) preexistingSkipNoPerfBackfillDone = true;
     if (Array.isArray(persisted?.backfilledIds)) backfilledIds = persisted.backfilledIds;
   } catch { /* corrupt/old checkpoint — start fresh rather than block the sweep */ }
-  // Task X7: null when not running on Vercel (e.g. local dev) -- missingForToday treats that as
-  // "skip the version check entirely", never as "everything is stale".
-  const currentDeploymentVersion = process.env.VERCEL_DEPLOYMENT_ID ?? null;
 
   // Task X5 Part 2c / Task X6 Part B.2 (user-approved): ETFs already in SKIP_NO_PERF state before
   // this deploy were classified NO_FUND_PERFORMANCE under the OLD code, which never wrote any row at
@@ -260,7 +262,7 @@ export async function GET(request: Request) {
     } catch { /* checkpoint write failure here just means this backfill chunk may repeat next invocation — not fatal */ }
   }
 
-  const missingIds = missingForToday(coreIdsArray, lastProcessedDate, today, lastProcessedVersion, currentDeploymentVersion);
+  const missingIds = missingForToday(coreIdsArray, lastProcessedDate, today, lastProcessedVersion, ETF_RETURNS_SOURCE_VERSION);
 
   const runKey = `etf-returns-sync:${today}`;
   const { runId, skipped } = await beginRun({
@@ -328,8 +330,7 @@ export async function GET(request: Request) {
     if (writeEnabledThisRun && writeResult.written > 0) {
       for (const p of pending) {
         lastProcessedDate[p.etfId] = today;
-        if (currentDeploymentVersion !== null) lastProcessedVersion[p.etfId] = currentDeploymentVersion;
-        else delete lastProcessedVersion[p.etfId]; // no version signal available -- don't keep a stale one around
+        lastProcessedVersion[p.etfId] = ETF_RETURNS_SOURCE_VERSION;
       }
       const r6mMap = await fetchLatestReturn6mBatch(writerQuery, ids);
       const entries: EtfsRankingEntry[] = pending.map((p) => ({ etfId: p.etfId, returns: p.returns, return6mSync: r6mMap.get(p.etfId) ?? null }));

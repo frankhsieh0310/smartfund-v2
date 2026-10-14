@@ -12,9 +12,15 @@ export type LastProcessedDateMap = Record<string, string>;
 // Task X7: a mid-day deploy that fixes the return calculation (e.g. the 2026-10-14 Yahoo奇摩
 // navReturn switch) does NOT retroactively redo etfs already marked "done for today" -- they'd sit
 // on the pre-fix value until the date rolls over, even though the fix is already live. Tracks which
-// deployment (VERCEL_DEPLOYMENT_ID, see writeGate.ts's writeEnvDiagnostic) actually produced each
-// etf's "done for today" write; a version mismatch forces reprocessing today regardless of date,
-// self-healing within one invocation of a deploy instead of waiting for tomorrow.
+// DATA-SOURCE/CALCULATION version actually produced each etf's "done for today" write; a version
+// mismatch forces reprocessing today regardless of date, self-healing within one invocation instead
+// of waiting for tomorrow.
+//
+// currentVersion is deliberately NOT tied to VERCEL_DEPLOYMENT_ID (every deploy gets a new one, even
+// deploys unrelated to this pipeline -- that would force a full same-day reprocess of every TW-listed
+// ETF on every single deploy, burning Yahoo request quota and run time for no reason). It's a plain
+// constant the route sets manually (ETF_RETURNS_SOURCE_VERSION) and only bumps when the actual data
+// source or calculation changes.
 export type LastProcessedVersionMap = Record<string, string>;
 
 export function missingForToday(
