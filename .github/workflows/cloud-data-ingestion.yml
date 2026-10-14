@@ -58,7 +58,12 @@ on:
     - cron: "40 19 * * 1-5"     # Commodity: CBOT (Corn/Wheat/Soybeans/Soybean Oil) — day-session settle ~1:20pm CT = 19:20 UTC winter
     - cron: "0 20 * * 1-5"      # Commodity: COMEX/NYMEX (WTI, Nat Gas, Gold, Silver, Copper, Platinum, Palladium) — settle 1:30-2:30pm ET = 18:30-19:30 UTC winter
     - cron: "20 20 * * 1-5"     # Commodity: CME Livestock (Live Cattle, Lean Hogs) — Chicago settle ~1-2pm CT = 19:00-20:00 UTC winter
-    - cron: "0 21 * * 1-5"      # Commodity: ICE (Coffee, Cocoa, Sugar, Cotton, Brent) — NY softs ~1-2pm ET + ICE Europe Brent, safe latest bound
+    - cron: "0 21 * * 1-5"      # Commodity: ICE (Coffee, Cocoa, Sugar, Cotton, Brent, Orange Juice) — NY softs ~1-2pm ET + ICE Europe Brent, safe latest bound
+    # Commodity technical indicators: pure DB-to-DB computation from the price rows the 4 groups
+    # above just wrote -- no external Yahoo call, no rate limit, so it runs once after all 4 groups
+    # have had a chance to settle (30min after the latest group, ICE at 21:00 UTC) rather than
+    # needing its own per-group split.
+    - cron: "30 21 * * 1-5"     # Commodity: technical indicators (SMA/EMA/MACD/RSI/Bollinger/KD/N-day-high-low/volume-multiple)
     # Yahoo Taiwan "international index" page (22 fixed symbols): one trigger per MARKET close,
     # not per index. Each time is picked at/after that market's LATEST possible UTC close (i.e. its
     # winter/non-DST offset, which is later in UTC than its summer/DST offset) plus a 10-20min
@@ -94,7 +99,7 @@ on:
         description: "Which job to run"
         type: choice
         default: all
-        options: [both, etf-price, moneydj-fund, moneydj-etf, global-etf-holdings, fund-holdings, fund-nav, consensus-ingest, consensus-aggregate, consensus-performance, consensus-flips, consensus-backfill, tw-fundamentals-refresh, global-pe-recompute, mops-financial-incremental, sec-financial-incremental, etf-official-holdings, fx-quote, crypto-quote, crypto-marketcap, crypto-history, index-history, index-japan, index-korea, index-china, index-philippines, index-hongkong, index-sea, index-india, index-russia, index-europe, index-us, commodity-cbot, commodity-comex-nymex, commodity-livestock, commodity-ice, all]
+        options: [both, etf-price, moneydj-fund, moneydj-etf, global-etf-holdings, fund-holdings, fund-nav, consensus-ingest, consensus-aggregate, consensus-performance, consensus-flips, consensus-backfill, tw-fundamentals-refresh, global-pe-recompute, mops-financial-incremental, sec-financial-incremental, etf-official-holdings, fx-quote, crypto-quote, crypto-marketcap, crypto-history, index-history, index-japan, index-korea, index-china, index-philippines, index-hongkong, index-sea, index-india, index-russia, index-europe, index-us, commodity-cbot, commodity-comex-nymex, commodity-livestock, commodity-ice, commodity-technical, all]
       issuer:
         description: "ETF issuer to run (etf-official-holdings job only; ignored by every other job)"
         type: choice
@@ -131,6 +136,7 @@ jobs:
             "0 20 * * 1-5") echo "job=commodity-comex-nymex" >> "$GITHUB_OUTPUT" ;;
             "20 20 * * 1-5") echo "job=commodity-livestock" >> "$GITHUB_OUTPUT" ;;
             "0 21 * * 1-5") echo "job=commodity-ice" >> "$GITHUB_OUTPUT" ;;
+            "30 21 * * 1-5") echo "job=commodity-technical" >> "$GITHUB_OUTPUT" ;;
             "20 6 * * 1-5") echo "job=index-japan" >> "$GITHUB_OUTPUT" ;;
             "45 6 * * 1-5") echo "job=index-korea" >> "$GITHUB_OUTPUT" ;;
             "20 7 * * 1-5") echo "job=index-china" >> "$GITHUB_OUTPUT" ;;
@@ -359,7 +365,7 @@ jobs:
           curl --fail-with-body --show-error --silent \
                --connect-timeout 15 --max-time 300 \
                -H "Authorization: Bearer ${SECRET}" \
-               "${BASE_URL}/api/cron/yahoo-commodity?phase=history&group=cbot&symbols=ZC=F,ZW=F,ZS=F,ZL=F" | tee commodity-cbot-response.json
+               "${BASE_URL}/api/cron/yahoo-commodity?phase=history&group=cbot&symbols=ZC=F,ZW=F,ZS=F,ZL=F,ZO=F,ZR=F" | tee commodity-cbot-response.json
           echo
 
       - name: Commodity — COMEX/NYMEX close (WTI, Nat Gas, Gold, Silver, Copper, Platinum, Palladium)
@@ -369,7 +375,7 @@ jobs:
           curl --fail-with-body --show-error --silent \
                --connect-timeout 15 --max-time 300 \
                -H "Authorization: Bearer ${SECRET}" \
-               "${BASE_URL}/api/cron/yahoo-commodity?phase=history&group=comex-nymex&symbols=CL=F,NG=F,GC=F,SI=F,HG=F,PL=F,PA=F" | tee commodity-comex-nymex-response.json
+               "${BASE_URL}/api/cron/yahoo-commodity?phase=history&group=comex-nymex&symbols=CL=F,NG=F,GC=F,SI=F,HG=F,PL=F,PA=F,RB=F,HO=F" | tee commodity-comex-nymex-response.json
           echo
 
       - name: Commodity — CME Livestock close (Live Cattle, Lean Hogs)
@@ -389,7 +395,17 @@ jobs:
           curl --fail-with-body --show-error --silent \
                --connect-timeout 15 --max-time 300 \
                -H "Authorization: Bearer ${SECRET}" \
-               "${BASE_URL}/api/cron/yahoo-commodity?phase=history&group=ice&symbols=KC=F,CC=F,SB=F,CT=F,BZ=F" | tee commodity-ice-response.json
+               "${BASE_URL}/api/cron/yahoo-commodity?phase=history&group=ice&symbols=KC=F,CC=F,SB=F,CT=F,BZ=F,OJ=F" | tee commodity-ice-response.json
+          echo
+
+      - name: Commodity — technical indicators (daily, DB-to-DB, no external calls)
+        if: ${{ contains(fromJSON('["commodity-technical","all"]'), steps.pick.outputs.job) }}
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --show-error --silent \
+               --connect-timeout 15 --max-time 60 \
+               -H "Authorization: Bearer ${SECRET}" \
+               "${BASE_URL}/api/cron/yahoo-commodity-technical" | tee commodity-technical-response.json
           echo
 
       - name: Index — Japan market close (^N225)
