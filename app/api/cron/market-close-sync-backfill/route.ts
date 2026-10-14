@@ -30,7 +30,7 @@ import { beginRun, finishRun } from "@/lib/cloud-ingestion/runContext";
 import { readCheckpoint, writeCheckpoint } from "@/lib/cloud-ingestion/runContext";
 import { localDateFromUnix } from "@/lib/market-close-sync/marketTime";
 import {
-  parseBackfillDates, computeMissingPairs, extractRequestedCloses, filterTradingDates, computeConfirmedNoData,
+  parseBackfillDates, computeMissingPairs, extractRequestedCloses, filterTradingDates, buildTradingDaySet, computeConfirmedNoData,
 } from "@/lib/market-close-sync/backfillHistory";
 
 export const runtime = "nodejs";
@@ -99,8 +99,9 @@ export async function GET(request: Request) {
   }
 
   // Trading-calendar proxy: a configured date only counts as a real gap if the market itself was open.
+  // See buildTradingDaySet's own header comment for the 2026-10-13 bug this fixed.
   const calendarPoints = await fetchYahooChartPoints(TRADING_CALENDAR_PROXY_SYMBOL, configuredDates);
-  const tradingDays = new Set(calendarPoints.filter((p) => p.close != null).map((p) => p.dateKey));
+  const tradingDays = buildTradingDaySet(calendarPoints);
   const dates = filterTradingDates(configuredDates, tradingDays);
   const excludedNonTradingDates = configuredDates.filter((d) => !dates.includes(d));
 

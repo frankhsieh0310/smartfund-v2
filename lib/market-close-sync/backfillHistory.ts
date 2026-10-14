@@ -62,6 +62,18 @@ export function filterTradingDates(dates: readonly string[], tradingDays: Readon
   return dates.filter((d) => tradingDays.has(d));
 }
 
+/** Builds the trading-day reference set from the proxy symbol's raw chart points. A date counts as a
+ * trading day iff Yahoo's response has A BAR for it (a timestamp entry) -- NOT iff that bar's `close`
+ * happens to be non-null. Found 2026-10-14 (round-4 QA): Yahoo's own chart response for 0050.TW had a
+ * genuine timestamp for 2026-10-13 (a confirmed real trading day) but with `close: null` for that one
+ * bar -- a transient Yahoo-side gap, not evidence the market was closed. Filtering on `close != null`
+ * wrongly excluded a real trading day from the whole backfill. Bar presence = market open; a null
+ * close for one specific symbol is a separate, already-handled signal (computeConfirmedNoData below),
+ * never a calendar fact. */
+export function buildTradingDaySet(calendarPoints: readonly { dateKey: string; close: number | null }[]): Set<string> {
+  return new Set(calendarPoints.map((p) => p.dateKey));
+}
+
 /** Of the dates actually requested for one symbol this run, which ones Yahoo's response had NO close
  * for at all. Since the caller only ever requests confirmed trading days (filterTradingDates already
  * ran), a date missing here means this ONE symbol didn't trade that day (or -- 00838B -- Yahoo has

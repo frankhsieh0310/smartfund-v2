@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { parseBackfillDates, computeMissingPairs, extractRequestedCloses, filterTradingDates, computeConfirmedNoData } from "../backfillHistory.ts";
+import { parseBackfillDates, computeMissingPairs, extractRequestedCloses, filterTradingDates, buildTradingDaySet, computeConfirmedNoData } from "../backfillHistory.ts";
 
 function test(name: string, fn: () => void) {
   try { fn(); console.log(`PASS: ${name}`); } catch (e) { console.log(`FAIL: ${name} — ${(e as Error).message}`); process.exitCode = 1; }
@@ -109,4 +109,28 @@ test("computeMissingPairs: all pairs resolved via existing+confirmedNoData combi
   const confirmedNoData = new Set(["e1::2026-10-08", "e2::2026-10-07", "e2::2026-10-08"]);
   const result = computeMissingPairs(["e1", "e2"], ["2026-10-07", "2026-10-08"], existingPairs, confirmedNoData);
   assert.deepEqual(result, []);
+});
+
+// Regression (round-4 QA, 2026-10-14): a real trading day whose proxy-symbol bar has close:null must
+// still count as a trading day -- only bar ABSENCE means the market was closed. Reproduces the live
+// Yahoo response shape seen for 0050.TW on 2026-10-13 (bar present, close null).
+test("buildTradingDaySet: a bar with close:null still counts as a trading day (bar presence, not close non-null, is the signal)", () => {
+  const points = [
+    { dateKey: "2026-10-07", close: 116.05 },
+    { dateKey: "2026-10-08", close: 114.95 },
+    { dateKey: "2026-10-12", close: 114.8 },
+    { dateKey: "2026-10-13", close: null },
+    { dateKey: "2026-10-14", close: 113 },
+  ];
+  const tradingDays = buildTradingDaySet(points);
+  assert.equal(tradingDays.has("2026-10-13"), true);
+  const configured = ["2026-10-07", "2026-10-09", "2026-10-10", "2026-10-11", "2026-10-13"];
+  const dates = filterTradingDates(configured, tradingDays);
+  assert.deepEqual(dates, ["2026-10-07", "2026-10-13"]);
+});
+
+test("buildTradingDaySet: a date entirely absent from the proxy response is NOT a trading day", () => {
+  const points = [{ dateKey: "2026-10-07", close: 116.05 }, { dateKey: "2026-10-12", close: 114.8 }];
+  const tradingDays = buildTradingDaySet(points);
+  assert.equal(tradingDays.has("2026-10-10"), false); // e.g. a real holiday, no bar at all
 });
