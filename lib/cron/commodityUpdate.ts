@@ -51,11 +51,18 @@ export const CORE_COMMODITY_ROOTS: Array<{ rootId: string; yahooSymbol: string; 
   { rootId: "937b3fd5-cf31-4b30-a324-6fd7d33b430b", yahooSymbol: "OJ=F", name: "Orange Juice" },
   { rootId: "4b3fb696-c482-4ab1-ac1c-da7c2b15f2fb", yahooSymbol: "RB=F", name: "RBOB Gasoline" },
   { rootId: "2dcbe3e0-9440-401d-acd1-40ba9a4fc2d4", yahooSymbol: "ZR=F", name: "Rice" },
-  // Aluminum (LME, root 84e96c98-d834-4070-aa3e-11f85fe0a38a) and NY Harbor ULSD / "Heating Oil"
-  // (NYMEX, root 4e6fe3d8-bdfd-4076-a0fe-7a19e1da9683) are NOT added here: no confirmed
-  // futures_yahoo_symbol_mappings row exists for either, and LME metals in particular are not
-  // reliably available under Yahoo's plain `=F` continuous-contract symbol format. Needs its own
-  // symbol-verification pass before inclusion -- see docs/specs/technical-screener-reverse-lookup.md.
+  // 2026-10-14 symbol-verification pass (round-5 instruction 3-2): HO=F live-confirmed via Yahoo's
+  // own chart API meta (shortName "Heating Oil Nov 26", exchangeName "NYM") -- matches this root's
+  // own exchange (NYMEX) and product (NY Harbor ULSD, the modern successor contract still commonly
+  // called "heating oil"). Added.
+  { rootId: "4e6fe3d8-bdfd-4076-a0fe-7a19e1da9683", yahooSymbol: "HO=F", name: "Heating Oil (NY Harbor ULSD)" },
+  // Aluminum is deliberately NOT added: the only futures_product_roots entry for it is LME-listed
+  // (root_symbol "AH", exchange LME). Yahoo's ALI=F is live-confirmed to exist, but its own chart
+  // meta reports exchangeName "CMX" (COMEX) -- a DIFFERENT, cash-settled contract priced off a
+  // Midwest premium + LME price, not the same instrument as the LME primary contract this root
+  // represents. Writing ALI=F data onto the LME root would mislabel the source. Needs either a
+  // separate COMEX-aluminum root created first, or an LME-specific Yahoo symbol found -- flagged in
+  // docs/specs/technical-screener-reverse-lookup.md rather than forced.
 ];
 
 export type CommodityHistoryBatchResult = {
