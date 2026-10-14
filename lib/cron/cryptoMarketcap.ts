@@ -64,7 +64,7 @@ export async function fetchMarketcapQuotes(symbols: string[]): Promise<Quote[]> 
 
 const validNumber = (v: unknown): number | null => typeof v === "number" && Number.isFinite(v) && v >= 0 ? v : null;
 
-export async function runMarketcapSlice(owner: string, invocationId?: string | null) {
+export async function runMarketcapSlice(owner: string, invocationId?: string | null, writeEnabled = false) {
   const started = Date.now();
   const runKey = cryptoRunKey("marketcap", started, invocationId);
   const before = await readCheckpoint(CHECKPOINT);
@@ -102,9 +102,12 @@ export async function runMarketcapSlice(owner: string, invocationId?: string | n
         "SELECT owner FROM production_scheduler_locks WHERE job_id=$1 AND owner=$2 AND expires_at>CURRENT_TIMESTAMP FOR UPDATE", JOB, owner,
       );
       if (!held.length) throw new Error("CRYPTO_LEASE_LOST");
+      // Task X9: this pipeline (restored from the dormant release-data-p3 branch) had no write
+      // gate at all -- shadow mode still runs the lease check, lookups and checkpoint/run-log
+      // advancement below for diagnostics, just skips the actual crypto_market_cap_supply insert.
       // Actual Yahoo observation time gives stable idempotency across retry/crash. Preserve
       // other providers on a timestamp collision; never replace newer Yahoo observations.
-      const updated = values.length ? await tx.$executeRawUnsafe(
+      const updated = values.length && writeEnabled ? await tx.$executeRawUnsafe(
         `WITH incoming AS (
            SELECT DISTINCT ON ("assetId") * FROM jsonb_to_recordset($1::jsonb)
              AS v("assetId" text, "observedAt" timestamptz, "marketCap" numeric, "circulatingSupply" numeric)

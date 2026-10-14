@@ -93,7 +93,7 @@ export type CryptoQuoteBatchResult = {
 // Phase 1: latest price. Bounded batch — live-confirmed 2026-09-13: Yahoo Spark's safe cap for
 // crypto symbols is the same 20/request as FX and Index (21+ symbols in one call returns HTTP
 // 400 regardless of validity).
-export async function updateCryptoQuotes(cursor: string | null, batchSize = 20, symbols?: string[]): Promise<CryptoQuoteBatchResult> {
+export async function updateCryptoQuotes(cursor: string | null, batchSize = 20, symbols?: string[], writeEnabled = false): Promise<CryptoQuoteBatchResult> {
   // No explicit symbols -> drive from the full active "yahoo" universe already in crypto_markets
   // (mirrors FX's getActiveYahooDirectPairSymbols() DB-driven scope), not the original 16-symbol
   // targeted-validation constant.
@@ -133,11 +133,16 @@ export async function updateCryptoQuotes(cursor: string | null, batchSize = 20, 
     const change = r.previousClose != null ? r.regularMarketPrice - r.previousClose : null;
     const changePercent = change != null && r.previousClose ? (change / r.previousClose) * 100 : null;
 
-    await prisma.cryptoMarketSnapshot.upsert({
-      where: { marketId_observedAt: { marketId: row.id, observedAt: incomingAt } },
-      create: { marketId: row.id, observedAt: incomingAt, price: r.regularMarketPrice, quoteCurrency: "USD", change24h: change, changePercent24h: changePercent, source: "YAHOO_SPARK", freshnessStatus: "CURRENT" },
-      update: { price: r.regularMarketPrice, change24h: change, changePercent24h: changePercent, freshnessStatus: "CURRENT" },
-    });
+    // Task X9: this pipeline (restored from the dormant release-data-p3 branch) had no write gate
+    // at all -- shadow mode still runs every lookup/comparison above for diagnostics, just skips
+    // the actual upsert.
+    if (writeEnabled) {
+      await prisma.cryptoMarketSnapshot.upsert({
+        where: { marketId_observedAt: { marketId: row.id, observedAt: incomingAt } },
+        create: { marketId: row.id, observedAt: incomingAt, price: r.regularMarketPrice, quoteCurrency: "USD", change24h: change, changePercent24h: changePercent, source: "YAHOO_SPARK", freshnessStatus: "CURRENT" },
+        update: { price: r.regularMarketPrice, change24h: change, changePercent24h: changePercent, freshnessStatus: "CURRENT" },
+      });
+    }
     updatedMarkets++;
   }
 
@@ -157,7 +162,7 @@ export type CryptoHistoryBatchResult = {
 // 3-day revision-reabsorb padding as FX/Index. Crypto trades 24/7 (Step 9/19): the "1d" interval
 // here is a fixed calendar-day bucket exactly as Yahoo's own chart API already returns it — no
 // weekday/holiday filtering is applied anywhere in this function.
-export async function updateCryptoHistory(cursor: string | null, batchSize = 2, symbols?: string[]): Promise<CryptoHistoryBatchResult> {
+export async function updateCryptoHistory(cursor: string | null, batchSize = 2, symbols?: string[], writeEnabled = false): Promise<CryptoHistoryBatchResult> {
   // Same DB-driven default scope as updateCryptoQuotes above.
   const rows = await prisma.cryptoMarket.findMany({
     where: { exchangeId: YAHOO_EXCHANGE_ID, active: true, ...(symbols ? { providerSymbol: { in: symbols } } : {}), ...(cursor ? { id: { gt: cursor } } : {}) },
@@ -195,11 +200,13 @@ export async function updateCryptoHistory(cursor: string | null, batchSize = 2, 
         // of upserting the existing one).
         const openTime = c.date;
         if (cursorTime != null && openTime.getTime() < cursorTime - 3 * DAY_MS) continue;
-        await prisma.cryptoCandle.upsert({
-          where: { marketId_interval_openTime: { marketId: row.id, interval: "1d", openTime } },
-          create: { marketId: row.id, interval: "1d", openTime, closeTime: new Date(openTime.getTime() + DAY_MS - 1), open: c.open!, high: c.high!, low: c.low!, close: c.close!, volume: c.volume ?? 0, source: "YAHOO_CHART", freshnessStatus: "CURRENT" },
-          update: { open: c.open!, high: c.high!, low: c.low!, close: c.close!, volume: c.volume ?? 0, freshnessStatus: "CURRENT" },
-        });
+        if (writeEnabled) {
+          await prisma.cryptoCandle.upsert({
+            where: { marketId_interval_openTime: { marketId: row.id, interval: "1d", openTime } },
+            create: { marketId: row.id, interval: "1d", openTime, closeTime: new Date(openTime.getTime() + DAY_MS - 1), open: c.open!, high: c.high!, low: c.low!, close: c.close!, volume: c.volume ?? 0, source: "YAHOO_CHART", freshnessStatus: "CURRENT" },
+            update: { open: c.open!, high: c.high!, low: c.low!, close: c.close!, volume: c.volume ?? 0, freshnessStatus: "CURRENT" },
+          });
+        }
         wrote++;
       }
       rowsWritten += wrote;

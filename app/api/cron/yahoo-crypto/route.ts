@@ -17,6 +17,7 @@ import { beginRun, finishRun, readCheckpoint, writeCheckpoint } from "@/lib/clou
 import { updateCryptoQuotes, updateCryptoHistory, ensureYahooCryptoUniverse, CORE_CRYPTO_SYMBOLS } from "@/lib/cron/cryptoUpdate";
 
 import { cryptoRunKey, runMarketcapSlice, withCryptoLease } from "@/lib/cron/cryptoMarketcap";
+import { isCryptoSyncWriteEnabled } from "@/lib/cron/cryptoWriteGate";
 
 export const runtime = "nodejs";
 export const maxDuration = 280;
@@ -33,7 +34,7 @@ export async function GET(request: Request) {
   const invocation = request.headers.get("x-crypto-invocation-id");
   if (invocation && !/^[A-Za-z0-9_-]{1,80}$/.test(invocation)) return Response.json({ ok: false, error: "INVALID_INVOCATION_ID" }, { status: 400 });
   return withCryptoLease(phase, owner => phase === "marketcap"
-    ? runMarketcapSlice(owner, invocation)
+    ? runMarketcapSlice(owner, invocation, isCryptoSyncWriteEnabled())
     : handleCryptoRequest(request));
 }
 
@@ -70,6 +71,7 @@ async function handleCryptoRequest(request: Request) {
   const { runId, skipped } = await beginRun({ jobName: JOB, provider: "YAHOO", runKey, universeCount: 0, batchSize: batch, checkpointBefore: cpBefore });
   if (skipped) return Response.json({ ok: true, task: "yahoo-crypto", phase, skipped: true });
 
+  const writeEnabled = isCryptoSyncWriteEnabled();
   try {
     let cursor = cpBefore?.lastSymbol ?? null;
     if (phase === "quote") {
@@ -77,7 +79,7 @@ async function handleCryptoRequest(request: Request) {
       const failedMarkets: Array<{ id: string; symbol: string; reason: string }> = [];
       let wrapped = false, slices = 0;
       while (Date.now() - started < TIME_BUDGET_MS) {
-        const r = await updateCryptoQuotes(cursor, batch, scope);
+        const r = await updateCryptoQuotes(cursor, batch, scope, writeEnabled);
         requestedMarkets += r.requestedMarkets; updatedMarkets += r.updatedMarkets; staleSkipped += r.staleSkipped; noNewData += r.noNewData;
         failedMarkets.push(...r.failedMarkets);
         cursor = r.lastId; slices++;
@@ -86,14 +88,14 @@ async function handleCryptoRequest(request: Request) {
       const cpAfter = { lastSymbol: wrapped ? null : cursor, processed: (cpBefore?.processed ?? 0) + requestedMarkets, succeeded: (cpBefore?.succeeded ?? 0) + updatedMarkets, failed: failedMarkets.length };
       await writeCheckpoint(JOB, cpKey, runId, cpAfter);
 
-      await finishRun(runId, JOB, "YAHOO", started, { status: failedMarkets.length > 0 && updatedMarkets === 0 ? "PARTIAL" : "COMPLETED", attempted: requestedMarkets, completed: updatedMarkets, inserted: 0, updated: updatedMarkets, failed: failedMarkets.length, retryableFailures: failedMarkets.length, checkpointAfter: { ...cpAfter, updatedAt: new Date().toISOString() }, details: { slices, wrapped, staleSkipped, noNewData } });
-      return Response.json({ ok: true, task: "yahoo-crypto", phase, requestedMarkets, updatedMarkets, staleSkipped, noNewData, failedMarkets, wrapped, slices });
+      await finishRun(runId, JOB, "YAHOO", started, { status: failedMarkets.length > 0 && updatedMarkets === 0 ? "PARTIAL" : "COMPLETED", attempted: requestedMarkets, completed: updatedMarkets, inserted: 0, updated: updatedMarkets, failed: failedMarkets.length, retryableFailures: failedMarkets.length, checkpointAfter: { ...cpAfter, updatedAt: new Date().toISOString() }, details: { slices, wrapped, staleSkipped, noNewData, writeEnabled } });
+      return Response.json({ ok: true, task: "yahoo-crypto", phase, writeEnabled, requestedMarkets, updatedMarkets, staleSkipped, noNewData, failedMarkets, wrapped, slices });
     } else {
       let requestedMarkets = 0, updatedMarkets = 0, rowsWritten = 0;
       const failedMarkets: Array<{ id: string; symbol: string; reason: string }> = [];
       let wrapped = false, slices = 0;
       while (Date.now() - started < HISTORY_MAX_SAFE_RUNTIME_MS) {
-        const r = await updateCryptoHistory(cursor, HISTORY_BATCH_SIZE, scope);
+        const r = await updateCryptoHistory(cursor, HISTORY_BATCH_SIZE, scope, writeEnabled);
         requestedMarkets += r.requestedMarkets; updatedMarkets += r.updatedMarkets; rowsWritten += r.rowsWritten;
         failedMarkets.push(...r.failedMarkets);
         cursor = r.lastId; slices++;
@@ -103,8 +105,8 @@ async function handleCryptoRequest(request: Request) {
         if (Date.now() - started >= HISTORY_MAX_SAFE_RUNTIME_MS) break;
       }
       const cpAfter = { lastSymbol: wrapped ? null : cursor, processed: (cpBefore?.processed ?? 0) + requestedMarkets, succeeded: (cpBefore?.succeeded ?? 0) + updatedMarkets, failed: failedMarkets.length };
-      await finishRun(runId, JOB, "YAHOO", started, { status: failedMarkets.length > 0 && updatedMarkets === 0 && rowsWritten === 0 ? "PARTIAL" : "COMPLETED", attempted: requestedMarkets, completed: updatedMarkets, inserted: rowsWritten, updated: 0, failed: failedMarkets.length, retryableFailures: failedMarkets.length, checkpointAfter: { ...cpAfter, updatedAt: new Date().toISOString() }, details: { slices, wrapped, batchSize: HISTORY_BATCH_SIZE } });
-      return Response.json({ ok: true, task: "yahoo-crypto", phase, requestedMarkets, updatedMarkets, rowsWritten, failedMarkets, wrapped, slices });
+      await finishRun(runId, JOB, "YAHOO", started, { status: failedMarkets.length > 0 && updatedMarkets === 0 && rowsWritten === 0 ? "PARTIAL" : "COMPLETED", attempted: requestedMarkets, completed: updatedMarkets, inserted: rowsWritten, updated: 0, failed: failedMarkets.length, retryableFailures: failedMarkets.length, checkpointAfter: { ...cpAfter, updatedAt: new Date().toISOString() }, details: { slices, wrapped, batchSize: HISTORY_BATCH_SIZE, writeEnabled } });
+      return Response.json({ ok: true, task: "yahoo-crypto", phase, writeEnabled, requestedMarkets, updatedMarkets, rowsWritten, failedMarkets, wrapped, slices });
     }
   } catch (e) {
     await finishRun(runId, JOB, "YAHOO", started, { status: "FAILED", attempted: 0, completed: 0, inserted: 0, updated: 0, failed: 1, retryableFailures: 1, checkpointAfter: cpBefore, error: (e as Error).message });
