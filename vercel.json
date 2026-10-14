@@ -30,6 +30,26 @@
     { "path": "/api/cron/tw-etf-day-change", "schedule": "10 8 * * 1-5" },
     { "path": "/api/cron/offshore-nav-tdcc-sync", "schedule": "31 2 * * *" },
     { "path": "/api/cron/offshore-nav-tdcc-sync", "schedule": "31 10 * * *" },
-    { "path": "/api/cron/fund-returns-sync", "schedule": "41 * * * *" }
+    { "path": "/api/cron/fund-returns-sync", "schedule": "41 * * * *" },
+    { "path": "/api/cron/yahoo-commodity?phase=history&group=cbot&symbols=ZC=F,ZW=F,KE=F,ZS=F,ZL=F,ZM=F,ZO=F,ZR=F", "schedule": "40 19 * * 1-5" },
+    { "path": "/api/cron/yahoo-commodity?phase=history&group=comex-nymex&symbols=CL=F,NG=F,GC=F,SI=F,HG=F,PL=F,PA=F,RB=F,HO=F", "schedule": "0 20 * * 1-5" },
+    { "path": "/api/cron/yahoo-commodity?phase=history&group=livestock&symbols=LE=F,HE=F,GF=F", "schedule": "20 20 * * 1-5" },
+    { "path": "/api/cron/yahoo-commodity?phase=history&group=ice&symbols=KC=F,CC=F,SB=F,CT=F,BZ=F,OJ=F", "schedule": "0 21 * * 1-5" },
+    { "path": "/api/cron/yahoo-commodity-technical", "schedule": "30 21 * * 1-5" },
+    { "path": "/api/cron/yahoo-index?phase=history", "schedule": "26 0 * * *" },
+    { "path": "/api/cron/yahoo-index?phase=history&market=japan&symbols=%5EN225", "schedule": "20 6 * * 1-5" },
+    { "path": "/api/cron/yahoo-index?phase=history&market=korea&symbols=%5EKS11", "schedule": "45 6 * * 1-5" },
+    { "path": "/api/cron/yahoo-index?phase=history&market=china&symbols=000001.SS,000002.SS,000003.SS,399001.SZ,399107.SZ,399108.SZ", "schedule": "20 7 * * 1-5" },
+    { "path": "/api/cron/yahoo-index?phase=history&market=philippines&symbols=PSEI.PS", "schedule": "45 7 * * 1-5" },
+    { "path": "/api/cron/yahoo-index?phase=history&market=hongkong&symbols=%5EHSI", "schedule": "25 8 * * 1-5" },
+    { "path": "/api/cron/yahoo-index?phase=history&market=sea&symbols=%5EJKSE,%5EKLSE,%5ESTI", "schedule": "15 9 * * 1-5" },
+    { "path": "/api/cron/yahoo-index?phase=history&market=india&symbols=%5EBSESN", "schedule": "15 10 * * 1-5" },
+    { "path": "/api/cron/yahoo-index?phase=history&market=russia&symbols=RTSI.ME", "schedule": "5 16 * * 1-5" },
+    { "path": "/api/cron/yahoo-index?phase=history&market=europe&symbols=%5EGDAXI,%5EFTSE,%5EFCHI", "schedule": "50 16 * * 1-5" },
+    { "path": "/api/cron/yahoo-index?phase=history&market=us&symbols=%5EDJI,%5EGSPC,%5EIXIC,%5ESOX", "schedule": "15 21 * * 1-5" },
+    { "path": "/api/cron/yahoo-crypto?phase=marketcap", "schedule": "39 0 * * *" },
+    { "path": "/api/cron/yahoo-crypto?phase=history", "schedule": "23 0 * * *" },
+    { "path": "/api/cron/yahoo-crypto?phase=quote", "schedule": "0 */4 * * *" },
+    { "path": "/api/cron/yahoo-crypto?phase=bootstrap", "schedule": "10 0 * * *" }
   ]
 }

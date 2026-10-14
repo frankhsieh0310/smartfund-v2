@@ -17,52 +17,64 @@ import { fetchYahooChartPeriod } from "@/lib/services/dataProviders/yahoo/yahooC
 
 const DAY_MS = 86_400_000;
 
-// Fixed Commodity Core Universe (18 roots) — 15 already had mature Yahoo history in production;
-// Brent/Live Cattle/Lean Hogs are the 3 gap-fills this round, using the exact yahoo_symbol already
-// confirmed by the separate Futures identity-mapping work (BZ=F / LE=F / HE=F), live-reconfirmed
-// 2026-09-16. root_id values are the commodity_identities-linked futures_product_roots row (this
-// table has some unlinked/duplicate rows for the same root_symbol from earlier work; the id below
-// is always the one with a real commodity_id, matching the ground-truth ingestion pattern already
-// in place for the 15 working roots).
+// Task X10 (round-6 instruction 一-2): expanded from the original 18+5=23 to every genuine physical
+// commodity continuous-contract (`=F`) Yahoo symbol found in futures_yahoo_symbol_mappings, verified
+// one-by-one against futures_product_roots to exclude anything that isn't an actual commodity (the
+// 831-row mapping table also covers Treasury/rate futures, equity-index futures, single-stock
+// futures, FX futures and crypto-proxy futures -- none of those belong here). Also fixes a real bug
+// found during this expansion: the ORIGINAL Brent/Live Cattle/Lean Hogs root_ids (from the upstream
+// release-data-p3 commit) each pointed at a near-empty duplicate root (12 rows, or 0 for Lean Hogs)
+// instead of the correct root with thousands of rows of real history -- futures_product_roots has
+// known unlinked duplicate rows per root_symbol from earlier work, and the original commit picked
+// the wrong one for these 3. Verified via a direct row-count query against
+// futures_root_market_observations before swapping in the correct root_ids below.
 export const CORE_COMMODITY_ROOTS: Array<{ rootId: string; yahooSymbol: string; name: string }> = [
   { rootId: "ceebeb1f-3616-4d38-ab85-a7de76455d9a", yahooSymbol: "CL=F", name: "WTI Crude Oil" },
   { rootId: "8c9966ab-8e29-43bc-a4ff-e908fef9b2c2", yahooSymbol: "NG=F", name: "Natural Gas" },
-  { rootId: "d57a0610-4fb7-4b0e-a7bf-ea52a299bbbf", yahooSymbol: "BZ=F", name: "Brent Crude" },
+  // Brent: was d57a0610... (12 rows) -- corrected to 7ceb9102... (4,759 rows, latest 2026-09-11).
+  { rootId: "7ceb9102-ff27-4040-a181-26aaabbd6193", yahooSymbol: "BZ=F", name: "Brent Crude" },
   { rootId: "35ff5db4-16ba-4392-a48e-efd96fbc485d", yahooSymbol: "GC=F", name: "Gold" },
   { rootId: "6ae35358-2b1c-4b3b-a09c-005b94e6b8cc", yahooSymbol: "SI=F", name: "Silver" },
   { rootId: "8f039a9d-b99f-4392-aa1f-7c5f2f7930f8", yahooSymbol: "HG=F", name: "Copper" },
   { rootId: "ae10e8e2-ff62-4b0c-a49f-ef7de91ce48e", yahooSymbol: "PL=F", name: "Platinum" },
   { rootId: "67b0dd24-c1b2-4fe2-aa46-7b9bc07c7caa", yahooSymbol: "PA=F", name: "Palladium" },
   { rootId: "fd09e876-d00b-4b83-a66c-b5fda200bda7", yahooSymbol: "ZC=F", name: "Corn" },
-  { rootId: "f63f52c4-39cf-4f3f-a835-ad868d061ea4", yahooSymbol: "ZW=F", name: "Wheat" },
+  { rootId: "f63f52c4-39cf-4f3f-a835-ad868d061ea4", yahooSymbol: "ZW=F", name: "Wheat (Chicago SRW)" },
+  // New (Task X10): a second, distinct wheat contract -- Kansas HRW wheat is priced differently from
+  // Chicago SRW wheat and both trade actively; not a duplicate of ZW=F above.
+  { rootId: "553b2e4d-d509-428f-a970-1fa01dca62b2", yahooSymbol: "KE=F", name: "Wheat (Kansas HRW)" },
   { rootId: "d4a4304a-2c4d-47ff-acbc-a89d6c09342c", yahooSymbol: "ZS=F", name: "Soybeans" },
   { rootId: "7719c807-1b98-4a48-ade9-a6a199b448f6", yahooSymbol: "ZL=F", name: "Soybean Oil" },
+  // New (Task X10): confirmed genuine commodity (commodity_group AGRICULTURE), has a verified Yahoo
+  // mapping, was simply missed in the original 18-root list.
+  { rootId: "c1ec80c8-16c6-4493-a934-14fb9c9ae783", yahooSymbol: "ZM=F", name: "Soybean Meal" },
   { rootId: "c9be301d-b1d0-4167-ad6d-bdd2114a8831", yahooSymbol: "KC=F", name: "Coffee" },
   { rootId: "34500588-c4e4-4fc9-ac32-72adfef22fed", yahooSymbol: "CC=F", name: "Cocoa" },
   { rootId: "b5fa20c5-38ea-44ae-a44f-205ebc938995", yahooSymbol: "SB=F", name: "Sugar" },
   { rootId: "cdd56574-85b6-4c42-aa76-2ab9eefd43a2", yahooSymbol: "CT=F", name: "Cotton" },
-  { rootId: "17916524-f558-4f90-a51d-d0baaeda0bb3", yahooSymbol: "LE=F", name: "Live Cattle" },
-  { rootId: "35a2935b-90d0-441b-adf3-e38baf08e654", yahooSymbol: "HE=F", name: "Lean Hogs" },
-  // Task X9 (2026-10-14, round-5 commodity instruction): 4 more roots confirmed via
-  // futures_yahoo_symbol_mappings (mapping_status VERIFIED_EXACT_ROOT) with existing history
-  // already in futures_root_market_observations (~6,250-6,770 rows each, through 2026-08-14 /
-  // 2026-09-11) -- same gap-fill pattern as Brent/Live Cattle/Lean Hogs above, not a new schema.
+  // Live Cattle: was 17916524... (12 rows) -- corrected to c44804f1... (6,399 rows, latest 2026-09-11).
+  { rootId: "c44804f1-19cd-44ee-aba5-f597bfbf3e04", yahooSymbol: "LE=F", name: "Live Cattle" },
+  // Lean Hogs: was 35a2935b... (0 rows, confirmed empty) -- corrected to cba5f88f... (6,467 rows).
+  { rootId: "cba5f88f-7051-4626-a2f0-8b7aa09f802a", yahooSymbol: "HE=F", name: "Lean Hogs" },
+  // New (Task X10): Feeder Cattle is a distinct CME livestock contract from Live Cattle (different
+  // underlying weight class), not a duplicate.
+  { rootId: "50555c8c-e575-4a4f-a10d-b16ad76da848", yahooSymbol: "GF=F", name: "Feeder Cattle" },
   { rootId: "1614a922-96d0-42b5-a289-682bc344b1fa", yahooSymbol: "ZO=F", name: "Oats" },
   { rootId: "937b3fd5-cf31-4b30-a324-6fd7d33b430b", yahooSymbol: "OJ=F", name: "Orange Juice" },
   { rootId: "4b3fb696-c482-4ab1-ac1c-da7c2b15f2fb", yahooSymbol: "RB=F", name: "RBOB Gasoline" },
   { rootId: "2dcbe3e0-9440-401d-acd1-40ba9a4fc2d4", yahooSymbol: "ZR=F", name: "Rice" },
-  // 2026-10-14 symbol-verification pass (round-5 instruction 3-2): HO=F live-confirmed via Yahoo's
-  // own chart API meta (shortName "Heating Oil Nov 26", exchangeName "NYM") -- matches this root's
-  // own exchange (NYMEX) and product (NY Harbor ULSD, the modern successor contract still commonly
-  // called "heating oil"). Added.
   { rootId: "4e6fe3d8-bdfd-4076-a0fe-7a19e1da9683", yahooSymbol: "HO=F", name: "Heating Oil (NY Harbor ULSD)" },
-  // Aluminum is deliberately NOT added: the only futures_product_roots entry for it is LME-listed
-  // (root_symbol "AH", exchange LME). Yahoo's ALI=F is live-confirmed to exist, but its own chart
-  // meta reports exchangeName "CMX" (COMEX) -- a DIFFERENT, cash-settled contract priced off a
-  // Midwest premium + LME price, not the same instrument as the LME primary contract this root
-  // represents. Writing ALI=F data onto the LME root would mislabel the source. Needs either a
-  // separate COMEX-aluminum root created first, or an LME-specific Yahoo symbol found -- flagged in
-  // docs/specs/technical-screener-reverse-lookup.md rather than forced.
+  // Still NOT added, by design:
+  // - Aluminum: only futures_product_roots entry is LME-listed (root_symbol "AH"); Yahoo's ALI=F is
+  //   a different, COMEX-settled cash contract (confirmed via its own chart meta exchangeName
+  //   "CMX") -- writing it onto the LME root would mislabel the source.
+  // - Dairy (Class III/IV Milk, Dry Whey, Nonfat Dry Milk, Cash-settled Butter/Cheese), Mont Belvieu
+  //   TET Propane, Southern Yellow Pine Lumber: every futures_yahoo_symbol_mappings row found for
+  //   these is a SPECIFIC delivery-month contract (e.g. "Class III Milk Futures,Apr-2027"), not a
+  //   continuous `=F` ticker -- this pipeline's one-row-per-commodity model has no way to track
+  //   contract expiry/rollover, so including a single expiring month would silently go stale. Needs
+  //   a genuine continuous-contract Yahoo symbol (if one exists) before these can be added; flagged
+  //   in docs/specs/technical-screener-reverse-lookup.md rather than forced in with a wrong model.
 ];
 
 export type CommodityHistoryBatchResult = {

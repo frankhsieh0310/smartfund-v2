@@ -45,7 +45,15 @@ const CHECKPOINT_KEY = "cloud-moneydj-fund:ROLLING";
 // MoneyDJ fetch+parse+persist calls (each already individually timeout-protected at 30s). Lowered
 // to a batch size this window can realistically complete start-to-finish; no change to the fetch,
 // parse, persist, checkpoint or backoff logic itself.
-const DEFAULT_BATCH = 50;
+// Task X11 (round-6 daily-completion audit): raised to the already-proven-safe ceiling (MAX_BATCH)
+// -- at the old DEFAULT_BATCH=50, hourly x 24/day = 1,200/day against a ~5,633-fund candidate pool
+// (fund_mappings WHERE moneydj_code IS NOT NULL) took ~5 days for one full cursor pass. At 80,
+// hourly x 24/day = 1,920/day, ~3 days per pass -- still not same-day, but the cursor itself still
+// wraps and wasn't newly broken. Going further would mean either exceeding this route's own
+// empirically-proven 300s-maxDuration safe batch ceiling (see the 2026-10-08 comment above) or
+// increasing the GitHub Actions schedule frequency, which raises MoneyDJ scrape volume -- left as a
+// flagged tradeoff rather than silently cranking it up, per the standing anti-scraping-abuse rule.
+const DEFAULT_BATCH = 80;
 const MAX_BATCH = 80;
 const FRESH_DAYS = 25; // matches the local disclosure worker's re-fetch guard
 // 2026-10-08: the real fix for "every run stuck IN_PROGRESS" is a time budget, not just a smaller

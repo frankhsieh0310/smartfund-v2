@@ -43,7 +43,11 @@ export const maxDuration = 300;
 export const dynamic = "force-dynamic";
 
 const JOB = "CLOUD_FUND_HOLDINGS";
-const DEFAULT_BATCH = 150;
+// Task X11 (round-6 daily-completion audit): raised to the existing MAX_BATCH ceiling (not a new,
+// untested limit) -- at 150, hourly x 24/day = 3,600/day against the ~5,633-fund MoneyDJ-mapped
+// candidate pool took >1 day per cursor pass. At 300, 7,200/day comfortably completes one full pass
+// within a day.
+const DEFAULT_BATCH = 300;
 const MAX_BATCH = 300;
 const FRESH_DAYS = 25; // matches the local disclosure worker's re-fetch guard
 const TIME_BUDGET_MS = 240_000;
