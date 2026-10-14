@@ -47,6 +47,17 @@ const assetIdFor = (base: string) => base.toLowerCase();
 // mints a duplicate canonical asset for a coin the existing multi-exchange pipeline already
 // tracks (e.g. BTC, ETH, USDT, USDC, DOGE, ADA, TRX, AVAX, DOT, LTC, BCH all pre-exist). Only
 // genuinely new symbols (e.g. LINK, SHIB) get a new crypto_assets row.
+//
+// Task X9 review note: this is the ONE write path in this pipeline deliberately left OUTSIDE the
+// CRYPTO_SYNC_WRITE shadow-mode gate (see cryptoWriteGate.ts). Reviewed and confirmed: (1) it
+// writes registry/identity metadata, never price or financial data; (2) every upsert is keyed on a
+// stable deterministic id, so a re-run is a true no-op, not a duplicate or overwrite; (3) the
+// GitHub Actions workflow's job switch-case only allows quote|marketcap|history -- `phase=bootstrap`
+// is unreachable from the automatic schedule and only runs if someone calls this route directly
+// with phase=bootstrap and the cron bearer secret. Gating it would also break the ability to
+// shadow-test updateCryptoQuotes/updateCryptoHistory at all (they filter on the "yahoo" exchange
+// row this function creates). If `bootstrap` is ever added to the workflow's automatic job list,
+// revisit this exception.
 export async function ensureYahooCryptoUniverse(symbols: string[] = CORE_CRYPTO_SYMBOLS) {
   await prisma.cryptoExchange.upsert({
     where: { id: YAHOO_EXCHANGE_ID },
