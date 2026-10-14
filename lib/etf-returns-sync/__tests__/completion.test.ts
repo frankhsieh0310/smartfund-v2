@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { missingForToday, type LastProcessedDateMap } from "../completion.ts";
+import { missingForToday, type LastProcessedDateMap, type LastProcessedVersionMap } from "../completion.ts";
 
 function test(name: string, fn: () => Promise<void> | void) {
   const p = Promise.resolve().then(fn);
@@ -42,5 +42,36 @@ function test(name: string, fn: () => Promise<void> | void) {
 
   test("missingForToday: empty coreIds returns empty regardless of the map", () => {
     assert.deepEqual(missingForToday([], { a: "2026-10-11" }, "2026-10-11"), []);
+  });
+
+  // Task X7: version-aware reprocessing — a mid-day deploy must not leave already-processed etfs
+  // stuck on a pre-fix value until tomorrow.
+  test("missingForToday: same date + same version is NOT missing (no currentVersion arg = old behavior)", () => {
+    const dateMap: LastProcessedDateMap = { a: "2026-10-14" };
+    assert.deepEqual(missingForToday(["a"], dateMap, "2026-10-14"), []);
+  });
+
+  test("missingForToday: same date but a DIFFERENT deployment version forces reprocessing today", () => {
+    const dateMap: LastProcessedDateMap = { a: "2026-10-14" };
+    const versionMap: LastProcessedVersionMap = { a: "dpl_OLD" };
+    assert.deepEqual(missingForToday(["a"], dateMap, "2026-10-14", versionMap, "dpl_NEW"), ["a"]);
+  });
+
+  test("missingForToday: same date AND same deployment version is not reprocessed", () => {
+    const dateMap: LastProcessedDateMap = { a: "2026-10-14" };
+    const versionMap: LastProcessedVersionMap = { a: "dpl_NEW" };
+    assert.deepEqual(missingForToday(["a"], dateMap, "2026-10-14", versionMap, "dpl_NEW"), []);
+  });
+
+  test("missingForToday: an etf with no recorded version at all is reprocessed once a currentVersion is known", () => {
+    const dateMap: LastProcessedDateMap = { a: "2026-10-14" };
+    const versionMap: LastProcessedVersionMap = {}; // e.g. written before this fix shipped
+    assert.deepEqual(missingForToday(["a"], dateMap, "2026-10-14", versionMap, "dpl_NEW"), ["a"]);
+  });
+
+  test("missingForToday: currentVersion=null (no VERCEL_DEPLOYMENT_ID, e.g. local dev) skips the version check entirely", () => {
+    const dateMap: LastProcessedDateMap = { a: "2026-10-14" };
+    const versionMap: LastProcessedVersionMap = {}; // would force reprocessing if version check ran
+    assert.deepEqual(missingForToday(["a"], dateMap, "2026-10-14", versionMap, null), []);
   });
 })();

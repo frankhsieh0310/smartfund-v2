@@ -9,6 +9,26 @@
 // never "done".
 export type LastProcessedDateMap = Record<string, string>;
 
-export function missingForToday(coreIds: string[], lastProcessedDate: LastProcessedDateMap, today: string): string[] {
-  return coreIds.filter((id) => lastProcessedDate[id] !== today);
+// Task X7: a mid-day deploy that fixes the return calculation (e.g. the 2026-10-14 Yahoo奇摩
+// navReturn switch) does NOT retroactively redo etfs already marked "done for today" -- they'd sit
+// on the pre-fix value until the date rolls over, even though the fix is already live. Tracks which
+// deployment (VERCEL_DEPLOYMENT_ID, see writeGate.ts's writeEnvDiagnostic) actually produced each
+// etf's "done for today" write; a version mismatch forces reprocessing today regardless of date,
+// self-healing within one invocation of a deploy instead of waiting for tomorrow.
+export type LastProcessedVersionMap = Record<string, string>;
+
+export function missingForToday(
+  coreIds: string[],
+  lastProcessedDate: LastProcessedDateMap,
+  today: string,
+  lastProcessedVersion: LastProcessedVersionMap = {},
+  currentVersion: string | null = null,
+): string[] {
+  return coreIds.filter((id) => {
+    if (lastProcessedDate[id] !== today) return true;
+    // currentVersion is null when VERCEL_DEPLOYMENT_ID isn't set (e.g. local dev) -- version check
+    // is skipped entirely rather than treating "no signal" as "always stale".
+    if (currentVersion !== null && lastProcessedVersion[id] !== currentVersion) return true;
+    return false;
+  });
 }

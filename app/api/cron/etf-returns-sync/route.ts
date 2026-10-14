@@ -30,7 +30,7 @@ import { writeBatchIfEnabled, type WriteCandidate, type TrailingReturns } from "
 import {
   nextStateAfterOutcome, orderForInvocation, type EtfFailureStateMap,
 } from "@/lib/etf-returns-sync/failureState";
-import { missingForToday, type LastProcessedDateMap } from "@/lib/etf-returns-sync/completion";
+import { missingForToday, type LastProcessedDateMap, type LastProcessedVersionMap } from "@/lib/etf-returns-sync/completion";
 import {
   resolveWriteDatesBatch, fetchLatestReturn6mBatch, writeEtfsRankingColumnsBatch, type EtfsRankingEntry,
 } from "@/lib/etf-returns-sync/batchHelpers";
@@ -200,15 +200,20 @@ export async function GET(request: Request) {
   const before = await readCheckpoint(CHECKPOINT_KEY);
   let failureStateMap: EtfFailureStateMap = {};
   let lastProcessedDate: LastProcessedDateMap = {};
+  let lastProcessedVersion: LastProcessedVersionMap = {};
   let preexistingSkipNoPerfBackfillDone = false;
   let backfilledIds: string[] = [];
   try {
     const persisted = before?.lastSymbol ? JSON.parse(before.lastSymbol) : null;
     if (persisted?.failureState) failureStateMap = persisted.failureState;
     if (persisted?.lastProcessedDate) lastProcessedDate = persisted.lastProcessedDate;
+    if (persisted?.lastProcessedVersion) lastProcessedVersion = persisted.lastProcessedVersion;
     if (persisted?.preexistingSkipNoPerfBackfillDone) preexistingSkipNoPerfBackfillDone = true;
     if (Array.isArray(persisted?.backfilledIds)) backfilledIds = persisted.backfilledIds;
   } catch { /* corrupt/old checkpoint — start fresh rather than block the sweep */ }
+  // Task X7: null when not running on Vercel (e.g. local dev) -- missingForToday treats that as
+  // "skip the version check entirely", never as "everything is stale".
+  const currentDeploymentVersion = process.env.VERCEL_DEPLOYMENT_ID ?? null;
 
   // Task X5 Part 2c / Task X6 Part B.2 (user-approved): ETFs already in SKIP_NO_PERF state before
   // this deploy were classified NO_FUND_PERFORMANCE under the OLD code, which never wrote any row at
@@ -247,7 +252,7 @@ export async function GET(request: Request) {
     try {
       await writeCheckpoint(JOB, CHECKPOINT_KEY, `backfill:${today}`, {
         lastSymbol: JSON.stringify({
-          failureState: failureStateMap, lastProcessedDate,
+          failureState: failureStateMap, lastProcessedDate, lastProcessedVersion,
           preexistingSkipNoPerfBackfillDone, backfilledIds,
         }),
         processed: remaining.length, succeeded: backfillWritten, failed: 0,
@@ -255,7 +260,7 @@ export async function GET(request: Request) {
     } catch { /* checkpoint write failure here just means this backfill chunk may repeat next invocation — not fatal */ }
   }
 
-  const missingIds = missingForToday(coreIdsArray, lastProcessedDate, today);
+  const missingIds = missingForToday(coreIdsArray, lastProcessedDate, today, lastProcessedVersion, currentDeploymentVersion);
 
   const runKey = `etf-returns-sync:${today}`;
   const { runId, skipped } = await beginRun({
@@ -321,7 +326,11 @@ export async function GET(request: Request) {
     writeErrorCount += writeResult.writeErrorCount;
     droppedFieldCount += writeResult.droppedFieldCount;
     if (writeEnabledThisRun && writeResult.written > 0) {
-      for (const p of pending) lastProcessedDate[p.etfId] = today;
+      for (const p of pending) {
+        lastProcessedDate[p.etfId] = today;
+        if (currentDeploymentVersion !== null) lastProcessedVersion[p.etfId] = currentDeploymentVersion;
+        else delete lastProcessedVersion[p.etfId]; // no version signal available -- don't keep a stale one around
+      }
       const r6mMap = await fetchLatestReturn6mBatch(writerQuery, ids);
       const entries: EtfsRankingEntry[] = pending.map((p) => ({ etfId: p.etfId, returns: p.returns, return6mSync: r6mMap.get(p.etfId) ?? null }));
       await writeEtfsRankingColumnsBatch(writerQuery, entries);
@@ -402,7 +411,10 @@ export async function GET(request: Request) {
   await flushPending();
 
   await writeCheckpoint(JOB, CHECKPOINT_KEY, runId, {
-    lastSymbol: JSON.stringify({ failureState: failureStateMap, lastProcessedDate, preexistingSkipNoPerfBackfillDone, backfilledIds }),
+    lastSymbol: JSON.stringify({
+      failureState: failureStateMap, lastProcessedDate, lastProcessedVersion,
+      preexistingSkipNoPerfBackfillDone, backfilledIds,
+    }),
     processed: attempted, succeeded: written, failed: noFundPerformanceCount + transientFailureCount + writeErrorCount,
   });
 
