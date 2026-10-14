@@ -14,6 +14,7 @@ import { prisma } from "@/lib/prisma";
 import { beginRun, finishRun } from "@/lib/cloud-ingestion/runContext";
 import { checkPipelineRunLog, evaluateFreshness, checkEtfDataSourceGap, evaluateYahooTwReturnConsistency, type QueryFn, type YahooTwReturnSample } from "@/lib/daily-health-report/checks";
 import { notifyAnomaly } from "@/lib/daily-health-report/notify";
+import { buildDailySummary } from "@/lib/daily-health-report/buildDailySummary";
 import { fetchYahooTwPerformance } from "@/lib/yahoo/twPerformancePage";
 
 export const runtime = "nodejs";
@@ -94,16 +95,14 @@ export async function GET(request: Request) {
     ...(yahooTwCheck.anomaly ? [{ type: "YAHOO_TW_RETURN_MISMATCH", mismatches: yahooTwCheck.mismatches }] : []),
   ];
 
-  let notifyResult = null;
-  if (anomalies.length > 0) {
-    const lines = [`Daily health report ${today}: ${anomalies.length} anomalies`];
-    for (const p of pipelineHealth) if (p.anomaly) lines.push(`- PIPELINE ${p.jobId}: ${p.anomalyReasons.join(", ")}`);
-    for (const f of [stockFreshness, domesticFundFreshness]) if (f.anomaly) lines.push(`- FRESHNESS ${f.label}: ${f.anomalyReason}`);
-    if (etfDataSourceGap.anomaly) lines.push(`- ETF data_source NULL (new, not yet investigated): ${etfDataSourceGap.newCodes.join(", ")}`);
-    if (etfDataSourceGap.knownCodes.length > 0) lines.push(`(known/suspected-delisted, not a new warning: ${etfDataSourceGap.knownCodes.join(", ")})`);
-    if (yahooTwCheck.anomaly) for (const m of yahooTwCheck.mismatches) lines.push(`- YAHOO_TW_RETURN_MISMATCH ${m.code}: ours=${m.ourReturn1y} yahooTw=${m.yahooTwReturn1y} fetchFailed=${m.fetchFailed}`);
-    notifyResult = await notifyAnomaly(lines.join("\n"));
-  }
+  // Round-4, user-approved: send a short summary EVERY day, not only when something is wrong --
+  // "沒收到訊息就代表出事了" means silence itself must never be the normal case. See
+  // buildDailySummary.ts for the message format (unit-tested separately).
+  const summary = buildDailySummary({
+    today, anomalyCount: anomalies.length, pipelineHealth,
+    freshness: [stockFreshness, domesticFundFreshness], etfDataSourceGap, yahooTwCheck,
+  });
+  const notifyResult = await notifyAnomaly(summary);
 
   const status = anomalies.length > 0 ? "PARTIAL" : "COMPLETED";
   await finishRun(runId, JOB, "INTERNAL_HEALTH_CHECK", startedMs, {
