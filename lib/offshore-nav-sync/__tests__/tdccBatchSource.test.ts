@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { parseTdccNavCsv, excludeOverlapWithYahooMapping } from "../tdccBatchSource.ts";
+import { parseTdccNavCsv, excludeOverlapWithYahooMapping, filterNewerThanStored, type TdccNavRow } from "../tdccBatchSource.ts";
 
 function test(name: string, fn: () => void) {
   try {
@@ -59,4 +59,53 @@ test("excludeOverlapWithYahooMapping: empty mapping excludes nothing", () => {
   const candidates = [{ id: "fund-1", name: "A" }];
   const result = excludeOverlapWithYahooMapping(candidates, []);
   assert.deepEqual(result, candidates);
+});
+
+// Task X8 (user-flagged design error, fixed): replaces the old `updated_at < 14 days ago` candidate
+// filter -- writability is now decided purely by comparing the CSV's navDate against the fund's own
+// stored latest_nav_date, never by how recently the fund was last written.
+function navRow(navDate: string, nav = 100): TdccNavRow {
+  return { code: "X", name: "測試基金", navDate, nav, isin: null, currency: null };
+}
+
+test("filterNewerThanStored: CSV date newer than stored latest_nav_date -> updates", () => {
+  const byName = new Map([["測試基金", navRow("2026-10-14")]]);
+  const result = filterNewerThanStored([{ id: "f1", name: "測試基金", latestNavDate: "2026-10-13" }], byName);
+  assert.deepEqual(result, [{ fundId: "f1", navDate: "2026-10-14", nav: 100 }]);
+});
+
+test("filterNewerThanStored: CSV date EQUAL to stored latest_nav_date -> skipped", () => {
+  const byName = new Map([["測試基金", navRow("2026-10-13")]]);
+  const result = filterNewerThanStored([{ id: "f1", name: "測試基金", latestNavDate: "2026-10-13" }], byName);
+  assert.deepEqual(result, []);
+});
+
+test("filterNewerThanStored: CSV date OLDER than stored latest_nav_date -> skipped", () => {
+  const byName = new Map([["測試基金", navRow("2026-10-10")]]);
+  const result = filterNewerThanStored([{ id: "f1", name: "測試基金", latestNavDate: "2026-10-13" }], byName);
+  assert.deepEqual(result, []);
+});
+
+test("filterNewerThanStored: fund never written before (latestNavDate=null) -> always updates regardless of CSV date", () => {
+  const byName = new Map([["測試基金", navRow("2026-10-01")]]);
+  const result = filterNewerThanStored([{ id: "f1", name: "測試基金", latestNavDate: null }], byName);
+  assert.deepEqual(result, [{ fundId: "f1", navDate: "2026-10-01", nav: 100 }]);
+});
+
+test("filterNewerThanStored: two consecutive days both carry a new NAV -> both run's calls update", () => {
+  // Simulates two separate daily invocations, not two rows in the same CSV (the CSV only ever
+  // has one row per fund per run) -- day 1's write becomes day 2's "stored" baseline.
+  const day1Csv = new Map([["測試基金", navRow("2026-10-13")]]);
+  const day1Result = filterNewerThanStored([{ id: "f1", name: "測試基金", latestNavDate: "2026-10-12" }], day1Csv);
+  assert.deepEqual(day1Result, [{ fundId: "f1", navDate: "2026-10-13", nav: 100 }]);
+
+  const day2Csv = new Map([["測試基金", navRow("2026-10-14")]]);
+  const day2Result = filterNewerThanStored([{ id: "f1", name: "測試基金", latestNavDate: "2026-10-13" }], day2Csv);
+  assert.deepEqual(day2Result, [{ fundId: "f1", navDate: "2026-10-14", nav: 100 }]);
+});
+
+test("filterNewerThanStored: a fund with no CSV match at all is simply absent from the result, not an error", () => {
+  const byName = new Map<string, TdccNavRow>();
+  const result = filterNewerThanStored([{ id: "f1", name: "沒資料基金", latestNavDate: "2026-10-13" }], byName);
+  assert.deepEqual(result, []);
 });

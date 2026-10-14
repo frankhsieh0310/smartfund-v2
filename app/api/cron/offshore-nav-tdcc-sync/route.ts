@@ -26,10 +26,9 @@
 import { prisma } from "@/lib/prisma";
 import { isAuthorizedCron, unauthorizedCron } from "@/lib/cron/authorize";
 import { beginRun, finishRun } from "@/lib/cloud-ingestion/runContext";
-import { fetchTdccNavCsv, parseTdccNavCsv, excludeOverlapWithYahooMapping, TDCC_NAV_SOURCE } from "@/lib/offshore-nav-sync/tdccBatchSource";
+import { fetchTdccNavCsv, parseTdccNavCsv, excludeOverlapWithYahooMapping, filterNewerThanStored, TDCC_NAV_SOURCE } from "@/lib/offshore-nav-sync/tdccBatchSource";
 import { writeTdccNavBatch } from "@/lib/offshore-nav-sync/navWriter";
 import { loadMapping } from "@/lib/offshore-nav-sync/mapping";
-import type { OffshoreNavCandidate } from "@/lib/offshore-nav-sync/types";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -54,8 +53,13 @@ export async function GET(request: Request) {
   });
   if (skipped) return Response.json({ ok: true, job: JOB, skipped: true });
 
+  // Task X8: no more `updated_at < 14 days ago` filter here -- every data_provider='yahoo' fund is a
+  // candidate every run, and filterNewerThanStored() below (plus navWriter.ts's own SQL-level guard)
+  // decides writability purely by comparing the CSV's navDate against the fund's own stored
+  // latest_nav_date, so a fund with a genuinely newer NAV is never stuck waiting out a staleness
+  // window again.
   const [rawCandidateFunds, yahooMapping] = await Promise.all([
-    query(`SELECT id, name FROM funds WHERE data_provider = 'yahoo' AND updated_at < CURRENT_DATE - INTERVAL '14 days'`, []),
+    query(`SELECT id, name, latest_nav_date::text AS "latestNavDate" FROM funds WHERE data_provider = 'yahoo'`, []),
     loadMapping(query),
   ]);
   const candidateFunds = excludeOverlapWithYahooMapping(rawCandidateFunds, yahooMapping.map((m) => m.fundId));
@@ -63,15 +67,9 @@ export async function GET(request: Request) {
   const csvText = await fetchTdccNavCsv();
   const byName = parseTdccNavCsv(csvText);
 
-  const candidates: OffshoreNavCandidate[] = [];
-  let matched = 0;
-  for (const f of candidateFunds) {
-    const row = byName.get(f.name);
-    if (row) {
-      matched++;
-      candidates.push({ fundId: f.id, navDate: row.navDate, nav: row.nav });
-    }
-  }
+  const nameMatchedCount = candidateFunds.filter((f) => byName.has(f.name)).length;
+  const candidates = filterNewerThanStored(candidateFunds, byName);
+  const matched = candidates.length;
 
   const result = writeEnabled
     ? await writeTdccNavBatch(query, candidates, new Date().toISOString())
@@ -81,15 +79,15 @@ export async function GET(request: Request) {
     status: "COMPLETED", attempted: candidateFunds.length, completed: result.written, inserted: result.written,
     updated: 0, failed: result.writeErrorCount, retryableFailures: 0, checkpointAfter: null,
     details: {
-      writeEnabled, rawStaleCandidateCount: rawCandidateFunds.length, yahooMappingExcludedCount: rawCandidateFunds.length - candidateFunds.length,
-      staleCandidateCount: candidateFunds.length, csvUniqueFundNames: byName.size, matched, writableRowCount: matched,
+      writeEnabled, rawCandidateCount: rawCandidateFunds.length, yahooMappingExcludedCount: rawCandidateFunds.length - candidateFunds.length,
+      candidateCount: candidateFunds.length, csvUniqueFundNames: byName.size, nameMatchedCount, writableRowCount: matched,
     },
   });
 
   return Response.json({
     ok: true, job: JOB, runId, writeEnabled,
-    rawStaleCandidateCount: rawCandidateFunds.length, yahooMappingExcludedCount: rawCandidateFunds.length - candidateFunds.length,
-    staleCandidateCount: candidateFunds.length, csvUniqueFundNames: byName.size, matched,
+    rawCandidateCount: rawCandidateFunds.length, yahooMappingExcludedCount: rawCandidateFunds.length - candidateFunds.length,
+    candidateCount: candidateFunds.length, csvUniqueFundNames: byName.size, nameMatchedCount,
     writableRowCount: matched, written: result.written, writeErrorCount: result.writeErrorCount,
   });
 }

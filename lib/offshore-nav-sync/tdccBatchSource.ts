@@ -65,6 +65,31 @@ export async function fetchTdccNavCsv(): Promise<string> {
   return res.text();
 }
 
+/** Task X8 (user-flagged design error, fixed): the original candidate query selected only funds
+ * stale by `updated_at < 14 days ago`, so once this job wrote a fund once, it fell out of
+ * consideration for the next 14 days even on a day the CSV published a newer NAV -- offshore funds on
+ * this pipeline could lag up to two weeks behind TDCC's own published data. Correct rule: a fund is
+ * writable this run iff the CSV's navDate for it is STRICTLY NEWER than the fund's own currently
+ * stored latest_nav_date (null counts as "always newer" -- never written before). Same date or an
+ * older CSV date is skipped, not an error -- TDCC republishes the same date for days at a time while
+ * waiting for the next NAV. This is a pure function so it's unit-testable without a DB; navWriter.ts's
+ * own SQL also re-checks `latest_nav_date < x.date` at write time as a second, DB-level guard. */
+export type OffshoreNavCandidateMatch = { fundId: string; navDate: string; nav: number };
+
+export function filterNewerThanStored(
+  candidateFunds: Array<{ id: string; name: string; latestNavDate: string | null }>,
+  byName: Map<string, TdccNavRow>,
+): OffshoreNavCandidateMatch[] {
+  const result: OffshoreNavCandidateMatch[] = [];
+  for (const f of candidateFunds) {
+    const row = byName.get(f.name);
+    if (!row) continue;
+    if (f.latestNavDate !== null && row.navDate <= f.latestNavDate) continue;
+    result.push({ fundId: f.id, navDate: row.navDate, nav: row.nav });
+  }
+  return result;
+}
+
 /** Round-4, user-approved fund-ownership rule: a fund already in offshore-nav-sync's own 876-fund
  * Yahoo mapping (lib/offshore-nav-sync/mapping.ts's loadMapping()) must NEVER also be written by this
  * TDCC-sourced pipeline, even if it happens to look "stale" by updated_at (e.g. during a transient
