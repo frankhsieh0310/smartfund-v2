@@ -49,10 +49,36 @@ type ReadyRow = { id: string; latest_date: Date | null; history_ready: boolean }
 // hiding it doesn't blank a field that was actually populated.
 const DEDUP_BACKFILL_PENDING = new Set(["00981D"]);
 
-// 2026-10-14: 6 securities-firm rows the user identified as misclassified as ETFs (their codes follow
-// TWSE's 020xxx warrant/other-security numbering, not a real ETF) -- display-layer hide only, per
-// decision 3-3. Database untouched.
-const MISCLASSIFIED_NON_ETF_CODES = new Set(["020000.TW", "020012.TW", "020028.TW", "020030.TW", "020031.TW", "020034.TW"]);
+// 2026-10-14 round-4: was a manually-maintained 6-code list (020000/020012/020028/020030/020031/
+// 020034.TW), found incomplete when the user spotted 020001.TWO ("Fubon Securities Co Ltd") was
+// missing from it. Replaced with a RULE per the user's explicit instruction, instead of adding
+// entries one at a time forever: a TW-listed (.TW/.TWO) row whose name is a securities BROKERAGE
+// FIRM's own corporate name, not a fund product, is never a real ETF.
+//
+// Tried and rejected: (1) a bare code-prefix rule ("020xxx") -- TOO BROAD, it also matches 020032.TW,
+// a genuine ETF ("Yuanta Taiwan Green Energy..."), and would have matched dozens of real Korean ETFs
+// if not scoped to .TW/.TWO. (2) Yahoo's own `instrumentType` field -- checked live, Yahoo itself
+// mislabels every one of these codes as "ETF", so it's not a usable signal here. (3) A bare
+// "name contains Securities/證券" match -- TOO BROAD on its own: nearly every genuine TW ETF's own
+// official long name contains "證券投資信託基金" (standard regulatory naming), and some genuine
+// international ETFs/ETPs use "Securities" as part of a legitimate product name.
+//
+// What actually works: scope to .TW/.TWO AND require the name to contain Securities/證券 AND NOT
+// contain any fund/ETF/index-indicating word. Verified live (2026-10-14) against the full `etfs`
+// table: this matches exactly 17 rows, all of them real Taiwanese brokerage firms' own stock
+// listings (Fubon/Yuanta/President/Uni-President/Yuanda/Mega Securities), and zero genuine ETFs --
+// see docs/specs/misclassified-etf-codes.md for the full list this rule currently catches.
+const MISCLASSIFIED_SECURITIES_FIRM_FILTER = Prisma.sql`
+  code ~ '\.(TW|TWO)$'
+  AND (name ILIKE '%securities%' OR name LIKE '%證券%')
+  AND name !~* 'etf|fund|trust|index'
+  AND name !~ '基金|信託|指數'
+`;
+
+async function getMisclassifiedSecuritiesFirmCodes(): Promise<string[]> {
+  const rows = await prisma.$queryRaw<Array<{ code: string }>>`SELECT code FROM etfs WHERE ${MISCLASSIFIED_SECURITIES_FIRM_FILTER}`;
+  return rows.map((r) => r.code);
+}
 
 async function getSuffixedDuplicateCodesToHide(): Promise<string[]> {
   const rows = await prisma.$queryRawUnsafe<Array<{ code: string }>>(`
@@ -67,7 +93,7 @@ export async function getEtfList(query: EtfListQuery = {}): Promise<ServiceRespo
   const { page, pageSize, skip } = normalizePagination(query.page, query.pageSize);
   const term = query.query?.trim();
   const direction: Prisma.SortOrder = query.direction === "desc" ? "desc" : "asc";
-  const hiddenDuplicateCodes = [...(await getSuffixedDuplicateCodesToHide()), ...MISCLASSIFIED_NON_ETF_CODES];
+  const hiddenDuplicateCodes = [...(await getSuffixedDuplicateCodesToHide()), ...(await getMisclassifiedSecuritiesFirmCodes())];
   const where = {
     isActive: true,
     ...(hiddenDuplicateCodes.length ? { code: { notIn: hiddenDuplicateCodes } } : {}),
