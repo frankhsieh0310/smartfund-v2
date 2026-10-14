@@ -19,7 +19,6 @@ export default function PricingPage() {
             <Link href="/quiz" className="hover:text-white transition-colors">投資人格分析</Link>
             <Link href="/etf" className="hover:text-white transition-colors">ETF篩選器</Link>
             <Link href="/funds" className="hover:text-white transition-colors">基金篩選器</Link>
-            <Link href="/compare" className="hover:text-white transition-colors">比較中心</Link>
             <Link href="/clients" className="hover:text-white transition-colors">客戶管理</Link>
             <Link href="/pricing" className="text-[#F5B700]">方案</Link>
           </nav>

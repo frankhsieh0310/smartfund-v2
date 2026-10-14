@@ -13,7 +13,6 @@ export function SiteFooter() {
             <Link href="/markets" className="transition-colors hover:text-slate-300">市場中心</Link>
             <Link href="/etf" className="transition-colors hover:text-slate-300">ETF資料庫</Link>
             <Link href="/funds" className="transition-colors hover:text-slate-300">基金資料庫</Link>
-            <Link href="/compare" className="transition-colors hover:text-slate-300">比較中心</Link>
             <Link href="/quiz" className="transition-colors hover:text-slate-300">人格分析</Link>
             <Link href="/clients" className="transition-colors hover:text-slate-300">客戶管理</Link>
             <Link href="/pricing" className="transition-colors hover:text-slate-300">方案說明</Link>

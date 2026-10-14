@@ -6,10 +6,35 @@
 // 不修改任何 UI 或邏輯
 // ============================================================
 
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { getHomeTopEtfs, getHomeTopFunds } from "@/lib/services/rankingService";
+
+// 2026-10-14 QA round 4: ZONE 6's two tables now read the real /api/rankings/performance endpoint
+// (already live, used elsewhere for the full rankings pages) instead of the hardcoded placeholder
+// rows from lib/services/rankingService.ts -- genuine top-5-by-1Y-return ETFs/funds, no self-
+// computed figures. Dropped the dividend-yield/company columns the old mock had, since this one
+// API call doesn't carry them and a second call per row isn't worth the added complexity for a
+// homepage preview card (the full rankings pages already show dividend yield).
+type RankingRow = { id: string; code: string | null; name: string; metricValue: number };
+
+function useTopPerformers(assetType: "ETF" | "FUND") {
+  const [rows, setRows] = useState<RankingRow[] | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/rankings/performance?assetType=${assetType}&rankingType=PERFORMANCE&period=1Y&limit=5&page=1`)
+      .then((r) => { if (!r.ok) throw new Error(String(r.status)); return r.json(); })
+      .then((j) => { if (!cancelled) setRows(j.results ?? []); })
+      .catch(() => { if (!cancelled) setRows([]); });
+    return () => { cancelled = true; };
+  }, [assetType]);
+  return rows;
+}
 
 export function FeaturesSection() {
+  const topEtfs = useTopPerformers("ETF");
+  const topFunds = useTopPerformers("FUND");
   return (
     <>
       {/* ══ ZONE 3：為什麼使用 SmartMatch（#F5F7FA）══════════════ */}
@@ -54,13 +79,12 @@ export function FeaturesSection() {
               建立帳號後，你的投資資料庫就開始運作。
             </p>
           </div>
-          <div className="grid grid-cols-5 gap-6">
+          <div className="grid grid-cols-4 gap-6">
             {[
               { icon:"🏠", title:"個人化首頁",   desc:"自由配置首頁模組，選擇你關心的市場、商品與工具。",                     cta:"設定首頁",      href:"/" },
               { icon:"⭐", title:"收藏商品",     desc:"將 ETF 與基金加入收藏清單，建立自己的投資商品庫。",                    cta:"前往ETF篩選器", href:"/etf" },
               { icon:"👀", title:"觀察名單",     desc:"長期追蹤關注商品，隨時掌握動態，等待合適時機。",                       cta:"前往基金篩選器",href:"/funds" },
               { icon:"📋", title:"分析結果保存", desc:"人格分析與商品篩選結果永久保存，隨時回顧每次決策過程。",                cta:"開始人格分析",  href:"/quiz" },
-              { icon:"📊", title:"比較中心",     desc:"建立自己的比較清單，ETF 與基金混合比較，找出最符合需求的商品。",       cta:"前往比較中心",  href:"/compare" },
             ].map(m => (
               <div key={m.title} className="flex flex-col border border-slate-100 rounded-2xl overflow-hidden hover:shadow-lg transition-all">
                 <div className="bg-[#0a1628] p-6">
@@ -129,9 +153,8 @@ export function FeaturesSection() {
       <section className="relative z-10 py-28" style={{ backgroundColor:"#ffffff" }}>
         <div className="max-w-[1600px] mx-auto px-10">
           <div className="text-center mb-12">
-            <div className="text-[14px] tracking-[10px] text-[#F5B700] font-semibold mb-3">HOT PICKS</div>
-            <h2 className="text-[40px] font-black text-[#0a1628]">熱門申購排行榜</h2>
-            <p className="text-[16px] text-slate-400 mt-2">近一週資金淨流入排行・示意資料</p>
+            <div className="text-[14px] tracking-[10px] text-[#F5B700] font-semibold mb-3">TOP PERFORMERS</div>
+            <h2 className="text-[40px] font-black text-[#0a1628]">近1年績效排行榜</h2>
           </div>
           <div className="grid grid-cols-2 gap-8">
             <div>
@@ -145,19 +168,18 @@ export function FeaturesSection() {
                     <th className="px-4 py-3 text-left w-8">#</th>
                     <th className="px-4 py-3 text-left">代碼</th>
                     <th className="px-4 py-3 text-left">名稱</th>
-                    <th className="px-4 py-3 text-right">殖利率</th>
                     <th className="px-4 py-3 text-right">近1年</th>
                   </tr></thead>
                   <tbody>
-                    {getHomeTopEtfs().map((e, i) => (
-                      <tr key={e.code} className="border-t border-slate-50 hover:bg-slate-50 transition-colors">
+                    {(topEtfs ?? []).map((e, i) => (
+                      <tr key={e.id} className="border-t border-slate-50 hover:bg-slate-50 transition-colors">
                         <td className="px-4 py-2.5"><span className={`text-[13px] font-bold ${i<3?"text-[#b38600]":"text-slate-300"}`}>{i+1}</span></td>
-                        <td className="px-4 py-2.5 font-bold text-[#b38600]">{e.code}</td>
+                        <td className="px-4 py-2.5 font-bold text-[#b38600]">{e.code ?? "—"}</td>
                         <td className="px-4 py-2.5 text-slate-600 truncate max-w-[140px]">{e.name}</td>
-                        <td className="px-4 py-2.5 text-right text-slate-500">{e.dividendYield>0?`${e.dividendYield.toFixed(1)}%`:"—"}</td>
-                        <td className={`px-4 py-2.5 text-right font-semibold ${e.return1y>=0?"text-emerald-600":"text-red-500"}`}>{e.return1y>=0?"+":""}{e.return1y.toFixed(1)}%</td>
+                        <td className={`px-4 py-2.5 text-right font-semibold ${e.metricValue>=0?"text-emerald-600":"text-red-500"}`}>{e.metricValue>=0?"+":""}{e.metricValue.toFixed(1)}%</td>
                       </tr>
                     ))}
+                    {topEtfs === null && <tr><td colSpan={4} className="px-4 py-6 text-center text-slate-400">載入中…</td></tr>}
                   </tbody>
                 </table>
               </div>
@@ -174,21 +196,20 @@ export function FeaturesSection() {
                 <table className="w-full text-[15px]">
                   <thead><tr className="bg-slate-50 text-slate-400 text-[13px]">
                     <th className="px-4 py-3 text-left w-8">#</th>
-                    <th className="px-4 py-3 text-left">公司</th>
+                    <th className="px-4 py-3 text-left">代碼</th>
                     <th className="px-4 py-3 text-left">基金名稱</th>
-                    <th className="px-4 py-3 text-right">年化配息</th>
                     <th className="px-4 py-3 text-right">近1年</th>
                   </tr></thead>
                   <tbody>
-                    {getHomeTopFunds().map((f, i) => (
+                    {(topFunds ?? []).map((f, i) => (
                       <tr key={f.id} className="border-t border-slate-50 hover:bg-slate-50 transition-colors">
                         <td className="px-4 py-2.5"><span className={`text-[13px] font-bold ${i<3?"text-[#b38600]":"text-slate-300"}`}>{i+1}</span></td>
-                        <td className="px-4 py-2.5 text-slate-500 text-[13px]">{f.company}</td>
+                        <td className="px-4 py-2.5 text-slate-500 text-[13px]">{f.code ?? "—"}</td>
                         <td className="px-4 py-2.5 text-slate-600 truncate max-w-[160px]">{f.name}</td>
-                        <td className="px-4 py-2.5 text-right font-semibold text-[#b38600]">{f.dividendYieldA>0?`${f.dividendYieldA.toFixed(1)}%`:"—"}</td>
-                        <td className={`px-4 py-2.5 text-right font-semibold ${f.return1y>=0?"text-emerald-600":"text-red-500"}`}>{f.return1y>=0?"+":""}{f.return1y.toFixed(1)}%</td>
+                        <td className={`px-4 py-2.5 text-right font-semibold ${f.metricValue>=0?"text-emerald-600":"text-red-500"}`}>{f.metricValue>=0?"+":""}{f.metricValue.toFixed(1)}%</td>
                       </tr>
                     ))}
+                    {topFunds === null && <tr><td colSpan={4} className="px-4 py-6 text-center text-slate-400">載入中…</td></tr>}
                   </tbody>
                 </table>
               </div>
@@ -197,7 +218,6 @@ export function FeaturesSection() {
               </div>
             </div>
           </div>
-          <p className="text-[14px] text-slate-400 mt-6 text-center">以上排行為示意範例，非即時申購數據，僅供功能展示。</p>
         </div>
       </section>
 

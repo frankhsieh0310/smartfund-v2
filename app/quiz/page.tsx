@@ -325,7 +325,6 @@ function Navbar() {
           <a href="/quiz" className="text-[#F5B700]">投資人格分析</a>
           <a href="/etf" className="hover:text-white transition-colors">ETF篩選器</a>
           <a href="/funds" className="hover:text-white transition-colors">基金篩選器</a>
-          <a href="/compare" className="hover:text-white transition-colors">比較中心</a>
           <a href="/clients" className="hover:text-white transition-colors">客戶管理</a>
           <a href="/pricing" className="hover:text-[#F5B700] transition-colors">方案</a>
         </div>

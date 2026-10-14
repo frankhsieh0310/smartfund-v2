@@ -240,7 +240,6 @@ function ReportContent() {
             <Link href="/quiz"    className="hover:text-white transition-colors">投資人格分析</Link>
             <Link href="/etf"     className="hover:text-white transition-colors">ETF篩選器</Link>
             <Link href="/funds"   className="hover:text-white transition-colors">基金篩選器</Link>
-            <Link href="/compare" className="hover:text-white transition-colors">比較中心</Link>
             <Link href="/clients" className="hover:text-white transition-colors">客戶管理</Link>
             <Link href="/pricing" className="hover:text-white transition-colors">方案</Link>
           </nav>
@@ -498,7 +497,7 @@ function ReportContent() {
         <div className="text-[11px] tracking-[6px] text-[#F5B700] font-semibold mb-3 mt-10">SECTION 5 · 快速操作</div>
         <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-6 mb-10">
           <h2 className="text-[20px] font-bold text-white mb-6">快速操作</h2>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 gap-4">
 
             {/* ⭐ 收藏全部 */}
             <button onClick={handleFavAll}
@@ -509,17 +508,6 @@ function ReportContent() {
                 {allEtfs.length + allFunds.length} 檔商品加入收藏
               </div>
               <div className="text-[11px] text-slate-600">目前收藏：{favCount} 檔</div>
-            </button>
-
-            {/* 📊 加入比較 */}
-            <button onClick={handleCmpAll}
-              className="flex flex-col items-center gap-3 bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-6 hover:bg-emerald-900/30 transition-all group">
-              <span className="text-[28px]">📊</span>
-              <div className="text-[15px] font-bold text-emerald-400">加入比較清單</div>
-              <div className="text-[12px] text-slate-500">
-                前往比較中心對比分析
-              </div>
-              <div className="text-[11px] text-slate-600">目前比較：{cmpCount} 檔</div>
             </button>
 
             {/* 👤 儲存客戶 */}
@@ -550,15 +538,6 @@ function ReportContent() {
 
           </div>
 
-          {/* 比較中心連結 */}
-          {cmpCount > 0 && (
-            <div className="mt-4 text-center">
-              <Link href="/compare"
-                className="text-[13px] text-emerald-400 hover:underline">
-                前往比較中心查看 {cmpCount} 檔商品 →
-              </Link>
-            </div>
-          )}
         </div>
 
         {/* 免責聲明 */}
