@@ -45,8 +45,8 @@ function buildWhere(conditions: Condition[]): string {
   const clauses = conditions.map((c) => {
     if (c.field === "rsi14") return `t.rsi14 IS NOT NULL AND t.rsi14 ${c.op === "lt" ? "<" : ">"} ${c.value}`;
     if (c.field === "macd_histogram") return `t.macd_histogram IS NOT NULL AND t.macd_histogram ${c.op === "lt" ? "<" : ">"} ${c.value}`;
-    if (c.field === "price_vs_ma20") return `t.ma20 IS NOT NULL AND s.latest_price IS NOT NULL AND s.latest_price ${c.op === "above" ? ">" : "<"} t.ma20`;
-    return `t.ma60 IS NOT NULL AND s.latest_price IS NOT NULL AND s.latest_price ${c.op === "above" ? ">" : "<"} t.ma60`;
+    if (c.field === "price_vs_ma20") return `t.ma20 IS NOT NULL AND s.latest_close IS NOT NULL AND s.latest_close ${c.op === "above" ? ">" : "<"} t.ma20`;
+    return `t.ma60 IS NOT NULL AND s.latest_close IS NOT NULL AND s.latest_close ${c.op === "above" ? ">" : "<"} t.ma60`;
   });
   return clauses.length ? `AND ${clauses.join(" AND ")}` : "";
 }
@@ -64,9 +64,9 @@ export async function GET(request: Request) {
   // index) rather than a naive WHERE over the full 106M-row table, which this round confirmed
   // times out (no index on date alone). VERIFIED runtime ~3.8s against production this round.
   const rows = await prisma.$queryRawUnsafe<
-    { ticker: string; company_name: string; date: string; rsi14: string | null; macd_histogram: string | null; ma20: string | null; ma60: string | null; latest_price: string | null }[]
+    { ticker: string; company_name: string; date: string; rsi14: string | null; macd_histogram: string | null; ma20: string | null; ma60: string | null; latestPrice: string | null }[]
   >(
-    `SELECT s.ticker, s.company_name, t.date::text, t.rsi14::text, t.macd_histogram::text, t.ma20::text, t.ma60::text, s.latest_price::text
+    `SELECT s.ticker, s.company_name, t.date::text, t.rsi14::text, t.macd_histogram::text, t.ma20::text, t.ma60::text, s.latest_close::text AS "latestPrice"
        FROM stocks s
        CROSS JOIN LATERAL (
          SELECT * FROM stock_technical st WHERE st.stock_id = s.id ORDER BY st.date DESC LIMIT 1
@@ -89,7 +89,7 @@ export async function GET(request: Request) {
       macdHistogram: r.macd_histogram !== null ? Number(r.macd_histogram) : null,
       ma20: r.ma20 !== null ? Number(r.ma20) : null,
       ma60: r.ma60 !== null ? Number(r.ma60) : null,
-      latestPrice: r.latest_price !== null ? Number(r.latest_price) : null,
+      latestPrice: r.latestPrice !== null ? Number(r.latestPrice) : null,
     })),
   }, { headers });
 }
