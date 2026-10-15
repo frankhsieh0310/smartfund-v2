@@ -13,32 +13,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { type FilterCondition, type SearchResultItem } from "@/lib/engines/filterEngine";
-import { searchFromTags } from "@/lib/query/queryBuilder";
-import { useWatchlist } from "@/lib/hooks/useWatchlist";
-import { ProductCard } from "@/components/shared/ProductCard";
-
-// ── Count Up Hook ─────────────────────────────────────────────
-function useCountUp(target: number, duration = 600): number {
-  const [count, setCount] = useState(0);
-  const prev = useRef(0);
-  useEffect(() => {
-    if (target === prev.current) return;
-    const start = prev.current;
-    const diff = target - start;
-    const startTime = performance.now();
-    function frame(now: number) {
-      const elapsed = now - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      const eased = 1 - Math.pow(1 - progress, 3);
-      setCount(Math.round(start + diff * eased));
-      if (progress < 1) requestAnimationFrame(frame);
-      else prev.current = target;
-    }
-    requestAnimationFrame(frame);
-  }, [target, duration]);
-  return count;
-}
+import { type FilterCondition } from "@/lib/engines/filterEngine";
 
 // ── 條件 label ────────────────────────────────────────────────
 function conditionToLabel(c: FilterCondition): string {
@@ -184,40 +159,11 @@ const EXAMPLE_SETS: ExampleSet[] = [
 
 const FREE_LIMIT = 3;
 
-// ── 即時符合數量 + Count Up ───────────────────────────────────
-function LiveCount({ etf, fund, total }: { etf: number; fund: number; total: number }) {
-  const animEtf   = useCountUp(etf);
-  const animFund  = useCountUp(fund);
-  const animTotal = useCountUp(total);
-
-  return (
-    <div className="flex items-center gap-6 bg-white border border-slate-200 rounded-2xl px-6 py-4 shadow-sm">
-      <div className="text-center">
-        <div className="text-[40px] font-black text-blue-600 leading-none tabular-nums">{animEtf}</div>
-        <div className="text-[12px] text-slate-400 mt-1 font-semibold">檔 ETF</div>
-      </div>
-      <div className="text-slate-200 text-[24px] font-light">+</div>
-      <div className="text-center">
-        <div className="text-[40px] font-black text-amber-500 leading-none tabular-nums">{animFund}</div>
-        <div className="text-[12px] text-slate-400 mt-1 font-semibold">檔基金</div>
-      </div>
-      <div className="text-slate-200 text-[24px] font-light">=</div>
-      <div className="text-center">
-        <div className="text-[40px] font-black text-[#0a1628] leading-none tabular-nums">{animTotal}</div>
-        <div className="text-[12px] text-slate-400 mt-1 font-semibold">符合條件</div>
-      </div>
-    </div>
-  );
-}
-
 // ── Main Export ────────────────────────────────────────────────
 export function CriteriaBuilderSection() {
-  const { favList, watchList, compareList, toggleFav, toggleWatch, toggleCompare, toast: wlToast } = useWatchlist();
   const [conditions, setConditions] = useState<FilterCondition[]>([]);
-  const [results, setResults]       = useState<SearchResultItem[] | null>(null);
   const [showMenu, setShowMenu]     = useState(false);
   const [showPremium, setShowPremium] = useState(false);
-  const [showResults, setShowResults] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   // 點擊外部關閉 menu
@@ -231,20 +177,12 @@ export function CriteriaBuilderSection() {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // 即時計算（Task 2：multi-select 由 searchFromTags 的 OR/AND 邏輯處理）
-  const liveCount = React.useMemo((): { etf: number; fund: number; total: number } => {
-    if (conditions.length === 0) return { etf: 0, fund: 0, total: 0 };
-    const r = searchFromTags(conditions, 300);
-    return { etf: r.etfCount, fund: r.fundCount, total: r.total };
-  }, [conditions]);
-
   // Task 2：Multi-select — 同分類 OR（允許同 type 多個）
   function addCondition(cond: FilterCondition) {
     const isSelected = conditions.some(c => c.type === cond.type && c.value === cond.value);
     if (isSelected) {
       // 取消選取
       setConditions(conditions.filter(c => !(c.type === cond.type && c.value === cond.value)));
-      setResults(null);
       return;
     }
     if (conditions.length >= FREE_LIMIT) {
@@ -253,37 +191,22 @@ export function CriteriaBuilderSection() {
     }
     // 同分類允許多選（OR within type）
     setConditions([...conditions, cond]);
-    setResults(null);
   }
 
   function removeCondition(idx: number) {
     setConditions(conditions.filter((_, i) => i !== idx));
-    setResults(null);
   }
 
   function applyExample(example: ExampleSet) {
     setConditions(example.conditions.slice(0, FREE_LIMIT));
-    setResults(null);
-    setShowResults(false);
     setShowMenu(false);
-  }
-
-  function doSearch() {
-    if (conditions.length === 0) return;
-    const qr = searchFromTags(conditions, 40);
-    setResults(qr.items);
-    setShowResults(true);
   }
 
   function clearAll() {
     setConditions([]);
-    setResults(null);
     setShowPremium(false);
-    setShowResults(false);
   }
 
-  const etfResults  = results?.filter(r => r.type === "ETF")  ?? [];
-  const fundResults = results?.filter(r => r.type === "基金") ?? [];
 
   return (
     <section id="criteria-builder" className="relative z-10 py-24" style={{ backgroundColor: "#ffffff" }}>
@@ -323,7 +246,7 @@ export function CriteriaBuilderSection() {
         <div className="max-w-[960px] mx-auto">
 
           {/* ── Task 7：常用條件範例（上方，先給範例降低門檻）── */}
-          {!showResults && (
+          {(
             <div id="examples" className="mb-8">
               <div className="text-[13px] text-slate-400 font-semibold tracking-wider mb-4 uppercase">
                 條件範例 <span className="text-[11px] font-normal normal-case ml-1">點擊套用，再自行調整</span>
@@ -449,18 +372,19 @@ export function CriteriaBuilderSection() {
 
               <div className="flex-1" />
 
-              {/* Task 3：Count Up 大數字 */}
-              {conditions.length > 0 && (
-                <LiveCount etf={liveCount.etf} fund={liveCount.fund} total={liveCount.total} />
-              )}
-
-              <button
-                onClick={doSearch}
-                disabled={conditions.length === 0}
-                className="bg-[#F5B700] hover:bg-[#e0a800] disabled:bg-slate-200 disabled:text-slate-400 text-[#020817] px-8 py-3 rounded-xl font-black text-[16px] transition-colors shadow-sm"
+              {/* 2026-10-15：首頁不再顯示以示意資料計算的符合數量與商品卡；改到 ETF／基金資料庫用實際資料查詢 */}
+              <Link
+                href="/etf"
+                className="bg-[#F5B700] hover:bg-[#e0a800] text-[#020817] px-6 py-3 rounded-xl font-black text-[15px] transition-colors"
               >
-                查看符合商品
-              </button>
+                到 ETF 資料庫查詢 →
+              </Link>
+              <Link
+                href="/funds"
+                className="border border-slate-300 hover:border-slate-500 text-[#0a1628] px-6 py-3 rounded-xl font-bold text-[15px] transition-colors"
+              >
+                到基金資料庫查詢 →
+              </Link>
             </div>
           </div>
 
@@ -485,128 +409,8 @@ export function CriteriaBuilderSection() {
           )}
         </div>
 
-        {/* ── Task 4：搜尋結果（共用 ProductCard）── */}
-        {showResults && results !== null && (
-          <div className="mt-10 max-w-[1400px]">
-            <div className="flex items-center justify-between mb-8">
-              <div>
-                <div className="text-[20px] font-bold text-[#0a1628]">
-                  符合你的條件
-                  <span className="mx-2 text-[#b38600] font-black text-[28px]">{results.length}</span>
-                  <span className="text-[17px] text-slate-500">筆商品</span>
-                </div>
-                <div className="text-[13px] text-slate-400 mt-1">
-                  條件：{conditions.map(conditionToLabel).join(" ＋ ")}
-                </div>
-              </div>
-              <button
-                onClick={clearAll}
-                className="text-[14px] text-slate-500 border border-slate-200 px-4 py-2 rounded-lg hover:border-slate-400 transition-colors"
-              >
-                重新設定
-              </button>
-            </div>
-
-            {results.length === 0 && (
-              <div className="text-center py-16 text-slate-400">
-                <div className="text-[48px] mb-4">🔍</div>
-                <div className="text-[18px] font-semibold mb-2">找不到符合條件的商品</div>
-                <div className="text-[15px]">請嘗試放寬條件，例如降低殖利率門檻或移除部分條件</div>
-              </div>
-            )}
-
-            {etfResults.length > 0 && (
-              <div className="mb-12">
-                <div className="flex items-center gap-3 mb-5">
-                  <div className="text-[18px] font-bold text-[#0a1628]">ETF</div>
-                  <div className="text-[14px] text-slate-400 bg-slate-100 px-2.5 py-0.5 rounded-full">{etfResults.length} 檔</div>
-                </div>
-                <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                  {etfResults.slice(0, 8).map(item => (
-                    <ProductCard
-                      key={item.id}
-                      item={item}
-                      favList={favList}
-                      watchList={watchList}
-                      compareList={compareList}
-                      onFav={(i: SearchResultItem) => toggleFav({ id: i.code || i.id, type: "etf", name: i.name })}
-                      onWatch={(i: SearchResultItem) => toggleWatch({ id: i.code || i.id, type: "etf", name: i.name })}
-                      onCompare={(i: SearchResultItem) => toggleCompare({ id: i.code || i.id, type: "etf", name: i.name })}
-                    />
-                  ))}
-                </div>
-                {etfResults.length > 8 && (
-                  <div className="mt-5 text-center">
-                    <Link href="/etf" className="text-[14px] text-[#b38600] hover:underline font-semibold">
-                      查看全部 {etfResults.length} 檔 ETF →
-                    </Link>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {fundResults.length > 0 && (
-              <div className="mb-6">
-                <div className="flex items-center gap-3 mb-5">
-                  <div className="text-[18px] font-bold text-[#0a1628]">基金</div>
-                  <div className="text-[14px] text-slate-400 bg-slate-100 px-2.5 py-0.5 rounded-full">{fundResults.length} 檔</div>
-                </div>
-                <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                  {fundResults.slice(0, 8).map(item => (
-                    <ProductCard
-                      key={item.id}
-                      item={item}
-                      favList={favList}
-                      watchList={watchList}
-                      compareList={compareList}
-                      onFav={(i: SearchResultItem) => toggleFav({ id: i.code || i.id, type: "fund", name: i.name })}
-                      onWatch={(i: SearchResultItem) => toggleWatch({ id: i.code || i.id, type: "fund", name: i.name })}
-                      onCompare={(i: SearchResultItem) => toggleCompare({ id: i.code || i.id, type: "fund", name: i.name })}
-                    />
-                  ))}
-                </div>
-                {fundResults.length > 8 && (
-                  <div className="mt-5 text-center">
-                    <Link href="/funds" className="text-[14px] text-[#b38600] hover:underline font-semibold">
-                      查看全部 {fundResults.length} 檔基金 →
-                    </Link>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Task 8：轉換流程 CTA — 保存條件 */}
-            {results.length > 0 && (
-              <div className="mt-10 border border-[#F5B700]/30 bg-amber-50/50 rounded-2xl p-7 flex items-center justify-between">
-                <div>
-                  <div className="text-[17px] font-bold text-[#0a1628] mb-1">
-                    想保存這組條件，下次一鍵重新執行？
-                  </div>
-                  <div className="text-[14px] text-slate-500">
-                    建立帳號後，你的投資條件永久保存。市場更新，條件不用重設。
-                  </div>
-                </div>
-                <Link
-                  href="/quiz"
-                  className="ml-6 shrink-0 bg-[#F5B700] hover:bg-[#e0a800] text-[#020817] px-7 py-3 rounded-xl font-black text-[15px] transition-colors"
-                >
-                  建立帳號，保存條件 →
-                </Link>
-              </div>
-            )}
-
-            <div className="text-[12px] text-slate-400 border-t border-slate-100 pt-5 mt-6">
-              以上為依您設定條件篩選出的商品，非投資建議。過去績效不代表未來表現，請自行評估風險。
-            </div>
-          </div>
-        )}
       </div>
 
-      {wlToast && (
-        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[999] bg-[#1a2540] text-white text-[14px] font-semibold px-6 py-3 rounded-full shadow-xl">
-          {wlToast}
-        </div>
-      )}
     </section>
   );
 }
