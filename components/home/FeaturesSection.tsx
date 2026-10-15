@@ -261,20 +261,6 @@ export function FeaturesSection() {
               </div>
             </div>
           </div>
-          <div className="grid grid-cols-4 gap-4">
-            {[
-              { num:"16,000+",  label:"ETF 商品",   sub:"台股＋美股" },
-              { num:"28,000+", label:"基金商品",     sub:"境內＋境外" },
-              { num:"170+",  label:"市場指標",     sub:"台灣、美歐、亞洲、商品" },
-              { num:"NT$99起", label:"多元方案", sub:"依需求升級" },
-            ].map(s => (
-              <div key={s.label} className="bg-white/[0.04] border border-white/[0.08] rounded-xl p-5 text-center">
-                <div className="text-[36px] font-black text-[#F5B700] leading-none mb-1">{s.num}</div>
-                <div className="text-[16px] font-semibold text-white mb-1">{s.label}</div>
-                <div className="text-[14px] text-slate-500">{s.sub}</div>
-              </div>
-            ))}
-          </div>
         </div>
       </section>
 
