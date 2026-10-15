@@ -31,7 +31,16 @@ import { writeTdccNavBatch } from "@/lib/offshore-nav-sync/navWriter";
 import { loadMapping } from "@/lib/offshore-nav-sync/mapping";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+// Raised from 60s this round: the 2026-10-15 10:31 UTC production run (first real run after this
+// round's fund-107 code-matched candidate branch was added, write-enabled) got hard-killed by
+// Vercel before ever reaching the catch block -- confirmed via production_scheduler_runs: the row
+// is still stuck at status=IN_PROGRESS with attempted=0 hours later, which is exactly what
+// beginRun's initial insert looks like before the route does any work. Writing ~3,700 name-matched
+// rows plus the new code-matched branch within 60s (CSV fetch + 2 candidate queries against a
+// ~23,700-row combined pool + the write transaction) was too tight. 280s matches every other
+// heavy ingestion route in this codebase (yahoo-commodity, yahoo-index, yahoo-crypto all use
+// 280-300s).
+export const maxDuration = 280;
 export const dynamic = "force-dynamic";
 
 const JOB = "OFFSHORE_NAV_TDCC_SYNC";
