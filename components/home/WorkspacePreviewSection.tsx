@@ -1,72 +1,12 @@
 "use client";
 // ============================================================
 // components/home/WorkspacePreviewSection.tsx
-// Mock Dashboard + Comparison + WhyCriteria sections
+// Comparison + WhyCriteria sections（2026-10-15 移除寫死數字的模擬儀表板）
 // 從 app/page.tsx 拆出，不修改任何 UI 或邏輯
 // ============================================================
 
-import Link from "next/link";
 
-// ── Mock Dashboard ────────────────────────────────────────────
-const MOCK_CRITERIA = [
-  { name: "退休現金流", etf: 8,  fund: 17, tags: ["月配息", "殖利率>6%", "低波動"] },
-  { name: "亞洲收益",   etf: 5,  fund: 12, tags: ["亞洲", "股票型", "月配息"] },
-  { name: "科技成長",   etf: 11, fund: 6,  tags: ["科技", "近1年>20%"] },
-  { name: "美元收益",   etf: 3,  fund: 18, tags: ["美國", "月配息", "殖利率>5%"] },
-];
-
-function MockDashboardSection() {
-  return (
-    <section className="py-28 bg-[#0B1220]">
-      <div className="max-w-[1200px] mx-auto px-10">
-        <div className="text-center mb-12">
-          <div className="text-[13px] tracking-[8px] text-[#F5B700] font-semibold mb-3">AFTER LOGIN</div>
-          <h2 className="text-[32px] font-black text-white mb-3">登入後，你的首頁會長這樣</h2>
-          <p className="text-[16px] text-slate-400">你建立的每一組投資條件，隨時重新執行，查看最新符合商品</p>
-        </div>
-
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          {MOCK_CRITERIA.map((c, i) => (
-            <div key={i} className="bg-white/[0.05] border border-white/[0.08] rounded-2xl p-5 hover:border-[#F5B700]/30 transition-all">
-              <div className="text-[16px] font-bold text-white mb-3">{c.name}</div>
-              <div className="flex flex-wrap gap-1.5 mb-4">
-                {c.tags.map(t => (
-                  <span key={t} className="text-[11px] bg-white/[0.08] text-slate-400 px-2 py-0.5 rounded-full">{t}</span>
-                ))}
-              </div>
-              <div className="border-t border-white/[0.06] pt-3 mb-4">
-                <div className="text-[12px] text-slate-500 mb-2">目前符合商品</div>
-                <div className="flex gap-4">
-                  <div>
-                    <div className="text-[20px] font-black text-blue-400">{c.etf}</div>
-                    <div className="text-[11px] text-slate-500">ETF</div>
-                  </div>
-                  <div>
-                    <div className="text-[20px] font-black text-[#F5B700]">{c.fund}</div>
-                    <div className="text-[11px] text-slate-500">基金</div>
-                  </div>
-                </div>
-              </div>
-              <button className="w-full bg-[#F5B700]/10 border border-[#F5B700]/20 text-[#F5B700] text-[13px] font-semibold py-2 rounded-xl hover:bg-[#F5B700]/20 transition-colors">
-                重新執行
-              </button>
-            </div>
-          ))}
-        </div>
-
-        <div className="text-center">
-          <div className="inline-flex items-center gap-3 bg-white/[0.04] border border-white/[0.08] rounded-2xl px-8 py-4">
-            <span className="text-[15px] text-slate-300">建立帳號後，你的投資條件將永久保存</span>
-            <Link href="/quiz" className="bg-[#F5B700] hover:bg-[#e0a800] text-[#020817] font-black text-[14px] px-6 py-2.5 rounded-xl transition-colors">
-              開始建立
-            </Link>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
+// 2026-10-15：移除「登入後，你的首頁會長這樣」的模擬儀表板（寫死的符合商品數不是真實資料）
 // ── Comparison ────────────────────────────────────────────────
 function ComparisonSection() {
   const left = [
@@ -158,7 +98,6 @@ function WhyCriteriaSection() {
 export function WorkspacePreviewSection() {
   return (
     <>
-      <MockDashboardSection />
       <ComparisonSection />
       <WhyCriteriaSection />
     </>
