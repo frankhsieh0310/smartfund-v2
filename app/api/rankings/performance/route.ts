@@ -13,9 +13,21 @@
 // dimension is reported unsupported rather than shown empty or backed by fabricated numbers.
 import { prisma } from "@/lib/prisma";
 import { readFundYieldSnapshot, rankFundYields } from "@/lib/yahoo/fundYieldRanking";
+import { categoriesForBucket } from "@/lib/data-platform/categoryClassification";
 
 const headers = { "Access-Control-Allow-Origin": "*", "Cache-Control": "no-store" };
 const ZH = "[一-鿿]";
+const ASSET_CATEGORY_BUCKETS = ["STOCK", "BOND", "COMMODITY", "MIXED"] as const;
+type AssetCategoryBucketParam = (typeof ASSET_CATEGORY_BUCKETS)[number];
+
+// ETF-only for now (see categoryClassification.ts) — funds.category coverage/CTE shape is a
+// separate, larger change not done this round. `category = ANY($n::text[])` with an empty array
+// matches zero rows (Postgres semantics), so an unmapped bucket just returns an empty page rather
+// than erroring or silently ignoring the filter.
+function etfCategoryFilter(bucket: string | null): { clause: string; values: string[] } {
+  if (!bucket || !ASSET_CATEGORY_BUCKETS.includes(bucket as AssetCategoryBucketParam)) return { clause: "", values: [] };
+  return { clause: "AND category = ANY($4::text[])", values: categoriesForBucket(bucket as AssetCategoryBucketParam) };
+}
 
 const ETF_PERIOD_COLUMN: Record<string, string> = {
   "1M": "return_1m", "3M": "return_3m", "6M": "return_6m", "1Y": "return_1y", "3Y": "return_3y", "5Y": "return_5y",
@@ -46,6 +58,7 @@ export async function GET(request: Request) {
   const offset = (page - 1) * limit;
 
   if (assetType === "ETF") {
+    const { clause: categoryClause, values: categoryValues } = etfCategoryFilter(q.get("category"));
     if (rankingType === "PERFORMANCE") {
       const column = ETF_PERIOD_COLUMN[period];
       if (!column) return unsupported(assetType, rankingType, page, limit, "UNSUPPORTED_PERIOD");
@@ -54,9 +67,9 @@ export async function GET(request: Request) {
       }>>(
         `SELECT id, code, name, ${column}::text AS value, latest_price::text, price_updated_at::text AS price_date,
                 COUNT(*) OVER ()::text AS total
-           FROM etfs WHERE is_active = true AND ${column} IS NOT NULL AND name ~ $3
+           FROM etfs WHERE is_active = true AND ${column} IS NOT NULL AND name ~ $3 ${categoryClause}
           ORDER BY ${column} ${sort} LIMIT $1 OFFSET $2`,
-        limit, offset, ZH,
+        limit, offset, ZH, ...categoryValues,
       );
       const total = rows.length ? Number(rows[0].total) : 0;
       return Response.json({
@@ -73,9 +86,9 @@ export async function GET(request: Request) {
       }>>(
         `SELECT id, code, name, aum::text AS aum, currency, latest_price::text AS latest_price, price_updated_at::text AS price_date,
                 COUNT(*) OVER ()::text AS total
-           FROM etfs WHERE is_active = true AND aum IS NOT NULL AND name ~ $3
+           FROM etfs WHERE is_active = true AND aum IS NOT NULL AND name ~ $3 ${categoryClause}
           ORDER BY etfs.aum ${sort} LIMIT $1 OFFSET $2`,
-        limit, offset, ZH,
+        limit, offset, ZH, ...categoryValues,
       );
       const total = rows.length ? Number(rows[0].total) : 0;
       return Response.json({
@@ -92,9 +105,9 @@ export async function GET(request: Request) {
       }>>(
         `SELECT id, code, name, volume::text AS volume, latest_price::text AS latest_price, price_updated_at::text AS price_date,
                 COUNT(*) OVER ()::text AS total
-           FROM etfs WHERE is_active = true AND volume IS NOT NULL AND name ~ $3
+           FROM etfs WHERE is_active = true AND volume IS NOT NULL AND name ~ $3 ${categoryClause}
           ORDER BY etfs.volume ${sort} LIMIT $1 OFFSET $2`,
-        limit, offset, ZH,
+        limit, offset, ZH, ...categoryValues,
       );
       const total = rows.length ? Number(rows[0].total) : 0;
       return Response.json({
@@ -115,9 +128,9 @@ export async function GET(request: Request) {
         `SELECT id, code, name, dividend_yield::text AS dividend_yield, latest_price::text AS latest_price, price_updated_at::text AS price_date,
                 COUNT(*) OVER ()::text AS total
            FROM etfs
-          WHERE is_active = true AND currency = 'TWD' AND code !~ '\\.' AND dividend_yield IS NOT NULL AND name ~ $3
+          WHERE is_active = true AND currency = 'TWD' AND code !~ '\\.' AND dividend_yield IS NOT NULL AND name ~ $3 ${categoryClause}
           ORDER BY etfs.dividend_yield ${sort} LIMIT $1 OFFSET $2`,
-        limit, offset, ZH,
+        limit, offset, ZH, ...categoryValues,
       );
       const total = rows.length ? Number(rows[0].total) : 0;
       return Response.json({
@@ -137,9 +150,9 @@ export async function GET(request: Request) {
       }>>(
         `SELECT id, code, name, beta::text AS beta, latest_price::text AS latest_price, price_updated_at::text AS price_date,
                 COUNT(*) OVER ()::text AS total
-           FROM etfs WHERE is_active = true AND beta IS NOT NULL AND name ~ $3
+           FROM etfs WHERE is_active = true AND beta IS NOT NULL AND name ~ $3 ${categoryClause}
           ORDER BY etfs.beta ${sort} LIMIT $1 OFFSET $2`,
-        limit, offset, ZH,
+        limit, offset, ZH, ...categoryValues,
       );
       const total = rows.length ? Number(rows[0].total) : 0;
       return Response.json({
