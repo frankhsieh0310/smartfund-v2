@@ -115,19 +115,6 @@ export function HeroSection() {
                 </div>
               </div>
 
-              {/* 資料規模 */}
-              <div className="flex gap-6 pt-1">
-                {[
-                  { num: "95+",  label: "ETF" },
-                  { num: "269+", label: "基金" },
-                  { num: "34+",  label: "市場指標" },
-                ].map(s => (
-                  <div key={s.label}>
-                    <div className="text-[28px] font-black text-[#F5B700] leading-none">{s.num}</div>
-                    <div className="text-[12px] text-white/40 mt-0.5">{s.label}</div>
-                  </div>
-                ))}
-              </div>
 
             </div>
 
@@ -158,25 +145,21 @@ export function HeroSection() {
                   {
                     name: "退休現金流",
                     tags: ["月配息", "殖利率 > 6%", "低波動"],
-                    etf: 8, fund: 17,
                     active: true,
                   },
                   {
                     name: "科技成長",
                     tags: ["美國", "科技", "近1年 > 20%"],
-                    etf: 11, fund: 6,
                     active: false,
                   },
                   {
                     name: "亞洲收益",
                     tags: ["亞洲", "月配息", "股票型"],
-                    etf: 5, fund: 12,
                     active: false,
                   },
                   {
                     name: "台灣高股息",
                     tags: ["台灣", "高股息", "配息率 > 5%"],
-                    etf: 9, fund: 4,
                     active: false,
                   },
                 ].map((c, i) => (
@@ -190,11 +173,6 @@ export function HeroSection() {
                   >
                     <div className="flex items-start justify-between mb-2">
                       <div className="text-[14px] font-bold text-white">{c.name}</div>
-                      <div className="flex items-center gap-2 text-[12px]">
-                        <span className="text-blue-400 font-semibold">{c.etf} ETF</span>
-                        <span className="text-white/20">·</span>
-                        <span className="text-amber-400 font-semibold">{c.fund} 基金</span>
-                      </div>
                     </div>
                     <div className="flex flex-wrap gap-1.5">
                       {c.tags.map(t => (
@@ -203,12 +181,6 @@ export function HeroSection() {
                         </span>
                       ))}
                     </div>
-                    {c.active && (
-                      <div className="mt-2.5 flex items-center gap-2">
-                        <div className="w-1.5 h-1.5 rounded-full bg-[#F5B700] animate-pulse" />
-                        <span className="text-[11px] text-[#F5B700]/70">今日更新</span>
-                      </div>
-                    )}
                   </div>
                 ))}
 

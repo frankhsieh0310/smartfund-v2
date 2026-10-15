@@ -16,7 +16,7 @@ export function SiteFooter() {
             <Link href="/quiz" className="transition-colors hover:text-slate-300">人格分析</Link>
             <Link href="/clients" className="transition-colors hover:text-slate-300">客戶管理</Link>
             <Link href="/pricing" className="transition-colors hover:text-slate-300">方案說明</Link>
-            <a href="mailto:contact@smartmatch.tw" className="transition-colors hover:text-slate-300">聯絡我們</a>
+            <a href="mailto:contact@smartmatchpilot.com" className="transition-colors hover:text-slate-300">聯絡我們</a>
           </div>
           <div className="min-w-0 text-[13px] text-slate-400 lg:text-right">
             <div>本站資料僅供參考，不構成投資建議。</div>
@@ -30,7 +30,7 @@ export function SiteFooter() {
           </p>
           <p>統一編號：93639659</p>
           <p>地址：新北市三重區重新路2段21號11樓</p>
-          <p>聯絡信箱：<a href="mailto:contact@smartmatch.tw" className="break-all underline underline-offset-4 hover:text-white">contact@smartmatch.tw</a></p>
+          <p>聯絡信箱：<a href="mailto:contact@smartmatchpilot.com" className="break-all underline underline-offset-4 hover:text-white">contact@smartmatchpilot.com</a></p>
         </address>
       </div>
     </footer>
