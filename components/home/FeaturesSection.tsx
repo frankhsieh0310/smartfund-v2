@@ -249,7 +249,6 @@ export function FeaturesSection() {
                 <div className="flex items-start gap-2"><span className="text-[#F5B700] shrink-0">·</span><span>基金：投信投顧公會公開資料</span></div>
                 <div className="flex items-start gap-2"><span className="text-[#F5B700] shrink-0">·</span><span>市場指數：各交易所公開資訊</span></div>
                 <div className="flex items-start gap-2"><span className="text-[#F5B700] shrink-0">·</span><span>申購排行：投信投顧公會月報</span></div>
-                <p className="text-[14px] text-slate-600 mt-3">目前版本使用示意數據供功能展示。</p>
               </div>
             </div>
             <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-7">
@@ -261,20 +260,6 @@ export function FeaturesSection() {
                 <p>過去績效不代表未來表現。</p>
               </div>
             </div>
-          </div>
-          <div className="grid grid-cols-4 gap-4">
-            {[
-              { num:"95+",  label:"ETF 商品",   sub:"台股＋美股" },
-              { num:"269+", label:"基金商品",     sub:"前20大基金公司" },
-              { num:"34+",  label:"市場指標",     sub:"台灣、美歐、亞洲、商品" },
-              { num:"NT$99起", label:"多元方案", sub:"依需求升級" },
-            ].map(s => (
-              <div key={s.label} className="bg-white/[0.04] border border-white/[0.08] rounded-xl p-5 text-center">
-                <div className="text-[36px] font-black text-[#F5B700] leading-none mb-1">{s.num}</div>
-                <div className="text-[16px] font-semibold text-white mb-1">{s.label}</div>
-                <div className="text-[14px] text-slate-500">{s.sub}</div>
-              </div>
-            ))}
           </div>
         </div>
       </section>

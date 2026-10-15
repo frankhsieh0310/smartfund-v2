@@ -261,7 +261,7 @@ function ReportContent() {
           {clientName && <div style={{ fontSize:"18px", color:"#94a3b8", marginBottom:"8px" }}>客戶姓名：<span style={{ color:"#fff", fontWeight:700 }}>{clientName}</span></div>}
           <div style={{ fontSize:"14px", color:"#64748b", marginBottom:"6px" }}>分析日期：{today}</div>
           {scoreParam && <div style={{ fontSize:"13px", color:"#64748b" }}>問卷總分：{scoreParam} 分</div>}
-          <div style={{ marginTop:"40px", fontSize:"12px", color:"#334155", textAlign:"center" }}>SmartMatch｜瑞宇智庫｜contact@smartmatch.tw</div>
+          <div style={{ marginTop:"40px", fontSize:"12px", color:"#334155", textAlign:"center" }}>SmartMatch｜瑞宇智庫｜contact@smartmatchpilot.com</div>
         </div>
 
         {/* Section 1：人格分析 */}

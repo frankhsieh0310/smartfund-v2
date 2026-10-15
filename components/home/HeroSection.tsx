@@ -115,19 +115,6 @@ export function HeroSection() {
                 </div>
               </div>
 
-              {/* 資料規模 */}
-              <div className="flex gap-6 pt-1">
-                {[
-                  { num: "95+",  label: "ETF" },
-                  { num: "269+", label: "基金" },
-                  { num: "34+",  label: "市場指標" },
-                ].map(s => (
-                  <div key={s.label}>
-                    <div className="text-[28px] font-black text-[#F5B700] leading-none">{s.num}</div>
-                    <div className="text-[12px] text-white/40 mt-0.5">{s.label}</div>
-                  </div>
-                ))}
-              </div>
 
             </div>
 
