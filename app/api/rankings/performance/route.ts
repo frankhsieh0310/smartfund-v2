@@ -20,13 +20,29 @@ const ZH = "[一-鿿]";
 const ASSET_CATEGORY_BUCKETS = ["STOCK", "BOND", "COMMODITY", "MIXED"] as const;
 type AssetCategoryBucketParam = (typeof ASSET_CATEGORY_BUCKETS)[number];
 
-// ETF-only for now (see categoryClassification.ts) — funds.category coverage/CTE shape is a
-// separate, larger change not done this round. `category = ANY($n::text[])` with an empty array
-// matches zero rows (Postgres semantics), so an unmapped bucket just returns an empty page rather
-// than erroring or silently ignoring the filter.
+// VERIFIED this round via a live GROUP BY: etfs.category (the 187-value Morningstar taxonomy) is
+// populated almost exclusively for the English-named global/US ETF universe — of the 349 ETFs with
+// a Chinese name (the ONLY ones this endpoint's ZH gate ever surfaces), 348 have category=NULL.
+// Category-only filtering would make every bucket return empty for the entire user-facing TW/ZH
+// universe this ranking center actually serves. Falls back to a name-keyword classifier for the
+// ZH universe (108 bond ETFs / 7 commodity ETFs found this way, VERIFIED by sampling) — STOCK is
+// "ZH-named, not bond-by-name, not commodity-by-name, and not category-classified as
+// BOND/COMMODITY/MIXED on the rare row that does have a category", which matches the real shape of
+// the TW ETF market (overwhelmingly equity, with debt/commodity ETFs reliably marked in their own
+// name per TWSE/TPEx naming convention).
+const BOND_NAME_PATTERN = "債";
+const COMMODITY_NAME_PATTERN = "原油|黃金|白銀|商品|石油|布蘭特|天然氣|農產品";
+
 function etfCategoryFilter(bucket: string | null): { clause: string; values: string[] } {
   if (!bucket || !ASSET_CATEGORY_BUCKETS.includes(bucket as AssetCategoryBucketParam)) return { clause: "", values: [] };
-  return { clause: "AND category = ANY($4::text[])", values: categoriesForBucket(bucket as AssetCategoryBucketParam) };
+  if (bucket === "BOND") return { clause: `AND (name ~ '${BOND_NAME_PATTERN}' OR category = ANY($4::text[]))`, values: categoriesForBucket("BOND") };
+  if (bucket === "COMMODITY") return { clause: `AND (name ~ '${COMMODITY_NAME_PATTERN}' OR category = ANY($4::text[]))`, values: categoriesForBucket("COMMODITY") };
+  if (bucket === "MIXED") return { clause: "AND category = ANY($4::text[])", values: categoriesForBucket("MIXED") };
+  // STOCK: exclude anything the bond/commodity name patterns or a non-stock category would catch.
+  return {
+    clause: `AND name !~ '${BOND_NAME_PATTERN}' AND name !~ '${COMMODITY_NAME_PATTERN}' AND (category IS NULL OR NOT (category = ANY($4::text[])))`,
+    values: [...categoriesForBucket("BOND"), ...categoriesForBucket("COMMODITY"), ...categoriesForBucket("MIXED")],
+  };
 }
 
 const ETF_PERIOD_COLUMN: Record<string, string> = {
@@ -69,7 +85,7 @@ export async function GET(request: Request) {
                 COUNT(*) OVER ()::text AS total
            FROM etfs WHERE is_active = true AND ${column} IS NOT NULL AND name ~ $3 ${categoryClause}
           ORDER BY ${column} ${sort} LIMIT $1 OFFSET $2`,
-        limit, offset, ZH, ...categoryValues,
+        limit, offset, ZH, ...(categoryValues.length ? [categoryValues] : []),
       );
       const total = rows.length ? Number(rows[0].total) : 0;
       return Response.json({
@@ -88,7 +104,7 @@ export async function GET(request: Request) {
                 COUNT(*) OVER ()::text AS total
            FROM etfs WHERE is_active = true AND aum IS NOT NULL AND name ~ $3 ${categoryClause}
           ORDER BY etfs.aum ${sort} LIMIT $1 OFFSET $2`,
-        limit, offset, ZH, ...categoryValues,
+        limit, offset, ZH, ...(categoryValues.length ? [categoryValues] : []),
       );
       const total = rows.length ? Number(rows[0].total) : 0;
       return Response.json({
@@ -107,7 +123,7 @@ export async function GET(request: Request) {
                 COUNT(*) OVER ()::text AS total
            FROM etfs WHERE is_active = true AND volume IS NOT NULL AND name ~ $3 ${categoryClause}
           ORDER BY etfs.volume ${sort} LIMIT $1 OFFSET $2`,
-        limit, offset, ZH, ...categoryValues,
+        limit, offset, ZH, ...(categoryValues.length ? [categoryValues] : []),
       );
       const total = rows.length ? Number(rows[0].total) : 0;
       return Response.json({
@@ -130,7 +146,7 @@ export async function GET(request: Request) {
            FROM etfs
           WHERE is_active = true AND currency = 'TWD' AND code !~ '\\.' AND dividend_yield IS NOT NULL AND name ~ $3 ${categoryClause}
           ORDER BY etfs.dividend_yield ${sort} LIMIT $1 OFFSET $2`,
-        limit, offset, ZH, ...categoryValues,
+        limit, offset, ZH, ...(categoryValues.length ? [categoryValues] : []),
       );
       const total = rows.length ? Number(rows[0].total) : 0;
       return Response.json({
@@ -152,7 +168,7 @@ export async function GET(request: Request) {
                 COUNT(*) OVER ()::text AS total
            FROM etfs WHERE is_active = true AND beta IS NOT NULL AND name ~ $3 ${categoryClause}
           ORDER BY etfs.beta ${sort} LIMIT $1 OFFSET $2`,
-        limit, offset, ZH, ...categoryValues,
+        limit, offset, ZH, ...(categoryValues.length ? [categoryValues] : []),
       );
       const total = rows.length ? Number(rows[0].total) : 0;
       return Response.json({
