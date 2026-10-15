@@ -40,7 +40,10 @@ export const maxDuration = 300;
 export const dynamic = "force-dynamic";
 
 const JOB = "HOLDINGS_ALT_SOURCE_SYNC";
-const TIME_BUDGET_MS = 150_000;
+// Raised from 150s to 280s this round (audit found ~39/run empirically against a 2,168-mapping
+// universe -> ~2.3 days/pass at hourly cadence): maxDuration=300s gives 20s margin.
+// REQUEST_SPACING_MS is untouched (anti-scraping pace, not the lever to pull).
+const TIME_BUDGET_MS = 280_000;
 const REQUEST_SPACING_MS = 3_000;
 const FRESH_DAYS = 25;
 const MAX_CONSECUTIVE_FAILURES = 5;

@@ -90,6 +90,36 @@ export function filterNewerThanStored(
   return result;
 }
 
+/** Derives a code -> row lookup from the same parsed CSV (no second fetch/parse). Funds whose
+ * `funds.data_provider = 'tdcc-offshore'` already carry TDCC's own 基金代碼 (the CSV's first
+ * column) as `funds.code` — VERIFIED live 2026-10-15 (e.g. fund code "107" matches CSV row
+ * "107,富蘭克林公用事業基金美元A1股,..." exactly) — so code matching is both possible and more
+ * precise than name matching for this specific population (name matching is what the existing
+ * data_provider='yahoo' population uses, because those funds have no `code` value at all). */
+export function indexByCode(byName: Map<string, TdccNavRow>): Map<string, TdccNavRow> {
+  const byCode = new Map<string, TdccNavRow>();
+  for (const row of byName.values()) {
+    const existing = byCode.get(row.code);
+    if (!existing || existing.navDate < row.navDate) byCode.set(row.code, row);
+  }
+  return byCode;
+}
+
+export function filterNewerThanStoredByCode(
+  candidateFunds: Array<{ id: string; code: string; latestNavDate: string | null }>,
+  byCode: Map<string, TdccNavRow>,
+): OffshoreNavCandidateMatch[] {
+  const result: OffshoreNavCandidateMatch[] = [];
+  for (const f of candidateFunds) {
+    const row = byCode.get(f.code);
+    if (!row) continue;
+    if (row.nav <= 0) continue; // TDCC's own "-9999 not yet reported" sentinel is already filtered by parseTdccNavCsv, but guard again defensively
+    if (f.latestNavDate !== null && row.navDate <= f.latestNavDate) continue;
+    result.push({ fundId: f.id, navDate: row.navDate, nav: row.nav });
+  }
+  return result;
+}
+
 /** Round-4, user-approved fund-ownership rule: a fund already in offshore-nav-sync's own 876-fund
  * Yahoo mapping (lib/offshore-nav-sync/mapping.ts's loadMapping()) must NEVER also be written by this
  * TDCC-sourced pipeline, even if it happens to look "stale" by updated_at (e.g. during a transient

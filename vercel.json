@@ -26,11 +26,11 @@
     { "path": "/api/cron/domestic-dividend-sync", "schedule": "0 2 * * *" },
     { "path": "/api/cron/holdings-alt-source-sync", "schedule": "52 * * * *" },
     { "path": "/api/cron/daily-health-report", "schedule": "30 0 * * *" },
-    { "path": "/api/cron/tw-etf-day-change", "schedule": "10 6 * * 1-5" },
-    { "path": "/api/cron/tw-etf-day-change", "schedule": "10 8 * * 1-5" },
+    { "path": "/api/cron/tw-etf-day-change", "schedule": "*/15 6-8 * * 1-5" },
     { "path": "/api/cron/offshore-nav-tdcc-sync", "schedule": "31 2 * * *" },
     { "path": "/api/cron/offshore-nav-tdcc-sync", "schedule": "31 10 * * *" },
     { "path": "/api/cron/fund-returns-sync", "schedule": "41 * * * *" },
+    { "path": "/api/cron/fund-returns-sync", "schedule": "11 * * * *" },
     { "path": "/api/cron/yahoo-commodity?phase=history&group=cbot&symbols=ZC=F,ZW=F,KE=F,ZS=F,ZL=F,ZM=F,ZO=F,ZR=F", "schedule": "40 19 * * 1-5" },
     { "path": "/api/cron/yahoo-commodity?phase=history&group=comex-nymex&symbols=CL=F,NG=F,GC=F,SI=F,HG=F,PL=F,PA=F,RB=F,HO=F", "schedule": "0 20 * * 1-5" },
     { "path": "/api/cron/yahoo-commodity?phase=history&group=livestock&symbols=LE=F,HE=F,GF=F", "schedule": "20 20 * * 1-5" },
@@ -51,6 +51,9 @@
     { "path": "/api/cron/yahoo-crypto?phase=history", "schedule": "23 0 * * *" },
     { "path": "/api/cron/yahoo-crypto?phase=quote", "schedule": "0 */4 * * *" },
     { "path": "/api/cron/yahoo-crypto?phase=bootstrap", "schedule": "10 0 * * *" },
-    { "path": "/api/cron/cloud-new-listing-detection", "schedule": "15 1 * * *" }
+    { "path": "/api/cron/cloud-new-listing-detection", "schedule": "15 1 * * *" },
+    { "path": "/api/cron/cloud-new-fund-listing-detection", "schedule": "25 1 * * *" },
+    { "path": "/api/cron/cloud-moneydj-fund", "schedule": "*/20 * * * *" },
+    { "path": "/api/cron/cloud-fund-holdings?provider=ALL", "schedule": "*/20 * * * *" }
   ]
 }

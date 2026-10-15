@@ -184,6 +184,12 @@ export type DelistingResult = {
   confirmed: { code: string; name: string }[];
 };
 
+// A DELISTING_CANDIDATE older than this is treated as stale — the ETF must have reappeared in the
+// official feed since (the cleanup pass below deletes the row the run it reappears), so a candidate
+// surviving past this window points at a bug, not a real 2-consecutive-day miss. Guards the
+// "2 consecutive misses" guarantee across time, not just within a single run.
+const DELISTING_CANDIDATE_MAX_AGE_HOURS = 48;
+
 export async function detectDelistings(writeEnabled: boolean): Promise<DelistingResult> {
   const [twse, tpex] = await Promise.all([fetchOfficialEtfList("TWSE"), fetchOfficialEtfList("TPEx")]);
   const officialCodes = new Set([...twse, ...tpex].map((r) => r.code));
@@ -192,18 +198,37 @@ export async function detectDelistings(writeEnabled: boolean): Promise<Delisting
     select: { id: true, code: true, name: true },
   });
 
+  // Cleanup pass: any ETF that reappeared in today's official feed must have its stale
+  // DELISTING_CANDIDATE row cleared, so a future unrelated miss can never be misread as the
+  // "second consecutive" one. This is the fix for the bug this round's independent review caught:
+  // without it, "miss once (any reason) -> reappear for months -> miss again (unrelated reason)"
+  // was wrongly read as 2 consecutive misses and flipped a real, still-listed ETF inactive.
+  if (writeEnabled) {
+    const reappeared = active.filter((e) => officialCodes.has(e.code)).map((e) => e.code);
+    if (reappeared.length > 0) {
+      await prisma.$executeRawUnsafe(
+        `DELETE FROM product_listing_events
+         WHERE product_type = 'ETF' AND event_type = 'DELISTING_CANDIDATE' AND code = ANY($1::text[])`,
+        reappeared,
+      );
+    }
+  }
+
   const result: DelistingResult = { candidates: [], confirmed: [] };
   for (const etf of active) {
     if (officialCodes.has(etf.code)) continue;
 
-    const priorCandidate = await prisma.$queryRawUnsafe<{ id: string }[]>(
-      `SELECT id FROM product_listing_events
+    const priorCandidate = await prisma.$queryRawUnsafe<{ id: string; detected_at: Date }[]>(
+      `SELECT id, detected_at FROM product_listing_events
        WHERE product_type = 'ETF' AND code = $1 AND event_type = 'DELISTING_CANDIDATE'
        LIMIT 1`,
       etf.code,
     );
+    const freshCandidate =
+      priorCandidate.length > 0 &&
+      Date.now() - new Date(priorCandidate[0].detected_at).getTime() <= DELISTING_CANDIDATE_MAX_AGE_HOURS * 60 * 60 * 1000;
 
-    if (priorCandidate.length === 0) {
+    if (!freshCandidate) {
       // First miss: log a candidate only. Requires a SECOND consecutive day's miss before acting,
       // so one transient CSV glitch on the official feed can never flip a still-listed ETF inactive.
       result.candidates.push({ code: etf.code, name: etf.name });
@@ -212,7 +237,7 @@ export async function detectDelistings(writeEnabled: boolean): Promise<Delisting
         `INSERT INTO product_listing_events
            (id, product_type, code, name, event_type, milestone_date, milestone_kind, source, source_url, detected_at, product_id, created_at, updated_at)
          VALUES (gen_random_uuid(), 'ETF', $1, $2, 'DELISTING_CANDIDATE', NULL, NULL, 'TWSE/TPEx t187ap47 absence', NULL, now(), $3, now(), now())
-         ON CONFLICT (product_type, code, event_type, source) DO UPDATE SET updated_at = now()`,
+         ON CONFLICT (product_type, code, event_type, source) DO UPDATE SET detected_at = now(), updated_at = now()`,
         etf.code, etf.name, etf.id,
       );
       continue;

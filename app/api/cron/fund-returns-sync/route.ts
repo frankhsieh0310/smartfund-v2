@@ -31,7 +31,12 @@ export const dynamic = "force-dynamic";
 const JOB = "FUND_RETURNS_SYNC";
 const CHECKPOINT_KEY = "fund-returns-sync:cursor";
 const REQUEST_DELAY_MS = 3_200;
-const TIME_BUDGET_MS = 150_000;
+// Raised from 150s to 270s this round (audit found the 2,168-fund universe was taking ~4 days/pass
+// at the old budget + hourly cadence): maxDuration=290s gives 20s margin. REQUEST_DELAY_MS is left
+// untouched — that's the anti-scraping-pace rule, not the lever to pull. vercel.json also now
+// triggers this route twice/hour (:11 and :41) instead of once, so the combined fix is budget x2
+// AND frequency x2, comfortably covering the universe within a day.
+const TIME_BUDGET_MS = 270_000;
 const query = (sql: string, params: any[]) => prisma.$queryRawUnsafe<any[]>(sql, ...params);
 
 function isWriteEnabled(): boolean {

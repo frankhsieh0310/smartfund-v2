@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { parseTdccNavCsv, excludeOverlapWithYahooMapping, filterNewerThanStored, type TdccNavRow } from "../tdccBatchSource.ts";
+import { parseTdccNavCsv, excludeOverlapWithYahooMapping, filterNewerThanStored, indexByCode, filterNewerThanStoredByCode, type TdccNavRow } from "../tdccBatchSource.ts";
 
 function test(name: string, fn: () => void) {
   try {
@@ -107,5 +107,34 @@ test("filterNewerThanStored: two consecutive days both carry a new NAV -> both r
 test("filterNewerThanStored: a fund with no CSV match at all is simply absent from the result, not an error", () => {
   const byName = new Map<string, TdccNavRow>();
   const result = filterNewerThanStored([{ id: "f1", name: "沒資料基金", latestNavDate: "2026-10-13" }], byName);
+  assert.deepEqual(result, []);
+});
+
+// This round's fix: data_provider='tdcc-offshore' funds (e.g. fund code "107") carry TDCC's own
+// 基金代碼 directly in funds.code, so they're matched by code instead of name — the name-matching
+// path above only ever applied to the data_provider='yahoo' population, which has no code at all.
+test("indexByCode: builds a code -> row lookup from the same parsed CSV, keeping the latest date per code", () => {
+  const byName = new Map([
+    ["富蘭克林公用事業基金美元A1股", { code: "107", name: "富蘭克林公用事業基金美元A1股", navDate: "2026-10-13", nav: 24, isin: "US3534964099", currency: "USD" } as TdccNavRow],
+  ]);
+  const byCode = indexByCode(byName);
+  assert.equal(byCode.get("107")!.nav, 24);
+});
+
+test("filterNewerThanStoredByCode: matches by code, same forward-only-date rule as the name path", () => {
+  const byCode = new Map([["107", navRow("2026-10-13", 24)]]);
+  const result = filterNewerThanStoredByCode([{ id: "fund-107", code: "107", latestNavDate: null }], byCode);
+  assert.deepEqual(result, [{ fundId: "fund-107", navDate: "2026-10-13", nav: 24 }]);
+});
+
+test("filterNewerThanStoredByCode: never writes TDCC's own -9999 sentinel even if it somehow reaches this far", () => {
+  const byCode = new Map([["XYZ", { code: "XYZ", name: "測試", navDate: "2026-10-13", nav: -9999, isin: null, currency: null } as TdccNavRow]]);
+  const result = filterNewerThanStoredByCode([{ id: "fund-x", code: "XYZ", latestNavDate: null }], byCode);
+  assert.deepEqual(result, []);
+});
+
+test("filterNewerThanStoredByCode: a code with no CSV match at all is simply absent, not an error", () => {
+  const byCode = new Map<string, TdccNavRow>();
+  const result = filterNewerThanStoredByCode([{ id: "fund-x", code: "NOPE", latestNavDate: null }], byCode);
   assert.deepEqual(result, []);
 });

@@ -26,7 +26,7 @@
 import { prisma } from "@/lib/prisma";
 import { isAuthorizedCron, unauthorizedCron } from "@/lib/cron/authorize";
 import { beginRun, finishRun } from "@/lib/cloud-ingestion/runContext";
-import { fetchTdccNavCsv, parseTdccNavCsv, excludeOverlapWithYahooMapping, filterNewerThanStored, TDCC_NAV_SOURCE } from "@/lib/offshore-nav-sync/tdccBatchSource";
+import { fetchTdccNavCsv, parseTdccNavCsv, excludeOverlapWithYahooMapping, filterNewerThanStored, filterNewerThanStoredByCode, indexByCode, TDCC_NAV_SOURCE } from "@/lib/offshore-nav-sync/tdccBatchSource";
 import { writeTdccNavBatch } from "@/lib/offshore-nav-sync/navWriter";
 import { loadMapping } from "@/lib/offshore-nav-sync/mapping";
 
@@ -58,17 +58,28 @@ export async function GET(request: Request) {
   // decides writability purely by comparing the CSV's navDate against the fund's own stored
   // latest_nav_date, so a fund with a genuinely newer NAV is never stuck waiting out a staleness
   // window again.
-  const [rawCandidateFunds, yahooMapping] = await Promise.all([
+  const [rawCandidateFunds, codeCandidateFunds, yahooMapping] = await Promise.all([
     query(`SELECT id, name, latest_nav_date::text AS "latestNavDate" FROM funds WHERE data_provider = 'yahoo'`, []),
+    // Task (this round): fund 107 and 24 siblings (data_provider='tdcc-offshore') were excluded from
+    // every NAV pipeline — this query's old WHERE clause never selected them at all, even though
+    // their NAV is sitting in this exact CSV right now. These funds carry TDCC's own 基金代碼
+    // directly in `funds.code` (not a name match, which is why the 'yahoo' population above uses
+    // name — those funds have no code), so they get their own code-matched branch below rather than
+    // being folded into the name-matched population.
+    query(`SELECT id, code, latest_nav_date::text AS "latestNavDate" FROM funds WHERE data_provider = 'tdcc-offshore' AND code IS NOT NULL`, []),
     loadMapping(query),
   ]);
   const candidateFunds = excludeOverlapWithYahooMapping(rawCandidateFunds, yahooMapping.map((m) => m.fundId));
 
   const csvText = await fetchTdccNavCsv();
   const byName = parseTdccNavCsv(csvText);
+  const byCode = indexByCode(byName);
 
   const nameMatchedCount = candidateFunds.filter((f) => byName.has(f.name)).length;
-  const candidates = filterNewerThanStored(candidateFunds, byName);
+  const codeMatchedCount = codeCandidateFunds.filter((f) => byCode.has(f.code)).length;
+  const nameCandidates = filterNewerThanStored(candidateFunds, byName);
+  const codeCandidates = filterNewerThanStoredByCode(codeCandidateFunds, byCode);
+  const candidates = [...nameCandidates, ...codeCandidates];
   const matched = candidates.length;
 
   const result = writeEnabled
@@ -76,11 +87,12 @@ export async function GET(request: Request) {
     : { written: 0, writeErrorCount: 0, writeErrorFundIds: [] };
 
   await finishRun(runId, JOB, TDCC_NAV_SOURCE, startedMs, {
-    status: "COMPLETED", attempted: candidateFunds.length, completed: result.written, inserted: result.written,
+    status: "COMPLETED", attempted: candidateFunds.length + codeCandidateFunds.length, completed: result.written, inserted: result.written,
     updated: 0, failed: result.writeErrorCount, retryableFailures: 0, checkpointAfter: null,
     details: {
       writeEnabled, rawCandidateCount: rawCandidateFunds.length, yahooMappingExcludedCount: rawCandidateFunds.length - candidateFunds.length,
-      candidateCount: candidateFunds.length, csvUniqueFundNames: byName.size, nameMatchedCount, writableRowCount: matched,
+      candidateCount: candidateFunds.length, csvUniqueFundNames: byName.size, nameMatchedCount, writableRowCount: nameCandidates.length,
+      codeCandidateCount: codeCandidateFunds.length, codeMatchedCount, codeWritableRowCount: codeCandidates.length,
     },
   });
 
@@ -88,6 +100,7 @@ export async function GET(request: Request) {
     ok: true, job: JOB, runId, writeEnabled,
     rawCandidateCount: rawCandidateFunds.length, yahooMappingExcludedCount: rawCandidateFunds.length - candidateFunds.length,
     candidateCount: candidateFunds.length, csvUniqueFundNames: byName.size, nameMatchedCount,
-    writableRowCount: matched, written: result.written, writeErrorCount: result.writeErrorCount,
+    writableRowCount: nameCandidates.length, codeCandidateCount: codeCandidateFunds.length, codeMatchedCount, codeWritableRowCount: codeCandidates.length,
+    written: result.written, writeErrorCount: result.writeErrorCount,
   });
 }

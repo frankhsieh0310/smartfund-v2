@@ -26,6 +26,16 @@ export const dynamic = "force-dynamic";
 const TIME_BUDGET_MS = 240_000;
 const HISTORY_BATCH_SIZE = 2;
 const HISTORY_MAX_SAFE_RUNTIME_MS = 180_000;
+// This round's audit fix: marketcap previously ran exactly ONE 250-symbol slice per invocation with
+// no internal loop (unlike quote/history, which both wrap-loop to completion already) — with only
+// one daily trigger and an 8,209-row universe, that was a ~33-DAY full-pass cadence, the single
+// worst daily-completion gap this round's audit found. Wrap-looping it here, the same pattern
+// yahoo-commodity/yahoo-index/yahoo-fx already use, lets one invocation walk through every ~33
+// slices (8,209/250) in well under the 280s maxDuration, since each slice's own internal budget
+// (fetchMarketcapQuotes's 210s deadline) bounds a single slice's Yahoo fetch time, not the whole
+// route — most slices finish in a few seconds. The lease acquired once below is held for the whole
+// loop (6-minute expiry, comfortably longer than MARKETCAP_MAX_SAFE_RUNTIME_MS).
+const MARKETCAP_MAX_SAFE_RUNTIME_MS = 250_000;
 
 export async function GET(request: Request) {
   if (!isAuthorizedCron(request)) return unauthorizedCron();
@@ -34,8 +44,25 @@ export async function GET(request: Request) {
   const invocation = request.headers.get("x-crypto-invocation-id");
   if (invocation && !/^[A-Za-z0-9_-]{1,80}$/.test(invocation)) return Response.json({ ok: false, error: "INVALID_INVOCATION_ID" }, { status: 400 });
   return withCryptoLease(phase, owner => phase === "marketcap"
-    ? runMarketcapSlice(owner, invocation, isCryptoSyncWriteEnabled())
+    ? runMarketcapSlicesUntilDone(owner, invocation, isCryptoSyncWriteEnabled())
     : handleCryptoRequest(request));
+}
+
+async function runMarketcapSlicesUntilDone(owner: string, invocation: string | null, writeEnabled: boolean): Promise<Response> {
+  const started = Date.now();
+  let slices = 0, totalProcessed = 0, totalUpdated = 0, totalFailed = 0;
+  let lastBody: Record<string, unknown> = {};
+  while (Date.now() - started < MARKETCAP_MAX_SAFE_RUNTIME_MS) {
+    const res = await runMarketcapSlice(owner, invocation, writeEnabled);
+    lastBody = await res.json();
+    slices++;
+    if (lastBody.skipped || lastBody.ok === false) break;
+    totalProcessed += Number(lastBody.processed ?? 0);
+    totalUpdated += Number(lastBody.updated ?? 0);
+    totalFailed += Number((lastBody.failedMarkets as unknown[] | undefined)?.length ?? 0);
+    if (lastBody.wrapped) break;
+  }
+  return Response.json({ ...lastBody, task: "yahoo-crypto", phase: "marketcap", loopSlices: slices, loopTotalProcessed: totalProcessed, loopTotalUpdated: totalUpdated, loopTotalFailed: totalFailed });
 }
 
 async function handleCryptoRequest(request: Request) {
