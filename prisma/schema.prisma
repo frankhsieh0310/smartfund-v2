@@ -6602,3 +6602,29 @@ model EtfOfficialDailyPosition {
   @@index([snapshotId])
   @@map("etf_official_daily_positions")
 }
+
+/// New-listing / delisting detection log (DRAFT — not yet applied; pending user approval per
+/// the single deploy-ask message). Logs every detected 新上市/新成立/下市 event for ETFs and funds,
+/// sourced only from verified official feeds. Never deleted; delisting flips the product's own
+/// is_active instead of removing this row, so history is preserved. RLS + REVOKE per CLAUDE.md
+/// "Supabase RLS" rule — see prisma/migrations-draft/20261015_add_product_listing_events.sql for
+/// the raw DDL (ENABLE ROW LEVEL SECURITY + REVOKE ALL FROM anon, authenticated).
+model ProductListingEvent {
+  id            String    @id @default(uuid()) @db.Uuid
+  productType   String    @map("product_type") // "ETF" | "FUND"
+  code          String
+  name          String
+  eventType     String    @map("event_type") // "NEW_LISTING" | "DELISTING"
+  milestoneDate DateTime? @map("milestone_date") @db.Date
+  milestoneKind String?   @map("milestone_kind") // "上市日期" | "成立日期" | "下市日期" | ...
+  source        String // e.g. "TWSE t187ap47_L" | "TPEx t187ap47_O"
+  sourceUrl     String?   @map("source_url")
+  detectedAt    DateTime  @default(now()) @map("detected_at")
+  productId     String?   @map("product_id") // nullable: set once auto-provisioning resolves it
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@unique([productType, code, eventType, source])
+  @@index([eventType, detectedAt])
+  @@map("product_listing_events")
+}
