@@ -2,6 +2,9 @@ import {
   AuthenticatedUserConflictError,
   getAccountForRequest,
 } from "@/lib/auth/userService";
+import { getAuthenticatedSupabaseUser } from "@/lib/auth/supabaseAuth";
+import { createSupabaseAdminClient } from "@/lib/auth/supabaseAdmin";
+import { prisma } from "@/lib/prisma";
 
 export async function GET(request: Request) {
   try {
@@ -22,4 +25,40 @@ export async function GET(request: Request) {
     console.error("GET /api/me failed", error);
     return Response.json({ error: "Internal Server Error" }, { status: 500 });
   }
+}
+
+// Account deletion. Deletes the Supabase auth identity first (via the admin API -- requires
+// SUPABASE_SERVICE_ROLE_KEY, NOT currently set in this environment; this route will 500 with a
+// clear error until that env var is added), then our own `User` row. Most of User's relations
+// (watchlists, portfolios, push devices, alerts, etc. -- see prisma/schema.prisma) already carry
+// `onDelete: Cascade`, so deleting the User row cleans those up at the DB level. A few relations
+// are optional (`userId String?`, no cascade) -- deleting those rows' user reference is NOT
+// separately handled here; not exhaustively audited this round, disclosed as a known gap.
+export async function DELETE(request: Request) {
+  const identity = await getAuthenticatedSupabaseUser(request);
+  if (!identity) return Response.json({ error: "Unauthorized" }, { status: 401 });
+
+  const dbUser = await prisma.user.findUnique({ where: { supabaseId: identity.id } });
+
+  try {
+    const admin = createSupabaseAdminClient();
+    const { error } = await admin.auth.admin.deleteUser(identity.id);
+    if (error) throw error;
+  } catch (error) {
+    console.error("DELETE /api/me: failed to delete Supabase auth identity", error);
+    return Response.json({ error: "Failed to delete account (auth identity)" }, { status: 500 });
+  }
+
+  if (dbUser) {
+    try {
+      await prisma.user.delete({ where: { id: dbUser.id } });
+    } catch (error) {
+      // Auth identity is already gone at this point -- the user can no longer sign in, but our
+      // own row/data survived. Logged loudly since this is a partial-failure state worth noticing.
+      console.error("DELETE /api/me: Supabase identity deleted but DB user row delete failed", error);
+      return Response.json({ error: "Account sign-in removed, but some data cleanup failed" }, { status: 500 });
+    }
+  }
+
+  return new Response(null, { status: 204 });
 }
