@@ -60,5 +60,7 @@ export async function DELETE(request: Request) {
     }
   }
 
-  return new Response(null, { status: 204 });
+  // Not a 204: the shared mobile API client always parses the response body as JSON, which
+  // throws on an empty 204 body.
+  return Response.json({ ok: true });
 }
