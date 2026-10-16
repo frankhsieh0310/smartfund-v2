@@ -44,10 +44,12 @@ type ReadyRow = { id: string; latest_date: Date | null; history_ready: boolean }
 // ingestion pipelines. Per the user's decision, the bare-code row (market-close-sync's own, the
 // "official" one) is kept and the suffixed duplicate is hidden from listings/search -- DISPLAY LAYER
 // ONLY, no rows are deleted (that's a separate DDL-approval-gated cleanup, see
-// docs/specs/etf-dedup-cleanup-draft.sql). One exception: 00981D's bare row is missing
-// dividend_yield that its suffixed twin has -- excluded from hiding until that gap is backfilled, so
-// hiding it doesn't blank a field that was actually populated.
-const DEDUP_BACKFILL_PENDING = new Set(["00981D"]);
+// docs/specs/etf-dedup-cleanup-draft.sql). 00981D's bare row was previously missing the
+// dividend_yield its suffixed twin had -- docs/specs/00981D-dividend-yield-fix-draft.sql has since
+// been executed (VERIFIED 2026-10-16: both rows show dividend_yield=0.0734), so there is no longer a
+// gap to protect and this set is empty. Left as a named constant (not deleted outright) so the next
+// person who finds a similar backfill-pending case has an obvious place to add it back.
+const DEDUP_BACKFILL_PENDING = new Set<string>([]);
 
 // 2026-10-14 round-4: was a manually-maintained 6-code list (020000/020012/020028/020030/020031/
 // 020034.TW), found incomplete when the user spotted 020001.TWO ("Fubon Securities Co Ltd") was

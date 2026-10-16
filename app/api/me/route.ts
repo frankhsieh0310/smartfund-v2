@@ -28,8 +28,8 @@ export async function GET(request: Request) {
 }
 
 // Account deletion. Deletes the Supabase auth identity first (via the admin API -- requires
-// SUPABASE_SERVICE_ROLE_KEY, NOT currently set in this environment; this route will 500 with a
-// clear error until that env var is added), then our own `User` row. Most of User's relations
+// SUPABASE_SERVICE_ROLE_KEY; VERIFIED set on Production via `vercel env ls` as of 2026-10-16, so
+// this route no longer 500s for that reason), then our own `User` row. Most of User's relations
 // (watchlists, portfolios, push devices, alerts, etc. -- see prisma/schema.prisma) already carry
 // `onDelete: Cascade`, so deleting the User row cleans those up at the DB level. A few relations
 // are optional (`userId String?`, no cascade) -- deleting those rows' user reference is NOT
