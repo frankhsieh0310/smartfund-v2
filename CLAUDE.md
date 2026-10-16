@@ -41,7 +41,7 @@ master 為正式基準分支。新工作一律從最新的 master 開分支；�
 | 1 | 股票反查 | ✅ 完成 | `/api/mobile/reverse-holdings`，首頁有 2 張卡片入口 |
 | 2 | 債券反查 | ⚠️ 部分 | 僅 ETF 側（`holdings.cusip/isin`）；基金側 MoneyDJ 揭露無識別碼，已誠實標註 `scopeNote`，未算違規但未達「基金／ETF」全覆蓋 |
 | 3 | 商品反查 | ✅ 完成 | 直接持有 ETF＋間接主題基金分開顯示，僅 4 種商品（黃金/白銀/WTI/布蘭特），誠實揭露複委託海外商品 ETF 未覆蓋 |
-| 4 | 技術選標反查 | ⚠️ 部分 | 查詢邏輯與串接股票反查都正常；但 `stock_technical` 寫入開關預設關閉（shadow mode），實際資料約 3 個月沒更新，違反「必須每天更新」；App 端原本有一句誇大「每日更新」的文字已修正；商品面技術選標完全沒做（僅台股） |
+| 4 | 技術選標反查 | ⚠️ 部分（計算引擎已驗證正確，缺臨門一腳） | 查詢邏輯與串接股票反查都正常；`stock_technical` 寫入開關預設關閉（shadow mode），實際資料停在 2026-08-14（確認 2+ 個月沒更新），違反「必須每天更新」；App 端原本誇大「每日更新」的文字已修正；商品面技術選標完全沒做（僅台股）。**已額外驗證**：本機 dry-run 算了 1101（台泥）最新一天的 MA5/MA20/RSI14/MACD，跟 Yahoo奇摩技術分析頁即時比對，MA5=26.9、MA20=25.54、收盤27.3 完全吻合——計算引擎本身是對的，只差最後部署時把 `STOCK_TECHNICAL_SYNC_WRITE=on` 這個寫入開關打開 |
 | 5 | 排行中心分類 | ✅ 完成 | 官方分類為主，關鍵字備援並標註 `classificationBasis` |
 | 6 | 大佬雷達 | ✅ 完成 | 真實資料管線＋App UI 都正常運作；AI 萃取已改走 Vercel AI Gateway，`AI_GATEWAY_API_KEY` VERIFIED 已在正式環境設定 14 天；直接查 DB 確認 `consensus_live_cards` 近 7 天新增 369 筆，管線確實在正式環境持續產出真實資料，不是空的 |
 | 7 | 配息專區 | ✅ 完成 | 試算機用真實 Yahoo 殖利率；00981D 修正已於早前回合執行並重新 VERIFIED（`dividend_yield=0.0734`），過期的「DRAFT 未執行」註解與 `DEDUP_BACKFILL_PENDING` 已一併修正 |
