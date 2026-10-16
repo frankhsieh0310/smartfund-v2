@@ -1,3 +1,10 @@
+# [已過期，不要用這份] 這份清單只用 updated_at 選要保留的那一筆，使用者核准時明確要求改成「關聯資料最完整」
+# 為準，兩者會選出不同的 keep（例如下面第一筆 AAMA Income，這份選 ffee02ce，正式執行改選了 0cea41f4，
+# 因為 0cea41f4 才是被其他 ETF/基金引用、有關聯資料的那一筆）。真正執行用的清單是
+# docs/specs/duplicate-funds-execute-836.txt（已執行）與 docs/specs/duplicate-funds-needs-review-67.txt
+# （待人工審查，未執行），查核過程見 docs/specs/duplicate-funds-relation-audit.json。保留這份只為留存
+# 查證過程紀錄。
+#
 # funds 表（code IS NULL, data_provider='yahoo'）同 (name, ticker) 完全重複清單
 # 產生時間: 2026-10-16T14:43:25.752Z
 # 分組數: 903，總筆數: 1813

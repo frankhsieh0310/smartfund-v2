@@ -15,7 +15,8 @@ master 為正式基準分支。新工作一律從最新的 master 開分支；�
 - `C:\Users\User\AppData\Local\Temp\mcs-hotfix` — 緊急熱修正 worktree，從 commit `599741829` 開出，只含 `ab8f698a4`。已被 `mcs-release` 取代為正式環境來源，我不得修改這個資料夾。
 - `C:\Users\User\AppData\Local\Temp\mcs-prod` — 另一個既有 worktree，HEAD 在 `599741829`。我不得修改這個資料夾。
 - `C:\Users\User\AppData\Local\Temp\mcs-release` — 上一次的正式環境部署來源（`58d8d8165`，從 `ab8f698a4` cherry-pick 網站修正與計數修正）。已被 `mcs-final` 取代，我不得再修改這個資料夾。
-- `C:\Users\User\AppData\Local\Temp\mcs-final` — **目前最新、待部署的 worktree**，直接是 `fix/qa-round1` 2026-10-16 的 HEAD（`e0588acec`），不是 cherry-pick 組出來的。之後要追加任何正式環境修正，從 `fix/qa-round1` 本身繼續開發，下次部署前再開一個新 worktree 指到那時的 HEAD。
+- `C:\Users\User\AppData\Local\Temp\mcs-final` — 已部署到正式環境的來源（`e0588acec`）。之後不再從這個資料夾部署，保留供對照。
+- `C:\Users\User\AppData\Local\Temp\mcs-final2` — **目前最新、待部署的 worktree**：`e0588acec`（目前正式環境）+ cherry-pick `338f594f8`（新 SHA `7bcaa87a3`），只多這一個修正，其他沒變。已完成 tsc／build／Preview 驗證，等使用者執行 `--prod` 部署。之後要追加任何正式環境修正，從 `fix/qa-round1` 本身繼續開發，下次部署前再開一個新 worktree 指到那時的 HEAD。
 
 **部署規則（使用者 2026-10-16 訂立，之後每次部署一律遵守）**
 - 部署指令固定用：`npx vercel deploy --prod --meta commit=$(git rev-parse HEAD)`（讓每次正式部署都留下對應的 commit SHA，之前用純 `vercel deploy --prod` 的 CLI 部署完全沒有 git metadata，無法回溯比對）。
@@ -32,13 +33,25 @@ master 為正式基準分支。新工作一律從最新的 master 開分支；�
 - 之後任何本機腳本要查 `timestamp without time zone` 欄位，一律在 SQL 裡用 `col AT TIME ZONE 'UTC'` 或 `extract(epoch from col)` 明確轉換後再比較/顯示，不要直接信任 `pg` 套件吐回來的 JS Date 字面值。
 - Production 本身跑在 Vercel（預設 UTC），且 Prisma Client 的型別化查詢不受此問題影響；只有本機用 `pg` 套件直連才會踩到。
 
-**2026-10-16 部署後新發現：`etf-returns-sync-tw` 自己造成的生產環境 bug（已修好，待部署）**
-- 這個新路由的第一次正式環境排程執行（2026-10-16T14:30:22.995Z，run id `343816ef-65f2-4b7d-94e7-22780339dab6`）在開始後約 2 秒就當掉：`prisma.$queryRawUnsafe(sql, [orderedMissing])` 把陣列多包了一層，Prisma 回報 `Couldn't serialize value 'Some([])' into a 'text'`。已修正為 `prisma.$queryRawUnsafe(sql, orderedMissing)`（跟 parent route 寫法一致），並加上整個 `GET` 的 try/catch，確保未來任何未預期錯誤都會呼叫 `finishRun(status: "FAILED")`，不會再讓 `production_scheduler_runs` 的列卡在 `IN_PROGRESS` 直到下一個小時的 360 秒逾時才被接管。
-- 已 `npx tsc --noEmit` 驗證通過，已 commit 到 `fix/qa-round1`（`338f594f8`）。**尚未部署**——這個 bug 會讓這條路由每 15 分鐘的排程持續當掉（接管同一個 `run_key`、重設 `started_at`，但一樣秒當），TW ETF 報酬率實質上沒有在刷新，直到這個修正被部署。這是我自己造成的 bug，依規則主動揭露。
+**`etf-returns-sync-tw` 自己造成的生產環境 bug — 已修好，已在 `mcs-final2` 完成 Preview 驗證，待使用者部署**
+- 這個新路由的第一次正式環境排程執行（2026-10-16T14:30:22.995Z，run id `343816ef-65f2-4b7d-94e7-22780339dab6`）在開始後約 2 秒就當掉：`prisma.$queryRawUnsafe(sql, [orderedMissing])` 把陣列多包了一層，Prisma 回報 `Couldn't serialize value 'Some([])' into a 'text'`。已修正為 `prisma.$queryRawUnsafe(sql, orderedMissing)`（跟 parent route 寫法一致），並加上整個 `GET` 的 try/catch，確保未來任何未預期錯誤都會呼叫 `finishRun(status: "FAILED")`。
+- `fix/qa-round1` 上的 commit `338f594f8`。使用者要求照完整流程重走一次：
+  1. 新乾淨 worktree `mcs-final2` = `e0588acec`（目前正式環境） + cherry-pick `338f594f8`（新 SHA `7bcaa87a3`），無其他後續 commit，沒有複製 `.env`。
+  2. 本機「只抓不寫 DB」dry-run：真實執行 `TW_ELIGIBLE_SQL_CONDITION` 選標（90 檔候選）＋真實呼叫 `fetchYahooTwPerformance()` 抓 3 檔（00403A/00408A/006204），用瀏覽器開 Yahoo奇摩「006204.TW/performance」頁面逐欄核對，cron 實際會寫入的 7 個欄位（m1/m3/m6/ytd/y1/y3/y5）**全部完全吻合**。
+  3. `git merge-base --is-ancestor e0588acec HEAD` 確認 0 個 commit 被移除；`npx tsc --noEmit`、`npx next build` 都 0 錯誤；Preview 部署 `smartfund-v2-asguvddh0-frankhsieh0310s-projects.vercel.app`，`vercel curl` 確認首頁 200、`bond-holders` 端點正常回應。
+  4. audit 了這次部署（`58d8d8165..e0588acec`）全部 20 個變更檔案裡每一個 `queryRawUnsafe`/`executeRawUnsafe` 呼叫的參數寫法，只有這一處有陣列多包一層的問題，其餘都正確（包含 `rankings/performance` 用 `...(arr.length ? [arr] : [])` 的正確 spread 寫法）。
+  5. 那筆卡住的 `IN_PROGRESS` 紀錄：beginRun 的 `ON CONFLICT...WHERE started_at < now() - 360s` 本身就會在下個排程週期自動接管，不會真的卡死，所以沒有手動更新任何一筆（使用者的核准是「如果會擋」才動，查證後不需要）。
+- **部署指令（待使用者執行）**：`cd` 到 `mcs-final2`，`npx vercel deploy --prod --meta commit=$(git rev-parse HEAD)`（HEAD = `7bcaa87a3`）。
+- 意外副作用並已清理：`vercel link` 第一次誤建了一個全新、空的 Vercel 專案 `mcs-final2`（跟 GitHub repo 建立了連結但沒有任何部署或密鑰），已用 `vercel project rm` 刪除，重新手動指向正確的 `smartfund-v2` 專案。
+
+**903 組同 ticker 真重複 — 已完成關聯資料查核，836 組已執行，67 組待人工決定**
+- 詳情與執行結果見 `docs/specs/duplicate-fund-names-merge-proposal.md`「900 組」章節；查核資料在 `docs/specs/duplicate-funds-relation-audit.json`。
+- 836 組（841 筆）無關聯資料落差，已 `is_active=false`（執行前後 SELECT 確認 841→0 active，`funds` 總筆數不變）。
+- 67 組有關聯資料落差（候選停用的那筆被其他 ETF/母子基金結構引用），**未執行**，清單在 `docs/specs/duplicate-funds-needs-review-67.txt`，等使用者決定。
+- 確認 0 組涉及真實使用者 `watchlist_items`。搜尋／反查都用 `isActive`/`is_active` 過濾，確認停用後不會消失保留的那筆、重複的那筆也不會再出現（抽樣 6 組覆查）。
 
 **待核准，尚未執行**
-- 296 筆重名基金合併方案（`docs/specs/duplicate-fund-names-merge-proposal.md`）——已執行的部分：顯示層用真實 ticker 區分（非資料庫異動，已上線）。
-- **新發現，待核准**：1,887 筆裡有 903 組（1,813 筆）是連 ticker 都相同的真重複，清單已產生於 `docs/specs/duplicate-funds-same-ticker-900-changelist.txt`（只列 keep/deactivate id，尚未執行任何 UPDATE）。
+- 67 組同 ticker 真重複的關聯資料落差案例（見上）。
 - 204 筆 MoneyDJ 重複基金合併方案（`docs/specs/moneydj-312-mapping-findings.md`）。
 - 剩餘 ~95 筆真正缺 mapping 的 MoneyDJ 基金，目前兩種提議方法都已確認不可行，待重新研究。
 

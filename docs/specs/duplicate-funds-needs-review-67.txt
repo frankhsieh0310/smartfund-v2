@@ -1,0 +1,140 @@
+# 903 組同 (name, ticker) 重複基金 -- 關聯資料查核「未通過」，待人工決定，尚未執行
+# 產生時間: 2026-10-16T15:10:23.312Z
+# 這 67 組裡，原本依「最完整關聯資料」判定要停用的那一筆，在至少一張關聯表有資料、但保留的那一筆完全沒有同類資料
+# （全部查核過：沒有任何一組涉及真實使用者自選股 watchlist_items，不是使用者資料風險，是「這筆基金本身被其他 ETF/基金當作持股/母子基金關係引用」的風險）。
+
+Alger Weatherbie Specialized Growth Z | ASMZX | 原定保留=c4b5e4d1-7f87-40c8-b1d8-4e4e97c400dd | 原定停用候選=[09912c0f-f0d6-49c4-a463-c7d51224108b]
+  -> 候選 09912c0f-f0d6-49c4-a463-c7d51224108b 若停用會遺失: holdings_by_master(10筆)
+American Beacon Balanced Inv | AABPX | 原定保留=01e71d23-a4a1-48c2-9dc2-6efed6243c3d | 原定停用候選=[66da6049-a200-4394-947e-7100b431e724]
+  -> 候選 66da6049-a200-4394-947e-7100b431e724 若停用會遺失: holdings_by_master(3筆)
+American Beacon Stephens Mid-Cap Gr A | SMFAX | 原定保留=da38ddb7-730f-4973-8118-c7c3f8d606be | 原定停用候選=[0bfabbcc-774b-4a5c-80b4-686216aaa7af]
+  -> 候選 0bfabbcc-774b-4a5c-80b4-686216aaa7af 若停用會遺失: holdings(9筆)
+American Century Focused Dynamic Gr I | ACFSX | 原定保留=64b2a5c4-f5b9-4a03-89d3-44e4e05608e6 | 原定停用候選=[ac5e852b-0067-483d-8ce5-6f121466b4e3]
+  -> 候選 ac5e852b-0067-483d-8ce5-6f121466b4e3 若停用會遺失: holdings(10筆)
+American Century Focused Lg Cap Val Inv | ALVIX | 原定保留=54c5647d-a5c2-4f22-ae29-e37f17778356 | 原定停用候選=[f3537c54-944d-4662-83f1-e3da59e8eb6b]
+  -> 候選 f3537c54-944d-4662-83f1-e3da59e8eb6b 若停用會遺失: holdings(10筆)
+American Century Growth A | TCRAX | 原定保留=e248ccdf-86de-4c57-8fc8-b81e12d0f3a5 | 原定停用候選=[957dae8b-e41f-410e-8e02-4b57efa2c16c]
+  -> 候選 957dae8b-e41f-410e-8e02-4b57efa2c16c 若停用會遺失: holdings(10筆)
+American Century Ultra C | TWCCX | 原定保留=3364b14e-bd1c-4885-b43d-d97281cb0968 | 原定停用候選=[bc759270-63b5-4746-9f10-05c6e3a62b2b]
+  -> 候選 bc759270-63b5-4746-9f10-05c6e3a62b2b 若停用會遺失: holdings(10筆)
+American Funds 2035 Trgt Date Retire R-1 | RAFTX | 原定保留=a7df0aa3-1266-4b5b-9542-874e10489ddd | 原定停用候選=[2209b3a0-5767-4fd5-a7d1-a820132a7439]
+  -> 候選 2209b3a0-5767-4fd5-a7d1-a820132a7439 若停用會遺失: holdings(10筆)
+American Funds Global Growth Port 529-A | CPGAX | 原定保留=d46f44d0-2925-4901-9471-a1c0854117be | 原定停用候選=[00f9891e-3ed4-445b-8b3c-f82ad2e650d0]
+  -> 候選 00f9891e-3ed4-445b-8b3c-f82ad2e650d0 若停用會遺失: holdings(8筆)
+American Funds Global Insight 529-F-3 | CGVHX | 原定保留=3acdb6c5-1f47-4963-a159-394ecfcca66b | 原定停用候選=[47e96ce4-dfa8-45ee-be23-eb6e26ebdb72]
+  -> 候選 47e96ce4-dfa8-45ee-be23-eb6e26ebdb72 若停用會遺失: holdings(10筆)
+American Funds Ret Inc Port-Enh R-2 | RFRPX | 原定保留=a42de240-295d-497d-b186-ef4db1fa2dcf | 原定停用候選=[2afe49c3-61b4-4e3b-9567-d089c893a739]
+  -> 候選 2afe49c3-61b4-4e3b-9567-d089c893a739 若停用會遺失: holdings(10筆)
+BlackRock Advantage Large Cap Core R | MRLRX | 原定保留=c0e8e5d3-06e6-4e01-876e-348e4376c3c9 | 原定停用候選=[ee1d7908-10f3-4bf3-b078-18bc1a600c52]
+  -> 候選 ee1d7908-10f3-4bf3-b078-18bc1a600c52 若停用會遺失: holdings(10筆)
+BlackRock Balanced Investor C | MCCPX | 原定保留=2cd7d147-bda2-4725-8a4d-8ee8e20aca16 | 原定停用候選=[ca4e5cee-0ce3-4c79-b0d2-7273b7bad232]
+  -> 候選 ca4e5cee-0ce3-4c79-b0d2-7273b7bad232 若停用會遺失: holdings_by_master(12筆)
+BlackRock Income Fund Inv C | BMSCX | 原定保留=2c51eab5-a06c-4e43-8259-7c53c197b2b4 | 原定停用候選=[ccef16ed-38e2-4dfa-961a-56d2430c178a]
+  -> 候選 ccef16ed-38e2-4dfa-961a-56d2430c178a 若停用會遺失: holdings_by_master(2筆)
+BlackRock LifePath Index 2060 Inv P | LIZPX | 原定保留=e2680157-a862-4ceb-9be0-085608e17ed3 | 原定停用候選=[225c8833-d3b2-4e2e-a000-5ab2a42ccef8]
+  -> 候選 225c8833-d3b2-4e2e-a000-5ab2a42ccef8 若停用會遺失: holdings_by_master(4筆)
+Columbia Overseas Core Institutional 3 | COSOX | 原定保留=91cf0031-a47f-4bb6-a169-5909e45a4ab0 | 原定停用候選=[397e59bb-4176-48bc-a13f-cda02a986178]
+  -> 候選 397e59bb-4176-48bc-a13f-cda02a986178 若停用會遺失: holdings_by_master(10筆)
+Columbia Select Mid Cap Gro Fd I3 | CMGYX | 原定保留=8a759b4d-356b-4cc6-a20b-c1978e7a371e | 原定停用候選=[6994c219-d2a3-4c08-87c7-feef7be21947]
+  -> 候選 6994c219-d2a3-4c08-87c7-feef7be21947 若停用會遺失: holdings(9筆)
+Columbia Seligman Tech & Info C | SCICX | 原定保留=98e56d05-4447-4c03-afbb-cd9336580c3b | 原定停用候選=[f0e4038a-c6c3-4680-ba7e-73c0c179d231]
+  -> 候選 f0e4038a-c6c3-4680-ba7e-73c0c179d231 若停用會遺失: holdings(10筆)
+Destinations Small-Mid Cap Equity Z | DSMZX | 原定保留=5c3c3eae-02fb-4b46-ad47-92239b7034d0 | 原定停用候選=[e53806b5-74fe-41b0-81e8-eac589b9a476]
+  -> 候選 e53806b5-74fe-41b0-81e8-eac589b9a476 若停用會遺失: holdings_by_master(10筆)
+Eventide Balanced Fund Class C | ETCMX | 原定保留=5101ef8f-4590-47a1-a29a-9c8c366e4086 | 原定停用候選=[52997ef9-0609-46cd-996d-dfe7d1a32192]
+  -> 候選 52997ef9-0609-46cd-996d-dfe7d1a32192 若停用會遺失: holdings_by_master(10筆)
+Eventide Balanced Fund Class I | ETIMX | 原定保留=9c12f3ea-57ce-4024-aa88-756751796fe1 | 原定停用候選=[6819a1f3-c30e-4692-bdd3-e6fa57a3f98e]
+  -> 候選 6819a1f3-c30e-4692-bdd3-e6fa57a3f98e 若停用會遺失: holdings_by_master(10筆)
+Federated Hermes MDT Balanced C | QCBGX | 原定保留=204db292-2264-4abe-b74f-0946846f986f | 原定停用候選=[965cac16-e4d1-4dc2-a270-be1e40d14352]
+  -> 候選 965cac16-e4d1-4dc2-a270-be1e40d14352 若停用會遺失: holdings_by_master(7筆)
+Fidelity Advisor Asset Manager 70% I | FAAIX | 原定保留=fffc3fde-6e2a-40bd-a6df-7c276a61eeb1 | 原定停用候選=[86ce6a0b-0c14-4c2c-bb5a-198771f5c670]
+  -> 候選 86ce6a0b-0c14-4c2c-bb5a-198771f5c670 若停用會遺失: holdings(8筆)
+Fidelity Advisor Freedom Blend 2050 C | FHXEX | 原定保留=5140a97e-79a5-4393-89ba-73580bb776ce | 原定停用候選=[f0b05e4e-6cd0-46e6-be23-859504dca60d]
+  -> 候選 f0b05e4e-6cd0-46e6-be23-859504dca60d 若停用會遺失: holdings(10筆)
+Fidelity Advisor Gold Z | FIJDX | 原定保留=b35c5437-51f7-4390-b57b-42db5fe05084 | 原定停用候選=[a7652c9e-6dba-4851-8067-17b613861f14]
+  -> 候選 a7652c9e-6dba-4851-8067-17b613861f14 若停用會遺失: holdings(10筆)
+Fidelity Advisor International Growth I | FIIIX | 原定保留=0ec132c6-a622-4d29-a264-9b263954f173 | 原定停用候選=[492f6b2b-8baa-4df8-a0b9-1724e22674e9]
+  -> 候選 492f6b2b-8baa-4df8-a0b9-1724e22674e9 若停用會遺失: holdings(10筆)
+Fidelity Advisor Large Cap Stock A | FLAFX | 原定保留=013eff30-ca05-4243-8734-d3ee40c26f17 | 原定停用候選=[7fc31900-fd7b-4c1e-9bed-9934136dd93b]
+  -> 候選 7fc31900-fd7b-4c1e-9bed-9934136dd93b 若停用會遺失: holdings(9筆)
+Franklin Retirement Advantage 2040 R | PBAOX | 原定保留=dcc6adcb-5328-407e-8475-8342d28725b1 | 原定停用候選=[e004c8d8-cb48-4a42-9586-2316de5d32f3]
+  -> 候選 e004c8d8-cb48-4a42-9586-2316de5d32f3 若停用會遺失: holdings(1筆)
+Franklin Retirement Advantage Pl 2030 R5 | PADRX | 原定保留=323d884f-ebb2-45df-a52d-9997029548f7 | 原定停用候選=[9f11707a-decd-4ff9-ac3f-5ce6196d6485]
+  -> 候選 9f11707a-decd-4ff9-ac3f-5ce6196d6485 若停用會遺失: holdings(2筆)
+Gladstone Alternative Income Fund | GAIIX | 原定保留=7c9a80e9-065c-4c95-abf3-b2c2a109166f | 原定停用候選=[11e3200a-6f03-428d-be9c-dfa8b976f4e1]
+  -> 候選 11e3200a-6f03-428d-be9c-dfa8b976f4e1 若停用會遺失: fund_distribution_observations(5筆)
+Hartford Growth Opportunities R5 | HGOTX | 原定保留=69d913ed-0120-42a1-9552-1392fd5f4644 | 原定停用候選=[b4e7e3fa-958a-4f55-a147-bf9d2a376228]
+  -> 候選 b4e7e3fa-958a-4f55-a147-bf9d2a376228 若停用會遺失: holdings(10筆)
+JHancock Disciplined Value Mid Cap R2 | JVMSX | 原定保留=70f08ae5-bfe5-4582-9f7d-2e91f2130ba1 | 原定停用候選=[92557c96-feb0-40df-912c-3c9c1b8b881e]
+  -> 候選 92557c96-feb0-40df-912c-3c9c1b8b881e 若停用會遺失: holdings(10筆)
+JHancock International Growth R2 | JHIGX | 原定保留=b0e62dea-464b-497b-bfd2-5dee82fbd96d | 原定停用候選=[68ecd0b8-7947-486e-91bc-fcb15133da7c]
+  -> 候選 68ecd0b8-7947-486e-91bc-fcb15133da7c 若停用會遺失: holdings(10筆)
+JHancock Multimanager 2050 Lifetime R4 | JLKGX | 原定保留=f1bb52e7-99fe-4afc-bb23-324e6bd75ec1 | 原定停用候選=[f1b75f78-5b56-43e4-a724-bd72016a3d4e]
+  -> 候選 f1b75f78-5b56-43e4-a724-bd72016a3d4e 若停用會遺失: holdings(5筆)
+JPMorgan Equity Income R5 | OIERX | 原定保留=79f6e28a-686f-4861-b7be-d1325e971364 | 原定停用候選=[6ce2aa28-9c6f-4c13-85c6-5609c26d2a88]
+  -> 候選 6ce2aa28-9c6f-4c13-85c6-5609c26d2a88 若停用會遺失: holdings(10筆)
+JPMorgan Mid Cap Equity I | VSNGX | 原定保留=d2430248-a110-469f-852e-f5adefd2dcca | 原定停用候選=[4cbfb314-7a17-4c70-98c3-7536fa0c7793]
+  -> 候選 4cbfb314-7a17-4c70-98c3-7536fa0c7793 若停用會遺失: holdings(10筆)
+JPMorgan US Large Cap Core Plus R6 | JLPYX | 原定保留=624872b2-faf7-45cb-8589-9aebe6f4fbbc | 原定停用候選=[6db68fb1-b315-4317-8d4a-8e371a89beaf]
+  -> 候選 6db68fb1-b315-4317-8d4a-8e371a89beaf 若停用會遺失: holdings(10筆)
+Lord Abbett Convertible R5 | LCFTX | 原定保留=1b018ac1-c606-422b-9799-8406fc075911 | 原定停用候選=[268a4cbc-0bc7-408f-a2b5-d5d8ae25a0f5, 14f74cb1-4e14-4936-9d5f-bf07887e2522]
+  -> 候選 268a4cbc-0bc7-408f-a2b5-d5d8ae25a0f5 若停用會遺失: holdings(4筆)
+  -> 候選 14f74cb1-4e14-4936-9d5f-bf07887e2522 若停用會遺失: holdings(4筆)
+Lord Abbett Convertible R6 | LCFVX | 原定保留=3afbf1de-2f95-4ed5-a5f0-fcc2e266b013 | 原定停用候選=[6551feaf-91da-4306-a31c-6da398fd09cf]
+  -> 候選 6551feaf-91da-4306-a31c-6da398fd09cf 若停用會遺失: holdings(4筆)
+MFS Aggressive Growth Allocation B | MBAGX | 原定保留=0f9d35a6-64bf-46a1-bde9-92a7fd2e9cab | 原定停用候選=[898f046f-ff3c-444c-ba41-0b109bc6f10a]
+  -> 候選 898f046f-ff3c-444c-ba41-0b109bc6f10a 若停用會遺失: holdings(10筆)
+MFS Core Equity C | MRGCX | 原定保留=dee163a4-ac04-4ea4-b67a-856bd3829d19 | 原定停用候選=[49aa5baf-30d5-4790-9f79-15aa21ca0c7b]
+  -> 候選 49aa5baf-30d5-4790-9f79-15aa21ca0c7b 若停用會遺失: holdings(10筆)
+MFS International Intrinsic Equity I | MINIX | 原定保留=55d88ba2-a5d1-4022-a5ed-f7266848e78f | 原定停用候選=[3fdc8c62-0d81-433b-a8cf-8089b81afd5b]
+  -> 候選 3fdc8c62-0d81-433b-a8cf-8089b81afd5b 若停用會遺失: holdings(10筆)
+MFS International New Discovery B | MIDBX | 原定保留=b2ec946c-cb8a-4ec2-9f4d-a0cfc0cf9fcd | 原定停用候選=[099d5669-926f-42a7-815b-2b03594fb08f]
+  -> 候選 099d5669-926f-42a7-815b-2b03594fb08f 若停用會遺失: holdings(10筆)
+MFS Lifetime 2040 C | MLFCX | 原定保留=0f9f98f9-a0f1-4ac1-a12e-3075b2ae17cb | 原定停用候選=[c966f9f5-1b4f-4eea-b69b-8bf23cda3eca]
+  -> 候選 c966f9f5-1b4f-4eea-b69b-8bf23cda3eca 若停用會遺失: holdings(10筆)
+MFS Moderate Allocation R2 | MARRX | 原定保留=a6580152-f673-4410-bd43-1b2fdab9d192 | 原定停用候選=[c7ed3caa-ac5f-4ab9-b16d-1edf5151f50a]
+  -> 候選 c7ed3caa-ac5f-4ab9-b16d-1edf5151f50a 若停用會遺失: holdings(10筆)
+MFS New Discovery R6 | MNDKX | 原定保留=f7e0719b-f961-4fe7-a129-716c496d55ae | 原定停用候選=[9dc9976b-4fc1-4556-90f3-fd82c1a491c7]
+  -> 候選 9dc9976b-4fc1-4556-90f3-fd82c1a491c7 若停用會遺失: holdings(10筆)
+Nationwide BNY Mellon Dyn US Core A | NMFAX | 原定保留=6be2cb6d-d089-4a2f-9cc3-746ac5cc76e5 | 原定停用候選=[393f25f7-68bc-4c7d-ac92-217ad672e5c7]
+  -> 候選 393f25f7-68bc-4c7d-ac92-217ad672e5c7 若停用會遺失: holdings(6筆)
+Nuveen Quant Small/Mid Cap Eq R6 | TSMWX | 原定保留=b362b6be-eb9a-449d-ae5b-400430f65516 | 原定停用候選=[5d5168e1-20a5-4ed7-b8bb-d7502c5d2c34]
+  -> 候選 5d5168e1-20a5-4ed7-b8bb-d7502c5d2c34 若停用會遺失: holdings(10筆)
+NYLI Winslow Large Cap Growth Class R1 | MLRRX | 原定保留=993bdc27-19eb-4112-a5c9-fe61fa763801 | 原定停用候選=[e379f815-6f8a-416f-a18f-808ec08aad65]
+  -> 候選 e379f815-6f8a-416f-a18f-808ec08aad65 若停用會遺失: holdings(10筆)
+Pictet - Short-Term Money Market USD T4 | 0P0001TLEO | 原定保留=995e315a-329f-47f8-863a-04eb7b1c569f | 原定停用候選=[1ecbb60c-a98c-4b77-b813-839fc8df21e9, bf719c89-fcd6-4698-87e3-a8e5a4186e0e]
+  -> 候選 bf719c89-fcd6-4698-87e3-a8e5a4186e0e 若停用會遺失: fund_risk_metrics(3筆)
+PIMCO Small Cap Stocks PLUS Bd Alp Inst | PSCSX | 原定保留=0859732d-e765-4113-a6c8-d6c4f196ceee | 原定停用候選=[91acebe9-6704-4e0e-9b24-48f2dc25c151]
+  -> 候選 91acebe9-6704-4e0e-9b24-48f2dc25c151 若停用會遺失: holdings(1筆)
+PIMCO Stocks PLUS Bond Abs Ret Alp I-2 | PTOPX | 原定保留=3323b4fa-28f5-4692-a132-c51af0fdf1fd | 原定停用候選=[fd7e27d2-14e6-44ee-a963-c7921f0ac393]
+  -> 候選 fd7e27d2-14e6-44ee-a963-c7921f0ac393 若停用會遺失: holdings_by_master(2筆)
+PIMCO Stocks PLUS Bond Alpha Inst | PSTKX | 原定保留=81613d27-6355-46eb-871c-945c33d5ceee | 原定停用候選=[471686cb-e23b-4c4f-848a-82dbbd9b2a6c]
+  -> 候選 471686cb-e23b-4c4f-848a-82dbbd9b2a6c 若停用會遺失: holdings(3筆)
+PIMCO Total Return II I2 | PMTPX | 原定保留=ff362b4b-cd9a-4526-8852-5ed6097973ae | 原定停用候選=[f3e3da41-150e-4820-adbf-627c921c2f16]
+  -> 候選 f3e3da41-150e-4820-adbf-627c921c2f16 若停用會遺失: holdings_by_master(1筆)
+Principal MidCap C | PMBCX | 原定保留=ee343267-9fd0-48a4-9bec-601e315799f7 | 原定停用候選=[4149f97e-ff13-4342-9468-60f6fd06dc79]
+  -> 候選 4149f97e-ff13-4342-9468-60f6fd06dc79 若停用會遺失: holdings(10筆)
+Principal SAM Balanced R5 | PSBFX | 原定保留=fab37e85-8e7d-4dc5-a8ff-3b1c6f34b30a | 原定停用候選=[0fbe5328-cbf7-4509-a3ce-f58fb63c64c2]
+  -> 候選 0fbe5328-cbf7-4509-a3ce-f58fb63c64c2 若停用會遺失: holdings(10筆)
+Royce Premier Consult | RPRCX | 原定保留=923baec3-776e-4aac-acf3-0dfad33fd847 | 原定停用候選=[1ead6e63-ada7-4b42-843e-6dc5cd4329c7]
+  -> 候選 1ead6e63-ada7-4b42-843e-6dc5cd4329c7 若停用會遺失: holdings_by_master(20筆)
+Russell Inv International Devd Mkts M | RNTTX | 原定保留=ded88cd3-4182-4655-8bc9-44776522fc45 | 原定停用候選=[d4f01987-9897-4c7f-aebb-459140127763]
+  -> 候選 d4f01987-9897-4c7f-aebb-459140127763 若停用會遺失: holdings(5筆)
+State Street Small/Mid Cap Equity Idx I | SSMLX | 原定保留=f89b7e1b-af4b-445f-a3a4-92be0f60631c | 原定停用候選=[626bb33f-1483-49a1-b151-66931062aafc]
+  -> 候選 626bb33f-1483-49a1-b151-66931062aafc 若停用會遺失: holdings(1筆)
+T. Rowe Price Retirement 2020 I | TRDBX | 原定保留=a89fcd3b-e62a-4a57-acb6-38b5563ca454 | 原定停用候選=[88993a2d-59fa-4d30-9b76-0f2687aa67c4]
+  -> 候選 88993a2d-59fa-4d30-9b76-0f2687aa67c4 若停用會遺失: holdings(10筆)
+T. Rowe Price Retirement 2065 I | TRMOX | 原定保留=5e5a54b2-21a9-4d48-9456-da6430579553 | 原定停用候選=[4fa2a41e-600d-4111-9dd2-3c21498a0272]
+  -> 候選 4fa2a41e-600d-4111-9dd2-3c21498a0272 若停用會遺失: fund_distribution_observations(3筆), fund_risk_metrics(17筆)
+T. Rowe Price Target 2050 | TRFOX | 原定保留=5d561990-ee6f-4b87-8129-ce7efa7396af | 原定停用候選=[837fec7c-aa22-4db7-9395-b9681b3d50fc]
+  -> 候選 837fec7c-aa22-4db7-9395-b9681b3d50fc 若停用會遺失: holdings_by_master(10筆)
+Voya Inflation Protected Bond Plus I | IBRIX | 原定保留=850cb306-73dc-44d0-8a5d-52e18a4523af | 原定停用候選=[f4001310-21ff-45d6-b05a-74083b92ef8f]
+  -> 候選 f4001310-21ff-45d6-b05a-74083b92ef8f 若停用會遺失: holdings_by_master(5筆)
+Voya Inflation Protected Bond Plus R | IBRAX | 原定保留=7876e44d-2bbb-420e-bf78-6c19fe3c5461 | 原定停用候選=[3a4906c3-d147-445c-9732-1489fa8afae4]
+  -> 候選 3a4906c3-d147-445c-9732-1489fa8afae4 若停用會遺失: holdings_by_master(1筆)
+Voya Retirement Mod Agrsv Port ADV | IRMGX | 原定保留=3c9eb45f-2fea-415d-a0aa-75909428d7a7 | 原定停用候選=[5f037baa-5cf0-4c4e-a4de-788310d4f860]
+  -> 候選 5f037baa-5cf0-4c4e-a4de-788310d4f860 若停用會遺失: holdings_by_master(16筆)
+Voya Retirement Moderately Agrsv Portt I | IRGMX | 原定保留=1fe4af2a-51c8-4be8-a4be-9c24984322f8 | 原定停用候選=[df781f3b-c702-4b57-addd-cbb486afc4e0]
+  -> 候選 df781f3b-c702-4b57-addd-cbb486afc4e0 若停用會遺失: holdings_by_master(16筆)
+Weitz Partners III Opportunity Instl | WPOPX | 原定保留=b25b4188-167f-47cc-a476-7ace29ec970a | 原定停用候選=[a627f004-16a7-4b07-a20f-b1e22cb86245]
+  -> 候選 a627f004-16a7-4b07-a20f-b1e22cb86245 若停用會遺失: holdings_by_master(10筆)

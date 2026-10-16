@@ -29,17 +29,34 @@ Opportunities 那組 7 筆分別是 GTORX／GSJPX／GITSX／GITIX／GITCX／GITA
 DDL／批次 UPDATE 核准。已過 `tsc`／`next build`，並用真實查詢（Goldman Sachs 那組 7 筆、以及隨機
 10 筆不重複名稱的負向測試）驗證過行為正確。
 
-## 新發現，需要你核准才會動：900 組「連 ticker 都重複」的真正重複
-在查證過程中額外發現：1,887 筆裡，有 **900 組 (name, ticker) 完全相同**（同名同代碼，2 筆以上）——
-這些才是真正的「同一檔證券被重複寫入」，不是不同級別（例如 `Destinations Large Cap Equity Z` /
-`DLCZX` 出現 2 筆、`Diamond Hill Mid Cap I` / `DHPIX` 出現 2 筆）。這個發現是在你核准「方案一」之後
-才查到的，你原本不核准 `is_active=false` 的理由（「這些多半是不同級別、不准停用」）是針對不同
-ticker 的情況，不是這 900 組同 ticker 的情況——所以**沒有自動套用**，先列出來讓你決定：
-- 建議：對這 900 組，保留 `updated_at` 最新的一筆、其餘標 `is_active=false`（不刪資料）。
-- 完整清單已產生：`docs/specs/duplicate-funds-same-ticker-900-changelist.txt`（2026-10-16 重新查證
-  為 **903 組、1,813 筆**，比最初估計略多，因為是即時查詢、期間有新資料寫入）。清單只列出
-  keep/deactivate 的 id，**尚未執行任何 UPDATE**，等你核准後才會執行＋SELECT 核對筆數。
+## 900 組「連 ticker 都重複」的真正重複 — 已完成（2026-10-16）
+重新查證確認 **903 組（1,813 筆）**。你有條件核准：保留哪一筆改成「關聯資料最完整」為準（不是只看
+`updated_at`），且先查每組兩筆的關聯資料差異，被停用那筆若有保留那筆沒有的資料就不准直接停用。
+
+**查核方式**：對 27 個有 `fund_id` 外鍵的表（`holdings`、`fund_holdings`、`fund_performances`、
+`fund_risk_metrics`、`fund_share_classes`、`distributions` 等）＋ `funds` 本身關鍵欄位（淨值、AUM、
+報酬率、晨星評級、費用率），算每個候選 id 的「關聯資料總筆數」當完整度分數，分數最高者保留；同分
+才看 `updated_at`。另外查了 `watchlist_items.canonical_asset_id`，確認**沒有任何一組涉及真實使用者
+自選股**（0 筆）。完整查核結果：`docs/specs/duplicate-funds-relation-audit.json`。
+
+**結果**：
+- **836 組（841 筆）無關聯資料落差，已執行** `is_active=false`：執行前 SELECT 確認 841 筆全為
+  active，UPDATE rowCount=841，執行後 SELECT 確認 0 筆為 active，保留的 836 筆全部仍為 active。
+  `funds` 表總筆數（29,336）前後不變，沒有刪除任何資料。隨機抽 6 組覆查，確認每組現在剛好剩 1 筆
+  active、ticker 正確無誤。清單：`docs/specs/duplicate-funds-execute-836.txt`。
+  - 其中至少 1 組（`AAMA Income`/`AMFIX`）保留的 id 跟「純用 updated_at」會選出的不一樣——那一筆
+    （`0cea41f4...`）才是真正被其他 ETF/基金引用、有關聯資料的那一筆，證實「不能只看 updated_at」
+    這個查核步驟是必要的，不是多做。
+  - 搜尋／反查都用 `isActive: true` 過濾（`lib/data-platform/web/fundService.ts` 的 `getFundList`、
+    `app/api/screener/bond-holders/route.ts` 的 `f.is_active` 等），確認停用後不會在搜尋結果裡消失
+    保留的那一筆，重複的那筆也不會再出現。
+- **67 組有關聯資料落差，未執行，待你決定**：被停用候選在 `holdings` 或 `holdings_by_master` 表有
+  資料，但保留候選完全沒有——代表這筆基金本身被某個 ETF／母子基金結構當作持股引用，停用前要先確認
+  那筆引用關係要不要一起處理。清單：`docs/specs/duplicate-funds-needs-review-67.txt`。
+  （舊版純用 `updated_at` 的清單 `docs/specs/duplicate-funds-same-ticker-900-changelist.txt` 已標註
+  過期，不要用那份。）
 
 ## 不執行的項目
-- 沒有對任何一筆執行 `is_active=false` 或刪除。
+- 67 組「有關聯資料落差」的候選，沒有執行任何 `is_active=false`，等你決定後再處理。
+- 沒有對任何一筆執行 DELETE。
 - 900 組同 ticker 真重複的處理方式，待你核准。
