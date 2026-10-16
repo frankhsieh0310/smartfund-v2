@@ -14,6 +14,7 @@
 import { prisma } from "@/lib/prisma";
 import { readFundYieldSnapshot, rankFundYields } from "@/lib/yahoo/fundYieldRanking";
 import { categoriesForBucket } from "@/lib/data-platform/categoryClassification";
+import { classifyEtfsOfficial } from "@/lib/data-platform/officialEtfCategory";
 
 const headers = { "Access-Control-Allow-Origin": "*", "Cache-Control": "no-store" };
 const ZH = "[一-鿿]";
@@ -59,6 +60,17 @@ const fmtStars = (v: number) => "★".repeat(v) + "☆".repeat(5 - v);
 const fmtAum = (v: number, currency: string) => `${currency} ${Math.round(v).toLocaleString("zh-TW")}`;
 const fmtVolume = (v: number) => `${Math.round(v).toLocaleString("zh-TW")} 股`;
 
+// Attaches each row's classificationBasis (OFFICIAL / KEYWORD_FALLBACK / UNCLASSIFIED) per
+// lib/data-platform/officialEtfCategory.ts — called only when a ?category= filter was requested,
+// so unfiltered requests pay no extra cost. Per instruction: official TWSE/TPEx 基金類型 is the
+// primary source, name-keyword is disclosed as fallback only where the official type itself can't
+// disambiguate (槓桿/反向, 指數股票型期貨信託基金).
+async function withClassificationBasis<T extends { code: string; name: string }>(rows: T[], categoryRequested: boolean): Promise<Array<T & { classificationBasis?: string }>> {
+  if (!categoryRequested || rows.length === 0) return rows;
+  const basisMap = await classifyEtfsOfficial(rows.map((r) => ({ code: r.code, name: r.name })));
+  return rows.map((r) => ({ ...r, classificationBasis: basisMap.get(r.code)?.basis }));
+}
+
 function unsupported(assetType: string, rankingType: string, page: number, limit: number, reason: string) {
   return Response.json({ assetType, rankingType, supported: false, total: 0, page, limit, hasMore: false, results: [], reason }, { headers });
 }
@@ -88,11 +100,13 @@ export async function GET(request: Request) {
         limit, offset, ZH, ...(categoryValues.length ? [categoryValues] : []),
       );
       const total = rows.length ? Number(rows[0].total) : 0;
+      const annotated = await withClassificationBasis(rows, categoryValues.length > 0);
       return Response.json({
         assetType, rankingType, period, supported: true, total, page, limit, hasMore: offset + rows.length < total,
-        results: rows.map((r) => ({
+        results: annotated.map((r) => ({
           id: r.id, code: r.code, name: r.name, metricValue: Number(r.value), metricDisplay: fmtPct(Number(r.value)),
           price: r.latest_price !== null ? Number(r.latest_price) : null, priceDate: r.price_date,
+          classificationBasis: r.classificationBasis,
         })),
       }, { headers });
     }
@@ -107,11 +121,13 @@ export async function GET(request: Request) {
         limit, offset, ZH, ...(categoryValues.length ? [categoryValues] : []),
       );
       const total = rows.length ? Number(rows[0].total) : 0;
+      const annotated = await withClassificationBasis(rows, categoryValues.length > 0);
       return Response.json({
         assetType, rankingType, supported: true, total, page, limit, hasMore: offset + rows.length < total,
-        results: rows.map((r) => ({
+        results: annotated.map((r) => ({
           id: r.id, code: r.code, name: r.name, metricValue: Number(r.aum), metricDisplay: fmtAum(Number(r.aum), r.currency),
           price: r.latest_price !== null ? Number(r.latest_price) : null, priceDate: r.price_date,
+          classificationBasis: r.classificationBasis,
         })),
       }, { headers });
     }
@@ -126,11 +142,13 @@ export async function GET(request: Request) {
         limit, offset, ZH, ...(categoryValues.length ? [categoryValues] : []),
       );
       const total = rows.length ? Number(rows[0].total) : 0;
+      const annotated = await withClassificationBasis(rows, categoryValues.length > 0);
       return Response.json({
         assetType, rankingType, supported: true, total, page, limit, hasMore: offset + rows.length < total,
-        results: rows.map((r) => ({
+        results: annotated.map((r) => ({
           id: r.id, code: r.code, name: r.name, metricValue: Number(r.volume), metricDisplay: fmtVolume(Number(r.volume)),
           price: r.latest_price !== null ? Number(r.latest_price) : null, priceDate: r.price_date,
+          classificationBasis: r.classificationBasis,
         })),
       }, { headers });
     }
@@ -149,13 +167,15 @@ export async function GET(request: Request) {
         limit, offset, ZH, ...(categoryValues.length ? [categoryValues] : []),
       );
       const total = rows.length ? Number(rows[0].total) : 0;
+      const annotated = await withClassificationBasis(rows, categoryValues.length > 0);
       return Response.json({
         assetType, rankingType, supported: true, total, page, limit, hasMore: offset + rows.length < total,
-        results: rows.map((r) => {
+        results: annotated.map((r) => {
           const pct = Number(r.dividend_yield) * 100;
           return {
             id: r.id, code: r.code, name: r.name, metricValue: pct, metricDisplay: `${pct.toFixed(2)}%`,
             price: r.latest_price !== null ? Number(r.latest_price) : null, priceDate: r.price_date,
+            classificationBasis: r.classificationBasis,
           };
         }),
       }, { headers });
@@ -171,11 +191,13 @@ export async function GET(request: Request) {
         limit, offset, ZH, ...(categoryValues.length ? [categoryValues] : []),
       );
       const total = rows.length ? Number(rows[0].total) : 0;
+      const annotated = await withClassificationBasis(rows, categoryValues.length > 0);
       return Response.json({
         assetType, rankingType, supported: true, total, page, limit, hasMore: offset + rows.length < total,
-        results: rows.map((r) => ({
+        results: annotated.map((r) => ({
           id: r.id, code: r.code, name: r.name, metricValue: Number(r.beta), metricDisplay: Number(r.beta).toFixed(2),
           price: r.latest_price !== null ? Number(r.latest_price) : null, priceDate: r.price_date,
+          classificationBasis: r.classificationBasis,
         })),
       }, { headers });
     }
@@ -183,6 +205,15 @@ export async function GET(request: Request) {
   }
 
   // FUND
+  // funds.category uses the same 187-value taxonomy as etfs.category (Morningstar-style, plus
+  // native Chinese labels like 股票型/固定收益型/平衡型(混合型) for domestic funds) --
+  // categoryClassification.ts's sets already cover both, so funds reuse it directly (no separate
+  // SITCA 類型代號 decode was completed this round -- that code scheme, e.g. "AA1"/"AC12", has no
+  // published lookup table found in the time available; disclosed gap, not guessed).
+  const fundCategoryBucket = q.get("category");
+  const fundCategoryValues = fundCategoryBucket && ASSET_CATEGORY_BUCKETS.includes(fundCategoryBucket as AssetCategoryBucketParam)
+    ? categoriesForBucket(fundCategoryBucket as AssetCategoryBucketParam) : [];
+  const fundCategoryClauseAt = (n: number) => (fundCategoryValues.length ? `AND f.category = ANY($${n}::text[])` : "");
   if (rankingType === "PERFORMANCE") {
     const metricCode = FUND_RISK_METRIC_CODE[period];
     if (metricCode) {
@@ -203,13 +234,13 @@ export async function GET(request: Request) {
              JOIN latest_metric lm ON lm.fund_id = f.id
              LEFT JOIN fund_share_classes sc ON sc.fund_id = f.id
              LEFT JOIN fund_master fm ON fm.id = sc.master_fund_id
-            WHERE f.is_active = true AND f.name ~ $3
+            WHERE f.is_active = true AND f.name ~ $3 ${fundCategoryClauseAt(5)}
          )
          SELECT id, code, name, value::text AS value, latest_nav::text AS nav, latest_nav_date::text AS nav_date,
                 COUNT(*) OVER ()::text AS total
            FROM ranked WHERE rn = 1
           ORDER BY ranked.value ${sort} LIMIT $1 OFFSET $2`,
-        limit, offset, ZH, metricCode,
+        limit, offset, ZH, metricCode, ...(fundCategoryValues.length ? [fundCategoryValues] : []),
       );
       const total = rows.length ? Number(rows[0].total) : 0;
       return Response.json({
@@ -235,13 +266,13 @@ export async function GET(request: Request) {
            FROM funds f
            LEFT JOIN fund_share_classes sc ON sc.fund_id = f.id
            LEFT JOIN fund_master fm ON fm.id = sc.master_fund_id
-          WHERE f.is_active = true AND f.${column} IS NOT NULL AND f.name ~ $3
+          WHERE f.is_active = true AND f.${column} IS NOT NULL AND f.name ~ $3 ${fundCategoryClauseAt(4)}
        )
        SELECT id, code, name, value::text AS value, latest_nav::text AS nav, latest_nav_date::text AS nav_date,
               COUNT(*) OVER ()::text AS total
          FROM ranked WHERE rn = 1
         ORDER BY ranked.value ${sort} LIMIT $1 OFFSET $2`,
-      limit, offset, ZH,
+      limit, offset, ZH, ...(fundCategoryValues.length ? [fundCategoryValues] : []),
     );
     const total = rows.length ? Number(rows[0].total) : 0;
     return Response.json({
