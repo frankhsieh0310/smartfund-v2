@@ -101,32 +101,53 @@ function test(name: string, fn: () => Promise<void> | void) {
 
   test("evaluateYahooTwReturnConsistency: a small drift (within threshold) is not an anomaly", async () => {
     const r = evaluateYahooTwReturnConsistency([
-      { code: "0050", ourReturn1y: 98.71, yahooTwReturn1y: 89.64, fetchFailed: false },
+      { code: "0050", ourReturn1y: 98.71, yahooTwReturn1y: 89.64, fetchFailed: false, ourBasisDate: "2026-10-15", yahooAsOfDate: "2026-10-15" },
     ]);
     assert.equal(r.anomaly, false);
     assert.equal(r.mismatches.length, 0);
   });
 
-  test("evaluateYahooTwReturnConsistency: a drift beyond the threshold IS an anomaly", async () => {
+  test("evaluateYahooTwReturnConsistency: a drift beyond the threshold, SAME basis date, IS an anomaly", async () => {
     const r = evaluateYahooTwReturnConsistency([
-      { code: "006208", ourReturn1y: 108.44, yahooTwReturn1y: 89.8, fetchFailed: false },
+      { code: "006208", ourReturn1y: 108.44, yahooTwReturn1y: 89.8, fetchFailed: false, ourBasisDate: "2026-10-15", yahooAsOfDate: "2026-10-15" },
     ]);
     assert.equal(r.anomaly, true);
     assert.equal(r.mismatches.length, 1);
     assert.ok(r.mismatches[0]!.diff! > 15);
   });
 
+  // 2026-10-16: 00980A flagged a 16.46pp "mismatch" at the daily-health-report's 00:30 UTC run
+  // purely because etf-returns-sync hadn't refreshed it yet that day -- our stored value was still
+  // yesterday's basis date while Yahoo奇摩's own page already disclosed today's. Verified the figures
+  // matched exactly (90.94 both sides) once etf-returns-sync's own run caught up hours later. A
+  // mismatch between different basis dates, below the hard ceiling, must not be flagged.
+  test("evaluateYahooTwReturnConsistency: a drift beyond the threshold but DIFFERENT basis date is staleness, not an anomaly", async () => {
+    const r = evaluateYahooTwReturnConsistency([
+      { code: "00980A", ourReturn1y: 107.4, yahooTwReturn1y: 90.94, fetchFailed: false, ourBasisDate: "2026-10-11", yahooAsOfDate: "2026-10-15" },
+    ]);
+    assert.equal(r.anomaly, false);
+    assert.equal(r.mismatches.length, 0);
+  });
+
+  test("evaluateYahooTwReturnConsistency: a drift beyond the hard ceiling is ALWAYS an anomaly, even with different basis dates", async () => {
+    const r = evaluateYahooTwReturnConsistency([
+      { code: "00980A", ourReturn1y: 150, yahooTwReturn1y: 90.94, fetchFailed: false, ourBasisDate: "2026-10-11", yahooAsOfDate: "2026-10-15" },
+    ]);
+    assert.equal(r.anomaly, true);
+    assert.equal(r.mismatches.length, 1);
+  });
+
   test("evaluateYahooTwReturnConsistency: a failed fetch is always an anomaly regardless of diff", async () => {
     const r = evaluateYahooTwReturnConsistency([
-      { code: "0056", ourReturn1y: 69.38, yahooTwReturn1y: null, fetchFailed: true },
+      { code: "0056", ourReturn1y: 69.38, yahooTwReturn1y: null, fetchFailed: true, ourBasisDate: "2026-10-15", yahooAsOfDate: null },
     ]);
     assert.equal(r.anomaly, true);
   });
 
   test("evaluateYahooTwReturnConsistency: all samples clean -> no anomaly", async () => {
     const r = evaluateYahooTwReturnConsistency([
-      { code: "0050", ourReturn1y: 98.71, yahooTwReturn1y: 89.64, fetchFailed: false },
-      { code: "0056", ourReturn1y: 69.38, yahooTwReturn1y: 72.07, fetchFailed: false },
+      { code: "0050", ourReturn1y: 98.71, yahooTwReturn1y: 89.64, fetchFailed: false, ourBasisDate: "2026-10-15", yahooAsOfDate: "2026-10-15" },
+      { code: "0056", ourReturn1y: 69.38, yahooTwReturn1y: 72.07, fetchFailed: false, ourBasisDate: "2026-10-15", yahooAsOfDate: "2026-10-15" },
     ]);
     assert.equal(r.anomaly, false);
   });
