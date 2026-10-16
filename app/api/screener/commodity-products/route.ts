@@ -2,9 +2,20 @@
 // lib/data-platform/commodityEtfMapping.ts for the curated, name-derived mapping and its scope
 // limits). Enriches each with live price/return data already in `etfs` — no self-computed figures.
 import { prisma } from "@/lib/prisma";
-import { COMMODITY_ETF_MAPPING, COMMODITY_KEYS, type CommodityKey } from "@/lib/data-platform/commodityEtfMapping";
+import { COMMODITY_ETF_MAPPING, COMMODITY_KEYS, THEMATIC_COMMODITY_FUNDS, type CommodityKey } from "@/lib/data-platform/commodityEtfMapping";
 
 const headers = { "Access-Control-Allow-Origin": "*", "Cache-Control": "no-store" };
+
+// WTI/Brent crude are both energy-sector exposures -- 能源主題基金 (equity/bond funds investing in
+// the energy sector, not direct futures) are shown alongside them for that reason; GOLD only shows
+// gold-themed funds; 原物料(BROAD_COMMODITY)-themed funds are shown for every commodity since they
+// don't target one specific one.
+const THEME_FOR_COMMODITY: Record<CommodityKey, Array<"GOLD" | "ENERGY" | "BROAD_COMMODITY">> = {
+  GOLD: ["GOLD", "BROAD_COMMODITY"],
+  SILVER: ["BROAD_COMMODITY"],
+  WTI_CRUDE: ["ENERGY", "BROAD_COMMODITY"],
+  BRENT_CRUDE: ["ENERGY", "BROAD_COMMODITY"],
+};
 
 export async function GET(request: Request) {
   const q = new URL(request.url).searchParams;
@@ -37,7 +48,29 @@ export async function GET(request: Request) {
       return1YPct: row?.return1y ? Number(row.return1y) : null,
     };
   });
-  return Response.json({ ok: true, commodity, total: results.length, generated_at: new Date().toISOString(), results }, { headers });
+
+  const themes = THEME_FOR_COMMODITY[commodity as CommodityKey];
+  const thematicEntries = THEMATIC_COMMODITY_FUNDS.filter((f) => themes.includes(f.theme));
+  const thematicFundRows = thematicEntries.length
+    ? await prisma.fund.findMany({ where: { code: { in: thematicEntries.map((f) => f.code) } }, select: { code: true, name: true, id: true, isActive: true, latestNav: true, latestNavDate: true } })
+    : [];
+  const thematicByCode = new Map(thematicFundRows.map((r) => [r.code, r]));
+  const thematicFunds = thematicEntries.map((e) => {
+    const row = thematicByCode.get(e.code);
+    return {
+      code: e.code, name: e.name, theme: e.theme,
+      id: row?.id ?? null, isActive: row?.isActive ?? null,
+      latestNav: row?.latestNav ? Number(row.latestNav) : null, navDate: row?.latestNavDate ?? null,
+      exposureNote: "間接曝險（投資該產業股票/債券的主題型基金，非直接持有商品期貨）",
+    };
+  });
+
+  return Response.json({
+    ok: true, commodity, total: results.length, generated_at: new Date().toISOString(),
+    results,
+    thematicFunds,
+    scopeNote: "複委託可買的海外商品ETF（如SPDR Gold Shares等）不在本資料庫中（沒有「可複委託交易」的清單或旗標），本端點無法涵蓋，不是遺漏。",
+  }, { headers });
 }
 
 export async function OPTIONS() {

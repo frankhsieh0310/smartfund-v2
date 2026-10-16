@@ -36,3 +36,17 @@ export function etfsForCommodity(commodity: CommodityKey): CommodityEtfMappingEn
 }
 
 export const COMMODITY_KEYS: CommodityKey[] = ["GOLD", "SILVER", "WTI_CRUDE", "BRENT_CRUDE"];
+
+// 間接曝險（追加這輪）：國內可買、以黃金/能源/原物料為主題的基金（非直接持有商品期貨，而是投資
+// 該產業股票/債券的主題型基金）。VERIFIED via a live SELECT this round: 5 active, TW-coded funds
+// match a commodity/energy keyword in `funds.name`. 複委託可買的海外商品ETF（如SPDR Gold Shares等）
+// 不在我們資料庫裡（沒有「複委託可交易」這個旗標或清單），這部分誠實標示做不到，不是忘記做。
+export type ThematicFundEntry = { code: string; name: string; theme: "GOLD" | "ENERGY" | "BROAD_COMMODITY" };
+
+export const THEMATIC_COMMODITY_FUNDS: ThematicFundEntry[] = [
+  { code: "88251656", name: "富蘭克林華美全球潔淨能源ETF基金", theme: "ENERGY" },
+  { code: "73688977", name: "復華15年期以上能源業債券ETF基金", theme: "ENERGY" },
+  { code: "25676249", name: "復華全球原物料基金", theme: "BROAD_COMMODITY" },
+  { code: "99632577", name: "德銀遠東DWS全球原物料能源基金", theme: "BROAD_COMMODITY" },
+  { code: "26318517", name: "統一新亞洲科技能源基金", theme: "ENERGY" },
+];
