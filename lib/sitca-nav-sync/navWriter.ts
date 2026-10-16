@@ -35,17 +35,18 @@ export async function writeSitcaNavBatch(query: QueryFn, candidates: SitcaMatche
          WHERE fund_history.nav IS DISTINCT FROM EXCLUDED.nav`,
         [JSON.stringify(payload), nowIso],
       );
-      await query(
+      const updated = await query(
         `UPDATE funds AS f SET
            latest_nav = x.nav, latest_nav_date = x.date::date, nav_updated_at = $2::timestamptz, last_nav_source = 'SITCA_FSC_OFFICIAL_DAILY_NAV_CSV'
          FROM jsonb_to_recordset($1::jsonb) AS x(fund_id text, date text, nav numeric)
          WHERE f.id = x.fund_id AND (
            f.latest_nav_date IS NULL OR f.latest_nav_date < x.date::date
            OR (f.latest_nav_date = x.date::date AND f.latest_nav IS DISTINCT FROM x.nav)
-         )`,
+         )
+         RETURNING f.id`,
         [JSON.stringify(payload), nowIso],
       );
-      written += chunk.length;
+      written += updated.length;
     } catch {
       writeErrorCount += chunk.length;
       writeErrorFundIds.push(...chunk.map((c) => c.fundId));

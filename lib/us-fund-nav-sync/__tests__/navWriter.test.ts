@@ -28,7 +28,7 @@ function mockQuery(impl?: (sql: string, params: any[]) => any[]): { query: Query
   });
 
   test("writeFundNavBatch: two queries (fund_history upsert + newer-or-same-date-different-value funds update), batched", async () => {
-    const { query, calls } = mockQuery();
+    const { query, calls } = mockQuery((_sql, params) => JSON.parse(params[0] as string).map(() => ({ id: "x" })));
     const r = await writeFundNavBatch(query, [{ fundId: "a", symbol: "AFDAX", date: "2026-10-09", nav: 51.83 }], "2026-10-11T00:00:00Z");
     assert.equal(calls.length, 2);
     assert.ok(calls[0].sql.includes("INSERT INTO fund_history"));

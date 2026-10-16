@@ -83,7 +83,7 @@ export async function writeReturnsBatch(query: QueryFn, candidates: WriteCandida
   });
 
   try {
-    await query(
+    const upserted = await query(
       `INSERT INTO etf_performances (id, etf_id, date, return_1m, return_3m, return_ytd, return_1y, return_3y, return_5y, created_at)
        SELECT gen_random_uuid()::text, x.etf_id, x.date::date, x.return_1m, x.return_3m, x.return_ytd, x.return_1y, x.return_3y, x.return_5y, $2::timestamptz
          FROM jsonb_to_recordset($1::jsonb) AS x(
@@ -100,7 +100,11 @@ export async function writeReturnsBatch(query: QueryFn, candidates: WriteCandida
        RETURNING 1`,
       [JSON.stringify(payload), nowIso],
     );
-    return { written: candidates.length, droppedFieldCount, writeErrorCount: 0, writeErrorEtfIds: [] };
+    // This INSERT ... ON CONFLICT DO UPDATE has no WHERE guard, so every row in the batch always
+    // affects exactly one row -- upserted.length should equal candidates.length here, but reporting
+    // the real count (not the batch size) keeps this writer consistent with the others and honest
+    // if that ever stops being true (e.g. a future guard clause is added).
+    return { written: upserted.length, droppedFieldCount, writeErrorCount: 0, writeErrorEtfIds: [] };
   } catch {
     return { written: 0, droppedFieldCount, writeErrorCount: candidates.length, writeErrorEtfIds: candidates.map((c) => c.etfId) };
   }

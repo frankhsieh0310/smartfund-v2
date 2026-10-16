@@ -36,17 +36,20 @@ export async function writeFundNavBatch(query: QueryFn, candidates: FundNavCandi
     // same rule fundIngest.ts and lib/cloud-ingestion/fundNav.ts's persistFundNav both already use,
     // so all three pipelines agree on when funds.latest_nav may change. Still never moves the date
     // backward.
-    await query(
+    const updated = await query(
       `UPDATE funds AS f SET
          latest_nav = x.nav, latest_nav_date = x.date::date, nav_updated_at = $2::timestamptz, last_nav_source = 'SPARK'
        FROM jsonb_to_recordset($1::jsonb) AS x(fund_id text, date text, nav numeric)
        WHERE f.id = x.fund_id AND (
          f.latest_nav_date IS NULL OR f.latest_nav_date < x.date::date
          OR (f.latest_nav_date = x.date::date AND f.latest_nav IS DISTINCT FROM x.nav)
-       )`,
+       )
+       RETURNING f.id`,
       [JSON.stringify(payload), nowIso],
     );
-    return { written: candidates.length, writeErrorCount: 0, writeErrorFundIds: [] };
+    // Real affected-row count, not candidates.length -- a candidate whose date/value was already
+    // current by the time this ran correctly matches zero rows here and must not count as written.
+    return { written: updated.length, writeErrorCount: 0, writeErrorFundIds: [] };
   } catch {
     return { written: 0, writeErrorCount: candidates.length, writeErrorFundIds: candidates.map((c) => c.fundId) };
   }
