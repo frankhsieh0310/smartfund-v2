@@ -50,7 +50,11 @@ import { TW_ELIGIBLE_SQL_CONDITION } from "@/lib/etf-returns-sync/twUniverse";
 export const dynamic = "force-dynamic";
 export const maxDuration = 280;
 const JOB = "ETF_RETURNS_SYNC";
-const TIME_BUDGET_MS = 240_000;
+// 2026-10-16: bumped 240s->260s (same 20s-under-maxDuration buffer as the new etf-returns-sync-tw
+// route) and the cron schedule tightened from */15 to */10 (vercel.json) -- part of making the
+// now-TW-excluded ~16,176-etf non-TW universe provably finish within one trading day; see
+// docs/specs/etf-returns-sync-tw-coverage.md for the full math (both routes together).
+const TIME_BUDGET_MS = 260_000;
 const REQUEST_DELAY_MS = 400; // matches the existing Yahoo ETF enrichment pipeline's own pacing
 // 2026-10-14 QA-round-1: TW-listed ETFs (data_source ending .TW/.TWO) now source their returns from
 // Yahoo奇摩's own page (lib/yahoo/twPerformancePage.ts) instead of the global API's trailingReturns
