@@ -34,6 +34,7 @@ import { missingForToday, type LastProcessedDateMap, type LastProcessedVersionMa
 import {
   resolveWriteDatesBatch, fetchLatestReturn6mBatch, writeEtfsRankingColumnsBatch, type EtfsRankingEntry,
 } from "@/lib/etf-returns-sync/batchHelpers";
+import { TW_ELIGIBLE_SQL_CONDITION } from "@/lib/etf-returns-sync/twUniverse";
 
 // 2026-10-16: this route was missing both of these -- every other cron route in app/api/cron/*
 // declares them explicitly. Without `dynamic = "force-dynamic"`, Next.js's own fetch-patching can
@@ -81,11 +82,22 @@ function todayLocalDate(): string {
  * core-universe definition — not imported from lib/market-close-sync/coreUniverse.ts, and market-
  * close-sync's code is not touched by this task at all (explicit freeze during its acceptance
  * window). */
+// 2026-10-16: excludes the TW-eligible set (see lib/etf-returns-sync/twUniverse.ts) -- those now
+// have their OWN dedicated cron (app/api/cron/etf-returns-sync-tw/route.ts) with an undiluted
+// budget. Before this split, this route's shared TIME_BUDGET_MS/missingIds ordering was blended
+// across this (non-TW, ~16,000-etf) population AND the much smaller, much more expensive
+// (3.2s/item vs 0.4s/item) TW population with no priority separation -- any given invocation's
+// alphabetically-ordered missingIds draw could easily spend its whole budget on cheap non-TW items
+// before a TW item's turn came up, which is how some TW ETFs went 4-7 days between refreshes despite
+// a 15-minute cron cadence. Was Prisma's typed findMany; switched to raw SQL here since the TW
+// exclusion needs a regex match + EXISTS subquery Prisma's query builder doesn't express directly.
 async function computeRecentlyPricedIds(): Promise<Set<string>> {
-  const rows = await prisma.etf.findMany({
-    where: { isActive: true, dataSource: { not: null }, priceUpdatedAt: { gte: new Date(Date.now() - RECENT_PRICE_WINDOW_DAYS * 24 * 60 * 60 * 1000) } },
-    select: { id: true },
-  });
+  const rows = await prisma.$queryRawUnsafe<Array<{ id: string }>>(
+    `SELECT bare.id FROM etfs bare
+     WHERE bare.is_active = true AND bare.data_source IS NOT NULL
+       AND bare.price_updated_at >= NOW() - INTERVAL '${RECENT_PRICE_WINDOW_DAYS} days'
+       AND NOT ${TW_ELIGIBLE_SQL_CONDITION}`,
+  );
   return new Set(rows.map((r) => r.id));
 }
 
