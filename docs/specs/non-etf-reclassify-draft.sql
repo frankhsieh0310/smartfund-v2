@@ -1,4 +1,5 @@
--- DRAFT, NOT EXECUTED. Needs user approval before running.
+-- EXECUTED 2026-10-16 (user-approved). Before: 24/24 rows is_active=true. UPDATE RETURNING: exactly
+-- 24 rows. After: 24/24 rows is_active=false. No rows deleted.
 --
 -- 24 rows in `etfs` (is_active=true) are confirmed, via cross-reference against TWSE/TPEx's own
 -- official ETF registry (mopsfin.twse.com.tw/opendata/t187ap47_{L,O}.csv, fetched live 2026-10-16,
