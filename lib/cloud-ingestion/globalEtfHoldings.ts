@@ -70,6 +70,15 @@ const numeric = (value: string | undefined): number | null => {
   const cleaned = (value ?? "").replaceAll(",", "").replaceAll("%", "").trim();
   return cleaned && cleaned !== "-" && Number.isFinite(Number(cleaned)) ? Number(cleaned) : null;
 };
+/** The CSV's own "Maturity" column is "Mon DD, YYYY" (e.g. "Aug 05, 2027") -- VERIFIED live
+ * 2026-10-16 against a real iShares bond-fund CSV. Returns null rather than guessing on any other
+ * shape (never silently misparses a date). */
+const maturityDate = (value: string | undefined): string | null => {
+  const trimmed = (value ?? "").trim();
+  if (!trimmed || trimmed === "-") return null;
+  const parsed = new Date(`${trimmed} 12:00:00 UTC`);
+  return Number.isFinite(parsed.getTime()) ? parsed.toISOString().slice(0, 10) : null;
+};
 const holdingType = (assetClass: string, name: string): string => {
   const value = `${assetClass} ${name}`.toUpperCase();
   if (/CASH|CURRENCY|MONEY MARKET/.test(value)) return "CASH";
@@ -101,6 +110,12 @@ export type IsharesHoldingRow = {
   exchange: string | null;
   country: string | null;
   currency: string | null;
+  /// From the source CSV's own "Coupon (%)" column when present (bond-holding rows on a bond-ETF
+  /// CSV). NULL when the column is absent from this fund's CSV (equity-only funds) or blank/"-"
+  /// for a given row (e.g. a zero-coupon instrument's own "0.00" is kept as 0, not coerced to null).
+  couponPct: number | null;
+  /// From the source CSV's own "Maturity" column, ISO yyyy-mm-dd. Never guessed when absent/unparseable.
+  maturityDate: string | null;
 };
 export type IsharesHoldings = { code: string; sourceUrl: string; asOfIso: string; checksum: string; rows: IsharesHoldingRow[] };
 
@@ -153,6 +168,8 @@ export async function fetchIsharesHoldings(product: IsharesProduct): Promise<Ish
       exchange: row[column("Exchange")] || null,
       country: row[column("Location")] || null,
       currency: row[column("Currency")] || row[column("Market Currency")] || null,
+      couponPct: column("Coupon (%)") >= 0 ? numeric(row[column("Coupon (%)")]) : null,
+      maturityDate: column("Maturity") >= 0 ? maturityDate(row[column("Maturity")]) : null,
     };
   });
   if (!rows.length) throw new Error("ISHARES_CSV_NO_ROWS");
@@ -211,6 +228,8 @@ export async function persistIsharesHoldings(
       ticker: row.ticker,
       isin: row.isin,
       cusip: row.cusip,
+      coupon_rate: row.couponPct,
+      maturity_date: row.maturityDate,
       weight: row.weight ?? 0,
       sector: row.sector,
       country: row.country,
@@ -234,12 +253,12 @@ export async function persistIsharesHoldings(
     );
     await tx.$executeRawUnsafe(
       `INSERT INTO holdings
-         (id, asset_type, etf_id, as_of_date, rank, holding_name, holding_code, ticker, isin, cusip, weight,
+         (id, asset_type, etf_id, as_of_date, rank, holding_name, holding_code, ticker, isin, cusip, coupon_rate, maturity_date, weight,
           sector, country, asset_id, security_id, shares, market_value, currency, source, source_record_id, weight_method, created_at)
-       SELECT x.id, 'ETF', $1, $2::date, x.rank, x.holding_name, x.holding_code, x.ticker, x.isin, x.cusip, x.weight,
+       SELECT x.id, 'ETF', $1, $2::date, x.rank, x.holding_name, x.holding_code, x.ticker, x.isin, x.cusip, x.coupon_rate, x.maturity_date::date, x.weight,
               x.sector, x.country, x.asset_id, x.security_id, x.shares, x.market_value, x.currency, x.source, x.source_record_id, x.weight_method, NOW()
        FROM jsonb_to_recordset($3::jsonb) AS x(
-         id text, rank int, holding_name text, holding_code text, ticker text, isin text, cusip text, weight numeric,
+         id text, rank int, holding_name text, holding_code text, ticker text, isin text, cusip text, coupon_rate numeric, maturity_date text, weight numeric,
          sector text, country text, asset_id text, security_id text, shares numeric, market_value numeric, currency text,
          source text, source_record_id text, weight_method text)`,
       etfId,

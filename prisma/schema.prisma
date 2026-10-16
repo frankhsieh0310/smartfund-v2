@@ -1422,6 +1422,12 @@ model Holding {
   isin           String?
   cusip          String?
   ticker         String?
+  /// Populated from the official holdings CSV's own "Coupon (%)" column (e.g. iShares) when the
+  /// source feed has one. NULL for rows ingested before 2026-10-16 or for sources whose feed never
+  /// carried this field -- never guessed/computed.
+  couponRate     Decimal?        @map("coupon_rate") @db.Decimal(10, 4)
+  /// Populated from the official holdings CSV's own "Maturity" column. Same "never guessed" rule.
+  maturityDate   DateTime?       @map("maturity_date") @db.Date
   amount         Decimal?        @db.Decimal(24, 8)
   shares         Decimal?        @db.Decimal(24, 8)
   marketValue    Decimal?        @map("market_value") @db.Decimal(24, 4)
