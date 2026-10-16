@@ -33,14 +33,8 @@ export function parseSitcaCsv(csv: string): SitcaRawRow[] {
   return rows;
 }
 
-// 2026-10-16: 20s was too tight -- production_scheduler_runs shows this fetch aborting at ~22.3s
-// and ~22.4s runtime on 2026-10-15 and 2026-10-14 respectively (status=FAILED, error="The operation
-// was aborted due to timeout"), both times the SITCA server itself just being slow, not a real
-// outage -- the job's own hourly retry succeeded minutes later each day. lib/cloud-ingestion/
-// fundNav.ts's independent fetch of this SAME endpoint already uses 45s; matching that budget here
-// instead of guessing a new number, since this route's own maxDuration (300s) has plenty of room.
 export async function fetchSitcaRows(): Promise<SitcaRawRow[]> {
-  const res = await fetch(SITCA_FSC_NAV_URL, { headers: { "User-Agent": "Mozilla/5.0" }, signal: AbortSignal.timeout(45_000) });
+  const res = await fetch(SITCA_FSC_NAV_URL, { headers: { "User-Agent": "Mozilla/5.0" }, signal: AbortSignal.timeout(20_000) });
   if (res.status === 401 || res.status === 403 || res.status === 429) {
     const err = new Error(`SITCA_RATE_LIMITED_${res.status}`);
     (err as any).rateLimited = true;

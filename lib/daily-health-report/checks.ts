@@ -101,18 +101,6 @@ export type YahooTwReturnSample = {
   ourReturn1y: number | null;
   yahooTwReturn1y: number | null; // null when the fetch itself failed/was rate-limited
   fetchFailed: boolean;
-  /** The trading-day basis our stored return_1y was actually computed as of (etf_performances'
-   * latest row date for this ETF), and the basis date Yahoo奇摩's own page discloses for the value
-   * just fetched. When these differ, a diff beyond MISMATCH_THRESHOLD_PCT_POINTS is NOT a parser
-   * bug -- it's this health-report run (00:30 UTC) landing before etf-returns-sync's own daily
-   * refresh for that specific ETF has completed yet, comparing yesterday's stored figure against
-   * today's live Yahoo page. VERIFIED live 2026-10-16: 00980A (inception 2025-04-21, still young and
-   * concentrated enough that its trailing-1Y return swings 15-20pp day to day on its own, confirmed
-   * across 10 consecutive real Yahoo-sourced daily values) flagged a 16.46pp "mismatch" at 00:30 UTC
-   * purely because our stored value was still 10/11's basis; by the time etf-returns-sync's own run
-   * caught up hours later, etfs.return_1y matched Yahoo exactly (90.94 both sides). */
-  ourBasisDate: string | null;
-  yahooAsOfDate: string | null;
 };
 
 export type YahooTwReturnCheckResult = {
@@ -129,20 +117,10 @@ export type YahooTwReturnCheckResult = {
 // figure suddenly off by tens of points), not for chasing exact equality with a source that this
 // project's own investigation found is never going to match exactly.
 const MISMATCH_THRESHOLD_PCT_POINTS = 15;
-// A diff this large is never explained by a one-day staleness gap, even for the most volatile young
-// ETF in this universe (see the 00980A write-up above) -- always flag it regardless of basis date.
-const HARD_CEILING_PCT_POINTS = 40;
 
 export function evaluateYahooTwReturnConsistency(samples: YahooTwReturnSample[]): YahooTwReturnCheckResult {
   const mismatches = samples
     .map((s) => ({ ...s, diff: s.ourReturn1y != null && s.yahooTwReturn1y != null ? Math.abs(s.ourReturn1y - s.yahooTwReturn1y) : null }))
-    .filter((s) => {
-      if (s.fetchFailed || s.diff === null) return true;
-      if (s.diff > HARD_CEILING_PCT_POINTS) return true;
-      if (s.diff <= MISMATCH_THRESHOLD_PCT_POINTS) return false;
-      // Between the two thresholds: only an anomaly if both sides are actually quoting the same
-      // trading day -- otherwise it's staleness, not a data bug.
-      return s.ourBasisDate !== null && s.yahooAsOfDate !== null && s.ourBasisDate === s.yahooAsOfDate;
-    });
+    .filter((s) => s.fetchFailed || s.diff === null || s.diff > MISMATCH_THRESHOLD_PCT_POINTS);
   return { samples, mismatches, anomaly: mismatches.length > 0 };
 }

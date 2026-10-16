@@ -72,27 +72,16 @@ export async function GET(request: Request) {
   // Yahoo奇摩 page redesign) or a sudden, large data error, not the few-point drift that's expected
   // and already documented. Requests are sequential with a 3s+ gap (same courtesy as the offshore NAV
   // fetcher) and a 401/403/429 aborts the remaining samples for today rather than hammering Yahoo.
-  const sampleRows = await prisma.$queryRawUnsafe<Array<{ code: string; data_source: string; return_1y: number | null; id: string }>>(
-    `SELECT id, code, data_source, return_1y FROM etfs WHERE is_active = true AND currency = 'TWD' AND data_source IS NOT NULL ORDER BY random() LIMIT 3`,
+  const sampleRows = await prisma.$queryRawUnsafe<Array<{ code: string; data_source: string; return_1y: number | null }>>(
+    `SELECT code, data_source, return_1y FROM etfs WHERE is_active = true AND currency = 'TWD' AND data_source IS NOT NULL ORDER BY random() LIMIT 3`,
   );
-  const basisDateRows = sampleRows.length
-    ? await prisma.$queryRawUnsafe<Array<{ etf_id: string; d: string }>>(
-        `SELECT etf_id, max(date)::text AS d FROM etf_performances WHERE etf_id = ANY($1::text[]) GROUP BY etf_id`,
-        sampleRows.map((r) => r.id),
-      )
-    : [];
-  const basisDateByEtfId = new Map(basisDateRows.map((r) => [r.etf_id, r.d]));
   const yahooTwSamples: YahooTwReturnSample[] = [];
   for (const row of sampleRows) {
-    const ourBasisDate = basisDateByEtfId.get(row.id) ?? null;
     try {
       const perf = await fetchYahooTwPerformance(row.data_source);
-      yahooTwSamples.push({
-        code: row.code, ourReturn1y: row.return_1y, yahooTwReturn1y: perf?.navReturn.y1 ?? null,
-        fetchFailed: perf === null, ourBasisDate, yahooAsOfDate: perf?.asOfDate ?? null,
-      });
+      yahooTwSamples.push({ code: row.code, ourReturn1y: row.return_1y, yahooTwReturn1y: perf?.navReturn.y1 ?? null, fetchFailed: perf === null });
     } catch {
-      yahooTwSamples.push({ code: row.code, ourReturn1y: row.return_1y, yahooTwReturn1y: null, fetchFailed: true, ourBasisDate, yahooAsOfDate: null });
+      yahooTwSamples.push({ code: row.code, ourReturn1y: row.return_1y, yahooTwReturn1y: null, fetchFailed: true });
       break; // rate-limited or similar -- stop hitting Yahoo for the rest of today's sample
     }
     await new Promise((r) => setTimeout(r, 3200));
