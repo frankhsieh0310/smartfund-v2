@@ -14,7 +14,8 @@ master 為正式基準分支。新工作一律從最新的 master 開分支；�
 - `C:\Users\User\AppData\Local\Temp\mcs-deploy` — 主要開發 worktree，分支 `fix/qa-round1`。
 - `C:\Users\User\AppData\Local\Temp\mcs-hotfix` — 緊急熱修正 worktree，從 commit `599741829` 開出，只含 `ab8f698a4`。已被 `mcs-release` 取代為正式環境來源，我不得修改這個資料夾。
 - `C:\Users\User\AppData\Local\Temp\mcs-prod` — 另一個既有 worktree，HEAD 在 `599741829`。我不得修改這個資料夾。
-- `C:\Users\User\AppData\Local\Temp\mcs-release` — 目前的正式環境部署來源，從 `ab8f698a4` 開出，cherry-pick 了 `94a7d3494`／`787bd8727`（網站內容修正）與 `42b676bf6`（NAV writer 計數修正）。之後要追加任何正式環境修正，從這裡（或其後繼 worktree）繼續 cherry-pick，不要再回頭用 `mcs-hotfix`。
+- `C:\Users\User\AppData\Local\Temp\mcs-release` — 上一次的正式環境部署來源（`58d8d8165`，從 `ab8f698a4` cherry-pick 網站修正與計數修正）。已被 `mcs-final` 取代，我不得再修改這個資料夾。
+- `C:\Users\User\AppData\Local\Temp\mcs-final` — **目前最新、待部署的 worktree**，直接是 `fix/qa-round1` 2026-10-16 的 HEAD（`e0588acec`），不是 cherry-pick 組出來的。之後要追加任何正式環境修正，從 `fix/qa-round1` 本身繼續開發，下次部署前再開一個新 worktree 指到那時的 HEAD。
 
 **部署規則（使用者 2026-10-16 訂立，之後每次部署一律遵守）**
 - 部署指令固定用：`npx vercel deploy --prod --meta commit=$(git rev-parse HEAD)`（讓每次正式部署都留下對應的 commit SHA，之前用純 `vercel deploy --prod` 的 CLI 部署完全沒有 git metadata，無法回溯比對）。
