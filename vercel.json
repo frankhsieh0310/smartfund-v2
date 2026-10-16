@@ -54,6 +54,7 @@
     { "path": "/api/cron/cloud-new-listing-detection", "schedule": "15 1 * * *" },
     { "path": "/api/cron/cloud-new-fund-listing-detection", "schedule": "25 1 * * *" },
     { "path": "/api/cron/cloud-moneydj-fund", "schedule": "*/20 * * * *" },
-    { "path": "/api/cron/cloud-fund-holdings?provider=ALL", "schedule": "*/20 * * * *" }
+    { "path": "/api/cron/cloud-fund-holdings?provider=ALL", "schedule": "*/20 * * * *" },
+    { "path": "/api/cron/stock-technical-daily", "schedule": "0 8 * * 1-5" }
   ]
 }
