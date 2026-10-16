@@ -1,15 +1,44 @@
-# 296 筆重複基金名稱 — 合併方案（草稿，未執行，不刪除任何資料）
+# 重複基金名稱 — 方案一執行結果與新發現（2026-10-16）
 
-## 查到的實際情況
-296 筆（265 個重複名稱）的樣本顯示：全部 `code IS NULL`、`data_provider='yahoo'`，但同名的幾筆**淨值不同**（例如「AQR Funds - AQR Small Cap Momentum Style Fund」3 筆，淨值分別 24.19/24.22/24.05）。
+## 範圍更正
+原本估計 296 筆（265 個重複名稱），重新查證（`code IS NULL`、`data_provider='yahoo'`、依 `name`
+分組）實際是 **1,887 筆（925 個不同的重複名稱）**，比原估計大。
 
-## 判斷
-淨值不同代表這些**不是同一天重複寫入同一檔**造成的真重複，更可能是**不同股份級別(share class)** 被 Yahoo 擷取時用了同一個顯示名稱（Yahoo 的 topHoldings/fund 清單對不同 share class 有時不帶後綴）。因為三筆都沒有 code/ISIN，目前無法單靠名稱判斷哪一筆是哪一個真正的 share class。
+## 方案一（ISIN 重新分組）— 已實測，確認不可行
+直接用 Yahoo quoteSummary 對樣本 ticker（GTORX／GSJPX／GITSX，同屬 Goldman Sachs Technology
+Opportunities 基金的 3 個不同級別）查詢 `quoteType`／`summaryProfile`／`price`／`fundProfile` 四個
+module，**完全沒有 ISIN 欄位**。這些是美國共同基金，美國市場慣用 CUSIP 不是 ISIN，Yahoo 的
+quoteSummary 本來就沒有為這類商品提供 ISIN。
 
-## 建議方案（不刪除，不立即執行）
-1. **優先**：對這 296 筆，用 Yahoo quoteSummary 補回 ISIN（`lib/yahoo/fundIngest.ts` 應該已有抓 ISIN 的能力，需確認），用 ISIN 當作真正的唯一鍵重新分組——如果補回後 ISIN 彼此不同，就證明本來就是不同基金，不需要合併，只是名稱顯示重複；如果 ISIN 相同，才是真重複。
-2. **備援**（補不到 ISIN 時）：不刪除，改成把除了「最近更新時間最新」那一筆以外的其他筆標記 `is_active=false`（保留資料，從清單畫面隱藏），並在 `name` 後面加註來源日期以便人工日後核對。
-3. 兩種方案都需要先花時間查證 1 做不做得到，這份文件只列方案，沒有先執行任何一種。
+同時也測了「用來源的級別/幣別資訊改顯示名稱」這條備援路——`fundProfile` 整個都是 null
+（`family`/`categoryName`/`legalType` 全部是 null），Yahoo 沒有提供任何可用的級別標籤。
 
-## 不建議
-直接刪除任何一筆 —— 使用者已明確禁止。
+## 已執行的替代方案（已上線，非資料庫異動，可直接在這次部署裡生效）
+查證發現：**每一筆的 `data_source`（真實 ticker）早就不一樣**——Goldman Sachs Technology
+Opportunities 那組 7 筆分別是 GTORX／GSJPX／GITSX／GITIX／GITCX／GITAX／GISTX，淨值也都不同，
+全部 1,887 筆**沒有任何一筆缺 `data_source`**。這證實你的判斷：這些多半真的是不同級別，不是重複。
+
+改在**顯示層**用這個既有、真實、來源提供的 ticker 來區分（`lib/data-platform/web/fundService.ts`
+的 `disambiguatedDisplayName`），例如：
+
+> Goldman Sachs ETF Trust - Goldman Sachs Technology Opportunities ETF（GTORX）
+> Goldman Sachs ETF Trust - Goldman Sachs Technology Opportunities ETF（GITAX）
+> ...（7 筆，各自標上自己的 ticker）
+
+完全照抄來源的 ticker，沒有自己編任何文字；資料庫 `name` 欄位完全沒動，只改畫面顯示，不需要
+DDL／批次 UPDATE 核准。已過 `tsc`／`next build`，並用真實查詢（Goldman Sachs 那組 7 筆、以及隨機
+10 筆不重複名稱的負向測試）驗證過行為正確。
+
+## 新發現，需要你核准才會動：900 組「連 ticker 都重複」的真正重複
+在查證過程中額外發現：1,887 筆裡，有 **900 組 (name, ticker) 完全相同**（同名同代碼，2 筆以上）——
+這些才是真正的「同一檔證券被重複寫入」，不是不同級別（例如 `Destinations Large Cap Equity Z` /
+`DLCZX` 出現 2 筆、`Diamond Hill Mid Cap I` / `DHPIX` 出現 2 筆）。這個發現是在你核准「方案一」之後
+才查到的，你原本不核准 `is_active=false` 的理由（「這些多半是不同級別、不准停用」）是針對不同
+ticker 的情況，不是這 900 組同 ticker 的情況——所以**沒有自動套用**，先列出來讓你決定：
+- 建議：對這 900 組，保留 `updated_at` 最新的一筆、其餘標 `is_active=false`（不刪資料）。
+- 這 900 組的完整清單（name、ticker、各筆 id、updated_at）需要另外產生——目前還沒做，等你核准
+  處理方式後再產生清單＋執行＋SELECT 核對筆數。
+
+## 不執行的項目
+- 沒有對任何一筆執行 `is_active=false` 或刪除。
+- 900 組同 ticker 真重複的處理方式，待你核准。

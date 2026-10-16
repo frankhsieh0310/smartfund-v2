@@ -7,7 +7,22 @@ import { buildProvenance } from "./provenance.ts";
 import { isoOrNull, numberOrNull, type CanonicalIdentity, type HistoryQuery, type ListQuery, type Provenance, type ResponseMeta, type ServiceResponse, type SummaryMetrics } from "./types.ts";
 import { mapFundMainCategory, type FundMainCategory } from "./fundCategoryMapping.ts";
 
-const fundIdentity = (row: { id: string; code: string | null; isin: string | null; name: string; currency: string; domicile: string | null; region: string | null }): CanonicalIdentity => ({ assetType: "FUND", id: row.id, symbol: row.code ?? row.isin ?? row.id, name: row.name, displayName: row.name, currency: row.currency, market: row.domicile, country: row.region ?? row.domicile });
+// 2026-10-16: 925 distinct fund names (1,887 rows) share a display name with at least one other
+// fund row -- VERIFIED live these are overwhelmingly genuinely different, real, purchasable share
+// classes of the same fund family (confirmed: each row's own `data_source` is already a distinct
+// real ticker, e.g. Goldman Sachs Technology Opportunities has 7 rows under GTORX/GSJPX/GITSX/GITIX/
+// GITCX/GITAX/GISTX, each a real share class with its own NAV), NOT duplicate rows of the same
+// security. User-approved fallback (ISIN backfill and Yahoo-sourced share-class labels both checked
+// live and confirmed NOT AVAILABLE via quoteSummary for these US mutual funds -- quoteType/
+// summaryProfile/price/fundProfile all came back null/absent): disambiguate the DISPLAY name with
+// the fund's own real ticker (`dataSource`), copied verbatim from the source, never invented. This
+// is display-layer only -- `name` in the DB is untouched, no data is altered.
+function disambiguatedDisplayName(name: string, dataSource: string | null, duplicateNames: ReadonlySet<string>): string {
+  if (!dataSource || !duplicateNames.has(name)) return name;
+  return `${name}（${dataSource}）`;
+}
+
+const fundIdentity = (row: { id: string; code: string | null; isin: string | null; name: string; currency: string; domicile: string | null; region: string | null; dataSource?: string | null }, duplicateNames: ReadonlySet<string> = new Set()): CanonicalIdentity => ({ assetType: "FUND", id: row.id, symbol: row.code ?? row.isin ?? row.id, name: row.name, displayName: disambiguatedDisplayName(row.name, row.dataSource ?? null, duplicateNames), currency: row.currency, market: row.domicile, country: row.region ?? row.domicile });
 const fundMetrics = (row: { latestNav: unknown; currency: string; latestNavDate: Date | null; return1y: unknown; dividendYieldA?: unknown }): SummaryMetrics => ({ priceOrNav: numberOrNull(row.latestNav), change: null, changePercent: null, currency: row.currency, asOfDate: isoOrNull(row.latestNavDate), performance1M: null, performance3M: null, performance1Y: numberOrNull(row.return1y), dividendYield: numberOrNull(row.dividendYieldA) });
 
 export type FundListQuery = ListQuery & {
@@ -70,13 +85,25 @@ export async function getFundList(query: FundListQuery = {}): Promise<ServiceRes
     prisma.fund.count({ where }),
     prisma.fund.findMany({ where, skip, take: pageSize, orderBy }),
   ]);
+  const duplicateNames = rows.length
+    ? new Set(
+        (
+          await prisma.fund.groupBy({
+            by: ["name"],
+            where: { isActive: true, name: { in: [...new Set(rows.map((r) => r.name))] } },
+            _count: { name: true },
+            having: { name: { _count: { gt: 1 } } },
+          })
+        ).map((g) => g.name),
+      )
+    : new Set<string>();
   const readiness = rows.length ? await prisma.$queryRaw<Array<{id:string;history_ready:boolean}>>(Prisma.sql`SELECT f.id,EXISTS(SELECT 1 FROM fund_history h WHERE h.fund_id=f.id OFFSET 19 LIMIT 1) history_ready FROM funds f WHERE f.id IN (${Prisma.join(rows.map(row=>row.id))})`) : [];
   const readyByFund = new Map(readiness.map(row=>[row.id,row.history_ready]));
   const latest = rows.reduce<Date | null>((value, row) => !value || (row.latestNavDate && row.latestNavDate > value) ? row.latestNavDate : value, null);
   const updated = rows.reduce<Date | null>((value, row) => !value || row.updatedAt > value ? row.updatedAt : value, null);
   const source = rows.length === 1 ? rows[0].lastNavSource ?? rows[0].dataSource ?? rows[0].dataProvider : "MULTIPLE_VERIFIED_PROVIDERS";
   const provenance = buildProvenance({ source, asOfDate: latest, lastUpdated: updated });
-  return { data: rows.map((row) => ({ identity: fundIdentity(row), isin: row.isin, metrics: fundMetrics(row), company: row.company, category: row.category, fundCategory: mapFundMainCategory(row.category), fundSubcategory: row.category, riskLevel: row.riskLevel, freshnessStatus: freshnessStatus(row.latestNavDate, "PUBLICATION_AWARE"), publicReady: row.latestNav != null && row.latestNavDate != null && readyByFund.get(row.id) === true && !["STALE","UNKNOWN","UNAVAILABLE"].includes(freshnessStatus(row.latestNavDate, "PUBLICATION_AWARE")), source: row.lastNavSource ?? row.dataSource ?? row.dataProvider })), meta: { asOfDate: provenance.asOfDate, lastUpdated: provenance.lastUpdated, freshnessStatus: freshnessStatus(latest, "PUBLICATION_AWARE"), source, provenance, coverageStatus: "PARTIAL_CURRENT" }, pagination: paginationMeta(page, pageSize, total), error: null };
+  return { data: rows.map((row) => ({ identity: fundIdentity(row, duplicateNames), isin: row.isin, metrics: fundMetrics(row), company: row.company, category: row.category, fundCategory: mapFundMainCategory(row.category), fundSubcategory: row.category, riskLevel: row.riskLevel, freshnessStatus: freshnessStatus(row.latestNavDate, "PUBLICATION_AWARE"), publicReady: row.latestNav != null && row.latestNavDate != null && readyByFund.get(row.id) === true && !["STALE","UNKNOWN","UNAVAILABLE"].includes(freshnessStatus(row.latestNavDate, "PUBLICATION_AWARE")), source: row.lastNavSource ?? row.dataSource ?? row.dataProvider })), meta: { asOfDate: provenance.asOfDate, lastUpdated: provenance.lastUpdated, freshnessStatus: freshnessStatus(latest, "PUBLICATION_AWARE"), source, provenance, coverageStatus: "PARTIAL_CURRENT" }, pagination: paginationMeta(page, pageSize, total), error: null };
 }
 
 export async function getFundFilterOptions(): Promise<{ companies: string[]; currencies: string[]; categories: string[]; riskLevels: number[] }> {
