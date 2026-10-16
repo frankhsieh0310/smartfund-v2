@@ -28,7 +28,7 @@ function mockQuery(impl?: (sql: string, params: any[]) => any[]): { query: Query
   });
 
   test("writeSitcaNavBatch: two queries (fund_history upsert + newer-or-same-date-different-value update)", async () => {
-    const { query, calls } = mockQuery();
+    const { query, calls } = mockQuery((_sql, params) => JSON.parse(params[0] as string).map(() => ({ id: "x" })));
     const r = await writeSitcaNavBatch(query, [{ fundId: "f1", navDate: "2026-10-09", nav: 8.46, matchedBy: "CODE" }], "2026-10-12T00:00:00Z");
     assert.equal(calls.length, 2);
     assert.ok(calls[0].sql.includes("INSERT INTO fund_history"));
@@ -49,7 +49,7 @@ function mockQuery(impl?: (sql: string, params: any[]) => any[]): { query: Query
         firstChunkFailed = true;
         throw new Error("db error on first chunk");
       }
-      return [];
+      return payload ? JSON.parse(payload).map(() => ({ id: "x" })) : [];
     };
     const candidates = Array.from({ length: 600 }, (_, i) => ({ fundId: `f${i}`, navDate: "2026-10-09", nav: 10, matchedBy: "CODE" as const }));
     const r = await writeSitcaNavBatch(query, candidates, "2026-10-12T00:00:00Z");

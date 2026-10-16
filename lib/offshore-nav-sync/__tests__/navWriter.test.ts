@@ -28,7 +28,11 @@ function mockQuery(impl?: (sql: string, params: any[]) => any[]): { query: Query
   });
 
   test("writeOffshoreNavBatch: forward-only date rule, no same-date-different-value clause", async () => {
-    const { query, calls } = mockQuery();
+    // Simulates the real RETURNING f.id -- one row back per candidate the UPDATE actually matched.
+    const { query, calls } = mockQuery((sql, params) => {
+      const payload = JSON.parse(params[0] as string);
+      return payload.map(() => ({ id: "x" }));
+    });
     const r = await writeOffshoreNavBatch(query, [{ fundId: "f1", navDate: "2026-10-09", nav: 8.46 }], "2026-10-12T00:00:00Z");
     assert.equal(calls.length, 2);
     assert.ok(calls[0].sql.includes("INSERT INTO fund_history"));
@@ -47,7 +51,7 @@ function mockQuery(impl?: (sql: string, params: any[]) => any[]): { query: Query
         firstChunkFailed = true;
         throw new Error("db error on first chunk");
       }
-      return [];
+      return payload ? JSON.parse(payload).map(() => ({ id: "x" })) : [];
     };
     const candidates = Array.from({ length: 250 }, (_, i) => ({ fundId: `f${i}`, navDate: "2026-10-09", nav: 10 }));
     const r = await writeOffshoreNavBatch(query, candidates, "2026-10-12T00:00:00Z");

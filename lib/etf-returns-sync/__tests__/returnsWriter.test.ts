@@ -84,7 +84,7 @@ const allNull: TrailingReturns = { r1d: null, r1m: null, r3m: null, r6m: null, r
   });
 
   await test("writeReturnsBatch: an out-of-range field is dropped (null) before the write, reported via droppedFieldCount, row is still written", async () => {
-    const { query, calls } = mockQuery();
+    const { query, calls } = mockQuery(() => [{ x: 1 }]); // simulates the real RETURNING 1 -- one row back per upserted candidate
     const result = await writeReturnsBatch(query, [{ etfId: "a", date: "2026-10-09", returns: { ...allNull, r1m: 1.5, r3y: 999999 } }], "2026-10-11T00:00:00Z");
     assert.equal(result.written, 1);
     assert.equal(result.droppedFieldCount, 1);

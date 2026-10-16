@@ -32,14 +32,18 @@ export async function writeOffshoreNavBatch(query: QueryFn, candidates: Offshore
          WHERE fund_history.nav IS DISTINCT FROM EXCLUDED.nav`,
         [JSON.stringify(payload), nowIso],
       );
-      await query(
+      const updated = await query(
         `UPDATE funds AS f SET
            latest_nav = x.nav, latest_nav_date = x.date::date, nav_updated_at = $2::timestamptz, last_nav_source = 'YAHOO_FUND_PRICE_HISTORY'
          FROM jsonb_to_recordset($1::jsonb) AS x(fund_id text, date text, nav numeric)
-         WHERE f.id = x.fund_id AND (f.latest_nav_date IS NULL OR f.latest_nav_date < x.date::date)`,
+         WHERE f.id = x.fund_id AND (f.latest_nav_date IS NULL OR f.latest_nav_date < x.date::date)
+         RETURNING f.id`,
         [JSON.stringify(payload), nowIso],
       );
-      written += chunk.length;
+      // Count the UPDATE's real affected-row count, not the chunk size -- a chunk can run with zero
+      // exceptions while the forward-only-date WHERE clause matches none of its rows (e.g. every
+      // candidate was already written by an earlier run), and `written` must reflect that honestly.
+      written += updated.length;
     } catch {
       writeErrorCount += chunk.length;
       writeErrorFundIds.push(...chunk.map((c) => c.fundId));
@@ -77,14 +81,15 @@ export async function writeTdccNavBatch(query: QueryFn, candidates: OffshoreNavC
          WHERE fund_history.nav IS DISTINCT FROM EXCLUDED.nav`,
         [JSON.stringify(payload), nowIso],
       );
-      await query(
+      const updated = await query(
         `UPDATE funds AS f SET
            latest_nav = x.nav, latest_nav_date = x.date::date, nav_updated_at = $2::timestamptz, last_nav_source = 'TDCC_OPENDATA_NAV'
          FROM jsonb_to_recordset($1::jsonb) AS x(fund_id text, date text, nav numeric)
-         WHERE f.id = x.fund_id AND (f.latest_nav_date IS NULL OR f.latest_nav_date < x.date::date)`,
+         WHERE f.id = x.fund_id AND (f.latest_nav_date IS NULL OR f.latest_nav_date < x.date::date)
+         RETURNING f.id`,
         [JSON.stringify(payload), nowIso],
       );
-      written += chunk.length;
+      written += updated.length;
     } catch {
       writeErrorCount += chunk.length;
       writeErrorFundIds.push(...chunk.map((c) => c.fundId));
