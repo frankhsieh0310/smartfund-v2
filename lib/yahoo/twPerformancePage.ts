@@ -69,7 +69,11 @@ export class YahooTwRateLimitedError extends Error {
 /** symbol must include the Yahoo suffix, e.g. "0050.TW", "00679B.TWO". */
 export async function fetchYahooTwPerformance(symbol: string): Promise<YahooTwPerformance | null> {
   const url = `https://tw.stock.yahoo.com/quote/${encodeURIComponent(symbol)}/performance`;
-  const res = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" }, signal: AbortSignal.timeout(15_000) });
+  // cache: 'no-store' is explicit, not just implied by the caller route's dynamic="force-dynamic" --
+  // this function's whole reason to exist is to read Yahoo奇摩's CURRENT displayed figure (2026-10-16
+  // writeup: a missing force-dynamic on the caller route let a stale cached response get written as
+  // if fresh), so it must never be silently satisfied by Next.js's Data Cache.
+  const res = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" }, signal: AbortSignal.timeout(15_000), cache: "no-store" });
   if (res.status === 401 || res.status === 403 || res.status === 429) throw new YahooTwRateLimitedError(res.status);
   if (!res.ok) return null;
 

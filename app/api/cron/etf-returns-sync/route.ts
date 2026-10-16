@@ -35,6 +35,19 @@ import {
   resolveWriteDatesBatch, fetchLatestReturn6mBatch, writeEtfsRankingColumnsBatch, type EtfsRankingEntry,
 } from "@/lib/etf-returns-sync/batchHelpers";
 
+// 2026-10-16: this route was missing both of these -- every other cron route in app/api/cron/*
+// declares them explicitly. Without `dynamic = "force-dynamic"`, Next.js's own fetch-patching can
+// apply its Data Cache to the plain `fetch()` calls inside fetchYahooTwPerformance/
+// fetchFundPerformanceRaw, serving a stale cached Yahoo response on some invocations instead of a
+// live one -- the likely explanation for 00980A's etf_performances history showing the exact same
+// return_1y/return_3m/return_ytd triple (110.1164/4.0268/73.7500) recur on five non-consecutive
+// dates (9/11, 9/16, 9/19, 9/27, 10/6) interleaved with genuinely different fresh values on every
+// other date -- a signature of an intermittent stale-cache hit, not two different data sources (no
+// second writer of etfs.return_1y was found anywhere in this repo; checked exhaustively). Without
+// `maxDuration` set, this route also relied on an undocumented platform default that happened to be
+// high enough (observed runs up to 237s succeeded) -- pinning it explicitly removes that guesswork.
+export const dynamic = "force-dynamic";
+export const maxDuration = 280;
 const JOB = "ETF_RETURNS_SYNC";
 const TIME_BUDGET_MS = 240_000;
 const REQUEST_DELAY_MS = 400; // matches the existing Yahoo ETF enrichment pipeline's own pacing
@@ -152,7 +165,7 @@ async function fetchFundPerformanceRaw(symbol: string): Promise<FetchAttemptResu
     try {
       r = await fetch(
         `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(symbol)}?modules=fundPerformance&crumb=${encodeURIComponent(auth.crumb)}`,
-        { headers: { "user-agent": UA, accept: "application/json", cookie: auth.cookie }, signal: AbortSignal.timeout(20_000) },
+        { headers: { "user-agent": UA, accept: "application/json", cookie: auth.cookie }, signal: AbortSignal.timeout(20_000), cache: "no-store" },
       );
     } catch {
       if (attempt < 2) continue;
