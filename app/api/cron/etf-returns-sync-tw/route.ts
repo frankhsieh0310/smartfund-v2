@@ -82,9 +82,38 @@ async function computeTwEligibleIds(): Promise<Set<string>> {
   return new Set(rows.map((r) => r.id));
 }
 
+// 2026-10-16: this route's FIRST real production invocation crashed with an unhandled
+// PrismaClientKnownRequestError (a real param-shape bug in the candidate query, since fixed) before
+// ever reaching finishRun -- leaving its production_scheduler_runs row stuck IN_PROGRESS forever,
+// exactly the same symptom offshore-nav-tdcc-sync's 60s timeout caused, just from a different root
+// cause. The parent route (etf-returns-sync) has the same exposure (no top-level catch), but this is
+// the one that actually hit it today -- wrapping GET so ANY future unexpected error still reaches
+// finishRun with a FAILED status instead of leaving the row stuck until the next hour's staleness
+// TTL takes over.
 export async function GET(request: Request) {
   if (!isAuthorizedCron(request)) return unauthorizedCron();
+  let runIdForErrorHandling: string | null = null;
+  let startedMsForErrorHandling = Date.now();
+  try {
+    return await runSweep(request, (runId, startedMs) => {
+      runIdForErrorHandling = runId;
+      startedMsForErrorHandling = startedMs;
+    });
+  } catch (error) {
+    if (runIdForErrorHandling) {
+      try {
+        await finishRun(runIdForErrorHandling, JOB, "YAHOO_TW_PERFORMANCE_PAGE", startedMsForErrorHandling, {
+          status: "FAILED", attempted: 0, completed: 0, inserted: 0, updated: 0, failed: 0, retryableFailures: 0,
+          checkpointAfter: null, error: error instanceof Error ? error.message : String(error),
+          details: { run_mode: currentRunMode(), crashed: true },
+        });
+      } catch { /* best-effort -- never let the error handler itself throw and mask the real error */ }
+    }
+    throw error;
+  }
+}
 
+async function runSweep(request: Request, onRunStarted: (runId: string, startedMs: number) => void): Promise<Response> {
   const startedMs = Date.now();
   const today = todayLocalDate();
   const writeEnabledThisRun = isWriteEnabled();
@@ -113,6 +142,7 @@ export async function GET(request: Request) {
   if (skipped) {
     return Response.json({ ok: true, job: JOB, skipped: true, reason: "run_key already present this hour", runKey, runMode: currentRunMode() });
   }
+  onRunStarted(runId, startedMs);
 
   if (missingIds.length === 0) {
     await finishRun(runId, JOB, "YAHOO_TW_PERFORMANCE_PAGE", startedMs, {
@@ -131,7 +161,7 @@ export async function GET(request: Request) {
                  THEN (SELECT suf.data_source FROM etfs suf WHERE suf.code = bare.code || '.TW' OR suf.code = bare.code || '.TWO' LIMIT 1)
                  ELSE NULL END AS yahoo_symbol_override
        FROM etfs bare WHERE bare.id = ANY($1::text[])`,
-    [orderedMissing],
+    orderedMissing,
   );
   const rowById = new Map(rows.map((r) => [r.id, r]));
 
