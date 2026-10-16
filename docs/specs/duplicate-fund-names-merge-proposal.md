@@ -36,8 +36,9 @@ DDL／批次 UPDATE 核准。已過 `tsc`／`next build`，並用真實查詢（
 才查到的，你原本不核准 `is_active=false` 的理由（「這些多半是不同級別、不准停用」）是針對不同
 ticker 的情況，不是這 900 組同 ticker 的情況——所以**沒有自動套用**，先列出來讓你決定：
 - 建議：對這 900 組，保留 `updated_at` 最新的一筆、其餘標 `is_active=false`（不刪資料）。
-- 這 900 組的完整清單（name、ticker、各筆 id、updated_at）需要另外產生——目前還沒做，等你核准
-  處理方式後再產生清單＋執行＋SELECT 核對筆數。
+- 完整清單已產生：`docs/specs/duplicate-funds-same-ticker-900-changelist.txt`（2026-10-16 重新查證
+  為 **903 組、1,813 筆**，比最初估計略多，因為是即時查詢、期間有新資料寫入）。清單只列出
+  keep/deactivate 的 id，**尚未執行任何 UPDATE**，等你核准後才會執行＋SELECT 核對筆數。
 
 ## 不執行的項目
 - 沒有對任何一筆執行 `is_active=false` 或刪除。
