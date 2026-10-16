@@ -19,10 +19,12 @@ master 為正式基準分支。新工作一律從最新的 master 開分支；�
 
 **部署規則（使用者 2026-10-16 訂立，之後每次部署一律遵守）**
 - 部署指令固定用：`npx vercel deploy --prod --meta commit=$(git rev-parse HEAD)`（讓每次正式部署都留下對應的 commit SHA，之前用純 `vercel deploy --prod` 的 CLI 部署完全沒有 git metadata，無法回溯比對）。
+- **部署用的 worktree 資料夾不准複製 `.env` 進去**（本機設定不應該跟著部署；正式環境的環境變數只能來自 Vercel dashboard/`vercel env`）。`.env` 本來就被 `.gitignore`（`.env*`）排除，Vercel CLI 部署會依 `.gitignore` 排除上傳，但不要依賴這點——本機複製 worktree 時也不要手動把 `.env` 複製過去，需要本機查資料庫時改用 `--env-file` 之類方式從別處讀，不要讓 `.env` 出現在要拿去部署的資料夾裡。
 - 部署正式環境前，必須先比對「目前正式環境的 commit」與「準備部署的 commit」，列出會被移除的 commit，不是 0 個不准部署；並先用 Preview 部署讓使用者自己在瀏覽器/`vercel curl`確認畫面。
 
-**正式環境狀態（VERIFIED 2026-10-16，commit `58d8d8165`）**
-- 目前 production 部署於 `mcs-release`（見上），alias 到 `www.smartmatchpilot.com` 等。
+**正式環境狀態（VERIFIED 2026-10-16，commit `e0588acec`，部署於 `mcs-final`）**
+- 目前 production 部署於 `mcs-final`，alias 到 `www.smartmatchpilot.com` 等。`STOCK_TECHNICAL_SYNC_WRITE=on` 已由使用者本人新增到 Vercel Production。
+- VERIFIED 無 `.env` 外洩：`.env` 被 `.gitignore`（`.env*`）排除；`app/`、`lib/` 整個程式碼裡沒有任何 `dotenv`／讀取 `.env` 的程式碼（只有 `scripts/` 底下的本機腳本會用 `--env-file`，那些不會被部署）。正式環境執行時的環境變數只可能來自 Vercel 自己注入的 process.env，不可能讀到本機 `.env` 的值。
 - `offshore-nav-tdcc-sync` 2026-10-16 02:31 UTC 排程 VERIFIED 完整跑完且真的寫入了 3,727 筆新資料（`production_scheduler_runs` 該筆 `status=COMPLETED`，`inserted=3727`）。10/15 10:31 那次卡住的紀錄不是「什麼都沒做」，是寫了 7 筆後被舊的 60 秒逾時砍斷——這點一度被我誤判成「未經授權的本機寫入」，後來查證是我自己本機診斷腳本的時區顯示錯誤（見下），已撤回更正。
 
 **本機診斷腳本的時區陷阱（務必遵守，不要重新調查一次）**
