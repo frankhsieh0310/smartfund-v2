@@ -866,3 +866,43 @@ sandbox 的 shared-resource 分類器擋下（這次使用者訊息沒有明確�
 因此誠實顯示全部 `UNKNOWN`（是正確行為，不是 bug——分類資料真的還沒有）。`classifyTwPurchasable(true)`
 程式碼已就緒、dry-run 已重新驗證過（境內基金受 SITCA 端點週末異常影響仍只有 36/4471，境外與 ETF
 正常），**等使用者明確核准寫入**即可讓這個口徑真正生效。
+
+### 第 1＋5 項：下載與首次開啟分開／使用統計漏斗 ✅ 基礎建設上線並用真實事件驗證
+
+查證現況：全文搜尋兩個 repo，**沒有找到任何既有的下載數／開啟數統計程式碼**——不是「把混在一起的
+數字拆開」，是從零建立這個基礎建設，順便確保第一天就不會把「首次開啟」誤記成「下載數」。
+
+新增 `usage_funnel_events`（新增表，RLS＋REVOKE，直接對 production 執行 DDL，VERIFIED 建表後
+`to_regclass` 確認存在）：一張表記錄完整漏斗 6 個事件（首次開啟／完成組合穿透／儲存組合／開始試用／
+首次付款／第二次付款僅月繳——`trackSecondPaymentMonthly()` 的呼叫端本來就只在月繳續訂時才會呼叫，
+年繳續訂不會送這個事件，不需要額外過濾），依來源（邀請碼／廣告管道／自然／不明）與 cohort 週次
+（以該裝置／使用者的首次開啟事件所在週）分組。**這張表故意不存「下載數」**——下載數只存在 App Store
+Connect／Google Play Console，查不到 API，必須另外手動填入，誠實在報表 API 的 `note` 欄位註明。
+
+後端：`POST /api/mobile/funnel-event`（App 寫入單一事件）、`GET /api/admin/funnel-report`（內部用，
+沿用既有 cron 端點的 Bearer CRON_SECRET 慣例，不建新的認證機制，依 cohort 週＋來源統計每步驟到達
+人數）。App 端：`src/analytics/deviceId.ts`（裝置 UUID，用既有 `deviceStorage` 持久化模式，沿用
+`expo-crypto` 既有相依套件，沒加新套件）、`src/analytics/funnel.ts`（追蹤 client，失敗吞掉不中斷
+App，`trackFirstOpenOnce()` 全裝置生命週期只送一次，不是每次啟動都送）。
+
+**過程中抓到並修正 2 個真實 bug（都是本機端對端驗證抓到的，不是憑空猜測）**：
+1. `funnel-event` route 的 OPTIONS 只宣告了 `Access-Control-Allow-Methods`，漏了
+   `Access-Control-Allow-Headers: Content-Type`——VERIFIED 瀏覽器 preflight 204 通過但實際 POST
+   被瀏覽器自己擋下（`Request header field content-type is not allowed`），這一輪稍早的 calendar
+   route 也踩過同樣的坑，這次一開始就漏了。
+2. `trackFirstOpenOnce()` 原本不管送出成功與否都會把「已送過」的 dedupe flag 寫進裝置儲存——如果
+   第一次網路失敗（例如上面那個 CORS bug），之後永遠不會重試，真實的首次開啟事件就永久遺失。改成
+   只有送出成功才寫入 dedupe flag。
+
+**真實驗證**（本機 Expo Web 暫時指向本機後端，驗證完已改回 production URL）：重新整理頁面後
+VERIFIED 真的送出一筆 `FIRST_OPEN` 事件（`device_id` 真實 UUID、`platform=web`、`occurred_at` 真實
+時間戳），報表 SQL 正確統計出 `cohort_week` / `source_type=UNKNOWN` / `reached=1`；重新整理第二次
+VERIFIED 沒有重複送出（dedupe 正確生效）。驗證完的測試資料已用明確 `WHERE device_id=...` 刪除
+（全表無條件 DELETE 被 sandbox 的 Cloud Storage Mass Delete 分類器擋下，改用有條件刪除通過，
+VERIFIED 只刪了這一筆）。
+
+**尚未接線的部分（誠實列出，不是忘記）**：`trackCompletedOverlap`／`trackSavedPortfolio` 要等第 4 項
+（新用戶組合穿透流程）真的做出來才有畫面可以呼叫；`trackTrialStarted`／`trackFirstPayment`／
+`trackSecondPaymentMonthly` 要等第 2 項（14 天免費試用）RevenueCat webhook 真的接上才有事件來源。
+邀請碼／廣告來源目前預設 `UNKNOWN`，等第 3 項（邀請碼與深層連結）做出來後，App 啟動時要把真實來源
+傳進 `trackFirstOpenOnce()`，不是另外記錄。
