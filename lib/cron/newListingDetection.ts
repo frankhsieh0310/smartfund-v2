@@ -100,9 +100,24 @@ export async function fetchOfficialEtfList(exchange: "TWSE" | "TPEx"): Promise<O
   return rows;
 }
 
+// 2026-10-17: TWSE/TPEx's official 基金簡稱 for every actively-managed ETF (a product category Taiwan
+// started approving in 2026) is prefixed "主動" (e.g. "主動復華全球50") -- that prefix is a category
+// label, not part of any issuer's brand, so taking the first 2 characters of the raw name as the
+// brand always produced "主動" and never matched an existing provider. VERIFIED live (2026-10-17):
+// stripping this one known, official prefix and re-slicing resolves a unique existing provider for
+// every one of today's 5 affected new listings (復華/永豐/安聯/統一/統一). Deliberately NOT adding a
+// broader brand-nickname alias table (e.g. "中信" -> "中國信託") here -- that would risk a wrong match
+// for some other issuer's genuine 2-character brand down the line; only this one disclosed, official,
+// structural prefix is stripped.
+const NON_BRAND_NAME_PREFIXES = ["主動"];
+
 /** Brand-prefix match against existing providers already in the DB — a lookup, not a guess. */
 async function resolveProviderByBrand(shortName: string): Promise<string | null> {
-  const brand = shortName.slice(0, 2);
+  let name = shortName;
+  for (const prefix of NON_BRAND_NAME_PREFIXES) {
+    if (name.startsWith(prefix)) { name = name.slice(prefix.length); break; }
+  }
+  const brand = name.slice(0, 2);
   if (!brand) return null;
   const providers = await prisma.etf.findMany({ where: { provider: { contains: brand } }, select: { provider: true }, distinct: ["provider"] });
   const unique = Array.from(new Set(providers.map((p) => p.provider)));
