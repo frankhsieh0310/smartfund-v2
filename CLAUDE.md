@@ -22,6 +22,7 @@ master 為正式基準分支。新工作一律從最新的 master 開分支；�
 - 部署指令固定用：`npx vercel deploy --prod --meta commit=$(git rev-parse HEAD)`（讓每次正式部署都留下對應的 commit SHA，之前用純 `vercel deploy --prod` 的 CLI 部署完全沒有 git metadata，無法回溯比對）。
 - **部署用的 worktree 資料夾不准複製 `.env` 進去**（本機設定不應該跟著部署；正式環境的環境變數只能來自 Vercel dashboard/`vercel env`）。`.env` 本來就被 `.gitignore`（`.env*`）排除，Vercel CLI 部署會依 `.gitignore` 排除上傳，但不要依賴這點——本機複製 worktree 時也不要手動把 `.env` 複製過去，需要本機查資料庫時改用 `--env-file` 之類方式從別處讀，不要讓 `.env` 出現在要拿去部署的資料夾裡。
 - 部署正式環境前，必須先比對「目前正式環境的 commit」與「準備部署的 commit」，列出會被移除的 commit，不是 0 個不准部署；並先用 Preview 部署讓使用者自己在瀏覽器/`vercel curl`確認畫面。
+- **建立或刪除 Vercel 專案、變更專案設定，一律先問使用者，不准自己決定執行**（2026-10-16 訂立：`vercel link` 不帶 `--project` 時會自動用當前目錄名建立一個全新專案，曾意外建出一個空的 `mcs-final2` 專案，雖然已刪除且沒有造成影響，但刪除專案這類指令如果打錯目標後果嚴重）。`vercel link` 一律要明確指到既有的 `smartfund-v2` 專案（`.vercel/project.json` 直接寫入 `projectId: prj_1KrCMg3BVSPuYqqmigFVksTn1Xa0`, `orgId: team_D42Dk8aVzncrm2MAPDeJ25i3`），不要讓 CLI 自動互動建立。
 
 **正式環境狀態（VERIFIED 2026-10-16，commit `e0588acec`，部署於 `mcs-final`）**
 - 目前 production 部署於 `mcs-final`，alias 到 `www.smartmatchpilot.com` 等。`STOCK_TECHNICAL_SYNC_WRITE=on` 已由使用者本人新增到 Vercel Production。
@@ -33,25 +34,27 @@ master 為正式基準分支。新工作一律從最新的 master 開分支；�
 - 之後任何本機腳本要查 `timestamp without time zone` 欄位，一律在 SQL 裡用 `col AT TIME ZONE 'UTC'` 或 `extract(epoch from col)` 明確轉換後再比較/顯示，不要直接信任 `pg` 套件吐回來的 JS Date 字面值。
 - Production 本身跑在 Vercel（預設 UTC），且 Prisma Client 的型別化查詢不受此問題影響；只有本機用 `pg` 套件直連才會踩到。
 
-**`etf-returns-sync-tw` 自己造成的生產環境 bug — 已修好，已在 `mcs-final2` 完成 Preview 驗證，待使用者部署**
-- 這個新路由的第一次正式環境排程執行（2026-10-16T14:30:22.995Z，run id `343816ef-65f2-4b7d-94e7-22780339dab6`）在開始後約 2 秒就當掉：`prisma.$queryRawUnsafe(sql, [orderedMissing])` 把陣列多包了一層，Prisma 回報 `Couldn't serialize value 'Some([])' into a 'text'`。已修正為 `prisma.$queryRawUnsafe(sql, orderedMissing)`（跟 parent route 寫法一致），並加上整個 `GET` 的 try/catch，確保未來任何未預期錯誤都會呼叫 `finishRun(status: "FAILED")`。
-- `fix/qa-round1` 上的 commit `338f594f8`。使用者要求照完整流程重走一次：
-  1. 新乾淨 worktree `mcs-final2` = `e0588acec`（目前正式環境） + cherry-pick `338f594f8`（新 SHA `7bcaa87a3`），無其他後續 commit，沒有複製 `.env`。
-  2. 本機「只抓不寫 DB」dry-run：真實執行 `TW_ELIGIBLE_SQL_CONDITION` 選標（90 檔候選）＋真實呼叫 `fetchYahooTwPerformance()` 抓 3 檔（00403A/00408A/006204），用瀏覽器開 Yahoo奇摩「006204.TW/performance」頁面逐欄核對，cron 實際會寫入的 7 個欄位（m1/m3/m6/ytd/y1/y3/y5）**全部完全吻合**。
-  3. `git merge-base --is-ancestor e0588acec HEAD` 確認 0 個 commit 被移除；`npx tsc --noEmit`、`npx next build` 都 0 錯誤；Preview 部署 `smartfund-v2-asguvddh0-frankhsieh0310s-projects.vercel.app`，`vercel curl` 確認首頁 200、`bond-holders` 端點正常回應。
-  4. audit 了這次部署（`58d8d8165..e0588acec`）全部 20 個變更檔案裡每一個 `queryRawUnsafe`/`executeRawUnsafe` 呼叫的參數寫法，只有這一處有陣列多包一層的問題，其餘都正確（包含 `rankings/performance` 用 `...(arr.length ? [arr] : [])` 的正確 spread 寫法）。
-  5. 那筆卡住的 `IN_PROGRESS` 紀錄：beginRun 的 `ON CONFLICT...WHERE started_at < now() - 360s` 本身就會在下個排程週期自動接管，不會真的卡死，所以沒有手動更新任何一筆（使用者的核准是「如果會擋」才動，查證後不需要）。
-- **部署指令（待使用者執行）**：`cd` 到 `mcs-final2`，`npx vercel deploy --prod --meta commit=$(git rev-parse HEAD)`（HEAD = `7bcaa87a3`）。
-- 意外副作用並已清理：`vercel link` 第一次誤建了一個全新、空的 Vercel 專案 `mcs-final2`（跟 GitHub repo 建立了連結但沒有任何部署或密鑰），已用 `vercel project rm` 刪除，重新手動指向正確的 `smartfund-v2` 專案。
+**`etf-returns-sync-tw` 自己造成的生產環境 bug — 已修好，已部署，已 VERIFIED 恢復正常**
+- 根因與修正過程見下方 git log／`docs/specs` 記錄；commit `338f594f8`（cherry-pick 後新 SHA `7bcaa87a3`）。
+- **2026-10-17 使用者已從 `mcs-final2` 部署 `7bcaa87a3` 到正式環境**（部署時間 2026-10-17T04:55:05Z，`vercel inspect` 的 `meta.commit` VERIFIED 確實是 `7bcaa87a3`，alias 到 `www.smartmatchpilot.com`）。
+- **VERIFIED 修正生效**：部署前每小時（2026-10-16T20:45 起連續 9 小時）都卡在 `IN_PROGRESS`／`attempted=0`／`error=null`（舊 bug 的當機迴圈）。部署後第一次排程執行（2026-10-17T05:00:23Z）**正常跑完**：`status=PARTIAL`（命中 260 秒時間預算，這是正常的 steady-state，不是錯誤）、`attempted=65`、`inserted=65`、`error=null`、`core_universe_size=448`。當機迴圈已停止。
+- 部署前 9 筆卡在 `IN_PROGRESS` 的舊紀錄（20:45~04:45 每小時各一筆）不會再被接管（每小時用不同的 `run_key`），但也不會再擋到任何後續執行，不需要手動處理。
+- 意外副作用並已清理：`vercel link` 第一次誤建了一個全新、空的 Vercel 專案 `mcs-final2`（跟 GitHub repo 建立了連結但沒有任何部署或密鑰），已用 `vercel project rm` 刪除，重新手動指向正確的 `smartfund-v2` 專案。**新規則（見上「部署規則」）：之後建立/刪除 Vercel 專案或變更專案設定一律先問使用者。**
 
-**903 組同 ticker 真重複 — 已完成關聯資料查核，836 組已執行，67 組待人工決定**
-- 詳情與執行結果見 `docs/specs/duplicate-fund-names-merge-proposal.md`「900 組」章節；查核資料在 `docs/specs/duplicate-funds-relation-audit.json`。
-- 836 組（841 筆）無關聯資料落差，已 `is_active=false`（執行前後 SELECT 確認 841→0 active，`funds` 總筆數不變）。
-- 67 組有關聯資料落差（候選停用的那筆被其他 ETF/母子基金結構引用），**未執行**，清單在 `docs/specs/duplicate-funds-needs-review-67.txt`，等使用者決定。
-- 確認 0 組涉及真實使用者 `watchlist_items`。搜尋／反查都用 `isActive`/`is_active` 過濾，確認停用後不會消失保留的那筆、重複的那筆也不會再出現（抽樣 6 組覆查）。
+**903 組同 ticker 真重複 — 全部處理完畢（903 組裡 881 組已執行，剩 3 組待你決定）**
+- 詳情與執行結果見 `docs/specs/duplicate-fund-names-merge-proposal.md`；查核資料在 `docs/specs/duplicate-funds-relation-audit.json`、`docs/specs/duplicate-funds-67-resolution.txt`。
+- 836 組（841 筆）無關聯資料落差，已 `is_active=false`（執行前後 SELECT 確認 841→0 active）。
+- 67 組有關聯資料落差，依 2026-10-17 核准規則處理：
+  - 64 組是持股資料（`holdings`／`holdings_by_master`）落差，符合規則範圍：45 組只有一筆被引用，已
+    `is_active=false`（保留被引用那筆，執行前後 SELECT 確認 45→0 active，抽 3 組覆查反查結果正常，
+    保留的基金都還能正確 JOIN 到自己的 holdings）；0 組是「兩筆都被引用」要列清單的情形。
+  - **3 組不屬於這次規則範圍**（是 `fund_distribution_observations`／`fund_risk_metrics` 的落差，不是
+    持股資料），維持原樣未執行，清單在 `duplicate-funds-67-resolution.txt` 最後一節，等你決定。
+- 累計已執行 886 筆 `is_active=false`（841+45），確認 0 組涉及真實使用者 `watchlist_items`，搜尋／
+  反查都用 `isActive`/`is_active` 過濾，重複不會再出現、保留的基金也不會消失。
 
 **待核准，尚未執行**
-- 67 組同 ticker 真重複的關聯資料落差案例（見上）。
+- 3 組「持股資料以外」的關聯落差案例（見上）。
 - 204 筆 MoneyDJ 重複基金合併方案（`docs/specs/moneydj-312-mapping-findings.md`）。
 - 剩餘 ~95 筆真正缺 mapping 的 MoneyDJ 基金，目前兩種提議方法都已確認不可行，待重新研究。
 

@@ -50,13 +50,27 @@ DDL／批次 UPDATE 核准。已過 `tsc`／`next build`，並用真實查詢（
   - 搜尋／反查都用 `isActive: true` 過濾（`lib/data-platform/web/fundService.ts` 的 `getFundList`、
     `app/api/screener/bond-holders/route.ts` 的 `f.is_active` 等），確認停用後不會在搜尋結果裡消失
     保留的那一筆，重複的那筆也不會再出現。
-- **67 組有關聯資料落差，未執行，待你決定**：被停用候選在 `holdings` 或 `holdings_by_master` 表有
-  資料，但保留候選完全沒有——代表這筆基金本身被某個 ETF／母子基金結構當作持股引用，停用前要先確認
-  那筆引用關係要不要一起處理。清單：`docs/specs/duplicate-funds-needs-review-67.txt`。
+- **67 組有關聯資料落差 — 已依 2026-10-17 核准規則處理完畢**：規則是「只有一筆被
+  `holdings`／`holdings_by_master` 引用 → 保留被引用那筆，其餘停用；兩筆（或全部）都被引用 → 全部
+  保留，不動，列清單」。完整結果：`docs/specs/duplicate-funds-67-resolution.txt`。
+  - 其中 64 組是因為 `holdings`／`holdings_by_master` 的落差被標記，屬於這次規則覆蓋的範圍：
+    - **45 組（45 筆）只有一筆被引用，已執行** `is_active=false`（保留被引用那筆）。執行前 SELECT
+      確認 45 筆全為 active，UPDATE rowCount=45，執行後 0 筆為 active；保留的 46 筆（1 組是 3 筆候選
+      裡 2 筆都被引用）全部仍為 active。抽 3 組覆查：保留的基金（`holdings` 外鍵）仍完整可 JOIN，
+      筆數不變，沒有任何基金消失。
+      - 其中多組（例如 `American Beacon Stephens Mid-Cap Gr A`/`SMFAX`）保留的 id 跟原本「關聯資料
+        總分最高」會選出的不一樣——分數較高的那筆其實完全沒有 `holdings` 引用，真正被引用的是另一
+        筆，證實這次改用「持股引用」為準是對的。
+      - 這 45 組都是「只有一筆被引用」的情況；沒有出現「兩筆都被引用」需要列清單給你的情形。
+    - 0 組是「兩筆（或以上）都被持股資料引用」的情形。
+  - **3 組不屬於本次規則範圍**：這 3 組是因為 `fund_distribution_observations`／`fund_risk_metrics`
+    的落差被標記，不是「持股資料」（你的指示明確寫「持股資料（holdings／holdings_by_master）」），
+    所以**維持原樣，沒有執行任何動作**，清單在 `duplicate-funds-67-resolution.txt` 最後一節，等你決定
+    這 3 組要不要另外處理。
   （舊版純用 `updated_at` 的清單 `docs/specs/duplicate-funds-same-ticker-900-changelist.txt` 已標註
   過期，不要用那份。）
 
 ## 不執行的項目
-- 67 組「有關聯資料落差」的候選，沒有執行任何 `is_active=false`，等你決定後再處理。
+- 3 組「持股資料以外的關聯落差」（`fund_distribution_observations`／`fund_risk_metrics`），沒有執行
+  任何 `is_active=false`，等你決定後再處理。
 - 沒有對任何一筆執行 DELETE。
-- 900 組同 ticker 真重複的處理方式，待你核准。
