@@ -284,6 +284,7 @@
   },
   "dependencies": {
     "@opentelemetry/api": "^1.9.1",
+    "@revenuecat/purchases-js": "^1.71.0",
     "@sparticuz/chromium": "^153.0.0",
     "@supabase/ssr": "^0.12.0",
     "@supabase/supabase-js": "^2.108.2",
