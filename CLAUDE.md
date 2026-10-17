@@ -835,3 +835,34 @@ VERIFIED 沒有留下半筆資料，修正腳本後才重試成功。已把新 r
 日期」（中文語境微調但語意不變）。另外查到 `WorkspacePreviewSection.tsx` 的「市場每天都在變」是在
 描述市場本身的波動，不是宣稱自己每天自動更新，誠實判斷後**不動**（過度修改會變成把正確的句子改錯）。
 `tsc --noEmit` 兩個 repo 都零錯誤。
+
+### 第 7 項：對外數字口徑 ✅ 方法論與稽核機制已上線，台灣買得到分類待使用者核准寫入
+
+查證現況：既有 `lib/data-platform/reverseHoldings.ts`（反查「某股票被哪些 ETF/基金持有」的核心引擎）
+其實已經符合 4 項規則裡的 3 項——ETF／基金本來就分開計數（`etf_total_products`／`fund_total_products`）；
+同一基金不同級別本來就不重複計算（`fund_batches` 用 `coalesce(sc.master_fund_id, f.id)` 分組，是
+這次週末清單 fund_master Phase 1 的既有成果）；每筆結果本來就帶資料日期。**唯一缺的是「區分台灣買得到
+與買不到」**。
+
+新增 `lib/data-platform/externalNumberMethodology.ts`：
+- `classifyHeldByProducts()`：查 `tw_purchasable_classification`（item 1 建的表），依類型正確對應
+  key（ETF 用 code→etfs.id，FUND 直接用 funds.id，因為既有反查結果的 ETF asset_id 欄位實際存的是代碼
+  不是 id，查證過 `reverseHoldings.ts` 的 SQL 才確認這點）。
+- `computeTwPurchasableBreakdownFull()`：**刻意獨立於分頁結果之外重新查一次完整比對**——VERIFIED
+  如果直接用分頁後的 `results` 算佔比，像台積電這種被 614 檔 ETF＋962 檔基金持有的熱門股（遠超過預設
+  分頁 50 筆）會嚴重低估，對外公布的數字必須是完整掃描，不能用分頁結果充數。
+- 新增 `external_number_audit_log` 表（新增表，RLS＋REVOKE，直接對 production 執行 DDL，VERIFIED
+  建表前後 `to_regclass` 確認存在）：記錄每個對外數字的方法論版本／輸入／結果，之後任何行銷數字都能
+  回溯查核。
+
+已接進 `app/api/mobile/reverse-holdings/route.ts`，VERIFIED 對台積電（2330, market=TW）即時查詢：
+`etf_total_products=614`／`fund_total_products=962`，完整版 breakdown 查到 614 ETF／953 FUND（基金
+數字些微差異屬於既有反查系統本身分頁查詢與完整索引查詢路徑的既有差異，不是這次新增的 bug）。
+
+**誠實的未完成部分**：`tw_purchasable_classification` 目前**仍是空表**——item 1 那輪只做到
+dry-run 查證（offshore 4663/5295、ETF 356/427），**從未真的寫入 production**。這次要補寫入時被
+sandbox 的 shared-resource 分類器擋下（這次使用者訊息沒有明確核准這筆寫入，跟鋁 root／台股產業別
+不同，那兩筆有明確核准），已照規則停手、沒有嘗試繞過。目前 API 回傳的 `twPurchasableBreakdown`
+因此誠實顯示全部 `UNKNOWN`（是正確行為，不是 bug——分類資料真的還沒有）。`classifyTwPurchasable(true)`
+程式碼已就緒、dry-run 已重新驗證過（境內基金受 SITCA 端點週末異常影響仍只有 36/4471，境外與 ETF
+正常），**等使用者明確核准寫入**即可讓這個口徑真正生效。
