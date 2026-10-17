@@ -23,6 +23,7 @@
 // "官方來源才可引用" requirement, so neither is implemented here.
 
 import { prisma } from "@/lib/prisma";
+import { fetchYahooTwPerformance } from "@/lib/yahoo/twPerformancePage";
 
 export type OfficialEtfRow = {
   exchange: "TWSE" | "TPEx";
@@ -108,6 +109,25 @@ async function resolveProviderByBrand(shortName: string): Promise<string | null>
   return unique.length === 1 ? unique[0] : null;
 }
 
+// 2026-10-17: root-cause fix for 7 ETFs (009825/6/7/9, 00990B/1B/2B) that got auto-provisioned here
+// with data_source left NULL, silently excluding them from market-close-sync, etf-returns-sync,
+// stock/technical, holdings and dividend pipelines (every one of those gates its universe on
+// `data_source IS NOT NULL` / the `\.(TW|TWO)$` suffix regex in twUniverse.ts) until a human noticed
+// via daily-health-report's ETF_DATA_SOURCE_GAP check. The suffix convention (TWSE -> .TW, TPEx ->
+// .TWO) matches every other TW ETF's data_source in this table. Verified against the real Yahoo
+// fetch function rather than trusted blindly -- if the guessed symbol doesn't actually resolve, leave
+// data_source NULL so the health-report gap check still catches it for manual attention, instead of
+// writing a plausible-looking but wrong value.
+async function resolveTwDataSource(code: string, exchange: "TWSE" | "TPEx"): Promise<string | null> {
+  const candidate = `${code}${exchange === "TPEx" ? ".TWO" : ".TW"}`;
+  try {
+    const perf = await fetchYahooTwPerformance(candidate);
+    return perf ? candidate : null;
+  } catch {
+    return null;
+  }
+}
+
 // How far back a 上市日期 can be and still count as a genuine "new listing" rather than a
 // pre-existing ETF our own `etfs` table simply never onboarded. Confirmed via a real dry-run
 // (2026-10-15) against production: WITHOUT this filter, 65 decades-old-to-years-old ETFs (e.g.
@@ -157,6 +177,7 @@ export async function detectNewListings(writeEnabled: boolean): Promise<NewListi
       result.loggedOnly.push({ code: row.code, reason: "provider 無法從既有資料唯一比對，待人工建檔" });
       continue;
     }
+    const dataSource = await resolveTwDataSource(row.code, row.exchange);
     const created = await prisma.etf.create({
       data: {
         code: row.code,
@@ -166,9 +187,13 @@ export async function detectNewListings(writeEnabled: boolean): Promise<NewListi
         currency: "TWD",
         isActive: true,
         inceptionDate: row.establishedAt ?? undefined,
+        dataSource: dataSource ?? undefined,
       },
       select: { id: true },
     });
+    if (!dataSource) {
+      result.loggedOnly.push({ code: row.code, reason: "data_source 無法從 Yahoo 驗證對應代碼，已建立商品但待人工補上，daily-health-report 會持續列出" });
+    }
     await prisma.$executeRawUnsafe(
       `UPDATE product_listing_events SET product_id = $1, updated_at = now()
        WHERE product_type = 'ETF' AND code = $2 AND event_type = 'NEW_LISTING' AND source = $3`,

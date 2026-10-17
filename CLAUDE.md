@@ -27,6 +27,16 @@ master 為正式基準分支。新工作一律從最新的 master 開分支；�
 - **部署來源統一（2026-10-17 訂立）**：`smartmatchpilot.com` 正式環境以後只從這邊的 `fix/qa-round1` 部署。另一個工作階段（台股拼圖 App）如果直接改了這個網站的程式碼並自己部署，那個分支要先合併進 `fix/qa-round1`，再從乾淨的 worktree 部署，不准直接從別的分支部署正式環境。
   - **已查證（2026-10-17）**：用 `vercel ls --prod` 比對最近 20 次正式部署的 `meta.commit`，台股那邊確實自己部署過 2 次——`dpl_56HJ8Nf1YuE6TuAwk4TgjambicVN`（commit `34505f12e`，2026-10-16T14:53）跟 `dpl_DDU6h8K5qWkomx1MkdMibj4NAY5t`（commit `c504d180a`，2026-10-17T05:05，即造成本次 404 的那次）。VERIFIED 兩次的程式碼改動都已經在 `fix/qa-round1` 裡：`c504d180a` 連同 `3a7513481` 已直接合併進來；`34505f12e` 雖然不是目前 HEAD 的祖先（是 cherry-pick 關係，commit hash 不同），但用 `git diff 34505f12e HEAD -- app/twpuzzle/ components/twpuzzle/` 確認檔案內容逐字相同，不需要再處理。其他 18 次部署的 commit 都能在 `fix/qa-round1` 的 git log 裡對上，不是外部分支。
 
+**批次 UPDATE 預先核准範圍（使用者 2026-10-17 訂立，之後同類型修正不用再問）**
+- **新上市商品補 `data_source` 或代號對應**，只要已經用正式環境實際會呼叫的抓取函式（例如
+  `fetchYahooTwPerformance`）實測驗證過能抓到真實資料，才算符合這項預先核准；可以直接執行，不用先
+  問，事後在報告裡列出受影響的筆數跟代碼即可。
+- 除了上面這一類，**其他所有批次 UPDATE（is_active 停用、資料合併等）仍然要先問使用者核准**，這項
+  沒有放寬。
+- 起因：2026-10-17 發現 `lib/cron/newListingDetection.ts` 自動建立新上市 ETF 時從沒設定
+  `data_source`，造成新商品完全掉出所有下游管線（見 `docs/specs/2026-10-17-new-listing-datasource-rootcause-fix.md`）；已修好根因（建檔時用 Yahoo 即時驗證並寫入
+  `data_source`），並用 7 檔以外的 5 檔近期上市 ETF 驗證推算邏輯跟實際資料完全一致。
+
 **正式環境狀態（VERIFIED 2026-10-16，commit `e0588acec`，部署於 `mcs-final`）**
 - 目前 production 部署於 `mcs-final`，alias 到 `www.smartmatchpilot.com` 等。`STOCK_TECHNICAL_SYNC_WRITE=on` 已由使用者本人新增到 Vercel Production。
 - VERIFIED 無 `.env` 外洩：`.env` 被 `.gitignore`（`.env*`）排除；`app/`、`lib/` 整個程式碼裡沒有任何 `dotenv`／讀取 `.env` 的程式碼（只有 `scripts/` 底下的本機腳本會用 `--env-file`，那些不會被部署）。正式環境執行時的環境變數只可能來自 Vercel 自己注入的 process.env，不可能讀到本機 `.env` 的值。
@@ -96,7 +106,7 @@ master 為正式基準分支。新工作一律從最新的 master 開分支；�
 | 9 | 基金／ETF 比較 | ✅ 完成 | 使用者核准：算達標。已在「組合穿透」（首頁卡進入的頁面）加一個「基金／ETF 比較」入口，首頁六張卡維持不動 |
 | 10 | 標的詳情頁＋技術分析（6 類） | ✅ 完成（程式碼層級） | 共用同一條詳情頁路由＋技術分析頁，依 assetType／category 分流涵蓋台股 ETF／海外 ETF／境內基金／境外基金／債券 ETF／商品；COMMODITY 技術指標是本輪才修好的；6 類底層資料本身是否每類都有完整歷史資料，本次稽核沒有逐類查 DB 驗證 |
 | 11 | 新商品上架 | ✅ 完成（已修正） | 原本「即將上架」查無資料時仍顯示空區塊標題，違反「查無來源則隱藏」規則，已修正為整個分區隱藏 |
-| 12 | 資料完整度 | ⚠️ 部分（已大幅推進） | 重名基金顯示層已修；903 組同 ticker 真重複：全部 903 組已處理完畢（886 筆 `is_active=false`：841+45；20 組/筆互有對方沒有的關聯資料，全部保留不動，無待決）；MoneyDJ 123 筆完全同名重複全部處理完畢（101 筆已 `is_active=false`，22 筆互有關聯資料全部保留不動）；MoneyDJ 剩餘 82 筆（名稱寫法差異）＋約 95 筆真缺對照仍待處理；今天 daily-health-report 發現 7 檔新上市 ETF 缺 `data_source`，已查證對照代碼待核准執行（見 `docs/specs/2026-10-17-daily-health-report-review.md`）；英文名基金清理沒有獨立處理 |
+| 12 | 資料完整度 | ⚠️ 部分（已大幅推進） | 重名基金顯示層已修；903 組同 ticker 真重複：全部 903 組已處理完畢（886 筆 `is_active=false`：841+45；20 組/筆互有對方沒有的關聯資料，全部保留不動，無待決）；MoneyDJ 123 筆完全同名重複全部處理完畢（101 筆已 `is_active=false`，22 筆互有關聯資料全部保留不動）；MoneyDJ 剩餘 82 筆（名稱寫法差異）＋約 95 筆真缺對照仍待處理；今天 daily-health-report 發現 7 檔新上市 ETF 缺 `data_source`，已核准並執行補值（執行前後 SELECT 確認剛好 7 筆），根因（`newListingDetection.ts` 建檔時從沒設定這欄）已修好並用 5 檔額外的近期上市 ETF 驗證邏輯正確；英文名基金清理沒有獨立處理 |
 | 13 | 3 個交易日乾淨 | ❌ 計時未開始 | 已部署（`e0588acec`）；使用者指示從 2026-10-19（週一）起算三個交易日 |
 | 14 | Google 登入＋帳號刪除 | ⚠️ 部分 | Google 登入正式環境可用；`DELETE /api/me` 已部署；端對端實測卡在「公開註冊需 email 確認」，已準備 PowerShell 腳本（`scratch/claude-account-delete-flow-test.ps1`）待使用者貼金鑰執行 |
 | 15 | 配息提醒引擎 | ❌ 未做 | 只有 CRUD API（`watchlistAlertRule`）＋App UI，完全沒有任何排程會去讀規則、評估條件、觸發通知——這部分等於從零開始 |

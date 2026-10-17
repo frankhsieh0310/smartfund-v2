@@ -1,0 +1,10 @@
+# 2026-10-17 核准：7 檔新上市 ETF 補 data_source -- 執行清單
+# 核准來源：使用者 2026-10-17 訊息，核准 docs/specs/2026-10-17-daily-health-report-review.md 的提案
+
+009825 -> data_source=009825.TWO
+009826 -> data_source=009826.TW
+009827 -> data_source=009827.TW
+009829 -> data_source=009829.TW
+00990B -> data_source=00990B.TWO
+00991B -> data_source=00991B.TW
+00992B -> data_source=00992B.TWO

@@ -21,13 +21,13 @@
   `market-close-sync` 的核心清單排除，完全沒有股價/報酬率/技術指標更新。**這是真的、現在還存在的
   缺口，需要修**，詳見下方。
 
-## 待核准：7 檔新上市 ETF 補 `data_source`（批次異動，需核准）
+## 2026-10-17 已核准並執行：7 檔新上市 ETF 補 `data_source`
 查證結果：這 7 檔都是 2026-10-15 被新上市偵測管線寫進資料庫的真實、目前仍在交易的 ETF（都有近期
 `latest_price`），但當時沒有同步設定 `data_source`（Yahoo 對照代碼），導致被 `market-close-sync`
 核心清單排除。已用正式環境會呼叫的同一個函式（`fetchYahooTwPerformance`）實際查證下列 7 個對照
 代碼全部有效、查得到真實績效資料（不是猜的）：
 
-| code | exchange | 建議 data_source |
+| code | exchange | data_source（已寫入） |
 |---|---|---|
 | 009825 | TPEx | `009825.TWO` |
 | 009826 | TWSE | `009826.TW` |
@@ -38,6 +38,15 @@
 | 00992B | TPEx | `00992B.TWO` |
 
 對應關係依既有慣例（TWSE→`.TW`、TPEx→`.TWO`，跟同批號其他 ETF 如 00900-00910 一致）。只設定
-`data_source` 這一個欄位，不改名稱、不動 `is_active`，單純補回被新上市管線漏掉的對照。
-這是 7 筆的批次 UPDATE，需要你核准才會執行；核准後會先存變更清單、執行後 SELECT 確認 7 筆都正確
-設定，並抽查其中 1-2 檔確認隔天 `market-close-sync` 能抓到報價。
+`data_source` 這一個欄位，沒改名稱、沒動 `is_active`。執行前 SELECT 確認 7 筆都是 NULL，UPDATE
+後 SELECT 確認 7 筆都已正確設定（清單：`docs/specs/2026-10-17-7etf-datasource-fix-executed.txt`）。
+下一次 `market-close-sync` 排程跑完後需要再確認這 7 檔都抓到收盤價（見下方待辦）。
+
+## 根因已修好
+`lib/cron/newListingDetection.ts` 自動建檔時從沒設定 `data_source`，是這 7 檔漏掉的真正原因——已修
+好（建檔時用 Yahoo 即時驗證並寫入），並用 7 檔以外的 5 檔近期上市 ETF 驗證推算邏輯正確。完整說明：
+`docs/specs/2026-10-17-new-listing-datasource-rootcause-fix.md`。
+
+## 待辦（下一次市場收盤後）
+- 確認這 7 檔在下一次 `market-close-sync` 排程跑完後，`latest_price`／`price_updated_at` 有更新
+  到當天收盤價（目前還沒到下一個交易日收盤，先記錄待辦）。
