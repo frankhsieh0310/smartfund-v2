@@ -17,8 +17,8 @@ function ValueProposition() {
     },
     {
       icon: "🔄",
-      title: "市場每天更新",
-      desc: "你的條件不變，符合條件的 ETF 與基金持續更新。",
+      title: "每日檢查資料更新",
+      desc: "依各來源公布時程更新，並標示資料日期，你的條件不變，持續比對最新符合商品。",
     },
     {
       icon: "🎯",
@@ -105,7 +105,7 @@ export function HeroSection() {
                   {[
                     "你建立的條件可以保存，下次一鍵重新執行",
                     "同一組條件同時搜尋 ETF 與基金，不用分開查",
-                    "條件不變，市場每天更新，隨時查看最新符合商品",
+                    "每日檢查資料更新，依各來源公布時程更新，並標示資料日期",
                   ].map((point, i) => (
                     <div key={i} className="flex items-start gap-2.5 text-[14px] text-white/60">
                       <span className="text-[#F5B700] mt-0.5 shrink-0">✓</span>
