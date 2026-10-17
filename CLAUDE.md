@@ -155,6 +155,25 @@ master 為正式基準分支。新工作一律從最新的 master 開分支；�
     產品，`User.plan` 沒有被這次驗證動到。**
     下一步（需要你決定）：真正要讓付款按鈕可用，前提是方案頁要先有登入/session，這個目前
     超出第 15 項與付費規劃的範圍，需要你另外排期。
+  - **2026-10-17 使用者更正方向：付費要做在 smartmatch-mobile（App），不是網站**。
+    App 內販售訂閱必須走 Apple／Google 內購規則，改用 RevenueCat 的 React Native SDK
+    （`react-native-purchases`），不是這裡的 Web Billing SDK。**網站 `app/pricing/page.tsx`
+    與 `lib/payments/revenuecat.ts`（Web Billing client）這條線到此為止，先停在目前驗證過
+    的狀態，不再繼續投入**——保留現有程式碼不刪，但後續付費串接工作全部移到
+    `smartmatch-mobile` 那個 repo。**這個 webhook
+    （`app/api/webhooks/revenuecat/route.ts`）繼續保留使用**，App 端的 RevenueCat SDK
+    一樣會呼叫到這個網址，用來把訂閱事件同步回 `User.plan`，不用重做。
+    App 端的新進度記在 `smartmatch-mobile` 自己的 git 歷史裡（commit `edb276e`）：
+    新增 `src/payments/revenuecat.ts`（用 App 既有的 Supabase 登入使用者 id 當
+    RevenueCat 的 `appUserID`，跟這個 webhook 比對的 `users.supabase_id` 是同一個值）、
+    `docs/setup/revenuecat-store-setup.md`（給使用者的太太看的非工程師逐步設定清單：
+    Apple Developer／App Store Connect、Google Play Console、RevenueCat 後台三邊怎麼
+    建帳號、建商品、填 Webhook 密碼）。**刻意沒有接上任何畫面**，型別檢查通過
+    （`npx tsc --noEmit` 乾淨），但因為 `react-native-purchases` 是原生模組，**在
+    Expo Go 裡無法執行，必須跑過一次 EAS Build 產生開發版才能真正測試**，目前還沒跑
+    那次建置，所以沒有做過任何實機驗證。等使用者的太太照那份文件把三邊帳號/商品設定好、
+    把 API 金鑰跟 Webhook 密碼交回來，才能接上畫面並安排一次真的測試購買（sandbox）。
+    付費功能不會出現在 App 畫面上，直到那次測試購買成功為止。
 - 已設定一個單次排程（cron job `a28f5e07`，10/21 週三台北時間 2:35pm 前後觸發）：先確認 10/19-21
   三天 daily-health-report 都正常，正常才叫一個全新、沒有對話背景的獨立子代理從頭驗收 1-14 項，
   通過才準備交付訊息草稿回報使用者（不會自己宣布已交付）；沒通過就列問題、當場能修的修好、重驗。
