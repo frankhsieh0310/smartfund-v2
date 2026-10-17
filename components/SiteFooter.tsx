@@ -31,6 +31,12 @@ export function SiteFooter() {
           <p>統一編號：93639659</p>
           <p>地址：新北市三重區重新路2段21號11樓</p>
           <p>聯絡信箱：<a href="mailto:contact@smartmatchpilot.com" className="break-all underline underline-offset-4 hover:text-white">contact@smartmatchpilot.com</a></p>
+          <p>
+            台股拼圖 App：
+            <Link href="/twpuzzle/privacy" className="underline underline-offset-4 hover:text-white">隱私權政策</Link>{"　"}
+            <Link href="/twpuzzle/terms" className="underline underline-offset-4 hover:text-white">使用條款</Link>{"　"}
+            <Link href="/twpuzzle/support" className="underline underline-offset-4 hover:text-white">支援與聯絡</Link>
+          </p>
         </address>
       </div>
     </footer>
