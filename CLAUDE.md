@@ -824,3 +824,14 @@ SELECT 核對：寫入前 `futures_product_roots` 共 890 筆、無既有 COMEX�
 VERIFIED 沒有留下半筆資料，修正腳本後才重試成功。已把新 root id 加進
 `CORE_COMMODITY_ROOTS`（`lib/cron/commodityUpdate.ts`），`ALI=F` 會在既有 commodity cron
 下次執行時開始回填 `futures_root_market_observations`，不需要額外手動 backfill。
+
+## 2026-10-18 固定範圍 7 項（使用者訂立，不擴大功能）
+
+### 第 6 項：文案修正「每天自動更新」✅ 完成
+
+全文搜尋 `每天更新`／`每日更新`／`市場每天`／`自動更新` 於兩個 repo：找到 4 處真的在宣稱「我們每天
+自動更新」（網站首頁 `HeroSection.tsx` 2 處、`WorkspacePreviewSection.tsx` 1 處；App `new-listings.tsx`
+1 處「每日更新」），全部改為使用者指定的用語「每日檢查資料更新，依各來源公布時程更新，並標示資料
+日期」（中文語境微調但語意不變）。另外查到 `WorkspacePreviewSection.tsx` 的「市場每天都在變」是在
+描述市場本身的波動，不是宣稱自己每天自動更新，誠實判斷後**不動**（過度修改會變成把正確的句子改錯）。
+`tsc --noEmit` 兩個 repo 都零錯誤。
