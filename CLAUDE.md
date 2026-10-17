@@ -174,6 +174,18 @@ master 為正式基準分支。新工作一律從最新的 master 開分支；�
     那次建置，所以沒有做過任何實機驗證。等使用者的太太照那份文件把三邊帳號/商品設定好、
     把 API 金鑰跟 Webhook 密碼交回來，才能接上畫面並安排一次真的測試購買（sandbox）。
     付費功能不會出現在 App 畫面上，直到那次測試購買成功為止。
+  - **2026-10-17：已找到這台機器上登入的 Expo 帳號，啟動第一個 EAS development build（Android）**：
+    `eas-cli whoami` VERIFIED 已登入帳號 `franksmartmatch`（team `franksmartmatchs-team`，跟
+    `app.json` 的 `owner` 一致），不需要使用者重新登入。第一次 `eas build` 失敗，原因是專案缺
+    `expo-dev-client`（EAS development build 的必要套件，跑原生模組如 Apple 登入／RevenueCat
+    一定要用這種 build，Expo Go 不支援）——已安裝（`npx expo install expo-dev-client`），
+    `tsc --noEmit` 確認沒有型別錯誤，commit `8bcb81f`。重新啟動 Android development build，
+    已成功送出（build id `d512f040-6e35-4140-9f60-4622b4b8a0dd`，雲端自動產生新的 Android
+    keystore，不需要本機裝 Android SDK），背景輪詢等待完成。完成後要做的事：下載
+    `.apk`／`.aab` 安裝到實機或模擬器，實測 Google 登入與（還不能測的）RevenueCat 購買流程
+    （RevenueCat 要等使用者的太太照 `docs/setup/revenuecat-store-setup.md` 把三邊帳號設好、
+    把金鑰交回來才能真的測）。iOS 的 development build（測 Apple 登入）還沒開始——需要 Apple
+    Developer Program 帳號，等使用者決定。
   - **2026-10-17：SmartMatch App 的隱私權政策／使用條款／支援頁已上線 Preview（commit
     `e41ec143d`，Preview `smartfund-v2-k057t5cjr-frankhsieh0310s-projects.vercel.app`）**：
     新增 `/smartmatch-app/{privacy,terms,support}`，格式比照既有 `/twpuzzle` 三頁，但內容
