@@ -124,3 +124,41 @@ export function evaluateYahooTwReturnConsistency(samples: YahooTwReturnSample[])
     .filter((s) => s.fetchFailed || s.diff === null || s.diff > MISMATCH_THRESHOLD_PCT_POINTS);
   return { samples, mismatches, anomaly: mismatches.length > 0 };
 }
+
+export type FredCommoditySample = {
+  label: "WTI_CRUDE" | "NATURAL_GAS";
+  ourSymbol: string; // our Yahoo root's symbol, e.g. "CL=F"
+  ourDate: string | null;
+  ourClose: number | null;
+  fredSeriesId: string;
+  fredDate: string | null;
+  fredValue: number | null;
+  fetchFailed: boolean;
+};
+export type FredCommodityCheckResult = {
+  samples: FredCommoditySample[];
+  mismatches: Array<FredCommoditySample & { diffPct: number | null }>;
+  anomaly: boolean;
+};
+
+// Weekend list item 6: daily cross-check of our Yahoo-sourced WTI/Natural Gas closes against FRED's
+// own published spot series (DCOILWTICO = WTI Cushing OK spot, DHHNGSP = Henry Hub spot). These are
+// NOT the same instrument as our Yahoo CL=F/NG=F (front-month CONTINUOUS FUTURES, not cash spot), so
+// some everyday basis/contango spread is normal and expected -- this is not meant to chase exact
+// equality. VERIFIED live 2026-10-14 sample: WTI futures vs FRED spot diverged ~7.2% (95.09 vs
+// 101.91), natural gas ~0.7% (3.198 vs 3.22) -- thresholds below are set above that observed normal
+// spread so this only fires on a genuinely abnormal divergence (a stale/broken feed on either side,
+// or a real market dislocation worth a human look), not routine futures-vs-spot basis.
+const FRED_MISMATCH_THRESHOLD_PCT = { WTI_CRUDE: 12, NATURAL_GAS: 15 } as const;
+
+export function evaluateFredCommodityConsistency(samples: FredCommoditySample[]): FredCommodityCheckResult {
+  const mismatches = samples
+    .map((s) => ({
+      ...s,
+      diffPct: s.ourClose != null && s.fredValue != null && s.fredValue !== 0
+        ? Math.abs((s.ourClose - s.fredValue) / s.fredValue) * 100
+        : null,
+    }))
+    .filter((s) => s.fetchFailed || s.diffPct === null || s.diffPct > FRED_MISMATCH_THRESHOLD_PCT[s.label]);
+  return { samples, mismatches, anomaly: mismatches.length > 0 };
+}
