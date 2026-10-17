@@ -428,25 +428,60 @@ master 為正式基準分支。新工作一律從最新的 master 開分支；�
     觸發時間點在部署完成之前就已經過了**，用的是舊程式碼；真正第一次用這次部署的程式碼
     執行要等明天（10/18）同一時間。已設定一個單次排程（cron job `0464d850`，10/18 台北
     時間 9:53am 前後觸發）去查證這兩條管線的第一次真實執行結果，並抽樣跟官方公告頁面核對。
-  - **查證過程中意外發現一個跟這次部署無關的既有問題，先記錄不處理**：`production_scheduler_runs`
-    裡 `CLOUD_NEW_FUND_LISTING_DETECTION` 這個 job_id 在 10/15、10/16 各有一筆紀錄
-    `status=IN_PROGRESS`、`completed_at=null`、`attempted=0`、`inserted=0`、`error=null`，
-    從來沒有正常結束過——不是這次新加的管線造成的（這個 job_id 是既有的基金新上市事件
-    記錄排程，不是這次修好的 `createMissingDomesticFunds`），但值得查根因（可能是逾時被
-    砍斷卻沒寫入 error，或排程框架本身的 bug）。已經排進上面那個 10/18 的查證排程裡一併
-    確認今天這筆是否也卡住，到時候一起回報，先不動手修。
-- **EAS build（smartmatch-mobile，Android development build）**：前兩次都失敗——第一次缺
-  `expo-dev-client`（已裝，commit `8bcb81f`）；第二次卡在 Gradle 階段，CLI 只給通用的
-  `EAS_BUILD_UNKNOWN_GRADLE_ERROR`，沒有細節。**使用者指示：不要叫使用者自己去網站看，
-  CLI 已登入，直接用 `eas build:view <id> --json` 拿 `logFiles` 的簽名下載網址，
-  `curl --compressed`（GCS 回傳 `Content-Encoding: br`，一定要帶 `--compressed` 才能自動
-  解壓縮，否則拿到的是 Brotli 壓縮後的二進位內容）抓真正的 Gradle log 分析**，查到真正原因：
-  `app.json` 的 `expo-splash-screen` plugin 設定只有 `backgroundColor`，沒有 `image`，
-  Android 建置時找不到 `drawable/splashscreen_logo` 資源，`resource linking failed`。
-  `assets/splash-icon.png` 其實早就存在，只是沒接上 plugin 設定——這看起來是這個 App
-  第一次真的跑 Android 原生建置才浮現的既有缺口，跟這次 RevenueCat／expo-dev-client 的改動
-  無關。已修好（commit `72e707e`，補上 `"image": "./assets/splash-icon.png"`），重新送出
-  第三次 build（`59f5571d`），還在跑，完成會回報。
+  - **CLOUD_NEW_FUND_LISTING_DETECTION 卡住的 10/15、10/16 兩筆紀錄：根因已查到並修好，
+    不用等到 10/18 才查**（使用者 2026-10-17 指示現在就查，不要等）。根因：
+    `lib/cron/newFundListingDetection.ts` 的 `seedBaseline()`／逐筆 `logNewFund()` 是
+    「一筆一個 await INSERT、整個序列」，面對 SITCA／TDCC 真實的基金清單（數千筆），遠遠
+    超過 Vercel `maxDuration=120` 秒就被硬砍斷——無頭緒逾時砍斷不會進到 catch 區塊，
+    `finishRun()` 永遠不會執行，`production_scheduler_runs` 的紀錄就停在 `IN_PROGRESS`
+    （attempted=0／inserted=0／error=null 正是這個特徵，不是程式丟例外）。VERIFIED：查資料庫
+    目前 `DOMESTIC_FUND` 只有 97 筆 `KNOWN_BASELINE`、`OFFSHORE_FUND` 只有 83 筆——第一次
+    （10/15）跑到一半被砍斷，10/16 因為已經有 1 筆以上 baseline 所以不會再走「第一次」路徑，
+    改走「正常比對」路徑，但因為 baseline 不完整，比對出一大串「新」候選（光是 offshore
+    就有 988 筆），逐筆寫入一樣逾時被砍斷，兩天都卡在同一個模式。
+    已修好（commit `ec4296529`）：
+    1. 把逐筆 INSERT 改成分批（每批 1000 筆）的多列 INSERT，大幅減少資料庫往返次數
+       （本機對正式資料庫唯讀 dry-run VERIFIED：domestic 1.7 秒、offshore 2.1 秒跑完，
+       遠低於 120 秒上限）。
+    2. **順便發現並修好一個會被這次效能修正直接引爆的新問題**：如果直接套用分批修正，
+       下次真的執行寫入時，會把 988 筆「其實是既有資料、只是 baseline 沒補完整」的海外基金
+       一次全部標成「今天新上市」寫進 `product_listing_events`，誤導「新商品上架」畫面——
+       這違反專案一直在遵守的「不可誤導使用者」原則。加了一個
+       `CANDIDATE_BACKFILL_THRESHOLD`（50）：候選名單超過這個數字就視為「baseline 本身不完整
+       需要補齊」，改成安靜補進 baseline（不當成新上市事件），低於這個數字才是真的「今天的
+       新上市」正常寫入。本機 dry-run VERIFIED 這個判斷邏輯正確觸發（offshore：
+       `newlyDetected=0`、`baselineBackfilled=988`）。
+    `npx tsc --noEmit`／`npx next build` 都 0 錯誤。已準備新的乾淨 worktree `mcs-final6`
+    （HEAD `ec4296529`，比目前正式環境 `927daab14` 多 1 個 commit，VERIFIED 0 個被移除），
+    Preview 部署 `smartfund-v2-7e4p61g1y-frankhsieh0310s-projects.vercel.app`（首頁、
+    `/report`、`/compare`、`/etf/00981D`、`/smartmatch-app/privacy` 都 200），等使用者核准
+    週一開盤前（週日內）再部署一次。
+- **EAS build（smartmatch-mobile，Android development build）：從 errored 到成功，共踩了
+  4 個不同的根因，全部用「下載真正的 Gradle log 分析」而不是猜測找到**（使用者 2026-10-17
+  指示：不要叫使用者自己去網站看，CLI 已登入，直接用 `eas build:view <id> --json` 拿
+  `logFiles` 的簽名下載網址，`curl --compressed`（GCS 回傳 `Content-Encoding: br`，一定要帶
+  `--compressed` 才能自動解壓縮，否則拿到的是 Brotli 壓縮後的二進位內容）抓真正的 log）：
+  1. 缺 `expo-dev-client`（已裝，commit `8bcb81f`）。
+  2. `app.json` 的 `expo-splash-screen` plugin 只有 `backgroundColor`，沒有 `image`，
+     Android 建置找不到 `drawable/splashscreen_logo`，`resource linking failed`。
+     `assets/splash-icon.png` 其實早就存在只是沒接上——這看起來是這個 App 第一次真的跑
+     Android 原生建置才浮現的既有缺口，跟 RevenueCat／expo-dev-client 改動無關。已修好
+     （commit `72e707e`）。
+  3. C++ 編譯錯誤：`no member named 'executeSync' in 'worklets::WorkletRuntime'`——查
+     `npm ls` 發現 `react-native-worklets@0.12.1`（透過 `expo-router`→`@expo/ui`／
+     `react-native-reanimated` 間接帶入，不是這個 App 自己直接用的套件）跟
+     `expo-modules-core`（目前最新版 `57.0.23`）宣告支援的範圍
+     `^0.7.4 || ^0.8.0 || ^0.9.0 || ^0.10.0` 對不上——這是 Expo SDK 57 生態系本身目前還沒
+     對齊的版本落差，不是我改出來的。先用 `npx expo install --fix` 把專案的 12 個過期
+     Expo 套件對齊到 SDK 實際要求的版本（`expo-doctor` 從 20/21 變 21/21），但這個特定的
+     worklets 落差不是 `expo install --fix` 會處理的（worklets 不是直接依賴）。
+  4. 把 worklets 降到 `expo-modules-core` 支援範圍內的 `0.10.4`（npm `overrides`）後，
+     換成 `react-native-reanimated@4.6.0` 自己的 `assertWorkletsVersionTask` 建置期檢查
+     失敗（4.6.0 寫死要求 worklets `0.12.x`）。查過 reanimated 每個 4.x 版本宣告的
+     worklets peer range，找到 `4.5.5` 要求 `0.10.x - 0.11.x`，剛好跟 `0.10.4` 重疊，
+     也跟 `expo-modules-core` 的範圍重疊——加上 `react-native-reanimated: 4.5.5` 的
+     `overrides`，`npm ls` 確認乾淨解析（不再有 `invalid` 標記）。commit `46575c4`。
+  第五次 build（`545e097b`）已送出，還在跑，完成會回報。
 
 ## 財經 App 交付門檻（使用者 2026-10-16 訂立，原文照錄，之後對話被壓縮時以此為準）
 
