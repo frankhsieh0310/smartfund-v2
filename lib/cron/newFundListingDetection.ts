@@ -39,26 +39,48 @@ async function hasAnyBaseline(productType: ProductType, source: string): Promise
   return rows.length > 0;
 }
 
-async function seedBaseline(productType: ProductType, source: string, items: { key: string; name: string }[]) {
-  for (const item of items) {
+// 2026-10-17 root-cause fix: this used to be one sequentially-awaited INSERT per row. The real
+// SITCA/TDCC universe is thousands of rows, so a cold-start seed (or any run that has to log a
+// large backlog of candidates) took far longer than Vercel's maxDuration and got hard-killed
+// mid-loop -- a serverless timeout kill never reaches the catch block, so finishRun() never ran
+// and the production_scheduler_runs row was left stuck IN_PROGRESS forever (VERIFIED: two such
+// stuck rows from 2026-10-15/16, both with attempted=0/inserted=0/error=null -- the signature of a
+// hard kill, not a thrown exception). Batched into chunked multi-row INSERTs instead: productType,
+// milestoneKind and source are constant per call ($1/$2/$3), so only 2 params per row (code, name),
+// keeping well under Postgres's bind param limit even at chunk size 1000.
+const UPSERT_CHUNK_SIZE = 1000;
+
+async function batchInsertEvents(
+  eventType: "KNOWN_BASELINE" | "NEW_LISTING",
+  milestoneKind: string | null,
+  conflictAction: "DO NOTHING" | "DO UPDATE SET updated_at = now()",
+  productType: ProductType,
+  source: string,
+  items: { key: string; name: string }[],
+) {
+  for (let i = 0; i < items.length; i += UPSERT_CHUNK_SIZE) {
+    const chunk = items.slice(i, i + UPSERT_CHUNK_SIZE);
+    const values = chunk
+      .map((_, idx) => `(gen_random_uuid(), $1, $${idx * 2 + 4}, $${idx * 2 + 5}, '${eventType}', NULL, $2, $3, NULL, now(), NULL, now(), now())`)
+      .join(",\n");
     await prisma.$executeRawUnsafe(
       `INSERT INTO product_listing_events
          (id, product_type, code, name, event_type, milestone_date, milestone_kind, source, source_url, detected_at, product_id, created_at, updated_at)
-       VALUES (gen_random_uuid(), $1, $2, $3, 'KNOWN_BASELINE', NULL, NULL, $4, NULL, now(), NULL, now(), now())
-       ON CONFLICT (product_type, code, event_type, source) DO NOTHING`,
-      productType, item.key, item.name, source,
+       VALUES ${values}
+       ON CONFLICT (product_type, code, event_type, source) ${conflictAction}`,
+      productType, milestoneKind, source, ...chunk.flatMap((item) => [item.key, item.name]),
     );
   }
 }
 
-async function logNewFund(productType: ProductType, source: string, item: { key: string; name: string }) {
-  await prisma.$executeRawUnsafe(
-    `INSERT INTO product_listing_events
-       (id, product_type, code, name, event_type, milestone_date, milestone_kind, source, source_url, detected_at, product_id, created_at, updated_at)
-     VALUES (gen_random_uuid(), $1, $2, $3, 'NEW_LISTING', NULL, '官方未公告（來源僅提供淨值，無成立／核備日期欄位）', $4, NULL, now(), NULL, now(), now())
-     ON CONFLICT (product_type, code, event_type, source) DO UPDATE SET updated_at = now()`,
-    productType, item.key, item.name, source,
-  );
+async function seedBaseline(productType: ProductType, source: string, items: { key: string; name: string }[]) {
+  if (items.length === 0) return;
+  await batchInsertEvents("KNOWN_BASELINE", null, "DO NOTHING", productType, source, items);
+}
+
+async function logNewFunds(productType: ProductType, source: string, items: { key: string; name: string }[]) {
+  if (items.length === 0) return;
+  await batchInsertEvents("NEW_LISTING", "官方未公告（來源僅提供淨值，無成立／核備日期欄位）", "DO UPDATE SET updated_at = now()", productType, source, items);
 }
 
 export type NewFundResult = {
@@ -68,10 +90,22 @@ export type NewFundResult = {
   /** 2026-10-18: funds rows actually created from the official SITCA list this run, independent of
    * the baseline/new-listing event bookkeeping above (see createMissingDomesticFunds doc comment). */
   created: { taxId: string; name: string; company: string }[];
+  /** 2026-10-17: non-zero only when a day's "candidates" list was abnormally large and got treated
+   * as a baseline catch-up instead of real new-listing events -- see CANDIDATE_BACKFILL_THRESHOLD. */
+  baselineBackfilled: number;
 };
 
+// 2026-10-17: an earlier bug (unbatched sequential inserts, see batchInsertEvents's doc comment)
+// left both baselines partially seeded in production (83/~1071 offshore funds recorded). A normal
+// run's "candidates" (funds.code/name not yet in the baseline) is meant to be a handful of real new
+// listings per day -- if it's this large instead, the baseline itself is incomplete, not today's
+// news. Silently mass-announcing hundreds of pre-existing funds as "new today" would misrepresent
+// real data to users, which this project explicitly doesn't do. Past this threshold, top up the
+// baseline instead of logging NEW_LISTING events; below it, proceed as genuine new listings.
+const CANDIDATE_BACKFILL_THRESHOLD = 50;
+
 // 2026-10-18 root-cause fix: this pipeline previously only ever LOGGED a product_listing_events row
-// (logNewFund below) and never created the actual `funds` row -- unlike the ETF sibling
+// (logNewFunds below) and never created the actual `funds` row -- unlike the ETF sibling
 // (lib/cron/newListingDetection.ts), which does both. VERIFIED live: 8 real SITCA-registered funds
 // (e.g. 94991068B／富邦新台商基金-TISA類型) had been sitting in product_listing_events as either
 // KNOWN_BASELINE or NEW_LISTING for one or more days with no corresponding `funds` row at all.
@@ -134,15 +168,22 @@ export async function detectNewDomesticFunds(writeEnabled: boolean): Promise<New
     .map(([taxId, name]) => ({ key: taxId, name }));
 
   const created = await createMissingDomesticFunds(writeEnabled, existingFundCodes);
+  const needsBackfill = !isFirstRun && candidates.length > CANDIDATE_BACKFILL_THRESHOLD;
 
-  if (!writeEnabled) return { isFirstRun, seeded: isFirstRun ? bySeen.size : 0, newlyDetected: isFirstRun ? [] : candidates, created };
+  if (!writeEnabled) {
+    return { isFirstRun, seeded: isFirstRun ? bySeen.size : 0, newlyDetected: isFirstRun || needsBackfill ? [] : candidates, created, baselineBackfilled: needsBackfill ? candidates.length : 0 };
+  }
 
   if (isFirstRun) {
     await seedBaseline("DOMESTIC_FUND", DOMESTIC_SOURCE, [...bySeen.entries()].map(([taxId, name]) => ({ key: taxId, name })));
-    return { isFirstRun: true, seeded: bySeen.size, newlyDetected: [], created };
+    return { isFirstRun: true, seeded: bySeen.size, newlyDetected: [], created, baselineBackfilled: 0 };
   }
-  for (const c of candidates) await logNewFund("DOMESTIC_FUND", DOMESTIC_SOURCE, c);
-  return { isFirstRun: false, seeded: 0, newlyDetected: candidates, created };
+  if (needsBackfill) {
+    await seedBaseline("DOMESTIC_FUND", DOMESTIC_SOURCE, candidates);
+    return { isFirstRun: false, seeded: 0, newlyDetected: [], created, baselineBackfilled: candidates.length };
+  }
+  await logNewFunds("DOMESTIC_FUND", DOMESTIC_SOURCE, candidates);
+  return { isFirstRun: false, seeded: 0, newlyDetected: candidates, created, baselineBackfilled: 0 };
 }
 
 /** Offshore funds: funds.code is NULL for most offshore funds (per tdccBatchSource.ts's own
@@ -163,12 +204,20 @@ export async function detectNewOffshoreFunds(writeEnabled: boolean): Promise<New
   // Offshore fund auto-provisioning is a separate, harder problem (funds.code is NULL for most
   // offshore funds, no official per-record identity like SITCA's 基金統編 exists here) and is OUT OF
   // SCOPE for this round's fix -- only domestic SITCA funds were reported missing and fixed above.
-  if (!writeEnabled) return { isFirstRun, seeded: isFirstRun ? candidates.length : 0, newlyDetected: isFirstRun ? [] : candidates, created: [] };
+  const needsBackfill = !isFirstRun && candidates.length > CANDIDATE_BACKFILL_THRESHOLD;
+
+  if (!writeEnabled) {
+    return { isFirstRun, seeded: isFirstRun ? candidates.length : 0, newlyDetected: isFirstRun || needsBackfill ? [] : candidates, created: [], baselineBackfilled: needsBackfill ? candidates.length : 0 };
+  }
 
   if (isFirstRun) {
     await seedBaseline("OFFSHORE_FUND", OFFSHORE_SOURCE, [...byName.keys()].map((name) => ({ key: name, name })));
-    return { isFirstRun: true, seeded: byName.size, newlyDetected: [], created: [] };
+    return { isFirstRun: true, seeded: byName.size, newlyDetected: [], created: [], baselineBackfilled: 0 };
   }
-  for (const c of candidates) await logNewFund("OFFSHORE_FUND", OFFSHORE_SOURCE, c);
-  return { isFirstRun: false, seeded: 0, newlyDetected: candidates, created: [] };
+  if (needsBackfill) {
+    await seedBaseline("OFFSHORE_FUND", OFFSHORE_SOURCE, candidates);
+    return { isFirstRun: false, seeded: 0, newlyDetected: [], created: [], baselineBackfilled: candidates.length };
+  }
+  await logNewFunds("OFFSHORE_FUND", OFFSHORE_SOURCE, candidates);
+  return { isFirstRun: false, seeded: 0, newlyDetected: candidates, created: [], baselineBackfilled: 0 };
 }
