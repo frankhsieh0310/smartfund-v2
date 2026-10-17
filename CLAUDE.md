@@ -906,3 +906,27 @@ VERIFIED 只刪了這一筆）。
 `trackSecondPaymentMonthly` 要等第 2 項（14 天免費試用）RevenueCat webhook 真的接上才有事件來源。
 邀請碼／廣告來源目前預設 `UNKNOWN`，等第 3 項（邀請碼與深層連結）做出來後，App 啟動時要把真實來源
 傳進 `trackFirstOpenOnce()`，不是另外記錄。
+
+### 第 4 項：新用戶直接到組合穿透 ✅ 既有功能已覆蓋大部分，補齊真正缺的 3 塊並用真實資料驗證
+
+查證現況：`smartmatch-mobile` 的「我的組合」（`app/portfolio.tsx`）＋「穿透分析」
+（`app/results.tsx`）**早就幾乎完整符合這項規格**——`setEqualWeights()` 本來就會自動把每檔填上
+等權重百分比（不需要手動輸入金額）；穿透結果本來就有共同持股（`data.duplicates`）、集中度
+（產業／國家 `Exposure` 區塊）、資料日期（`formatDate(p.asOfDate)`）、未涵蓋部分揭露
+（`c.notLookedThroughPct`／`c.excludedProducts`，沒有資料時明確文字說明，不是顯示 0 或空白）。
+
+真正缺的只有 3 塊：
+1. **新用戶入口**：首頁加一個橫幅（`NewUserPortfolioBanner`），只在組合是空的時候顯示，直接連到
+   `/portfolio`，文案照使用者原話「加入 2～3 檔 ETF／基金，不用輸入金額」。
+2. **『等權重試算』標示**：`src/etfFundSelection.ts` 新增 `isEqualWeight` 旗標（存檔持久化，手動
+   改任何一檔金額／比例就清除），`results.tsx` 在這個旗標為真時顯示金色標籤。
+3. **一鍵儲存組合**：選取狀態本來就每次異動都自動存檔（`commit()` 裡的 `saveJson`），但沒有使用者
+   看得到的「儲存」動作——新增明確的「儲存組合」按鈕，點擊後顯示「✓ 已儲存」確認，並記錄
+   item 5 的 `trackSavedPortfolio` 漏斗事件（結果頁同樣在真的渲染出有資料的分析時記錄
+   `trackCompletedOverlap`，不是一到頁面就記，確保這個指標量的是「真的看到結果」不是「點進來」）。
+
+**真實驗證**（本機 Expo Web，對 production API，真實資料）：加入 0050＋0056 → 點「平均配置」→
+VERIFIED 兩檔自動填 50%／50%、「開始穿透分析」不用輸入任何金額就直接可按 → 結果頁 VERIFIED 顯示
+「等權重試算」標籤、真實個股曝險（台積電 28.33%、南亞 5.56%／2 檔持有……）、真實資料日期
+（2026-10-16）、「已穿透 100.00%」。點「儲存組合」VERIFIED 變成「✓ 已儲存」；重新整理頁面 VERIFIED
+選取內容（兩檔＋50/50 配置）完整保留，符合「下次打開 App 會直接回到這組內容」。
