@@ -694,3 +694,46 @@ route.ts` 提供當日＋區間查詢；`smartmatch-mobile`：`src/institutional
   完全一致，沒有另外接一套邏輯。
 - TypeScript `tsc --noEmit` 對修改檔案零錯誤；驗證後已 `taskkill` 關閉本機 Expo dev server（確認
   `netstat` 上 port 8099 無殘留監聽），未留下背景程序。
+
+### 第 5 項：投資日曆 ✅ 後端早就寫好但從沒合併／部署；已補齊第三種事件並開放入口，用真實資料驗證
+
+查證現況：`smartmatch-mobile` 的 `app/calendar.tsx`（我的投資日曆）、`src/calendar/service.ts` 其實
+早就完整存在，UI／呼叫邏輯都沒問題——但對 production 直接打 `/api/calendar/events`
+**回傳 404**（`curl` VERIFIED）。追查發現後端 `app/api/calendar/events/route.ts` 與
+`lib/calendar/eventsService.ts` 真的寫過（`git log` 找到 2026-09-19 commit
+`20f18d781 feat(calendar): confirmed-event calendar API`），但那個 commit **只在
+`holdings-backend-p0` 分支上，從沒合併到目前的部署分支**——不是程式被刪、也不是資料缺，是「寫完後
+忘記合併」的真實缺口。首頁也因為更早一輪「六大核心入口鎖定」的決定，從未放連到 `/calendar` 的入口。
+
+**補齊內容**：
+- 從 `holdings-backend-p0` 把 `app/api/calendar/events/route.ts`、`lib/calendar/eventsService.ts`
+  原封搬到目前分支（`fix/qa-round1`），VERIFIED 這兩個檔案引用的四張表
+  （`etf_distribution_events`／`etf_holding_snapshots`／`fund_distribution_observations`／
+  `fund_documents`）在目前 schema 都還在、欄位名稱都沒變。
+- 新增第三種事件型別 `DIVIDEND_EX_ANNOUNCED`（除權息預告），讀取既有的 `etf_upcoming_exrights` 表
+  （item 15 為 `DAYS_TO_EX_DATE` 建的 TWSE／TPEx 官方除權息預告表，見 `lib/cron/exDateSync.ts`）——
+  這正是本項要求的「除權息預告」真實資料來源，不是新建資料管線，只是多讀一張既有的表。VERIFIED
+  目前這張表是 0 筆（item 15 的 cron `535be9b1` 排程在明天約 9:53 才會第一次執行，現在是誠實的
+  「還沒有資料」，不是程式錯誤）。
+- 補上 CORS 標頭（`Access-Control-Allow-Origin: "*"` ＋ `OPTIONS` handler）——這個 route 原本沒有，
+  本機 Expo Web（8099）打本機後端（3001）時瀏覽器端回報 `ERR_FAILED`（後端 log 其實是 200），是
+  跨網域前端串接的既有慣例缺漏，不是這次新寫的邏輯錯誤；比照同目錄下 `/api/mobile/current-institutional`
+  等既有 mobile 端點的寫法補齊後解決。
+- 首頁新增「我的投資日曆」橫幅入口（`app/index.tsx`，沿用既有 `進階反查` 橫幅樣式，不建新元件），
+  更新原本「六大核心入口鎖定」的註解說明本次異動。
+- `smartmatch-mobile` 的 `src/calendar/service.ts`／`app/calendar.tsx` 加上
+  `DIVIDEND_EX_ANNOUNCED` 的 label（除權息預告）與金額顯示（金額可能「待公告」為 null，誠實顯示）。
+- 「新上市日期」早就有真實資料並已在首頁開放（`NewListingsBanner`／`/new-listings`，使用
+  `useNewListings` 真實資料），本項不重做。
+
+**驗證（本機 `next dev --port 3001` ＋ Expo Web `--port 8099`，本機暫時把 `.env.local` 指到
+`localhost:3001`，驗證完已改回 production URL；未部署，未對任何表寫入資料）**：
+- 真實測試標的：BIOY（Graniteshares YieldBOOST Biotech ETF，production `etf_distribution_events`
+  查到的真實配息 ETF），加入本機自選後：
+  - 2026-10 月：日曆正確顯示 2 筆真實除息事件（10/2 配息 0.232 USD、10/16 配息 0.225 USD），
+    與 DB 原始查詢結果一致。
+  - 2026-09 月：正確顯示 4 筆真實事件（0.248／0.246／... USD，逐周配息）。
+  - 2027-07 月（真實無資料的未來月份）：誠實顯示「本月沒有已確認事件」，沒有任何佔位或示意資料。
+- TypeScript `tsc --noEmit` 對所有修改／新增檔案零錯誤。
+- 驗證後 `taskkill` 關閉兩個本機 dev server（3001、8099），`netstat` 確認無殘留監聽；`.env.local`
+  已改回 production URL；本機自選的 BIOY 僅存在於瀏覽器本機 localStorage，未寫入任何資料庫。
