@@ -17,11 +17,18 @@ master 為正式基準分支。新工作一律從最新的 master 開分支；�
 - `C:\Users\User\AppData\Local\Temp\mcs-release` — 上一次的正式環境部署來源（`58d8d8165`，從 `ab8f698a4` cherry-pick 網站修正與計數修正）。已被 `mcs-final` 取代，我不得再修改這個資料夾。
 - `C:\Users\User\AppData\Local\Temp\mcs-final` — 已部署到正式環境的來源（`e0588acec`）。之後不再從這個資料夾部署，保留供對照。
 - `C:\Users\User\AppData\Local\Temp\mcs-final2` — 已部署到正式環境的來源（`7bcaa87a3`）。之後不再從這個資料夾部署。
-- `C:\Users\User\AppData\Local\Temp\mcs-final3` — **目前最新、待部署的 worktree**：`fix/qa-round1` 2026-10-17 的 HEAD（`7fd9125b1`），比目前正式環境（`c504d180a`）多 17 個 commit（0 個被移除，`git merge-base --is-ancestor` 已確認）。包含：7 檔新上市 ETF `data_source` 根因修正（`07b0f1b91`）、台股拼圖法律頁（已在正式環境，這裡是確保繼續包含）、903 組/MoneyDJ 重複基金顯示層修正等。已完成：`npm ci`＋`npx prisma generate`、`npx next build`（0 錯誤）、`npx tsc --noEmit`（0 錯誤）、新路由的本機只抓不寫 dry-run（`detectNewListings(false)` 讀到 6 檔今天真實新上市案例；額外直接驗證新寫的 `resolveTwDataSource()` 對這 6 檔全部能驗證到真實 Yahoo 資料）、Preview 部署
-  `smartfund-v2-b84m5ojjs-frankhsieh0310s-projects.vercel.app`（首頁、三個法律頁、`/compare`都 200；頁尾
-  email／連結正確；`/api/search` 確認 Goldman Sachs 那組 7 筆各自顯示正確 ticker）。等使用者執行
-  `--prod` 部署。之後要追加任何正式環境修正，從 `fix/qa-round1` 本身繼續開發，下次部署前再開一個新
-  worktree 指到那時的 HEAD。
+- `C:\Users\User\AppData\Local\Temp\mcs-final3` — 已部署到正式環境的來源（`7fd9125b1`）。之後不再從這個資料夾部署。
+- `C:\Users\User\AppData\Local\Temp\mcs-final4` — **目前最新、待部署的 worktree**：`fix/qa-round1`
+  2026-10-18 的 HEAD（`a1865caee`），比目前正式環境（`7fd9125b1`）多 4 個 commit（0 個被移除，
+  `git merge-base --is-ancestor` 已確認）。核心內容：**用官方「基金中文名稱」欄位取代名稱拆解
+  做發行投信比對**（取代了原本錯誤的「主動」前綴剝除做法，見下方根因說明）。已完成：`npm ci`＋
+  `npx prisma generate`、`npx next build`（0 錯誤）、`npx tsc --noEmit`（0 錯誤）、本機只抓不寫
+  dry-run（直接呼叫修好後的 `resolveProviderByBrand()` 對今天真實的 6 檔新上市 ETF
+  `00409A`／`00410A`／`00412A`／`009828`／`00411A`／`00987D` 全部正確比對到發行投信，包含之前比
+  對不到的 `009828`；另外對 15 檔既有已正確上架的 ETF 做回歸測試，0 筆比對錯誤）、Preview 部署
+  `smartfund-v2-moj0jped8-frankhsieh0310s-projects.vercel.app`（首頁、三個法律頁、`/compare` 都
+  200）。等使用者執行 `--prod` 部署。之後要追加任何正式環境修正，從 `fix/qa-round1` 本身繼續開發，
+  下次部署前再開一個新 worktree 指到那時的 HEAD。
 
 **部署規則（使用者 2026-10-16 訂立，之後每次部署一律遵守）**
 - 部署指令固定用：`npx vercel deploy --prod --meta commit=$(git rev-parse HEAD)`（讓每次正式部署都留下對應的 commit SHA，之前用純 `vercel deploy --prod` 的 CLI 部署完全沒有 git metadata，無法回溯比對）。
@@ -84,10 +91,12 @@ master 為正式基準分支。新工作一律從最新的 master 開分支；�
 - 第 14 項帳號刪除實測：公開註冊路徑（`/auth/v1/signup`，用 publishable key）會卡在「需要 email 確認才能拿到 session」——不是技術卡住，是這個 Supabase 專案的設定如此，已照使用者指示準備 PowerShell 腳本作為替代（見下）。查證過程中額外發現**本機 `.env` 的 `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` 有一個 O/0 打字錯誤**（`6iV00` 應為 `6iVO0`），跟 Vercel Production 實際值不一致，只是本機診斷用值錄錯，不影響正式環境（Vercel 自己的值是對的）。
 - PowerShell 實測腳本 `scratch/claude-account-delete-flow-test.ps1` 已逐行核對現有 `/api/me`、`/api/watchlists` 程式碼，確認腳本跟現在的正式環境行為一致，使用者只需貼上 `$ServiceRoleKey`／`$PublishableKey` 兩個值後整段執行。
 
-**部署凍結期（使用者 2026-10-17 訂立）**：這次（`mcs-final3`／`7fd9125b1`）部署之後到週三（10/21）
-收盤前，**不准再部署任何新功能**，只能部署「修正 daily-health-report 抓到的異常」這一類。新功能可以
-繼續開發、繼續用 Preview 測試，週三之後再一起上。這段凍結期跟下面第 13 項的 3 個交易日計時是同一段
-時間，目的是讓這 3 天測的是同一個穩定版本，不要中途又換版本。
+**部署凍結期（使用者 2026-10-17 訂立，2026-10-17 晚間修正理解）**：凍結期是**週一 10/19 開盤之後**才
+開始，到週三 10/21 收盤前，**不准再部署任何新功能**，只能部署「修正 daily-health-report 抓到的
+異常」這一類；目的是讓第 13 項的 3 個交易日計時測的是同一個穩定版本。**週日（10/18）的部署是在
+測試開始之前，不受這條限制**——新上市 ETF 資料每天都要更新，不能因為快到凍結期就延到週三之後，
+否則連續好幾天沒有新商品資料，違反「每天更新」原則。`mcs-final4`／`a1865caee` 就是在凍結期開始前
+的這次部署。之後新功能可以繼續開發、繼續用 Preview 測試，週三 10/21 收盤之後再一起上。
 
 **第 13 項：3 個交易日 daily-health-report 計時（起算 2026-10-19 週一）**
 - 已設定一個工作階段內的排程（cron job `8722122f`，平日台北時間 9:13 am 前後，7 天後自動過期），每天檢查
@@ -114,6 +123,21 @@ master 為正式基準分支。新工作一律從最新的 master 開分支；�
   **仍然會卡在 `loggedOnly`，不會自動建檔**，要等凍結期解除後的下次部署才會真的生效；在那之前不會
   因為沒處理就消失資料，會持續出現在「新商品上架」畫面的 `loggedOnly`／`product_listing_events`
   紀錄裡，沒有被忽略。
+- **2026-10-17 晚間：使用者修正，改用官方欄位重做**：使用者指出凍結期是從週一 10/19 開盤才開始，
+  週日部署不受影響，且新上市資料不能因為快到凍結期就延後；另外要求改成直接用證交所/櫃買官方 ETF
+  清單的「發行人」欄位，不要用名稱拆解。查證後發現：這兩個官方 CSV 開放資料（TWSE `t187ap47_L`、
+  TPEx `t187ap47_O`）本身沒有字面上叫「發行人」的欄位，但有「基金中文名稱」（基金的完整法定名稱，
+  不是縮寫的「基金簡稱」）——這個欄位結構上永遠從發行投信的真實品牌開頭，連 TPEx 傘型基金的全名
+  （例如「統一股債傘型證券投資信託基金之統一前沿科技主動式ETF證券投資信託基金」）也一樣從「統一」
+  開頭。改用這個官方欄位（`31c3b3ef3` 的「主動」前綴剝除土法煉鋼已被取代，commit `a1865caee`）：
+  直接用今天 6 檔真實資料驗證，**6 檔全部正確比對到發行投信，包含原本解不開的 `009828`**（短名稱
+  「中信台日韓PCB」配不到「中國信託...」，但全名「中國信託台日韓PCB ETF證券投資信託基金」第一個
+  字就是「中國」，直接比對成功）；另外對 15 檔既有已正確上架的 ETF 做回歸測試，0 筆比對錯誤。
+  已準備新乾淨 worktree `mcs-final4`（`a1865caee`），完成 `npm ci`／`prisma generate`／
+  `next build`（0 錯誤）／`tsc`（0 錯誤）／本機只抓不寫驗證／Preview 部署
+  `smartfund-v2-moj0jped8-frankhsieh0310s-projects.vercel.app`（首頁、三個法律頁、`/compare` 都
+  200），等使用者週日執行 `--prod` 部署。部署後需確認這 6 檔在下一次（10/18 01:15 UTC）排程後
+  自動建檔，並在下一次市場收盤後有收盤價。
 - 2026-10-19（週一）: 待檢查。
 - 2026-10-20（週二）: 待檢查。
 - 2026-10-21（週三）: 待檢查。
@@ -133,7 +157,7 @@ master 為正式基準分支。新工作一律從最新的 master 開分支；�
 | 9 | 基金／ETF 比較 | ✅ 完成 | 使用者核准：算達標。已在「組合穿透」（首頁卡進入的頁面）加一個「基金／ETF 比較」入口，首頁六張卡維持不動 |
 | 10 | 標的詳情頁＋技術分析（6 類） | ✅ 完成（程式碼層級） | 共用同一條詳情頁路由＋技術分析頁，依 assetType／category 分流涵蓋台股 ETF／海外 ETF／境內基金／境外基金／債券 ETF／商品；COMMODITY 技術指標是本輪才修好的；6 類底層資料本身是否每類都有完整歷史資料，本次稽核沒有逐類查 DB 驗證 |
 | 11 | 新商品上架 | ✅ 完成（已修正） | 原本「即將上架」查無資料時仍顯示空區塊標題，違反「查無來源則隱藏」規則，已修正為整個分區隱藏 |
-| 12 | 資料完整度 | ⚠️ 部分（已大幅推進） | 重名基金顯示層已修；903 組同 ticker 真重複：全部 903 組已處理完畢（886 筆 `is_active=false`：841+45；20 組/筆互有對方沒有的關聯資料，全部保留不動，無待決）；MoneyDJ 123 筆完全同名重複全部處理完畢（101 筆已 `is_active=false`，22 筆互有關聯資料全部保留不動）；MoneyDJ 剩餘 82 筆（名稱寫法差異）＋約 95 筆真缺對照仍待處理；今天 daily-health-report 發現 7 檔新上市 ETF 缺 `data_source`，已核准並執行補值，根因已修好（已部署）；額外發現「主動式 ETF」類別前綴讓 6 檔今天新偵測到的新上市案例完全建不了檔，根因已修好但還沒部署（凍結期內），5/6 檔驗證可解、1 檔（中信/009828）是品牌俗名缺口待人工建檔；英文名基金清理沒有獨立處理 |
+| 12 | 資料完整度 | ⚠️ 部分（已大幅推進） | 重名基金顯示層已修；903 組同 ticker 真重複：全部 903 組已處理完畢（886 筆 `is_active=false`：841+45；20 組/筆互有對方沒有的關聯資料，全部保留不動，無待決）；MoneyDJ 123 筆完全同名重複全部處理完畢（101 筆已 `is_active=false`，22 筆互有關聯資料全部保留不動）；MoneyDJ 剩餘 82 筆（名稱寫法差異）＋約 95 筆真缺對照仍待處理；今天 daily-health-report 發現 7 檔新上市 ETF 缺 `data_source`，已核准並執行補值，根因已修好（已部署）；額外發現 6 檔今天新偵測到的新上市 ETF 完全建不了檔，根因是發行投信比對邏輯只看會帶類別前綴的基金簡稱——已改用官方「基金中文名稱」欄位取代名稱拆解，6 檔（含原本解不開的 009828）全部驗證正確，待週日部署（`mcs-final4`/`a1865caee`）；英文名基金清理沒有獨立處理 |
 | 13 | 3 個交易日乾淨 | ❌ 計時未開始 | 已部署（`e0588acec`）；使用者指示從 2026-10-19（週一）起算三個交易日 |
 | 14 | Google 登入＋帳號刪除 | ⚠️ 部分 | Google 登入正式環境可用；`DELETE /api/me` 已部署；端對端實測卡在「公開註冊需 email 確認」，已準備 PowerShell 腳本（`scratch/claude-account-delete-flow-test.ps1`）待使用者貼金鑰執行 |
 | 15 | 配息提醒引擎 | ❌ 未做 | 只有 CRUD API（`watchlistAlertRule`）＋App UI，完全沒有任何排程會去讀規則、評估條件、觸發通知——這部分等於從零開始 |
