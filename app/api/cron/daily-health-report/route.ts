@@ -12,7 +12,7 @@
 import { isAuthorizedCron, unauthorizedCron } from "@/lib/cron/authorize";
 import { prisma } from "@/lib/prisma";
 import { beginRun, finishRun } from "@/lib/cloud-ingestion/runContext";
-import { checkPipelineRunLog, evaluateFreshness, checkEtfDataSourceGap, evaluateYahooTwReturnConsistency, type QueryFn, type YahooTwReturnSample } from "@/lib/daily-health-report/checks";
+import { checkPipelineRunLog, evaluateFreshness, checkEtfDataSourceGap, evaluateYahooTwReturnConsistency, evaluateFredCommodityConsistency, type QueryFn, type YahooTwReturnSample, type FredCommoditySample } from "@/lib/daily-health-report/checks";
 import { notifyAnomaly } from "@/lib/daily-health-report/notify";
 import { buildDailySummary } from "@/lib/daily-health-report/buildDailySummary";
 import { fetchYahooTwPerformance } from "@/lib/yahoo/twPerformancePage";
@@ -88,11 +88,49 @@ export async function GET(request: Request) {
   }
   const yahooTwCheck = evaluateYahooTwReturnConsistency(yahooTwSamples);
 
+  // Weekend list item 6: cross-check our Yahoo-sourced WTI/Natural Gas closes against FRED's own
+  // published spot series. FRED_API_KEY missing/misconfigured is itself treated as fetchFailed
+  // (surfaced as an anomaly) rather than silently skipped -- a broken cross-check is worse than no
+  // cross-check if it just goes quiet.
+  const fredRoots: Array<{ label: FredCommoditySample["label"]; rootId: string; ourSymbol: string; fredSeriesId: string }> = [
+    { label: "WTI_CRUDE", rootId: "ceebeb1f-3616-4d38-ab85-a7de76455d9a", ourSymbol: "CL=F", fredSeriesId: "DCOILWTICO" },
+    { label: "NATURAL_GAS", rootId: "8c9966ab-8e29-43bc-a4ff-e908fef9b2c2", ourSymbol: "NG=F", fredSeriesId: "DHHNGSP" },
+  ];
+  const fredApiKey = process.env.FRED_API_KEY;
+  const fredSamples: FredCommoditySample[] = await Promise.all(
+    fredRoots.map(async (r): Promise<FredCommoditySample> => {
+      const ourRow = (await prisma.$queryRawUnsafe<Array<{ observed_date: string; close: string }>>(
+        `SELECT observed_date::text, close::text FROM futures_root_market_observations WHERE root_id = $1::uuid ORDER BY observed_date DESC LIMIT 1`,
+        r.rootId,
+      ))[0];
+      const base = { label: r.label, ourSymbol: r.ourSymbol, fredSeriesId: r.fredSeriesId, ourDate: ourRow?.observed_date ?? null, ourClose: ourRow ? Number(ourRow.close) : null };
+      if (!fredApiKey) return { ...base, fredDate: null, fredValue: null, fetchFailed: true };
+      try {
+        const url = new URL("https://api.stlouisfed.org/fred/series/observations");
+        url.searchParams.set("series_id", r.fredSeriesId);
+        url.searchParams.set("api_key", fredApiKey);
+        url.searchParams.set("file_type", "json");
+        url.searchParams.set("sort_order", "desc");
+        url.searchParams.set("limit", "1");
+        const res = await fetch(url, { signal: AbortSignal.timeout(15_000) });
+        if (!res.ok) return { ...base, fredDate: null, fredValue: null, fetchFailed: true };
+        const json = (await res.json()) as { observations?: Array<{ date: string; value: string }> };
+        const obs = json.observations?.[0];
+        const value = obs && obs.value !== "." ? Number(obs.value) : null;
+        return { ...base, fredDate: obs?.date ?? null, fredValue: value, fetchFailed: value === null };
+      } catch {
+        return { ...base, fredDate: null, fredValue: null, fetchFailed: true };
+      }
+    }),
+  );
+  const fredCommodityCheck = evaluateFredCommodityConsistency(fredSamples);
+
   const anomalies = [
     ...pipelineHealth.filter((p) => p.anomaly).map((p) => ({ type: "PIPELINE", jobId: p.jobId, reasons: p.anomalyReasons })),
     ...[stockFreshness, domesticFundFreshness].filter((f) => f.anomaly).map((f) => ({ type: "FRESHNESS", label: f.label, reason: f.anomalyReason })),
     ...(etfDataSourceGap.anomaly ? [{ type: "ETF_DATA_SOURCE_GAP", newCodes: etfDataSourceGap.newCodes }] : []),
     ...(yahooTwCheck.anomaly ? [{ type: "YAHOO_TW_RETURN_MISMATCH", mismatches: yahooTwCheck.mismatches }] : []),
+    ...(fredCommodityCheck.anomaly ? [{ type: "FRED_COMMODITY_MISMATCH", mismatches: fredCommodityCheck.mismatches }] : []),
   ];
 
   // Round-4, user-approved: send a short summary EVERY day, not only when something is wrong --
@@ -100,7 +138,7 @@ export async function GET(request: Request) {
   // buildDailySummary.ts for the message format (unit-tested separately).
   const summary = buildDailySummary({
     today, anomalyCount: anomalies.length, pipelineHealth,
-    freshness: [stockFreshness, domesticFundFreshness], etfDataSourceGap, yahooTwCheck,
+    freshness: [stockFreshness, domesticFundFreshness], etfDataSourceGap, yahooTwCheck, fredCommodityCheck,
   });
   const notifyResult = await notifyAnomaly(summary);
 
@@ -110,9 +148,10 @@ export async function GET(request: Request) {
     inserted: 0, updated: 0, failed: anomalies.length, retryableFailures: 0, checkpointAfter: null,
     details: {
       date: today, pipeline_health: pipelineHealth, stock_freshness: stockFreshness, domestic_fund_freshness: domesticFundFreshness,
-      etf_data_source_gap: etfDataSourceGap, yahoo_tw_return_check: yahooTwCheck, anomaly_count: anomalies.length, anomalies, notify_result: notifyResult,
+      etf_data_source_gap: etfDataSourceGap, yahoo_tw_return_check: yahooTwCheck, fred_commodity_check: fredCommodityCheck,
+      anomaly_count: anomalies.length, anomalies, notify_result: notifyResult,
     },
   });
 
-  return Response.json({ ok: true, job: JOB, runId, status, anomalyCount: anomalies.length, anomalies, etfDataSourceGap, yahooTwCheck, notifyResult });
+  return Response.json({ ok: true, job: JOB, runId, status, anomalyCount: anomalies.length, anomalies, etfDataSourceGap, yahooTwCheck, fredCommodityCheck, notifyResult });
 }

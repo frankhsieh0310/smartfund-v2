@@ -67,7 +67,11 @@ export const CORE_COMMODITY_ROOTS: Array<{ rootId: string; yahooSymbol: string; 
   // Still NOT added, by design:
   // - Aluminum: only futures_product_roots entry is LME-listed (root_symbol "AH"); Yahoo's ALI=F is
   //   a different, COMEX-settled cash contract (confirmed via its own chart meta exchangeName
-  //   "CMX") -- writing it onto the LME root would mislabel the source.
+  //   "CMX") -- writing it onto the LME root would mislabel the source. 2026-10-17 (weekend list
+  //   item 6): the missing COMEX root is now ready to create via
+  //   `npx tsx scripts/seed-comex-aluminum-root.ts --write` (dry-run VERIFIED against production,
+  //   not yet executed per the standing no-DB-write-without-approval rule) -- once that row exists,
+  //   add `{ rootId: <new id>, yahooSymbol: "ALI=F", name: "Aluminum (COMEX)" }` to this list.
   // - Dairy (Class III/IV Milk, Dry Whey, Nonfat Dry Milk, Cash-settled Butter/Cheese), Mont Belvieu
   //   TET Propane, Southern Yellow Pine Lumber: every futures_yahoo_symbol_mappings row found for
   //   these is a SPECIFIC delivery-month contract (e.g. "Class III Milk Futures,Apr-2027"), not a
