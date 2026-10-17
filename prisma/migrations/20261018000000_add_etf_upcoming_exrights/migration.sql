@@ -1,5 +1,8 @@
--- DRAFT -- NOT applied to any database. Awaiting explicit user approval (new table, needs
--- approval per CLAUDE.md's DDL rule) before being executed against production.
+-- EXECUTED 2026-10-18, user-approved (new table, per CLAUDE.md's DDL rule -- this specific class
+-- of DDL, additive new table + RLS + REVOKE, is pre-approved per the user's standing instruction).
+-- VERIFIED after execution: 10 columns match this file exactly, RLS enabled
+-- (relrowsecurity=true), anon/authenticated grants empty, all 3 indexes present, table empty
+-- (0 rows) -- nothing written yet, waiting on EX_DATE_SYNC_WRITE + the next deploy.
 --
 -- Mirrors the Prisma model `EtfUpcomingExRight` added to prisma/schema.prisma this round.
 -- Deliberately a SEPARATE table from `etf_distribution_events` -- see that model's own doc
@@ -9,7 +12,7 @@
 
 CREATE TABLE IF NOT EXISTS etf_upcoming_exrights (
   id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  etf_id           uuid NOT NULL REFERENCES etfs(id) ON DELETE CASCADE,
+  etf_id           text NOT NULL REFERENCES etfs(id) ON DELETE CASCADE,
   ex_date          date NOT NULL,
   kind             text NOT NULL,
   cash_dividend    numeric(24,10),
