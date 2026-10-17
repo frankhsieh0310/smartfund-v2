@@ -16,7 +16,12 @@ master 為正式基準分支。新工作一律從最新的 master 開分支；�
 - `C:\Users\User\AppData\Local\Temp\mcs-prod` — 另一個既有 worktree，HEAD 在 `599741829`。我不得修改這個資料夾。
 - `C:\Users\User\AppData\Local\Temp\mcs-release` — 上一次的正式環境部署來源（`58d8d8165`，從 `ab8f698a4` cherry-pick 網站修正與計數修正）。已被 `mcs-final` 取代，我不得再修改這個資料夾。
 - `C:\Users\User\AppData\Local\Temp\mcs-final` — 已部署到正式環境的來源（`e0588acec`）。之後不再從這個資料夾部署，保留供對照。
-- `C:\Users\User\AppData\Local\Temp\mcs-final2` — **目前最新、待部署的 worktree**：`e0588acec`（目前正式環境）+ cherry-pick `338f594f8`（新 SHA `7bcaa87a3`），只多這一個修正，其他沒變。已完成 tsc／build／Preview 驗證，等使用者執行 `--prod` 部署。之後要追加任何正式環境修正，從 `fix/qa-round1` 本身繼續開發，下次部署前再開一個新 worktree 指到那時的 HEAD。
+- `C:\Users\User\AppData\Local\Temp\mcs-final2` — 已部署到正式環境的來源（`7bcaa87a3`）。之後不再從這個資料夾部署。
+- `C:\Users\User\AppData\Local\Temp\mcs-final3` — **目前最新、待部署的 worktree**：`fix/qa-round1` 2026-10-17 的 HEAD（`7fd9125b1`），比目前正式環境（`c504d180a`）多 17 個 commit（0 個被移除，`git merge-base --is-ancestor` 已確認）。包含：7 檔新上市 ETF `data_source` 根因修正（`07b0f1b91`）、台股拼圖法律頁（已在正式環境，這裡是確保繼續包含）、903 組/MoneyDJ 重複基金顯示層修正等。已完成：`npm ci`＋`npx prisma generate`、`npx next build`（0 錯誤）、`npx tsc --noEmit`（0 錯誤）、新路由的本機只抓不寫 dry-run（`detectNewListings(false)` 讀到 6 檔今天真實新上市案例；額外直接驗證新寫的 `resolveTwDataSource()` 對這 6 檔全部能驗證到真實 Yahoo 資料）、Preview 部署
+  `smartfund-v2-b84m5ojjs-frankhsieh0310s-projects.vercel.app`（首頁、三個法律頁、`/compare`都 200；頁尾
+  email／連結正確；`/api/search` 確認 Goldman Sachs 那組 7 筆各自顯示正確 ticker）。等使用者執行
+  `--prod` 部署。之後要追加任何正式環境修正，從 `fix/qa-round1` 本身繼續開發，下次部署前再開一個新
+  worktree 指到那時的 HEAD。
 
 **部署規則（使用者 2026-10-16 訂立，之後每次部署一律遵守）**
 - 部署指令固定用：`npx vercel deploy --prod --meta commit=$(git rev-parse HEAD)`（讓每次正式部署都留下對應的 commit SHA，之前用純 `vercel deploy --prod` 的 CLI 部署完全沒有 git metadata，無法回溯比對）。
@@ -78,6 +83,11 @@ master 為正式基準分支。新工作一律從最新的 master 開分支；�
 - 第 13 項 3 個交易日計時起點：使用者已明確指示從 **2026-10-19（週一）** 起算（10/17-18 為週末非交易日）。
 - 第 14 項帳號刪除實測：公開註冊路徑（`/auth/v1/signup`，用 publishable key）會卡在「需要 email 確認才能拿到 session」——不是技術卡住，是這個 Supabase 專案的設定如此，已照使用者指示準備 PowerShell 腳本作為替代（見下）。查證過程中額外發現**本機 `.env` 的 `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` 有一個 O/0 打字錯誤**（`6iV00` 應為 `6iVO0`），跟 Vercel Production 實際值不一致，只是本機診斷用值錄錯，不影響正式環境（Vercel 自己的值是對的）。
 - PowerShell 實測腳本 `scratch/claude-account-delete-flow-test.ps1` 已逐行核對現有 `/api/me`、`/api/watchlists` 程式碼，確認腳本跟現在的正式環境行為一致，使用者只需貼上 `$ServiceRoleKey`／`$PublishableKey` 兩個值後整段執行。
+
+**部署凍結期（使用者 2026-10-17 訂立）**：這次（`mcs-final3`／`7fd9125b1`）部署之後到週三（10/21）
+收盤前，**不准再部署任何新功能**，只能部署「修正 daily-health-report 抓到的異常」這一類。新功能可以
+繼續開發、繼續用 Preview 測試，週三之後再一起上。這段凍結期跟下面第 13 項的 3 個交易日計時是同一段
+時間，目的是讓這 3 天測的是同一個穩定版本，不要中途又換版本。
 
 **第 13 項：3 個交易日 daily-health-report 計時（起算 2026-10-19 週一）**
 - 已設定一個工作階段內的排程（cron job `8722122f`，平日台北時間 9:13 am 前後，7 天後自動過期），每天檢查
