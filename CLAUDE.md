@@ -112,8 +112,26 @@ master 為正式基準分支。新工作一律從最新的 master 開分支；�
     「大佬雷達」共用同一套，不是新接的廠商）。兩個都用 `ALERT_EVALUATE_WRITE` 開關預設關閉。
     另外做了 DAYS_TO_EX_DATE（ETF 除息日倒數）但 VERIFIED `etf_distribution_events` 目前只有
     歷史除息日（沒有未來日期的列），這個指標永遠不會觸發，所以**刻意沒有放進 `CAPABILITIES`
-    讓 App 顯示**，避免使用者選到一個做不到的條件；程式碼留著，等有未來除息日的資料來源接上
-    再打開。App 端「通知列表」畫面還沒做，是下一步。
+    讓 App 顯示**。
+  - **2026-10-18 晚間：DAYS_TO_EX_DATE 的官方資料來源已接好（commit `274e40272`，Preview
+    `smartfund-v2-g70hhjari-frankhsieh0310s-projects.vercel.app`）**：改用證交所「除權除息預告表」
+    （`https://www.twse.com.tw/rwd/zh/exRight/TWT48U`）＋櫃買中心官方 OpenAPI
+    （`tpex_exright_prepost`）這兩個「即將除息」的官方公告來源，日期/金額照抄，沒有自己推算。
+    本機只抓不寫驗證：今天共 121 筆官方公告（TWSE 55＋TPEx 66），99 筆比對到既有 ETF（22 筆不
+    匹配的都是一般股票，正確排除，不是比對出錯），23 筆金額還是官方「待公告」狀態，誠實跳過不寫
+    入（沒有編造 0 當佔位）。抽 5 檔（`00401A`／`00408A`／`00714`／`00717`／`00730`）跟官方頁面
+    逐字核對，日期與金額全部一致。
+    - **這次新增了一個資料表 `etf_upcoming_exrights`（需要你核准才會真的建立）**：沒有寫進既有
+      的 `etf_distribution_events`，是**刻意分開**——那張表已經被 `lib/yahoo/distributionYield.ts`
+      用「最近一筆除息日」算配息率（第 7 項，已驗收上線的功能），如果把「官方已公告但還沒真的
+      發生」的未來日期寫進同一張表，會讓這個既有配息率計算誤把「還沒發生的除息」當成「最近一次
+      已發生的除息」，污染一個已經驗收通過的功能。新表完全獨立，不會影響第 7 項。遷移檔
+      （含 RLS+REVOKE）已寫好在
+      `prisma/migrations/20261018000000_add_etf_upcoming_exrights/migration.sql`，**還沒執行**，
+      等你核准。
+    - 核准後：執行這個新表的遷移 → 部署這次修正 → 打開 `EX_DATE_SYNC_WRITE` 讓每日排程真的寫入
+      → 確認至少跑過一次有真實資料 → 才把 `DAYS_TO_EX_DATE` 加回 `CAPABILITIES` 讓 App 顯示
+      這個條件（現在故意還沒加回去，資料還沒真的進來）。App 端「通知列表」畫面還沒做，是下一步。
   - **付費機制規劃文件**：`docs/specs/2026-10-18-payment-mechanism-planning.md`。現況：方案頁
     UI 已完整（Free/Lite/Pro/Advisor/Team），付款按鈕目前是佔位符；`User.plan` enum 存在但沒人
     改它；另一個工作階段的「台股拼圖」App 已經在用 RevenueCat。建議：用 RevenueCat 當訂閱管理層
