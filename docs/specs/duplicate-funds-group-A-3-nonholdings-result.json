@@ -1,0 +1,189 @@
+[
+  {
+    "name": "Gladstone Alternative Income Fund",
+    "ticker": "GAIIX",
+    "action": "keep_both",
+    "ids": [
+      "7c9a80e9-065c-4c95-abf3-b2c2a109166f",
+      "11e3200a-6f03-428d-be9c-dfa8b976f4e1"
+    ],
+    "detail": [
+      {
+        "id": "7c9a80e9-065c-4c95-abf3-b2c2a109166f",
+        "score": 147,
+        "tables": [
+          [
+            "fund_history",
+            145
+          ],
+          [
+            "fund_provider_mappings",
+            1
+          ],
+          [
+            "fund_share_classes",
+            1
+          ]
+        ],
+        "wl": 0
+      },
+      {
+        "id": "11e3200a-6f03-428d-be9c-dfa8b976f4e1",
+        "score": 144,
+        "tables": [
+          [
+            "fund_distribution_observations",
+            5
+          ],
+          [
+            "fund_history",
+            137
+          ],
+          [
+            "fund_provider_mappings",
+            1
+          ],
+          [
+            "fund_share_classes",
+            1
+          ]
+        ],
+        "wl": 0
+      }
+    ]
+  },
+  {
+    "name": "Pictet - Short-Term Money Market USD T4",
+    "ticker": "0P0001TLEO",
+    "action": "keep_both",
+    "ids": [
+      "995e315a-329f-47f8-863a-04eb7b1c569f",
+      "1ecbb60c-a98c-4b77-b813-839fc8df21e9",
+      "bf719c89-fcd6-4698-87e3-a8e5a4186e0e"
+    ],
+    "detail": [
+      {
+        "id": "995e315a-329f-47f8-863a-04eb7b1c569f",
+        "score": 493,
+        "tables": [
+          [
+            "fund_history",
+            491
+          ],
+          [
+            "fund_provider_mappings",
+            1
+          ],
+          [
+            "fund_share_classes",
+            1
+          ]
+        ],
+        "wl": 0
+      },
+      {
+        "id": "1ecbb60c-a98c-4b77-b813-839fc8df21e9",
+        "score": 493,
+        "tables": [
+          [
+            "fund_history",
+            491
+          ],
+          [
+            "fund_provider_mappings",
+            1
+          ],
+          [
+            "fund_share_classes",
+            1
+          ]
+        ],
+        "wl": 0
+      },
+      {
+        "id": "bf719c89-fcd6-4698-87e3-a8e5a4186e0e",
+        "score": 483,
+        "tables": [
+          [
+            "fund_history",
+            478
+          ],
+          [
+            "fund_provider_mappings",
+            1
+          ],
+          [
+            "fund_risk_metrics",
+            3
+          ],
+          [
+            "fund_share_classes",
+            1
+          ]
+        ],
+        "wl": 0
+      }
+    ]
+  },
+  {
+    "name": "T. Rowe Price Retirement 2065 I",
+    "ticker": "TRMOX",
+    "action": "keep_both",
+    "ids": [
+      "5e5a54b2-21a9-4d48-9456-da6430579553",
+      "4fa2a41e-600d-4111-9dd2-3c21498a0272"
+    ],
+    "detail": [
+      {
+        "id": "5e5a54b2-21a9-4d48-9456-da6430579553",
+        "score": 744,
+        "tables": [
+          [
+            "fund_history",
+            732
+          ],
+          [
+            "fund_provider_mappings",
+            1
+          ],
+          [
+            "fund_share_classes",
+            1
+          ],
+          [
+            "holdings",
+            10
+          ]
+        ],
+        "wl": 0
+      },
+      {
+        "id": "4fa2a41e-600d-4111-9dd2-3c21498a0272",
+        "score": 743,
+        "tables": [
+          [
+            "fund_distribution_observations",
+            3
+          ],
+          [
+            "fund_history",
+            721
+          ],
+          [
+            "fund_provider_mappings",
+            1
+          ],
+          [
+            "fund_risk_metrics",
+            17
+          ],
+          [
+            "fund_share_classes",
+            1
+          ]
+        ],
+        "wl": 0
+      }
+    ]
+  }
+]

@@ -63,14 +63,14 @@ DDL／批次 UPDATE 核准。已過 `tsc`／`next build`，並用真實查詢（
         筆，證實這次改用「持股引用」為準是對的。
       - 這 45 組都是「只有一筆被引用」的情況；沒有出現「兩筆都被引用」需要列清單給你的情形。
     - 0 組是「兩筆（或以上）都被持股資料引用」的情形。
-  - **3 組不屬於本次規則範圍**：這 3 組是因為 `fund_distribution_observations`／`fund_risk_metrics`
-    的落差被標記，不是「持股資料」（你的指示明確寫「持股資料（holdings／holdings_by_master）」），
-    所以**維持原樣，沒有執行任何動作**，清單在 `duplicate-funds-67-resolution.txt` 最後一節，等你決定
-    這 3 組要不要另外處理。
+  - 這 3 組原本不屬於「持股資料」規則範圍，**2026-10-17 已依你擴大後的規則處理完畢**：改用「27 個
+    `fund_id` 外鍵表加總分數最高者保留，若兩筆互有對方沒有的關聯資料則全部保留不動」。結果：3 組**全
+    部保留，沒有停用任何一筆**——每組兩筆都各自有對方沒有的關聯資料（例如 `Gladstone Alternative
+    Income Fund` 一筆有 `fund_distribution_observations` 5 筆、另一筆沒有；`T. Rowe Price Retirement
+    2065 I` 一筆有 `fund_risk_metrics` 17 筆、另一筆沒有）。查核明細：
+    `docs/specs/duplicate-funds-group-A-3-nonholdings-result.json`。
   （舊版純用 `updated_at` 的清單 `docs/specs/duplicate-funds-same-ticker-900-changelist.txt` 已標註
   過期，不要用那份。）
 
 ## 不執行的項目
-- 3 組「持股資料以外的關聯落差」（`fund_distribution_observations`／`fund_risk_metrics`），沒有執行
-  任何 `is_active=false`，等你決定後再處理。
 - 沒有對任何一筆執行 DELETE。

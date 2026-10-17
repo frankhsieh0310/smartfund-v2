@@ -26,12 +26,17 @@ VERIFIED（直接 SELECT 查證，2026-10-16）：328 檔 `data_provider='MoneyD
 跟 903 組同 ticker 重複用同一套查核方式（27 個 fund_id 外鍵表 + `watchlist_items`），對 123 筆完全
 同名案例（重新查證：312 筆無對照裡有 123 筆能找到同名、已對照好的正確列，跟原估計 122 筆接近，差異
 是即時查詢期間資料變動）逐筆查核：
-- **101 筆安全可執行**：MoneyDJ 代碼列沒有任何正確列沒有的關聯資料，也沒有使用者自選股引用，建議
-  `is_active=false`（保留正確列）。清單：`docs/specs/moneydj-123-exact-match-audit.txt`。
-- **22 筆待人工決定**：MoneyDJ 代碼列有正確列沒有的關聯資料（例如被某個 ETF/母子基金結構的持股引
-  用），不能直接停用，清單在同一份文件下方。
-- **尚未執行任何異動**，等你核准後才會對這 101 筆執行 `is_active=false`，並補做 82 筆「同一檔基金、
-  名稱寫法差異」案例（股份級別後綴不同，需要更細的比對規則，這次沒有時間做）。
+- **101 筆：2026-10-17 已核准執行** `is_active=false`（保留正確列）。執行前 SELECT 確認 101 筆全為
+  active，UPDATE rowCount=101，執行後 0 筆為 active；保留的 101 筆正確列全部仍為 active。抽 3 筆
+  覆查：MoneyDJ 代碼列變 `is_active=false`，正確（SITCA 統編）列維持 active，沒有任何基金消失。
+  清單：`docs/specs/moneydj-123-exact-match-audit.txt`。
+- **22 筆：2026-10-17 已依你擴大後的規則處理完畢**——改用「27 個關聯表加總分數最高者保留，兩筆互有
+  對方沒有的關聯資料則全部保留」。結果：**22 筆全部保留，沒有停用任何一筆**，因為這 22 筆本來就是
+  因為「MoneyDJ 列有正確列沒有的關聯資料」才被標記，套用新規則後確認都是互有落差的情況。查核明細：
+  `docs/specs/duplicate-funds-group-B-22-moneydj-result.json`；完整執行清單（含 A/B/C 三批）：
+  `docs/specs/duplicate-funds-2026-10-17-batch.txt`。
+- 還沒做：82 筆「同一檔基金、名稱寫法差異」案例（股份級別後綴不同，需要更細的比對規則，這次沒有
+  時間做）。
 - 剩餘約 95 筆「真的沒有任何對照」的案例仍待重新研究（Yahoo/SITCA 代碼轉換都已確認不可行，見下）。
 
 ## 補充查證：Yahoo/SITCA 代碼轉換方法可行性

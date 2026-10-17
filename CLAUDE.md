@@ -24,6 +24,8 @@ master 為正式基準分支。新工作一律從最新的 master 開分支；�
 - 部署正式環境前，必須先比對「目前正式環境的 commit」與「準備部署的 commit」，列出會被移除的 commit，不是 0 個不准部署；並先用 Preview 部署讓使用者自己在瀏覽器/`vercel curl`確認畫面。
 - **建立或刪除 Vercel 專案、變更專案設定，一律先問使用者，不准自己決定執行**（2026-10-16 訂立：`vercel link` 不帶 `--project` 時會自動用當前目錄名建立一個全新專案，曾意外建出一個空的 `mcs-final2` 專案，雖然已刪除且沒有造成影響，但刪除專案這類指令如果打錯目標後果嚴重）。`vercel link` 一律要明確指到既有的 `smartfund-v2` 專案（`.vercel/project.json` 直接寫入 `projectId: prj_1KrCMg3BVSPuYqqmigFVksTn1Xa0`, `orgId: team_D42Dk8aVzncrm2MAPDeJ25i3`），不要讓 CLI 自動互動建立。
 - **任何網站部署步驟（包括要使用者手動執行的），給使用者之前必須先讀** `C:\Users\User\Desktop\smartmatchpilot-網站修改-合併說明.md`，**確認裡面列的分支都已合併**，並在步驟裡寫明已確認（2026-10-17 訂立，起因：另一個工作階段在 `smartmatchpilot.com` 上獨立開了 `site/twpuzzle-legal-on-*` 系列分支加三個法律頁＋頁尾連結，我用 `mcs-final2` 部署 `7bcaa87a3` 時沒看這份文件，把這三頁蓋成 404，使用者發現後才知道要合併）。沒確認過這份文件就不准叫使用者部署。`site/twpuzzle-legal-on-7bcaa87`（`3a7513481`、`c504d180a`）已於 2026-10-17 合併進 `fix/qa-round1`。
+- **部署來源統一（2026-10-17 訂立）**：`smartmatchpilot.com` 正式環境以後只從這邊的 `fix/qa-round1` 部署。另一個工作階段（台股拼圖 App）如果直接改了這個網站的程式碼並自己部署，那個分支要先合併進 `fix/qa-round1`，再從乾淨的 worktree 部署，不准直接從別的分支部署正式環境。
+  - **已查證（2026-10-17）**：用 `vercel ls --prod` 比對最近 20 次正式部署的 `meta.commit`，台股那邊確實自己部署過 2 次——`dpl_56HJ8Nf1YuE6TuAwk4TgjambicVN`（commit `34505f12e`，2026-10-16T14:53）跟 `dpl_DDU6h8K5qWkomx1MkdMibj4NAY5t`（commit `c504d180a`，2026-10-17T05:05，即造成本次 404 的那次）。VERIFIED 兩次的程式碼改動都已經在 `fix/qa-round1` 裡：`c504d180a` 連同 `3a7513481` 已直接合併進來；`34505f12e` 雖然不是目前 HEAD 的祖先（是 cherry-pick 關係，commit hash 不同），但用 `git diff 34505f12e HEAD -- app/twpuzzle/ components/twpuzzle/` 確認檔案內容逐字相同，不需要再處理。其他 18 次部署的 commit 都能在 `fix/qa-round1` 的 git log 裡對上，不是外部分支。
 
 **正式環境狀態（VERIFIED 2026-10-16，commit `e0588acec`，部署於 `mcs-final`）**
 - 目前 production 部署於 `mcs-final`，alias 到 `www.smartmatchpilot.com` 等。`STOCK_TECHNICAL_SYNC_WRITE=on` 已由使用者本人新增到 Vercel Production。
@@ -70,6 +72,11 @@ master 為正式基準分支。新工作一律從最新的 master 開分支；�
 - **重要限制**：這個排程只存在於目前這個對話 session 的記憶體裡，session 結束（使用者關閉這個對話、
   或這台機器的 Claude Code 退出）排程就會消失，不會自動恢復。如果 10/19~10/21 這段時間這個對話沒有保
   持開啟，計時檢查就不會自動發生，需要使用者開啟新對話時主動要求我補查。
+- **2026-10-17（今天，計時還沒開始，提前查核 Telegram 發送機制）**：確認近 3 天（10/15-17）
+  `notify_result` 都是 Telegram 成功送達（`httpStatus=200`）。異常追查：10/15、10/16 的
+  `SITCA_NAV_SYNC` 一次性錯誤已自行恢復；10/16 的 `00980A` 報酬率落差已自行修正（現在跟 Yahoo 差距
+  只有 0.27）；10/15 的 `00407A` 兩邊都是 null，不是真缺口。10/17 當天發現真的異常：7 檔新上市 ETF
+  缺 `data_source`，已查證對照代碼並寫成待核准提案（`docs/specs/2026-10-17-daily-health-report-review.md`），等核准後執行。
 - 2026-10-19（週一）: 待檢查。
 - 2026-10-20（週二）: 待檢查。
 - 2026-10-21（週三）: 待檢查。
@@ -89,7 +96,7 @@ master 為正式基準分支。新工作一律從最新的 master 開分支；�
 | 9 | 基金／ETF 比較 | ✅ 完成 | 使用者核准：算達標。已在「組合穿透」（首頁卡進入的頁面）加一個「基金／ETF 比較」入口，首頁六張卡維持不動 |
 | 10 | 標的詳情頁＋技術分析（6 類） | ✅ 完成（程式碼層級） | 共用同一條詳情頁路由＋技術分析頁，依 assetType／category 分流涵蓋台股 ETF／海外 ETF／境內基金／境外基金／債券 ETF／商品；COMMODITY 技術指標是本輪才修好的；6 類底層資料本身是否每類都有完整歷史資料，本次稽核沒有逐類查 DB 驗證 |
 | 11 | 新商品上架 | ✅ 完成（已修正） | 原本「即將上架」查無資料時仍顯示空區塊標題，違反「查無來源則隱藏」規則，已修正為整個分區隱藏 |
-| 12 | 資料完整度 | ⚠️ 部分（已大幅推進） | 重名基金顯示層已修；903 組同 ticker 真重複：886 筆已 `is_active=false`（841+45），3 組持股以外落差待決定；MoneyDJ 123 筆完全同名重複已查核，101 筆待核准執行、22 筆待人工決定；MoneyDJ 剩餘 82 筆（名稱寫法差異）＋約 95 筆真缺對照仍待處理；英文名基金清理沒有獨立處理 |
+| 12 | 資料完整度 | ⚠️ 部分（已大幅推進） | 重名基金顯示層已修；903 組同 ticker 真重複：全部 903 組已處理完畢（886 筆 `is_active=false`：841+45；20 組/筆互有對方沒有的關聯資料，全部保留不動，無待決）；MoneyDJ 123 筆完全同名重複全部處理完畢（101 筆已 `is_active=false`，22 筆互有關聯資料全部保留不動）；MoneyDJ 剩餘 82 筆（名稱寫法差異）＋約 95 筆真缺對照仍待處理；今天 daily-health-report 發現 7 檔新上市 ETF 缺 `data_source`，已查證對照代碼待核准執行（見 `docs/specs/2026-10-17-daily-health-report-review.md`）；英文名基金清理沒有獨立處理 |
 | 13 | 3 個交易日乾淨 | ❌ 計時未開始 | 已部署（`e0588acec`）；使用者指示從 2026-10-19（週一）起算三個交易日 |
 | 14 | Google 登入＋帳號刪除 | ⚠️ 部分 | Google 登入正式環境可用；`DELETE /api/me` 已部署；端對端實測卡在「公開註冊需 email 確認」，已準備 PowerShell 腳本（`scratch/claude-account-delete-flow-test.ps1`）待使用者貼金鑰執行 |
 | 15 | 配息提醒引擎 | ❌ 未做 | 只有 CRUD API（`watchlistAlertRule`）＋App UI，完全沒有任何排程會去讀規則、評估條件、觸發通知——這部分等於從零開始 |

@@ -1,0 +1,1614 @@
+[
+  {
+    "name": "元大富櫃50基金",
+    "action": "keep_both",
+    "ids": [
+      "f29168f8-2832-4f36-a255-28aa4a56e285",
+      "602517ca-e47e-44b5-973e-1b42ac6174bf"
+    ],
+    "detail": [
+      {
+        "id": "602517ca-e47e-44b5-973e-1b42ac6174bf",
+        "score": 113,
+        "tables": [
+          [
+            "fund_distribution_observations",
+            4
+          ],
+          [
+            "fund_history",
+            7
+          ],
+          [
+            "fund_mappings",
+            1
+          ],
+          [
+            "fund_profile_provenance",
+            1
+          ],
+          [
+            "fund_share_classes",
+            1
+          ],
+          [
+            "fund_source_allocation_observations",
+            23
+          ],
+          [
+            "holdings",
+            38
+          ],
+          [
+            "holdings_by_master",
+            38
+          ]
+        ],
+        "wl": 0
+      },
+      {
+        "id": "f29168f8-2832-4f36-a255-28aa4a56e285",
+        "score": 104,
+        "tables": [
+          [
+            "fund_history",
+            23
+          ],
+          [
+            "fund_performances",
+            19
+          ],
+          [
+            "fund_source_allocation_observations",
+            62
+          ]
+        ],
+        "wl": 0
+      }
+    ]
+  },
+  {
+    "name": "元大台灣中型100基金",
+    "action": "keep_both",
+    "ids": [
+      "6b30b6bf-e856-429b-af9d-65452bbee910",
+      "af147e02-fc10-49e1-bdd8-8d6b33494e5e"
+    ],
+    "detail": [
+      {
+        "id": "6b30b6bf-e856-429b-af9d-65452bbee910",
+        "score": 209,
+        "tables": [
+          [
+            "fund_history",
+            23
+          ],
+          [
+            "fund_performances",
+            25
+          ],
+          [
+            "fund_source_allocation_observations",
+            145
+          ],
+          [
+            "holdings",
+            8
+          ],
+          [
+            "holdings_by_master",
+            8
+          ]
+        ],
+        "wl": 0
+      },
+      {
+        "id": "af147e02-fc10-49e1-bdd8-8d6b33494e5e",
+        "score": 153,
+        "tables": [
+          [
+            "fund_distribution_observations",
+            4
+          ],
+          [
+            "fund_history",
+            7
+          ],
+          [
+            "fund_mappings",
+            1
+          ],
+          [
+            "fund_profile_provenance",
+            1
+          ],
+          [
+            "fund_share_classes",
+            1
+          ],
+          [
+            "fund_source_allocation_observations",
+            57
+          ],
+          [
+            "holdings",
+            41
+          ],
+          [
+            "holdings_by_master",
+            41
+          ]
+        ],
+        "wl": 0
+      }
+    ]
+  },
+  {
+    "name": "富邦台灣永續成長股息基金-A類型",
+    "action": "keep_both",
+    "ids": [
+      "79c1cf0b-5cf0-40fb-bd5c-9325511b8f6a",
+      "04dd901d-525e-4f77-adee-4de8118962af"
+    ],
+    "detail": [
+      {
+        "id": "04dd901d-525e-4f77-adee-4de8118962af",
+        "score": 1017,
+        "tables": [
+          [
+            "fund_history",
+            934
+          ],
+          [
+            "fund_mappings",
+            1
+          ],
+          [
+            "fund_profile_provenance",
+            1
+          ],
+          [
+            "fund_provider_mappings",
+            1
+          ],
+          [
+            "fund_risk_metrics",
+            16
+          ],
+          [
+            "fund_share_classes",
+            1
+          ],
+          [
+            "fund_source_allocation_observations",
+            15
+          ],
+          [
+            "holdings",
+            24
+          ],
+          [
+            "holdings_by_master",
+            24
+          ]
+        ],
+        "wl": 0
+      },
+      {
+        "id": "79c1cf0b-5cf0-40fb-bd5c-9325511b8f6a",
+        "score": 105,
+        "tables": [
+          [
+            "fund_history",
+            25
+          ],
+          [
+            "fund_performances",
+            19
+          ],
+          [
+            "fund_source_allocation_observations",
+            51
+          ],
+          [
+            "holdings",
+            5
+          ],
+          [
+            "holdings_by_master",
+            5
+          ]
+        ],
+        "wl": 0
+      }
+    ]
+  },
+  {
+    "name": "群益馬拉松基金TISA類型",
+    "action": "keep_both",
+    "ids": [
+      "5f72ee07-f674-4445-a529-e06271b41cd9",
+      "2ed47ecd-bf31-4b32-816c-ecdc1d2a8eac"
+    ],
+    "detail": [
+      {
+        "id": "5f72ee07-f674-4445-a529-e06271b41cd9",
+        "score": 185,
+        "tables": [
+          [
+            "fund_history",
+            23
+          ],
+          [
+            "fund_performances",
+            22
+          ],
+          [
+            "fund_source_allocation_observations",
+            126
+          ],
+          [
+            "holdings",
+            7
+          ],
+          [
+            "holdings_by_master",
+            7
+          ]
+        ],
+        "wl": 0
+      },
+      {
+        "id": "2ed47ecd-bf31-4b32-816c-ecdc1d2a8eac",
+        "score": 73,
+        "tables": [
+          [
+            "fund_history",
+            7
+          ],
+          [
+            "fund_mappings",
+            1
+          ],
+          [
+            "fund_profile_provenance",
+            1
+          ],
+          [
+            "fund_share_classes",
+            1
+          ],
+          [
+            "fund_source_allocation_observations",
+            33
+          ],
+          [
+            "holdings",
+            15
+          ],
+          [
+            "holdings_by_master",
+            15
+          ]
+        ],
+        "wl": 0
+      }
+    ]
+  },
+  {
+    "name": "元大台灣高股息基金(本基金之配息來源可能為收益平準金且並無保證收益及配息)",
+    "action": "keep_both",
+    "ids": [
+      "88e4673f-cd4d-4f5d-87d0-d7784d83b537",
+      "43280c25-d40e-4a36-a13c-5973633e8732"
+    ],
+    "detail": [
+      {
+        "id": "88e4673f-cd4d-4f5d-87d0-d7784d83b537",
+        "score": 188,
+        "tables": [
+          [
+            "fund_history",
+            19
+          ],
+          [
+            "fund_performances",
+            17
+          ],
+          [
+            "fund_source_allocation_observations",
+            90
+          ],
+          [
+            "holdings",
+            31
+          ],
+          [
+            "holdings_by_master",
+            31
+          ]
+        ],
+        "wl": 0
+      },
+      {
+        "id": "43280c25-d40e-4a36-a13c-5973633e8732",
+        "score": 99,
+        "tables": [
+          [
+            "fund_distribution_observations",
+            14
+          ],
+          [
+            "fund_history",
+            7
+          ],
+          [
+            "fund_mappings",
+            1
+          ],
+          [
+            "fund_profile_provenance",
+            1
+          ],
+          [
+            "fund_share_classes",
+            1
+          ],
+          [
+            "fund_source_allocation_observations",
+            35
+          ],
+          [
+            "holdings",
+            20
+          ],
+          [
+            "holdings_by_master",
+            20
+          ]
+        ],
+        "wl": 0
+      }
+    ]
+  },
+  {
+    "name": "台新大三通基金",
+    "action": "keep_both",
+    "ids": [
+      "b5f78a54-f595-4c6a-882d-0c6b6bd7a8e7",
+      "668f00fd-fe41-4c86-b16a-ca4cabc5f590"
+    ],
+    "detail": [
+      {
+        "id": "668f00fd-fe41-4c86-b16a-ca4cabc5f590",
+        "score": 5644,
+        "tables": [
+          [
+            "fund_history",
+            5574
+          ],
+          [
+            "fund_mappings",
+            1
+          ],
+          [
+            "fund_profile_provenance",
+            1
+          ],
+          [
+            "fund_provider_mappings",
+            1
+          ],
+          [
+            "fund_source_allocation_observations",
+            19
+          ],
+          [
+            "holdings",
+            24
+          ],
+          [
+            "holdings_by_master",
+            24
+          ]
+        ],
+        "wl": 0
+      },
+      {
+        "id": "b5f78a54-f595-4c6a-882d-0c6b6bd7a8e7",
+        "score": 121,
+        "tables": [
+          [
+            "fund_history",
+            22
+          ],
+          [
+            "fund_performances",
+            21
+          ],
+          [
+            "fund_source_allocation_observations",
+            64
+          ],
+          [
+            "holdings",
+            7
+          ],
+          [
+            "holdings_by_master",
+            7
+          ]
+        ],
+        "wl": 0
+      }
+    ]
+  },
+  {
+    "name": "元大台灣50單日正向2倍基金(本基金為策略交易型產品且投資具有槓桿操作風險，故本基金不適合長期持有，僅符合臺灣證券交易所訂適格條件之投資人始得交易)",
+    "action": "keep_both",
+    "ids": [
+      "d0957df3-992f-48bc-a26a-e926752a6c27",
+      "87f23da2-3d75-4aec-a86d-d7260a79bb94"
+    ],
+    "detail": [
+      {
+        "id": "d0957df3-992f-48bc-a26a-e926752a6c27",
+        "score": 65,
+        "tables": [
+          [
+            "fund_history",
+            22
+          ],
+          [
+            "fund_performances",
+            21
+          ],
+          [
+            "fund_source_allocation_observations",
+            16
+          ],
+          [
+            "holdings",
+            3
+          ],
+          [
+            "holdings_by_master",
+            3
+          ]
+        ],
+        "wl": 0
+      },
+      {
+        "id": "87f23da2-3d75-4aec-a86d-d7260a79bb94",
+        "score": 17,
+        "tables": [
+          [
+            "fund_history",
+            7
+          ],
+          [
+            "fund_mappings",
+            1
+          ],
+          [
+            "fund_profile_provenance",
+            1
+          ],
+          [
+            "fund_share_classes",
+            1
+          ],
+          [
+            "fund_source_allocation_observations",
+            5
+          ],
+          [
+            "holdings",
+            1
+          ],
+          [
+            "holdings_by_master",
+            1
+          ]
+        ],
+        "wl": 0
+      }
+    ]
+  },
+  {
+    "name": "台新店頭基金",
+    "action": "keep_both",
+    "ids": [
+      "ad20ff30-9f4f-47d5-9d55-2e4fbe838344",
+      "4ee6ebf8-dbf3-4aa9-af8c-4bdfb2479468"
+    ],
+    "detail": [
+      {
+        "id": "4ee6ebf8-dbf3-4aa9-af8c-4bdfb2479468",
+        "score": 5643,
+        "tables": [
+          [
+            "fund_history",
+            5576
+          ],
+          [
+            "fund_mappings",
+            1
+          ],
+          [
+            "fund_profile_provenance",
+            1
+          ],
+          [
+            "fund_provider_mappings",
+            1
+          ],
+          [
+            "fund_share_classes",
+            1
+          ],
+          [
+            "fund_source_allocation_observations",
+            15
+          ],
+          [
+            "holdings",
+            24
+          ],
+          [
+            "holdings_by_master",
+            24
+          ]
+        ],
+        "wl": 0
+      },
+      {
+        "id": "ad20ff30-9f4f-47d5-9d55-2e4fbe838344",
+        "score": 91,
+        "tables": [
+          [
+            "fund_history",
+            22
+          ],
+          [
+            "fund_performances",
+            17
+          ],
+          [
+            "fund_source_allocation_observations",
+            46
+          ],
+          [
+            "holdings",
+            3
+          ],
+          [
+            "holdings_by_master",
+            3
+          ]
+        ],
+        "wl": 0
+      }
+    ]
+  },
+  {
+    "name": "元大台灣卓越50基金",
+    "action": "keep_both",
+    "ids": [
+      "424b99ac-2a0a-4f58-8dea-267b00d8a7d5",
+      "51622445-9125-42b1-a203-fbf7fbba6fbc"
+    ],
+    "detail": [
+      {
+        "id": "424b99ac-2a0a-4f58-8dea-267b00d8a7d5",
+        "score": 196,
+        "tables": [
+          [
+            "fund_history",
+            24
+          ],
+          [
+            "fund_performances",
+            18
+          ],
+          [
+            "fund_source_allocation_observations",
+            66
+          ],
+          [
+            "holdings",
+            44
+          ],
+          [
+            "holdings_by_master",
+            44
+          ]
+        ],
+        "wl": 0
+      },
+      {
+        "id": "51622445-9125-42b1-a203-fbf7fbba6fbc",
+        "score": 86,
+        "tables": [
+          [
+            "fund_distribution_observations",
+            9
+          ],
+          [
+            "fund_history",
+            7
+          ],
+          [
+            "fund_mappings",
+            1
+          ],
+          [
+            "fund_profile_provenance",
+            1
+          ],
+          [
+            "fund_share_classes",
+            1
+          ],
+          [
+            "fund_source_allocation_observations",
+            27
+          ],
+          [
+            "holdings",
+            20
+          ],
+          [
+            "holdings_by_master",
+            20
+          ]
+        ],
+        "wl": 0
+      }
+    ]
+  },
+  {
+    "name": "富邦台灣釆吉50基金(本基金之配息來源可能為收益平準金)",
+    "action": "keep_both",
+    "ids": [
+      "0e495a8e-ed04-4bfc-bfa6-4c9e996f6950",
+      "7afa53cc-fed9-4be9-8146-8836a94b2e6c"
+    ],
+    "detail": [
+      {
+        "id": "0e495a8e-ed04-4bfc-bfa6-4c9e996f6950",
+        "score": 211,
+        "tables": [
+          [
+            "fund_history",
+            21
+          ],
+          [
+            "fund_performances",
+            18
+          ],
+          [
+            "fund_source_allocation_observations",
+            70
+          ],
+          [
+            "holdings",
+            51
+          ],
+          [
+            "holdings_by_master",
+            51
+          ]
+        ],
+        "wl": 0
+      },
+      {
+        "id": "7afa53cc-fed9-4be9-8146-8836a94b2e6c",
+        "score": 79,
+        "tables": [
+          [
+            "fund_distribution_observations",
+            9
+          ],
+          [
+            "fund_history",
+            7
+          ],
+          [
+            "fund_mappings",
+            1
+          ],
+          [
+            "fund_profile_provenance",
+            1
+          ],
+          [
+            "fund_share_classes",
+            1
+          ],
+          [
+            "fund_source_allocation_observations",
+            20
+          ],
+          [
+            "holdings",
+            20
+          ],
+          [
+            "holdings_by_master",
+            20
+          ]
+        ],
+        "wl": 0
+      }
+    ]
+  },
+  {
+    "name": "復華台灣菁英50指數基金",
+    "action": "keep_both",
+    "ids": [
+      "70bf3a94-3c1f-45a4-93a2-32cf483995d2",
+      "1239b17e-1e28-48c4-8d8a-9a278be85314"
+    ],
+    "detail": [
+      {
+        "id": "70bf3a94-3c1f-45a4-93a2-32cf483995d2",
+        "score": 124,
+        "tables": [
+          [
+            "fund_history",
+            21
+          ],
+          [
+            "fund_performances",
+            17
+          ],
+          [
+            "fund_source_allocation_observations",
+            62
+          ],
+          [
+            "holdings",
+            12
+          ],
+          [
+            "holdings_by_master",
+            12
+          ]
+        ],
+        "wl": 0
+      },
+      {
+        "id": "1239b17e-1e28-48c4-8d8a-9a278be85314",
+        "score": 57,
+        "tables": [
+          [
+            "fund_history",
+            11
+          ],
+          [
+            "fund_mappings",
+            1
+          ],
+          [
+            "fund_profile_provenance",
+            1
+          ],
+          [
+            "fund_provider_mappings",
+            1
+          ],
+          [
+            "fund_share_classes",
+            1
+          ],
+          [
+            "fund_source_allocation_observations",
+            22
+          ],
+          [
+            "holdings",
+            10
+          ],
+          [
+            "holdings_by_master",
+            10
+          ]
+        ],
+        "wl": 0
+      }
+    ]
+  },
+  {
+    "name": "富邦臺灣公司治理100基金",
+    "action": "keep_both",
+    "ids": [
+      "84658c0f-63c4-49fd-b16b-f0f4c84a22cd",
+      "cbbff568-5345-4898-a80d-b0a4610a95de"
+    ],
+    "detail": [
+      {
+        "id": "84658c0f-63c4-49fd-b16b-f0f4c84a22cd",
+        "score": 274,
+        "tables": [
+          [
+            "fund_history",
+            23
+          ],
+          [
+            "fund_performances",
+            20
+          ],
+          [
+            "fund_source_allocation_observations",
+            141
+          ],
+          [
+            "holdings",
+            45
+          ],
+          [
+            "holdings_by_master",
+            45
+          ]
+        ],
+        "wl": 0
+      },
+      {
+        "id": "cbbff568-5345-4898-a80d-b0a4610a95de",
+        "score": 146,
+        "tables": [
+          [
+            "fund_distribution_observations",
+            9
+          ],
+          [
+            "fund_history",
+            7
+          ],
+          [
+            "fund_mappings",
+            1
+          ],
+          [
+            "fund_share_classes",
+            1
+          ],
+          [
+            "fund_source_allocation_observations",
+            44
+          ],
+          [
+            "holdings",
+            42
+          ],
+          [
+            "holdings_by_master",
+            42
+          ]
+        ],
+        "wl": 0
+      }
+    ]
+  },
+  {
+    "name": "台新創新科技基金",
+    "action": "keep_both",
+    "ids": [
+      "b63f1145-54bd-43e3-9208-c96de9de7524",
+      "e4f7625b-3a67-413b-8133-859d099cd1bd"
+    ],
+    "detail": [
+      {
+        "id": "e4f7625b-3a67-413b-8133-859d099cd1bd",
+        "score": 5642,
+        "tables": [
+          [
+            "fund_history",
+            5573
+          ],
+          [
+            "fund_mappings",
+            1
+          ],
+          [
+            "fund_provider_mappings",
+            1
+          ],
+          [
+            "fund_share_classes",
+            1
+          ],
+          [
+            "fund_source_allocation_observations",
+            18
+          ],
+          [
+            "holdings",
+            24
+          ],
+          [
+            "holdings_by_master",
+            24
+          ]
+        ],
+        "wl": 0
+      },
+      {
+        "id": "b63f1145-54bd-43e3-9208-c96de9de7524",
+        "score": 128,
+        "tables": [
+          [
+            "fund_history",
+            26
+          ],
+          [
+            "fund_performances",
+            21
+          ],
+          [
+            "fund_source_allocation_observations",
+            63
+          ],
+          [
+            "holdings",
+            9
+          ],
+          [
+            "holdings_by_master",
+            9
+          ]
+        ],
+        "wl": 0
+      }
+    ]
+  },
+  {
+    "name": "富邦台灣科技指數基金(本基金之配息來源可能為收益平準金)",
+    "action": "keep_both",
+    "ids": [
+      "f1cff526-eada-4160-a821-7fd7e6525bd5",
+      "335ce95d-ef39-4ffa-9e93-9096ef94bf04"
+    ],
+    "detail": [
+      {
+        "id": "f1cff526-eada-4160-a821-7fd7e6525bd5",
+        "score": 111,
+        "tables": [
+          [
+            "fund_history",
+            21
+          ],
+          [
+            "fund_performances",
+            19
+          ],
+          [
+            "fund_source_allocation_observations",
+            43
+          ],
+          [
+            "holdings",
+            14
+          ],
+          [
+            "holdings_by_master",
+            14
+          ]
+        ],
+        "wl": 0
+      },
+      {
+        "id": "335ce95d-ef39-4ffa-9e93-9096ef94bf04",
+        "score": 102,
+        "tables": [
+          [
+            "fund_distribution_observations",
+            4
+          ],
+          [
+            "fund_history",
+            7
+          ],
+          [
+            "fund_mappings",
+            1
+          ],
+          [
+            "fund_profile_provenance",
+            1
+          ],
+          [
+            "fund_share_classes",
+            1
+          ],
+          [
+            "fund_source_allocation_observations",
+            10
+          ],
+          [
+            "holdings",
+            39
+          ],
+          [
+            "holdings_by_master",
+            39
+          ]
+        ],
+        "wl": 0
+      }
+    ]
+  },
+  {
+    "name": "元大摩臺基金",
+    "action": "keep_both",
+    "ids": [
+      "4c2bf5db-d115-4911-9153-0d0890f7797b",
+      "39a919ed-7830-4eb3-8be1-c12be2db140f"
+    ],
+    "detail": [
+      {
+        "id": "4c2bf5db-d115-4911-9153-0d0890f7797b",
+        "score": 240,
+        "tables": [
+          [
+            "fund_history",
+            21
+          ],
+          [
+            "fund_performances",
+            20
+          ],
+          [
+            "fund_source_allocation_observations",
+            99
+          ],
+          [
+            "holdings",
+            50
+          ],
+          [
+            "holdings_by_master",
+            50
+          ]
+        ],
+        "wl": 0
+      },
+      {
+        "id": "39a919ed-7830-4eb3-8be1-c12be2db140f",
+        "score": 138,
+        "tables": [
+          [
+            "fund_distribution_observations",
+            9
+          ],
+          [
+            "fund_history",
+            7
+          ],
+          [
+            "fund_mappings",
+            1
+          ],
+          [
+            "fund_profile_provenance",
+            1
+          ],
+          [
+            "fund_share_classes",
+            1
+          ],
+          [
+            "fund_source_allocation_observations",
+            41
+          ],
+          [
+            "holdings",
+            39
+          ],
+          [
+            "holdings_by_master",
+            39
+          ]
+        ],
+        "wl": 0
+      }
+    ]
+  },
+  {
+    "name": "元大台灣電子科技基金",
+    "action": "keep_both",
+    "ids": [
+      "d701cdc9-db35-4ee5-9b47-16db1aed3299",
+      "87339865-a7b8-4ac5-bc50-5c8c0f5a735a"
+    ],
+    "detail": [
+      {
+        "id": "d701cdc9-db35-4ee5-9b47-16db1aed3299",
+        "score": 132,
+        "tables": [
+          [
+            "fund_history",
+            22
+          ],
+          [
+            "fund_performances",
+            17
+          ],
+          [
+            "fund_source_allocation_observations",
+            53
+          ],
+          [
+            "holdings",
+            20
+          ],
+          [
+            "holdings_by_master",
+            20
+          ]
+        ],
+        "wl": 0
+      },
+      {
+        "id": "87339865-a7b8-4ac5-bc50-5c8c0f5a735a",
+        "score": 122,
+        "tables": [
+          [
+            "fund_distribution_observations",
+            4
+          ],
+          [
+            "fund_history",
+            7
+          ],
+          [
+            "fund_mappings",
+            1
+          ],
+          [
+            "fund_profile_provenance",
+            1
+          ],
+          [
+            "fund_share_classes",
+            1
+          ],
+          [
+            "fund_source_allocation_observations",
+            20
+          ],
+          [
+            "holdings",
+            44
+          ],
+          [
+            "holdings_by_master",
+            44
+          ]
+        ],
+        "wl": 0
+      }
+    ]
+  },
+  {
+    "name": "台新台灣富貴基金",
+    "action": "keep_both",
+    "ids": [
+      "b3b72c92-8964-4b32-bf2f-41335033599b",
+      "6fc9dd9f-ced7-4f93-bb22-32986335f125"
+    ],
+    "detail": [
+      {
+        "id": "6fc9dd9f-ced7-4f93-bb22-32986335f125",
+        "score": 5644,
+        "tables": [
+          [
+            "fund_history",
+            5574
+          ],
+          [
+            "fund_mappings",
+            1
+          ],
+          [
+            "fund_profile_provenance",
+            1
+          ],
+          [
+            "fund_provider_mappings",
+            1
+          ],
+          [
+            "fund_source_allocation_observations",
+            19
+          ],
+          [
+            "holdings",
+            24
+          ],
+          [
+            "holdings_by_master",
+            24
+          ]
+        ],
+        "wl": 0
+      },
+      {
+        "id": "b3b72c92-8964-4b32-bf2f-41335033599b",
+        "score": 122,
+        "tables": [
+          [
+            "fund_history",
+            21
+          ],
+          [
+            "fund_performances",
+            18
+          ],
+          [
+            "fund_source_allocation_observations",
+            69
+          ],
+          [
+            "holdings",
+            7
+          ],
+          [
+            "holdings_by_master",
+            7
+          ]
+        ],
+        "wl": 0
+      }
+    ]
+  },
+  {
+    "name": "富邦精銳中小基金-TISA類型",
+    "action": "keep_both",
+    "ids": [
+      "6e757d5a-a5da-48ce-8d20-9d2cffeaaafd",
+      "10a7232a-bfa7-4a83-bc36-ea6cbfa05b18"
+    ],
+    "detail": [
+      {
+        "id": "6e757d5a-a5da-48ce-8d20-9d2cffeaaafd",
+        "score": 92,
+        "tables": [
+          [
+            "fund_history",
+            23
+          ],
+          [
+            "fund_performances",
+            19
+          ],
+          [
+            "fund_source_allocation_observations",
+            44
+          ],
+          [
+            "holdings",
+            3
+          ],
+          [
+            "holdings_by_master",
+            3
+          ]
+        ],
+        "wl": 0
+      },
+      {
+        "id": "10a7232a-bfa7-4a83-bc36-ea6cbfa05b18",
+        "score": 69,
+        "tables": [
+          [
+            "fund_history",
+            7
+          ],
+          [
+            "fund_mappings",
+            1
+          ],
+          [
+            "fund_profile_provenance",
+            1
+          ],
+          [
+            "fund_source_allocation_observations",
+            12
+          ],
+          [
+            "holdings",
+            24
+          ],
+          [
+            "holdings_by_master",
+            24
+          ]
+        ],
+        "wl": 0
+      }
+    ]
+  },
+  {
+    "name": "元大台灣50單日反向1倍基金(本基金為策略交易型產品且投資具有反向操作風險，故本基金不適合長期持有，僅符合臺灣證券交易所訂適格條件之投資人始得交易)",
+    "action": "keep_both",
+    "ids": [
+      "7de5e967-2532-496f-874e-42509d00e831",
+      "89453c3b-953b-4e6b-a5a2-1fba22064003"
+    ],
+    "detail": [
+      {
+        "id": "7de5e967-2532-496f-874e-42509d00e831",
+        "score": 49,
+        "tables": [
+          [
+            "fund_history",
+            21
+          ],
+          [
+            "fund_performances",
+            17
+          ],
+          [
+            "fund_source_allocation_observations",
+            11
+          ]
+        ],
+        "wl": 0
+      },
+      {
+        "id": "89453c3b-953b-4e6b-a5a2-1fba22064003",
+        "score": 14,
+        "tables": [
+          [
+            "fund_history",
+            7
+          ],
+          [
+            "fund_mappings",
+            1
+          ],
+          [
+            "fund_profile_provenance",
+            1
+          ],
+          [
+            "fund_share_classes",
+            1
+          ],
+          [
+            "fund_source_allocation_observations",
+            4
+          ]
+        ],
+        "wl": 0
+      }
+    ]
+  },
+  {
+    "name": "復華富時台灣高股息低波動基金(基金之配息來源可能為收益平準金且本基金並無保證收益及配息)",
+    "action": "keep_both",
+    "ids": [
+      "41010f20-47a3-4dd2-920a-423481d90883",
+      "f20fc9b6-7553-4615-a460-1fa5c0ad2ba1"
+    ],
+    "detail": [
+      {
+        "id": "41010f20-47a3-4dd2-920a-423481d90883",
+        "score": 167,
+        "tables": [
+          [
+            "fund_history",
+            19
+          ],
+          [
+            "fund_performances",
+            15
+          ],
+          [
+            "fund_source_allocation_observations",
+            99
+          ],
+          [
+            "holdings",
+            17
+          ],
+          [
+            "holdings_by_master",
+            17
+          ]
+        ],
+        "wl": 0
+      },
+      {
+        "id": "f20fc9b6-7553-4615-a460-1fa5c0ad2ba1",
+        "score": 134,
+        "tables": [
+          [
+            "fund_distribution_observations",
+            14
+          ],
+          [
+            "fund_history",
+            7
+          ],
+          [
+            "fund_mappings",
+            1
+          ],
+          [
+            "fund_share_classes",
+            1
+          ],
+          [
+            "fund_source_allocation_observations",
+            29
+          ],
+          [
+            "holdings",
+            41
+          ],
+          [
+            "holdings_by_master",
+            41
+          ]
+        ],
+        "wl": 0
+      }
+    ]
+  },
+  {
+    "name": "元大台灣金融基金",
+    "action": "keep_both",
+    "ids": [
+      "8ef0f1eb-73a1-4922-96fc-40cfd16b1bbc",
+      "8e704b6c-bf74-44c6-9af1-9c8a5d35854f"
+    ],
+    "detail": [
+      {
+        "id": "8ef0f1eb-73a1-4922-96fc-40cfd16b1bbc",
+        "score": 102,
+        "tables": [
+          [
+            "fund_history",
+            25
+          ],
+          [
+            "fund_performances",
+            19
+          ],
+          [
+            "fund_source_allocation_observations",
+            20
+          ],
+          [
+            "holdings",
+            19
+          ],
+          [
+            "holdings_by_master",
+            19
+          ]
+        ],
+        "wl": 0
+      },
+      {
+        "id": "8e704b6c-bf74-44c6-9af1-9c8a5d35854f",
+        "score": 93,
+        "tables": [
+          [
+            "fund_distribution_observations",
+            4
+          ],
+          [
+            "fund_history",
+            7
+          ],
+          [
+            "fund_mappings",
+            1
+          ],
+          [
+            "fund_profile_provenance",
+            1
+          ],
+          [
+            "fund_share_classes",
+            1
+          ],
+          [
+            "fund_source_allocation_observations",
+            9
+          ],
+          [
+            "holdings",
+            35
+          ],
+          [
+            "holdings_by_master",
+            35
+          ]
+        ],
+        "wl": 0
+      }
+    ]
+  },
+  {
+    "name": "富邦新台商基金-A類型",
+    "action": "keep_both",
+    "ids": [
+      "7db9b62f-c994-4f7b-aad4-33a351720f2f",
+      "18fa72e3-84dd-4687-a772-4e7c1f471673"
+    ],
+    "detail": [
+      {
+        "id": "18fa72e3-84dd-4687-a772-4e7c1f471673",
+        "score": 5641,
+        "tables": [
+          [
+            "fund_history",
+            5574
+          ],
+          [
+            "fund_mappings",
+            1
+          ],
+          [
+            "fund_profile_provenance",
+            1
+          ],
+          [
+            "fund_provider_mappings",
+            1
+          ],
+          [
+            "fund_share_classes",
+            1
+          ],
+          [
+            "fund_source_allocation_observations",
+            15
+          ],
+          [
+            "holdings",
+            24
+          ],
+          [
+            "holdings_by_master",
+            24
+          ]
+        ],
+        "wl": 0
+      },
+      {
+        "id": "7db9b62f-c994-4f7b-aad4-33a351720f2f",
+        "score": 102,
+        "tables": [
+          [
+            "fund_history",
+            25
+          ],
+          [
+            "fund_performances",
+            17
+          ],
+          [
+            "fund_source_allocation_observations",
+            44
+          ],
+          [
+            "holdings",
+            8
+          ],
+          [
+            "holdings_by_master",
+            8
+          ]
+        ],
+        "wl": 0
+      }
+    ]
+  }
+]
