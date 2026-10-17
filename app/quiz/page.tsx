@@ -496,9 +496,6 @@ function QuizContent() {
           )}
 
           <div className="flex gap-4 justify-center">
-            <a href={`/report?type=${result.key}`} className="bg-[#F5B700] hover:bg-[#e0a800] text-white px-10 py-4 rounded-lg font-semibold text-[18px] transition-colors">
-              查看分析結果
-            </a>
             <button onClick={handleRestart} className="border border-white/20 text-white px-10 py-4 rounded-lg hover:bg-white/[0.03] transition-colors font-semibold text-[18px]">
               重新測驗
             </button>

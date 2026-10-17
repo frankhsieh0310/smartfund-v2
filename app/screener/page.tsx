@@ -24,7 +24,6 @@ const investmentItems = [
 const researchItems = [
   { label: "SmartMatch", href: "/quiz" }, { label: "篩選器", href: "/screener" },
   { label: "商品比較", href: "/compare" }, { label: "投資組合健檢", href: "/portfolio" },
-  { label: "研究分析", href: "/report" },
 ];
 const dataItems = [
   { label: "經濟數據" }, { label: "殖利率" }, { label: "經濟日曆" }, { label: "財報日曆" },
