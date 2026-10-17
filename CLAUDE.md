@@ -150,7 +150,24 @@ master 為正式基準分支。新工作一律從最新的 master 開分支；�
       等你核准。
     - 核准後：執行這個新表的遷移 → 部署這次修正 → 打開 `EX_DATE_SYNC_WRITE` 讓每日排程真的寫入
       → 確認至少跑過一次有真實資料 → 才把 `DAYS_TO_EX_DATE` 加回 `CAPABILITIES` 讓 App 顯示
-      這個條件（現在故意還沒加回去，資料還沒真的進來）。App 端「通知列表」畫面還沒做，是下一步。
+      這個條件（現在故意還沒加回去，資料還沒真的進來）。
+    - **2026-10-17 晚間：App 端「通知列表」畫面已完成**（smartmatch-mobile commit `6f91fad`，
+      網站後端 commit `d9f25d4f8`）。新增 `GET /api/alerts?occurrences=1`（跨所有規則彙總的
+      已觸發通知，`historyFor=<id>` 原本只能查單一規則；`WatchlistAlertOccurrence` 沒有宣告
+      Prisma relation 到 `WatchlistAlertRule`，用跟 `alertDispatch.ts` 一樣的手動反查
+      pattern）；App 的「已觸發」分頁改名「通知列表」，預設顯示跨規則彙總通知，點進單一規則
+      的「觸發紀錄」才縮小範圍，有「查看全部」連結回彙總檢視。**順便查到並修好一個會直接
+      外洩給使用者看到的 bug**：`alertEvaluate.ts` 原本不管實際觸發的是 DIVIDEND_YIELD 還是
+      DAYS_TO_EX_DATE，都寫死同一個佔位字串 `"DIVIDEND_YIELD_OR_DAYS_TO_EX_DATE"` 進
+      `payload.metric`——如果照原樣接到這次新做的通知列表，使用者會直接看到這串英文代碼。
+      已修好（`EvaluatedRule` 加一個真正的 `metric` 欄位，從實際觸發的條件取得），通知列表
+      正確顯示「配息率」／「除息倒數天數」。本機 `tsc`／`next build` 都 0 錯誤，Preview
+      部署 `smartfund-v2-f6iy0liv3-frankhsieh0310s-projects.vercel.app` 驗證新端點正確回
+      401（沒登入）；App 端在 Expo web 本機把 `FEATURES.alerts` 暫時改 `true` 測試畫面渲染
+      正常、無 console error，**測完改回 `false` 才 commit**（還沒到使用者說的「驗證過才開」
+      的時間點）。**還沒做：還沒有真實登入帳號＋真實觸發資料的端對端畫面驗證**，等明天
+      cron `535be9b1` 查證 DAYS_TO_EX_DATE 資料正確後，會一併做「設定提醒→觸發→收到通知」
+      的完整測試，到時候把 `FEATURES.alerts` 真的打開。
     - **2026-10-17 晚間：使用者已從 `mcs-final6` 部署 `ec4296529` 到正式環境**（VERIFIED
       `vercel ls --prod` 的 `meta.commit` 正確是 `ec4296529`，與 `mcs-final6` HEAD 完全一致；
       `www.smartmatchpilot.com` 首頁／`/report` 都 200）。下次 `CLOUD_NEW_FUND_LISTING_DETECTION`
