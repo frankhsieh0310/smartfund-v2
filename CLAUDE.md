@@ -737,3 +737,35 @@ route.ts` 提供當日＋區間查詢；`smartmatch-mobile`：`src/institutional
 - TypeScript `tsc --noEmit` 對所有修改／新增檔案零錯誤。
 - 驗證後 `taskkill` 關閉兩個本機 dev server（3001、8099），`netstat` 確認無殘留監聽；`.env.local`
   已改回 production URL；本機自選的 BIOY 僅存在於瀏覽器本機 localStorage，未寫入任何資料庫。
+
+### 第 6 項：商品覆蓋 ✅ 熱燃油確認已有；鋁的 COMEX root 已備妥（未寫入）；FRED 交叉核對已上線
+
+**熱燃油**：VERIFIED 早就在 `CORE_COMMODITY_ROOTS`（`lib/cron/commodityUpdate.ts` 第 66 行，
+`HO=F`／Heating Oil NY Harbor ULSD），不需要再補，這次只確認並記錄，沒有改動。
+
+**鋁（Aluminum）**：`futures_product_roots` 原本唯一的鋁是 LME 掛牌（`root_symbol "AH"`），Yahoo 的
+`ALI=F` VERIFIED 是不同合約（即時查證：chart meta `exchangeName: "CMX"`、`instrumentType: "FUTURE"`，
+2026-10-16 真實收盤 3113.25 USD），不能混寫到 LME 的 root 上。新增
+`scripts/seed-comex-aluminum-root.ts`（預設 dry-run，需要 `--write` 才會真的寫入，遵守
+「未經核准不寫 production」的規則）：VERIFIED dry-run 輸出正確、對 production 查詢確認沒有重複的
+COMEX 鋁 root；**這次只做到 dry-run，尚未實際執行 `--write`**，等 Wednesday 凍結解除、下次部署時再由
+使用者核准執行，執行後把回傳的新 root id 加進 `CORE_COMMODITY_ROOTS`（`commodityUpdate.ts` 已留好對應
+註解與欄位格式）。
+
+**FRED 交叉核對**（真正的新功能）：在既有的 `app/api/cron/daily-health-report` 健康報告（已經有
+Yahoo奇摩報酬率交叉核對的先例，照同一個模式做）新增 WTI／天然氣的 FRED 交叉核對：
+- `lib/daily-health-report/checks.ts` 新增 `evaluateFredCommodityConsistency()`（純函式，單元測試過
+  正常與異常兩種情況都正確判斷）。
+- `route.ts` 抓我們自己 Yahoo 來源的 `futures_root_market_observations` 最新收盤（WTI root
+  `ceebeb1f-...`／天然氣 root `8c9966ab-...`）與 FRED 官方 API（`DCOILWTICO`＝WTI Cushing 現貨，
+  `DHHNGSP`＝Henry Hub 現貨，VERIFIED `FRED_API_KEY` 本機已設定且真的能抓到最新資料）兩邊比對，
+  超過門檻才算異常，寫進 `anomalies`／Telegram 摘要／`production_scheduler_runs` 的 details。
+- 門檻設計：WTI 12%、天然氣 15%——VERIFIED 2026-10-14 真實樣本（期貨 vs 現貨本來就不是同一種商品，
+  正常價差：WTI 95.09 vs 101.91＝7.2%、天然氣 3.198 vs 3.22＝0.7%），門檻刻意設在正常價差之上，
+  只抓真正異常的背離（例如某邊資料源壞掉或真正的市場失衡），不會每天誤報正常的期貨/現貨價差。
+- VERIFIED 用唯讀腳本重現整段邏輯（DB 讀＋真實 FRED API 呼叫，無任何寫入）：2026-10-16 當下
+  WTI 2.82%、天然氣 3.20%，皆低於門檻，正確判定無異常。
+- **這次沒有實際觸發 production 的 `/api/cron/daily-health-report`**（該 route 本身會寫一筆
+  `production_scheduler_runs` 執行紀錄，屬於「未經核准不寫 production」規則內，而且本機沒有
+  `CRON_SECRET`），改用上述唯讀腳本單獨驗證新增的這段邏輯；程式碼已就緒，會跟著這支既有 cron
+  在下次部署後的下一次排程自動生效，不需要額外啟用步驟。
