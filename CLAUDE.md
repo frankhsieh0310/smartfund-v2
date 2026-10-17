@@ -174,6 +174,19 @@ master 為正式基準分支。新工作一律從最新的 master 開分支；�
     那次建置，所以沒有做過任何實機驗證。等使用者的太太照那份文件把三邊帳號/商品設定好、
     把 API 金鑰跟 Webhook 密碼交回來，才能接上畫面並安排一次真的測試購買（sandbox）。
     付費功能不會出現在 App 畫面上，直到那次測試購買成功為止。
+  - **2026-10-17：SmartMatch App 的隱私權政策／使用條款／支援頁已上線 Preview（commit
+    `e41ec143d`，Preview `smartfund-v2-k057t5cjr-frankhsieh0310s-projects.vercel.app`）**：
+    新增 `/smartmatch-app/{privacy,terms,support}`，格式比照既有 `/twpuzzle` 三頁，但內容
+    依 `smartmatch-mobile` 實際程式行為撰寫（不是照抄 twpuzzle 的內容）：登入走 Supabase
+    Google／Apple（`src/auth/supabase.ts`）；自選清單／投資組合／現金流記帳／比較草稿**只存
+    裝置本機**（`src/storage/deviceStorage.ts`，iOS/Android 用 expo-secure-store，網頁版用
+    localStorage，查證過沒有對應的伺服器 API）；提醒規則、推播裝置代碼、訂閱狀態才會送到
+    伺服器；市場資料來源列出 TWSE／TPEx／TDCC／SITCA／公開資訊觀測站／Yahoo Finance／
+    MoneyDJ（對照 `vercel.json` 實際排程來源）；訂閱方案價格**刻意沒有寫死金額**（RevenueCat
+    的方案/價格還沒決定），寫成「以商店頁面實際顯示為準」。首頁 `SiteFooter.tsx` 也加了一行
+    「SmartMatch App」的三個連結（跟既有「台股拼圖 App」那行並列）。本機 `next build` 成功
+    （0 錯誤），Preview 瀏覽器實際打開三個頁面＋首頁頁尾連結都 VERIFIED 正常顯示。**還沒
+    部署到 production**，等週三凍結解除後跟其他項目一起上。
 - 已設定一個單次排程（cron job `a28f5e07`，10/21 週三台北時間 2:35pm 前後觸發）：先確認 10/19-21
   三天 daily-health-report 都正常，正常才叫一個全新、沒有對話背景的獨立子代理從頭驗收 1-14 項，
   通過才準備交付訊息草稿回報使用者（不會自己宣布已交付）；沒通過就列問題、當場能修的修好、重驗。
