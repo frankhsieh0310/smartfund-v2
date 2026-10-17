@@ -151,6 +151,24 @@ master 為正式基準分支。新工作一律從最新的 master 開分支；�
     - 核准後：執行這個新表的遷移 → 部署這次修正 → 打開 `EX_DATE_SYNC_WRITE` 讓每日排程真的寫入
       → 確認至少跑過一次有真實資料 → 才把 `DAYS_TO_EX_DATE` 加回 `CAPABILITIES` 讓 App 顯示
       這個條件（現在故意還沒加回去，資料還沒真的進來）。App 端「通知列表」畫面還沒做，是下一步。
+    - **2026-10-17 晚間：使用者已從 `mcs-final6` 部署 `ec4296529` 到正式環境**（VERIFIED
+      `vercel ls --prod` 的 `meta.commit` 正確是 `ec4296529`，與 `mcs-final6` HEAD 完全一致；
+      `www.smartmatchpilot.com` 首頁／`/report` 都 200）。下次 `CLOUD_NEW_FUND_LISTING_DETECTION`
+      正式排程（明天 10/18 約台北 9:25am）執行結果查證已經排進 cron `535be9b1`（見上）。
+    - **Android 原生實測：這台機器不支援模擬器加速（缺 Windows Hypervisor Platform），使用者
+      決定延後處理**——裝 Android Studio 相關元件（JDK 17、Android SDK cmdline-tools、
+      platform-tools、emulator、system-images;android-34;google_apis;x86_64）都已完成並驗證
+      可執行（`sdkmanager --version` 正常）；AVD `smartmatch_test` 已建立；但啟動模擬器時
+      VERIFIED 報錯「Android Emulator hypervisor driver is not installed on this machine」——
+      韌體層 VT-x 有開，但 Windows 的 Hypervisor Platform 這個系統功能沒開，開啟需要系統管理員
+      權限＋**重開機**。使用者明確指示**現在不要重開機**（會中斷這個對話，連帶清空排定中的
+      每日健康檢查排程與週三驗收排程），**原生實測延到週三交付預覽連結之後**，屆時使用者會
+      自己開 Windows Hypervisor Platform 並重開機。EAS Android build 本身已經成功
+      （`545e097b`，APK 下載連結 VERIFIED 可用、244MB 非空檔案），只是還沒有能跑它的本機環境。
+      已清掉失敗的 emulator 程序，沒有留下殘留。
+    - **之後持續進行**：凍結期（週一 10/19 開盤起）期間繼續用 Preview 做第 15 項與其他未完成
+      項目，不部署正式環境；每天收盤後查健康報告（cron `8722122f`）；週三 10/21 收盤後走
+      驗收流程（cron `a28f5e07`），通過才交付。
   - **付費機制規劃文件**：`docs/specs/2026-10-18-payment-mechanism-planning.md`。現況：方案頁
     UI 已完整（Free/Lite/Pro/Advisor/Team），付款按鈕目前是佔位符；`User.plan` enum 存在但沒人
     改它；另一個工作階段的「台股拼圖」App 已經在用 RevenueCat。建議：用 RevenueCat 當訂閱管理層
