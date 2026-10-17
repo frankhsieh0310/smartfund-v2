@@ -23,6 +23,7 @@ master 為正式基準分支。新工作一律從最新的 master 開分支；�
 - **部署用的 worktree 資料夾不准複製 `.env` 進去**（本機設定不應該跟著部署；正式環境的環境變數只能來自 Vercel dashboard/`vercel env`）。`.env` 本來就被 `.gitignore`（`.env*`）排除，Vercel CLI 部署會依 `.gitignore` 排除上傳，但不要依賴這點——本機複製 worktree 時也不要手動把 `.env` 複製過去，需要本機查資料庫時改用 `--env-file` 之類方式從別處讀，不要讓 `.env` 出現在要拿去部署的資料夾裡。
 - 部署正式環境前，必須先比對「目前正式環境的 commit」與「準備部署的 commit」，列出會被移除的 commit，不是 0 個不准部署；並先用 Preview 部署讓使用者自己在瀏覽器/`vercel curl`確認畫面。
 - **建立或刪除 Vercel 專案、變更專案設定，一律先問使用者，不准自己決定執行**（2026-10-16 訂立：`vercel link` 不帶 `--project` 時會自動用當前目錄名建立一個全新專案，曾意外建出一個空的 `mcs-final2` 專案，雖然已刪除且沒有造成影響，但刪除專案這類指令如果打錯目標後果嚴重）。`vercel link` 一律要明確指到既有的 `smartfund-v2` 專案（`.vercel/project.json` 直接寫入 `projectId: prj_1KrCMg3BVSPuYqqmigFVksTn1Xa0`, `orgId: team_D42Dk8aVzncrm2MAPDeJ25i3`），不要讓 CLI 自動互動建立。
+- **任何網站部署步驟（包括要使用者手動執行的），給使用者之前必須先讀** `C:\Users\User\Desktop\smartmatchpilot-網站修改-合併說明.md`，**確認裡面列的分支都已合併**，並在步驟裡寫明已確認（2026-10-17 訂立，起因：另一個工作階段在 `smartmatchpilot.com` 上獨立開了 `site/twpuzzle-legal-on-*` 系列分支加三個法律頁＋頁尾連結，我用 `mcs-final2` 部署 `7bcaa87a3` 時沒看這份文件，把這三頁蓋成 404，使用者發現後才知道要合併）。沒確認過這份文件就不准叫使用者部署。`site/twpuzzle-legal-on-7bcaa87`（`3a7513481`、`c504d180a`）已於 2026-10-17 合併進 `fix/qa-round1`。
 
 **正式環境狀態（VERIFIED 2026-10-16，commit `e0588acec`，部署於 `mcs-final`）**
 - 目前 production 部署於 `mcs-final`，alias 到 `www.smartmatchpilot.com` 等。`STOCK_TECHNICAL_SYNC_WRITE=on` 已由使用者本人新增到 Vercel Production。
