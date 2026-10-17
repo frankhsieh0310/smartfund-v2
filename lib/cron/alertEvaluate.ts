@@ -60,7 +60,10 @@ async function resolveFund(assetId: string) {
 }
 async function daysToNextExDate(etfId: string): Promise<number | null> {
   const today = new Date(); today.setUTCHours(0, 0, 0, 0);
-  const row = await prisma.etfDistributionEvent.findFirst({
+  // Reads etf_upcoming_exrights (officially-announced, not-yet-paid dates from TWSE/TPEx's own
+  // pre-announcement tables), NOT etf_distribution_events -- see that model's doc comment in
+  // prisma/schema.prisma for why the two are kept separate.
+  const row = await prisma.etfUpcomingExRight.findFirst({
     where: { etfId, exDate: { gte: today } },
     orderBy: { exDate: "asc" },
     select: { exDate: true },

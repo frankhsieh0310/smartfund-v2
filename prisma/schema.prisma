@@ -254,6 +254,7 @@ model Etf {
   knowledgeTags       AssetKnowledgeTag[]
   distributions       Distribution[]
   distributionEvents  EtfDistributionEvent[]
+  upcomingExRights    EtfUpcomingExRight[]
   history             EtfHistory[]
   performances        EtfPerformance[]
   asset               Asset?                  @relation(fields: [assetId], references: [id])
@@ -298,6 +299,33 @@ model EtfDistributionEvent {
   @@index([etfId, exDate])
   @@index([source, verificationStatus])
   @@map("etf_distribution_events")
+}
+
+// 2026-10-18 (item 15): a SEPARATE table for officially-announced, NOT-YET-PAID upcoming ex-dates
+// (TWSE's "除權除息預告表" / TPEx's "上櫃股票除權除息預告表"), deliberately NOT written into
+// `etf_distribution_events` above. That table is already read by lib/yahoo/distributionYield.ts via
+// `ORDER BY ex_date DESC LIMIT 1` to find the most recent REALIZED distribution for trailing-yield
+// calculations (item 7, already verified/shipped) -- inserting a forward-dated announced-but-unpaid
+// row there would make that query pick up a future, not-yet-paid distribution as if it were the
+// latest actual one, corrupting an already-verified feature. This table exists purely so
+// lib/cron/alertEvaluate.ts's DAYS_TO_EX_DATE metric has a safe, isolated place to read
+// officially-announced upcoming dates from, with zero risk to the existing yield pipeline.
+model EtfUpcomingExRight {
+  id             String    @id @default(uuid()) @db.Uuid
+  etfId          String    @map("etf_id")
+  exDate         DateTime  @map("ex_date") @db.Date
+  kind           String
+  cashDividend   Decimal?  @map("cash_dividend") @db.Decimal(24, 10) // nullable: officially announced ex-date with amount still "待公告" (TBD) is a real, honest state, not a parse failure
+  source         String
+  sourceRecordId String    @map("source_record_id")
+  detectedAt     DateTime  @default(now()) @map("detected_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  etf            Etf       @relation(fields: [etfId], references: [id], onDelete: Cascade)
+
+  @@unique([etfId, exDate, source])
+  @@index([etfId, exDate])
+  @@map("etf_upcoming_exrights")
 }
 
 model EtfFlow {
