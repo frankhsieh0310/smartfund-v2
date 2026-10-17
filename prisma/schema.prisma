@@ -348,6 +348,23 @@ model TwPurchasableClassification {
   @@map("tw_purchasable_classification")
 }
 
+// 2026-10-18 固定範圍第 7 項 (對外數字口徑): audit trail for every public-facing/marketing number
+// ("台積電被 X 檔持有" etc.) -- records the methodology version, inputs and resulting number so a
+// claimed figure can always be traced back to its real computation.
+model ExternalNumberAuditLog {
+  id                 String   @id @default(uuid()) @db.Uuid
+  metricKey          String   @map("metric_key")
+  methodologyVersion String   @map("methodology_version")
+  inputParams        Json     @map("input_params")
+  result             Json
+  computedAt         DateTime @default(now()) @map("computed_at")
+  computedBy         String   @map("computed_by")
+  notes              String?
+
+  @@index([metricKey, computedAt])
+  @@map("external_number_audit_log")
+}
+
 model EtfFlow {
   id                 String    @id @default(uuid()) @db.Uuid
   etfId              String    @map("etf_id")
