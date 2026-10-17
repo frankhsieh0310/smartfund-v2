@@ -415,7 +415,38 @@ master 為正式基準分支。新工作一律從最新的 master 開分支；�
   沒有真實規則可測），先維持關閉，等之後有真實規則可以端對端驗證再開。
   `REVENUECAT_WEBHOOK_SECRET`／`NEXT_PUBLIC_REVENUECAT_API_KEY` 這次不需要新增——RevenueCat
   專案還沒建立，webhook 沒設定 secret 時的預設行為（全部 401）就是安全的，不影響其他功能。
-- **還沒做的事**：還沒把這份準備結果訊息正式發給使用者請求部署核准（下一步）。
+- **2026-10-17：使用者已執行部署並設定好 `EX_DATE_SYNC_WRITE=on`，已 VERIFIED 部署生效**：
+  `vercel ls --prod` 確認最新正式部署的 `meta.commit` 正確是 `927daab14`；
+  `www.smartmatchpilot.com` 逐一 curl 核對：首頁、`/report`（內容確認「研究報告尚未開放」、
+  COMING SOON，不再有假數字）、`/compare`、`/etf/00981D`（Dividend Yield 正確顯示
+  `7.34%`，不是 `0.0734%`）、三個 `/smartmatch-app/*`、`/twpuzzle/privacy`、`/pricing`、
+  `/quiz`、`/clients`、`/portfolio`、`/rankings`、`/screener` 全部 200；`/rankings` 確認
+  「研究分析」導覽項目已消失；首頁頁尾確認「SmartMatch App」連結存在；
+  `vercel env ls production` 確認 `EX_DATE_SYNC_WRITE` 已設定（Secret，5 分鐘前新增）。
+  - **除權除息預告與境內新基金建檔兩條管線「第一次正式執行」還沒發生**：這兩個排程
+    （`40 1 * * *`／`25 1 * * *` UTC，即台北時間約 9:40am／9:25am）**今天（10/17）的
+    觸發時間點在部署完成之前就已經過了**，用的是舊程式碼；真正第一次用這次部署的程式碼
+    執行要等明天（10/18）同一時間。已設定一個單次排程（cron job `0464d850`，10/18 台北
+    時間 9:53am 前後觸發）去查證這兩條管線的第一次真實執行結果，並抽樣跟官方公告頁面核對。
+  - **查證過程中意外發現一個跟這次部署無關的既有問題，先記錄不處理**：`production_scheduler_runs`
+    裡 `CLOUD_NEW_FUND_LISTING_DETECTION` 這個 job_id 在 10/15、10/16 各有一筆紀錄
+    `status=IN_PROGRESS`、`completed_at=null`、`attempted=0`、`inserted=0`、`error=null`，
+    從來沒有正常結束過——不是這次新加的管線造成的（這個 job_id 是既有的基金新上市事件
+    記錄排程，不是這次修好的 `createMissingDomesticFunds`），但值得查根因（可能是逾時被
+    砍斷卻沒寫入 error，或排程框架本身的 bug）。已經排進上面那個 10/18 的查證排程裡一併
+    確認今天這筆是否也卡住，到時候一起回報，先不動手修。
+- **EAS build（smartmatch-mobile，Android development build）**：前兩次都失敗——第一次缺
+  `expo-dev-client`（已裝，commit `8bcb81f`）；第二次卡在 Gradle 階段，CLI 只給通用的
+  `EAS_BUILD_UNKNOWN_GRADLE_ERROR`，沒有細節。**使用者指示：不要叫使用者自己去網站看，
+  CLI 已登入，直接用 `eas build:view <id> --json` 拿 `logFiles` 的簽名下載網址，
+  `curl --compressed`（GCS 回傳 `Content-Encoding: br`，一定要帶 `--compressed` 才能自動
+  解壓縮，否則拿到的是 Brotli 壓縮後的二進位內容）抓真正的 Gradle log 分析**，查到真正原因：
+  `app.json` 的 `expo-splash-screen` plugin 設定只有 `backgroundColor`，沒有 `image`，
+  Android 建置時找不到 `drawable/splashscreen_logo` 資源，`resource linking failed`。
+  `assets/splash-icon.png` 其實早就存在，只是沒接上 plugin 設定——這看起來是這個 App
+  第一次真的跑 Android 原生建置才浮現的既有缺口，跟這次 RevenueCat／expo-dev-client 的改動
+  無關。已修好（commit `72e707e`，補上 `"image": "./assets/splash-icon.png"`），重新送出
+  第三次 build（`59f5571d`），還在跑，完成會回報。
 
 ## 財經 App 交付門檻（使用者 2026-10-16 訂立，原文照錄，之後對話被壓縮時以此為準）
 
