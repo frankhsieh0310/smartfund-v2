@@ -35,6 +35,25 @@ master 為正式基準分支。新工作一律從最新的 master 開分支；�
 - **部署用的 worktree 資料夾不准複製 `.env` 進去**（本機設定不應該跟著部署；正式環境的環境變數只能來自 Vercel dashboard/`vercel env`）。`.env` 本來就被 `.gitignore`（`.env*`）排除，Vercel CLI 部署會依 `.gitignore` 排除上傳，但不要依賴這點——本機複製 worktree 時也不要手動把 `.env` 複製過去，需要本機查資料庫時改用 `--env-file` 之類方式從別處讀，不要讓 `.env` 出現在要拿去部署的資料夾裡。
 - 部署正式環境前，必須先比對「目前正式環境的 commit」與「準備部署的 commit」，列出會被移除的 commit，不是 0 個不准部署；並先用 Preview 部署讓使用者自己在瀏覽器/`vercel curl`確認畫面。
 - **建立或刪除 Vercel 專案、變更專案設定，一律先問使用者，不准自己決定執行**（2026-10-16 訂立：`vercel link` 不帶 `--project` 時會自動用當前目錄名建立一個全新專案，曾意外建出一個空的 `mcs-final2` 專案，雖然已刪除且沒有造成影響，但刪除專案這類指令如果打錯目標後果嚴重）。`vercel link` 一律要明確指到既有的 `smartfund-v2` 專案（`.vercel/project.json` 直接寫入 `projectId: prj_1KrCMg3BVSPuYqqmigFVksTn1Xa0`, `orgId: team_D42Dk8aVzncrm2MAPDeJ25i3`），不要讓 CLI 自動互動建立。
+  - **2026-10-17 使用者再次收緊，覆蓋前面任何看起來像例外的做法**：即使是「暫時性」的 Vercel
+    專案設定變更（例如為了讓稽核子代理能連進 Preview，先關掉 Deployment Protection、事後再開
+    回去），**也不准自己執行，連先問過使用者同意這次也不行**——這條規則本身就是「不准自己改
+    Vercel 專案設定」，不是「改之前要先問」。起因：我為了讓一個稽核子代理連進被保護的 Preview
+    網址，用 `vercel project protection disable --sso` 關掉保護、稽核完再用
+    `vercel project protection enable --sso` 開回去，雖然當下有先問過使用者、且事後 VERIFIED
+    沒有造成影響，使用者仍然認定這違反規則，之後完全不准做，連暫時性、會自動復原的變更都不行。
+    **真的需要繞過 Deployment Protection 時，改用這兩種唯讀、不改設定的方法**：(a) 專案既有的
+    automation bypass secret（`vercel project protection --protection-bypass --json` 可以查到
+    目前的 secret 清單），直接用 `x-vercel-protection-bypass` header 或
+    `?x-vercel-protection-bypass=<secret>&x-vercel-set-bypass-cookie=true` query string 存取；
+    (b) `vercel curl <path>`（正確用法是相對路徑，不是完整網址，見下方故障排除）。如果子代理
+    自己的安全分類器擋下這類操作（例如判定為「Security Weaken」），不准想辦法繞過那個分類器，
+    直接回報使用者，讓使用者決定要不要自己處理。
+  - **故障排除記錄（2026-10-17）**：`vercel curl <完整網址>` 在這個環境下會把網址誤判成
+    `-X` 的參數值，導致送出的請求目標整個是錯的；正確用法是只給相對路徑（例如
+    `vercel curl /api/webhooks/revenuecat -X POST ...`），而且在 Git Bash 下相對路徑開頭的
+    `/` 會被路徑轉換成 Windows 路徑（`/api/...` 變成 `C:/Program Files/Git/api/...`），要加
+    `MSYS_NO_PATHCONV=1` 環境變數前綴避免。
 - **任何網站部署步驟（包括要使用者手動執行的），給使用者之前必須先讀** `C:\Users\User\Desktop\smartmatchpilot-網站修改-合併說明.md`，**確認裡面列的分支都已合併**，並在步驟裡寫明已確認（2026-10-17 訂立，起因：另一個工作階段在 `smartmatchpilot.com` 上獨立開了 `site/twpuzzle-legal-on-*` 系列分支加三個法律頁＋頁尾連結，我用 `mcs-final2` 部署 `7bcaa87a3` 時沒看這份文件，把這三頁蓋成 404，使用者發現後才知道要合併）。沒確認過這份文件就不准叫使用者部署。`site/twpuzzle-legal-on-7bcaa87`（`3a7513481`、`c504d180a`）已於 2026-10-17 合併進 `fix/qa-round1`。
 - **部署來源統一（2026-10-17 訂立）**：`smartmatchpilot.com` 正式環境以後只從這邊的 `fix/qa-round1` 部署。另一個工作階段（台股拼圖 App）如果直接改了這個網站的程式碼並自己部署，那個分支要先合併進 `fix/qa-round1`，再從乾淨的 worktree 部署，不准直接從別的分支部署正式環境。
   - **已查證（2026-10-17）**：用 `vercel ls --prod` 比對最近 20 次正式部署的 `meta.commit`，台股那邊確實自己部署過 2 次——`dpl_56HJ8Nf1YuE6TuAwk4TgjambicVN`（commit `34505f12e`，2026-10-16T14:53）跟 `dpl_DDU6h8K5qWkomx1MkdMibj4NAY5t`（commit `c504d180a`，2026-10-17T05:05，即造成本次 404 的那次）。VERIFIED 兩次的程式碼改動都已經在 `fix/qa-round1` 裡：`c504d180a` 連同 `3a7513481` 已直接合併進來；`34505f12e` 雖然不是目前 HEAD 的祖先（是 cherry-pick 關係，commit hash 不同），但用 `git diff 34505f12e HEAD -- app/twpuzzle/ components/twpuzzle/` 確認檔案內容逐字相同，不需要再處理。其他 18 次部署的 commit 都能在 `fix/qa-round1` 的 git log 裡對上，不是外部分支。
