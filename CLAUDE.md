@@ -374,6 +374,49 @@ master 為正式基準分支。新工作一律從最新的 master 開分支；�
 
 **下一步優先順序**：(a) 把 `etf-returns-sync-tw` 的 crash fix（`338f594f8`）部署上去，停止它每 15 分鐘的當機循環；(b) 使用者核准 903 組同 ticker 真重複的處理方式後執行＋SELECT 核對；(c) 使用者跑 PowerShell 腳本完成第 14 項端對端實測；(d) 10/19 週一確認第 4、13 項的首次排程結果；(e) 第 15 項提醒引擎從零開始建。
 
+**2026-10-17（週日）部署準備完成，等待使用者執行**
+- 乾淨 worktree `mcs-final5`（`C:\Users\User\AppData\Local\Temp\mcs-final5`），HEAD 是
+  `fix/qa-round1` 的 `927daab14`，比目前正式環境（`a1865caee`）多 27 個 commit，
+  `git merge-base --is-ancestor a1865caee HEAD` VERIFIED 0 個被移除。
+- 已依 CLAUDE.md 完整部署前流程確認：讀過
+  `C:\Users\User\Desktop\smartmatchpilot-網站修改-合併說明.md`，裡面要求的
+  `site/twpuzzle-legal-on-7bcaa87` 已經在 `fix/qa-round1` 裡；用 `vercel ls --prod --json`
+  比對最近部署的 `meta.commit`，沒有發現任何這次對話之外的新部署；worktree 沒有 `.env`、
+  `.vercel/project.json` 手動指到既有 `smartfund-v2` 專案。`npm ci`／`npx prisma generate`／
+  `npx tsc --noEmit`／`npx next build` 全部 0 錯誤。
+- **這次要上線的內容**：`/report` 改「尚未開放」並移除所有入口（quiz／clients／3 個導覽列）、
+  ETF 詳情頁配息率／費用率顯示修正（`pctFraction`）、SmartMatch App 法律頁面
+  （`/smartmatch-app/{privacy,terms,support}`）、境內新基金自動建檔管線根因修正、除權除息
+  預告管線（含新表 `etf_upcoming_exrights`，RLS/REVOKE 已於早前回合執行並 VERIFIED）、
+  比較頁「＋新增標的」按鈕接錯畫面的修正、配息提醒引擎第一版（DIVIDEND_YIELD 評估＋Expo
+  push 發送，寫入開關預設關閉）、RevenueCat webhook（`app/api/webhooks/revenuecat/route.ts`，
+  沒設定 secret 就全部 401，safe-by-default）。
+- **本機只抓不寫 dry-run（寫入開關關閉狀態下，對正式資料庫唯讀）VERIFIED 正常**：
+  - 除權除息預告：今天 TWSE 55＋TPEx 66 筆官方公告，99 筆比對到既有 ETF，22 筆不匹配皆為一般
+    股票（正確排除），23 筆官方「待公告」誠實跳過不寫入，0 筆寫入（因為寫入開關關閉）、0 筆
+    錯誤。
+  - 境內新基金自動建檔：今天沒有新偵測到的境內基金（`newlyDetected: []`），0 筆建立、0 筆
+    錯誤——表示管線本身正常執行，只是今天沒有新商品可以測試建檔動作本身。
+  - 配息提醒評估：`attempted: 0`（目前沒有真實的 alert rule，因為 App 端這個功能的畫面仍是
+    `FEATURES.alerts=false` 關閉狀態），0 筆錯誤，管線本身健康。
+- **Preview 已部署並用瀏覽器＋curl 逐項驗證**：
+  `smartfund-v2-e99y04tao-frankhsieh0310s-projects.vercel.app`——首頁、`/report`（確認顯示
+  「研究報告尚未開放」、COMING SOON，不再有假數字）、`/compare`、`/etf/00981D`（確認
+  Dividend Yield 顯示 `7.34%`，不是 `0.0734%`）、三個 `/smartmatch-app/*` 法律頁、
+  `/twpuzzle/privacy`、`/pricing`、`/quiz`、`/clients`、`/portfolio`、`/rankings`、
+  `/screener` 全部 200；`/rankings` 頁面確認「研究分析」導覽項目已經不見；首頁頁尾確認
+  「SmartMatch App」三個連結存在；`POST /api/webhooks/revenuecat` 沒帶 secret 回 401。
+  **這次驗證全部用既有的 automation bypass secret 直接帶 header／query string 做，沒有碰
+  任何 Vercel 專案設定**（遵守 2026-10-17 新訂的規則）。
+- **寫入開關**：這次只有 `EX_DATE_SYNC_WRITE` 符合「已經驗證過」的門檻（連續 dry-run、抽
+  5 檔跟官方頁面逐字核對一致）——部署指令訊息會附上這個環境變數，請使用者在 Vercel
+  Production 新增。`ALERT_EVALUATE_WRITE` 這次**沒有**列入——雖然評估邏輯本身驗證過觸發
+  方向正確，但還沒有真的在排程環境跑過一次有真實 alert rule 的情境（目前 App 端功能還沒開放，
+  沒有真實規則可測），先維持關閉，等之後有真實規則可以端對端驗證再開。
+  `REVENUECAT_WEBHOOK_SECRET`／`NEXT_PUBLIC_REVENUECAT_API_KEY` 這次不需要新增——RevenueCat
+  專案還沒建立，webhook 沒設定 secret 時的預設行為（全部 401）就是安全的，不影響其他功能。
+- **還沒做的事**：還沒把這份準備結果訊息正式發給使用者請求部署核准（下一步）。
+
 ## 財經 App 交付門檻（使用者 2026-10-16 訂立，原文照錄，之後對話被壓縮時以此為準）
 
 **交付門檻**：每一項都必須「功能完整＋真實資料＋可直接使用＋獨立子代理驗收通過」才算完成。完成數至少 12 項，而且第 1～10 項必須全部完成，才可以交付預覽連結給使用者。達標前不准給連結，也不准要使用者試用。
