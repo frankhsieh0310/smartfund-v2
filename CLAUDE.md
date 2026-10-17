@@ -567,3 +567,63 @@ master 為正式基準分支。新工作一律從最新的 master 開分支；�
 **可以找使用者的情況只有**：(a) 最後那次部署；(b) 某一項技術上確定做不到（附查證理由）。
 
 **交付訊息只寫**：(a) 固定預覽連結；(b) 15 項對照表（完成／未完成，只寫查證過的事實）與完成數；(c) 付費、法務、商店帳號、Apple 4.3、Apple 登入的狀態；(d) 必要人工步驟（目標零項）。
+
+## 週末補做清單（使用者 2026-10-17 晚間訂立，1-6 項按編號順序完成；全部只在 Preview／本機，不部署正式環境）
+
+**總原則**：每項開始前先查清楚目前已做到哪裡，已完成的附證據跳過；新資料管線寫入開關預設關閉，
+先本機只抓不寫試跑；每一項都要用真實資料，照抄權威來源，抽查對來源核對；每完成一項在這裡記錄證據。
+
+### 第 1 項：技術選標反查（商品面）✅ 完成並 VERIFIED
+
+- **新表**（額外基礎建設，額外做的，不是這 6 項之一，但第 1 項需要）：`tw_purchasable_classification`
+  （additive DDL＋RLS＋REVOKE，commit `103091467`，VERIFIED 9 欄位/RLS/grants/0 列）＋分類管線
+  `lib/tw-purchasable/classify.ts`（SITCA／TDCC 3-2／TWSE+TPEx 三個官方清單比對）。Dry-run VERIFIED：
+  境外基金 4663/5295（88.0%）、ETF 356/427（83.4%），跟 `docs/specs/technical-screener-reverse-lookup.md`
+  的官方數字非常接近，驗證比對邏輯正確。**境內基金這次 dry-run 只抓到 36 筆（spec 文件記錄的官方數字是
+  4,471 筆），這是外部資料源本身的異常**（週六晚上 SITCA 官網這個 CSV 端點只回應 36 列，重試 3 次結果
+  一致，不是我方程式錯誤），需要平日重新驗證。**還沒真的寫入**（這個新管線的 write gate 還沒開）。
+- **技術選標反查核心發現**：`docs/specs/technical-screener-reverse-lookup.md`（2026-10-14）說「商品技術
+  指標管線不存在」已經過期——`lib/cron/commodityTechnicalUpdate.ts`／`futures_technical_analytics`
+  這次查證確認**已經存在且有真實資料**（21 個商品根，VERIFIED `observed_at` 只落後 1-2 天）。
+- **已修好**：`/api/screener/technical` 加 `?scope=commodity`，沿用同一套 RSI／MACD／站上均線條件，
+  查 `futures_technical_analytics`（commit `efd53e3db`）。
+- **順便查證並擴充**：`lib/data-platform/commodityEtfMapping.ts`（原本只有黃金/白銀/WTI/布蘭特 4 種）
+  對其餘 17 種商品重做同樣的 live-SELECT 驗證（搜尋 `etfs.name` 關鍵字），**找到並新增 2 檔真實、VERIFIED
+  的台灣 ETF**：銅（00763U 期街口道瓊銅）、黃豆（00693U 期街口S&P黃豆）。其餘 15 種（白金/鈀/玉米/小麥×2/
+  豆油/豆粕/咖啡/可可/糖/棉/活牛/生豬/天然氣/燃油/汽油/稻米/柳橙）**VERIFIED 確實沒有台灣上市 ETF**
+  （不是漏找，是真的不存在——用多組中文關鍵字查過）。
+- **App 端**：`technical-screener.tsx` 加「股票／商品期貨」切換；商品結果有對應台灣 ETF 的可點擊深連到
+  `commodity-reverse-lookup`（已加 `commodity` 參數支援自動帶入），沒有的誠實顯示「目前沒有台灣可直接
+  持有的商品 ETF」且不可點擊（commit `d63d3bd`）。
+- **端對端 VERIFIED**（本機 `next dev` + Expo web，繞過 Vercel Preview 的 SSO 保護，不碰專案設定）：
+  RSI 超賣顯示真實「Lean Hogs RSI14 16.25・最新價 66.875・資料日期 2026-10-16・目前沒有台灣可直接持有
+  的商品 ETF」；站上 20 日均線顯示「Rice」「Sugar」；深連到 SILVER／COPPER 都正確顯示真實 ETF
+  （期元大道瓊白銀 00738U 價格 45.68；期街口道瓊銅 00763U 價格 35.45，含真實今年以來/近1年報酬率）。
+- **過程記錄（流程教訓，供之後參考）**：中途卡在一個看起來像「App 邏輯 bug」的狀況——切換到商品、按
+  條件按鈕，畫面一直顯示跟股票一樣的舊資料。追查發現是這台 Windows 機器上 `pkill -f "expo start"`
+  沒有真的砍掉舊的 Metro process（舊 PID 繼續佔用 8086 port，用舊的 code／舊的環境變數持續回應），
+  `netstat -ano` 找到真正的 PID 後用 `taskkill //F //PID <pid>` 才真正砍掉重啟。之後如果又遇到「改了
+  程式碼、重啟 dev server，但行為沒變」，先用 `netstat` 確認 port 上的 PID 有沒有真的换過，不要先懷疑
+  自己的程式邏輯。
+
+### 第 2 項：商品反查的間接曝險 ❌ VERIFIED 目前做不到真實資料，不做假的
+
+查證結果（唯讀 SELECT，不是沒查）：`stocks.sector`／`stocks.industry` 兩個欄位對全部股票幾乎都是
+NULL——VERIFIED 連 Newmont／Barrick 這種知名黃金礦業股都是 NULL；`holdings.sector` 欄位有值，但
+VERIFIED 是**債券產業分類**（Corporates／Treasury／Agency 等），不是股票 GICS 產業，iShares 來源的
+持股也是同樣的債券分類；`industry_chain_nodes`（439 個節點）VERIFIED 是**台灣電子/製造業供應鏈分類**
+（上游材料/零組件/下游應用），跟「哪些股票屬於金礦/能源產業」這種全球商品關聯分類完全無關。
+**結論：目前系統裡沒有任何可靠的官方產業分類資料能把「某商品」連到「相關個股」**。使用者自己的指示是
+「沒有分類的維持『僅直接持有』」——照辦，不做關鍵字猜測（例如用公司名稱裡有沒有「gold」「mining」字樣
+去猜，這種方法論在 `docs/specs` 裡已經明確被否定過一次，見第三節）。既有商品反查（item 3，已完成）的
+「僅直接持有」現況維持不變。**這項要重新啟動的前提：找到可靠的官方股票產業分類資料源**（例如付費訂閱
+GICS/ICB 分類服務，或找到 Yahoo/其他來源的真實 sector/industry 欄位），不是程式能力問題，是資料缺口。
+
+### 第 3-6 項：還沒開始
+
+時間關係，今晚先完成第 1、2 項（第 2 項結論是「查證後確定做不到真實資料」，不是略過）。
+第 3 項（個別債券反查升級）、第 4 項（機構動向）、第 5 項（投資日曆）、第 6 項（商品覆蓋：熱燃油
+**VERIFIED 其實已經有**——`futures_technical_analytics` 的 21 個商品根裡已經包含 Heating Oil (HO=F)，
+不需要再補；鋁目前卡在一個已經查證過的真實問題：`futures_product_roots` 現有的鋁是 LME 掛牌，但 Yahoo
+的 `ALI=F` 是 COMEX 結算的不同合約，兩者不能混用，需要另外新增一個 COMEX 鋁的 root 才能誠實接上；
+FRED 交叉核對原油/天然氣還沒做）會在之後的回合繼續，依照編號順序，不會跳過。
