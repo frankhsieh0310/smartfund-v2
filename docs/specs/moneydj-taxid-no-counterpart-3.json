@@ -1,0 +1,26 @@
+[
+  {
+    "id": "c49b63f8-100e-4f44-8e32-8155b2ab88d3",
+    "name": "永豐趨勢平衡基金-TISA類型",
+    "code": "ACGC142",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACGC142",
+    "taxId": "14706582B",
+    "error": null
+  },
+  {
+    "id": "a51374b3-d418-4ce2-8579-284756cf4bbf",
+    "name": "第一金中概平衡基金TISA類型(台幣)",
+    "code": "ACNC181",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACNC181",
+    "taxId": "99353151B",
+    "error": null
+  },
+  {
+    "id": "78efb963-116c-4c23-8697-25d5db014d3d",
+    "name": "第一金台灣核心戰略建設基金TISA類型(台幣)(本基金配息來源可能為本金)",
+    "code": "ACNC182",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACNC182",
+    "taxId": "88271077E",
+    "error": null
+  }
+]

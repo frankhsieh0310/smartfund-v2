@@ -1,0 +1,974 @@
+[
+  {
+    "id": "427d7d9f-7b30-429e-b600-b208eae87b68",
+    "name": "富邦台灣高股息基金B配息(本基金並無保證收益及配息)",
+    "code": "ACFP130",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACFP130",
+    "taxId": "88095396B",
+    "error": null,
+    "correct": {
+      "id": "89332882-fd0d-4521-9344-1a7e26fd0e8c",
+      "name": "富邦台灣高股息基金-B類型",
+      "code": "88095396B"
+    },
+    "uniqueToMoneydj": [
+      [
+        "fund_source_allocation_observations",
+        66
+      ],
+      [
+        "holdings",
+        5
+      ],
+      [
+        "holdings_by_master",
+        5
+      ]
+    ],
+    "wl": 0
+  },
+  {
+    "id": "50ac49b1-01b8-4954-b1ff-2f6e47a7b2ff",
+    "name": "台新臺灣高股息基金B月配息(台幣)(本基金並無保證收益及配息)",
+    "code": "ACTS115",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACTS115",
+    "taxId": "88316721B",
+    "error": null,
+    "correct": {
+      "id": "43fdd927-94d9-4f83-a9a3-39b78c055204",
+      "name": "台新臺灣高股息基金(B配)新台幣",
+      "code": "88316721B"
+    },
+    "uniqueToMoneydj": [
+      [
+        "fund_performances",
+        21
+      ],
+      [
+        "fund_source_allocation_observations",
+        70
+      ],
+      [
+        "holdings",
+        2
+      ],
+      [
+        "holdings_by_master",
+        2
+      ]
+    ],
+    "wl": 0
+  },
+  {
+    "id": "9265c544-5a2b-43f9-8b11-f8c8d5992158",
+    "name": "匯豐台灣精典基金-AM2月配型(台幣)(本基金配息來源可能為本金)",
+    "code": "ACCJ84",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACCJ84",
+    "taxId": "73987671D",
+    "error": null,
+    "correct": {
+      "id": "3d279458-ac1d-4a10-92ae-1e9f5ddad2c0",
+      "name": "匯豐台灣精典基金-台幣月配型AM2類型(本基金配息來源可能為本金)",
+      "code": "73987671D"
+    },
+    "uniqueToMoneydj": [
+      [
+        "fund_performances",
+        18
+      ],
+      [
+        "fund_source_allocation_observations",
+        55
+      ],
+      [
+        "holdings",
+        9
+      ],
+      [
+        "holdings_by_master",
+        9
+      ]
+    ],
+    "wl": 0
+  },
+  {
+    "id": "9a968c0c-69bd-4427-a981-f39df0b654a3",
+    "name": "永豐永豐基金-TISA類型",
+    "code": "ACGC133",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACGC133",
+    "taxId": "81594690D",
+    "error": null,
+    "correct": {
+      "id": "e5b52950-d589-4d67-b26f-4aa6397aae75",
+      "name": "永豐永豐基金-TISA類型",
+      "code": "81594690D"
+    },
+    "uniqueToMoneydj": [
+      [
+        "fund_performances",
+        15
+      ],
+      [
+        "fund_source_allocation_observations",
+        64
+      ],
+      [
+        "holdings",
+        10
+      ],
+      [
+        "holdings_by_master",
+        10
+      ]
+    ],
+    "wl": 0
+  },
+  {
+    "id": "6842c0f9-de0a-4224-97fa-efc141126caa",
+    "name": "元大多多基金N不配息(台幣)",
+    "code": "ACYT234",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACYT234",
+    "taxId": "92001765B",
+    "error": null,
+    "correct": {
+      "id": "3d3697e5-fe85-4442-88f7-8e225f98d786",
+      "name": "元大多多基金-新台幣N類型",
+      "code": "92001765B"
+    },
+    "uniqueToMoneydj": [
+      [
+        "fund_performances",
+        15
+      ],
+      [
+        "fund_source_allocation_observations",
+        3
+      ]
+    ],
+    "wl": 0
+  },
+  {
+    "id": "25eea346-1518-4f4d-aa27-310e4e71e5f5",
+    "name": "玉山金滿意基金-R累積型",
+    "code": "ACML0201",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACML0201",
+    "taxId": "92013967B",
+    "error": null,
+    "correct": {
+      "id": "4e6888d5-e864-4d73-81c8-6eb15f372f3d",
+      "name": "玉山金滿意基金-R級別",
+      "code": "92013967B"
+    },
+    "uniqueToMoneydj": [
+      [
+        "fund_source_allocation_observations",
+        90
+      ],
+      [
+        "holdings",
+        7
+      ],
+      [
+        "holdings_by_master",
+        7
+      ]
+    ],
+    "wl": 0
+  },
+  {
+    "id": "a0700fdc-5ebf-47ae-bc16-fbb3d40ad003",
+    "name": "安聯台灣大壩基金-G累積型(台幣)",
+    "code": "ACDD102",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACDD102",
+    "taxId": "17604124B",
+    "error": null,
+    "correct": {
+      "id": "8fa292d5-fff4-46a5-a976-bc183830eb1c",
+      "name": "安聯台灣大壩基金-G類型-新臺幣",
+      "code": "17604124B"
+    },
+    "uniqueToMoneydj": [
+      [
+        "fund_source_allocation_observations",
+        76
+      ],
+      [
+        "holdings",
+        7
+      ],
+      [
+        "holdings_by_master",
+        7
+      ]
+    ],
+    "wl": 0
+  },
+  {
+    "id": "9d72df35-8ef4-450e-aeaf-97927d7b339e",
+    "name": "群益臺灣加權指數單日反向1倍基金",
+    "code": "ACCA97",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACCA97",
+    "taxId": "42481260",
+    "error": null,
+    "correct": {
+      "id": "a2f6dab1-9633-46c2-8718-87868df31b07",
+      "name": "群益臺灣加權單日反向1倍基金",
+      "code": "42481260"
+    },
+    "uniqueToMoneydj": [
+      [
+        "fund_performances",
+        21
+      ],
+      [
+        "fund_source_allocation_observations",
+        11
+      ]
+    ],
+    "wl": 0
+  },
+  {
+    "id": "739d6fc7-7095-4260-9a97-7b0d937bcb4e",
+    "name": "台新高股息平衡基金-NB配息(本基金並無保證收益及配息)",
+    "code": "ACTT117",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACTT117",
+    "taxId": "21719942D",
+    "error": null,
+    "correct": {
+      "id": "ac4b1d4d-c655-4165-9a6c-6fb0901d039d",
+      "name": "台新高股息平衡基金(後收月配息型)",
+      "code": "21719942D"
+    },
+    "uniqueToMoneydj": [
+      [
+        "fund_source_allocation_observations",
+        67
+      ],
+      [
+        "holdings",
+        5
+      ],
+      [
+        "holdings_by_master",
+        5
+      ]
+    ],
+    "wl": 0
+  },
+  {
+    "id": "2c39b679-4695-4b22-81e8-7cedd2aa82f6",
+    "name": "施羅德台灣樂活中小基金-TISA類型",
+    "code": "ACES125",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACES125",
+    "taxId": "48948834D",
+    "error": null,
+    "correct": {
+      "id": "53ae01e9-9f7d-4d23-8613-584c5ecad4ca",
+      "name": "施羅德台灣樂活中小基金-TISA類型",
+      "code": "48948834D"
+    },
+    "uniqueToMoneydj": [
+      [
+        "fund_performances",
+        19
+      ],
+      [
+        "fund_source_allocation_observations",
+        52
+      ],
+      [
+        "holdings",
+        2
+      ],
+      [
+        "holdings_by_master",
+        2
+      ]
+    ],
+    "wl": 0
+  },
+  {
+    "id": "607f85ba-33b8-42d4-8d45-6f747830aa6e",
+    "name": "兆豐豐台灣基金-A類型",
+    "code": "ACII21",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACII21",
+    "taxId": "10341837A",
+    "error": null,
+    "correct": {
+      "id": "434d4ce7-6f44-4071-90a3-4a9b35a3b09f",
+      "name": "兆豐豐台灣基金-A類別",
+      "code": "10341837A"
+    },
+    "uniqueToMoneydj": [
+      [
+        "fund_performances",
+        18
+      ],
+      [
+        "fund_source_allocation_observations",
+        54
+      ],
+      [
+        "holdings",
+        10
+      ],
+      [
+        "holdings_by_master",
+        10
+      ]
+    ],
+    "wl": 0
+  },
+  {
+    "id": "a283afb8-c2a7-402f-8532-b4fce3bbf173",
+    "name": "富達台灣成長基金-TISA類型",
+    "code": "ACFD73",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACFD73",
+    "taxId": "13984165B",
+    "error": null,
+    "correct": {
+      "id": "c89144ee-3238-4197-8a87-2f3a5b7f1230",
+      "name": "富達台灣成長基金TISA股累積型新臺幣計價級別",
+      "code": "13984165B"
+    },
+    "uniqueToMoneydj": [
+      [
+        "fund_performances",
+        21
+      ],
+      [
+        "fund_source_allocation_observations",
+        88
+      ],
+      [
+        "holdings",
+        14
+      ],
+      [
+        "holdings_by_master",
+        14
+      ]
+    ],
+    "wl": 0
+  },
+  {
+    "id": "1409be0a-373d-4ed3-897c-4433bcdb17cf",
+    "name": "玉山新世紀基金-TISA類型(本基金之配息來源可能為本金)",
+    "code": "ACML134",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACML134",
+    "taxId": "17602625C",
+    "error": null,
+    "correct": {
+      "id": "fd569c15-8d6a-46ae-a6be-41c84463b4d9",
+      "name": "玉山新世紀基金-TISA級別",
+      "code": "17602625C"
+    },
+    "uniqueToMoneydj": [
+      [
+        "fund_performances",
+        8
+      ],
+      [
+        "holdings",
+        6
+      ],
+      [
+        "holdings_by_master",
+        6
+      ]
+    ],
+    "wl": 0
+  },
+  {
+    "id": "d2505553-8529-4352-82e3-d8e21e1ff5f0",
+    "name": "玉山新世紀基金-R累積型",
+    "code": "ACML1201",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACML1201",
+    "taxId": "17602625B",
+    "error": null,
+    "correct": {
+      "id": "809da383-3833-46f4-b9f1-9bf928696856",
+      "name": "玉山新世紀基金-R級別",
+      "code": "17602625B"
+    },
+    "uniqueToMoneydj": [
+      [
+        "fund_source_allocation_observations",
+        75
+      ],
+      [
+        "holdings",
+        14
+      ],
+      [
+        "holdings_by_master",
+        14
+      ]
+    ],
+    "wl": 0
+  },
+  {
+    "id": "13c58285-a56f-420f-9170-835f922496c7",
+    "name": "國泰台灣高股息基金-TISA不配息(台幣)(本基金並無保證收益及配息)",
+    "code": "ACCY190",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACCY190",
+    "taxId": "88090934C",
+    "error": null,
+    "correct": {
+      "id": "66261a04-4c99-4396-9d14-28fab00bb65a",
+      "name": "國泰台灣高股息傘型基金之台灣高股息基金-新台幣TISA",
+      "code": "88090934C"
+    },
+    "uniqueToMoneydj": [
+      [
+        "fund_source_allocation_observations",
+        118
+      ]
+    ],
+    "wl": 0
+  },
+  {
+    "id": "9ff7d137-d815-4162-a733-f529fbf4d7b5",
+    "name": "第一金創新趨勢基金TISA類型(台幣)",
+    "code": "ACNC169",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACNC169",
+    "taxId": "26202396C",
+    "error": null,
+    "correct": {
+      "id": "1584dc91-fc1c-4e22-a859-ad483de4300b",
+      "name": "第一金創新趨勢基金-TISA類型",
+      "code": "26202396C"
+    },
+    "uniqueToMoneydj": [
+      [
+        "fund_source_allocation_observations",
+        77
+      ],
+      [
+        "holdings",
+        10
+      ],
+      [
+        "holdings_by_master",
+        10
+      ]
+    ],
+    "wl": 0
+  },
+  {
+    "id": "5b801868-3bca-4161-a067-b2c593be46be",
+    "name": "野村優質基金-累積型(台幣)",
+    "code": "ACIC01",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACIC01",
+    "taxId": "19330754A",
+    "error": null,
+    "correct": {
+      "id": "364157fa-1b55-4dfc-b14d-5ecb4becea3d",
+      "name": "野村優質基金-累積類型新臺幣計價",
+      "code": "19330754A"
+    },
+    "uniqueToMoneydj": [
+      [
+        "fund_source_allocation_observations",
+        67
+      ],
+      [
+        "holdings",
+        10
+      ],
+      [
+        "holdings_by_master",
+        10
+      ]
+    ],
+    "wl": 0
+  },
+  {
+    "id": "eab784bb-7bd3-41fe-9fc4-810fc18de4f9",
+    "name": "聯博大利基金A2類型",
+    "code": "ACTI02",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACTI02",
+    "taxId": "97997635A",
+    "error": null,
+    "correct": {
+      "id": "f8ac6ac9-1751-4418-90f7-cc8fe8b6b1a9",
+      "name": "聯博大利基金-A2類型(新台幣)",
+      "code": "97997635A"
+    },
+    "uniqueToMoneydj": [
+      [
+        "fund_source_allocation_observations",
+        61
+      ],
+      [
+        "holdings",
+        15
+      ],
+      [
+        "holdings_by_master",
+        15
+      ]
+    ],
+    "wl": 0
+  },
+  {
+    "id": "36afad1e-d591-447f-b2e1-02de93fbecdb",
+    "name": "富邦臺灣加權單日正向兩倍基金",
+    "code": "ACFP71",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACFP71",
+    "taxId": "42450837",
+    "error": null,
+    "correct": {
+      "id": "f503fb47-8ac3-4ffc-8ade-6595675174d0",
+      "name": "富邦臺灣加權ETF傘型基金之富邦臺灣加權單日正向兩倍基金",
+      "code": "42450837"
+    },
+    "uniqueToMoneydj": [
+      [
+        "fund_performances",
+        20
+      ],
+      [
+        "fund_source_allocation_observations",
+        12
+      ]
+    ],
+    "wl": 0
+  },
+  {
+    "id": "ad9ab37c-220f-4ff8-9d06-2af17d04908b",
+    "name": "復華台灣科技高股息基金A不配息(台幣)(本基金並無保證收益及配息)",
+    "code": "ACFH117",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACFH117",
+    "taxId": "93212009A",
+    "error": null,
+    "correct": {
+      "id": "2953d410-5d85-4ceb-afda-2c20465deb5d",
+      "name": "復華台灣科技高股息基金A類型(本基金並無保證收益及配息)",
+      "code": "93212009A"
+    },
+    "uniqueToMoneydj": [
+      [
+        "fund_performances",
+        20
+      ]
+    ],
+    "wl": 0
+  },
+  {
+    "id": "015970f7-8b13-4b7a-94d8-780102cd0c68",
+    "name": "國泰中小成長基金-B配息(台幣)(基金之配息來源可能為本金)",
+    "code": "ACCY213",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACCY213",
+    "taxId": "18043059C",
+    "error": null,
+    "correct": {
+      "id": "e7fa2a67-48a6-4309-b6b3-10b062cfad73",
+      "name": "國泰中小成長基金-新台幣B(配息)",
+      "code": "18043059C"
+    },
+    "uniqueToMoneydj": [
+      [
+        "fund_performances",
+        18
+      ],
+      [
+        "fund_source_allocation_observations",
+        4
+      ],
+      [
+        "holdings",
+        4
+      ],
+      [
+        "holdings_by_master",
+        4
+      ]
+    ],
+    "wl": 0
+  },
+  {
+    "id": "11932d46-8743-4175-81f2-752b4ea6c97d",
+    "name": "華南永昌台灣環境永續高股息指數基金A不配息(台幣)(本基金並無保證收益及配息)",
+    "code": "ACYC75",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACYC75",
+    "taxId": "88342468A",
+    "error": null,
+    "correct": {
+      "id": "94822644-c7ec-44b4-9189-2beaa69c53a0",
+      "name": "華南永昌台灣環境永續高股息指數基金(A類新台幣)",
+      "code": "88342468A"
+    },
+    "uniqueToMoneydj": [
+      [
+        "fund_performances",
+        22
+      ],
+      [
+        "fund_source_allocation_observations",
+        99
+      ]
+    ],
+    "wl": 0
+  },
+  {
+    "id": "b2647712-a182-4705-8b59-74883d7fbc6c",
+    "name": "元大台灣高股息優質龍頭基金B配息(本基金之配息來源可能為收益平準金且並無保證收益及配息)",
+    "code": "ACYT162",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACYT162",
+    "taxId": "76959044B",
+    "error": null,
+    "correct": {
+      "id": "deb01157-8e9c-483e-8ce0-a59663633391",
+      "name": "元大台灣高股息優質龍頭基金-新台幣B類型配息(本基金之配息來源可能為收益平準金且並無保證收益及配息)",
+      "code": "76959044B"
+    },
+    "uniqueToMoneydj": [
+      [
+        "fund_performances",
+        20
+      ],
+      [
+        "fund_source_allocation_observations",
+        55
+      ],
+      [
+        "holdings",
+        10
+      ],
+      [
+        "holdings_by_master",
+        10
+      ]
+    ],
+    "wl": 0
+  },
+  {
+    "id": "f67e613a-de54-49b6-a3a0-07c59e3e6972",
+    "name": "台新高股息平衡基金-A不配息(本基金並無保證收益及配息)",
+    "code": "ACTT03",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACTT03",
+    "taxId": "21719942A",
+    "error": null,
+    "correct": {
+      "id": "c51d650b-c261-4684-bde5-59a0118b7513",
+      "name": "台新高股息平衡基金(累積型)",
+      "code": "21719942A"
+    },
+    "uniqueToMoneydj": [
+      [
+        "fund_source_allocation_observations",
+        66
+      ],
+      [
+        "holdings",
+        4
+      ],
+      [
+        "holdings_by_master",
+        4
+      ]
+    ],
+    "wl": 0
+  },
+  {
+    "id": "1378fb5d-4898-4e69-987c-94fd06b26b64",
+    "name": "永豐臺灣ESG永續優選基金-年配型",
+    "code": "ACGC71",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACGC71",
+    "taxId": "77074486B",
+    "error": null,
+    "correct": {
+      "id": "9d3260b9-e423-4d3b-a218-7bda5e932dd0",
+      "name": "永豐臺灣ESG永續優選基金-A年配類型",
+      "code": "77074486B"
+    },
+    "uniqueToMoneydj": [
+      [
+        "fund_source_allocation_observations",
+        40
+      ],
+      [
+        "holdings",
+        14
+      ],
+      [
+        "holdings_by_master",
+        14
+      ]
+    ],
+    "wl": 0
+  },
+  {
+    "id": "81020eaa-e42c-4585-9eea-2d465d06bbc0",
+    "name": "玉山高成長基金-A類型",
+    "code": "ACML01",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACML01",
+    "taxId": "01032183A",
+    "error": null,
+    "correct": {
+      "id": "010a25ef-5241-4cc9-9db4-10bfa7fc1a66",
+      "name": "玉山高成長基金",
+      "code": "01032183A"
+    },
+    "uniqueToMoneydj": [
+      [
+        "fund_source_allocation_observations",
+        73
+      ]
+    ],
+    "wl": 0
+  },
+  {
+    "id": "8f2ebc37-90bb-45d1-9c16-9c55edd72d6b",
+    "name": "野村台灣高股息基金-累積S類型(台幣)(本基金之配息來源可能為本金且並無保證收益及配息)",
+    "code": "ACKH261",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACKH261",
+    "taxId": "99973878B",
+    "error": null,
+    "correct": {
+      "id": "5579216c-06d2-41b2-bafd-16a011f1d4c9",
+      "name": "野村台灣高股息基金-S類型(本基金並無保證收益)",
+      "code": "99973878B"
+    },
+    "uniqueToMoneydj": [
+      [
+        "fund_performances",
+        18
+      ],
+      [
+        "fund_source_allocation_observations",
+        76
+      ],
+      [
+        "holdings",
+        16
+      ],
+      [
+        "holdings_by_master",
+        16
+      ]
+    ],
+    "wl": 0
+  },
+  {
+    "id": "94d85609-36ed-4c57-9c03-26bf2a6b1e47",
+    "name": "富邦臺灣加權單日反向一倍基金",
+    "code": "ACFP72",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACFP72",
+    "taxId": "42450843",
+    "error": null,
+    "correct": {
+      "id": "335ea337-965f-4e9d-9ea0-12eadd7ee139",
+      "name": "富邦臺灣加權ETF傘型基金之富邦臺灣加權單日反向一倍基金",
+      "code": "42450843"
+    },
+    "uniqueToMoneydj": [
+      [
+        "fund_performances",
+        19
+      ],
+      [
+        "fund_source_allocation_observations",
+        12
+      ]
+    ],
+    "wl": 0
+  },
+  {
+    "id": "2f43df64-491c-40b0-837d-e86177819161",
+    "name": "富邦台灣摩根基金",
+    "code": "AC0057",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=AC0057",
+    "taxId": "48975156",
+    "error": null,
+    "correct": {
+      "id": "6f3370e8-c94b-4aec-aeaa-0c10b1afe591",
+      "name": "富邦台灣ETF傘型基金之富邦台灣摩根指數股票型基金",
+      "code": "48975156"
+    },
+    "uniqueToMoneydj": [
+      [
+        "fund_performances",
+        23
+      ],
+      [
+        "fund_source_allocation_observations",
+        103
+      ],
+      [
+        "holdings",
+        59
+      ],
+      [
+        "holdings_by_master",
+        59
+      ]
+    ],
+    "wl": 0
+  },
+  {
+    "id": "d27fa4f7-deb7-4621-a765-06bcb30420df",
+    "name": "元大台灣高股息優質龍頭基金I不配息(本基金之配息來源可能為收益平準金且並無保證收益及配息)",
+    "code": "ACYT164",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACYT164",
+    "taxId": "76959044C",
+    "error": null,
+    "correct": {
+      "id": "abbb94c8-866e-4c1a-96d8-643d226bbba3",
+      "name": "元大台灣高股息優質龍頭基金-新台幣I類型累積級別(本基金之配息來源可能為收益平準金且並無保證收益及配息)",
+      "code": "76959044C"
+    },
+    "uniqueToMoneydj": [
+      [
+        "fund_performances",
+        18
+      ],
+      [
+        "fund_source_allocation_observations",
+        53
+      ],
+      [
+        "holdings",
+        11
+      ],
+      [
+        "holdings_by_master",
+        11
+      ]
+    ],
+    "wl": 0
+  },
+  {
+    "id": "53d0d6b3-9bee-4b83-95e2-0b94320b03a9",
+    "name": "元大二○○一基金",
+    "code": "AC0017",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=AC0017",
+    "taxId": "00974066",
+    "error": null,
+    "correct": {
+      "id": "a62ca4ac-5194-4ec2-aef3-957e3fffe439",
+      "name": "元大2001基金",
+      "code": "00974066"
+    },
+    "uniqueToMoneydj": [
+      [
+        "fund_source_allocation_observations",
+        39
+      ],
+      [
+        "holdings",
+        9
+      ],
+      [
+        "holdings_by_master",
+        9
+      ]
+    ],
+    "wl": 0
+  },
+  {
+    "id": "48b4650b-2f23-413b-baad-e7ccff46740c",
+    "name": "統一全天候基金",
+    "code": "ACPS01",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACPS01",
+    "taxId": "01031699A",
+    "error": null,
+    "correct": {
+      "id": "88254e59-0312-4797-8b2f-85cb6d16f1d3",
+      "name": "統一全天候基金-A類型",
+      "code": "01031699A"
+    },
+    "uniqueToMoneydj": [
+      [
+        "fund_source_allocation_observations",
+        70
+      ]
+    ],
+    "wl": 0
+  },
+  {
+    "id": "dd3af2ae-a8c1-4663-8faa-90729c95b7ce",
+    "name": "元大多福基金A不配息(台幣)",
+    "code": "ACYT02",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACYT02",
+    "taxId": "01032058A",
+    "error": null,
+    "correct": {
+      "id": "1511d0b9-6c05-4ff3-a7db-5189731c3be6",
+      "name": "元大多福基金-新台幣A類型",
+      "code": "01032058A"
+    },
+    "uniqueToMoneydj": [
+      [
+        "fund_performances",
+        16
+      ],
+      [
+        "fund_source_allocation_observations",
+        60
+      ],
+      [
+        "holdings",
+        11
+      ],
+      [
+        "holdings_by_master",
+        11
+      ]
+    ],
+    "wl": 0
+  },
+  {
+    "id": "37ccb91e-012d-420b-bb6a-197d55f79cfe",
+    "name": "國泰國泰基金-NB配息(台幣)(基金之配息來源可能為本金)",
+    "code": "ACCY212",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACCY212",
+    "taxId": "17612497D",
+    "error": null,
+    "correct": {
+      "id": "a7e029c6-88fd-42d3-95c6-9e11a8fbcf31",
+      "name": "國泰國泰基金-新台幣NB(配息)",
+      "code": "17612497D"
+    },
+    "uniqueToMoneydj": [
+      [
+        "fund_performances",
+        19
+      ],
+      [
+        "fund_source_allocation_observations",
+        4
+      ],
+      [
+        "holdings",
+        5
+      ],
+      [
+        "holdings_by_master",
+        5
+      ]
+    ],
+    "wl": 0
+  },
+  {
+    "id": "25f765ff-c355-4ab6-8bde-2ea01cdff1a1",
+    "name": "宏利臺灣股息收益基金-B月配息(台幣)(本基金配息來源可能為本金及收益平準金且並無保證收益及配息)",
+    "code": "ACAP247",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACAP247",
+    "taxId": "73982057C",
+    "error": null,
+    "correct": {
+      "id": "71a180c6-ff06-438c-a470-60628393f793",
+      "name": "宏利臺灣股息收益基金B類型(本基金配息來源可能為本金及收益平準金且並無保證收益及配息)",
+      "code": "73982057C"
+    },
+    "uniqueToMoneydj": [
+      [
+        "fund_performances",
+        22
+      ]
+    ],
+    "wl": 0
+  }
+]

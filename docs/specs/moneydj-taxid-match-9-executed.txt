@@ -1,0 +1,13 @@
+# 2026-10-18 核准：9 筆 MoneyDJ 重複基金（用官方「基金統編」精確比對，非名稱模糊比對）-- 執行清單
+# 查核方式：抓 MoneyDJ 基本資料頁的官方「基金統編」欄位，跟 funds.code（SITCA統編）精確比對，比對上才算重複；
+# 執行前再查 27 個 fund_id 外鍵表 + watchlist_items，確認無關聯資料落差才停用。
+
+聯邦精選科技基金-A不配息(台幣) | moneydj_id=13e81955-e23f-4714-8de9-fed1aa4ec631 (code=ACUI03) | correct_id=4135dade-da9c-44a7-995b-fb33713b3241 (code=17597236A) | taxId=17597236A
+富蘭克林華美第一富基金-A累積型(台幣) | moneydj_id=7bf34a92-ad7f-4e3a-9a09-9546b1312ae6 (code=ACFT01) | correct_id=ac1a6084-b441-4d3e-99a0-8ccabfbf9303 (code=15733973A) | taxId=15733973A
+台中銀台灣優息基金B月配型(台幣)(本基金並無保證收益及配息) | moneydj_id=cfe36d02-276b-48fc-910f-531f534f9c2d (code=ACDF31) | correct_id=97231d69-ca88-45f3-8b03-8646949d53a3 (code=88315292B) | taxId=88315292B
+景順潛力基金 | moneydj_id=00e1aef3-16ba-4473-8a37-ebbcc2d1e23b (code=ACCS02) | correct_id=cd2ceed6-d8ca-4dbc-ab26-0a30d9f39199 (code=92019786A) | taxId=92019786A
+玉山金滿意基金-A累積型 | moneydj_id=ae68258c-2bb1-4410-b794-4b17f583bb31 (code=ACML02) | correct_id=d18f1e71-9a3e-48e0-9f93-3515a01e1044 (code=92013967A) | taxId=92013967A
+兆豐台灣金傳精選股息基金A累積型(台幣)(本基金並無保證收益及配息) | moneydj_id=c41ea1c7-23fe-4794-af4d-5ba942ac95f0 (code=ACII85) | correct_id=8e0c216a-7c86-4119-a29f-0ee9fa53b8a8 (code=88198077A) | taxId=88198077A
+匯豐龍鳳基金R類型 | moneydj_id=bb18124a-d64c-449a-9141-64c3055d9fff (code=ACCI89) | correct_id=42958e06-032d-43a8-99d5-18dd89115790 (code=01031298C) | taxId=01031298C
+台中銀台灣優息基金A累積型(台幣)(本基金並無保證收益及配息) | moneydj_id=71242197-f9f1-4775-b6b0-92dac3d62acc (code=ACDF30) | correct_id=7343ba1c-9a23-413e-b5e0-3f751852d61d (code=88315292A) | taxId=88315292A
+台新高股息平衡基金-NA不配息(本基金並無保證收益及配息) | moneydj_id=ca267014-cbe1-4c6d-accd-61bfe352baba (code=ACTT116) | correct_id=495d2acb-0cd5-4021-af7b-db167ebdcf7f (code=21719942C) | taxId=21719942C
