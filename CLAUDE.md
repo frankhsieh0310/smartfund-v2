@@ -959,3 +959,33 @@ Product ID 交付項目。
 **沒有真實事件可以驗證**，只做到語法／邏輯層級的 `tsc` 檢查。`GET /api/admin/funnel-report`
 新增 `pendingStoreVerification` 區塊，明確列出這 3 個事件「待商店實測」，在文件第 4 節的
 沙箱測試清單真的跑完之前，這 3 個數字不得對外引用——完全依照使用者這次的原話執行。
+
+### 第 3 項：邀請碼與深層連結 ✅ 已安裝流程與手動輸入已驗證；Install Referrer／AdServices 誠實標示未做
+
+重用第 1＋5 項的 `usage_funnel_events` 漏斗基礎建設，不建新的後端——邀請碼第一版只追蹤來源，
+不送獎勵（照使用者原話）。
+
+**已完成並用真實互動驗證**：
+- `app/_layout.tsx` 的 `FirstOpenTracker` 在送出 `FIRST_OPEN` 之前，先用 `Linking.getInitialURL()`
+  讀取真正啟動這次 App 的網址，解析出邀請碼（支援 `smartmatch://invite/<code>` 或任何帶
+  `?code=` 的網址）——確保全新安裝透過邀請連結啟動時，從第一個事件就正確歸因，不是事後修正。
+- `app/invite/[code].tsx`：已安裝使用者點擊邀請連結時直接進入的畫面，VERIFIED 導覽到
+  `/invite/FROMLINK99` 後正確跳轉到 `/portfolio`（第 4 項的新用戶穿透流程），符合「直接打開
+  組合穿透畫面」的要求。
+- `app/redeem-invite.tsx`：兩個平台共用的「手動輸入邀請碼」備援，從首頁底部連結進入。
+  VERIFIED 在真實裝置狀態（此裝置先前已經有 `FIRST_OPEN` 記錄）下輸入邀請碼，正確顯示誠實的
+  「這組邀請碼不會改變原本的記錄」訊息，不會假裝改寫了原本的歸因。
+
+**誠實標示未完成的部分**（`src/analytics/installReferrer.ts` 裡完整記錄原因，不是假裝做完）：
+- **Android Google Play Install Referrer**：需要原生模組（例如
+  `react-native-google-play-referrer`），這個專案目前沒有，加入後需要 custom dev build
+  （`eas build --profile development`），**而且必須在真實 Android 裝置上，用真的 Play
+  Store 連結（帶 `&referrer=...`）全新安裝測試過，才能確認 referrer 字串真的讀得到**——
+  完全照使用者的要求「必須實機測試，不准假設一般連結就能做到」，沒有在這次直接寫一個
+  沒驗證過的原生整合進去。
+- **Apple AdServices**：AdServices.framework 是原生 iOS 框架，同樣需要原生模組／config
+  plugin，而且只能用真實的（哪怕預算很小的）Apple Search Ads 活動在真實裝置上驗證，沒有
+  模擬器等效測試方式。使用者已經說「iOS 先不接第三方服務」，這項本來就只能用蘋果官方框架，
+  現在誠實標記為「需要原生開發＋實機測試才能做」，不是忘記做。
+- 在這兩項做出來之前，`source_type = AD_CHANNEL` 全站沒有任何地方會真的寫入——沒有用假資料
+  或佔位符冒充已經有廣告歸因的樣子。
