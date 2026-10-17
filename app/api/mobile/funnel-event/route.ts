@@ -8,7 +8,7 @@ const EVENT_TYPES = ["FIRST_OPEN", "COMPLETED_OVERLAP", "SAVED_PORTFOLIO", "TRIA
 const SOURCE_TYPES = ["INVITE_CODE", "AD_CHANNEL", "ORGANIC", "UNKNOWN"] as const;
 
 export function OPTIONS() {
-  return new Response(null, { status: 204, headers: { ...headers, "Access-Control-Allow-Methods": "POST, OPTIONS" } });
+  return new Response(null, { status: 204, headers: { ...headers, "Access-Control-Allow-Methods": "POST, OPTIONS", "Access-Control-Allow-Headers": "Content-Type" } });
 }
 
 export async function POST(request: Request) {
