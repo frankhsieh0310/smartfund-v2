@@ -769,3 +769,13 @@ Yahoo奇摩報酬率交叉核對的先例，照同一個模式做）新增 WTI�
   `production_scheduler_runs` 執行紀錄，屬於「未經核准不寫 production」規則內，而且本機沒有
   `CRON_SECRET`），改用上述唯讀腳本單獨驗證新增的這段邏輯；程式碼已就緒，會跟著這支既有 cron
   在下次部署後的下一次排程自動生效，不需要額外啟用步驟。
+
+### 2026-10-18 使用者修正：鋁 COMEX root 已核准寫入並完成 ✅
+
+使用者明確核准後執行：`npx tsx scripts/seed-comex-aluminum-root.ts --write`。寫入前後都做了
+SELECT 核對：寫入前 `futures_product_roots` 共 890 筆、無既有 COMEX／ALI 列；寫入後 891 筆，
+確認只新增 1 筆（id `e044c37c-a9cb-4ce1-bd57-0ea5492e2c3d`）。過程中第一次嘗試因為漏帶
+`country`／`jurisdiction`／`timezone`（都是 NOT NULL，無預設值）觸發 `23502` 整筆失敗、
+VERIFIED 沒有留下半筆資料，修正腳本後才重試成功。已把新 root id 加進
+`CORE_COMMODITY_ROOTS`（`lib/cron/commodityUpdate.ts`），`ALI=F` 會在既有 commodity cron
+下次執行時開始回填 `futures_root_market_observations`，不需要額外手動 backfill。
