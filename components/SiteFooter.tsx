@@ -37,6 +37,12 @@ export function SiteFooter() {
             <Link href="/twpuzzle/terms" className="underline underline-offset-4 hover:text-white">使用條款</Link>{"　"}
             <Link href="/twpuzzle/support" className="underline underline-offset-4 hover:text-white">支援與聯絡</Link>
           </p>
+          <p>
+            SmartMatch App：
+            <Link href="/smartmatch-app/privacy" className="underline underline-offset-4 hover:text-white">隱私權政策</Link>{"　"}
+            <Link href="/smartmatch-app/terms" className="underline underline-offset-4 hover:text-white">使用條款</Link>{"　"}
+            <Link href="/smartmatch-app/support" className="underline underline-offset-4 hover:text-white">支援與聯絡</Link>
+          </p>
         </address>
       </div>
     </footer>
