@@ -1,0 +1,77 @@
+[
+  {
+    "id": "64ea4bd9-b2cc-439a-a47b-073b870dcd31",
+    "name": "富邦新台商基金-TISA類型",
+    "code": "ACJS113",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACJS113",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND",
+    "sitca": {
+      "taxId": "94991068B",
+      "name": "富邦新台商基金-TISA類型",
+      "company": "富邦投信",
+      "nav": "396.12",
+      "date": "20261016"
+    }
+  },
+  {
+    "id": "dd04f11c-94ca-4ff2-b620-1f7e2744c361",
+    "name": "永豐中小基金-TISA類型",
+    "code": "ACGC134",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACGC134",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND",
+    "sitca": {
+      "taxId": "13998344C",
+      "name": "永豐中小基金-TISA類型",
+      "company": "永豐投信",
+      "nav": "339.93",
+      "date": "20261016"
+    }
+  },
+  {
+    "id": "85d44abc-4c6b-49fc-b108-6a05ac9216bd",
+    "name": "兆豐豐台灣基金-TISA類型",
+    "code": "ACII158",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACII158",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND",
+    "sitca": {
+      "taxId": "10341837B",
+      "name": "兆豐豐台灣基金-TISA類型",
+      "company": "兆豐投信",
+      "nav": "10.09",
+      "date": "20261016"
+    }
+  },
+  {
+    "id": "848a02db-ee32-4242-b7aa-dfb8439da765",
+    "name": "群益馬拉松基金I類型",
+    "code": "ACCA197",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACCA197",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND",
+    "sitca": {
+      "taxId": "97984293B",
+      "name": "群益馬拉松基金I類型",
+      "company": "群益投信",
+      "nav": "-",
+      "date": "20261016"
+    }
+  },
+  {
+    "id": "33ef19b8-94ce-4a3d-9f8e-2c92b02a6cd5",
+    "name": "富邦台灣永續成長股息基金-TISA類型",
+    "code": "ACJS114",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACJS114",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND",
+    "sitca": {
+      "taxId": "88175551B",
+      "name": "富邦台灣永續成長股息基金-TISA類型",
+      "company": "富邦投信",
+      "nav": "47.04",
+      "date": "20261016"
+    }
+  }
+]

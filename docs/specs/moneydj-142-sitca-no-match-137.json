@@ -1,0 +1,1098 @@
+[
+  {
+    "id": "cdcf8e68-17ad-40e4-ba6e-7e2e61f79359",
+    "name": "群益店頭市場基金N類型",
+    "code": "ACCA274",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACCA274",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "0621f283-1ddf-4106-ac56-6154eaf69284",
+    "name": "玉山金滿意基金-TISA類型",
+    "code": "ACML129",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACML129",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "a1b12891-a21c-41f6-8fc3-76d3cd689d93",
+    "name": "元大新主流基金N不配息(台幣)",
+    "code": "ACYT238",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACYT238",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "62ea3c14-210d-44ec-8c04-7d2320e1fc8e",
+    "name": "柏瑞巨人基金",
+    "code": "ACAI01",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACAI01",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "63478e5e-b7de-402f-b0c7-6b336c269ff8",
+    "name": "富邦上選基金-N類型",
+    "code": "ACJS64",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACJS64",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "90cfb876-2398-4f72-9796-d4ba0ce59fa9",
+    "name": "野村優質基金-TISA類型(台幣)",
+    "code": "ACKH304",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACKH304",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "00c8fbc3-df54-4126-9d79-53ecf16f44aa",
+    "name": "元大經貿基金N不配息(台幣)",
+    "code": "ACYT237",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACYT237",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "33645001-f5e4-418e-857c-deb7e3512525",
+    "name": "元大高科技基金A不配息(台幣)",
+    "code": "ACYT09",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACYT09",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "1c21c3c5-faab-42ef-989d-f83185999412",
+    "name": "元大多多基金A不配息(台幣)",
+    "code": "ACYT03",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACYT03",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "bfe3135b-2712-4108-bb7a-63193b75761b",
+    "name": "台中銀台灣優息基金C累積型(台幣)(本基金並無保證收益及配息)",
+    "code": "ACDF32",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACDF32",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "eb416aad-a8ae-4b7b-a334-e1e91e1d9122",
+    "name": "元大台灣高股息優質龍頭基金A不配息(本基金之配息來源可能為收益平準金且並無保證收益及配息)",
+    "code": "ACYT161",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACYT161",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "8fe80b69-8b20-488c-be38-4c3a28d8bd60",
+    "name": "景順潛力基金-TISA累積型(台幣)",
+    "code": "ACCS135",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACCS135",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "b315e972-4ca5-49dc-bed2-7b7fb3105101",
+    "name": "路博邁台灣5G股票基金N累積型(基金之配息來源可能為本金)",
+    "code": "ACNB45",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACNB45",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "6f940793-0ea2-4010-9c83-1d305234a431",
+    "name": "第一金台灣核心戰略建設基金B配息(台幣)(本基金配息來源可能為本金)",
+    "code": "ACNC156",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACNC156",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "cf9ddd69-775a-4f7a-aa00-c1f49b0dc415",
+    "name": "野村台灣高股息基金-累積型(台幣)(本基金之配息來源可能為本金且並無保證收益及配息)",
+    "code": "ACKH29",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACKH29",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "120320fd-18ce-4dfe-ab05-f91248237af5",
+    "name": "野村台灣高股息基金-月配型(台幣)(本基金之配息來源可能為本金且並無保證收益及配息)",
+    "code": "ACKH2901",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACKH2901",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "dae4fb36-adba-4583-ba40-e76921f1c56f",
+    "name": "台新高股息平衡基金-B配息(本基金並無保證收益及配息)",
+    "code": "ACTT0301",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACTT0301",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "36d26e47-6e9e-449c-a9db-9bf6f3fa413f",
+    "name": "富達台灣成長基金-A類型累積型",
+    "code": "ACFD02",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACFD02",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "242a2759-d8a0-47f2-ab99-99addf068e57",
+    "name": "宏利臺灣股息收益基金-A不配息(台幣)(本基金並無保證收益及配息)",
+    "code": "ACAP01",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACAP01",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "74ea7d2d-24cb-44d2-9f51-b8ad34e2d452",
+    "name": "宏利台灣動力基金A類",
+    "code": "ACAP04",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACAP04",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "973faeb9-6ee2-4b1d-b34b-ae2234bfdc4e",
+    "name": "野村e科技基金",
+    "code": "ACIC06",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACIC06",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "4073257a-4f2c-496d-aba7-af8db2495fde",
+    "name": "台新2000高科技基金-I不配息",
+    "code": "ACTT78",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACTT78",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "a027f7e2-2057-45e1-8d7f-1fa5a12e869f",
+    "name": "元大台灣加權股價指數基金A不配息(台幣)",
+    "code": "ACKY17",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACKY17",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "9386e5c8-63fd-4965-90a3-6ee598ca00b6",
+    "name": "瀚亞外銷基金A不配息(台幣)",
+    "code": "ACCP04",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACCP04",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "c25f2144-d006-47d1-9388-52b29591325b",
+    "name": "野村台灣高股息基金-TISA類型(台幣)(本基金之配息來源可能為本金且並無保證收益及配息)",
+    "code": "ACKH305",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACKH305",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "489a0c96-261f-4c0f-8c50-176ac1fddd84",
+    "name": "台新2000高科技基金-A不配息",
+    "code": "ACSH03",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACSH03",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "6b901105-e5fd-43d3-a13c-9757494c3306",
+    "name": "聯邦金鑽平衡基金-NA不配息(台幣)",
+    "code": "ACUI92",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACUI92",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "21483c1e-010f-4c93-8748-25568f61dca3",
+    "name": "台新台灣富貴基金-TISA類型",
+    "code": "ACTS130",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACTS130",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "da4560ec-d5ad-4d46-b50f-2d79cc164010",
+    "name": "台新臺灣高股息基金A不配息(台幣)",
+    "code": "ACTS114",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACTS114",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "a2badd37-9f4f-48da-af88-b49cd79719a3",
+    "name": "台中銀大發基金TISA累積型(台幣)(本基金之配息來源可能為本金)",
+    "code": "ACDF37",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACDF37",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "a4840ccc-7ef4-45f7-982c-afa503cac9d4",
+    "name": "街口標普高盛黃豆ER指數期貨基金",
+    "code": "ACCH21",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACCH21",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "5d7c7454-aeca-4a65-8492-e94b4447aa4a",
+    "name": "匯豐龍鳳基金I類型",
+    "code": "ACCI69",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACCI69",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "3ea1d425-e82d-456f-9eb0-0f5befeac958",
+    "name": "國泰小龍基金-R類型(台幣)",
+    "code": "ACCY157",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACCY157",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "712f30a4-eb01-4c6a-8ac6-5a2405282e9d",
+    "name": "柏瑞巨人基金I不配息(台幣)",
+    "code": "ACAI214",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACAI214",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "6740b16f-eae5-488d-bda6-9c1428f4377b",
+    "name": "聯博大利基金TISA類型",
+    "code": "ACTI119",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACTI119",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "5f1b801a-42c0-4151-90bd-e94f8c36666b",
+    "name": "路博邁台灣5G股票基金N月配型(基金之配息來源可能為本金)",
+    "code": "ACNB46",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACNB46",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "86617d44-b9d0-43be-abe9-afbc60d3593d",
+    "name": "瀚亞理財通基金A不配息(台幣)",
+    "code": "ACCP15",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACCP15",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "57b769c0-66cd-42d5-a8b5-ed29f1cd55a5",
+    "name": "華南永昌台灣環境永續高股息指數基金B配息(台幣)(本基金並無保證收益及配息)",
+    "code": "ACYC76",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACYC76",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "e8f480fc-89ca-4f15-9804-b0d908f9bb29",
+    "name": "台中銀數位時代基金A累積型(台幣)(本基金之配息來源可能為本金)",
+    "code": "ACDF07",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACDF07",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "53a7cd41-c446-405b-9061-7fb1cbaa2841",
+    "name": "玉山金平衡基金-A累積型(本基金有相當比重投資於非投資等級之高風險債券)",
+    "code": "ACML14",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACML14",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "db21a0fc-8f15-44c4-b41c-b2749dcddd52",
+    "name": "台中銀數位時代基金B月配型(台幣)(本基金之配息來源可能為本金)",
+    "code": "ACDF0701",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACDF0701",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "34bb4072-4211-4582-84bb-0b2ff2c688d9",
+    "name": "復華台灣科技高股息基金B配息(台幣)(基金之配息來源可能為本金及收益平準金且本基金並無保證收益及配息)",
+    "code": "ACFH118",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACFH118",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "0582697c-5a1c-4b56-bbc5-dc5d53d563d6",
+    "name": "玉山中小型股基金-A類型",
+    "code": "ACML09",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACML09",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "6bf2be2e-83dc-4cd1-bfbc-9e4e4245b9dc",
+    "name": "玉山中小型股基金-TISA類型",
+    "code": "ACML125",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACML125",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "f0d4c93d-2f78-44fe-bfd5-ea1188664936",
+    "name": "玉山高成長基金-TISA類型",
+    "code": "ACML124",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACML124",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "0819539b-fc6c-4701-b08c-0ee220a0f28a",
+    "name": "國泰中小成長基金-A類型(台幣)",
+    "code": "ACCY03",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACCY03",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "fc5a8905-6ff8-49a9-a11f-789ddf2e61a0",
+    "name": "凱基台灣精五門基金A類型(台幣)",
+    "code": "ACKG15",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACKG15",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "4f35c8ba-ea71-4776-8237-37bec12d8d5b",
+    "name": "凱基台灣精五門基金TISA類型(台幣)",
+    "code": "ACKG207",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACKG207",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "24ea592d-e39b-4acd-aeff-f5f8e788be80",
+    "name": "元大經貿基金A不配息(台幣)",
+    "code": "ACYT12",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACYT12",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "2ad063b0-f979-4831-9541-2c85c9b87c14",
+    "name": "國泰台灣高股息基金-B配息(台幣)(本基金並無保證收益及配息)",
+    "code": "ACCY151",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACCY151",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "8e18431d-c876-4add-b8c2-c416a491509b",
+    "name": "玉山新世紀基金-A累積型",
+    "code": "ACML12",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACML12",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "99033f52-f6a9-42ed-87f8-dfad322796bb",
+    "name": "統一台灣高息優選基金-累積型(台幣)(本基金並無保證收益及配息，配息來源可能為本金及收益平準金)",
+    "code": "ACPS62",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACPS62",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "90722b31-7cfa-44db-b93c-ede55c5a606e",
+    "name": "第一金創新趨勢基金A類型(台幣)",
+    "code": "ACNC38",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACNC38",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "c3f6a613-ea69-4a38-84b3-be4c8edc0c59",
+    "name": "富邦台灣高股息基金TISA類型(本基金並無保證收益及配息)",
+    "code": "ACFP200",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACFP200",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "a7f02bd0-b47a-450f-901e-4a4818d81dd0",
+    "name": "富邦台灣高股息基金A不配息(本基金並無保證收益及配息)",
+    "code": "ACFP129",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACFP129",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "86e79050-2fd4-496d-ab30-fe6c9209304f",
+    "name": "國泰國泰基金-B配息(台幣)(基金之配息來源可能為本金)",
+    "code": "ACCY211",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACCY211",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "7d253bde-cb15-45fa-954c-23fdfc6a0b06",
+    "name": "國泰國泰基金-A類型(台幣)",
+    "code": "ACCY01",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACCY01",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "a9981e80-33e2-4112-b92d-353687a0c3da",
+    "name": "國泰小龍基金(台幣)",
+    "code": "ACCY14",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACCY14",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "b6423ec5-74d3-41fc-b7a7-180b5b04f537",
+    "name": "永豐臺灣ESG永續優選基金-累積型",
+    "code": "ACGC70",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACGC70",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "dacf86b8-d768-4536-9641-523402c30841",
+    "name": "元大多福基金N不配息(台幣)",
+    "code": "ACYT233",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACYT233",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "5e110fed-caf8-4da4-a778-27ebd229fd41",
+    "name": "富邦上選基金-TISA類型",
+    "code": "ACJS112",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACJS112",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "607f785f-ec29-40b1-b4ce-b9702430eaea",
+    "name": "合庫台灣基金-B配息(台幣)(本基金之配息來源可能為本金)",
+    "code": "ACCB157",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACCB157",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "b01d7b8c-766a-4034-ba81-a811d532abb9",
+    "name": "群益臺灣加權指數單日正向2倍基金",
+    "code": "ACCA98",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACCA98",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "170e4488-f1e6-47b6-9039-be5f0bdb00bc",
+    "name": "合庫台灣基金-A不配息(台幣)",
+    "code": "ACCB01",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACCB01",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "8d4b5f75-4379-4258-a0fa-9afa99663822",
+    "name": "聯邦精選科技基金-NA不配息(台幣)",
+    "code": "ACUI93",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACUI93",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "3347be2e-9139-440d-94ad-0a16c77a313e",
+    "name": "野村優質基金-累積S類型(台幣)",
+    "code": "ACKH173",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACKH173",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "a0c43c6f-bcf1-46d8-91f7-5695c3846f55",
+    "name": "合庫台灣高科技基金-B配息(台幣)(本基金之配息來源可能為本金)",
+    "code": "ACCB207",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACCB207",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "b6c0c20d-f908-42ee-b5aa-78bbb30def17",
+    "name": "元大卓越基金N不配息(台幣)",
+    "code": "ACYT235",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACYT235",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "243a9219-03ab-463b-8f83-d8932eee7508",
+    "name": "聯邦中國龍基金-A不配息(台幣)",
+    "code": "ACUI05",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACUI05",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "6550936e-ff46-43cd-b7b5-cc41961504ab",
+    "name": "統一台灣高息優選基金-月配型(台幣)(本基金並無保證收益及配息，配息來源可能為本金及收益平準金)",
+    "code": "ACPS63",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACPS63",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "b4ca9daa-9996-4e55-ac24-21a087b0038b",
+    "name": "元大卓越基金A不配息(台幣)",
+    "code": "ACYT04",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACYT04",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "09f3627a-5c71-458b-ac28-51c89c41bae1",
+    "name": "匯豐台灣精典基金-NM2月配型(台幣)(本基金配息來源可能為本金)",
+    "code": "ACCJ85",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACCJ85",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "49fd87ca-c94c-4288-9a0c-2a4353023b1b",
+    "name": "群益馬拉松基金N類型",
+    "code": "ACCA273",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACCA273",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "87408d6d-623e-4b81-b601-2afe52a9d6de",
+    "name": "第一金台灣核心戰略建設基金N不配息(台幣)(本基金配息來源可能為本金)",
+    "code": "ACNC157",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACNC157",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "3f286557-71ed-48c1-874c-9578c8ed2285",
+    "name": "安聯台灣大壩基金-A累積型(台幣)",
+    "code": "ACDD01",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACDD01",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "9e2772a0-166f-4886-a653-1bf3c88e185f",
+    "name": "野村高科技基金-累積N類型(台幣)",
+    "code": "ACKH322",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACKH322",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "5b21a908-3ad3-485b-bd8c-5641ac9e40e8",
+    "name": "合庫台灣高科技基金-A不配息(台幣)",
+    "code": "ACCB78",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACCB78",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "3dfe58b9-a23b-414e-ba3a-38ea9fe83a73",
+    "name": "台新大三通基金-TISA類型",
+    "code": "ACTS131",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACTS131",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "8e7f36da-a366-4c06-935d-bdd26a332e15",
+    "name": "柏瑞巨人基金N9不配息(台幣)",
+    "code": "ACAI479",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACAI479",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "a0932861-4ad4-4714-8fb5-4dc33343147a",
+    "name": "國泰臺灣加權指數單日正向2倍基金",
+    "code": "ACTR12",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACTR12",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "9a9e25dc-e795-46e2-9fe6-a0c136b4ed2c",
+    "name": "台中銀大發基金A累積型(台幣)(本基金之配息來源可能為本金)",
+    "code": "AC0025",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=AC0025",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "337a6f17-d89c-44ab-9f0b-0e281c7c551f",
+    "name": "瀚亞理財通基金B配息(台幣)(本基金配息來源可能為本金)",
+    "code": "ACCP1501",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACCP1501",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "82b04786-b17c-4692-9efe-56345aaa33f6",
+    "name": "玉山金平衡基金-TISA類型(本基金有相當比重投資於非投資等級之高風險債券)",
+    "code": "ACML131",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACML131",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "bccaf00e-dc5c-4f52-b2bb-00ab00fe3092",
+    "name": "元大新主流基金A不配息(台幣)",
+    "code": "ACYT11",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACYT11",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "4745a7f5-9740-428d-834f-e8d6914d8425",
+    "name": "台中銀大發基金B月配型(台幣)(本基金之配息來源可能為本金)",
+    "code": "AC002501",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=AC002501",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "4bf94955-50a5-4b84-bb66-2e4cc55171c1",
+    "name": "第一金台灣核心戰略建設基金A不配息(台幣)(本基金配息來源可能為本金)",
+    "code": "ACNC155",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACNC155",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "cd8fea56-55d5-4090-b142-43fe0c06f188",
+    "name": "台中銀台灣優息基金N月配型(台幣)(本基金並無保證收益及配息)",
+    "code": "ACDF33",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACDF33",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "56316eb5-4b17-4767-9df4-d329f2fb3be7",
+    "name": "元大台灣高股息優質龍頭基金R不配息(台幣)(本基金之配息來源可能為收益平準金)",
+    "code": "ACYT204",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACYT204",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "1f4f66b0-8aa5-4ea9-bb08-8f272d72134f",
+    "name": "富邦上選基金-A類型",
+    "code": "ACJS03",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACJS03",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "299b71cd-cde0-47fe-81c0-df6acd087ca8",
+    "name": "聯邦中國龍基金-NA不配息(台幣)",
+    "code": "ACUI91",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACUI91",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "4192fcc3-dcc0-416a-b9bb-124c2c0cca92",
+    "name": "野村中小基金-累積型(台幣)",
+    "code": "ACIC08",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACIC08",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "b931ba4b-d821-4595-a394-b419f899ec3d",
+    "name": "聯邦金鑽平衡基金-A不配息(台幣)",
+    "code": "ACUI08",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACUI08",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "574b46b5-885b-4ca8-8740-844f347518e4",
+    "name": "第一金小型精選基金A類型(台幣)",
+    "code": "ACNC13",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACNC13",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "e81ea009-6548-423a-9b36-2eb52402b0eb",
+    "name": "台新台灣中小基金-TISA類型",
+    "code": "ACTT250",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACTT250",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "6d51ca57-022a-4066-9c0b-c8d71e4b0ef6",
+    "name": "國泰中小成長基金-I類型(美元)",
+    "code": "ACCY110",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACCY110",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "c722d750-2e19-43c2-bf47-50d221919c62",
+    "name": "國泰中小成長基金-NB配息(台幣)(基金之配息來源可能為本金)",
+    "code": "ACCY214",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACCY214",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "b9b2f33d-a03f-47d3-9e05-f9914a71a53b",
+    "name": "摩根新興科技基金-數位型",
+    "code": "ACJF147",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACJF147",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "003a6308-6cba-49c9-8420-ec01c63431f9",
+    "name": "元大台灣高股息優質龍頭基金I配息(本基金之配息來源可能為收益平準金且並無保證收益及配息)",
+    "code": "ACYT165",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACYT165",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "7996ef49-19ea-495b-a81e-4b268cf8d034",
+    "name": "元大台灣加權股價指數基金R不配息(台幣)",
+    "code": "ACYT167",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACYT167",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "375f9a26-b653-4d21-ae29-8d4f3ecae2a0",
+    "name": "第一金台灣核心戰略建設基金N配息(台幣)(本基金配息來源可能為本金)",
+    "code": "ACNC158",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACNC158",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "e96e8b22-205d-4dd8-af81-0ca9b90fbc13",
+    "name": "匯豐台灣精典基金-不配息(台幣)(本基金配息來源可能為本金)",
+    "code": "ACCI12",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACCI12",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "f4074642-6771-498c-b5bb-35edd71c468d",
+    "name": "台中銀大發基金R累積型(台幣)(本基金之配息來源可能為本金)",
+    "code": "ACDF36",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACDF36",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "075f0e50-8517-4159-ae3f-186e790c9d04",
+    "name": "國泰小龍基金-I類型(美元)",
+    "code": "ACCY109",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACCY109",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "592ddf64-1bb8-4c40-a660-421dd1647174",
+    "name": "路博邁台灣5G股票基金I月配型(基金之配息來源可能為本金)",
+    "code": "ACNB03",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACNB03",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "d209be32-b7e0-4601-a2ad-c4aca10bb4a9",
+    "name": "路博邁台灣5G股票基金I累積型(基金之配息來源可能為本金)",
+    "code": "ACNB04",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACNB04",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "e43c06f3-63b4-4247-9718-2c3d11869825",
+    "name": "國泰國泰基金-I類型",
+    "code": "ACTR27",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACTR27",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "dc7d4a3b-dd3d-466e-8327-fb6f9dd8e4f1",
+    "name": "台新高股息平衡基金-TISA類型(本基金並無保證收益及配息)",
+    "code": "ACTT252",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACTT252",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "8c0c3c7b-c912-4243-bded-9759be4dc956",
+    "name": "國泰臺灣加權指數單日反向1倍基金",
+    "code": "ACTR13",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACTR13",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "d3bcc06e-5fbe-4ca7-b044-937ac73f0334",
+    "name": "兆豐國民基金-A類型(本基金之配息來源可能為收益平準金)",
+    "code": "AC0004",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=AC0004",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "12a1c9bb-a829-471a-bd78-ecc77d18139c",
+    "name": "國泰臺灣低波動股利精選30基金(本基金並無保證收益及配息)",
+    "code": "ACCY98",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACCY98",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "62f28434-52ef-4529-af03-1bbeb9277378",
+    "name": "路博邁台灣5G股票基金T累積型(基金之配息來源可能為本金)",
+    "code": "ACNB01",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACNB01",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "68ddff96-39c5-41a1-8bc1-ffa1b564c5d1",
+    "name": "野村優質基金-累積N類型(台幣)",
+    "code": "ACKH321",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACKH321",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "67e31792-8047-471e-aee5-438a16810e1b",
+    "name": "第一金小型精選基金TISA類型(台幣)",
+    "code": "ACNC170",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACNC170",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "d3d09863-0f07-4ced-8c10-695e9806e59b",
+    "name": "台新中國通基金-TISA類型",
+    "code": "ACTT251",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACTT251",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "f948c6b4-f6b4-47bf-9bfe-d3b7f0129e91",
+    "name": "野村平衡基金-TISA類型(台幣)",
+    "code": "ACKH306",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACKH306",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "5935df07-c3c3-4021-b2bb-6db27bcf20cd",
+    "name": "摩根新興科技基金-一般型",
+    "code": "ACJF76",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACJF76",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "46b36d0b-c65c-4ffb-afe6-4429b4af483c",
+    "name": "兆豐台灣金傳精選股息基金N後收型(台幣)(本基金並無保證收益及配息)",
+    "code": "ACII86",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACII86",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "bc1b867b-a499-4aec-a375-207fd52ff264",
+    "name": "瀚亞外銷基金TISA類型(台幣)",
+    "code": "ACCP241",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACCP241",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "b3fba989-5f08-47bc-ac50-7ce440dee474",
+    "name": "富邦基金",
+    "code": "AC0015",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=AC0015",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "4ebb8dc5-7bff-4575-bd13-32e8fda5530b",
+    "name": "野村中小基金-累積S類型(台幣)",
+    "code": "ACKH174",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACKH174",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "d07ca991-b3b6-47d7-b6e7-ad9b90d28665",
+    "name": "國泰台灣高股息基金-A不配息(台幣)(本基金並無保證收益及配息)",
+    "code": "ACCY149",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACCY149",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "273032c4-c650-4154-89c4-f064e9677c51",
+    "name": "路博邁台灣5G股票基金T月配型(基金之配息來源可能為本金)",
+    "code": "ACNB02",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACNB02",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "843f71d5-cd79-493e-8802-24f4cfd0d6c5",
+    "name": "富蘭克林華美高科技基金",
+    "code": "ACFT12",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACFT12",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "e1dd8e7c-04d4-4e60-b843-57dc31539815",
+    "name": "匯豐龍鳳基金",
+    "code": "ACCI05",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACCI05",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "bb4fc7ed-2d41-43d9-be76-bce56613ccdb",
+    "name": "宏利台灣動力基金I類",
+    "code": "ACAP96",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACAP96",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "374a5a71-228b-4ba1-96c1-67145acebd05",
+    "name": "富蘭克林華美第一富基金-TISA類型(台幣)",
+    "code": "ACFT171",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACFT171",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "6d66e024-0bb9-40c8-808e-00da2e1a0e84",
+    "name": "街口道瓊銅ER指數期貨基金",
+    "code": "ACCH38",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACCH38",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "14d9e4a4-7202-433c-9cd5-42febe786f90",
+    "name": "野村高科技基金-累積型(台幣)",
+    "code": "ACKH19",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACKH19",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "b221b86f-2122-4a3c-95cc-87e51b2686f3",
+    "name": "野村平衡基金-累積型(台幣)",
+    "code": "ACIC05",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACIC05",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "4703a1b6-7551-4a1b-94a0-cd2f1b6e7c0f",
+    "name": "玉山金平衡基金-R累積型(本基金有相當比重投資於非投資等級之高風險債券)",
+    "code": "ACML1401",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACML1401",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "566fdc50-76a4-4d60-b5df-8b36bad109dd",
+    "name": "匯豐台灣精典基金-TISA類型(本基金配息來源可能為本金)",
+    "code": "ACCJ83",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACCJ83",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "0b581848-a164-4f87-8636-77c5b4b11df4",
+    "name": "華南永昌永昌基金-TISA類型",
+    "code": "ACYC96",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACYC96",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "de85a5f8-0d50-4f0e-9276-8857456076ee",
+    "name": "元大高科技基金N不配息(台幣)",
+    "code": "ACYT236",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACYT236",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "f0fa92f8-4eac-498c-a9df-02b15cd12977",
+    "name": "玉山科技島基金-N累積型",
+    "code": "ACML137",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACML137",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "778d62ab-f3a2-464a-b4ee-7c47e5318cf7",
+    "name": "玉山中小型股基金-N累積型",
+    "code": "ACML133",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACML133",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "e6f8d975-8aef-48cc-8e82-d5a5ff58d80e",
+    "name": "玉山新世紀基金-月配息型(台幣)(本基金之配息來源可能為本金)",
+    "code": "ACML135",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACML135",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  },
+  {
+    "id": "b82cad53-f625-46d8-9421-54b548aa8f7b",
+    "name": "玉山金滿意基金-N累積型",
+    "code": "ACML130",
+    "data_source": "https://www.moneydj.com/funddj/yp/yp011000.djhtm?a=ACML130",
+    "taxId": null,
+    "error": "NO_TAXID_FOUND"
+  }
+]
