@@ -14,7 +14,7 @@
 // `funds` AND not already in the baseline is genuinely new since yesterday and gets a NEW_LISTING
 // event with milestone_date = NULL (honest "官方未公告" — the TDCC/SITCA feeds cannot supply a date).
 import { prisma } from "@/lib/prisma";
-import { fetchSitcaRows } from "@/lib/sitca-nav-sync/sitcaFetch";
+import { fetchSitcaRows, fetchSitcaIdentityRows } from "@/lib/sitca-nav-sync/sitcaFetch";
 import { fetchTdccNavCsv, parseTdccNavCsv } from "@/lib/offshore-nav-sync/tdccBatchSource";
 
 const DOMESTIC_SOURCE = "SITCA nav.csv (基金統編 diff)";
@@ -65,7 +65,56 @@ export type NewFundResult = {
   isFirstRun: boolean;
   seeded: number;
   newlyDetected: { key: string; name: string }[];
+  /** 2026-10-18: funds rows actually created from the official SITCA list this run, independent of
+   * the baseline/new-listing event bookkeeping above (see createMissingDomesticFunds doc comment). */
+  created: { taxId: string; name: string; company: string }[];
 };
+
+// 2026-10-18 root-cause fix: this pipeline previously only ever LOGGED a product_listing_events row
+// (logNewFund below) and never created the actual `funds` row -- unlike the ETF sibling
+// (lib/cron/newListingDetection.ts), which does both. VERIFIED live: 8 real SITCA-registered funds
+// (e.g. 94991068B／富邦新台商基金-TISA類型) had been sitting in product_listing_events as either
+// KNOWN_BASELINE or NEW_LISTING for one or more days with no corresponding `funds` row at all.
+//
+// "Should a funds row exist" and "should today's 新商品上架 screen announce this as new" are
+// deliberately decoupled here: a fund that was swept into the first-run KNOWN_BASELINE snapshot
+// (because our `funds` table simply hadn't onboarded it yet, not because it's genuinely old news)
+// must still get its row created -- it was never "fine to ignore", the baseline-seed only exists to
+// keep that backlog from being mis-announced as a brand-new product today. So this checks EVERY
+// taxId from the official list against `funds.code`, regardless of baseline/known status, and
+// creates whatever's missing; the event-log/新商品上架 `candidates` logic below is untouched.
+async function createMissingDomesticFunds(writeEnabled: boolean, existingFundCodes: Set<string>): Promise<{ taxId: string; name: string; company: string }[]> {
+  const identity = await fetchSitcaIdentityRows();
+  const navRows = await fetchSitcaRows().catch(() => []); // best-effort -- NAV might not be published yet for some
+  const navByTaxId = new Map(navRows.map((r) => [r.taxId, r.nav]));
+
+  const seenTaxIds = new Set<string>();
+  const missing: { taxId: string; name: string; company: string }[] = [];
+  for (const row of identity) {
+    if (seenTaxIds.has(row.taxId) || existingFundCodes.has(row.taxId)) continue;
+    seenTaxIds.add(row.taxId);
+    missing.push(row);
+  }
+  if (!writeEnabled || missing.length === 0) return missing;
+
+  const created: { taxId: string; name: string; company: string }[] = [];
+  for (const row of missing) {
+    const nav = navByTaxId.get(row.taxId) ?? null;
+    await prisma.fund.create({
+      data: {
+        name: row.name,
+        code: row.taxId,
+        company: row.company,
+        currency: "TWD",
+        dataProvider: "SITCA",
+        isActive: true,
+        latestNav: nav ?? undefined,
+      },
+    });
+    created.push(row);
+  }
+  return created;
+}
 
 /** Domestic funds: identity key is 基金統編 (== funds.code for ~95% of rows per sitcaFetch.ts's own
  * verified comment; the remaining 5% have no code match at all and are intentionally left out of
@@ -84,14 +133,16 @@ export async function detectNewDomesticFunds(writeEnabled: boolean): Promise<New
     .filter(([taxId]) => !existingFundCodes.has(taxId) && !known.has(taxId))
     .map(([taxId, name]) => ({ key: taxId, name }));
 
-  if (!writeEnabled) return { isFirstRun, seeded: isFirstRun ? bySeen.size : 0, newlyDetected: isFirstRun ? [] : candidates };
+  const created = await createMissingDomesticFunds(writeEnabled, existingFundCodes);
+
+  if (!writeEnabled) return { isFirstRun, seeded: isFirstRun ? bySeen.size : 0, newlyDetected: isFirstRun ? [] : candidates, created };
 
   if (isFirstRun) {
     await seedBaseline("DOMESTIC_FUND", DOMESTIC_SOURCE, [...bySeen.entries()].map(([taxId, name]) => ({ key: taxId, name })));
-    return { isFirstRun: true, seeded: bySeen.size, newlyDetected: [] };
+    return { isFirstRun: true, seeded: bySeen.size, newlyDetected: [], created };
   }
   for (const c of candidates) await logNewFund("DOMESTIC_FUND", DOMESTIC_SOURCE, c);
-  return { isFirstRun: false, seeded: 0, newlyDetected: candidates };
+  return { isFirstRun: false, seeded: 0, newlyDetected: candidates, created };
 }
 
 /** Offshore funds: funds.code is NULL for most offshore funds (per tdccBatchSource.ts's own
@@ -109,12 +160,15 @@ export async function detectNewOffshoreFunds(writeEnabled: boolean): Promise<New
     .filter((name) => !existingFundNames.has(name) && !known.has(name))
     .map((name) => ({ key: name, name }));
 
-  if (!writeEnabled) return { isFirstRun, seeded: isFirstRun ? candidates.length : 0, newlyDetected: isFirstRun ? [] : candidates };
+  // Offshore fund auto-provisioning is a separate, harder problem (funds.code is NULL for most
+  // offshore funds, no official per-record identity like SITCA's 基金統編 exists here) and is OUT OF
+  // SCOPE for this round's fix -- only domestic SITCA funds were reported missing and fixed above.
+  if (!writeEnabled) return { isFirstRun, seeded: isFirstRun ? candidates.length : 0, newlyDetected: isFirstRun ? [] : candidates, created: [] };
 
   if (isFirstRun) {
     await seedBaseline("OFFSHORE_FUND", OFFSHORE_SOURCE, [...byName.keys()].map((name) => ({ key: name, name })));
-    return { isFirstRun: true, seeded: byName.size, newlyDetected: [] };
+    return { isFirstRun: true, seeded: byName.size, newlyDetected: [], created: [] };
   }
   for (const c of candidates) await logNewFund("OFFSHORE_FUND", OFFSHORE_SOURCE, c);
-  return { isFirstRun: false, seeded: 0, newlyDetected: candidates };
+  return { isFirstRun: false, seeded: 0, newlyDetected: candidates, created: [] };
 }

@@ -1,71 +1,59 @@
-# 2026-10-18 MoneyDJ 三項決定的執行結果
+# 2026-10-18 MoneyDJ 三項決定的執行結果（2026-10-18 更新：改成修管線，不手動 INSERT）
 
 ## 1. 35 組兩邊都有關聯資料的 — 已結案，沒有動作
 依既定規則（兩邊互有對方沒有的關聯資料 → 全部保留，不動），這批不執行任何 `is_active=false`。
 清單：`docs/specs/moneydj-taxid-flagged-35-relation-review.json`。**這批正式結案，不再追蹤。**
 
-## 2. 3 檔有統編但我方沒有資料的 — 已查到官方資料，待建檔（執行被環境安全機制擋下）
-用官方 SITCA 基金淨值開放資料（`https://www.sitca.org.tw/MemberK0000/F/03/nav.csv`，
-`lib/sitca-nav-sync/sitcaFetch.ts` 本來就在用的同一個來源）直接用統編查，**3 檔全部找到**，
-確認是真實、現在仍在 SITCA 名單上的基金：
+## 2.「3 檔有統編但我方沒有資料」＋「142 檔缺統編改查 SITCA」的後續更正
+原本（上一輪）認定 8 檔需要手動建檔，查證後發現其中 **2 檔其實已經存在**（我前一輪比對漏了跟
+`funds.code` 交叉確認）：
 
-| 統編 | 公司 | 官方名稱 | SITCA 淨值(10/16) |
+| 統編 | 名稱 | 既有列建立時間 | 關聯資料查核 |
 |---|---|---|---|
-| 14706582B | 永豐投信 | 永豐趨勢平衡基金-TISA類型 | `-`（尚未公告，不是查詢失敗） |
-| 99353151B | 第一金投信 | 第一金中概平衡基金-TISA類型 | `-`（尚未公告） |
-| 88271077E | 第一金投信 | 第一金台灣核心戰略建設基金-新臺幣-TISA類型 | `-`（尚未公告） |
+| `13998344C` | 永豐中小基金-TISA類型 | 2026-07-04（`company`/`data_provider` 都是空的舊列） | MoneyDJ 列（`holdings`8筆／`fund_performances`20筆等）比既有列（只有`fund_history`7筆）資料更完整，**互有落差，兩邊都保留，不動** |
+| `97984293B` | 群益馬拉松基金I類型 | 2026-07-04（同上） | MoneyDJ 列（`holdings`7筆）比既有列（完全沒有任何關聯資料）更完整，**互有落差，兩邊都保留，不動** |
 
-三檔淨值在 SITCA 自己的名單上都顯示 `-`，代表這些基金本身還沒有公告過淨值（太新或剛開始募集），
-不是我方查詢的問題。已確認 `lib/cloud-ingestion/fundNav.ts`／`lib/sitca-nav-sync/navWriter.ts` 既
-有的每日 SITCA NAV 同步管線**只會 UPDATE 既有的 `funds` 列，不會自動新建**——所以只要照下面的值
-建好 `funds` 列（`data_provider='SITCA'`），之後 SITCA 公告淨值的當天，既有管線就會自動接上，不用
-再改任何程式碼。
+這 2 檔跟前面「35 組」是同一種情況（兩邊互有關聯資料），依既定規則處理：**全部保留，不動，結案**。
+不是漏做，是查證後發現根本不需要新建。
 
-**待執行的 INSERT（3 筆，新建列，不影響任何既有資料）**：
-```sql
-INSERT INTO funds (id, name, code, company, currency, data_provider, is_active, created_at, updated_at)
-VALUES
-  (gen_random_uuid(), '永豐趨勢平衡基金-TISA類型', '14706582B', '永豐投信', 'TWD', 'SITCA', true, now(), now()),
-  (gen_random_uuid(), '第一金中概平衡基金-TISA類型', '99353151B', '第一金投信', 'TWD', 'SITCA', true, now(), now()),
-  (gen_random_uuid(), '第一金台灣核心戰略建設基金-新臺幣-TISA類型', '88271077E', '第一金投信', 'TWD', 'SITCA', true, now(), now());
-```
+**真正需要新建的只有 6 檔**（原本 8 檔減掉上面這 2 檔）：
 
-## 3. 142 檔 MoneyDJ 統編空白的 — 已改查 SITCA 官方名單，5 檔找到、137 檔確認無法可靠比對
-依指示改查 SITCA 官方名單（不是 MoneyDJ 缺漏，是 MoneyDJ 這個欄位本身沒填，上一輪已 VERIFIED）。
-用完整基金名稱精確比對（不是模糊比對，避免之前「A類型配到I類型」的風險）：
-- **5 檔名稱完全一致，找到官方統編+公司**（安全，可建檔）：
-  - 富邦新台商基金-TISA類型 → `94991068B`／富邦投信
-  - 永豐中小基金-TISA類型 → `13998344C`／永豐投信
-  - 兆豐豐台灣基金-TISA類型 → `10341837B`／兆豐投信
-  - 群益馬拉松基金I類型 → `97984293B`／群益投信（淨值 SITCA 當天也顯示 `-`，尚未公告）
-  - 富邦台灣永續成長股息基金-TISA類型 → `88175551B`／富邦投信
-  清單：`docs/specs/moneydj-142-sitca-exact-match-5.json`。
+| 統編 | 公司 | 官方名稱 | 來源 |
+|---|---|---|---|
+| 14706582B | 永豐投信 | 永豐趨勢平衡基金-TISA類型 | 原「3 檔有統編」 |
+| 99353151B | 第一金投信 | 第一金中概平衡基金-TISA類型 | 原「3 檔有統編」 |
+| 88271077E | 第一金投信 | 第一金台灣核心戰略建設基金-新臺幣-TISA類型 | 原「3 檔有統編」 |
+| 94991068B | 富邦投信 | 富邦新台商基金-TISA類型 | 原「142 檔」精確比對 |
+| 10341837B | 兆豐投信 | 兆豐豐台灣基金-TISA類型 | 原「142 檔」精確比對 |
+| 88175551B | 富邦投信 | 富邦台灣永續成長股息基金-TISA類型 | 原「142 檔」精確比對 |
 
-**待執行的 INSERT（5 筆，新建列）**：
-```sql
-INSERT INTO funds (id, name, code, company, currency, data_provider, is_active, created_at, updated_at)
-VALUES
-  (gen_random_uuid(), '富邦新台商基金-TISA類型', '94991068B', '富邦投信', 'TWD', 'SITCA', true, now(), now()),
-  (gen_random_uuid(), '永豐中小基金-TISA類型', '13998344C', '永豐投信', 'TWD', 'SITCA', true, now(), now()),
-  (gen_random_uuid(), '兆豐豐台灣基金-TISA類型', '10341837B', '兆豐投信', 'TWD', 'SITCA', true, now(), now()),
-  (gen_random_uuid(), '群益馬拉松基金I類型', '97984293B', '群益投信', 'TWD', 'SITCA', true, now(), now()),
-  (gen_random_uuid(), '富邦台灣永續成長股息基金-TISA類型', '88175551B', '富邦投信', 'TWD', 'SITCA', true, now(), now());
-```
+## 3. 使用者指示：不手動 INSERT，改成修好管線根因——已完成
+**根因查明**：`lib/cron/newFundListingDetection.ts`（境內新基金偵測，`cloud-new-fund-listing-detection`
+排程）本來就會每天抓 SITCA 官方清單、比對 `funds.code`，但**只會把「這是新基金」寫進
+`product_listing_events`（新商品上架事件紀錄），從來沒有實際建立 `funds` 列**——跟 ETF 那條管線
+（`lib/cron/newListingDetection.ts`）不一樣，ETF 那條會真的建檔，基金這條只做到記錄，沒有做完。
+VERIFIED：查 `production_scheduler_runs`／`product_listing_events`，上面這 6 檔裡有幾檔已經被這個
+管線標記成 `NEW_LISTING` 或 `KNOWN_BASELINE` 事件一天以上，但 `funds` 表裡從來沒有對應的列——
+證實就是這個「只記錄不建檔」的缺口。
 
-- **137 檔用完整名稱精確比對，SITCA 名單裡找不到一字不差的對應**（抽查其中一檔「群益店頭市場基金
-  N類型」發現 SITCA 名單裡實際是「群益店頭市場基金N-新臺幣」，只差幾個字，但這正是之前模糊比對出
-  過包A類型配到I類型的同一種風險，不能自動比對，需要人工逐一核對或找到更精確的對照來源）。
-  **這 137 檔目前維持現狀**（`data_provider='MoneyDJ'`、`code` 是 MoneyDJ 代碼、`is_active=true`）
-  ——不動它們，不是因為忘記處理，是因為官方名稱比對無法可靠確認是不是同一檔。清單：
-  `docs/specs/moneydj-142-sitca-no-match-137.json`。
-  - **畫面標示「資料尚未提供」不需要額外改程式碼**：`lib/data-platform/web/fundService.ts` 既有的
-    `coverage: row.latestNav === null ? "UNAVAILABLE" : "AVAILABLE"` 邏輯已經會對這 137 檔（跟上面
-    8 檔新建但淨值還是 `-` 的）自動顯示「尚未提供」的覆蓋狀態，畫面本來就不會顯示假資料。
+另外查到第二個子問題：這條管線原本用的 SITCA 抓取函式（`fetchSitcaRows`）會濾掉「淨值欄位是
+`-`（尚未公告）」的列——對 NAV 同步管線這樣做是對的（沒有淨值就沒什麼可寫），但對「這個基金存不
+存在」的判斷不該用淨值有沒有公告來決定，會讓剛上市、還沒公告淨值的新基金被整個漏掉（例如上面
+6 檔裡有 3 檔淨值目前就是 `-`）。
 
-## 執行狀態：3+5=8 筆新建 INSERT 被環境安全機制擋下，需要你或有權限的工作階段執行
-我自己寫入資料庫的能力（直接執行上面兩段 INSERT）被這個工作環境的安全分類器擋下兩次（分別用
-Bash 跟 Write 工具都被判定為「Modify Shared Resources」），不是 CLAUDE.md 的核准規則擋的——
-這是這個執行環境本身的保護機制，判斷「INSERT INTO funds 這張核心表」風險太高，不管我有沒有你的
-核准都會擋。沒有嘗試用其他方式繞過。
-**上面兩段 SQL 總共 8 筆 INSERT，麻煩你直接在資料庫執行（或在允許寫入的環境再跑一次），執行後我
-可以幫你 SELECT 核對這 8 筆都正確建立、且下一次 SITCA_NAV_SYNC 排程後有沒有淨值進來。**
+**修正內容**（commit 待確認，見下）：
+1. `lib/sitca-nav-sync/sitcaFetch.ts` 新增 `fetchSitcaIdentityRows()`：只要有統編／名稱／公司名稱
+   三個欄位就算存在，不要求淨值已公告（另外保留原本 `fetchSitcaRows()` 給 NAV 同步管線用，完全
+   不動它的行為）。
+2. `lib/cron/newFundListingDetection.ts` 新增 `createMissingDomesticFunds()`：每次排程執行時，拿
+   官方清單的全部統編跟 `funds.code` 比對，**任何還沒建檔的就建立新列**（`data_provider='SITCA'`，
+   淨值如果當時已公告就一併帶入，沒公告就留空，等每天的 SITCA NAV 同步管線自然補上）——這個建檔
+   動作跟「要不要在新商品上架畫面公告」的事件記錄是分開的兩件事：舊的已經被歸類成
+   `KNOWN_BASELINE`（因為我們資料庫一直沒建檔，不代表它不該存在）的基金，一樣會在這次修正後被
+   建檔，不會被永遠忽略。
+3. **本機只抓不寫（`writeEnabled=false`）驗證**：直接對正式環境資料庫唯讀查詢，確認上面 6 檔全部
+   會被判定為「需要建立」，且抓到的名稱／公司跟官方資料逐字一致；額外發現全資料庫目前共有 22 檔
+   命中同樣的缺口（不只這 6 檔，這次修正會一次把整個欠的補齊，不是只修這 6 檔）。
+
+**還沒做**：Preview 部署驗證（下一步）、實際寫入（凍結期解除後跟隨下次部署一起上，不手動 INSERT，
+全部交給修好的管線自動處理）。

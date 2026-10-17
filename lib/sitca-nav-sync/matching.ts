@@ -4,7 +4,11 @@
 // remaining ~187 rows have no match at all in `funds` under either key — those are reported as
 // unmatched, NEVER created as new funds (explicit, user-stated constraint on this pipeline).
 
-export type SitcaRawRow = { taxId: string; name: string; nav: number; navDate: string; currency: string };
+// 2026-10-18: added `company` (公司名稱) for lib/cron/newFundListingDetection.ts's fund-creation step
+// only -- matching.ts/navWriter.ts themselves still NEVER create a fund (see the unmatched-rows note
+// above, unchanged); this field is simply carried through so that separate, explicitly-scoped
+// pipeline doesn't need its own CSV fetch/parse.
+export type SitcaRawRow = { taxId: string; name: string; nav: number; navDate: string; currency: string; company?: string };
 export type FundRow = { id: string; code: string | null; name: string; currency: string };
 
 export function nfkcNameKey(name: string): string {
