@@ -137,6 +137,24 @@ master 為正式基準分支。新工作一律從最新的 master 開分支；�
     改它；另一個工作階段的「台股拼圖」App 已經在用 RevenueCat。建議：用 RevenueCat 當訂閱管理層
     （同時處理 Apple IAP／Google Play Billing／網頁 Stripe，不要直接接 Stripe，因為 App 內解鎖
     內容依蘋果規則必須走 IAP）。純規劃，沒有建任何帳號或改資料庫。
+  - **2026-10-17：RevenueCat 串接程式第一版已完成並在 Preview 驗證通過（commit `20fcf410c`，
+    Preview `smartfund-v2-ks6ruymk1-frankhsieh0310s-projects.vercel.app`）**：
+    新增 `lib/payments/revenuecat.ts`（Web Billing client：`configureRevenueCat`／
+    `listOfferingPackages`／`purchasePackage`，用 `@revenuecat/purchases-js@1.71.0`）與
+    `app/api/webhooks/revenuecat/route.ts`（webhook，把 RevenueCat 的訂閱事件同步到
+    `User.plan`，用 `REVENUECAT_WEBHOOK_SECRET` 做 Bearer 驗證，沒設定就全部 401）。
+    `ENTITLEMENT_TO_PLAN` 對照表只是**暫定佔位**，等你在 RevenueCat 後台決定真正的
+    entitlement 命名再改。**刻意沒有接上 `app/pricing/page.tsx` 的按鈕**——那個頁面目前完全
+    沒有登入/session 機制（「登入」連結是 `href="#"` 佔位符，網站端沒有任何地方呼叫
+    `/api/me`），RevenueCat Web SDK 需要一個真實、已識別的 `appUserId`，在那個 session 之前
+    接上去等於編造一個假使用者 ID，所以先不做。
+    Preview 直接對實際部署網址驗證（繞過 `vercel curl` 內部會錯誤導到 production 網域的問題，
+    改用 protection-bypass token 直接 curl）：首頁 200、`/pricing` 200（畫面不變，付款按鈕仍是
+    `alert()` 佔位）、`POST /api/webhooks/revenuecat` 401（沒設 secret，預設關閉，跟這輪其他
+    新接的整合一致）。**只做到這裡，沒有部署到 production，沒有建立任何 RevenueCat 帳號/
+    產品，`User.plan` 沒有被這次驗證動到。**
+    下一步（需要你決定）：真正要讓付款按鈕可用，前提是方案頁要先有登入/session，這個目前
+    超出第 15 項與付費規劃的範圍，需要你另外排期。
 - 已設定一個單次排程（cron job `a28f5e07`，10/21 週三台北時間 2:35pm 前後觸發）：先確認 10/19-21
   三天 daily-health-report 都正常，正常才叫一個全新、沒有對話背景的獨立子代理從頭驗收 1-14 項，
   通過才準備交付訊息草稿回報使用者（不會自己宣布已交付）；沒通過就列問題、當場能修的修好、重驗。
