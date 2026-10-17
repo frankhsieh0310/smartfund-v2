@@ -365,6 +365,29 @@ model ExternalNumberAuditLog {
   @@map("external_number_audit_log")
 }
 
+// 2026-10-18 固定範圍第 1+5 項: single funnel event log (首次開啟/完成組合穿透/儲存組合/開始試用/
+// 首次付款/第二次付款僅月繳), segmented by source and cohort week. Written only through this app's
+// backend API, never directly from the client. Deliberately holds no "download count" -- that
+// number lives only in App Store Connect/Google Play Console, entered/reported separately.
+model UsageFunnelEvent {
+  id          String   @id @default(uuid()) @db.Uuid
+  deviceId    String   @map("device_id")
+  userId      String?  @map("user_id") @db.Uuid
+  eventType   String   @map("event_type")
+  sourceType  String   @default("UNKNOWN") @map("source_type")
+  sourceDetail String? @map("source_detail")
+  platform    String?
+  appVersion  String?  @map("app_version")
+  occurredAt  DateTime @default(now()) @map("occurred_at")
+  metadata    Json?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([deviceId, eventType])
+  @@index([eventType, occurredAt])
+  @@index([sourceType, occurredAt])
+  @@map("usage_funnel_events")
+}
+
 model EtfFlow {
   id                 String    @id @default(uuid()) @db.Uuid
   etfId              String    @map("etf_id")
