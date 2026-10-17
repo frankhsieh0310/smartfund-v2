@@ -606,7 +606,7 @@ master 為正式基準分支。新工作一律從最新的 master 開分支；�
   程式碼、重啟 dev server，但行為沒變」，先用 `netstat` 確認 port 上的 PID 有沒有真的换過，不要先懷疑
   自己的程式邏輯。
 
-### 第 2 項：商品反查的間接曝險 ❌ VERIFIED 目前做不到真實資料，不做假的
+### 第 2 項：商品反查的間接曝險 ✅ 2026-10-18 使用者修正後已用真實資料做出來（見下方「修正一」）
 
 查證結果（唯讀 SELECT，不是沒查）：`stocks.sector`／`stocks.industry` 兩個欄位對全部股票幾乎都是
 NULL——VERIFIED 連 Newmont／Barrick 這種知名黃金礦業股都是 NULL；`holdings.sector` 欄位有值，但
@@ -618,6 +618,51 @@ VERIFIED 是**債券產業分類**（Corporates／Treasury／Agency 等），不
 去猜，這種方法論在 `docs/specs` 裡已經明確被否定過一次，見第三節）。既有商品反查（item 3，已完成）的
 「僅直接持有」現況維持不變。**這項要重新啟動的前提：找到可靠的官方股票產業分類資料源**（例如付費訂閱
 GICS/ICB 分類服務，或找到 Yahoo/其他來源的真實 sector/industry 欄位），不是程式能力問題，是資料缺口。
+
+#### 2026-10-18 修正一：使用者指出「跟票面利率的情況一樣」，確實有官方欄位只是沒擷取 —— 查證後完全正確
+
+使用者糾正：iShares 持股 CSV 本來就有 Sector 欄位，台股有 TWSE/TPEx 官方產業別。查證後 VERIFIED
+使用者是對的，上面 10/17 的結論在「當時已擷取的資料」範圍內是真的做不到，但問題根源是**擷取範圍設錯**，
+不是資料真的不存在：
+
+**海外（iShares）端**：`lib/cloud-ingestion/globalEtfHoldings.ts` 的 `fetchIsharesHoldings()` 其實
+早就會解析 CSV 的官方 `Sector` 欄位並寫進 `holdings.sector`——10/17 查到的「只有債券分類」是因為
+抓取名單（`config/ishares-bond-etf-products.json`，從檔名就看得出來）只收錄債券型 iShares ETF，從沒
+收錄過任何股票型商品主題基金，不是程式不會擷取股票 Sector。新增
+`config/ishares-commodity-equity-etf-products.json`（RING 黃金礦業、SLVP 白銀及金屬礦業、ICOP 銅及
+金屬礦業、PICK 全球金屬礦業、IXC 全球能源，5 檔皆為 VERIFIED 對 ishares.com 官網即時查證過的真實
+iShares ETF），`scripts/backfill-commodity-equity-holdings.ts --write` 寫入真實持股（VERIFIED 寫入前
+4 檔 0 筆、寫入後分別 52/49/81/280/65 筆，與官網 CSV 列數一致）。
+
+過程中發現並修正 2 個真實的正確性問題（不是這次才引入，是建這個功能時才暴露）：
+1. 原本的 SUM(weight) 沒有限定「只取最新一次持股快照」，把同一檔 ETF 多個歷史 as_of_date 的 weight
+   加總在一起，VERIFIED 算出 IWM 等 ETF「Materials 曝險 139%」這種不可能的數字；改用
+   `latest AS (SELECT etf_id, max(as_of_date) ...)` CTE 只取最新一筆。
+2. iShares 的 Sector 欄位對債券持股用的是**債券發行人產業分類**（Corporates/Treasury/Energy/
+   Materials...），對股票持股用的是 **GICS 股票產業分類**，兩者共用同一組英文標籤但意義完全不同——
+   VERIFIED 不過濾會把高收益債 ETF（因為債券發行人剛好屬於「Energy」業）誤判成「間接曝險石油」；
+   用 `coupon_rate IS NULL AND maturity_date IS NULL`（債券才有的欄位）排除債券列解決。
+
+抽查 5 個商品（使用者要求的數量）皆 VERIFIED 用真實資料跑通：GOLD／SILVER／COPPER → Materials
+（RING 99.82%／SLVP 99.88%／PICK 99.80%／ICOP 99.44%，門檻 20% 才列入）；WTI_CRUDE／BRENT_CRUDE →
+Energy（IXC 99.63%）。寫入 `app/api/screener/commodity-products` 的新欄位 `indirectExposure`，與既有
+人工整理的 `thematicFunds`（只有 5 檔，從沒有 GOLD 主題）並存，不互相取代。
+
+**台股端**：TWSE/TPEx 官方產業別**真的沒有編碼對照表可驗證**（查證多次都找不到「01=水泥工業」這種
+數字代碼的官方權威來源，為避免瞎猜，改用 `isin.twse.com.tw/isin/C_public.jsp?strMode=2`（上市）／
+`strMode=4`（上櫃）——證交所／櫃買中心自己的證券國際編碼一覽表，每一列直接附產業別「文字」，不需要
+數字代碼對照表。VERIFIED 這個頁面 `Content-Type` 宣告 UTF-8 但實際是 Big5 編碼（UTF-8 解碼會變亂碼，
+Big5 解碼才是正確中文），用 `iconv -c` 跳過少數無效位元組（不中斷整個解析）。
+`scripts/backfill-tw-stock-industry.ts --write` 把 `stocks.industry`（既有欄位，不需要新增 DDL）
+從 0/1977 寫到 VERIFIED 1963/1977（台積電→半導體業、台泥→水泥工業，人工核對正確）。
+
+交叉比對台股 ETF/基金持股（`holdings.ticker` 對應 `stocks.ticker`）後發現一個誠實的真結論：**台灣
+官方 33 種產業別裡完全沒有「礦業」這個類別**（Taiwan 是製造業/科技業為主，沒有本土礦業），所以
+黃金／白銀／銅／黃豆**在台股端沒有任何可對應的產業別**，不勉強套用「鋼鐵工業」之類不精確的類別。
+唯一有意義的對應是 WTI/Brent → 油電燃氣業，但 VERIFIED 即使是這個類別，目前已收錄的台股 ETF/基金
+持股裡最高集中度也只有 5.12%（富邦旗艦50），遠低於 20% 門檻——`findIndirectExposureByTwIndustry()`
+照實跑出空結果，**是真實情況，不是程式漏寫**（台灣的 ETF/基金市場以大盤/高股息為主，目前沒有集中
+於油氣類股的主題基金）。這個函式已經上線、資料真實，未來若有新的集中型主題基金就會自動顯示。
 
 ### 第 3-6 項：還沒開始
 
