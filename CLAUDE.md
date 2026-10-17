@@ -63,6 +63,16 @@ master 為正式基準分支。新工作一律從最新的 master 開分支；�
 - 第 14 項帳號刪除實測：公開註冊路徑（`/auth/v1/signup`，用 publishable key）會卡在「需要 email 確認才能拿到 session」——不是技術卡住，是這個 Supabase 專案的設定如此，已照使用者指示準備 PowerShell 腳本作為替代（見下）。查證過程中額外發現**本機 `.env` 的 `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` 有一個 O/0 打字錯誤**（`6iV00` 應為 `6iVO0`），跟 Vercel Production 實際值不一致，只是本機診斷用值錄錯，不影響正式環境（Vercel 自己的值是對的）。
 - PowerShell 實測腳本 `scratch/claude-account-delete-flow-test.ps1` 已逐行核對現有 `/api/me`、`/api/watchlists` 程式碼，確認腳本跟現在的正式環境行為一致，使用者只需貼上 `$ServiceRoleKey`／`$PublishableKey` 兩個值後整段執行。
 
+**第 13 項：3 個交易日 daily-health-report 計時（起算 2026-10-19 週一）**
+- 已設定一個工作階段內的排程（cron job `8722122f`，平日台北時間 9:13 am 前後，7 天後自動過期），每天檢查
+  前一天 00:30 UTC 的 `daily-health-report` 結果，異常當天查修，正常/異常都寫回這個區塊。
+- **重要限制**：這個排程只存在於目前這個對話 session 的記憶體裡，session 結束（使用者關閉這個對話、
+  或這台機器的 Claude Code 退出）排程就會消失，不會自動恢復。如果 10/19~10/21 這段時間這個對話沒有保
+  持開啟，計時檢查就不會自動發生，需要使用者開啟新對話時主動要求我補查。
+- 2026-10-19（週一）: 待檢查。
+- 2026-10-20（週二）: 待檢查。
+- 2026-10-21（週三）: 待檢查。
+
 **15 項逐項狀態（VERIFIED 2026-10-16，4 個獨立子代理分別稽核 1-4／5-7／8-10／11-15，發現 2 處過期註解已修正——00981D 修正其實已執行、service role key 其實已設定，不是代理最初讀到的樣子）**
 
 | # | 項目 | 狀態 | 備註 |
