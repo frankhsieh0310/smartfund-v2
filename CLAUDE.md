@@ -104,6 +104,21 @@ master 為正式基準分支。新工作一律從最新的 master 開分支；�
 修完再驗一次，直到通過。在驗收通過、交付之前：
 - 繼續做的事：第 15 項配息提醒（評估引擎＋發送機制＋App端）、付費機制規劃。全部只用 Preview 開發
   測試，**不部署**。
+  - **第 15 項已有第一個真實指標跑通（commit `c496bd0b0`，Preview
+    `smartfund-v2-72o4ru4q9-frankhsieh0310s-projects.vercel.app`）**：`lib/cron/alertEvaluate.ts`
+    （評估：DIVIDEND_YIELD，用真實 `etfs.dividend_yield`／`funds.dividend_yield_a`，對一檔真實
+    ETF 正反兩個方向都驗證過觸發邏輯正確）、`lib/cron/alertDispatch.ts`（發送：接現有
+    `lib/consensus/push.ts` 的 Expo push，讀現有 `WatchlistNotificationProfile` 裝置 token，跟
+    「大佬雷達」共用同一套，不是新接的廠商）。兩個都用 `ALERT_EVALUATE_WRITE` 開關預設關閉。
+    另外做了 DAYS_TO_EX_DATE（ETF 除息日倒數）但 VERIFIED `etf_distribution_events` 目前只有
+    歷史除息日（沒有未來日期的列），這個指標永遠不會觸發，所以**刻意沒有放進 `CAPABILITIES`
+    讓 App 顯示**，避免使用者選到一個做不到的條件；程式碼留著，等有未來除息日的資料來源接上
+    再打開。App 端「通知列表」畫面還沒做，是下一步。
+  - **付費機制規劃文件**：`docs/specs/2026-10-18-payment-mechanism-planning.md`。現況：方案頁
+    UI 已完整（Free/Lite/Pro/Advisor/Team），付款按鈕目前是佔位符；`User.plan` enum 存在但沒人
+    改它；另一個工作階段的「台股拼圖」App 已經在用 RevenueCat。建議：用 RevenueCat 當訂閱管理層
+    （同時處理 Apple IAP／Google Play Billing／網頁 Stripe，不要直接接 Stripe，因為 App 內解鎖
+    內容依蘋果規則必須走 IAP）。純規劃，沒有建任何帳號或改資料庫。
 - 已設定一個單次排程（cron job `a28f5e07`，10/21 週三台北時間 2:35pm 前後觸發）：先確認 10/19-21
   三天 daily-health-report 都正常，正常才叫一個全新、沒有對話背景的獨立子代理從頭驗收 1-14 項，
   通過才準備交付訊息草稿回報使用者（不會自己宣布已交付）；沒通過就列問題、當場能修的修好、重驗。
