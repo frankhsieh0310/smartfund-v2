@@ -6,15 +6,21 @@
 //         tpex.org.tw openapi host that returned HTTP 403 this round is a DIFFERENT, unrelated host
 //         and is NOT used here)
 //
-// Deliberate scope limit, disclosed rather than silently under-delivered: this CSV has no
-// asset-manager/company-name column, so a brand-new ETF's required `provider` field (etfs.provider
-// is NOT NULL) cannot be read off this source directly. Auto-provisioning (actually inserting an
-// etfs row) only happens when the new ETF's 基金簡稱 brand prefix uniquely matches the brand prefix
-// of an existing `etfs.provider` value already in the DB (e.g. "元大..." -> "元大證券投資信託股份
-// 有限公司") — this is a lookup against already-verified data, never an invented value. When no
-// unique match is found, the event is still logged (so it surfaces in the App's 新商品上架 screen)
-// but no etfs row is created; product_id stays null until a human (or a later, better-sourced pass)
-// resolves it. This is the one explicitly-scoped gap for the ETF path.
+// Deliberate scope limit, disclosed rather than silently under-delivered: this CSV has no column
+// literally labelled 發行人/經理公司 (manager company name) — the closest thing is 基金中文名稱, the
+// fund's full official legal name, which structurally always starts with the issuer's own brand (e.g.
+// "復華全球未來50主動式ETF證券投資信託基金" -> 復華, or for a TPEx umbrella-fund-style name like
+// "統一股債傘型證券投資信託基金之統一前沿科技主動式ETF證券投資信託基金" -> 統一). VERIFIED live
+// (2026-10-17) against every one of that day's 6 new listings, including a TPEx umbrella-fund name:
+// the first 2 characters of 基金中文名稱 matched an existing provider for all 6, where the short name
+// (基金簡稱) alone failed for 5 of them because its first 2 characters are "主動" (Taiwan's 2026
+// actively-managed-ETF category label, not a brand). `resolveProviderByBrand` therefore matches
+// against 基金中文名稱 first (the official, unmodified field), falling back to 基金簡稱 only if the
+// full name is somehow missing — this is a lookup against already-verified data, never an invented
+// value, and the fallback path is marked as such wherever it's surfaced. When no unique match is
+// found either way, the event is still logged (so it surfaces in the App's 新商品上架 screen) but no
+// etfs row is created; product_id stays null until a human (or a later, better-sourced pass) resolves
+// it. This is the one explicitly-scoped gap for the ETF path.
 //
 // Fund (SITCA/境內) and offshore (TDCC) new-listing detection are OUT OF SCOPE for this pipeline:
 // this round's research subagent could not get a direct, VERIFIED official source for either
@@ -29,6 +35,10 @@ export type OfficialEtfRow = {
   exchange: "TWSE" | "TPEx";
   code: string;
   name: string;
+  /** 基金中文名稱 -- the fund's full official legal name (not the abbreviated 基金簡稱 in `name`).
+   * Used for provider/issuer resolution since it structurally embeds the real brand without the
+   * "主動" category-label prefix that the short name carries for actively-managed ETFs. */
+  fullName: string;
   establishedAt: Date | null;
   listedAt: Date | null;
 };
@@ -82,7 +92,7 @@ export async function fetchOfficialEtfList(exchange: "TWSE" | "TPEx"): Promise<O
   if (lines.length < 2) return [];
   const header = parseCsvLine(lines[0]).map((h) => h.trim());
   const idx = (name: string) => header.indexOf(name);
-  const iCode = idx("基金代號"), iName = idx("基金簡稱"), iEst = idx("成立日期"), iList = idx("上市日期");
+  const iCode = idx("基金代號"), iName = idx("基金簡稱"), iFullName = idx("基金中文名稱"), iEst = idx("成立日期"), iList = idx("上市日期");
   if (iCode < 0 || iName < 0) throw new Error(`${exchange} official feed header missing expected columns`);
   const rows: OfficialEtfRow[] = [];
   for (const line of lines.slice(1)) {
@@ -93,6 +103,7 @@ export async function fetchOfficialEtfList(exchange: "TWSE" | "TPEx"): Promise<O
       exchange,
       code,
       name: (cols[iName] ?? "").trim(),
+      fullName: iFullName >= 0 ? (cols[iFullName] ?? "").trim() : "",
       establishedAt: iEst >= 0 ? parseRocDate(cols[iEst]) : null,
       listedAt: iList >= 0 ? parseRocDate(cols[iList]) : null,
     });
@@ -100,28 +111,28 @@ export async function fetchOfficialEtfList(exchange: "TWSE" | "TPEx"): Promise<O
   return rows;
 }
 
-// 2026-10-17: TWSE/TPEx's official 基金簡稱 for every actively-managed ETF (a product category Taiwan
-// started approving in 2026) is prefixed "主動" (e.g. "主動復華全球50") -- that prefix is a category
-// label, not part of any issuer's brand, so taking the first 2 characters of the raw name as the
-// brand always produced "主動" and never matched an existing provider. VERIFIED live (2026-10-17):
-// stripping this one known, official prefix and re-slicing resolves a unique existing provider for
-// every one of today's 5 affected new listings (復華/永豐/安聯/統一/統一). Deliberately NOT adding a
-// broader brand-nickname alias table (e.g. "中信" -> "中國信託") here -- that would risk a wrong match
-// for some other issuer's genuine 2-character brand down the line; only this one disclosed, official,
-// structural prefix is stripped.
-const NON_BRAND_NAME_PREFIXES = ["主動"];
-
-/** Brand-prefix match against existing providers already in the DB — a lookup, not a guess. */
-async function resolveProviderByBrand(shortName: string): Promise<string | null> {
-  let name = shortName;
-  for (const prefix of NON_BRAND_NAME_PREFIXES) {
-    if (name.startsWith(prefix)) { name = name.slice(prefix.length); break; }
-  }
-  const brand = name.slice(0, 2);
+async function uniqueProviderForBrand(brand: string): Promise<string | null> {
   if (!brand) return null;
   const providers = await prisma.etf.findMany({ where: { provider: { contains: brand } }, select: { provider: true }, distinct: ["provider"] });
   const unique = Array.from(new Set(providers.map((p) => p.provider)));
   return unique.length === 1 ? unique[0] : null;
+}
+
+/**
+ * Brand-prefix match against existing providers already in the DB — a lookup, not a guess.
+ * Tries the official full legal name (基金中文名稱) first, since it structurally starts with the
+ * real issuer brand (see OfficialEtfRow.fullName doc comment above). Falls back to the abbreviated
+ * short name (基金簡稱) only if the full name is missing or doesn't resolve — that fallback is
+ * disclosed to the caller via `usedFallback` so it can be surfaced as a lower-confidence match rather
+ * than silently treated the same as the primary, official-field-based resolution.
+ */
+async function resolveProviderByBrand(fullName: string, shortName: string): Promise<{ provider: string | null; usedFallback: boolean }> {
+  if (fullName) {
+    const provider = await uniqueProviderForBrand(fullName.slice(0, 2));
+    if (provider) return { provider, usedFallback: false };
+  }
+  const provider = await uniqueProviderForBrand(shortName.slice(0, 2));
+  return { provider, usedFallback: true };
 }
 
 // 2026-10-17: root-cause fix for 7 ETFs (009825/6/7/9, 00990B/1B/2B) that got auto-provisioned here
@@ -154,7 +165,7 @@ const NEW_LISTING_LOOKBACK_DAYS = 120;
 export type NewListingResult = {
   checkedCodes: number;
   newlyDetected: { exchange: string; code: string; name: string }[];
-  autoProvisioned: { code: string; provider: string }[];
+  autoProvisioned: { code: string; provider: string; providerSource: "OFFICIAL_FULL_NAME" | "FALLBACK_SHORT_NAME" }[];
   loggedOnly: { code: string; reason: string }[];
   /** Codes the official feed lists but our DB never onboarded, OLDER than the lookback window —
    * a separate pre-existing backfill gap, NOT treated as a new listing (not logged, not provisioned). */
@@ -187,7 +198,7 @@ export async function detectNewListings(writeEnabled: boolean): Promise<NewListi
       row.code, row.name, row.listedAt ?? row.establishedAt, source, SOURCES[row.exchange].url,
     );
 
-    const provider = await resolveProviderByBrand(row.name);
+    const { provider, usedFallback } = await resolveProviderByBrand(row.fullName, row.name);
     if (!provider) {
       result.loggedOnly.push({ code: row.code, reason: "provider 無法從既有資料唯一比對，待人工建檔" });
       continue;
@@ -214,7 +225,7 @@ export async function detectNewListings(writeEnabled: boolean): Promise<NewListi
        WHERE product_type = 'ETF' AND code = $2 AND event_type = 'NEW_LISTING' AND source = $3`,
       created.id, row.code, source,
     );
-    result.autoProvisioned.push({ code: row.code, provider });
+    result.autoProvisioned.push({ code: row.code, provider, providerSource: usedFallback ? "FALLBACK_SHORT_NAME" : "OFFICIAL_FULL_NAME" });
   }
   return result;
 }
