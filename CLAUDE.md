@@ -930,3 +930,32 @@ VERIFIED 兩檔自動填 50%／50%、「開始穿透分析」不用輸入任何�
 「等權重試算」標籤、真實個股曝險（台積電 28.33%、南亞 5.56%／2 檔持有……）、真實資料日期
 （2026-10-16）、「已穿透 100.00%」。點「儲存組合」VERIFIED 變成「✓ 已儲存」；重新整理頁面 VERIFIED
 選取內容（兩檔＋50/50 配置）完整保留，符合「下次打開 App 會直接回到這組內容」。
+
+### 第 2 項：14 天免費試用 ✅ 程式與文件已完成，誠實標示「待商店實測」（不算完成）
+
+查證現況：`src/payments/revenuecat.ts`（RevenueCat SDK 封裝）與 `app/api/webhooks/revenuecat/
+route.ts`（entitlement→plan 同步）早就存在，但都是「程式已接好，等商店帳號開通」的狀態——
+符合使用者這次「只改文件不算完成」的前提，這次要做的是把漏斗追蹤也接上，並誠實標示未驗證部分。
+
+**程式端**：擴充既有 webhook，從真實 RevenueCat 事件寫入 `usage_funnel_events` 的
+`TRIAL_STARTED`／`FIRST_PAYMENT`／`SECOND_PAYMENT_MONTHLY`：
+- 查證 RevenueCat 官方事件模型後發現**沒有「TRIAL_STARTED」這個事件類型**——試用開始其實是
+  `period_type="TRIAL"` 的 `INITIAL_PURCHASE`；試用轉換成真正收費後，第一筆真實扣款是接在
+  後面的 `RENEWAL` 事件，不是另一個 `INITIAL_PURCHASE`。
+- 「第一次付款」與「第二次付款」用查詢這個使用者過去的漏斗事件來判斷，不是單純信任 RevenueCat
+  的事件類型。
+- `SECOND_PAYMENT_MONTHLY` 只有在 `PRODUCT_ID_TO_PERIOD`（暫定對照表，跟既有
+  `ENTITLEMENT_TO_PLAN` 同樣的模式）確認是月繳時才會寫入，年繳或未對照的產品一律不會觸發，
+  符合「年繳續訂不列入近期指標」。
+
+**文件端**：`docs/setup/revenuecat-store-setup.md` 補上 14 天試用的設定步驟（Apple 只能選
+固定週期單位「2 週」沒有精確「14 天」選項；Google Play 可以直接填 14 天）、月繳年繳要分開
+設定試用優惠、第 4 節補上「月繳／年繳要分開各測一次」「試用資格只限首次訂閱要真的測」
+「試用結束自動扣款／取消／恢復購買都要真的測過」的檢查清單、第 6 節補上工程師需要的
+Product ID 交付項目。
+
+**誠實的未完成部分（這就是為什麼不算「完成」）**：RevenueCat 商店產品目前**完全不存在**
+（App Store Connect／Google Play Console 都還沒設定），所以上面這段 webhook 邏輯
+**沒有真實事件可以驗證**，只做到語法／邏輯層級的 `tsc` 檢查。`GET /api/admin/funnel-report`
+新增 `pendingStoreVerification` 區塊，明確列出這 3 個事件「待商店實測」，在文件第 4 節的
+沙箱測試清單真的跑完之前，這 3 個數字不得對外引用——完全依照使用者這次的原話執行。
