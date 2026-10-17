@@ -651,4 +651,46 @@ FRED 交叉核對原油/天然氣還沒做）會在之後的回合繼續，依�
   沒有一筆在票面利率/到期日明明對不上卻被誤判成 NAME_PARSED，也沒有明明對得上卻被誤判成 ISSUER 的
   案例）。
 
-### 第 4 項：機構動向 — 查證現況中
+### 第 4 項：機構動向 ✅ 查證後發現 2 個真實缺口，已修正並用真實資料驗證
+
+查證現況（使用者要求「先查目前 App 是否已有」）：三大法人買賣超的資料管線、後端 API、前端
+`InstitutionalPanel` 元件**其實早就都已存在**（`smartfund-v2`：`lib/cron/institutionalUpdate.ts` 抓取
+TWSE `T86`／TPEx `insti/dailyTrade`，寫入 `institutional_daily`；`app/api/mobile/current-institutional/
+route.ts` 提供當日＋區間查詢；`smartmatch-mobile`：`src/institutional/InstitutionalPanel.tsx`、
+`src/institutional/service.ts` 完整串接，誠實標示「尚未提供」不自行估算）。但實際查證發現使用者要求的
+兩個條件**都還沒滿足**：
+
+1. **「個股與 ETF 都要顯示」—— ETF 原本完全沒有這個分頁**：`app/asset/[assetId].tsx` 的「法人」分頁
+   只在 `detail.assetType === "STOCK"` 時才會出現（第 671 行的分頁清單），ETF／基金走的是另一組
+   「總覽／持股／異動」分頁（第 805 行起），完全沒有法人分頁選項——不是資料缺，是**前端分頁從沒做**。
+2. **「並可連到反查」—— 全站找不到任何連到反查頁的連結**：`grep -rn "反查\|reverse-lookup"` 在
+   `InstitutionalPanel.tsx` 與 `[assetId].tsx` 都是零結果。
+
+**ETF 是否真的有三大法人資料（VERIFIED，不是假設）**：用 subagent 對 production DB 做唯讀 SELECT（小
+樣本，非整表）：TWSE 的 `T86?...&selectType=ALLBUT0999` 本來就涵蓋所有上市商品（含 ETF），不是只有
+個股；`institutional_daily` 裡 `0050` 真的有 48 筆近兩個月的真實買賣超資料（例如 2026-10-11：外資賣超
+23,021,781 股）；但 `0056`／`00878`／`006208` 目前是 0 筆——追查是因為這三檔尚未登記在 `securities`
+對照表，被 cron 的 mapping 步驟丟進 `unmapped`，**不是資料源結構性缺 ETF**，是個別 ticker 的對照資料
+缺口（留給下一輪補，這次任務範圍只要求「有資料的要顯示」，不要求回填所有 ETF 的 securities 對照）。
+附帶發現一個資料品質問題（非本次任務範圍，先記錄）：`securities` 表裡 `0050` 這個 ticker 的 `name`
+欄位錯寫成「香港小輪（集團）」，是 ticker 衝突／對照錯誤，與本項功能無關，留給資料團隊另外處理。
+
+**修正內容**（`smartmatch-mobile`，`app/asset/[assetId].tsx`）：
+- ETF 分頁清單加入「法人」選項（僅 `assetType === "ETF"`，不含 `FUND`／`COMMODITY`——三大法人買賣超
+  是交易所掛牌商品才有的資料，不適用於場外申購的共同基金），對應內容重用既有
+  `<InstitutionalPanel ticker={detail.symbol} market={detail.exchange} />`，不新建元件。
+- STOCK 的「法人」分頁內新增一個連到 `/reverse-lookup?ticker=<symbol>&scope=TW` 的按鈕
+  「◇ 查哪些 ETF／基金持有此股票 ›」，重用既有 `/reverse-lookup` 頁面與既有的 `/api/mobile/
+  reverse-holdings` 查詢，不新建後端端點。
+
+**驗證方式（真實資料，Expo Web 本機 `npx expo start --web --port 8099`，API 指向正式環境唯讀查詢，
+未部署，未寫入任何資料）**：
+- ETF（0050 元大台灣50）：點「法人」分頁 → 顯示當日買賣超外資 -23,022 張／投信 3,650 張／自營商
+  -47,771 張／合計 -67,143 張，以及近 5/10/20 日累計，與 DB 查到的真實數字一致。
+- 個股（2330 台積電，assetId 取自 production `/api/search?q=2330` 真實回傳）：點「法人」分頁 → 真實
+  當日／5/10/20 日法人買賣超數字正確顯示；點擊新按鈕「查哪些 ETF／基金持有此股票」→ 正確導到
+  `/reverse-lookup?ticker=2330.TW&scope=TW`，自動帶入查詢並顯示「614 檔 ETF、962 檔基金持有」的真實
+  反查結果列表（富邦台灣科技指數基金 67.77%、富邦科技 ETF 63.84%……依持股比重排序），與既有反查功能
+  完全一致，沒有另外接一套邏輯。
+- TypeScript `tsc --noEmit` 對修改檔案零錯誤；驗證後已 `taskkill` 關閉本機 Expo dev server（確認
+  `netstat` 上 port 8099 無殘留監聽），未留下背景程序。
