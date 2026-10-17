@@ -255,6 +255,43 @@ master 為正式基準分支。新工作一律從最新的 master 開分支；�
 - 2026-10-20（週二）: 待檢查。
 - 2026-10-21（週三）: 待檢查。
 
+**2026-10-17：釐清「15 項驗收清單」稽核的對象是 App（smartmatch-mobile），不是這個網站本身**
+- 起因：請獨立子代理提前演練 Wednesday 驗收時，我誤把「財經 App」理解成這個 Next.js 網站，
+  叫子代理去點網站首頁。子代理很確實地回報「這個網址的首頁是另一個完全不同、6 月的舊產品
+  （Investment Criteria Builder／ETF 篩選器），15 項清單講的反查/比較/組合穿透/配息/提醒功能
+  在這裡根本點不到」。VERIFIED 這不是子代理誤判：網站程式碼裡 `grep` 整個 repo，
+  `/api/mobile/reverse-holdings`、`/api/screener/bond-holders`、`/api/screener/commodity-products`
+  這些後端 API 完全沒有任何 `.tsx` 呼叫；`app/page.tsx` 最後修改是 6/28（Sprint 1 首頁改版），
+  跟這輪反查/大佬雷達/配息等所有工作完全無關；`smartmatch-mobile/app/index.tsx`（App 首頁）才是
+  真正連到 `/reverse-lookup`、`/ranking-center`、`/consensus-radar`、`/dividend-center`、
+  `/new-listings` 這些畫面的地方。**結論：15 項清單指的是 smartmatch-mobile 這個 App，這個網站
+  只是它的 JSON API 後端＋另一個獨立、較舊的 ETF/基金篩選工具網站，兩者共用同一個 repo／資料庫
+  但是不同產品介面。** CLAUDE.md 既有「✅ 完成」「App UI」這些字眼原本講的就是 App，不是網站，
+  沒有錯；錯的是我這次隨口把「App」當成「網站」去下指令。已請子代理改用
+  `smartmatch-mobile` 的 `npx expo start --web` 重新稽核，結果見下方「App 驗收稽核」。
+- **過程中發現並修好一個網站自己的真實 bug（跟上面誤會無關，獨立確認）**：`app/etf/[code]/page.tsx`
+  顯示 Dividend Yield／Expense Ratio 時直接把資料庫存的小數（例如 `0.0734`）加上 `%`，顯示成
+  「0.0734%」，少除以 100；查證 `etf.dividendYield`／`etf.expenseRatio` 在資料庫是以小數存
+  （跟 `smartmatch-mobile/src/detail/service.ts` 的 `pct2()` 註解「0.0032 = 0.32%」互相印證），
+  但 `return1m`／`volatility1y` 等欄位本來就是百分點、不用再乘 100，不要搞混。已修好
+  （commit `511abd301`，加一個 `pctFraction()` helper 只套用在 expenseRatio／dividendYield），
+  Preview 用 curl 直接核對 `00981D` 的 HTML：`<div...>7.34%</div>`，修正前是 `0.0734%`，
+  修正正確。這個 bug 只在網站的 ETF 詳情頁，smartmatch-mobile 自己的 App 本來就有正確縮放
+  （`pct2()`），不受影響。**還沒部署到 production**，等週三凍結解除。
+- **順便發現一個更嚴重、沒有馬上修的問題，先記錄**：`app/report/page.tsx` 直接 `import` 並渲染
+  `app/etf/data.ts`、`app/funds/data.ts` 這兩個**寫死的假資料陣列**（例如 `dividendYield: 2.4`
+  這種憑空填的數字），不是接資料庫。這違反整個專案一直在遵守的「誠實揭露、不可編造」原則，
+  而且是使用者實際能點到的網站頁面（`/report`），不是測試用殘留檔案。**這次沒有動它**——
+  範圍比單純顯示 bug 大很多（整頁邏輯、不確定要接真資料庫還是直接隱藏/下架這個頁面），需要
+  使用者決定方向。先列在這裡，等使用者有空再排。
+- **子代理額外回報的其他網站層級問題（真實，已獨立確認部分，暫不處理，列入之後清理清單）**：
+  首頁「登入」連結是死的 `href="#"`；`/compare`、`/rankings`、`/screener` 是明確的
+  「COMING SOON」／「DATA PENDING」佔位畫面；不同頁面（`/`、`/search`、`/screener`、`/funds`）
+  各自用完全不同的頁首／品牌／選單（「SmartMatch」↔「SmartFund」交替），使用者跨頁會覺得像
+  換了一個網站；`/auth/login` 轉址到 Google 時主控台有 CORS／404／401 錯誤。這些都不在 15 項
+  驗收範圍內（驗收的是 App 不是這個網站），所以不擋週三驗收，但是真實存在的網站問題，之後
+  要找時間個別處理。
+
 **15 項逐項狀態（VERIFIED 2026-10-16，4 個獨立子代理分別稽核 1-4／5-7／8-10／11-15，發現 2 處過期註解已修正——00981D 修正其實已執行、service role key 其實已設定，不是代理最初讀到的樣子）**
 
 | # | 項目 | 狀態 | 備註 |
