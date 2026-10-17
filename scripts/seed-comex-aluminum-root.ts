@@ -37,6 +37,9 @@ async function main() {
     root_symbol: "ALI",
     exchange: "COMEX",
     currency: "USD",
+    country: "UNKNOWN",
+    jurisdiction: "UNKNOWN",
+    timezone: "UNKNOWN",
     status: "ACTIVE",
     source: "Yahoo Finance chart API (symbol ALI=F, chart meta exchangeName \"CMX\")",
     verification_status: "PENDING",
@@ -50,11 +53,12 @@ async function main() {
 
   await prisma.$executeRawUnsafe(
     `INSERT INTO futures_product_roots
-       (id, commodity_id, asset_class, official_product_name, root_symbol, exchange, currency, status,
-        source, verification_status, license_status, product_state, missing_reason)
-     VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+       (id, commodity_id, asset_class, official_product_name, root_symbol, exchange, currency, country,
+        jurisdiction, timezone, status, source, verification_status, license_status, product_state, missing_reason)
+     VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
     row.id, row.commodity_id, row.asset_class, row.official_product_name, row.root_symbol, row.exchange,
-    row.currency, row.status, row.source, row.verification_status, row.license_status, row.product_state, row.missing_reason,
+    row.currency, row.country, row.jurisdiction, row.timezone, row.status, row.source,
+    row.verification_status, row.license_status, row.product_state, row.missing_reason,
   );
   console.log("Inserted. New root id:", newId, "— next step: add it to CORE_COMMODITY_ROOTS in lib/cron/commodityUpdate.ts");
 }

@@ -64,14 +64,11 @@ export const CORE_COMMODITY_ROOTS: Array<{ rootId: string; yahooSymbol: string; 
   { rootId: "4b3fb696-c482-4ab1-ac1c-da7c2b15f2fb", yahooSymbol: "RB=F", name: "RBOB Gasoline" },
   { rootId: "2dcbe3e0-9440-401d-acd1-40ba9a4fc2d4", yahooSymbol: "ZR=F", name: "Rice" },
   { rootId: "4e6fe3d8-bdfd-4076-a0fe-7a19e1da9683", yahooSymbol: "HO=F", name: "Heating Oil (NY Harbor ULSD)" },
+  // 2026-10-18 (user-approved write, verified before/after row count 890->891, exactly 1 row):
+  // separate COMEX root for Yahoo's ALI=F, distinct from the pre-existing LME-listed aluminum root
+  // (root_symbol "AH") -- see scripts/seed-comex-aluminum-root.ts for the full reasoning.
+  { rootId: "e044c37c-a9cb-4ce1-bd57-0ea5492e2c3d", yahooSymbol: "ALI=F", name: "Aluminum (COMEX)" },
   // Still NOT added, by design:
-  // - Aluminum: only futures_product_roots entry is LME-listed (root_symbol "AH"); Yahoo's ALI=F is
-  //   a different, COMEX-settled cash contract (confirmed via its own chart meta exchangeName
-  //   "CMX") -- writing it onto the LME root would mislabel the source. 2026-10-17 (weekend list
-  //   item 6): the missing COMEX root is now ready to create via
-  //   `npx tsx scripts/seed-comex-aluminum-root.ts --write` (dry-run VERIFIED against production,
-  //   not yet executed per the standing no-DB-write-without-approval rule) -- once that row exists,
-  //   add `{ rootId: <new id>, yahooSymbol: "ALI=F", name: "Aluminum (COMEX)" }` to this list.
   // - Dairy (Class III/IV Milk, Dry Whey, Nonfat Dry Milk, Cash-settled Butter/Cheese), Mont Belvieu
   //   TET Propane, Southern Yellow Pine Lumber: every futures_yahoo_symbol_mappings row found for
   //   these is a SPECIFIC delivery-month contract (e.g. "Class III Milk Futures,Apr-2027"), not a
