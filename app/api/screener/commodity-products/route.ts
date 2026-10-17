@@ -15,6 +15,8 @@ const THEME_FOR_COMMODITY: Record<CommodityKey, Array<"GOLD" | "ENERGY" | "BROAD
   SILVER: ["BROAD_COMMODITY"],
   WTI_CRUDE: ["ENERGY", "BROAD_COMMODITY"],
   BRENT_CRUDE: ["ENERGY", "BROAD_COMMODITY"],
+  COPPER: ["BROAD_COMMODITY"],
+  SOYBEANS: ["BROAD_COMMODITY"],
 };
 
 export async function GET(request: Request) {
