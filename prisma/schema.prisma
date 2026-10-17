@@ -328,6 +328,26 @@ model EtfUpcomingExRight {
   @@map("etf_upcoming_exrights")
 }
 
+// "台灣買得到" classification, see docs/specs/technical-screener-reverse-lookup.md ("一之一"
+// section) for the full design rationale. Polymorphic over FUND/ETF (no Prisma relation field --
+// Prisma doesn't support a single relation spanning two different target models), identified by
+// (assetType, assetId) where assetId is funds.id or etfs.id depending on assetType.
+model TwPurchasableClassification {
+  id               String   @id @default(uuid()) @db.Uuid
+  assetType        String   @map("asset_type")
+  assetId          String   @map("asset_id")
+  status           String   @default("UNKNOWN")
+  source           String
+  sourceRecordRef  String?  @map("source_record_ref")
+  checkedAt        DateTime @default(now()) @map("checked_at")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@unique([assetType, assetId])
+  @@index([assetType, assetId])
+  @@map("tw_purchasable_classification")
+}
+
 model EtfFlow {
   id                 String    @id @default(uuid()) @db.Uuid
   etfId              String    @map("etf_id")
