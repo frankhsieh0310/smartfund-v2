@@ -3,6 +3,7 @@
 // limits). Enriches each with live price/return data already in `etfs` — no self-computed figures.
 import { prisma } from "@/lib/prisma";
 import { COMMODITY_ETF_MAPPING, COMMODITY_KEYS, THEMATIC_COMMODITY_FUNDS, type CommodityKey } from "@/lib/data-platform/commodityEtfMapping";
+import { findIndirectExposureBySector, findIndirectExposureByTwIndustry, COMMODITY_SECTOR, COMMODITY_TW_INDUSTRY, type SectorCommodityKey } from "@/lib/data-platform/sectorIndirectExposure";
 
 const headers = { "Access-Control-Allow-Origin": "*", "Cache-Control": "no-store" };
 
@@ -67,10 +68,34 @@ export async function GET(request: Request) {
     };
   });
 
+  // 修正一 (2026-10-18): real, sector-weight-driven indirect exposure (iShares CSV's own official
+  // Sector column), in addition to the small manually-curated THEMATIC_COMMODITY_FUNDS list above.
+  const sectorExposure = COMMODITY_SECTOR[commodity as SectorCommodityKey]
+    ? await findIndirectExposureBySector(prisma, commodity as SectorCommodityKey)
+    : { sector: null, results: [] };
+  // 修正一 (TW side): TWSE/TPEx's own official industry category on stocks.industry.
+  const twExposure = COMMODITY_TW_INDUSTRY[commodity as SectorCommodityKey]
+    ? await findIndirectExposureByTwIndustry(prisma, commodity as SectorCommodityKey)
+    : { industry: null, results: [] };
+
   return Response.json({
     ok: true, commodity, total: results.length, generated_at: new Date().toISOString(),
     results,
     thematicFunds,
+    indirectExposure: {
+      sector: sectorExposure.sector,
+      results: sectorExposure.results,
+      note: sectorExposure.sector
+        ? `依官方 iShares 持股 CSV 的 Sector 欄位（${sectorExposure.sector}），真實持股權重加總超過 20% 才列入，非關鍵字命名猜測。`
+        : "此商品沒有可清楚對應的股票產業分類，誠實不顯示間接曝險（避免勉強對應造成誤導）。",
+    },
+    indirectExposureTw: {
+      industry: twExposure.industry,
+      results: twExposure.results,
+      note: twExposure.industry
+        ? `依證交所／櫃買中心官方產業別（${twExposure.industry}），真實持股權重加總超過 20% 才列入。台灣上市櫃產業分類沒有「礦業」類別，故黃金／白銀／銅／黃豆目前沒有可對應的台股產業間接曝險。`
+        : "台灣上市櫃官方產業分類沒有可清楚對應此商品的類別，誠實不顯示，不勉強對應。",
+    },
     scopeNote: "複委託可買的海外商品ETF（如SPDR Gold Shares等）不在本資料庫中（沒有「可複委託交易」的清單或旗標），本端點無法涵蓋，不是遺漏。",
   }, { headers });
 }

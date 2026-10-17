@@ -39,21 +39,24 @@ export function getIsharesUniverse(): IsharesProduct[] {
     { code: "IVV", sourceUrl: "https://www.ishares.com/us/products/239726/ishares-core-s-p-500-etf/latest-holdings.csv" },
     { code: "IWM", sourceUrl: "https://www.ishares.com/us/products/239710/ishares-russell-2000-etf/latest-holdings.csv" },
   ];
-  let configured: IsharesProduct[] = [];
-  try {
-    const registry = JSON.parse(
-      readFileSync(path.join(process.cwd(), "config", "ishares-bond-etf-products.json"), "utf8"),
-    );
-    if (Array.isArray(registry.products)) {
-      configured = registry.products
+  const loadRegistry = (filename: string): IsharesProduct[] => {
+    try {
+      const registry = JSON.parse(readFileSync(path.join(process.cwd(), "config", filename), "utf8"));
+      if (!Array.isArray(registry.products)) return [];
+      return registry.products
         .filter((p: unknown): p is IsharesProduct => Boolean((p as IsharesProduct)?.code && (p as IsharesProduct)?.sourceUrl))
         .map((p: IsharesProduct) => ({ code: String(p.code).toUpperCase(), sourceUrl: p.sourceUrl }));
+    } catch {
+      return []; // config optional
     }
-  } catch {
-    /* config optional */
-  }
+  };
+  const configured = loadRegistry("ishares-bond-etf-products.json");
+  // 2026-10-18 (修正一): equity commodity-theme iShares ETFs (gold/silver/copper/broad metals &
+  // mining miners) for the 商品反查 indirect-exposure feature -- same CSV contract, same Sector
+  // column, just a different fund list than the bond-only registry above.
+  const commodityEquity = loadRegistry("ishares-commodity-equity-etf-products.json");
   const byCode = new Map<string, IsharesProduct>();
-  for (const p of [...representative, ...configured]) byCode.set(p.code.toUpperCase(), { ...p, code: p.code.toUpperCase() });
+  for (const p of [...representative, ...configured, ...commodityEquity]) byCode.set(p.code.toUpperCase(), { ...p, code: p.code.toUpperCase() });
   cachedProducts = [...byCode.values()];
   return cachedProducts;
 }

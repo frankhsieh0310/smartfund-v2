@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "source": "ishares.com product pages, verified live 2026-10-18 (redirect from /us/product_info/fund/overview/<TICKER>.htm to the real /us/products/<id>/<slug> page, then the same latest-holdings.csv contract as ishares-bond-etf-products.json)",
+  "purpose": "Equity commodity-theme iShares ETFs (miners/producers) for the 商品反查 indirect-exposure feature -- real holdings with a Sector column, used to find which funds are heavily weighted in a commodity's related industry (e.g. gold -> gold miners). Deliberately separate from ishares-bond-etf-products.json, which is bond-only.",
+  "exactTickerMappingOnly": true,
+  "generatedAt": "2026-10-18",
+  "products": [
+    {
+      "productId": "239654",
+      "slug": "ishares-msci-global-gold-miners-etf",
+      "code": "RING",
+      "name": "iShares MSCI Global Gold Miners ETF",
+      "productUrl": "https://www.ishares.com/us/products/239654/ishares-msci-global-gold-miners-etf",
+      "etfId": "b37decd3-8b1b-4e8f-b1bd-22c588b8133b",
+      "canonicalName": "iShares MSCI Global Gold Miners ETF",
+      "sourceUrl": "https://www.ishares.com/us/products/239654/ishares-msci-global-gold-miners-etf/latest-holdings.csv",
+      "researchUrl": "https://www.ishares.com/us/products/239654/ishares-msci-global-gold-miners-etf"
+    },
+    {
+      "productId": "239656",
+      "slug": "ishares-msci-global-silver-and-metals-miners-etf",
+      "code": "SLVP",
+      "name": "iShares MSCI Global Silver and Metals Miners ETF",
+      "productUrl": "https://www.ishares.com/us/products/239656/ishares-msci-global-silver-and-metals-miners-etf",
+      "etfId": "d32c3d36-e1c9-42bd-a80f-15e0099b5048",
+      "canonicalName": "iShares MSCI Global Silver and Metals Miners ETF",
+      "sourceUrl": "https://www.ishares.com/us/products/239656/ishares-msci-global-silver-and-metals-miners-etf/latest-holdings.csv",
+      "researchUrl": "https://www.ishares.com/us/products/239656/ishares-msci-global-silver-and-metals-miners-etf"
+    },
+    {
+      "productId": "332280",
+      "slug": "ishares-copper-and-metals-mining-etf",
+      "code": "ICOP",
+      "name": "iShares Copper and Metals Mining ETF",
+      "productUrl": "https://www.ishares.com/us/products/332280/ishares-copper-and-metals-mining-etf",
+      "etfId": "af41e602-bc67-4141-a00c-1fa56fbcee27",
+      "canonicalName": "iShares Copper and Metals Mining ETF",
+      "sourceUrl": "https://www.ishares.com/us/products/332280/ishares-copper-and-metals-mining-etf/latest-holdings.csv",
+      "researchUrl": "https://www.ishares.com/us/products/332280/ishares-copper-and-metals-mining-etf"
+    },
+    {
+      "productId": "239655",
+      "slug": "ishares-msci-global-metals-mining-producers-etf",
+      "code": "PICK",
+      "name": "iShares MSCI Global Metals & Mining Producers ETF",
+      "productUrl": "https://www.ishares.com/us/products/239655/ishares-msci-global-metals-mining-producers-etf",
+      "etfId": "8b81d19c-8157-4912-babc-14906a963bf8",
+      "canonicalName": "iShares MSCI Global Metals & Mining Producers ETF",
+      "sourceUrl": "https://www.ishares.com/us/products/239655/ishares-msci-global-metals-mining-producers-etf/latest-holdings.csv",
+      "researchUrl": "https://www.ishares.com/us/products/239655/ishares-msci-global-metals-mining-producers-etf"
+    },
+    {
+      "productId": "239741",
+      "slug": "ishares-global-energy-etf",
+      "code": "IXC",
+      "name": "iShares Global Energy ETF",
+      "productUrl": "https://www.ishares.com/us/products/239741/ishares-global-energy-etf",
+      "etfId": "7a33977b-cf6b-4f51-92d4-3ff7397eeec1",
+      "canonicalName": "iShares Global Energy ETF",
+      "sourceUrl": "https://www.ishares.com/us/products/239741/ishares-global-energy-etf/latest-holdings.csv",
+      "researchUrl": "https://www.ishares.com/us/products/239741/ishares-global-energy-etf"
+    }
+  ]
+}
