@@ -36,6 +36,9 @@ master 為正式基準分支。新工作一律從最新的 master 開分支；�
 - 起因：2026-10-17 發現 `lib/cron/newListingDetection.ts` 自動建立新上市 ETF 時從沒設定
   `data_source`，造成新商品完全掉出所有下游管線（見 `docs/specs/2026-10-17-new-listing-datasource-rootcause-fix.md`）；已修好根因（建檔時用 Yahoo 即時驗證並寫入
   `data_source`），並用 7 檔以外的 5 檔近期上市 ETF 驗證推算邏輯跟實際資料完全一致。
+  **這個根因的程式碼修正（commit `07b0f1b91`）已 commit 到 `fix/qa-round1`，但還沒部署**——下次
+  排程偵測到新上市 ETF 前，實際生效的仍是舊的、沒設定 `data_source` 的版本，要等下次正式部署才會
+  真正接上。7 檔本身缺的資料已經直接補值，不受這個時間差影響。
 
 **正式環境狀態（VERIFIED 2026-10-16，commit `e0588acec`，部署於 `mcs-final`）**
 - 目前 production 部署於 `mcs-final`，alias 到 `www.smartmatchpilot.com` 等。`STOCK_TECHNICAL_SYNC_WRITE=on` 已由使用者本人新增到 Vercel Production。
