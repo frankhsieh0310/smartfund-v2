@@ -52,6 +52,10 @@ export async function GET(request: Request) {
     generated_at: new Date().toISOString(),
     eventOrder: EVENT_ORDER,
     note: "下載數不在此報表——下載數只能從 App Store Connect／Google Play Console 取得，與此處的「首次開啟」是不同的數字，需另外手動填入，不自動推算。",
+    pendingStoreVerification: {
+      events: ["TRIAL_STARTED", "FIRST_PAYMENT", "SECOND_PAYMENT_MONTHLY"],
+      note: "RevenueCat 商店產品／定價尚未在 App Store Connect／Google Play Console 設定完成，也還沒做過任何沙箱測試購買——這三個事件的寫入邏輯（app/api/webhooks/revenuecat/route.ts）已完成但未經真實事件驗證。在完成 docs/setup/revenuecat-store-setup.md 第 4 節列出的沙箱測試（含月繳／年繳分開測試）之前，這三項數字一律標示「待商店實測」，不得對外引用。",
+    },
     cohorts: [...byCohortSource.values()].sort((a, b) => b.cohortWeek.localeCompare(a.cohortWeek) || a.sourceType.localeCompare(b.sourceType)),
   }, { headers });
 }
