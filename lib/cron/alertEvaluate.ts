@@ -7,7 +7,9 @@
 // Data sources, both real, no invented numbers:
 //   DIVIDEND_YIELD: etfs.dividend_yield / funds.dividend_yield_a (same fields the 配息專區 screen
 //     and rankings already show).
-//   DAYS_TO_EX_DATE: MIN(etf_distribution_events.ex_date) WHERE ex_date >= today for that ETF.
+//   DAYS_TO_EX_DATE: MIN(etf_upcoming_exrights.ex_date) WHERE ex_date >= today for that ETF --
+//     officially-announced, not-yet-paid dates from TWSE/TPEx's own pre-announcement tables
+//     (lib/cron/exDateSync.ts), not the historical-only etf_distribution_events.
 //     Domestic/offshore funds have no forward-looking ex-date source in this schema (checked this
 //     round) so FUND does not get DAYS_TO_EX_DATE — not invented, not approximated.
 import { prisma } from "@/lib/prisma";
@@ -33,6 +35,11 @@ export type EvaluatedRule = {
   assetType: string;
   canonicalAssetId: string | null;
   value: number | null;
+  // 2026-10-18 (item 15 follow-up, found while wiring DAYS_TO_EX_DATE back in): the real metric
+  // that produced `value`, not a hardcoded placeholder -- a rule evaluating DAYS_TO_EX_DATE must
+  // not have its occurrence payload claim "DIVIDEND_YIELD_OR_DAYS_TO_EX_DATE" when it's actually
+  // one or the other.
+  metric: string | null;
   triggered: boolean;
   skippedReason?: string;
 };
@@ -107,17 +114,17 @@ export async function evaluateRule(rule: {
   const relevant = params.conditions.filter((c) => c.metric && SUPPORTED_METRICS.has(c.metric));
   if (relevant.length === 0) return null;
 
-  const results: { triggered: boolean; value: number | null }[] = [];
+  const results: { triggered: boolean; value: number | null; metric: string }[] = [];
   for (const c of relevant) {
-    if (!c.assetId || !c.assetType || !c.operator || c.threshold === null) { results.push({ triggered: false, value: null }); continue; }
+    if (!c.assetId || !c.assetType || !c.operator || c.threshold === null) { results.push({ triggered: false, value: null, metric: c.metric! }); continue; }
     const value = await currentValue(c.assetType, c.assetId, c.metric!);
-    results.push({ triggered: value !== null && compare(value, c.operator, c.threshold), value });
+    results.push({ triggered: value !== null && compare(value, c.operator, c.threshold), value, metric: c.metric! });
   }
   const logic = params.logic === "OR" ? "OR" : "AND";
   const triggered = logic === "OR" ? results.some((r) => r.triggered) : results.every((r) => r.triggered) && results.length > 0;
-  const firstValue = results.find((r) => r.value !== null)?.value ?? null;
+  const firstResult = results.find((r) => r.value !== null) ?? null;
 
-  return { ruleId: rule.id, ruleVersionId: rule.currentVersionId, ownerUserId: rule.ownerUserId, assetType: rule.assetType, canonicalAssetId: rule.canonicalAssetId, value: firstValue, triggered };
+  return { ruleId: rule.id, ruleVersionId: rule.currentVersionId, ownerUserId: rule.ownerUserId, assetType: rule.assetType, canonicalAssetId: rule.canonicalAssetId, value: firstResult?.value ?? null, metric: firstResult?.metric ?? null, triggered };
 }
 
 export type AlertEvaluateResult = { attempted: number; triggeredNew: number; skippedCooldown: number; errors: number };
@@ -181,7 +188,7 @@ export async function runAlertEvaluate(writeEnabled: boolean): Promise<AlertEval
           ruleId: rule.id, ruleVersionId: rule.currentVersionId, watchlistId: rule.watchlistId, watchlistItemId: rule.watchlistItemId,
           assetType: rule.assetType, canonicalAssetId: rule.canonicalAssetId, triggeredAt: now, triggerType: "THRESHOLD",
           severity: rule.severity ?? "INFO", triggerValue: evaluated.value, thresholdValue: null,
-          payload: { metric: "DIVIDEND_YIELD_OR_DAYS_TO_EX_DATE", value: evaluated.value },
+          payload: { metric: evaluated.metric ?? "UNKNOWN", value: evaluated.value },
           source: "alertEvaluate.v1", inputAsOfDate: now, inputObservedAt: now, evaluationAt: now,
           freshnessStatus: "CURRENT", verificationStatus: "VERIFIED", dedupeKey: key, status: "TRIGGERED",
         },

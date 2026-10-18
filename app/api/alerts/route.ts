@@ -4,14 +4,14 @@ const TYPES=['STOCK','ETF','FUND','INDEX','DERIVATIVES','FIXED_INCOME','FX','MAC
 const FAMILIES=['PRICE_VALUE','TECHNICAL','FUNDAMENTAL','ETF_FUND','FIXED_INCOME','FX','MACRO','COMMODITY','CRYPTO','DERIVATIVES','FCN_SIMULATION'] as const;
 const OPERATORS=['ABOVE','BELOW','CROSS_ABOVE','CROSS_BELOW','PERCENT_CHANGE','ABSOLUTE_CHANGE','EQUALS','GREATER_THAN_METRIC','LESS_THAN_METRIC'] as const;
 // 2026-10-18 (item 15): DIVIDEND_YIELD backed by real etfs.dividend_yield/funds.dividend_yield_a,
-// VERIFIED against a real ETF's live value both trigger directions. lib/cron/alertEvaluate.ts also
-// implements DAYS_TO_EX_DATE (ETF only, via etf_distribution_events.ex_date), but that metric is
-// deliberately NOT exposed here yet: VERIFIED live that etf_distribution_events only holds historical
-// ex-dates (latest row 2026-10-15, zero rows with ex_date >= today) -- the ingestion for this table
-// never captures forward-announced upcoming ex-dates, so the metric would never fire. Exposing it in
-// the capability list before that data exists would be exactly the "半成品" the delivery checklist
-// says never to show. Add it back to this list once a forward-ex-date source is wired in.
-const CAPABILITIES:Record<string,string[]>={STOCK:['PRICE','CHANGE','PERCENT_CHANGE'],ETF:['PRICE','NAV','CHANGE','PERCENT_CHANGE','DIVIDEND_YIELD'],FUND:['NAV','DIVIDEND_YIELD'],INDEX:['VALUE','CHANGE','PERCENT_CHANGE'],FIXED_INCOME:['YIELD'],FX:['RATE','CHANGE','PERCENT_CHANGE'],MACRO:['VALUE'],COMMODITY:['PRICE','CHANGE','PERCENT_CHANGE'],CRYPTO:['PRICE','CHANGE','PERCENT_CHANGE'],DERIVATIVES:['PRICE','VOLUME','OPENINTEREST','IV','DELTA','GAMMA','THETA','VEGA']};
+// VERIFIED against a real ETF's live value both trigger directions.
+// DAYS_TO_EX_DATE (ETF only) re-added 2026-10-18 after ex-date-sync's first real production run:
+// lib/cron/alertEvaluate.ts's daysToNextExDate() reads etf_upcoming_exrights (TWSE/TPEx official
+// pre-announcement tables, NOT the historical-only etf_distribution_events this comment originally
+// warned about), VERIFIED COMPLETED in production with 76 real rows written and 5 spot-checked
+// rows matching the official TWSE TWT48U / TPEx sources exactly on ex-date and amount -- see
+// CLAUDE.md's 2026-10-18 entries for the full verification. The data this metric needs now exists.
+const CAPABILITIES:Record<string,string[]>={STOCK:['PRICE','CHANGE','PERCENT_CHANGE'],ETF:['PRICE','NAV','CHANGE','PERCENT_CHANGE','DIVIDEND_YIELD','DAYS_TO_EX_DATE'],FUND:['NAV','DIVIDEND_YIELD'],INDEX:['VALUE','CHANGE','PERCENT_CHANGE'],FIXED_INCOME:['YIELD'],FX:['RATE','CHANGE','PERCENT_CHANGE'],MACRO:['VALUE'],COMMODITY:['PRICE','CHANGE','PERCENT_CHANGE'],CRYPTO:['PRICE','CHANGE','PERCENT_CHANGE'],DERIVATIVES:['PRICE','VOLUME','OPENINTEREST','IV','DELTA','GAMMA','THETA','VEGA']};
 const text=(v:unknown,n=100)=>typeof v==='string'&&v.trim()?v.trim().slice(0,n):null; const body=(r:Request)=>r.json().catch(()=>({})) as Promise<Record<string,unknown>>;
 const ok=(data:unknown,status=200)=>Response.json({data,error:null},{status,headers:{'Cache-Control':'no-store'}}); const fail=(message:string,status=400)=>Response.json({data:null,error:{message}},{status});
 async function account(request:Request){const value=await getAccountForRequest(request);if(!value)throw new Error('AUTH');return value}
