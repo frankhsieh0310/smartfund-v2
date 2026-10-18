@@ -1336,3 +1336,50 @@ timestamp 欄位改用 `::text`，發現並避開了對 `timestamptz` 欄位誤�
 | 00981D | 主動中信非投等債 | TPEx | 2026-10-19 | 1151019 | 0.070 | 0.070 |
 
 **第 2 項全數通過，可以進行第 5 項。**
+
+## 2026-10-18（週日午後）第 5 項：DAYS_TO_EX_DATE 接回 App ✅ Preview 已驗證，未部署正式環境
+
+**分支**：`mcs-final7` 基礎上開新分支 `item15-days-to-ex-date`（commit `a67a6516e`）。
+
+**異動**：
+1. `app/api/alerts/route.ts`：`CAPABILITIES.ETF` 加回 `DAYS_TO_EX_DATE`，更新過時的註解
+   （原本的註解還在講 `etf_distribution_events` 只有歷史日期的舊問題，現在已經是讀
+   `etf_upcoming_exrights`）。
+2. `lib/cron/alertEvaluate.ts`：**順便抓到並修好一個真實 bug**——`EvaluatedRule` 原本沒有
+   `metric` 欄位，`WatchlistAlertOccurrence` 寫入時 `payload.metric` 寫死成字串
+   `"DIVIDEND_YIELD_OR_DAYS_TO_EX_DATE"`，不管真正觸發的是哪個指標都一樣，誤導。加了真的
+   `metric` 欄位，從觸發該次 `value` 的那個 condition 帶出來。
+
+**`npx tsc --noEmit`／`npx next build` 都 0 錯誤。**
+
+**Preview 部署 ✅ VERIFIED `target: preview`**（不是正式環境）：
+`https://smartfund-v2-i46yk0cgw-frankhsieh0310s-projects.vercel.app`
+
+**端對端流程驗證 ✅ VERIFIED**（唯讀查證環境內做了必要的最小寫入，過程與結果如下，寫入前後
+都確認清空，沒有誤動任何正式資料）：
+
+查證發現 `alert_rules_p0`／`alert_occurrences` 這兩張表**目前都是 0 筆真實資料**（這整個
+配息提醒功能至今沒有任何真實使用者用過）——確認了直接呼叫 `runAlertEvaluate(true)`／
+`runAlertDispatch(true)` 這兩個「全域」函式（沒有依規則 id 篩選，會掃過全部 ACTIVE 規則／
+全部待送通知）是安全的，不會誤觸到其他真實使用者的資料。
+
+測試流程：
+1. 建立 1 筆全新、明確標記的測試使用者（`email` 格式 `qa-test-<uuid>@internal.test`）。
+2. 用今天 ex-date-sync 真的寫入、已核對過官方來源的真實 ETF（`00996A` 主動兆豐台灣豐收，
+   除息日 2026-10-19，今天 2026-10-18）建立 1 筆測試規則：`DAYS_TO_EX_DATE BELOW 5`。
+3. 呼叫真正的 `runAlertEvaluate(true)`：`{attempted:1, triggeredNew:1, errors:0}`——
+   VERIFIED 規則被評估、正確觸發（1 天 < 5 天）。產生的 occurrence VERIFIED
+   `trigger_value=1`、**`payload.metric="DAYS_TO_EX_DATE"`**（不是上面提到的那個寫死字串，
+   證實順便修的那個 bug 真的生效）。
+4. 呼叫真正的 `runAlertDispatch(true)`：`{attempted:1, delivered:0, failed:0, noDevice:1}`——
+   VERIFIED dispatch 邏輯被正確觸發、呼叫層沒有錯誤。**因為測試帳號沒有註冊任何真實推播
+   裝置，`WatchlistAlertDeliveryAttempt` 沒有被建立**（`dispatch.ts` 的邏輯是：
+   `profiles.length === 0` 時直接 `noDevice++` 並 `continue`，不會建立 attempt 記錄）——
+   這點跟原本「確認有產生一筆 `WatchlistAlertDeliveryAttempt`」的期待有落差，誠實回報：
+   在沒有真實裝置註冊的情況下，這個功能設計上本來就不會留下 delivery attempt 記錄，
+   但 dispatch 這一步確實被觸發、沒有拋出例外，符合使用者自己原本的備案說法
+   「如果沒有真實裝置可以收，至少確認 API 呼叫層面的 send 動作有被觸發、沒有 error」。
+5. 清理：依外鍵順序刪除 delivery attempt／occurrence／rule state／rule version／rule／
+   測試使用者，**VERIFIED 事後 6 張相關表全部核對回到 0 筆**，沒有任何殘留。
+
+**沒有部署正式環境**，照使用者指示停在 Preview，等核准。
