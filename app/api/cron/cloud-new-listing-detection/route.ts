@@ -21,8 +21,15 @@ export async function GET(request: Request) {
   if (skipped) return Response.json({ ok: true, task: "new-listing-detection", skipped: true });
 
   const writeEnabled = isNewListingSyncWriteEnabled();
+  // 2026-10-18（使用者核准的一次性補建）: ?backfillCodes=0054,0058,... 讓這次執行針對明確列出
+  // 的代號繞過「太舊不算新上市」的篩選，沿用完全相同的 provider/data_source 比對邏輯補建。
+  // 不帶這個參數時行為完全不變。
+  const backfillCodesParam = new URL(request.url).searchParams.get("backfillCodes");
+  const backfillCodes = backfillCodesParam
+    ? new Set(backfillCodesParam.split(",").map((c) => c.trim()).filter(Boolean))
+    : undefined;
   try {
-    const newListings = await detectNewListings(writeEnabled);
+    const newListings = await detectNewListings(writeEnabled, backfillCodes);
     const delistings = await detectDelistings(writeEnabled);
     await finishRun(runId, JOB, "TWSE_TPEX_OPENDATA", started, {
       status: "COMPLETED",

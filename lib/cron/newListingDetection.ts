@@ -172,7 +172,12 @@ export type NewListingResult = {
   preexistingBackfillGapCount: number;
 };
 
-export async function detectNewListings(writeEnabled: boolean): Promise<NewListingResult> {
+// 2026-10-18 (使用者核准的一次性補建): 讓 CLOUD_NEW_LISTING_DETECTION 支援針對明確指定的代號
+// 繞過 NEW_LISTING_LOOKBACK_DAYS 的「太舊不算新上市」篩選——用於補建 65 檔已知、確認過的
+// 既存缺建檔缺口（0054、0058... 等），沿用跟真正新上市完全相同的 provider／data_source 比對
+// 邏輯（resolveProviderByBrand／resolveTwDataSource），不是另外寫一套。只對明確列在
+// backfillCodes 裡的代號生效，不會意外放寬到其他真正太舊、原本就該排除的項目。
+export async function detectNewListings(writeEnabled: boolean, backfillCodes?: ReadonlySet<string>): Promise<NewListingResult> {
   const [twse, tpex] = await Promise.all([fetchOfficialEtfList("TWSE"), fetchOfficialEtfList("TPEx")]);
   const official = [...twse, ...tpex];
   const existing = await prisma.etf.findMany({ select: { code: true } });
@@ -194,8 +199,9 @@ export async function detectNewListings(writeEnabled: boolean): Promise<NewListi
 
   for (const row of official) {
     if (existingCodes.has(normalizeCode(row.code))) continue;
+    const isExplicitBackfillTarget = backfillCodes?.has(row.code) ?? false;
     const milestone = row.listedAt ?? row.establishedAt;
-    if (!milestone || milestone < cutoff) { result.preexistingBackfillGapCount++; continue; }
+    if (!isExplicitBackfillTarget && (!milestone || milestone < cutoff)) { result.preexistingBackfillGapCount++; continue; }
     result.newlyDetected.push({ exchange: row.exchange, code: row.code, name: row.name });
     if (!writeEnabled) continue;
 

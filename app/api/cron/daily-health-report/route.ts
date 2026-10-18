@@ -12,7 +12,7 @@
 import { isAuthorizedCron, unauthorizedCron } from "@/lib/cron/authorize";
 import { prisma } from "@/lib/prisma";
 import { beginRun, finishRun } from "@/lib/cloud-ingestion/runContext";
-import { checkPipelineRunLog, evaluateFreshness, checkEtfDataSourceGap, evaluateYahooTwReturnConsistency, evaluateFredCommodityConsistency, checkCommodityTechnicalCoverage, checkFundPerformanceCoverage, checkEtfPerformanceCoverage, checkEtfHistoryFreshness, checkFundHistoryFreshness, type QueryFn, type YahooTwReturnSample, type FredCommoditySample } from "@/lib/daily-health-report/checks";
+import { checkPipelineRunLog, evaluateFreshness, checkEtfDataSourceGap, evaluateYahooTwReturnConsistency, evaluateFredCommodityConsistency, checkCommodityTechnicalCoverage, checkFundPerformanceCoverage, checkEtfPerformanceCoverage, checkEtfHistoryFreshness, checkFundHistoryFreshness, checkCoreUniverseEtfCoverage, checkCoreUniverseFundCoverage, type QueryFn, type YahooTwReturnSample, type FredCommoditySample } from "@/lib/daily-health-report/checks";
 import { CORE_COMMODITY_ROOTS } from "@/lib/cron/commodityUpdate";
 import { notifyAnomaly } from "@/lib/daily-health-report/notify";
 import { buildDailySummary } from "@/lib/daily-health-report/buildDailySummary";
@@ -56,6 +56,7 @@ const RUN_LOG_PIPELINES = [
   "HOLDINGS_ALT_SOURCE_SYNC",
   "CLOUD_SEC_FINANCIAL_INCREMENTAL",
   "CLOUD_CONSENSUS_INGEST",
+  "TW_PURCHASABLE_CLASSIFY",
 ];
 
 export async function GET(request: Request) {
@@ -93,14 +94,19 @@ export async function GET(request: Request) {
   // futures_technical_analytics）——etf_history／fund_history 這兩張大表故意沒做，見
   // checks.ts 裡 evaluateCoverage 的註解說明為什麼。
   const coreRootIds = CORE_COMMODITY_ROOTS.map((r) => r.rootId);
-  const [fundPerformanceCoverage, etfPerformanceCoverage, commodityTechnicalCoverage, etfHistoryFreshness, fundHistoryFreshness] = await Promise.all([
+  // 2026-10-18（第 3c 項）: 新增「核心母體」覆蓋率——只算 tw_purchasable_classification 裡
+  // status='APPROVED' 的資產，目標 100%、未達標會標異常；原本的 4 項全部改成非核心（已經在
+  // checks.ts 裡用 suppressAnomaly=true），只列數字參考，不再觸發異常。
+  const [fundPerformanceCoverage, etfPerformanceCoverage, commodityTechnicalCoverage, etfHistoryFreshness, fundHistoryFreshness, coreUniverseEtfCoverage, coreUniverseFundCoverage] = await Promise.all([
     checkFundPerformanceCoverage(query),
     checkEtfPerformanceCoverage(query),
     checkCommodityTechnicalCoverage(query, coreRootIds),
     checkEtfHistoryFreshness(query),
     checkFundHistoryFreshness(query),
+    checkCoreUniverseEtfCoverage(query, 4),
+    checkCoreUniverseFundCoverage(query, 4),
   ]);
-  const coverage = [fundPerformanceCoverage, etfPerformanceCoverage, commodityTechnicalCoverage, etfHistoryFreshness, fundHistoryFreshness];
+  const coverage = [fundPerformanceCoverage, etfPerformanceCoverage, commodityTechnicalCoverage, etfHistoryFreshness, fundHistoryFreshness, coreUniverseEtfCoverage, coreUniverseFundCoverage];
   const etfDataSourceGap = await checkEtfDataSourceGap(query);
 
   // 2026-10-13 QA-round-1 addition: 3 random TWD-listed ETFs, our stored return_1y vs Yahoo奇摩's own

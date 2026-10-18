@@ -150,6 +150,48 @@ async function createMissingDomesticFunds(writeEnabled: boolean, existingFundCod
   return created;
 }
 
+// 2026-10-18（使用者核准的最小新增方案）: offshore 的「auto-provisioning 是另一個更難的問題」
+// 舊註解（見下方 detectNewOffshoreFunds）其實只對一部分正確——TDCC NAV CSV（tdccBatchSource.ts
+// 的 dataset，不是這裡 OFFSHORE_SOURCE 用的 3-4 清冊）VERIFIED 每一列都有自己的 code/isin/
+// currency 欄位，不是完全沒有身分識別。既有 603 檔比對失敗的境外基金，用名稱當識別鍵（跟
+// classify.ts 比對 TDCC 時用的鍵完全一樣），把 NAV CSV 自己的 code/isin/currency 一起補進
+// `funds` 表。跟 createMissingDomesticFunds 用同一套「檢查缺漏→writeEnabled 才真的建立」模式。
+// 與 lib/tw-purchasable/classify.ts 比對 TDCC 名稱時用同一個正規化規則（去掉全形空白／多餘
+// 空白），避免把「只有空白字元差異」的既存基金誤判成缺漏而建出重複列。
+function normalizeFundName(s: string): string {
+  return s.replace(/[　\s]+/g, "");
+}
+
+async function createMissingOffshoreFunds(writeEnabled: boolean, existingFundNames: Set<string>): Promise<{ taxId: string; name: string; company: string }[]> {
+  const csvText = await fetchTdccNavCsv();
+  const byName = parseTdccNavCsv(csvText);
+  const existingNormalized = new Set([...existingFundNames].map(normalizeFundName));
+  const missing: { taxId: string; name: string; company: string }[] = [];
+  for (const [name, row] of byName) {
+    if (existingFundNames.has(name) || existingNormalized.has(normalizeFundName(name))) continue;
+    missing.push({ taxId: row.code, name, company: "" });
+  }
+  if (!writeEnabled || missing.length === 0) return missing;
+
+  const created: { taxId: string; name: string; company: string }[] = [];
+  for (const row of missing) {
+    const navRow = byName.get(row.name)!;
+    await prisma.fund.create({
+      data: {
+        name: row.name,
+        currency: navRow.currency ?? "USD",
+        dataProvider: "tdcc-offshore",
+        isActive: true,
+        latestNav: navRow.nav,
+        latestNavDate: new Date(navRow.navDate),
+        isin: navRow.isin ?? undefined,
+      },
+    });
+    created.push(row);
+  }
+  return created;
+}
+
 /** Domestic funds: identity key is 基金統編 (== funds.code for ~95% of rows per sitcaFetch.ts's own
  * verified comment; the remaining 5% have no code match at all and are intentionally left out of
  * this detector — they're not resolvable to a `funds` row either way, so "new" vs "existing" can't
@@ -201,23 +243,29 @@ export async function detectNewOffshoreFunds(writeEnabled: boolean): Promise<New
     .filter((name) => !existingFundNames.has(name) && !known.has(name))
     .map((name) => ({ key: name, name }));
 
-  // Offshore fund auto-provisioning is a separate, harder problem (funds.code is NULL for most
-  // offshore funds, no official per-record identity like SITCA's 基金統編 exists here) and is OUT OF
-  // SCOPE for this round's fix -- only domestic SITCA funds were reported missing and fixed above.
+  // 2026-10-18（使用者核准的最小新增方案）: 原本這裡完全不建立 funds 列（見下面保留的舊註解）。
+  // 現在跟 domestic 的 createMissingDomesticFunds 一樣，用「是否該有 funds 列」跟「今天的畫面
+  // 要不要宣布為新商品」兩件事分開處理——不管 isFirstRun/needsBackfill 走哪個分支，缺漏的
+  // funds 列都會檢查並（writeEnabled 時）建立。
+  const created = await createMissingOffshoreFunds(writeEnabled, existingFundNames);
+
+  // Offshore fund auto-provisioning used to be treated as a separate, harder problem (funds.code is
+  // NULL for most offshore funds) -- VERIFIED 2026-10-18 that TDCC's own NAV CSV does carry a usable
+  // code/isin per row (see createMissingOffshoreFunds above), so the backfill gap is now closeable.
   const needsBackfill = !isFirstRun && candidates.length > CANDIDATE_BACKFILL_THRESHOLD;
 
   if (!writeEnabled) {
-    return { isFirstRun, seeded: isFirstRun ? candidates.length : 0, newlyDetected: isFirstRun || needsBackfill ? [] : candidates, created: [], baselineBackfilled: needsBackfill ? candidates.length : 0 };
+    return { isFirstRun, seeded: isFirstRun ? candidates.length : 0, newlyDetected: isFirstRun || needsBackfill ? [] : candidates, created, baselineBackfilled: needsBackfill ? candidates.length : 0 };
   }
 
   if (isFirstRun) {
     await seedBaseline("OFFSHORE_FUND", OFFSHORE_SOURCE, [...byName.keys()].map((name) => ({ key: name, name })));
-    return { isFirstRun: true, seeded: byName.size, newlyDetected: [], created: [], baselineBackfilled: 0 };
+    return { isFirstRun: true, seeded: byName.size, newlyDetected: [], created, baselineBackfilled: 0 };
   }
   if (needsBackfill) {
     await seedBaseline("OFFSHORE_FUND", OFFSHORE_SOURCE, candidates);
-    return { isFirstRun: false, seeded: 0, newlyDetected: [], created: [], baselineBackfilled: candidates.length };
+    return { isFirstRun: false, seeded: 0, newlyDetected: [], created, baselineBackfilled: candidates.length };
   }
   await logNewFunds("OFFSHORE_FUND", OFFSHORE_SOURCE, candidates);
-  return { isFirstRun: false, seeded: 0, newlyDetected: candidates, created: [], baselineBackfilled: 0 };
+  return { isFirstRun: false, seeded: 0, newlyDetected: candidates, created, baselineBackfilled: 0 };
 }

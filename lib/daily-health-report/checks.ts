@@ -143,6 +143,7 @@ async function evaluateCoverage(
   dateCol: string,
   idCol: string,
   universeCountSql: string,
+  suppressAnomaly = false,
 ): Promise<CoverageResult> {
   const universeRows = await query(universeCountSql, []);
   const universeCount = Number(universeRows[0]?.n ?? 0);
@@ -158,10 +159,10 @@ async function evaluateCoverage(
   const latestDate = bestDayRows[0]?.d ?? null;
   const coveredCount = Number(bestDayRows[0]?.n ?? 0);
   if (!latestDate) {
-    return { label, universeCount, latestDate: null, coveredCount: 0, coveragePct: 0, missingSample: [], anomaly: true, anomalyReason: "NO_RECENT_DATA", baselineMethod: "RECENT_10D_BEST_COVERAGE" };
+    return { label, universeCount, latestDate: null, coveredCount: 0, coveragePct: 0, missingSample: [], anomaly: !suppressAnomaly, anomalyReason: "NO_RECENT_DATA", baselineMethod: "RECENT_10D_BEST_COVERAGE" };
   }
   const coveragePct = (coveredCount / universeCount) * 100;
-  const anomaly = coveragePct < 100;
+  const anomaly = !suppressAnomaly && coveragePct < 100;
   return {
     label, universeCount, latestDate, coveredCount, coveragePct, missingSample: [],
     anomaly, anomalyReason: anomaly ? `COVERAGE_${coveragePct.toFixed(1)}PCT` : null,
@@ -199,9 +200,11 @@ export async function checkCommodityTechnicalCoverage(query: QueryFn, coreRootId
 // 'tdcc-offshore')` undercounted: VERIFIED 1,292 of the covered funds on a real sample day had
 // data_provider = NULL (not one of those 3 labels) yet still had real fund_performances rows,
 // which made coveragePct come out over 100%. COALESCE+NOT IN matches those NULL-provider funds too.
+// 2026-10-18（第 3c 項）: 非核心（全部「非yahoo/SEC」基金，不限台灣買得到），改成只列數字
+// 不標異常——核心母體覆蓋率看 checkCoreUniverseFundCoverage。
 export async function checkFundPerformanceCoverage(query: QueryFn): Promise<CoverageResult> {
   return evaluateCoverage(query, "fund_performances", "fund_performances", "date", "fund_id",
-    `SELECT COUNT(*)::int n FROM funds WHERE is_active = true AND COALESCE(data_provider, '') NOT IN ('yahoo', 'SEC')`);
+    `SELECT COUNT(*)::int n FROM funds WHERE is_active = true AND COALESCE(data_provider, '') NOT IN ('yahoo', 'SEC')`, true);
 }
 
 // 2026-10-18 (使用者規則定案，第 2c 項): etf_history／fund_history 這兩張大表改用 LATERAL
@@ -217,6 +220,7 @@ export async function checkHistoryFreshnessLateral(
   universeTable: string,
   universeWhereSql: string,
   staleDaysThreshold: number,
+  suppressAnomaly = false,
 ): Promise<CoverageResult> {
   const rows = await query(
     `SELECT
@@ -231,20 +235,43 @@ export async function checkHistoryFreshnessLateral(
   const coveredCount = Number(rows[0]?.fresh ?? 0);
   if (universeCount === 0) return { label, universeCount: 0, latestDate: null, coveredCount: 0, coveragePct: null, missingSample: [], anomaly: false, anomalyReason: null, baselineMethod: "LATERAL_FRESHNESS_WINDOW" };
   const coveragePct = (coveredCount / universeCount) * 100;
-  const anomaly = coveragePct < 100;
+  const anomaly = !suppressAnomaly && coveragePct < 100;
   return { label, universeCount, latestDate: null, coveredCount, coveragePct, missingSample: [], anomaly, anomalyReason: anomaly ? `COVERAGE_${coveragePct.toFixed(1)}PCT` : null, baselineMethod: "LATERAL_FRESHNESS_WINDOW" };
+}
+
+// 2026-10-18（使用者規則定案，第 3c 項）: 「核心母體」覆蓋率——只算 tw_purchasable_classification
+// 裡 status='APPROVED' 的資產（台灣買得到的 4 類：境內基金／境外基金／TWSE+TPEx ETF／美股ETF），
+// 目標 100%。母體目前可能是 0（TW_PURCHASABLE_CLASSIFY 寫入開關還沒打開，或還沒跑過一次），
+// 這種情況回報「universe empty」而不是誤判成異常。
+export async function checkCoreUniverseEtfCoverage(query: QueryFn, staleDaysThreshold: number): Promise<CoverageResult> {
+  return checkHistoryFreshnessLateral(
+    query, "core_universe_etf", "etf_history", "date", "etf_id",
+    `(SELECT asset_id AS id FROM tw_purchasable_classification WHERE asset_type = 'ETF' AND status = 'APPROVED')`,
+    "true", staleDaysThreshold,
+  );
+}
+export async function checkCoreUniverseFundCoverage(query: QueryFn, staleDaysThreshold: number): Promise<CoverageResult> {
+  return checkHistoryFreshnessLateral(
+    query, "core_universe_fund", "fund_history", "date", "fund_id",
+    `(SELECT asset_id AS id FROM tw_purchasable_classification WHERE asset_type = 'FUND' AND status = 'APPROVED')`,
+    "true", staleDaysThreshold,
+  );
 }
 
 // etf_history (1,836 萬筆) -- universe = 全部 active ETF，4 天內有新資料才算 fresh（跟既有
 // evaluateFreshness 的 tw_stock_price/domestic_fund_nav 用同一個寬鬆門檻慣例）。
+// 2026-10-18（第 3c 項）: 這是「非核心」（全部 active 資產，不限台灣買得到）的覆蓋率——改成
+// suppressAnomaly=true，只列出數字供參考，不再標記異常。真正要達到 100% 目標、會觸發異常的
+// 是上面的 checkCoreUniverseEtfCoverage/checkCoreUniverseFundCoverage（只算核心母體）。
 export async function checkEtfHistoryFreshness(query: QueryFn): Promise<CoverageResult> {
-  return checkHistoryFreshnessLateral(query, "etf_history", "etf_history", "date", "etf_id", "etfs", "u.is_active = true AND u.data_source IS NOT NULL", 4);
+  return checkHistoryFreshnessLateral(query, "etf_history", "etf_history", "date", "etf_id", "etfs", "u.is_active = true AND u.data_source IS NOT NULL", 4, true);
 }
 
 // fund_history (8,487 萬筆) -- 只檢查 yahoo-provider 基金（它們的報酬率只存在這張表，不是
-// fund_performances，見上方說明），universe = 23,053 檔 yahoo-provider active fund。
+// fund_performances，見上方說明），universe = 23,053 檔 yahoo-provider active fund。非核心，
+// 同上不標異常。
 export async function checkFundHistoryFreshness(query: QueryFn): Promise<CoverageResult> {
-  return checkHistoryFreshnessLateral(query, "fund_history_yahoo", "fund_history", "date", "fund_id", "funds", "u.is_active = true AND u.data_source IS NOT NULL AND u.data_provider = 'yahoo'", 4);
+  return checkHistoryFreshnessLateral(query, "fund_history_yahoo", "fund_history", "date", "fund_id", "funds", "u.is_active = true AND u.data_source IS NOT NULL AND u.data_provider = 'yahoo'", 4, true);
 }
 
 // etf_performances -- small table (119k rows, safe to scan). Universe is intentionally the FULL
@@ -252,8 +279,9 @@ export async function checkFundHistoryFreshness(query: QueryFn): Promise<Coverag
 // (market-close-sync, etf-returns-sync, etf-returns-sync-tw) whose combined coverage is what
 // actually matters to anyone reading return_1d -- this check is data-outcome-based, not tied to one
 // job_id, same convention as the existing domestic_fund_nav freshness check below.
+// 2026-10-18（第 3c 項）: 非核心（全部 active ETF，不限台灣買得到），只列數字不標異常。
 export async function checkEtfPerformanceCoverage(query: QueryFn): Promise<CoverageResult> {
-  return evaluateCoverage(query, "etf_performances", "etf_performances", "date", "etf_id", `SELECT COUNT(*)::int n FROM etfs WHERE is_active = true`);
+  return evaluateCoverage(query, "etf_performances", "etf_performances", "date", "etf_id", `SELECT COUNT(*)::int n FROM etfs WHERE is_active = true`, true);
 }
 
 export type YahooTwReturnSample = {
