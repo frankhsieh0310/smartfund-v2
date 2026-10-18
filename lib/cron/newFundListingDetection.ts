@@ -16,7 +16,7 @@
 import { prisma } from "@/lib/prisma";
 import { fetchSitcaRows, fetchSitcaIdentityRows } from "@/lib/sitca-nav-sync/sitcaFetch";
 import { fetchTdccNavCsv, parseTdccNavCsv } from "@/lib/offshore-nav-sync/tdccBatchSource";
-import { fetchTdccOffshoreBasicInfoNames } from "@/lib/tw-purchasable/tdccOffshoreBasicInfo";
+import { fetchTdccOffshoreBasicInfoNames, fetchTdccOffshoreBasicInfoAgents } from "@/lib/tw-purchasable/tdccOffshoreBasicInfo";
 
 const DOMESTIC_SOURCE = "SITCA nav.csv (基金統編 diff)";
 const OFFSHORE_SOURCE = "TDCC opendata 3-4 (基金名稱 diff)";
@@ -171,6 +171,11 @@ async function createMissingOffshoreFunds(writeEnabled: boolean, existingFundNam
   const csvText = await fetchTdccNavCsv();
   const byName = parseTdccNavCsv(csvText);
   const approvedNames = await fetchTdccOffshoreBasicInfoNames();
+  // 2026-10-18 修正：funds.company 不准填佔位文字。dataset 3-2（跟核備狀態比對用的同一個
+  // CSV）本身就帶「基金總代理名稱」欄位（column index 9），用 fetchTdccOffshoreBasicInfoAgents
+  // 取得真正的總代理公司名稱——不是編造的，是官方資料本身的欄位。
+  const agentsByName = await fetchTdccOffshoreBasicInfoAgents();
+  const agentsByNormalizedName = new Map([...agentsByName].map(([n, a]) => [normalizeFundName(n), a]));
   const approvedNormalized = new Set([...approvedNames].map(normalizeFundName));
   const existingNormalized = new Set([...existingFundNames].map(normalizeFundName));
   const missing: { taxId: string; name: string; company: string }[] = [];
@@ -179,19 +184,23 @@ async function createMissingOffshoreFunds(writeEnabled: boolean, existingFundNam
     // 只補建「目前核備、可在台灣銷售」的基金——跟 3-2 清冊比對不到的一律排除，不建立。
     const isCurrentlyApproved = approvedNames.has(name) || approvedNormalized.has(normalizeFundName(name));
     if (!isCurrentlyApproved) continue;
-    missing.push({ taxId: row.code, name, company: "" });
+    // 2026-10-18 修正：company 查詢要在這裡就做（dry-run 也要看到真實值），不能留空字串再等
+    // writeEnabled 分支才查——否則 dry-run 回傳的 missing 永遠是空字串，跟實際寫入的值不一致。
+    // 3-2 真的查不到（理論上不會發生，因為上面已經確認過 isCurrentlyApproved）才留空字串，
+    // 絕不編造看起來像真資料的公司名。
+    const company = agentsByName.get(name) ?? agentsByNormalizedName.get(normalizeFundName(name)) ?? "";
+    missing.push({ taxId: row.code, name, company });
   }
   if (!writeEnabled || missing.length === 0) return missing;
 
   const created: { taxId: string; name: string; company: string }[] = [];
   for (const row of missing) {
     const navRow = byName.get(row.name)!;
+    const company = row.company;
     await prisma.fund.create({
       data: {
         name: row.name,
-        // funds.company 是必填欄位，但 TDCC NAV CSV（dataset 3-4）這一列本身不帶總代理/發行
-        // 公司名稱——誠實標記待補，不要編造一個看起來像真資料的公司名稱。
-        company: "（境外基金，總代理公司待人工補上）",
+        company,
         currency: navRow.currency ?? "USD",
         dataProvider: "tdcc-offshore",
         isActive: true,
@@ -200,7 +209,7 @@ async function createMissingOffshoreFunds(writeEnabled: boolean, existingFundNam
         isin: navRow.isin ?? undefined,
       },
     });
-    created.push(row);
+    created.push({ ...row, company });
   }
   return created;
 }

@@ -30,6 +30,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { fetchYahooTwPerformance } from "@/lib/yahoo/twPerformancePage";
+import { fetchCurrentlyTradingTwCodes } from "@/lib/cron/twCurrentlyTradingCheck";
 
 export type OfficialEtfRow = {
   exchange: "TWSE" | "TPEx";
@@ -154,13 +155,12 @@ async function resolveTwDataSource(code: string, exchange: "TWSE" | "TPEx"): Pro
   }
 }
 
-// How far back a 上市日期 can be and still count as a genuine "new listing" rather than a
-// pre-existing ETF our own `etfs` table simply never onboarded. Confirmed via a real dry-run
-// (2026-10-15) against production: WITHOUT this filter, 65 decades-old-to-years-old ETFs (e.g.
-// 0054 元大台商50, listed 2008-07-16) that are missing from our DB for unrelated backfill reasons
-// would have been wrongly logged/auto-provisioned as NEW_LISTING. 120 days comfortably covers any
-// gap even if this daily cron were down for weeks, while excluding the real backfill gap.
-const NEW_LISTING_LOOKBACK_DAYS = 120;
+// 2026-10-18：原本這裡用「上市日期是否在 120 天內」判斷是不是真的新上市——後來 VERIFIED
+// 0054／0058／0059／0060 這些當時假設的「既存缺建檔缺口」其實全部都已經不在交易（見上方
+// detectNewListings 的根因修正說明），所以「上市日期多舊」從來就不是正確的判斷依據，已經
+// 改成用「現在是否還在交易」。這個常數跟 cutoff 計算已經不再使用，故意留著常數定義本身
+// （不是程式碼，只是數字）供之後若要重新加回「只在特定天數內才算新上市公告」這種跟今天
+// 補建邏輯無關的需求時參考，但目前沒有任何地方讀取它。
 
 export type NewListingResult = {
   checkedCodes: number;
@@ -172,15 +172,20 @@ export type NewListingResult = {
   preexistingBackfillGapCount: number;
 };
 
-// 2026-10-18 (使用者核准的一次性補建): 讓 CLOUD_NEW_LISTING_DETECTION 支援針對明確指定的代號
-// 繞過 NEW_LISTING_LOOKBACK_DAYS 的「太舊不算新上市」篩選——用於補建 65 檔已知、確認過的
-// 既存缺建檔缺口（0054、0058... 等），沿用跟真正新上市完全相同的 provider／data_source 比對
-// 邏輯（resolveProviderByBrand／resolveTwDataSource），不是另外寫一套。只對明確列在
-// backfillCodes 裡的代號生效，不會意外放寬到其他真正太舊、原本就該排除的項目。
+// 2026-10-18（根因修正，使用者核准）: 原本用 NEW_LISTING_LOOKBACK_DAYS（上市日期是否夠新）
+// 當「這是真的新上市還是既存缺建檔缺口」的判斷依據。VERIFIED 這個假設本身有問題：t187ap47
+// 官方清單其實包含已經不在交易的 ETF（唯讀對照 TWSE/TPEx 今天真實的收盤行情資料，427 檔
+// 官方清單裡有 68 檔完全沒有今天的收盤紀錄，包含原本以為是「既存缺建檔缺口」的全部 65 檔）。
+// 真正該用的判斷依據是「現在是否還在交易」，不是「上市日期多舊」——改用
+// lib/cron/twCurrentlyTradingCheck.ts 查 TWSE/TPEx 自己的每日收盤行情，不管年紀多大，只要
+// 現在真的還在交易、資料庫沒有，排程每次執行就自動補建；不在交易的，不管多新都不建立。
+// 這樣排程本身就能自動補建缺口，不再需要手動帶 backfillCodes 參數觸發（沒有人拿得到
+// CRON_SECRET，手動觸發本來就不現實）。backfillCodes 保留做人工覆寫用途，但不是必要路徑。
 export async function detectNewListings(writeEnabled: boolean, backfillCodes?: ReadonlySet<string>): Promise<NewListingResult> {
   const [twse, tpex] = await Promise.all([fetchOfficialEtfList("TWSE"), fetchOfficialEtfList("TPEx")]);
   const official = [...twse, ...tpex];
   const existing = await prisma.etf.findMany({ select: { code: true } });
+  const tradingCodes = await fetchCurrentlyTradingTwCodes();
   // 2026-10-18 root-cause fix: this previously compared the official list's bare code
   // (e.g. "00409A") against our stored codes with an EXACT string match. VERIFIED this was the
   // source of fresh duplicate ETF rows being created daily -- when an existing ETF's own `code`
@@ -193,15 +198,15 @@ export async function detectNewListings(writeEnabled: boolean, backfillCodes?: R
   // lib/etf-returns-sync/twUniverse.ts's TW_ELIGIBLE_SQL_CONDITION.
   const normalizeCode = (code: string) => code.replace(/\.(TW|TWO)$/, "");
   const existingCodes = new Set(existing.map((e) => normalizeCode(e.code)));
-  const cutoff = new Date(Date.now() - NEW_LISTING_LOOKBACK_DAYS * 24 * 60 * 60 * 1000);
 
   const result: NewListingResult = { checkedCodes: official.length, newlyDetected: [], autoProvisioned: [], loggedOnly: [], preexistingBackfillGapCount: 0 };
 
   for (const row of official) {
     if (existingCodes.has(normalizeCode(row.code))) continue;
-    const isExplicitBackfillTarget = backfillCodes?.has(row.code) ?? false;
-    const milestone = row.listedAt ?? row.establishedAt;
-    if (!isExplicitBackfillTarget && (!milestone || milestone < cutoff)) { result.preexistingBackfillGapCount++; continue; }
+    // 真正的判斷依據：現在是否還在交易，不是上市日期多舊。backfillCodes 明確列出的代號
+    // 仍然可以強制通過（人工覆寫用途），但不是主要路徑。
+    const isCurrentlyTrading = tradingCodes.has(row.code) || (backfillCodes?.has(row.code) ?? false);
+    if (!isCurrentlyTrading) { result.preexistingBackfillGapCount++; continue; }
     result.newlyDetected.push({ exchange: row.exchange, code: row.code, name: row.name });
     if (!writeEnabled) continue;
 

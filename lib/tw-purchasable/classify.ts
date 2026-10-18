@@ -18,6 +18,7 @@ import { prisma } from "@/lib/prisma";
 import { fetchSitcaIdentityRows } from "@/lib/sitca-nav-sync/sitcaFetch";
 import { fetchTdccOffshoreBasicInfoNames, TDCC_OFFSHORE_BASIC_INFO_SOURCE } from "./tdccOffshoreBasicInfo";
 import { fetchOfficialEtfList } from "@/lib/cron/newListingDetection";
+import { fetchCurrentlyTradingTwCodes } from "@/lib/cron/twCurrentlyTradingCheck";
 
 const SITCA_SOURCE = "SITCA_NAV_CSV";
 const TWSE_SOURCE = "TWSE_T187AP47_L";
@@ -90,12 +91,17 @@ export async function classifyTwPurchasable(writeEnabled: boolean): Promise<Clas
   await upsertApproved(offshoreMatches, writeEnabled);
 
   // ETF: TWSE + TPEx t187ap47 code == etfs.code
+  // 2026-10-18 修正：t187ap47 官方清單本身 VERIFIED 會包含已經不在交易的 ETF（唯讀對照
+  // TWSE/TPEx 今天真實收盤行情，427 檔官方清單裡有 68 檔完全沒有今天的收盤紀錄）——單純
+  // 「代號存在於官方清單」不等於「現在買得到」，額外要求代號也出現在今天的收盤行情裡才算
+  // 核心母體，跟上面美股ETF第4類用同一個「現行掛牌」查詢，不寫兩套。
   const [twseRows, tpexRows] = await Promise.all([fetchOfficialEtfList("TWSE"), fetchOfficialEtfList("TPEx")]);
+  const tradingCodes = await fetchCurrentlyTradingTwCodes();
   const allEtfs = await prisma.etf.findMany({ select: { id: true, code: true } });
   const etfByCode = new Map(allEtfs.map((e) => [e.code, e.id]));
   const etfMatches = [
-    ...twseRows.filter((r) => etfByCode.has(r.code)).map((r) => ({ assetType: "ETF" as const, assetId: etfByCode.get(r.code)!, source: TWSE_SOURCE, sourceRecordRef: r.code })),
-    ...tpexRows.filter((r) => etfByCode.has(r.code)).map((r) => ({ assetType: "ETF" as const, assetId: etfByCode.get(r.code)!, source: TPEX_SOURCE, sourceRecordRef: r.code })),
+    ...twseRows.filter((r) => etfByCode.has(r.code) && tradingCodes.has(r.code)).map((r) => ({ assetType: "ETF" as const, assetId: etfByCode.get(r.code)!, source: TWSE_SOURCE, sourceRecordRef: r.code })),
+    ...tpexRows.filter((r) => etfByCode.has(r.code) && tradingCodes.has(r.code)).map((r) => ({ assetType: "ETF" as const, assetId: etfByCode.get(r.code)!, source: TPEX_SOURCE, sourceRecordRef: r.code })),
   ];
   await upsertApproved(etfMatches, writeEnabled);
 
@@ -118,10 +124,15 @@ export async function classifyTwPurchasable(writeEnabled: boolean): Promise<Clas
     .map((id) => ({ assetType: "ETF" as const, assetId: id, source: US_ETF_SOURCE, sourceRecordRef: id }));
   await upsertApproved(usEtfMatches, writeEnabled);
 
+  // officialCount 改成只算現行掛牌的那些（跟上面 etfMatches 用同一個 tradingCodes 過濾），
+  // 不是整份 427 檔官方清單——否則母體本身就含已下市商品，分母錯誤。
+  const twseTrading = twseRows.filter((r) => tradingCodes.has(r.code)).length;
+  const tpexTrading = tpexRows.filter((r) => tradingCodes.has(r.code)).length;
+
   return {
     domesticFund: { officialCount: sitcaRows.length, matched: domesticMatches.length },
     offshoreFund: { officialCount: tdccNames.size, matched: offshoreMatches.length },
-    etf: { officialCount: twseRows.length + tpexRows.length, matched: etfMatches.length },
+    etf: { officialCount: twseTrading + tpexTrading, matched: etfMatches.length },
     usEtf: { candidateCount: usEtfIds.length, matched: usEtfMatches.length },
   };
 }
