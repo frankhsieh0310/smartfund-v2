@@ -44,7 +44,8 @@ function parseKind(raw: string): TpexExRightRow["kind"] {
 }
 
 export async function fetchTpexExRightRows(): Promise<TpexExRightRow[]> {
-  const res = await fetch(TPEX_EXRIGHT_URL, { headers: { "User-Agent": "Mozilla/5.0 (SmartMatch data pipeline)" }, signal: AbortSignal.timeout(30_000) });
+  // 2026-10-18: tightened from 30s to 15s, same reasoning as twseExRight.ts's fetch.
+  const res = await fetch(TPEX_EXRIGHT_URL, { headers: { "User-Agent": "Mozilla/5.0 (SmartMatch data pipeline)" }, signal: AbortSignal.timeout(15_000) });
   if (res.status === 401 || res.status === 403 || res.status === 429) {
     const err = new Error(`TPEX_EXRIGHT_RATE_LIMITED_${res.status}`);
     (err as any).rateLimited = true;

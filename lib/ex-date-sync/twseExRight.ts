@@ -45,7 +45,12 @@ function parseCashDividend(raw: string | undefined): number | null {
 }
 
 export async function fetchTwseExRightRows(): Promise<TwseExRightRow[]> {
-  const res = await fetch(TWSE_EXRIGHT_URL, { headers: { "User-Agent": "Mozilla/5.0 (SmartMatch data pipeline)" }, signal: AbortSignal.timeout(30_000) });
+  // 2026-10-18: tightened from 30s to 15s -- local curl from Taiwan answers in ~0.2s, but Vercel's
+  // production region is overseas and TWSE may respond far slower (or hang) for an out-of-country
+  // caller; a tighter timeout fails fast with a clear error instead of silently eating the route's
+  // budget. See app/api/cron/ex-date-sync/route.ts's step timing log for which step actually ran
+  // long in production.
+  const res = await fetch(TWSE_EXRIGHT_URL, { headers: { "User-Agent": "Mozilla/5.0 (SmartMatch data pipeline)" }, signal: AbortSignal.timeout(15_000) });
   if (res.status === 401 || res.status === 403 || res.status === 429) {
     const err = new Error(`TWSE_EXRIGHT_RATE_LIMITED_${res.status}`);
     (err as any).rateLimited = true;
