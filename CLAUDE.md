@@ -511,6 +511,39 @@ master 為正式基準分支。新工作一律從最新的 master 開分支；�
     Preview 部署 `smartfund-v2-7e4p61g1y-frankhsieh0310s-projects.vercel.app`（首頁、
     `/report`、`/compare`、`/etf/00981D`、`/smartmatch-app/privacy` 都 200），等使用者核准
     週一開盤前（週日內）再部署一次。
+
+- **2026-10-18：`535be9b1` 排程結果 ❌ EX_DATE_SYNC 第一次正式執行就卡死超時，未往下做第二部分**
+  （唯讀查證，`DIRECT_URL` 連線，所有 timestamp 欄位都用 `::text` 轉型，沒有誤用本機時區解讀）：
+  - `vercel ls --prod --json` 先確認目前正式環境就是預期的 `ec4296529`（`meta.commit` 完全相符），
+    VERIFIED `EX_DATE_SYNC_WRITE=on` 這個前提成立。
+  - `production_scheduler_runs` 查今天 01:40 UTC 那筆 `EX_DATE_SYNC`：**`status=IN_PROGRESS`，
+    `completed_at=null`，`inserted/updated/failed` 全部 0，`error=null`**——跟稍早
+    `CLOUD_NEW_FUND_LISTING_DETECTION` 卡死時一模一樣的「無例外、無錯誤訊息，單純停在
+    IN_PROGRESS」特徵。用 `vercel logs --deployment <url>` 直接拉這次部署的即時 runtime log，
+    **VERIFIED 真正原因**：
+    `"Vercel Runtime Timeout Error: Task timed out after 60 seconds"`（`/api/cron/ex-date-sync`，
+    2026-10-18T01:41:40Z，剛好是 01:40:41 開始後 59 秒）——函式被平台強制砍斷，`finishRun()`
+    的 catch 區塊沒機會執行，紀錄永遠停在 IN_PROGRESS，不是程式丟出例外、也不是程式邏輯錯誤。
+  - **已排除「跟上次一樣是資料量太大」這個假設**：直接即時 curl 官方兩個來源（TWSE
+    `exRight/TWT48U`、TPEx `tpex_exright_prepost`）本身，VERIFIED 回應都在 0.2 秒內、
+    資料量分別只有 55 筆、66 筆（總共 121 筆，其中多數還是普通股票不是 ETF，`exDateSync.ts`
+    逐筆 upsert 的實際資料量遠低於會觸發逾時的門檻）——**不是官方來源變慢、也不是這條管線
+    像上次新基金建檔那樣面對「數千筆」規模，真正瓶頸還沒查到確切是哪一步**（候選：
+    `prisma.etf.findMany` 抓全部 16,823 檔 ETF 的 id/code 清單本身、或資料庫連線池在
+    cron 密集觸發的整點附近出現排隊——同一份 log 裡 `cloud-moneydj-etf` 也在
+    01:39:22 UTC 以完整 300 秒額度逾時，但那是不同 region（`sfo1` vs `ex-date-sync` 的
+    `iad1`）、不同逾時長度，證據還不足以斷定兩者是同一個共用瓶頸，誠實列為未確認）。
+  - **第二部分（把 `DAYS_TO_EX_DATE` 接回 App）沒有做**：照使用者這次明確指示「如果沒通過，
+    先回報問題，不要往下做」，第一部分第 1 點沒通過就停在這裡，沒有去動
+    `app/api/alerts/route.ts` 的 `CAPABILITIES`，也沒有準備新的 Preview 部署。
+  - `CLOUD_NEW_FUND_LISTING_DETECTION` 這條管線本身沒問題：今天 01:25 UTC 那筆
+    `status=COMPLETED`，`domestic.created` 真的新建了 22 筆、`offshore.baselineBackfilled`
+    補齊 988 筆、`error=null`——VERIFIED `ec4296529` 的分批寫入＋baseline 補齊保護在正式環境
+    確實生效、沒有再卡住，跟 EX_DATE_SYNC 是兩條獨立的管線，一個正常一個逾時。
+  - **建議下一步**（還沒執行，等使用者決定）：在 `exDateSync.ts`／cron route 加時間戳記 log
+    （抓 ETF 清單查詢耗時、upsert 迴圈耗時分別印出來），讓下一次執行能看出真正卡在哪一步；
+    或者先把 `maxDuration` 拉高到跟 `cloud-moneydj-etf` 一樣的 300 秒當作臨時紓解，但這治標
+    不治本，沒有先做。
 - **EAS build（smartmatch-mobile，Android development build）：從 errored 到成功，共踩了
   4 個不同的根因，全部用「下載真正的 Gradle log 分析」而不是猜測找到**（使用者 2026-10-17
   指示：不要叫使用者自己去網站看，CLI 已登入，直接用 `eas build:view <id> --json` 拿
