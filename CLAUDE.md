@@ -305,6 +305,22 @@ master 為正式基準分支。新工作一律從最新的 master 開分支；�
   跟前面第 13 項監看排程同樣的限制）：`f59fe7a4`（10/18 台北時間 9:31am 前後，檢查新上市偵測排程
   是否讓這 6 檔全部自動建檔＋`data_source` 正確）、`9989ecd5`（10/19 台北時間 2:08pm 前後，確認這
   6 檔在第一個真正交易日收盤後有真實收盤價，同時做第 13 項第 1 天的健檢）。
+- **2026-10-18：`f59fe7a4` 排程檢查結果 ✅ VERIFIED 6 檔全部自動建檔成功，修正確實生效**：
+  查 `production_scheduler_runs` 當天最新一筆 `CLOUD_NEW_LISTING_DETECTION`（`started_at`
+  2026-10-18 01:15:16 UTC，`status=COMPLETED`，用 `DIRECT_URL` 連線、所有 timestamp 欄位
+  都用 `::text` SQL 端轉型查詢，避開已知的本機時區陷阱）：`details.newListings.loggedOnly`
+  是空陣列 `[]`，`autoProvisioned` 裡 6 檔全部都在（`00409A`／`00410A`／`00412A`／`009828`／
+  `00411A`／`00987D`），`providerSource` 全部是 `OFFICIAL_FULL_NAME`，跟前一天（10/17 01:15
+  UTC）同一個查詢的結果（6 檔全部卡在 `loggedOnly`，原因「provider 無法從既有資料唯一比對」）
+  形成明確對照，確認 `a1865caee` 這個修正部署後真的解決了問題，不是巧合。
+  直接 SELECT `etfs` 表二次核對：6 檔都存在、`is_active=true`、`data_source` 正確帶
+  `.TW`／`.TWO` 後綴（對應 TWSE／TPEx）且非 NULL、`provider` 欄位的中文全名跟排程紀錄裡的
+  `provider` 值逐字相符（例如 `009828` 是「中國信託證券投資信託股份有限公司」，驗證了原本
+  最難比對的這一檔也真的比對對了）。另外檢查 `latest_price`／`price_updated_at`／
+  `data_provider` 三個欄位目前都是 NULL——這是誠實的「還沒排到收盤價同步」，不是新上市偵測
+  這個排程的責任範圍（它只負責建檔＋設定 `data_source`，價格同步是另一個既有、獨立的排程），
+  跟 `9989ecd5`（10/19 排程，確認第一個真正交易日收盤後有真實收盤價）要查的是同一件事，
+  這裡不重複處理。本次查證全程唯讀，沒有對 production 做任何寫入。
 - 2026-10-19（週一）: 待檢查。
 - 2026-10-20（週二）: 待檢查。
 - 2026-10-21（週三）: 待檢查。
