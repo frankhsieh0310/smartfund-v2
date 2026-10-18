@@ -618,12 +618,23 @@ export async function GET(request: Request) {
     // Hong Kong's duplicate currency-counter listings — both decided once per etf_id up front, not
     // per batch, so the SQL only ever returns candidates already known to belong in the rotation.
     while (!state.sweepComplete && Date.now() < marketDeadlineMs) {
-      const rawCandidates = await prisma.$queryRawUnsafe<Array<{ id: string; code: string; exchange: string | null; data_source: string }>>(
-        `SELECT id, code, exchange, data_source
-           FROM etfs
-          WHERE is_active = true AND data_source IS NOT NULL AND id > $1
-            AND (data_source LIKE ANY($2) OR (data_source NOT LIKE '%.%' AND exchange = ANY($3)))
-          ORDER BY id ASC LIMIT $4`,
+      // 2026-10-18 root-cause fix: 57 TWSE ETFs are the bare-code half of a known duplicate pair
+      // (QA-round-1 decision 4-1, documented in etf-returns-sync/route.ts and twUniverse.ts) --
+      // their OWN data_source has no .TW/.TWO suffix (e.g. "00936"), which is not a fetchable Yahoo
+      // symbol, so this sweep has been getting SOURCE_MISSING for all of them, every run, forever
+      // (VERIFIED live: same ~65 pending TWSE symbols, unchanged run after run on 2026-10-16).
+      // etf-returns-sync/etf-returns-sync-tw already solved this by borrowing the suffixed
+      // duplicate twin's data_source purely as a read-only Yahoo lookup key -- applying the exact
+      // same pattern here, never writing anything back to the bare row's own data_source column.
+      const rawCandidates = await prisma.$queryRawUnsafe<Array<{ id: string; code: string; exchange: string | null; data_source: string; yahoo_symbol_override: string | null }>>(
+        `SELECT bare.id, bare.code, bare.exchange, bare.data_source,
+                CASE WHEN bare.data_source !~ '\\.(TW|TWO)$'
+                     THEN (SELECT suf.data_source FROM etfs suf WHERE suf.code = bare.code || '.TW' OR suf.code = bare.code || '.TWO' LIMIT 1)
+                     ELSE NULL END AS yahoo_symbol_override
+           FROM etfs bare
+          WHERE bare.is_active = true AND bare.data_source IS NOT NULL AND bare.id > $1
+            AND (bare.data_source LIKE ANY($2) OR (bare.data_source NOT LIKE '%.%' AND bare.exchange = ANY($3)))
+          ORDER BY bare.id ASC LIMIT $4`,
         state.cursorEtfId, ctx.suffixPatterns, ctx.fallbackExchanges, SPARK_MAX_SYMBOLS_PER_BATCH,
       );
       if (rawCandidates.length === 0) {
@@ -643,7 +654,8 @@ export async function GET(request: Request) {
       }
 
       await sleep(REQUEST_DELAY_MS);
-      const batch = await fetchSparkBatch(candidates.map((c) => c.data_source));
+      // Fetch using the override symbol (the duplicate twin's suffixed data_source) when present.
+      const batch = await fetchSparkBatch(candidates.map((c) => c.yahoo_symbol_override ?? c.data_source));
       if (batch.rateLimited) { rateLimitStop = true; break; }
       if (batch.error) {
         fetchErrorCount += candidates.length;
@@ -660,8 +672,13 @@ export async function GET(request: Request) {
       const batchWritable: WritablePrice[] = [];
       for (const etf of candidates) {
         requested++;
+        // Use the override symbol consistently from here on (classification, pending-state
+        // `symbol`, samples) -- the pending state's `symbol` is what Phase 2 below re-fetches with,
+        // so storing the bare unfetchable code there would silently undo this fix for anything that
+        // doesn't resolve on the first pass.
+        const fetchSymbol = etf.yahoo_symbol_override ?? etf.data_source;
         const { classification: c, sourceUsed, yahooMatch, yahooDetail, sanityDetail, resolvedPrice } = resolveAndClassify(
-          etf, byCandle.get(etf.data_source), dbRows, lastKnownCloses, job, targetLocalDate, now, quoteResolutions, sourceSwitches,
+          etf, byCandle.get(fetchSymbol), dbRows, lastKnownCloses, job, targetLocalDate, now, quoteResolutions, sourceSwitches,
         );
         counts[c]++;
         if (sourceUsed === "BAR") barCount++;
@@ -670,19 +687,19 @@ export async function GET(request: Request) {
         if (yahooMatch === true) yahooConsistentCount++;
         if (yahooMatch === false) {
           yahooInconsistentCount++;
-          if (yahooDetail && yahooInconsistentSamples.length < 5) yahooInconsistentSamples.push({ symbol: etf.data_source, ...yahooDetail });
+          if (yahooDetail && yahooInconsistentSamples.length < 5) yahooInconsistentSamples.push({ symbol: fetchSymbol, ...yahooDetail });
         }
-        observations.push({ etfId: etf.id, symbol: etf.data_source, classification: c });
-        if (c === "SOURCE_MISSING" && sourceMissingSymbols.length < 20) sourceMissingSymbols.push(etf.data_source);
-        if (c === "NO_BAR_FOR_TARGET_DATE" && noBarSymbols.length < 20) noBarSymbols.push(etf.data_source);
-        if (c === "NO_TRADE_ON_TARGET" && noTradeSymbols.length < 20) noTradeSymbols.push(etf.data_source);
-        if (c === "NEW" && newSymbols.length < 20) newSymbols.push(etf.data_source);
-        if (c === "CHANGED" && changedSymbols.length < 20) changedSymbols.push(etf.data_source);
-        if (c === "UNIT_MISMATCH" && sanityDetail && unitMismatchSamples.length < 20) unitMismatchSamples.push({ symbol: etf.data_source, ...sanityDetail });
-        if (c === "PRICE_JUMP_REVIEW" && sanityDetail && priceJumpReviewSamples.length < 20) priceJumpReviewSamples.push({ symbol: etf.data_source, ...sanityDetail });
-        if (c === "DB_DISCONTINUITY" && sanityDetail && dbDiscontinuitySamples.length < 20) dbDiscontinuitySamples.push({ symbol: etf.data_source, ...sanityDetail });
+        observations.push({ etfId: etf.id, symbol: fetchSymbol, classification: c });
+        if (c === "SOURCE_MISSING" && sourceMissingSymbols.length < 20) sourceMissingSymbols.push(fetchSymbol);
+        if (c === "NO_BAR_FOR_TARGET_DATE" && noBarSymbols.length < 20) noBarSymbols.push(fetchSymbol);
+        if (c === "NO_TRADE_ON_TARGET" && noTradeSymbols.length < 20) noTradeSymbols.push(fetchSymbol);
+        if (c === "NEW" && newSymbols.length < 20) newSymbols.push(fetchSymbol);
+        if (c === "CHANGED" && changedSymbols.length < 20) changedSymbols.push(fetchSymbol);
+        if (c === "UNIT_MISMATCH" && sanityDetail && unitMismatchSamples.length < 20) unitMismatchSamples.push({ symbol: fetchSymbol, ...sanityDetail });
+        if (c === "PRICE_JUMP_REVIEW" && sanityDetail && priceJumpReviewSamples.length < 20) priceJumpReviewSamples.push({ symbol: fetchSymbol, ...sanityDetail });
+        if (c === "DB_DISCONTINUITY" && sanityDetail && dbDiscontinuitySamples.length < 20) dbDiscontinuitySamples.push({ symbol: fetchSymbol, ...sanityDetail });
         if (sourceUsed && resolvedPrice != null) {
-          batchWritable.push({ etfId: etf.id, symbol: etf.data_source, classification: c, targetLocalDate, price: resolvedPrice, source: sourceUsed });
+          batchWritable.push({ etfId: etf.id, symbol: fetchSymbol, classification: c, targetLocalDate, price: resolvedPrice, source: sourceUsed });
         }
       }
       // Task P: one batched write call per Spark batch, never per row — matching "批次寫入，不逐筆".
