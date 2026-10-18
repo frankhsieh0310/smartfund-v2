@@ -186,11 +186,15 @@ export async function checkCommodityTechnicalCoverage(query: QueryFn, coreRootId
 // fund_performances -- small table (12k rows, safe to scan). 2026-10-18 correction: universe is
 // NOT "all active funds" -- VERIFIED the 23,053 yahoo-provider funds have ZERO rows in this table
 // ever (their returns live in fund_history's own return_1m/return_3m/... columns instead, a
-// completely different write path -- see checkFundHistoryFreshness below). Narrowed to the
-// providers that actually use this table: SITCA/MoneyDJ (domestic) + tdcc-offshore (offshore).
+// completely different write path -- see checkFundHistoryFreshness below). Narrowed to the same
+// "domestic, not yahoo/SEC" filter the existing domestic_fund_nav freshness check below already
+// uses -- an earlier attempt that explicitly listed `data_provider IN ('SITCA','MoneyDJ',
+// 'tdcc-offshore')` undercounted: VERIFIED 1,292 of the covered funds on a real sample day had
+// data_provider = NULL (not one of those 3 labels) yet still had real fund_performances rows,
+// which made coveragePct come out over 100%. COALESCE+NOT IN matches those NULL-provider funds too.
 export async function checkFundPerformanceCoverage(query: QueryFn): Promise<CoverageResult> {
   return evaluateCoverage(query, "fund_performances", "fund_performances", "date", "fund_id",
-    `SELECT COUNT(*)::int n FROM funds WHERE is_active = true AND data_provider IN ('SITCA','MoneyDJ','tdcc-offshore')`);
+    `SELECT COUNT(*)::int n FROM funds WHERE is_active = true AND COALESCE(data_provider, '') NOT IN ('yahoo', 'SEC')`);
 }
 
 // 2026-10-18 (使用者規則定案，第 2c 項): etf_history／fund_history 這兩張大表改用 LATERAL
