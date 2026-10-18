@@ -11,6 +11,10 @@ export type ExDateSyncResult = {
   twseRows: number; tpexRows: number;
   matchedEtfs: number; unmatchedCodes: string[];
   upserted: number; skippedTbd: number; errors: number;
+  // 2026-10-18: per-step timing, added after the route's first production run timed out at 60s
+  // with no error (status stuck IN_PROGRESS) and no visibility into which step actually took the
+  // time -- see CLAUDE.md's 2026-10-18 entry.
+  timingMs: { fetchSourcesMs: number; etfListMs: number; upsertLoopMs: number; totalMs: number };
 };
 
 type NormalizedRow = { code: string; exDate: Date; kind: string; cashDividend: number | null; source: string; sourceRecordId: string };
@@ -22,16 +26,27 @@ function normalize(twse: TwseExRightRow[], tpex: TpexExRightRow[]): NormalizedRo
   return out;
 }
 
-export async function runExDateSync(writeEnabled: boolean): Promise<ExDateSyncResult> {
+export async function runExDateSync(writeEnabled: boolean, log: (msg: string) => void = () => {}): Promise<ExDateSyncResult> {
+  const t0 = Date.now();
+  log(`[exDateSync] fetching TWSE+TPEx sources...`);
   const [twse, tpex] = await Promise.all([fetchTwseExRightRows(), fetchTpexExRightRows()]);
+  const fetchSourcesMs = Date.now() - t0;
+  log(`[exDateSync] sources fetched in ${fetchSourcesMs}ms (twse=${twse.length} tpex=${tpex.length})`);
   const rows = normalize(twse, tpex);
 
+  const t1 = Date.now();
   const etfs = await prisma.etf.findMany({ where: { isActive: true }, select: { id: true, code: true } });
+  const etfListMs = Date.now() - t1;
+  log(`[exDateSync] etf list fetched in ${etfListMs}ms (count=${etfs.length})`);
   const etfByCode = new Map(etfs.map((e) => [e.code, e.id]));
 
-  const result: ExDateSyncResult = { twseRows: twse.length, tpexRows: tpex.length, matchedEtfs: 0, unmatchedCodes: [], upserted: 0, skippedTbd: 0, errors: 0 };
+  const result: ExDateSyncResult = {
+    twseRows: twse.length, tpexRows: tpex.length, matchedEtfs: 0, unmatchedCodes: [], upserted: 0, skippedTbd: 0, errors: 0,
+    timingMs: { fetchSourcesMs, etfListMs, upsertLoopMs: 0, totalMs: 0 },
+  };
   const seenUnmatched = new Set<string>();
 
+  const t2 = Date.now();
   for (const row of rows) {
     const etfId = etfByCode.get(row.code);
     if (!etfId) {
@@ -52,5 +67,8 @@ export async function runExDateSync(writeEnabled: boolean): Promise<ExDateSyncRe
       result.errors++;
     }
   }
+  result.timingMs.upsertLoopMs = Date.now() - t2;
+  result.timingMs.totalMs = Date.now() - t0;
+  log(`[exDateSync] upsert loop done in ${result.timingMs.upsertLoopMs}ms (matched=${result.matchedEtfs} upserted=${result.upserted} errors=${result.errors}); total=${result.timingMs.totalMs}ms`);
   return result;
 }

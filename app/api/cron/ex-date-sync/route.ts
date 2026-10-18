@@ -6,7 +6,11 @@ import { beginRun, finishRun } from "@/lib/cloud-ingestion/runContext";
 import { runExDateSync } from "@/lib/cron/exDateSync";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+// 2026-10-18: raised from 60s after the first production run was killed by Vercel's platform
+// timeout at exactly 60s with no error/exception -- 300s matches the budget other crons in this
+// project already use (e.g. cloud-moneydj-etf) and gives real headroom while the per-step timing
+// log below narrows down which step was actually slow.
+export const maxDuration = 300;
 export const dynamic = "force-dynamic";
 
 const JOB = "EX_DATE_SYNC";
@@ -20,7 +24,7 @@ export async function GET(request: Request) {
   if (skipped) return Response.json({ ok: true, job: JOB, skipped: true });
 
   try {
-    const result = await runExDateSync(writeEnabled);
+    const result = await runExDateSync(writeEnabled, (msg) => console.log(msg));
     await finishRun(runId, JOB, "TWSE_TPEX_EXRIGHT", started, {
       status: "COMPLETED", attempted: result.matchedEtfs, completed: result.upserted,
       inserted: result.upserted, updated: 0, failed: result.errors, retryableFailures: 0, checkpointAfter: null,
