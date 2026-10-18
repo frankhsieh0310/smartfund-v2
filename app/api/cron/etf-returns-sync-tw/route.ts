@@ -37,6 +37,8 @@ import {
   resolveWriteDatesBatch, fetchLatestReturn6mBatch, writeEtfsRankingColumnsBatch, type EtfsRankingEntry,
 } from "@/lib/etf-returns-sync/batchHelpers";
 import { TW_ELIGIBLE_SQL_CONDITION } from "@/lib/etf-returns-sync/twUniverse";
+import { loadExchangeCalendarRegistry } from "@/lib/market-close-sync/marketConfig";
+import { mostRecentTradingDay } from "@/lib/market-close-sync/marketTime";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -117,6 +119,11 @@ async function runSweep(request: Request, onRunStarted: (runId: string, startedM
   const startedMs = Date.now();
   const today = todayLocalDate();
   const writeEnabledThisRun = isWriteEnabled();
+  // 2026-10-18: resolveWriteDatesBatch's "no recent row" fallback previously defaulted to literal
+  // `today`. This route's universe is exactly TW-listed ETFs, so the TWSE calendar is correct here.
+  const registry = await loadExchangeCalendarRegistry();
+  const twseJob = registry.jobs.find((j) => j.id === "twse-yahoo-daily")!;
+  const fallbackTradingDay = mostRecentTradingDay(twseJob, today);
 
   const coreUniverseIds = await computeTwEligibleIds();
   const coreIdsArray = [...coreUniverseIds];
@@ -177,7 +184,7 @@ async function runSweep(request: Request, onRunStarted: (runId: string, startedM
     if (pending.length === 0) return;
     const ids = pending.map((p) => p.etfId);
     const dateMap = await resolveWriteDatesBatch(writerQuery, ids, dateAlignmentCutoffIso);
-    const candidates: WriteCandidate[] = pending.map((p) => ({ etfId: p.etfId, date: dateMap.get(p.etfId) ?? today, returns: p.returns }));
+    const candidates: WriteCandidate[] = pending.map((p) => ({ etfId: p.etfId, date: dateMap.get(p.etfId) ?? fallbackTradingDay, returns: p.returns }));
     const writeResult = await writeBatchIfEnabled(writerQuery, candidates, new Date().toISOString(), writeEnabledThisRun);
     written += writeResult.written;
     writeErrorCount += writeResult.writeErrorCount;

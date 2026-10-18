@@ -176,13 +176,24 @@ export async function detectNewListings(writeEnabled: boolean): Promise<NewListi
   const [twse, tpex] = await Promise.all([fetchOfficialEtfList("TWSE"), fetchOfficialEtfList("TPEx")]);
   const official = [...twse, ...tpex];
   const existing = await prisma.etf.findMany({ select: { code: true } });
-  const existingCodes = new Set(existing.map((e) => e.code));
+  // 2026-10-18 root-cause fix: this previously compared the official list's bare code
+  // (e.g. "00409A") against our stored codes with an EXACT string match. VERIFIED this was the
+  // source of fresh duplicate ETF rows being created daily -- when an existing ETF's own `code`
+  // happens to be stored WITH a .TW/.TWO suffix (e.g. "00409A.TW", from an earlier import), the
+  // exact match against the official feed's bare "00409A" fails, so this detector wrongly concludes
+  // it's a brand-new listing and auto-provisions a SECOND row for the same real-world ETF (confirmed
+  // live: "00409A" created 2026-10-18 01:15, 8s after this cron ran, duplicating the existing
+  // "00409A.TW" row from 2026-09-11). Normalizing both sides (stripping a trailing .TW/.TWO) before
+  // comparing matches the same normalization already used by the duplicate-pair scan and by
+  // lib/etf-returns-sync/twUniverse.ts's TW_ELIGIBLE_SQL_CONDITION.
+  const normalizeCode = (code: string) => code.replace(/\.(TW|TWO)$/, "");
+  const existingCodes = new Set(existing.map((e) => normalizeCode(e.code)));
   const cutoff = new Date(Date.now() - NEW_LISTING_LOOKBACK_DAYS * 24 * 60 * 60 * 1000);
 
   const result: NewListingResult = { checkedCodes: official.length, newlyDetected: [], autoProvisioned: [], loggedOnly: [], preexistingBackfillGapCount: 0 };
 
   for (const row of official) {
-    if (existingCodes.has(row.code)) continue;
+    if (existingCodes.has(normalizeCode(row.code))) continue;
     const milestone = row.listedAt ?? row.establishedAt;
     if (!milestone || milestone < cutoff) { result.preexistingBackfillGapCount++; continue; }
     result.newlyDetected.push({ exchange: row.exchange, code: row.code, name: row.name });
@@ -243,7 +254,14 @@ const DELISTING_CANDIDATE_MAX_AGE_HOURS = 48;
 
 export async function detectDelistings(writeEnabled: boolean): Promise<DelistingResult> {
   const [twse, tpex] = await Promise.all([fetchOfficialEtfList("TWSE"), fetchOfficialEtfList("TPEx")]);
-  const officialCodes = new Set([...twse, ...tpex].map((r) => r.code));
+  // 2026-10-18: same normalization fix as detectNewListings above -- without it, any active ETF
+  // whose own `code` happens to be stored WITH a .TW/.TWO suffix would NEVER match the official
+  // feed's bare codes, and after 2 consecutive daily misses would get wrongly flipped is_active=false
+  // even though it's genuinely still listed. VERIFIED this hasn't fired yet in practice only because
+  // the 100 known duplicate-pair "suffixed" rows all have exchange='Taiwan' (excluded by the WHERE
+  // below), not because the comparison itself was safe.
+  const normalizeCode = (code: string) => code.replace(/\.(TW|TWO)$/, "");
+  const officialCodes = new Set([...twse, ...tpex].map((r) => normalizeCode(r.code)));
   const active = await prisma.etf.findMany({
     where: { isActive: true, exchange: { in: ["TWSE", "TPEx"] } },
     select: { id: true, code: true, name: true },
@@ -255,7 +273,7 @@ export async function detectDelistings(writeEnabled: boolean): Promise<Delisting
   // without it, "miss once (any reason) -> reappear for months -> miss again (unrelated reason)"
   // was wrongly read as 2 consecutive misses and flipped a real, still-listed ETF inactive.
   if (writeEnabled) {
-    const reappeared = active.filter((e) => officialCodes.has(e.code)).map((e) => e.code);
+    const reappeared = active.filter((e) => officialCodes.has(normalizeCode(e.code))).map((e) => e.code);
     if (reappeared.length > 0) {
       await prisma.$executeRawUnsafe(
         `DELETE FROM product_listing_events
@@ -267,7 +285,7 @@ export async function detectDelistings(writeEnabled: boolean): Promise<Delisting
 
   const result: DelistingResult = { candidates: [], confirmed: [] };
   for (const etf of active) {
-    if (officialCodes.has(etf.code)) continue;
+    if (officialCodes.has(normalizeCode(etf.code))) continue;
 
     const priorCandidate = await prisma.$queryRawUnsafe<{ id: string; detected_at: Date }[]>(
       `SELECT id, detected_at FROM product_listing_events

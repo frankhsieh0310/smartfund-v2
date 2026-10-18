@@ -23,6 +23,8 @@ import { beginRun, finishRun, readCheckpoint, writeCheckpoint } from "@/lib/clou
 import { loadMapping } from "@/lib/offshore-nav-sync/mapping";
 import { loadDomesticYahooMapping } from "@/lib/holdings-alt-source/domesticYahooMapping";
 import { fetchYahooFundPerformance, YahooFundRateLimitedError } from "@/lib/yahoo/fundPerformancePage";
+import { loadExchangeCalendarRegistry } from "@/lib/market-close-sync/marketConfig";
+import { mostRecentTradingDay } from "@/lib/market-close-sync/marketTime";
 
 export const runtime = "nodejs";
 export const maxDuration = 290;
@@ -52,7 +54,15 @@ export async function GET(request: Request) {
 
   const startedMs = Date.now();
   const writeEnabled = isWriteEnabled();
-  const today = new Date().toISOString().slice(0, 10);
+  // 2026-10-18 root-cause fix: previously wrote `today` (execution day) directly as the `date`
+  // column, including on weekends (this route runs hourly, no weekday restriction) -- VERIFIED this
+  // stamped non-trading-day dates onto real performance figures. These are TW-focused domestic +
+  // offshore fund pages (Yahoo奇摩), so the TWSE calendar is the right one: reuse the exact registry
+  // market-close-sync already maintains (config/production-yahoo-daily-jobs.json) rather than
+  // inventing a second calendar.
+  const registry = await loadExchangeCalendarRegistry();
+  const twseJob = registry.jobs.find((j) => j.id === "twse-yahoo-daily")!;
+  const today = mostRecentTradingDay(twseJob, new Date().toISOString().slice(0, 10));
 
   const [offshoreMapping, domesticMapping] = await Promise.all([loadMapping(query), loadDomesticYahooMapping(query)]);
   const combined = [...offshoreMapping, ...domesticMapping].sort((a, b) => a.code.localeCompare(b.code));

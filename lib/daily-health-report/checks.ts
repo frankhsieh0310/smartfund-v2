@@ -110,6 +110,12 @@ export type CoverageResult = {
   missingSample: string[];
   anomaly: boolean;
   anomalyReason: string | null;
+  // 2026-10-18 (使用者規則定案): 基準日的決定方式必須在「輸出」本身講清楚，不能只寫在程式碼
+  // 註解裡——否則看報告的人會誤以為這是真正的交易日曆。固定兩種值：
+  //   "RECENT_10D_BEST_COVERAGE"：近 10 天內覆蓋筆數最多的那一天，不是交易日曆。
+  //   "LATERAL_FRESHNESS_WINDOW"：不挑單一基準日，改成「universe 裡有多少比例在最近 N 天內
+  //     有資料」（etf_history/fund_history 的 LATERAL 新鮮度檢查用這種）。
+  baselineMethod: "RECENT_10D_BEST_COVERAGE" | "LATERAL_FRESHNESS_WINDOW";
 };
 
 // 2026-10-18 (使用者規則定案，第 2b 項): 排程狀態（COMPLETED/PARTIAL）只代表「這次執行有沒有
@@ -141,7 +147,7 @@ async function evaluateCoverage(
   const universeRows = await query(universeCountSql, []);
   const universeCount = Number(universeRows[0]?.n ?? 0);
   if (universeCount === 0) {
-    return { label, universeCount: 0, latestDate: null, coveredCount: 0, coveragePct: null, missingSample: [], anomaly: false, anomalyReason: null };
+    return { label, universeCount: 0, latestDate: null, coveredCount: 0, coveragePct: null, missingSample: [], anomaly: false, anomalyReason: null, baselineMethod: "RECENT_10D_BEST_COVERAGE" };
   }
   // 基準日 = 最近 10 天內「覆蓋筆數最多」的那一天，不是單純「最新出現的日期」，見上方 2b 註解。
   const bestDayRows = await query(
@@ -152,13 +158,14 @@ async function evaluateCoverage(
   const latestDate = bestDayRows[0]?.d ?? null;
   const coveredCount = Number(bestDayRows[0]?.n ?? 0);
   if (!latestDate) {
-    return { label, universeCount, latestDate: null, coveredCount: 0, coveragePct: 0, missingSample: [], anomaly: true, anomalyReason: "NO_RECENT_DATA" };
+    return { label, universeCount, latestDate: null, coveredCount: 0, coveragePct: 0, missingSample: [], anomaly: true, anomalyReason: "NO_RECENT_DATA", baselineMethod: "RECENT_10D_BEST_COVERAGE" };
   }
   const coveragePct = (coveredCount / universeCount) * 100;
   const anomaly = coveragePct < 100;
   return {
     label, universeCount, latestDate, coveredCount, coveragePct, missingSample: [],
     anomaly, anomalyReason: anomaly ? `COVERAGE_${coveragePct.toFixed(1)}PCT` : null,
+    baselineMethod: "RECENT_10D_BEST_COVERAGE",
   };
 }
 
@@ -167,7 +174,7 @@ async function evaluateCoverage(
 // contract-month row ever stored, not this job's actual per-commodity universe; using it as the
 // denominator was a mistake caught during this round's audit).
 export async function checkCommodityTechnicalCoverage(query: QueryFn, coreRootIds: string[]): Promise<CoverageResult> {
-  if (coreRootIds.length === 0) return { label: "commodity_technical", universeCount: 0, latestDate: null, coveredCount: 0, coveragePct: null, missingSample: [], anomaly: false, anomalyReason: null };
+  if (coreRootIds.length === 0) return { label: "commodity_technical", universeCount: 0, latestDate: null, coveredCount: 0, coveragePct: null, missingSample: [], anomaly: false, anomalyReason: null, baselineMethod: "RECENT_10D_BEST_COVERAGE" };
   // 同上 evaluateCoverage 的 2b 修正：拿覆蓋根數最多的那天當基準日，不是單純最新日期。
   const bestDayRows = await query(
     `SELECT observed_at::date::text AS d, COUNT(DISTINCT root_id)::int AS n FROM futures_technical_analytics
@@ -177,10 +184,10 @@ export async function checkCommodityTechnicalCoverage(query: QueryFn, coreRootId
   );
   const latestDate = bestDayRows[0]?.d ?? null;
   const coveredCount = Number(bestDayRows[0]?.n ?? 0);
-  if (!latestDate) return { label: "commodity_technical", universeCount: coreRootIds.length, latestDate: null, coveredCount: 0, coveragePct: 0, missingSample: [], anomaly: true, anomalyReason: "NO_RECENT_DATA" };
+  if (!latestDate) return { label: "commodity_technical", universeCount: coreRootIds.length, latestDate: null, coveredCount: 0, coveragePct: 0, missingSample: [], anomaly: true, anomalyReason: "NO_RECENT_DATA", baselineMethod: "RECENT_10D_BEST_COVERAGE" };
   const coveragePct = (coveredCount / coreRootIds.length) * 100;
   const anomaly = coveragePct < 100;
-  return { label: "commodity_technical", universeCount: coreRootIds.length, latestDate, coveredCount, coveragePct, missingSample: [], anomaly, anomalyReason: anomaly ? `COVERAGE_${coveragePct.toFixed(1)}PCT` : null };
+  return { label: "commodity_technical", universeCount: coreRootIds.length, latestDate, coveredCount, coveragePct, missingSample: [], anomaly, anomalyReason: anomaly ? `COVERAGE_${coveragePct.toFixed(1)}PCT` : null, baselineMethod: "RECENT_10D_BEST_COVERAGE" };
 }
 
 // fund_performances -- small table (12k rows, safe to scan). 2026-10-18 correction: universe is
@@ -222,10 +229,10 @@ export async function checkHistoryFreshnessLateral(
   );
   const universeCount = Number(rows[0]?.universe ?? 0);
   const coveredCount = Number(rows[0]?.fresh ?? 0);
-  if (universeCount === 0) return { label, universeCount: 0, latestDate: null, coveredCount: 0, coveragePct: null, missingSample: [], anomaly: false, anomalyReason: null };
+  if (universeCount === 0) return { label, universeCount: 0, latestDate: null, coveredCount: 0, coveragePct: null, missingSample: [], anomaly: false, anomalyReason: null, baselineMethod: "LATERAL_FRESHNESS_WINDOW" };
   const coveragePct = (coveredCount / universeCount) * 100;
   const anomaly = coveragePct < 100;
-  return { label, universeCount, latestDate: null, coveredCount, coveragePct, missingSample: [], anomaly, anomalyReason: anomaly ? `COVERAGE_${coveragePct.toFixed(1)}PCT` : null };
+  return { label, universeCount, latestDate: null, coveredCount, coveragePct, missingSample: [], anomaly, anomalyReason: anomaly ? `COVERAGE_${coveragePct.toFixed(1)}PCT` : null, baselineMethod: "LATERAL_FRESHNESS_WINDOW" };
 }
 
 // etf_history (1,836 萬筆) -- universe = 全部 active ETF，4 天內有新資料才算 fresh（跟既有

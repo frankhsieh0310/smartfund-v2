@@ -61,6 +61,19 @@ export function isDefinitelyClosed(job: ExchangeCalendarJob, localDate: string, 
   return minutesSinceMidnight(nowLocalTime) >= closeMinutes;
 }
 
+// 2026-10-18: simple reusable helper for routes outside market-close-sync (fund-returns-sync,
+// etf-returns-sync's "no recent row" fallback) that just need "the most recent real trading day
+// on/before this date", without the done/closed-state machinery findEligibleTradeDate needs for its
+// own sweep-eligibility question. Scans backward, capped well above any plausible holiday cluster.
+export function mostRecentTradingDay(job: ExchangeCalendarJob, fromLocalDate: string): string {
+  let candidate = fromLocalDate;
+  for (let i = 0; i < 30; i++) {
+    if (isTradingDay(job, candidate)) return candidate;
+    candidate = addLocalDays(candidate, -1);
+  }
+  return fromLocalDate; // defensive fallback -- should be unreachable outside a 30-day holiday cluster
+}
+
 const DEFAULT_TRADING_DAY_LOOKBACK = 5;
 
 /**

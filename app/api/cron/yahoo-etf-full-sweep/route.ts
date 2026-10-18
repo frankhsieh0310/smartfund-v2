@@ -87,13 +87,33 @@ export async function GET(request: Request) {
 
   try {
     const cursor = cpBefore?.lastSymbol ?? null;
+    // 2026-10-18 root-cause fix: this sweep previously treated every is_active ETF row as its own
+    // independent candidate, with no awareness of the known duplicate-pair problem (100 pairs,
+    // documented in lib/etf-returns-sync/twUniverse.ts) -- VERIFIED this is why the "new"/hidden
+    // twin half of each pair (never shown to users, see app/api/mobile/current-market-data/route.ts's
+    // display filter) had MORE etf_history/etf_sector_allocations/etf_credit_rating_allocations rows
+    // than the canonical row users actually see: this sweep was fetching+writing BOTH halves every
+    // lap. Fixed in two parts: (1) the EXISTS clause excludes any row that is the newer half of a
+    // duplicate pair (same normalized code, an older sibling exists) -- that row is never a
+    // candidate here again; (2) for the canonical (older) row, when its OWN code/data_source isn't a
+    // directly fetchable Yahoo symbol (the 57 TWSE bare-code cases -- SYMBOL_RE matches the bare code
+    // string itself, but Yahoo has no such ticker), borrow the newer twin's data_source purely as a
+    // read-only lookup key, same pattern already applied to market-close-sync.
     const rows = (await query(
-      `SELECT id::text, code, data_source,
-              CASE WHEN data_source ~ '^[A-Za-z0-9.^=-]{1,15}$' THEN data_source
-                   WHEN code ~ '^[A-Za-z0-9.^=-]{1,15}$' THEN code ELSE NULL END AS symbol
-         FROM etfs
-        WHERE is_active = true AND ($1::text IS NULL OR id > $1)
-        ORDER BY id
+      `SELECT bare.id::text, bare.code, bare.data_source,
+              CASE WHEN bare.data_source ~ '^[A-Za-z0-9.^=-]{1,15}$' THEN bare.data_source
+                   WHEN twin.data_source IS NOT NULL THEN twin.data_source
+                   WHEN bare.code ~ '^[A-Za-z0-9.^=-]{1,15}$' THEN bare.code ELSE NULL END AS symbol
+         FROM etfs bare
+         LEFT JOIN etfs twin ON regexp_replace(twin.code, '\\.(TW|TWO)$', '') = regexp_replace(bare.code, '\\.(TW|TWO)$', '')
+                            AND twin.created_at > bare.created_at
+        WHERE bare.is_active = true AND ($1::text IS NULL OR bare.id > $1)
+          AND NOT EXISTS (
+            SELECT 1 FROM etfs older
+            WHERE regexp_replace(older.code, '\\.(TW|TWO)$', '') = regexp_replace(bare.code, '\\.(TW|TWO)$', '')
+              AND older.created_at < bare.created_at
+          )
+        ORDER BY bare.id
         LIMIT $2`,
       [cursor, batch],
     )) as Array<{ id: string; code: string; data_source: string | null; symbol: string | null }>;

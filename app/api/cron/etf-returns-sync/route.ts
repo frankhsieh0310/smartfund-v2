@@ -35,6 +35,8 @@ import {
   resolveWriteDatesBatch, fetchLatestReturn6mBatch, writeEtfsRankingColumnsBatch, type EtfsRankingEntry,
 } from "@/lib/etf-returns-sync/batchHelpers";
 import { TW_ELIGIBLE_SQL_CONDITION } from "@/lib/etf-returns-sync/twUniverse";
+import { loadExchangeCalendarRegistry } from "@/lib/market-close-sync/marketConfig";
+import { mostRecentTradingDay } from "@/lib/market-close-sync/marketTime";
 
 // 2026-10-16: this route was missing both of these -- every other cron route in app/api/cron/*
 // declares them explicitly. Without `dynamic = "force-dynamic"`, Next.js's own fetch-patching can
@@ -220,6 +222,15 @@ export async function GET(request: Request) {
   const startedMs = Date.now();
   const today = todayLocalDate();
   const writeEnabledThisRun = isWriteEnabled();
+  // 2026-10-18: resolveWriteDatesBatch's fallback (no recent row to align to) previously defaulted
+  // to literal `today`, stamping weekend/holiday dates. This route's universe is global/mixed-market
+  // (TW-eligible ETFs are excluded -- see TW_ELIGIBLE_SQL_CONDITION above), so there's no single
+  // exact calendar that's correct for every row; using the NYSE/NASDAQ calendar as the fallback
+  // default is a known simplification (documented, not a full per-market resolution) but strictly
+  // better than always trusting a literal weekend/holiday execution date.
+  const registry = await loadExchangeCalendarRegistry();
+  const nyseJob = registry.jobs.find((j) => j.id === "nyse-yahoo-daily")!;
+  const fallbackTradingDay = mostRecentTradingDay(nyseJob, today);
 
   const coreUniverseIds = await getCandidateIdsCachedForToday(today);
   const coreIdsArray = [...coreUniverseIds];
@@ -267,7 +278,7 @@ export async function GET(request: Request) {
     if (remaining.length > 0) {
       try {
         const dateMap = await resolveWriteDatesBatch(writerQuery, remaining, dateAlignmentCutoffIso);
-        const candidates: WriteCandidate[] = remaining.map((etfId) => ({ etfId, date: dateMap.get(etfId) ?? today, returns: ALL_NULL_RETURNS }));
+        const candidates: WriteCandidate[] = remaining.map((etfId) => ({ etfId, date: dateMap.get(etfId) ?? fallbackTradingDay, returns: ALL_NULL_RETURNS }));
         const writeResult = await writeBatchIfEnabled(writerQuery, candidates, new Date().toISOString(), writeEnabledThisRun);
         backfillWritten = writeResult.written;
         if (writeEnabledThisRun && writeResult.written > 0) {
@@ -351,7 +362,7 @@ export async function GET(request: Request) {
     if (pending.length === 0) return;
     const ids = pending.map((p) => p.etfId);
     const dateMap = await resolveWriteDatesBatch(writerQuery, ids, dateAlignmentCutoffIso);
-    const candidates: WriteCandidate[] = pending.map((p) => ({ etfId: p.etfId, date: dateMap.get(p.etfId) ?? today, returns: p.returns }));
+    const candidates: WriteCandidate[] = pending.map((p) => ({ etfId: p.etfId, date: dateMap.get(p.etfId) ?? fallbackTradingDay, returns: p.returns }));
     const writeResult = await writeBatchIfEnabled(writerQuery, candidates, new Date().toISOString(), writeEnabledThisRun);
     written += writeResult.written;
     writeErrorCount += writeResult.writeErrorCount;
