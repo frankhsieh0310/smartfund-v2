@@ -9,13 +9,22 @@ import { updateCommodityTechnical } from "@/lib/cron/commodityTechnicalUpdate";
 import { isCommoditySyncWriteEnabled } from "@/lib/cron/commodityWriteGate";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 300;
 export const dynamic = "force-dynamic";
 
 const JOB = "YAHOO_COMMODITY_TECHNICAL";
 const CP_KEY = "yahoo-commodity-technical";
 const BATCH_SIZE = 5;
-const MAX_SAFE_RUNTIME_MS = 45_000;
+// 2026-10-18 root-cause fix: this route's own comment claims the ~27-root universe always
+// finishes in one invocation (no external fetch, pure DB-to-DB) -- VERIFIED false in production:
+// real runs only got through 6/27 (2026-10-16) and 20/27 (2026-10-15) roots before hitting the old
+// 45s budget inside a 60s maxDuration. Root cause is the same cross-region DB latency already
+// documented for ex-date-sync (Vercel iad1 vs Supabase ap-southeast-1, ~1.1s/round-trip): each
+// root does a read + an upsert, so 27 roots can need ~60-90s even with zero external calls. Not a
+// region change or a write-strategy change -- just giving this one job the same maxDuration
+// headroom every other full-sweep job already has (300s) so a single invocation can actually
+// reach every root, matching what the route already claims to do.
+const MAX_SAFE_RUNTIME_MS = 280_000;
 
 export async function GET(request: Request) {
   if (!isAuthorizedCron(request)) return unauthorizedCron();
@@ -42,7 +51,11 @@ export async function GET(request: Request) {
       if (r.wrapped) { wrapped = true; break; }
     }
     await finishRun(runId, JOB, "INTERNAL", started, {
-      status: skippedRoots.length > 0 && updatedRoots === 0 ? "PARTIAL" : "COMPLETED",
+      // 2026-10-18 (使用者規則定案): PARTIAL 判定改成「有任何一項沒寫入就不能回報
+      // COMPLETED」-- 原本只有「全部失敗」才算 PARTIAL，會把「大部分成功、少數幾檔沒寫入」
+      // 誤報成 COMPLETED。現在只要有任何一檔被跳過，或這次沒有真正跑完整個 universe
+      // （!wrapped），就標 PARTIAL。
+      status: skippedRoots.length > 0 || !wrapped ? "PARTIAL" : "COMPLETED",
       attempted: requestedRoots, completed: updatedRoots, inserted: writeEnabled ? updatedRoots : 0, updated: 0,
       failed: skippedRoots.length, retryableFailures: skippedRoots.length,
       checkpointAfter: { lastSymbol: wrapped ? null : cursor, processed: requestedRoots, succeeded: updatedRoots, failed: skippedRoots.length, updatedAt: new Date().toISOString() },

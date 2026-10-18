@@ -1,7 +1,7 @@
 // Round-4, user-approved: daily-health-report must send a Telegram summary EVERY day, not only on
 // anomaly -- "沒收到訊息就代表出事了" (no message = something's wrong) only works if silence is never
 // the normal case. Extracted as a pure function so the message format is unit-testable without a DB.
-import type { PipelineHealth, DataFreshnessResult, DataSourceGapResult, YahooTwReturnCheckResult, FredCommodityCheckResult } from "./checks";
+import type { PipelineHealth, DataFreshnessResult, DataSourceGapResult, YahooTwReturnCheckResult, FredCommodityCheckResult, CoverageResult } from "./checks";
 
 export function buildDailySummary(input: {
   today: string;
@@ -11,8 +11,9 @@ export function buildDailySummary(input: {
   etfDataSourceGap: DataSourceGapResult;
   yahooTwCheck: YahooTwReturnCheckResult;
   fredCommodityCheck: FredCommodityCheckResult;
+  coverage?: CoverageResult[];
 }): string {
-  const { today, anomalyCount, pipelineHealth, freshness, etfDataSourceGap, yahooTwCheck, fredCommodityCheck } = input;
+  const { today, anomalyCount, pipelineHealth, freshness, etfDataSourceGap, yahooTwCheck, fredCommodityCheck, coverage = [] } = input;
   const lines: string[] = [];
   lines.push(anomalyCount > 0 ? `⚠️ Daily health report ${today}: ${anomalyCount} anomalies` : `✅ Daily health report ${today}: all clear`);
   for (const p of pipelineHealth) {
@@ -22,6 +23,10 @@ export function buildDailySummary(input: {
     lines.push(`${f.anomaly ? "⚠️" : "•"} ${f.label}: latest=${f.latestDate ?? "—"} (${f.staleDays ?? "?"}d stale)`);
   }
   lines.push(`• etf_data_source_gap: ${etfDataSourceGap.nullCount} NULL${etfDataSourceGap.newCodes.length ? ` (${etfDataSourceGap.newCodes.length} NEW: ${etfDataSourceGap.newCodes.join(", ")})` : ""}`);
+  for (const c of coverage) {
+    if (c.coveragePct === null) { lines.push(`• coverage_${c.label}: universe empty`); continue; }
+    lines.push(`${c.anomaly ? "⚠️" : "•"} coverage_${c.label}: ${c.coveredCount}/${c.universeCount} = ${c.coveragePct.toFixed(1)}% (latest=${c.latestDate ?? "—"})`);
+  }
   if (yahooTwCheck.mismatches?.length) lines.push(`• yahoo_tw_return_check: ${yahooTwCheck.mismatches.length} sampled`);
   for (const s of fredCommodityCheck.samples) lines.push(`${fredCommodityCheck.mismatches.some((m) => m.label === s.label) ? "⚠️" : "•"} fred_${s.label.toLowerCase()}: ours=${s.ourClose ?? "—"}(${s.ourDate ?? "—"}) fred=${s.fredValue ?? "—"}(${s.fredDate ?? "—"})`);
 
@@ -30,6 +35,7 @@ export function buildDailySummary(input: {
     lines.push("Anomaly detail:");
     for (const p of pipelineHealth) if (p.anomaly) lines.push(`- PIPELINE ${p.jobId}: ${p.anomalyReasons.join(", ")}`);
     for (const f of freshness) if (f.anomaly) lines.push(`- FRESHNESS ${f.label}: ${f.anomalyReason}`);
+    for (const c of coverage) if (c.anomaly) lines.push(`- COVERAGE ${c.label}: ${c.anomalyReason} (${c.coveredCount}/${c.universeCount}, latest=${c.latestDate ?? "—"})`);
     if (etfDataSourceGap.anomaly) lines.push(`- ETF data_source NULL (new, not yet investigated): ${etfDataSourceGap.newCodes.join(", ")}`);
     if (etfDataSourceGap.knownCodes.length > 0) lines.push(`(known/suspected-delisted, not a new warning: ${etfDataSourceGap.knownCodes.join(", ")})`);
     if (yahooTwCheck.anomaly) for (const m of yahooTwCheck.mismatches) lines.push(`- YAHOO_TW_RETURN_MISMATCH ${m.code}: ours=${m.ourReturn1y} yahooTw=${m.yahooTwReturn1y} fetchFailed=${m.fetchFailed}`);

@@ -7,10 +7,14 @@
 // SHADOW MODE BY DEFAULT: unless TW_ETF_DAY_CHANGE_WRITE is exactly "on", fetches and classifies but
 // writes nothing — same pattern as etf-returns-sync's writeGate.
 //
-// NOT added to vercel.json yet — this is a new job, scheduling it is a separate decision for the user.
-// Suggested schedule once approved: once daily, shortly after TWSE/TPEx close (e.g. "45 7 * * 1-5" UTC
-// = 15:45 Taipei, 15 min after the 14:30 close) — day-change only needs to be correct once prices stop
-// moving for the day, per the user's own framing when asking for this fix.
+// 2026-10-18 correction: the two paragraphs above describing this as unscheduled were stale --
+// VERIFIED this route IS actually in vercel.json (`*/15 6-8 * * 1-5`, i.e. every 15 min during
+// 14:00-16:59 Taipei) and has been firing on that schedule. What's still true: `TW_ETF_DAY_CHANGE_WRITE`
+// has never been set in production (VERIFIED via `vercel env ls production`), so every one of those
+// invocations has been running in SHADOW mode this whole time -- fetching and classifying but writing
+// nothing. The actual writer of etf_performances.return_1d for TW ETFs today is market-close-sync
+// (job ids twse-yahoo-daily/tpex-yahoo-daily) and etf-returns-sync/etf-returns-sync-tw, not this route.
+// Not enabling the write flag here -- that's a separate decision, not part of today's fix.
 
 import { isAuthorizedCron, unauthorizedCron } from "@/lib/cron/authorize";
 import { prisma } from "@/lib/prisma";

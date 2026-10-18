@@ -33,6 +33,11 @@ export async function checkPipelineRunLog(query: QueryFn, jobId: string): Promis
   if (rows.length === 0) anomalyReasons.push("NO_RUN_IN_LAST_24H");
   if (errorCount24h > 0) anomalyReasons.push(`ERROR_COUNT_${errorCount24h}`);
   if (writeErrorCount24h > 0) anomalyReasons.push(`WRITE_ERROR_COUNT_${writeErrorCount24h}`);
+  // 2026-10-18 (使用者規則定案): 「排程超過 maxDuration、PARTIAL 且當天沒補完，都要標示異常」
+  // -- 之前只看 `error` 欄位，但好幾支排程的 PARTIAL（例如跑到 timeBudgetStop）根本不會寫
+  // `error`，導致健康報告完全看不到。現在只要最近一次執行的狀態是 PARTIAL 或 FAILED 就算異常。
+  if (last?.status === "PARTIAL") anomalyReasons.push("LAST_RUN_PARTIAL");
+  if (last?.status === "FAILED") anomalyReasons.push("LAST_RUN_FAILED");
 
   return {
     jobId,
@@ -94,6 +99,150 @@ export function evaluateFreshness(label: string, latestDateIso: string | null, m
   const staleDays = Math.floor((Date.now() - latest.getTime()) / 86400000);
   const anomaly = staleDays > maxStaleDays;
   return { label, latestDate: latestDateIso, staleDays, anomaly: anomaly ? true : false, anomalyReason: anomaly ? `STALE_${staleDays}D` : null };
+}
+
+export type CoverageResult = {
+  label: string;
+  universeCount: number;
+  latestDate: string | null;
+  coveredCount: number;
+  coveragePct: number | null;
+  missingSample: string[];
+  anomaly: boolean;
+  anomalyReason: string | null;
+};
+
+// 2026-10-18 (使用者規則定案，第 2b 項): 排程狀態（COMPLETED/PARTIAL）只代表「這次執行有沒有
+// 出錯」，不代表「母體裡的資料真的每天都更新到」。這組函式改成直接量「最近一個排程自己有寫入
+// 資料的日期，母體裡有多少比例真的有那天的資料」。
+//
+// 已知限制（誠實記錄，不是沒想到）：
+// 1. 不是完整的交易日曆查詢（跟既有 evaluateFreshness 的限制一樣），用「表裡最近出現的日期」
+//    當作「預期更新到的日期」，不是真的去查該市場是否休市。
+// 2. 沒有排除「當地休市」「來源本身沒有報價（停市但仍標 active）」這兩類本次稽核已經確認過的
+//    合理缺口，所以覆蓋率沒到 100% 不等於一定是真問題，需要人工對照當天已知的合理缺口清單。
+// 2b. 拿最近 10 天「覆蓋筆數最多」的那一天當基準日，不是單純拿「表裡最新出現的日期」——
+//    VERIFIED 這次用真實資料試跑時發現，週末（非交易日）偶爾還是會有少量零星寫入，若直接拿
+//    「最新日期」當基準，會把一個只有 2~4% 覆蓋率的非交易日誤判成「幾乎全部排程都壞了」。拿
+//    覆蓋筆數最多的那天當基準，至少能避開這個最明顯的假警報來源，但仍不是真正的交易日曆。
+// 3. etf_history（1,836 萬筆）／fund_history（8,487 萬筆）這兩張表故意沒有在這裡做覆蓋率查詢
+//    ——VERIFIED 這兩張表的索引都是 (id欄, date) 複合索引，date 當 WHERE 條件用不到索引，
+//    之前拿 85M 筆的 fund_history 試過兩次，在這支路由僅有的 60 秒 maxDuration 預算內做這種
+//    查詢風險太高（可能把健康報告本身拖垮），沒有不經同意就加新索引（DDL），所以這兩張表目前
+//    仍只靠上面的排程狀態監控，覆蓋率查核留作已知待辦。
+async function evaluateCoverage(
+  query: QueryFn,
+  label: string,
+  table: string,
+  dateCol: string,
+  idCol: string,
+  universeCountSql: string,
+): Promise<CoverageResult> {
+  const universeRows = await query(universeCountSql, []);
+  const universeCount = Number(universeRows[0]?.n ?? 0);
+  if (universeCount === 0) {
+    return { label, universeCount: 0, latestDate: null, coveredCount: 0, coveragePct: null, missingSample: [], anomaly: false, anomalyReason: null };
+  }
+  // 基準日 = 最近 10 天內「覆蓋筆數最多」的那一天，不是單純「最新出現的日期」，見上方 2b 註解。
+  const bestDayRows = await query(
+    `SELECT ${dateCol}::text AS d, COUNT(DISTINCT ${idCol})::int AS n FROM ${table}
+     WHERE ${dateCol} > now() - interval '10 days' GROUP BY ${dateCol} ORDER BY n DESC, d DESC LIMIT 1`,
+    [],
+  );
+  const latestDate = bestDayRows[0]?.d ?? null;
+  const coveredCount = Number(bestDayRows[0]?.n ?? 0);
+  if (!latestDate) {
+    return { label, universeCount, latestDate: null, coveredCount: 0, coveragePct: 0, missingSample: [], anomaly: true, anomalyReason: "NO_RECENT_DATA" };
+  }
+  const coveragePct = (coveredCount / universeCount) * 100;
+  const anomaly = coveragePct < 100;
+  return {
+    label, universeCount, latestDate, coveredCount, coveragePct, missingSample: [],
+    anomaly, anomalyReason: anomaly ? `COVERAGE_${coveragePct.toFixed(1)}PCT` : null,
+  };
+}
+
+// futures_technical_analytics -- small table (safe to scan), real universe is CORE_COMMODITY_ROOTS
+// (27 roots, lib/cron/commodityUpdate.ts), NOT futures_product_roots (891 rows -- that's every
+// contract-month row ever stored, not this job's actual per-commodity universe; using it as the
+// denominator was a mistake caught during this round's audit).
+export async function checkCommodityTechnicalCoverage(query: QueryFn, coreRootIds: string[]): Promise<CoverageResult> {
+  if (coreRootIds.length === 0) return { label: "commodity_technical", universeCount: 0, latestDate: null, coveredCount: 0, coveragePct: null, missingSample: [], anomaly: false, anomalyReason: null };
+  // 同上 evaluateCoverage 的 2b 修正：拿覆蓋根數最多的那天當基準日，不是單純最新日期。
+  const bestDayRows = await query(
+    `SELECT observed_at::date::text AS d, COUNT(DISTINCT root_id)::int AS n FROM futures_technical_analytics
+     WHERE root_id = ANY($1::uuid[]) AND observed_at > now() - interval '10 days'
+     GROUP BY observed_at::date ORDER BY n DESC, d DESC LIMIT 1`,
+    [coreRootIds],
+  );
+  const latestDate = bestDayRows[0]?.d ?? null;
+  const coveredCount = Number(bestDayRows[0]?.n ?? 0);
+  if (!latestDate) return { label: "commodity_technical", universeCount: coreRootIds.length, latestDate: null, coveredCount: 0, coveragePct: 0, missingSample: [], anomaly: true, anomalyReason: "NO_RECENT_DATA" };
+  const coveragePct = (coveredCount / coreRootIds.length) * 100;
+  const anomaly = coveragePct < 100;
+  return { label: "commodity_technical", universeCount: coreRootIds.length, latestDate, coveredCount, coveragePct, missingSample: [], anomaly, anomalyReason: anomaly ? `COVERAGE_${coveragePct.toFixed(1)}PCT` : null };
+}
+
+// fund_performances -- small table (12k rows, safe to scan). 2026-10-18 correction: universe is
+// NOT "all active funds" -- VERIFIED the 23,053 yahoo-provider funds have ZERO rows in this table
+// ever (their returns live in fund_history's own return_1m/return_3m/... columns instead, a
+// completely different write path -- see checkFundHistoryFreshness below). Narrowed to the
+// providers that actually use this table: SITCA/MoneyDJ (domestic) + tdcc-offshore (offshore).
+export async function checkFundPerformanceCoverage(query: QueryFn): Promise<CoverageResult> {
+  return evaluateCoverage(query, "fund_performances", "fund_performances", "date", "fund_id",
+    `SELECT COUNT(*)::int n FROM funds WHERE is_active = true AND data_provider IN ('SITCA','MoneyDJ','tdcc-offshore')`);
+}
+
+// 2026-10-18 (使用者規則定案，第 2c 項): etf_history／fund_history 這兩張大表改用 LATERAL
+// 「每檔取最新一筆」的查法，走 (id欄, date) 既有索引，不對整張表做 WHERE date = X 的全表掃描。
+// 回傳「universe 裡有多少比例在最近 staleDaysThreshold 天內有資料」，不是「某個精確日期」的
+// 覆蓋率（這兩張表橫跨太多市場/時區，沒有單一個「正確的那一天」）。
+export async function checkHistoryFreshnessLateral(
+  query: QueryFn,
+  label: string,
+  table: string,
+  dateCol: string,
+  idCol: string,
+  universeTable: string,
+  universeWhereSql: string,
+  staleDaysThreshold: number,
+): Promise<CoverageResult> {
+  const rows = await query(
+    `SELECT
+       COUNT(*) FILTER (WHERE latest.d >= CURRENT_DATE - $1::int)::int AS fresh,
+       COUNT(*)::int AS universe
+     FROM ${universeTable} u
+     CROSS JOIN LATERAL (SELECT ${dateCol} AS d FROM ${table} h WHERE h.${idCol} = u.id ORDER BY h.${dateCol} DESC LIMIT 1) latest
+     WHERE ${universeWhereSql}`,
+    [staleDaysThreshold],
+  );
+  const universeCount = Number(rows[0]?.universe ?? 0);
+  const coveredCount = Number(rows[0]?.fresh ?? 0);
+  if (universeCount === 0) return { label, universeCount: 0, latestDate: null, coveredCount: 0, coveragePct: null, missingSample: [], anomaly: false, anomalyReason: null };
+  const coveragePct = (coveredCount / universeCount) * 100;
+  const anomaly = coveragePct < 100;
+  return { label, universeCount, latestDate: null, coveredCount, coveragePct, missingSample: [], anomaly, anomalyReason: anomaly ? `COVERAGE_${coveragePct.toFixed(1)}PCT` : null };
+}
+
+// etf_history (1,836 萬筆) -- universe = 全部 active ETF，4 天內有新資料才算 fresh（跟既有
+// evaluateFreshness 的 tw_stock_price/domestic_fund_nav 用同一個寬鬆門檻慣例）。
+export async function checkEtfHistoryFreshness(query: QueryFn): Promise<CoverageResult> {
+  return checkHistoryFreshnessLateral(query, "etf_history", "etf_history", "date", "etf_id", "etfs", "u.is_active = true AND u.data_source IS NOT NULL", 4);
+}
+
+// fund_history (8,487 萬筆) -- 只檢查 yahoo-provider 基金（它們的報酬率只存在這張表，不是
+// fund_performances，見上方說明），universe = 23,053 檔 yahoo-provider active fund。
+export async function checkFundHistoryFreshness(query: QueryFn): Promise<CoverageResult> {
+  return checkHistoryFreshnessLateral(query, "fund_history_yahoo", "fund_history", "date", "fund_id", "funds", "u.is_active = true AND u.data_source IS NOT NULL AND u.data_provider = 'yahoo'", 4);
+}
+
+// etf_performances -- small table (119k rows, safe to scan). Universe is intentionally the FULL
+// active-ETF set here (not narrowed to TW/TWO), since this table is fed by multiple jobs
+// (market-close-sync, etf-returns-sync, etf-returns-sync-tw) whose combined coverage is what
+// actually matters to anyone reading return_1d -- this check is data-outcome-based, not tied to one
+// job_id, same convention as the existing domestic_fund_nav freshness check below.
+export async function checkEtfPerformanceCoverage(query: QueryFn): Promise<CoverageResult> {
+  return evaluateCoverage(query, "etf_performances", "etf_performances", "date", "etf_id", `SELECT COUNT(*)::int n FROM etfs WHERE is_active = true`);
 }
 
 export type YahooTwReturnSample = {

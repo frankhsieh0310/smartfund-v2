@@ -12,7 +12,8 @@
 import { isAuthorizedCron, unauthorizedCron } from "@/lib/cron/authorize";
 import { prisma } from "@/lib/prisma";
 import { beginRun, finishRun } from "@/lib/cloud-ingestion/runContext";
-import { checkPipelineRunLog, evaluateFreshness, checkEtfDataSourceGap, evaluateYahooTwReturnConsistency, evaluateFredCommodityConsistency, type QueryFn, type YahooTwReturnSample, type FredCommoditySample } from "@/lib/daily-health-report/checks";
+import { checkPipelineRunLog, evaluateFreshness, checkEtfDataSourceGap, evaluateYahooTwReturnConsistency, evaluateFredCommodityConsistency, checkCommodityTechnicalCoverage, checkFundPerformanceCoverage, checkEtfPerformanceCoverage, checkEtfHistoryFreshness, checkFundHistoryFreshness, type QueryFn, type YahooTwReturnSample, type FredCommoditySample } from "@/lib/daily-health-report/checks";
+import { CORE_COMMODITY_ROOTS } from "@/lib/cron/commodityUpdate";
 import { notifyAnomaly } from "@/lib/daily-health-report/notify";
 import { buildDailySummary } from "@/lib/daily-health-report/buildDailySummary";
 import { fetchYahooTwPerformance } from "@/lib/yahoo/twPerformancePage";
@@ -27,13 +28,34 @@ const query: QueryFn = (sql, params) => prisma.$queryRawUnsafe<any[]>(sql, ...pa
 // Pipelines logged in THIS database's production_scheduler_runs (smartfund-v2's own crons, plus
 // tw-data-updater's institutional-update which shares this same Postgres and started logging here
 // as of today's fix).
+//
+// 2026-10-18 (使用者規則定案，第 2a 項): 原本的清單只有 6 支，這次排程耗時稽核找到的 11 支
+// 風險排程（CLOUD_ETF_PRICE、CLOUD_FUND_NAV:SITCA、CLOUD_MONEYDJ_FUND、FUND_RETURNS_SYNC、
+// TW_ETF_DAY_CHANGE、YAHOO_ETF_FULL_SWEEP、YAHOO_FUND_FULL_SWEEP、YAHOO_COMMODITY_TECHNICAL、
+// HOLDINGS_ALT_SOURCE_SYNC、CLOUD_SEC_FINANCIAL_INCREMENTAL、CLOUD_CONSENSUS_INGEST）一個都不在
+// 裡面——代表這些排程完全停擺，健康報告都不會發現。另外追查 TW ETF 覆蓋率時又多發現一支
+// ETF_RETURNS_SYNC_TW 也沒被監控，一起加進來。CLOUD_FUND_NAV 的 job_id 實際帶 provider 後綴
+// （見 beginRun 的 runKey 慣例），這裡用前綴比對，checkPipelineRunLog 內部若查不到完全比對的
+// job_id 會回報 NO_RUN_IN_LAST_24H，之後如有需要可以再改成前綴查詢。
 const RUN_LOG_PIPELINES = [
   "MARKET_CLOSE_SYNC_SHADOW",
   "ETF_RETURNS_SYNC",
+  "ETF_RETURNS_SYNC_TW",
   "US_FUND_NAV_SYNC",
   "SITCA_NAV_SYNC",
   "OFFSHORE_NAV_SYNC",
   "INSTITUTIONAL_UPDATE",
+  "CLOUD_ETF_PRICE",
+  "CLOUD_FUND_NAV:SITCA",
+  "CLOUD_MONEYDJ_FUND",
+  "FUND_RETURNS_SYNC",
+  "TW_ETF_DAY_CHANGE",
+  "YAHOO_ETF_FULL_SWEEP",
+  "YAHOO_FUND_FULL_SWEEP",
+  "YAHOO_COMMODITY_TECHNICAL",
+  "HOLDINGS_ALT_SOURCE_SYNC",
+  "CLOUD_SEC_FINANCIAL_INCREMENTAL",
+  "CLOUD_CONSENSUS_INGEST",
 ];
 
 export async function GET(request: Request) {
@@ -65,6 +87,20 @@ export async function GET(request: Request) {
     `SELECT to_char(max(latest_nav_date), 'YYYY-MM-DD') AS max_date FROM funds WHERE COALESCE(data_provider, '') NOT IN ('yahoo', 'SEC')`,
   );
   const domesticFundFreshness = evaluateFreshness("domestic_fund_nav", domesticFundFreshRow[0]?.max_date ?? null, 4);
+
+  // 2026-10-18 (使用者規則定案，第 2b 項): 判斷依據從「排程有沒有報錯」改成「母體裡真的有
+  //多少比例在最近一個更新日拿到資料」。只挑小表（fund_performances/etf_performances/
+  // futures_technical_analytics）——etf_history／fund_history 這兩張大表故意沒做，見
+  // checks.ts 裡 evaluateCoverage 的註解說明為什麼。
+  const coreRootIds = CORE_COMMODITY_ROOTS.map((r) => r.rootId);
+  const [fundPerformanceCoverage, etfPerformanceCoverage, commodityTechnicalCoverage, etfHistoryFreshness, fundHistoryFreshness] = await Promise.all([
+    checkFundPerformanceCoverage(query),
+    checkEtfPerformanceCoverage(query),
+    checkCommodityTechnicalCoverage(query, coreRootIds),
+    checkEtfHistoryFreshness(query),
+    checkFundHistoryFreshness(query),
+  ]);
+  const coverage = [fundPerformanceCoverage, etfPerformanceCoverage, commodityTechnicalCoverage, etfHistoryFreshness, fundHistoryFreshness];
   const etfDataSourceGap = await checkEtfDataSourceGap(query);
 
   // 2026-10-13 QA-round-1 addition: 3 random TWD-listed ETFs, our stored return_1y vs Yahoo奇摩's own
@@ -131,6 +167,7 @@ export async function GET(request: Request) {
     ...(etfDataSourceGap.anomaly ? [{ type: "ETF_DATA_SOURCE_GAP", newCodes: etfDataSourceGap.newCodes }] : []),
     ...(yahooTwCheck.anomaly ? [{ type: "YAHOO_TW_RETURN_MISMATCH", mismatches: yahooTwCheck.mismatches }] : []),
     ...(fredCommodityCheck.anomaly ? [{ type: "FRED_COMMODITY_MISMATCH", mismatches: fredCommodityCheck.mismatches }] : []),
+    ...coverage.filter((c) => c.anomaly).map((c) => ({ type: "COVERAGE", label: c.label, reason: c.anomalyReason })),
   ];
 
   // Round-4, user-approved: send a short summary EVERY day, not only when something is wrong --
@@ -138,20 +175,20 @@ export async function GET(request: Request) {
   // buildDailySummary.ts for the message format (unit-tested separately).
   const summary = buildDailySummary({
     today, anomalyCount: anomalies.length, pipelineHealth,
-    freshness: [stockFreshness, domesticFundFreshness], etfDataSourceGap, yahooTwCheck, fredCommodityCheck,
+    freshness: [stockFreshness, domesticFundFreshness], etfDataSourceGap, yahooTwCheck, fredCommodityCheck, coverage,
   });
   const notifyResult = await notifyAnomaly(summary);
 
   const status = anomalies.length > 0 ? "PARTIAL" : "COMPLETED";
   await finishRun(runId, JOB, "INTERNAL_HEALTH_CHECK", startedMs, {
-    status, attempted: RUN_LOG_PIPELINES.length + 2, completed: RUN_LOG_PIPELINES.length + 2 - anomalies.length,
+    status, attempted: RUN_LOG_PIPELINES.length + 2 + coverage.length, completed: RUN_LOG_PIPELINES.length + 2 + coverage.length - anomalies.length,
     inserted: 0, updated: 0, failed: anomalies.length, retryableFailures: 0, checkpointAfter: null,
     details: {
       date: today, pipeline_health: pipelineHealth, stock_freshness: stockFreshness, domestic_fund_freshness: domesticFundFreshness,
-      etf_data_source_gap: etfDataSourceGap, yahoo_tw_return_check: yahooTwCheck, fred_commodity_check: fredCommodityCheck,
+      etf_data_source_gap: etfDataSourceGap, yahoo_tw_return_check: yahooTwCheck, fred_commodity_check: fredCommodityCheck, coverage,
       anomaly_count: anomalies.length, anomalies, notify_result: notifyResult,
     },
   });
 
-  return Response.json({ ok: true, job: JOB, runId, status, anomalyCount: anomalies.length, anomalies, etfDataSourceGap, yahooTwCheck, fredCommodityCheck, notifyResult });
+  return Response.json({ ok: true, job: JOB, runId, status, anomalyCount: anomalies.length, anomalies, etfDataSourceGap, yahooTwCheck, fredCommodityCheck, coverage, notifyResult });
 }
