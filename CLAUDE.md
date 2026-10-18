@@ -1038,3 +1038,151 @@ Product ID 交付項目。
   現在誠實標記為「需要原生開發＋實機測試才能做」，不是忘記做。
 - 在這兩項做出來之前，`source_type = AD_CHANNEL` 全站沒有任何地方會真的寫入——沒有用假資料
   或佔位符冒充已經有廣告歸因的樣子。
+
+## 2026-10-18（週日）使用者後續指示：修 ex-date-sync 逾時、行銷功能全部凍結
+
+### 第 1 項：ex-date-sync 逾時修正 ✅ 已修正並部署 Preview（未部署正式環境，等核准）
+
+**1a／1b 根因與修正**：在 `lib/cron/exDateSync.ts` 加每個步驟的耗時 log（抓取來源／查
+ETF 清單／寫入迴圈），每個外部 fetch 的 `AbortSignal.timeout` 從 30 秒收緊到 15 秒，
+route 的 `maxDuration` 從 60 秒拉高到 300 秒。
+
+VERIFIED（本機唯讀 dry-run，`writeEnabled=false`，連正式環境資料庫唯讀）：抓官方來源
+103ms（TWSE 55 筆、TPEx 66 筆）、查 16,823 檔 active ETF 清單 1224ms、比對迴圈（因為
+write 關閉所以沒有真的寫入）幾乎 0ms，**總共只要 1.3 秒**——排除「官方來源本身很慢」
+「資料量太大」這兩個假設，跟正式環境卡住 60 秒的現象差距懸殊。
+
+**UNKNOWN（誠實標示，沒有迴避）**：使用者要查的核心假設「Vercel 海外主機對 TWSE/TPEx
+的網路延遲是不是比本機從台灣連線慢很多」**沒有驗證成功**——嘗試用 Preview 實際觸發一次
+`/api/cron/ex-date-sync`，用既有 automation-bypass secret（`ydAxbJDQ10Kmkiz0TsLBmeiWd4309AcA`）
+正確通過了 Vercel 的 Deployment Protection（首頁 200，確認走 cookie jar 才會過，單純
+query string 不夠），但 route 本身回傳 `401 Unauthorized`——查證發現 **`CRON_SECRET`
+這個環境變數只設定在 Production，Preview 環境完全沒有**（`vercel env ls preview`／
+`production` 兩邊比對確認），所以不管帶什麼 Bearer token 都會被 `isAuthorizedCron()`
+擋下。這不是我能自己解決的——加這個環境變數到 Preview 屬於 Vercel 專案設定異動，沒有
+事先核准，已經停手沒有嘗試繞過（例如改程式碼邏輯讓它在沒有 secret 時也放行，這種做法
+風險更高，沒有做）。另外沒有真的用 `writeEnabled=true` 在本機對正式資料庫執行過，因為那
+會真的寫入 `etf_upcoming_exrights`，不在這次核准範圍內，沒有自己加做。
+
+合理但未證實的推測（標示為推測，不是結論）：正式環境寫入是開著的（`EX_DATE_SYNC_WRITE=on`），
+比對迴圈會對約 76 筆真的執行序列 upsert；如果 Vercel 到資料庫的單次往返延遲比我本機連線
+慢（例如跨區），76 次序列往返就可能把原本 60 秒的額度吃光——這能合理解釋卡住的現象，但
+沒有實測驗證，留給使用者決定是否要核准我在 Preview 補上 `CRON_SECRET` 來真正驗證。
+
+**1c Preview 寫入關閉確認 ✅ VERIFIED**：`vercel env ls preview` 確認 `EX_DATE_SYNC_WRITE`
+完全沒有出現在 Preview 環境（只在 Production），代表這次 Preview 無論怎麼觸發都不會真的
+寫入 `etf_upcoming_exrights`，沒有自己去關閉或調整任何 Vercel 保護設定。
+
+**1d 今天卡住的那筆紀錄會不會擋到明天 ✅ VERIFIED 不會擋，沒有去動它**：查
+`lib/cloud-ingestion/runContext.ts` 的 `beginRun()`，`run_key` 是用日期組字串
+（`ex-date-sync:2026-10-18`），明天會是完全不同的 `ex-date-sync:2026-10-19`，
+`ON CONFLICT (run_key)` 不會撞到今天這筆；就算不小心用到同一個 key，`WHERE status <> RUNNING
+OR started_at < now() - 360 秒` 這個條件也會讓逾時超過 6 分鐘的舊紀錄自動被接管、不會卡死。
+**因為不會擋，所以沒有使用使用者這次給的「核准只更新這一筆為 FAILED」的授權**，這筆紀錄
+原封不動留在 `IN_PROGRESS`，作為今天真實發生過的事件紀錄。
+
+**1e 乾淨 worktree＋Preview 部署 ✅ 完成**：從 `ec4296529` 建立全新 worktree
+`C:\Users\User\AppData\Local\Temp\mcs-final7`（`git worktree add ... ec4296529 --detach`），
+只 cherry-pick 這次的修正（commit `1dc222b6e`，對應 `fix/qa-round1` 分支上的 `d06a150d1`）。
+VERIFIED `git log --oneline ec4296529..HEAD` 只有這 1 個 commit，`git diff ec4296529 HEAD --stat`
+只有這次真的改的 4 個檔案，沒有任何其他 commit 被移除或夾帶進來（這個 worktree 的基底
+完全沒有第 2 項要凍結的任何行銷 commit）。`npm ci`／`npx prisma generate`／
+`npx tsc --noEmit`／`npx next build` 全部 0 錯誤。
+
+部署：`npx vercel deploy`（**不是** `--prod`，確認回傳 `"target": null`）。
+**過程中有一個自己造成的小失誤，主動揭露**：這個全新 worktree 目錄沒有帶
+`.vercel/project.json`，第一次執行 `vercel deploy` 時 Vercel CLI 自動幫它建立了一個
+**全新、獨立的 Vercel 專案叫 `mcs-final7`**（跟正式的 `smartfund-v2` 完全無關，projectId
+`prj_9ja51io2c0p6x8zLhmJJPFDNMiwm`），並且因為是該新專案的「第一次部署」被自動標成那個
+*新專案自己的* production（跟真正的 smartfund-v2 正式環境無關，這個新專案沒有設定任何
+真實環境變數/資料庫連線，沒有風險）。發現後手動把 `.vercel/project.json` 改回正確的
+`smartfund-v2`（`prj_1KrCMg3BVSPuYqqmigFVksTn1Xa0`）reconnect，重新 `vercel deploy`
+才拿到真正連到 smartfund-v2 的 Preview。嘗試用 `vercel project rm mcs-final7` 清掉這個
+誤建的空專案，但這版 CLI 不支援非互動式的 `--yes` 確認，而刪除專案屬於 Vercel 設定異動，
+沒有嘗試繞過互動確認去硬刪，**這個空的、沒有任何真實資料/密鑰的 `mcs-final7` 專案目前還在，
+如果要清掉需要使用者自己在 Vercel 後台刪，或明確核准我用互動方式刪**。
+
+**正確的 Preview URL**：`https://smartfund-v2-ou9ucdngr-frankhsieh0310s-projects.vercel.app`
+VERIFIED 用 bypass secret＋cookie jar 正確通過保護、首頁 200；`/api/cron/ex-date-sync`
+回傳 401（如上述，Preview 沒有 `CRON_SECRET`，不是部署失敗）。
+
+**我要執行正式部署的指令（等使用者核准，沒有自己執行）**：
+```
+cd C:\Users\User\AppData\Local\Temp\mcs-final7
+npx vercel deploy --prod
+```
+部署前請注意：這個修正本身（timeout 拉長＋加 log）VERIFIED 建置正常、邏輯沒變，但
+「正式環境到底卡在哪一步」這個核心問題還沒有透過即時 Preview 觸發驗證（上述 UNKNOWN）。
+如果現在核准部署，300 秒的新額度加上新的分步 log，至少能讓**明天（10/19）01:40 UTC
+那次真實排程**不管成功與否，都會留下真正的耗時數據可以回頭查——這是即使沒有先在 Preview
+驗證完也仍然值得先部署的理由，但最終是否要在驗證 1b 的 UNKNOWN 之前就核准部署，由使用者
+決定。
+
+### 第 2 項：行銷相關成果凍結 ✅ 已列清單＋已確認 RLS/REVOKE，沒有合併、沒有繼續開發
+
+**2a 凍結狀態 ✅ VERIFIED**：7 項行銷功能的全部 commit 都只存在於 `smartfund-v2` 的
+`fix/qa-round1` 分支與 `smartmatch-mobile` 的 `fix/hide-unbuilt-entries` 分支，**沒有合併
+進 `main`／`master`，沒有出現在任何部署候選裡**（這次 1e 新建的 `mcs-final7` 是從
+`ec4296529` 直接 cherry-pick，VERIFIED 不含任何行銷 commit）。這次只做了查證／回報
+（1b 的本機 dry-run、1d 的 run_key 查詢、3 的 SITCA 健康檢查），**沒有再往下開發任何一項
+行銷功能的新程式碼**。
+
+**2b 清單**（commit hash／改了哪些檔案／畫面或資料表異動）：
+
+`smartfund-v2`（`fix/qa-round1` 分支）：
+| commit | 說明 | 檔案 |
+|---|---|---|
+| `be8a8316a` | 漏斗事件追蹤（項目1+5）| 新增 `app/api/admin/funnel-report/route.ts`、`app/api/mobile/funnel-event/route.ts`、`prisma/schema.prisma`（+23行）、新增表 migration |
+| `330ff285a` | 修 funnel-event 的 CORS 標頭 | `app/api/mobile/funnel-event/route.ts` |
+| `67203872c` | 對外數字口徑方法論（項目7）| 新增 `lib/data-platform/externalNumberMethodology.ts`、改 `app/api/mobile/reverse-holdings/route.ts`、`prisma/schema.prisma`（+17行）、新增表 migration |
+| `d86ba1c83` | 文案修正「每天自動更新」（項目6）| `components/home/HeroSection.tsx`、`components/home/WorkspacePreviewSection.tsx` |
+| `20b83b657` | RevenueCat webhook 接漏斗（項目2）| `app/api/webhooks/revenuecat/route.ts`、`app/api/admin/funnel-report/route.ts` |
+| `c4665ef82`／`b09e77af9`／`193bff687`／`f5712da3d`／`7e0edbc86`／`b3121bcc8` | 純文件（CLAUDE.md 證據記錄，項目4/1+5/7/6/2/3）| 只有 `CLAUDE.md` |
+
+`smartmatch-mobile`（`fix/hide-unbuilt-entries` 分支）：
+| commit | 說明 | 檔案（含 App 畫面異動）|
+|---|---|---|
+| `74da14c` | 首次開啟追蹤＋裝置ID（項目1+5）| `app/_layout.tsx`、新增 `src/analytics/deviceId.ts`、`src/analytics/funnel.ts` |
+| `ba73d25` | 新用戶組合穿透快速引導（項目4）| **畫面異動**：`app/index.tsx`（首頁新增橫幅）、`app/portfolio.tsx`（新增「儲存組合」按鈕）、`app/results.tsx`（新增「等權重試算」標籤）、`src/etfFundSelection.ts` |
+| `ec46611` | 文案修正「每日更新」（項目6）| `app/new-listings.tsx` |
+| `dccce50` | 邀請碼追蹤＋深層連結（項目3）| **畫面異動**：`app/_layout.tsx`、`app/index.tsx`（首頁新增「有邀請碼」連結）、新增 `app/invite/[code].tsx`（深層連結頁）、新增 `app/redeem-invite.tsx`（手動輸入邀請碼頁）、新增 `src/analytics/funnel.ts`／`src/analytics/installReferrer.ts` |
+| `c17a612` | 純文件（RevenueCat 14天試用設定教學）| `docs/setup/revenuecat-store-setup.md` |
+
+**新增的資料表**：`usage_funnel_events`（漏斗事件）、`external_number_audit_log`
+（對外數字稽核紀錄）——兩張都是這次新增；另外 `tw_purchasable_classification`
+雖然是上一輪（item 1）就建的表，不是這 7 項之一，但使用者這次訊息也提到，一併列入查證。
+
+**2c RLS／REVOKE 查證 ✅ VERIFIED 三張表都正確設定**（唯讀查 `pg_class.relrowsecurity`
+與 `information_schema.role_table_grants`）：
+
+| 資料表 | RLS 已啟用 | anon/authenticated/public 權限 |
+|---|---|---|
+| `usage_funnel_events` | true | 無（已完全 REVOKE）|
+| `external_number_audit_log` | true | 無（已完全 REVOKE）|
+| `tw_purchasable_classification` | true | 無（已完全 REVOKE）|
+
+三張表目前都是 0 筆資料（VERIFIED 唯讀 SELECT COUNT 確認），沒有任何測試或正式資料殘留。
+
+**2d `tw_purchasable_classification` 寫入 ✅ 確認沒有執行**：維持上次查證後的狀態，
+這次沒有再嘗試寫入，照使用者指示停手。
+
+### 第 3 項：SITCA 來源狀態 ✅ VERIFIED 已恢復，但 UNKNOWN／否：沒有排程會自動補齊
+
+唯讀直接 curl `https://www.sitca.org.tw/MemberK0000/F/03/nav.csv`（`classify.ts` 實際使用的
+官方來源）：**`status=200`，沒有遇到 401/403/429，沒有停下來繞過任何限制**。VERIFIED 這次
+回傳 4,473 行（4,472 筆資料＋1 行標頭），跟 `docs/specs/technical-screener-reverse-lookup.md`
+記錄的官方境內基金數字「約 4,471」幾乎完全吻合——**確認 SITCA 來源已經從週末那次只回
+36 筆的異常狀態恢復正常**。
+
+**但星期一的排程不會自動補齊**：查證 `classifyTwPurchasable()`（`lib/tw-purchasable/classify.ts`）
+在 `app/` 整個目錄下**沒有任何 cron route 呼叫它**（`grep` 確認零結果），這個函式從建立
+以來只被我這次工作階段手動呼叫過（且都是 `writeEnabled=false` 的 dry-run，從未真的寫入，
+見第 2d 點）。代表**不管 SITCA 來源健不健康，星期一都不會有任何排程自動去補這 36/4471 的
+缺口**——`tw_purchasable_classification` 要補齊，必須有人手動執行
+`classifyTwPurchasable(true)` 並取得核准才會發生，不是被動等待就會自己修好。
+
+### 第 4 項：DAYS_TO_EX_DATE 接回 App ✅ 確認沒有動
+
+照使用者指示「等 ex-date-sync 在正式環境成功跑完一次、真的寫入資料之後才做」——第 1 項
+還沒有在正式環境成功驗證過（Preview 無法驗證核心假設，見上），這項完全沒有開始，
+`app/api/alerts/route.ts` 的 `CAPABILITIES` 沒有任何異動。
