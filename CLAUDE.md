@@ -1186,3 +1186,96 @@ npx vercel deploy --prod
 照使用者指示「等 ex-date-sync 在正式環境成功跑完一次、真的寫入資料之後才做」——第 1 項
 還沒有在正式環境成功驗證過（Preview 無法驗證核心假設，見上），這項完全沒有開始，
 `app/api/alerts/route.ts` 的 `CAPABILITIES` 沒有任何異動。
+
+## 標準規則：建立新部署 worktree 時的 Vercel 連結步驟（2026-10-18 訂立，長期適用）
+
+這次 `mcs-final7` 第一次 `vercel deploy` 時，因為新 worktree 沒有帶 `.vercel/project.json`，
+CLI 自動幫它建立了一個全新、無關的 Vercel 專案（詳見下方「第 1 項」記錄）。**往後任何一次
+建立新的部署用 worktree，流程固定如下，不准讓 CLI 自動建立新專案**：
+
+```powershell
+# 1. 建立 worktree
+git worktree add C:\Users\User\AppData\Local\Temp\mcs-finalN <base-commit> --detach
+
+# 2. 先手動連到正確的 smartfund-v2 專案，再做任何 vercel 指令
+New-Item -ItemType Directory -Force C:\Users\User\AppData\Local\Temp\mcs-finalN\.vercel
+Set-Content -Path C:\Users\User\AppData\Local\Temp\mcs-finalN\.vercel\project.json `
+  -Value '{"projectId":"prj_1KrCMg3BVSPuYqqmigFVksTn1Xa0","orgId":"team_D42Dk8aVzncrm2MAPDeJ25i3","projectName":"smartfund-v2"}' `
+  -Encoding utf8
+
+# 3. npm ci / prisma generate / tsc / build 驗證 0 錯誤後，才進到部署
+```
+
+**給使用者的正式部署指令一律用這個格式**（PowerShell，固定包含 `Remove-Item .env`
+避免本機 `.env` 意外被打包進部署、固定帶 `--meta commit=` 方便事後用 `vercel ls --prod --json`
+直接核對 commit 不用另外查）：
+
+```powershell
+cd C:\Users\User\AppData\Local\Temp\mcs-finalN
+Remove-Item .env -ErrorAction SilentlyContinue
+npx vercel deploy --prod --meta commit=$(git rev-parse HEAD)
+```
+
+## 2026-10-18（週日午後）：使用者已從 mcs-final7 部署正式環境，後續查證
+
+### 第 1 項：正式環境確認 ✅ VERIFIED
+
+`vercel ls --prod --json`：目前正式環境 `meta.commit` = `1dc222b6effcb13380d7ab95b59a1afdd0c609ca`，
+正是 `mcs-final7` 那個 cherry-pick commit。`git diff ec4296529 1dc222b6e --stat` 確認只有
+`app/api/cron/ex-date-sync/route.ts`／`lib/cron/exDateSync.ts`／
+`lib/ex-date-sync/tpexExRight.ts`／`lib/ex-date-sync/twseExRight.ts` 這 4 個檔案，
+沒有任何其他異動混進去。
+
+### 第 2 項：手動觸發正式環境 ex-date-sync ❌ 卡在取得 CRON_SECRET 這一步，沒有觸發
+
+查 `vercel env ls production --json`：`CRON_SECRET` 的 `"type": "sensitive"`／
+`"visibility": "secret"`——這是 Vercel 的「Sensitive Environment Variable」功能，**設計上
+建立後任何人（包含專案擁有者、不管是 CLI、API 還是 Dashboard）都無法再讀回明文值**，不是
+權限或指令問題，是平台本身的設計限制。`vercel env pull` 也確認這類值會被寫成
+`[SENSITIVE]` 佔位符，不是真的值。
+
+**沒有嘗試任何繞過方式**（例如建立一個新的 CRON_SECRET 值去覆蓋——這會改變正式環境的
+設定/密鑰，不在這次核准範圍內，也沒有自己決定要不要這麼做；或是放寬
+`isAuthorizedCron()` 的檢查邏輯——這是改程式行為去繞過自己的安全機制，風險更高，沒有做）。
+
+**需要使用者其中一種方式才能繼續**：
+1. 直接把 `CRON_SECRET` 的值貼給我（如果有存在密碼管理工具或其他地方)，或
+2. 使用者自己執行一次這個 curl（用他自己能看到的值）：
+   ```powershell
+   curl.exe -H "Authorization: Bearer <CRON_SECRET的真實值>" `
+     "https://www.smartmatchpilot.com/api/cron/ex-date-sync"
+   ```
+   執行後把回傳的 JSON 貼給我，我可以從回傳內容裡的 `timingMs` 直接分析瓶頸（不需要
+   額外去拉 Vercel log），或
+3. 核准我生成一個新的 `CRON_SECRET` 值並更新到 Production（這會讓舊密鑰失效，如果
+   有其他地方還在用舊密鑰呼叫，需要一起更新）。
+
+**第 2a／2b／2c／2d 都還沒有開始**，因為第一步就卡住，照使用者「失敗或卡住就停下來回報，
+不要重試」的指示，沒有自己亂猜或重試其他方式。
+
+### 第 4 項：`tw_purchasable_classification` 的讀取者查證 ✅ VERIFIED 目前沒有使用者可見的功能讀取
+
+全文搜尋 `smartfund-v2`（網站＋API）與 `smartmatch-mobile`（App）兩個 repo：
+- 這張表唯一的「讀取」程式碼在 `lib/data-platform/externalNumberMethodology.ts`
+  （`classifyHeldByProducts()`／`computeTwPurchasableBreakdownFull()`，這次 7 項行銷清單
+  第 7 項做的），被 `app/api/mobile/reverse-holdings/route.ts` 呼叫，回傳 `twPurchasable`／
+  `twPurchasableBreakdown` 兩個欄位。
+- **但 `smartmatch-mobile` App 端完全沒有任何畫面讀取這兩個欄位**（`grep` 全 repo 零結果）
+  ——API 有回傳，但沒有任何客戶端程式碼去用它、沒有任何畫面顯示。
+- `smartfund-v2` 網站本身也沒有任何頁面讀取這張表。
+- 這張表目前仍是 0 筆資料（前面已確認）。
+
+**結論：不違反「所有資料每天更新」規則**——不是「資料沒有每天更新」的問題，是這個欄位
+根本還沒有被串進任何使用者看得到的畫面（而且第 2 項提到的 7 項行銷功能本來就全部凍結，
+沒有在往下開發，這個欄位會不會被串進畫面也還沒發生）。
+
+**排程方案提案（只提案，沒有實作，沒有寫入，等使用者決定）**：如果未來要把這個欄位
+接進畫面，`classifyTwPurchasable(true)` 需要排程化才能保持每日更新，可以比照專案現有
+排程的慣例新增一個 cron route（例如 `app/api/cron/tw-purchasable-classify/route.ts`），
+用 `isAuthorizedCron`／`beginRun`／`finishRun` 的既有慣例、每日觸發一次、寫入前後各
+`SELECT COUNT(*)` 核對，初期可以先維持 `writeEnabled` 旗標預設關閉（同其他新管線的慣例），
+等人工驗證幾天資料正確後再打開。沒有把這個方案寫進程式碼。
+
+### 第 5 項：DAYS_TO_EX_DATE 接回 App ❌ 還沒開始
+
+照使用者指示，等第 2 項驗證通過、資料確認正確之後才做；第 2 項現在卡住，這項還沒開始。
