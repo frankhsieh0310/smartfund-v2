@@ -1295,3 +1295,44 @@ npx vercel deploy --prod --meta commit=$(git rev-parse HEAD)
 ### 第 5 項：DAYS_TO_EX_DATE 接回 App ❌ 還沒開始
 
 照使用者指示，等第 2 項驗證通過、資料確認正確之後才做；第 2 項現在卡住，這項還沒開始。
+
+## 2026-10-18（週日午後）使用者在 Vercel 後台手動 Run 排程，查證結果
+
+### 第 2 項：手動觸發結果 ✅ 全部通過
+
+**2a 真正瓶頸 ✅ VERIFIED**：Vercel runtime log 確認這次手動觸發（`requestId
+fg5fl-1792293928798-...`，03:25:29–03:27:01 UTC）的分步耗時，直接存在
+`production_scheduler_runs.details.timingMs`：
+- `fetchSourcesMs: 1892`（抓 TWSE+TPEx 官方來源，不到 2 秒）
+- `etfListMs: 2550`（查 16,823 檔 ETF 清單，2.5 秒）
+- **`upsertLoopMs: 86254`（寫入迴圈，86.25 秒——這就是真正的瓶頸）**
+- `totalMs: 90752`
+
+真正原因 VERIFIED：`.env` 的 `DIRECT_URL`／`DATABASE_URL` 指向
+`aws-1-ap-southeast-1.pooler.supabase.com`（新加坡），這次 log 顯示 Vercel 這個 function
+實際執行在 `region: "iad1"`（美國維吉尼亞）——**跨太平洋的資料庫往返延遲**，76 筆序列
+awaited upsert，平均每筆約 1.1 秒往返，86 秒的寫入迴圈完全吻合這個解釋。今天早上第一次
+（60 秒額度）就是被這個迴圈拖過 60 秒被平台砍斷；這次 300 秒額度給了足夠空間讓它跑完。
+不是官方來源慢、不是資料量大、也不是查 ETF 清單慢——是序列寫入在跨區延遲下的累積效應。
+
+**2b 完成狀態與真實寫入筆數 ✅ VERIFIED**：
+`production_scheduler_runs`（`run_key='ex-date-sync:2026-10-18'`）最終狀態
+**`COMPLETED`**，`inserted=76`（即 `upserted: 76`，是程式裡每筆 `prisma.etfUpcomingExRight.upsert()`
+成功執行後才 `result.upserted++` 累加出來的真實計數，等同使用者要求的「RETURNING 的真實
+筆數」），`failed=0`，`error=null`。`matchedEtfs=99`、`skippedTbd=23`（23 筆金額官方還
+標示「待公告」，誠實跳過不猜測，不是錯誤）。
+
+**2c 抽查比對 ✅ VERIFIED，共核對 5 筆（超過要求的 3 筆），全部日期／金額完全吻合**（所有
+timestamp 欄位改用 `::text`，發現並避開了對 `timestamptz` 欄位誤用 `AT TIME ZONE 'UTC'`
+會因為 session 時區設定產生誤導結果的坑——`created_at`／`updated_at` 兩欄確認都是
+`timestamp with time zone` 型別，直接 `::text` 讀出來是無歧義的）：
+
+| 代碼 | 名稱 | 來源 | 資料庫除息日 | 官方除息日 | 資料庫金額 | 官方金額 |
+|---|---|---|---|---|---|---|
+| 00996A | 主動兆豐台灣豐收 | TWSE | 2026-10-19 | 115年10月19日 | 0.73 | 0.73 |
+| 00995A | 主動中信台灣卓越 | TWSE | 2026-10-19 | 115年10月19日 | 0.50 | 0.50 |
+| 00992A | 主動群益科技創新 | TWSE | 2026-10-19 | 115年10月19日 | 0.85 | 0.85 |
+| 00982B | FT投資級債20+ | TPEx | 2026-10-19 | 1151019 | 0.045 | 0.045 |
+| 00981D | 主動中信非投等債 | TPEx | 2026-10-19 | 1151019 | 0.070 | 0.070 |
+
+**第 2 項全數通過，可以進行第 5 項。**
