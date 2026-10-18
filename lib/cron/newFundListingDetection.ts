@@ -16,6 +16,7 @@
 import { prisma } from "@/lib/prisma";
 import { fetchSitcaRows, fetchSitcaIdentityRows } from "@/lib/sitca-nav-sync/sitcaFetch";
 import { fetchTdccNavCsv, parseTdccNavCsv } from "@/lib/offshore-nav-sync/tdccBatchSource";
+import { fetchTdccOffshoreBasicInfoNames } from "@/lib/tw-purchasable/tdccOffshoreBasicInfo";
 
 const DOMESTIC_SOURCE = "SITCA nav.csv (基金統編 diff)";
 const OFFSHORE_SOURCE = "TDCC opendata 3-4 (基金名稱 diff)";
@@ -152,10 +153,14 @@ async function createMissingDomesticFunds(writeEnabled: boolean, existingFundCod
 
 // 2026-10-18（使用者核准的最小新增方案）: offshore 的「auto-provisioning 是另一個更難的問題」
 // 舊註解（見下方 detectNewOffshoreFunds）其實只對一部分正確——TDCC NAV CSV（tdccBatchSource.ts
-// 的 dataset，不是這裡 OFFSHORE_SOURCE 用的 3-4 清冊）VERIFIED 每一列都有自己的 code/isin/
-// currency 欄位，不是完全沒有身分識別。既有 603 檔比對失敗的境外基金，用名稱當識別鍵（跟
-// classify.ts 比對 TDCC 時用的鍵完全一樣），把 NAV CSV 自己的 code/isin/currency 一起補進
-// `funds` 表。跟 createMissingDomesticFunds 用同一套「檢查缺漏→writeEnabled 才真的建立」模式。
+// 的 dataset 3-4，不是這裡 OFFSHORE_SOURCE 用的字串標籤）VERIFIED 每一列都有自己的 code/isin/
+// currency 欄位，不是完全沒有身分識別。把 NAV CSV 跟資料庫比對後缺漏的基金清單，再交叉比對
+// dataset 3-2（lib/tw-purchasable/tdccOffshoreBasicInfo.ts，「目前核備可在台灣銷售」的官方
+// 清冊）——VERIFIED 兩個資料集範圍不同：3-4 是「目前還在回報淨值」的基金（可能包含已停止對
+// 新投資人銷售、但既有持有人仍可查詢淨值的基金），3-2 才是「目前核備、可銷售」的清單。
+// 唯讀 dry-run 把 993 筆缺漏分類：454 筆同時在 3-2（可補建），539 筆不在 3-2（排除——這些
+// navDate 本身並不陳舊，代表它們是「還在回報淨值但已不在銷售核備清單上」，符合已停售/下架
+// 的特徵，不建立 funds 列）。只有 454 筆會真的被建立。
 // 與 lib/tw-purchasable/classify.ts 比對 TDCC 名稱時用同一個正規化規則（去掉全形空白／多餘
 // 空白），避免把「只有空白字元差異」的既存基金誤判成缺漏而建出重複列。
 function normalizeFundName(s: string): string {
@@ -165,10 +170,15 @@ function normalizeFundName(s: string): string {
 async function createMissingOffshoreFunds(writeEnabled: boolean, existingFundNames: Set<string>): Promise<{ taxId: string; name: string; company: string }[]> {
   const csvText = await fetchTdccNavCsv();
   const byName = parseTdccNavCsv(csvText);
+  const approvedNames = await fetchTdccOffshoreBasicInfoNames();
+  const approvedNormalized = new Set([...approvedNames].map(normalizeFundName));
   const existingNormalized = new Set([...existingFundNames].map(normalizeFundName));
   const missing: { taxId: string; name: string; company: string }[] = [];
   for (const [name, row] of byName) {
     if (existingFundNames.has(name) || existingNormalized.has(normalizeFundName(name))) continue;
+    // 只補建「目前核備、可在台灣銷售」的基金——跟 3-2 清冊比對不到的一律排除，不建立。
+    const isCurrentlyApproved = approvedNames.has(name) || approvedNormalized.has(normalizeFundName(name));
+    if (!isCurrentlyApproved) continue;
     missing.push({ taxId: row.code, name, company: "" });
   }
   if (!writeEnabled || missing.length === 0) return missing;
@@ -179,6 +189,9 @@ async function createMissingOffshoreFunds(writeEnabled: boolean, existingFundNam
     await prisma.fund.create({
       data: {
         name: row.name,
+        // funds.company 是必填欄位，但 TDCC NAV CSV（dataset 3-4）這一列本身不帶總代理/發行
+        // 公司名稱——誠實標記待補，不要編造一個看起來像真資料的公司名稱。
+        company: "（境外基金，總代理公司待人工補上）",
         currency: navRow.currency ?? "USD",
         dataProvider: "tdcc-offshore",
         isActive: true,
