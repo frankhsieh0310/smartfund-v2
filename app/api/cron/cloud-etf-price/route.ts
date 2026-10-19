@@ -99,7 +99,7 @@ export async function GET(request: Request) {
     where: { isActive: true, dataSource: { not: null }, id: { gt: cursor, in: coreEtfIds } },
     orderBy: { id: "asc" },
     take: batch,
-    select: { id: true, dataSource: true, priceUpdatedAt: true },
+    select: { id: true, dataSource: true, priceUpdatedAt: true, exchange: true, code: true },
   });
   if (candidates.length === 0 && cursor !== "") {
     wrapped = true;
@@ -108,7 +108,7 @@ export async function GET(request: Request) {
       where: { isActive: true, dataSource: { not: null }, id: { in: coreEtfIds } },
       orderBy: { id: "asc" },
       take: batch,
-      select: { id: true, dataSource: true, priceUpdatedAt: true },
+      select: { id: true, dataSource: true, priceUpdatedAt: true, exchange: true, code: true },
     });
   }
 
@@ -147,7 +147,18 @@ export async function GET(request: Request) {
       continue;
     }
     attempted++;
-    const symbol = etf.dataSource!;
+    // 2026-10-19 root-cause fix: VERIFIED live a cluster of YAHOO_CHART_NULL failures (00682U,
+    // 00685L, 00851, 00865B, 009803, 009805, 00994A, etc.) are NOT a Yahoo data gap -- their
+    // etfs.data_source is the bare code with no .TW/.TWO market suffix, which Yahoo's chart API
+    // requires to resolve a TW symbol at all. This is exactly the known "bare-code" gap already
+    // worked around in yahoo-etf-full-sweep/route.ts (borrowing a duplicate twin's data_source) --
+    // this route never had that fallback. Apply the same suffix correction directly here using the
+    // ETF's own exchange field, since that's always known even when no twin row exists.
+    const SYMBOL_RE = /^[A-Za-z0-9.^=-]{1,15}$/;
+    const hasSuffix = /\.(TW|TWO)$/.test(etf.dataSource!);
+    const suffix = etf.exchange === "TWSE" ? ".TW" : etf.exchange === "TPEx" ? ".TWO" : null;
+    const symbol = hasSuffix ? etf.dataSource! : suffix ? `${etf.dataSource}${suffix}` : etf.dataSource!;
+    if (!SYMBOL_RE.test(symbol)) { failed++; failures.push({ id: etf.id, symbol, reason: "INVALID_SYMBOL" }); continue; }
     try {
       // finally below always saves progress for this item, even when one of the continues inside
       // this try fires (null response / empty candle series) — continue still runs a finally.

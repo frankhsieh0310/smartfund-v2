@@ -34,7 +34,7 @@
     { "path": "/api/cron/fund-returns-sync", "schedule": "41 * * * *" },
     { "path": "/api/cron/fund-returns-sync", "schedule": "11 * * * *" },
     { "path": "/api/cron/yahoo-commodity?phase=history&group=cbot&symbols=ZC=F,ZW=F,KE=F,ZS=F,ZL=F,ZM=F,ZO=F,ZR=F", "schedule": "40 19 * * 1-5" },
-    { "path": "/api/cron/yahoo-commodity?phase=history&group=comex-nymex&symbols=CL=F,NG=F,GC=F,SI=F,HG=F,PL=F,PA=F,RB=F,HO=F", "schedule": "0 20 * * 1-5" },
+    { "path": "/api/cron/yahoo-commodity?phase=history&group=comex-nymex&symbols=CL=F,NG=F,GC=F,SI=F,HG=F,PL=F,PA=F,RB=F,HO=F,ALI=F", "schedule": "0 20 * * 1-5" },
     { "path": "/api/cron/yahoo-commodity?phase=history&group=livestock&symbols=LE=F,HE=F,GF=F", "schedule": "20 20 * * 1-5" },
     { "path": "/api/cron/yahoo-commodity?phase=history&group=ice&symbols=KC=F,CC=F,SB=F,CT=F,BZ=F,OJ=F", "schedule": "0 21 * * 1-5" },
     { "path": "/api/cron/yahoo-commodity-technical", "schedule": "30 21 * * 1-5" },

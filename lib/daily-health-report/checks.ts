@@ -13,6 +13,18 @@ export type PipelineHealth = {
   lastError: string | null;
   anomaly: boolean;
   anomalyReasons: string[];
+  /** 2026-10-19: errors matching a job's benignErrorPattern (source genuinely has no data to
+   * disclose, not a pipeline failure) -- counted here instead of errorCount24h, never contributes
+   * to anomaly. */
+  sourceUnavailableCount24h: number;
+};
+
+// 2026-10-19（使用者核准）: 部分排程的「錯誤」其實是「來源本身沒有資料可揭露」，不是真正的
+// 管線故障——VERIFIED 實際打開 MoneyDJ 網頁核對一筆失敗樣本（ACCA190，債券型基金），頁面本身
+// 顯示的是地區別資產配置，根本沒有個股持股表格可解析，不是我方爬蟲壞掉。這種已知的「來源無
+// 資料」錯誤樣式不計入異常，但筆數仍然要在報告中列出（不是悄悄吞掉）。
+const BENIGN_ERROR_PATTERNS: Record<string, RegExp> = {
+  CLOUD_MONEYDJ_FUND: /MONEYDJ_DISCLOSED_HOLDINGS_MISSING/,
 };
 
 // Checks production_scheduler_runs for a given job_id over the last 24h. A pipeline with ZERO runs in
@@ -44,7 +56,10 @@ export async function checkPipelineRunLog(query: QueryFn, jobId: string): Promis
     [jobId],
   );
 
-  const errorCount24h = rows.filter((r) => r.error != null).length;
+  const benignPattern = BENIGN_ERROR_PATTERNS[jobId];
+  const isBenignError = (errMsg: string | null) => !!errMsg && !!benignPattern && benignPattern.test(errMsg);
+  const errorCount24h = rows.filter((r) => r.error != null && !isBenignError(r.error)).length;
+  const sourceUnavailableCount24h = rows.filter((r) => isBenignError(r.error)).length;
   const writeErrorCount24h = rows.reduce((sum, r) => sum + (Number(r.write_error_count) || 0), 0);
   const last = rows[0] ?? null;
 
@@ -84,6 +99,7 @@ export async function checkPipelineRunLog(query: QueryFn, jobId: string): Promis
     jobId,
     hasRunInLast24h,
     errorCount24h,
+    sourceUnavailableCount24h,
     writeErrorCount24h,
     lastStatus: last?.status ?? null,
     lastError: last?.error ?? null,
@@ -156,7 +172,7 @@ export type CoverageResult = {
   //   "RECENT_10D_BEST_COVERAGE"：近 10 天內覆蓋筆數最多的那一天，不是交易日曆。
   //   "LATERAL_FRESHNESS_WINDOW"：不挑單一基準日，改成「universe 裡有多少比例在最近 N 天內
   //     有資料」（etf_history/fund_history 的 LATERAL 新鮮度檢查用這種）。
-  baselineMethod: "RECENT_10D_BEST_COVERAGE" | "LATERAL_FRESHNESS_WINDOW";
+  baselineMethod: "RECENT_10D_BEST_COVERAGE" | "LATERAL_FRESHNESS_WINDOW" | "TRADING_CALENDAR_WEEKDAY";
 };
 
 // 2026-10-18 (使用者規則定案，第 2b 項): 排程狀態（COMPLETED/PARTIAL）只代表「這次執行有沒有
@@ -215,21 +231,33 @@ async function evaluateCoverage(
 // (27 roots, lib/cron/commodityUpdate.ts), NOT futures_product_roots (891 rows -- that's every
 // contract-month row ever stored, not this job's actual per-commodity universe; using it as the
 // denominator was a mistake caught during this round's audit).
-export async function checkCommodityTechnicalCoverage(query: QueryFn, coreRootIds: string[]): Promise<CoverageResult> {
-  if (coreRootIds.length === 0) return { label: "commodity_technical", universeCount: 0, latestDate: null, coveredCount: 0, coveragePct: null, missingSample: [], anomaly: false, anomalyReason: null, baselineMethod: "RECENT_10D_BEST_COVERAGE" };
-  // 同上 evaluateCoverage 的 2b 修正：拿覆蓋根數最多的那天當基準日，不是單純最新日期。
-  const bestDayRows = await query(
-    `SELECT observed_at::date::text AS d, COUNT(DISTINCT root_id)::int AS n FROM futures_technical_analytics
-     WHERE root_id = ANY($1::uuid[]) AND observed_at > now() - interval '10 days'
-     GROUP BY observed_at::date ORDER BY n DESC, d DESC LIMIT 1`,
-    [coreRootIds],
+// 2026-10-19（使用者核准，修正「全體最佳日」基準）: 這 27 個核心商品全部是美股市場商品
+// （CBOT／COMEX-NYMEX／ICE／Livestock，vercel.json 排程皆平日週一到週五 19:00-21:30 UTC
+// 觸發），基準日改成「最近一個已經完整結束的平日」，不是「近10天覆蓋筆數最多的那天」——
+// 後者會不小心選到覆蓋率剛好較高、但不是最新交易日的某一天，掩蓋掉真正的缺口。健康報告固定
+// 在 UTC 00:30 查詢，這個時間點永遠晚於前一個平日全部排程的觸發時間，所以「最近一個平日」
+// 一定已經跑完，可以直接當基準，不用再找「最佳日」。
+// 已知限制（誠實記錄）：只排除週六週日，沒有查真正的美股假日行事曆，遇到美股假日當天仍會被
+// 誤判成「應該有資料」，跟既有 evaluateFreshness 的限制相同，不是本次新增的缺口。
+function lastCompletedUsTradingWeekday(now: Date): string {
+  const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  d.setUTCDate(d.getUTCDate() - 1); // start from "yesterday" -- today's own syncs haven't fired yet
+  while (d.getUTCDay() === 0 || d.getUTCDay() === 6) d.setUTCDate(d.getUTCDate() - 1); // skip Sat/Sun
+  return d.toISOString().slice(0, 10);
+}
+
+export async function checkCommodityTechnicalCoverage(query: QueryFn, coreRootIds: string[], now: Date = new Date()): Promise<CoverageResult> {
+  if (coreRootIds.length === 0) return { label: "commodity_technical", universeCount: 0, latestDate: null, coveredCount: 0, coveragePct: null, missingSample: [], anomaly: false, anomalyReason: null, baselineMethod: "TRADING_CALENDAR_WEEKDAY" };
+  const targetDate = lastCompletedUsTradingWeekday(now);
+  const dayRows = await query(
+    `SELECT COUNT(DISTINCT root_id)::int AS n FROM futures_technical_analytics
+     WHERE root_id = ANY($1::uuid[]) AND observed_at::date = $2::date`,
+    [coreRootIds, targetDate],
   );
-  const latestDate = bestDayRows[0]?.d ?? null;
-  const coveredCount = Number(bestDayRows[0]?.n ?? 0);
-  if (!latestDate) return { label: "commodity_technical", universeCount: coreRootIds.length, latestDate: null, coveredCount: 0, coveragePct: 0, missingSample: [], anomaly: true, anomalyReason: "NO_RECENT_DATA", baselineMethod: "RECENT_10D_BEST_COVERAGE" };
+  const coveredCount = Number(dayRows[0]?.n ?? 0);
   const coveragePct = (coveredCount / coreRootIds.length) * 100;
   const anomaly = coveragePct < 100;
-  return { label: "commodity_technical", universeCount: coreRootIds.length, latestDate, coveredCount, coveragePct, missingSample: [], anomaly, anomalyReason: anomaly ? `COVERAGE_${coveragePct.toFixed(1)}PCT` : null, baselineMethod: "RECENT_10D_BEST_COVERAGE" };
+  return { label: "commodity_technical", universeCount: coreRootIds.length, latestDate: targetDate, coveredCount, coveragePct, missingSample: [], anomaly, anomalyReason: anomaly ? `COVERAGE_${coveragePct.toFixed(1)}PCT` : null, baselineMethod: "TRADING_CALENDAR_WEEKDAY" };
 }
 
 // fund_performances -- small table (12k rows, safe to scan). 2026-10-18 correction: universe is
