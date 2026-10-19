@@ -85,6 +85,9 @@
     { "path": "/api/cron/etf-official-holdings?issuer=Capital", "schedule": "3,23,43 11-14 * * 1-5" },
     { "path": "/api/cron/etf-official-holdings?issuer=Taishin", "schedule": "3,23,43 11-14 * * 1-5" },
     { "path": "/api/cron/etf-official-holdings?issuer=Nomura", "schedule": "8,28,48 11-14 * * 1-5" },
-    { "path": "/api/cron/etf-official-holdings?issuer=BlackRock", "schedule": "8,28,48 11-14 * * 1-5" }
+    { "path": "/api/cron/etf-official-holdings?issuer=BlackRock", "schedule": "8,28,48 11-14 * * 1-5" },
+    { "path": "/api/cron/fx-forward-reference-curve", "schedule": "15 19 * * *" },
+    { "path": "/api/cron/fx-global-carry-ranking", "schedule": "30 19 * * *" },
+    { "path": "/api/cron/fx-options-public", "schedule": "49 13 * * *" }
   ]
 }
