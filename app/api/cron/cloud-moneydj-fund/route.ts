@@ -5,7 +5,11 @@
 // No scraper logic is duplicated beyond that single-page parse contract; the DB write path,
 // conflict target and advisory lock are identical to the existing local job.
 //
-// Trigger: GitHub Actions schedule -> GET with `Authorization: Bearer <CRON_SECRET>`.
+// Trigger: GitHub Actions schedule (:02/:22/:37/:52, repo secret SMARTFUND_CRON_SECRET) AND Vercel's
+// native cron (vercel.json, */20 * * * *, auto-sends Bearer $CRON_SECRET) -- both call the same public
+// GET with `Authorization: Bearer <CRON_SECRET>`, and both are expected/intentional: run_key is a
+// 15-minute bucket (see quarterHourBucketKey below), not per-trigger-source, so whichever of the two
+// mechanisms lands first in a given 15-minute window does the real work and the other is a safe no-op.
 // One invocation: read ROLLING checkpoint -> next <=BATCH MASTER-FUND portfolios (one representative
 // share class per verified master_fund_id, standalone funds unaffected) -> fetch MoneyDJ -> compare
 // 資料月份 -> only-newer write -> advance checkpoint -> run log -> return.
@@ -24,7 +28,6 @@ import {
 import {
   beginRun,
   finishRun,
-  hourBucketKey,
   readCheckpoint,
   writeCheckpoint,
   type CheckpointRow,
@@ -62,6 +65,24 @@ const FRESH_DAYS = 25; // matches the local disclosure worker's re-fetch guard
 // yahoo-etf-full-sweep (TIME_BUDGET_MS well under maxDuration=300s so a checkpoint write always
 // happens). Not a maxDuration increase — maxDuration stays 300.
 const TIME_BUDGET_MS = 240_000;
+
+// 2026-10-19: hourBucketKey() (lib/cloud-ingestion/runContext.ts) dedups run_key per CALENDAR HOUR,
+// shared by 9 other cron routes that genuinely want "at most once per hour" semantics. This route no
+// longer does — the daily-completion fix now fires GitHub Actions 4x/hour (:02/:22/:37/:52) plus
+// Vercel's native */20 cron (:00/:20/:40), specifically so this job gets more real attempts per day.
+// Under hourBucketKey, every one of those extra triggers within the same hour would hit the same
+// run_key and be skipped ("run_key already present this hour") the instant the hour's first trigger
+// succeeds -- making the added trigger frequency a no-op for actual throughput. quarterHourBucketKey
+// buckets by 15-minute window instead (:00/:15/:30/:45), giving up to 4 distinct, independently-
+// dedup'd run_key slots per hour. A single run takes ~243-250s (TIME_BUDGET_MS=240_000 + response
+// overhead), comfortably inside one 900s-wide bucket with no risk of spilling into the next bucket's
+// window. Scoped to this route only -- NOT a change to the shared hourBucketKey used by the other 9
+// routes, which still want hourly dedup.
+function quarterHourBucketKey(prefix: string, now = new Date()): string {
+  const hourPrefix = now.toISOString().slice(0, 13); // e.g. 2026-10-19T05
+  const quarter = String(Math.floor(now.getUTCMinutes() / 15) * 15).padStart(2, "0"); // 00/15/30/45
+  return `${prefix}:${hourPrefix}:${quarter}`;
+}
 
 // portfolioKey = fund_share_classes.master_fund_id when that mapping is verifiable (an actual row
 // links this fund to a master), otherwise the fund's own id — i.e. the SAME master-fund identity
@@ -235,7 +256,7 @@ export async function GET(request: Request) {
   const universeCount = Number(universeRows[0]?.n ?? 0);
 
   const before = await readCheckpoint(CHECKPOINT_KEY);
-  const runKey = hourBucketKey("cloud-moneydj-fund");
+  const runKey = quarterHourBucketKey("cloud-moneydj-fund");
   const { runId, skipped } = await beginRun({
     jobName: JOB,
     provider: PROVIDER,
@@ -245,7 +266,7 @@ export async function GET(request: Request) {
     checkpointBefore: before,
   });
   if (skipped) {
-    return Response.json({ ok: true, job: JOB, skipped: true, reason: "run_key already present this hour", runKey });
+    return Response.json({ ok: true, job: JOB, skipped: true, reason: "run_key already present this 15-minute window", runKey });
   }
 
   let cursor = before?.lastSymbol ?? "";
