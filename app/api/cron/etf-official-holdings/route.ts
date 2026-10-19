@@ -263,7 +263,19 @@ export async function GET(request: Request) {
       { status: 400 },
     );
   }
-  const { adapter, tickers } = issuerUniverse[issuer];
+  const { adapter, tickers: issuerTickers } = issuerUniverse[issuer];
+  // Skip any ticker this app has already marked is_active=false (delisted / no longer tracked),
+  // e.g. CTBC's 00847B — its own official site has no holdings entry for a delisted fund at all,
+  // so retrying it every run only ever produces the same NO_ENTRY failure, which previously
+  // blocked this whole issuer from ever reaching reachedEnd=true via `stoppedOnFailure`. Checked
+  // generically against the DB here (not a per-issuer hardcoded exclusion like the existing
+  // CATHAY_CANONICAL/CAPITAL_ACTIVE/SINOPAC_ACTIVE filters in buildIssuerUniverse) so any issuer's
+  // static FUND_ID_MAP self-heals the moment a ticker is marked inactive, without a code change.
+  const inactiveRows = issuerTickers.length
+    ? await prisma.etf.findMany({ where: { code: { in: issuerTickers }, isActive: false }, select: { code: true } })
+    : [];
+  const inactiveCodes = new Set(inactiveRows.map((r) => r.code));
+  const tickers = inactiveCodes.size ? issuerTickers.filter((t) => !inactiveCodes.has(t)) : issuerTickers;
   const checkpointKey = `etf-official-holdings:${issuer.toLowerCase()}`;
 
   // Daily reset, scoped to this issuer only: a checkpoint from a previous Taipei calendar day never
