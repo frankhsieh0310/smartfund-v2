@@ -19,7 +19,6 @@ on:
     # run_key makes a second same-window call a safe no-op, not corruption — but still pointless). Kept
     # as workflow_dispatch-only options below (job=consensus-ingest etc.) for manual/fallback use, not on
     # the automatic schedule, so Vercel Workflow stays the one PRIMARY trigger for this domain.
-    - cron: "30 11 * * 1-5" # Function 2: Taiwan ETF official daily holdings — 19:30 Taipei, weekdays only
     # Crypto: daily bounded history and marketcap slices (UTC); quote is manual only.
     - cron: "39 0 * * *"        # marketcap: daily 08:39 Taipei, max 250 markets
     - cron: "23 0 * * *"        # history: daily 08:23 Taipei, existing small batches
@@ -130,7 +129,6 @@ jobs:
             "0 0 * * *") echo "job=consensus-performance" >> "$GITHUB_OUTPUT" ;;
             "40 1,4,7,10,13,16,19,22 * * *") echo "job=consensus-flips" >> "$GITHUB_OUTPUT" ;;
             "50 23 * * *") echo "job=consensus-backfill" >> "$GITHUB_OUTPUT" ;;
-            "30 11 * * 1-5") echo "job=etf-official-holdings" >> "$GITHUB_OUTPUT" ;;
             *)            echo "job=${{ github.event.inputs.job || 'all' }}" >> "$GITHUB_OUTPUT" ;;
           esac
 
@@ -502,7 +500,7 @@ jobs:
   # name for a manual single-issuer dispatch, all 17 for a schedule run or issuer=all), and the real
   # job below consumes that list via fromJSON() in strategy.matrix — its own if never references matrix.
   etf-issuer-matrix-setup:
-    if: ${{ github.event.schedule == '30 11 * * 1-5' || github.event.inputs.job == 'etf-official-holdings' || github.event.inputs.job == 'all' }}
+    if: ${{ github.event.inputs.job == 'etf-official-holdings' || github.event.inputs.job == 'all' }}
     runs-on: ubuntu-latest
     outputs:
       issuers: ${{ steps.set.outputs.issuers }}
@@ -523,7 +521,7 @@ jobs:
 
   etf-official-holdings:
     needs: etf-issuer-matrix-setup
-    if: ${{ github.event.schedule == '30 11 * * 1-5' || github.event.inputs.job == 'etf-official-holdings' || github.event.inputs.job == 'all' }}
+    if: ${{ github.event.inputs.job == 'etf-official-holdings' || github.event.inputs.job == 'all' }}
     runs-on: ubuntu-latest
     timeout-minutes: 90
     strategy:
