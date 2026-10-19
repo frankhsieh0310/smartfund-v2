@@ -11,6 +11,7 @@
 import { isAuthorizedCron, unauthorizedCron } from "@/lib/cron/authorize";
 import { prisma } from "@/lib/prisma";
 import { fetchYahooChartPeriod } from "@/lib/services/dataProviders/yahoo/yahooClient";
+import { getCoreUniverseEtfIds } from "@/lib/tw-purchasable/coreUniverseFilter";
 import {
   beginRun,
   finishRun,
@@ -90,9 +91,12 @@ export async function GET(request: Request) {
   let cursor = before?.lastSymbol ?? "";
   let wrapped = false;
 
+  // 2026-10-19（使用者商品範圍規則，最高層）: 只更新「台灣買得到」的核心母體 ETF。
+  const coreEtfIds = Array.from(await getCoreUniverseEtfIds());
+
   // Take the next id-window; if empty, the cursor is past the end -> wrap once.
   let candidates = await prisma.etf.findMany({
-    where: { isActive: true, dataSource: { not: null }, id: { gt: cursor } },
+    where: { isActive: true, dataSource: { not: null }, id: { gt: cursor, in: coreEtfIds } },
     orderBy: { id: "asc" },
     take: batch,
     select: { id: true, dataSource: true, priceUpdatedAt: true },
@@ -101,7 +105,7 @@ export async function GET(request: Request) {
     wrapped = true;
     cursor = "";
     candidates = await prisma.etf.findMany({
-      where: { isActive: true, dataSource: { not: null } },
+      where: { isActive: true, dataSource: { not: null }, id: { in: coreEtfIds } },
       orderBy: { id: "asc" },
       take: batch,
       select: { id: true, dataSource: true, priceUpdatedAt: true },

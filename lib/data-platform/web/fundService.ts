@@ -6,6 +6,7 @@ import { normalizePagination, paginationMeta } from "./pagination.ts";
 import { buildProvenance } from "./provenance.ts";
 import { isoOrNull, numberOrNull, type CanonicalIdentity, type HistoryQuery, type ListQuery, type Provenance, type ResponseMeta, type ServiceResponse, type SummaryMetrics } from "./types.ts";
 import { mapFundMainCategory, type FundMainCategory } from "./fundCategoryMapping.ts";
+import { getCoreUniverseFundIds } from "../../tw-purchasable/coreUniverseFilter.ts";
 
 // 2026-10-16: 925 distinct fund names (1,887 rows) share a display name with at least one other
 // fund row -- VERIFIED live these are overwhelmingly genuinely different, real, purchasable share
@@ -63,8 +64,12 @@ export async function getFundList(query: FundListQuery = {}): Promise<ServiceRes
   const { page, pageSize, skip } = normalizePagination(query.page, query.pageSize);
   const term = query.query?.trim();
   const direction: Prisma.SortOrder = query.direction === "desc" ? "desc" : "asc";
+  // 2026-10-19（使用者商品範圍規則，最高層）: 只顯示「台灣買得到」的核心母體基金（SITCA 國內
+  // 基金＋TDCC 3-2 境內核備境外基金）。
+  const coreFundIds = await getCoreUniverseFundIds();
   const where = {
     isActive: true,
+    id: { in: Array.from(coreFundIds) },
     NOT: {
       dataProvider: "yahoo",
       lastNavSource: null,

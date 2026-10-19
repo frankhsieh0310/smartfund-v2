@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "../../prisma.ts";
 import { freshnessStatus } from "./freshness.ts";
 import type { HomeRankData, HomeRankItem } from "@/lib/web/home-ranking-types";
+import { getCoreUniverseFundIds } from "../../tw-purchasable/coreUniverseFilter.ts";
 
 const n = (value: unknown) => value == null ? null : Number(value);
 const iso = (value: Date | null | undefined) => value ? value.toISOString() : null;
@@ -16,16 +17,18 @@ async function stockRanks(){
  return{primary:{label:`${md(rows[0]?.date)} 台股成交量前五大`,asOfDate:iso(rows[0]?.date),items},secondary:{label:"",asOfDate:null,items:[] as HomeRankItem[]}};
 }
 async function etfRanks(){
- const rows=await prisma.$queryRaw<EtfRankRow[]>(Prisma.sql`WITH candidates AS (SELECT e.id,e.code,e.name,e.currency,h.date,h.price,h.volume,(h.price*h.volume) trading_amount,CASE WHEN p.price IS NOT NULL AND p.price<>0 THEN ((h.price-p.price)/p.price)*100 END change_pct,e.updated_at FROM etfs e CROSS JOIN LATERAL (SELECT date,coalesce(close,price) price,volume FROM etf_history WHERE etf_id=e.id AND volume>0 AND coalesce(close,price) IS NOT NULL ORDER BY date DESC LIMIT 1) h LEFT JOIN LATERAL (SELECT coalesce(close,price) price FROM etf_history WHERE etf_id=e.id AND date<h.date AND coalesce(close,price) IS NOT NULL ORDER BY date DESC LIMIT 1) p ON true WHERE e.is_active AND e.currency='TWD' AND e.exchange IN ('TWSE','TPEx')), latest AS (SELECT max(date) date FROM candidates) SELECT c.* FROM candidates c JOIN latest l ON c.date=l.date ORDER BY c.trading_amount DESC,c.code ASC LIMIT 5`);
+ const rows=await prisma.$queryRaw<EtfRankRow[]>(Prisma.sql`WITH candidates AS (SELECT e.id,e.code,e.name,e.currency,h.date,h.price,h.volume,(h.price*h.volume) trading_amount,CASE WHEN p.price IS NOT NULL AND p.price<>0 THEN ((h.price-p.price)/p.price)*100 END change_pct,e.updated_at FROM etfs e CROSS JOIN LATERAL (SELECT date,coalesce(close,price) price,volume FROM etf_history WHERE etf_id=e.id AND volume>0 AND coalesce(close,price) IS NOT NULL ORDER BY date DESC LIMIT 1) h LEFT JOIN LATERAL (SELECT coalesce(close,price) price FROM etf_history WHERE etf_id=e.id AND date<h.date AND coalesce(close,price) IS NOT NULL ORDER BY date DESC LIMIT 1) p ON true WHERE e.is_active AND e.currency='TWD' AND e.exchange IN ('TWSE','TPEx') AND e.id IN (SELECT asset_id FROM tw_purchasable_classification WHERE asset_type='ETF' AND status='APPROVED')), latest AS (SELECT max(date) date FROM candidates) SELECT c.* FROM candidates c JOIN latest l ON c.date=l.date ORDER BY c.trading_amount DESC,c.code ASC LIMIT 5`);
  const items=rows.map((row):HomeRankItem=>({id:row.id,code:row.code,name:row.name,href:`/etf/${encodeURIComponent(row.code)}`,value:n(row.price),metric:n(row.change_pct),metricLabel:"漲跌幅",currency:row.currency,asOfDate:iso(row.date),lastUpdated:iso(row.updated_at),trend:[]}));
  return{primary:{label:`${md(rows[0]?.date)} 台灣ETF成交金額前五大`,asOfDate:iso(rows[0]?.date),items},secondary:{label:"",asOfDate:null,items:[] as HomeRankItem[]}};
 }async function fundRanks() {
   const select={id:true,code:true,isin:true,name:true,currency:true,return1y:true,latestNav:true,latestNavDate:true,updatedAt:true,history:{orderBy:{date:"desc" as const},take:8,select:{nav:true}}};
+  // 2026-10-19（使用者商品範圍規則，最高層）: 首頁排行只列「台灣買得到」的核心母體基金。
+  const coreFundIds=Array.from(await getCoreUniverseFundIds());
   const [totalCount,comparableCount,asOf,candidates]=await Promise.all([
-    prisma.fund.count({where:{isActive:true}}),
-    prisma.fund.count({where:{isActive:true,return1y:{not:null}}}),
-    prisma.fund.aggregate({where:{isActive:true,return1y:{not:null}},_max:{latestNavDate:true}}),
-    prisma.fund.findMany({where:{isActive:true,return1y:{not:null}},orderBy:[{return1y:{sort:"desc",nulls:"last"}},{id:"asc"}],take:100,select}),
+    prisma.fund.count({where:{isActive:true,id:{in:coreFundIds}}}),
+    prisma.fund.count({where:{isActive:true,return1y:{not:null},id:{in:coreFundIds}}}),
+    prisma.fund.aggregate({where:{isActive:true,return1y:{not:null},id:{in:coreFundIds}},_max:{latestNavDate:true}}),
+    prisma.fund.findMany({where:{isActive:true,return1y:{not:null},id:{in:coreFundIds}},orderBy:[{return1y:{sort:"desc",nulls:"last"}},{id:"asc"}],take:100,select}),
   ]);
   const readiness=candidates.length?await prisma.$queryRaw<Array<{id:string;history_ready:boolean}>>(Prisma.sql`SELECT f.id,EXISTS(SELECT 1 FROM fund_history h WHERE h.fund_id=f.id OFFSET 19 LIMIT 1) history_ready FROM funds f WHERE f.id IN (${Prisma.join(candidates.map(row=>row.id))})`):[];
   const readyByFund=new Map(readiness.map(row=>[row.id,row.history_ready]));

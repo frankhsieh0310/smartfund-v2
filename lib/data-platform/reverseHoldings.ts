@@ -82,6 +82,8 @@ export const reverseSQL = `WITH targets AS (
     THEN 'ETF:TW:'||regexp_replace(e.code,'\\.(TW|TWO)$','')
     ELSE 'ETF:'||coalesce(nullif(e.isin,''),coalesce(e.exchange,'')||':'||e.code) END product_key
   FROM etfs e WHERE e.is_active
+    -- 2026-10-19（使用者商品範圍規則，最高層）: 反查結果只列「台灣買得到」的核心母體 ETF。
+    AND e.id IN (SELECT asset_id FROM tw_purchasable_classification WHERE asset_type='ETF' AND status='APPROVED')
 ), etf_latest AS MATERIALIZED (
   SELECT DISTINCT ON(e.product_key) e.product_key,e.code,e.name,e.category,e.id etf_id,s.id snapshot_id,s.effective_date,s.source,s.completeness_status
   FROM etf_products e JOIN etf_holding_snapshots s ON s.etf_id=e.id
@@ -97,6 +99,8 @@ export const reverseSQL = `WITH targets AS (
     h.as_of_date,CASE WHEN h.source='YAHOO_QUOTE_SUMMARY' THEN NULL ELSE h.as_of_date END effective_date,h.source,h.filing_id,count(*) row_count,
     (f.id=fm.representative_fund_id) representative,coalesce(fm.canonical_name,f.name) display_name
   FROM holdings h JOIN funds f ON f.id=h.fund_id AND f.is_active
+    -- 2026-10-19（使用者商品範圍規則，最高層）: 反查結果只列「台灣買得到」的核心母體基金。
+    AND f.id IN (SELECT asset_id FROM tw_purchasable_classification WHERE asset_type='FUND' AND status='APPROVED')
   LEFT JOIN fund_share_classes sc ON sc.fund_id=f.id
   LEFT JOIN fund_master fm ON fm.id=sc.master_fund_id
   WHERE h.asset_type='FUND' AND h.as_of_date<=CURRENT_DATE AND h.source IS NOT NULL

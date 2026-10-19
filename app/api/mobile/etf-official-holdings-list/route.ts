@@ -11,12 +11,17 @@ export async function GET(request: Request) {
   const q = new URL(request.url).searchParams;
   const search = q.get("q")?.trim().toUpperCase() ?? "";
 
+  // 2026-10-19（使用者商品範圍規則，最高層）: 只列「台灣買得到」的核心母體 ETF。
   const rows = await prisma.$queryRawUnsafe<
     Array<{ etf_code: string; issuer: string; snapshot_count: bigint; latest_data_date: string }>
   >(
     `SELECT etf_code, MAX(issuer) AS issuer, COUNT(*) AS snapshot_count,
             to_char(MAX(data_date), 'YYYY-MM-DD') AS latest_data_date
        FROM etf_official_daily_snapshots
+      WHERE etf_code IN (
+        SELECT e.code FROM etfs e
+        WHERE e.id IN (SELECT asset_id FROM tw_purchasable_classification WHERE asset_type='ETF' AND status='APPROVED')
+      )
       GROUP BY etf_code
       ORDER BY etf_code`,
   );

@@ -108,6 +108,9 @@ export async function GET(request: Request) {
          LEFT JOIN etfs twin ON regexp_replace(twin.code, '\\.(TW|TWO)$', '') = regexp_replace(bare.code, '\\.(TW|TWO)$', '')
                             AND twin.created_at > bare.created_at
         WHERE bare.is_active = true AND ($1::text IS NULL OR bare.id > $1)
+          -- 2026-10-19（使用者商品範圍規則，最高層）: 只更新「台灣買得到」的核心母體，
+          -- 不再抓非核心 ETF（非 tw_purchasable_classification APPROVED 的長尾商品）。
+          AND bare.id IN (SELECT asset_id FROM tw_purchasable_classification WHERE asset_type = 'ETF' AND status = 'APPROVED')
           AND NOT EXISTS (
             SELECT 1 FROM etfs older
             WHERE regexp_replace(older.code, '\\.(TW|TWO)$', '') = regexp_replace(bare.code, '\\.(TW|TWO)$', '')

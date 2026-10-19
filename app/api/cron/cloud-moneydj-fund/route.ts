@@ -190,6 +190,10 @@ async function nextCodes(cursor: string, batch: number): Promise<MappedFund[]> {
          JOIN funds f ON f.id = m.fund_id
          LEFT JOIN fund_share_classes sc ON sc.fund_id = f.id
         WHERE m.moneydj_code IS NOT NULL
+          -- 2026-10-19（使用者商品範圍規則，最高層）: 只更新「台灣買得到」的核心母體基金，
+          -- 不再抓非核心基金的揭露持股（這也是 MONEYDJ_DISCLOSED_HOLDINGS_MISSING 健康報告
+          -- 異常的主要來源——多數失敗的 fund_id 本身就不是核心母體）。
+          AND f.id IN (SELECT asset_id FROM tw_purchasable_classification WHERE asset_type = 'FUND' AND status = 'APPROVED')
      ),
      fresh_portfolios AS (
        SELECT DISTINCT COALESCE(sc.master_fund_id, h.fund_id) AS portfolio_key
@@ -224,7 +228,9 @@ export async function GET(request: Request) {
   const startedMs = Date.now();
 
   const universeRows = await prisma.$queryRawUnsafe<Array<{ n: number }>>(
-    `SELECT COUNT(*)::int AS n FROM fund_mappings WHERE moneydj_code IS NOT NULL`,
+    `SELECT COUNT(*)::int AS n FROM fund_mappings m JOIN funds f ON f.id = m.fund_id
+      WHERE m.moneydj_code IS NOT NULL
+        AND f.id IN (SELECT asset_id FROM tw_purchasable_classification WHERE asset_type = 'FUND' AND status = 'APPROVED')`,
   );
   const universeCount = Number(universeRows[0]?.n ?? 0);
 

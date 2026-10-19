@@ -15,6 +15,14 @@ import { prisma } from "@/lib/prisma";
 import { readFundYieldSnapshot, rankFundYields } from "@/lib/yahoo/fundYieldRanking";
 import { categoriesForBucket } from "@/lib/data-platform/categoryClassification";
 import { classifyEtfsOfficial } from "@/lib/data-platform/officialEtfCategory";
+import { getCoreUniverseFundIds } from "@/lib/tw-purchasable/coreUniverseFilter";
+
+// 2026-10-19（使用者商品範圍規則，最高層）: 排行榜只列「台灣買得到」的核心母體。ETF 用子查詢
+// 直接內嵌進各支 SQL（跟既有 categoryClause 同一種寫法）；FUND 的三個 raw SQL block 也用同一個
+// 子查詢字串，唯一例外是 FUND DIVIDEND_YIELD 走離線 snapshot（不是 SQL），改成後置用
+// getCoreUniverseFundIds() 過濾。
+const CORE_ETF_FILTER_SQL = `AND id IN (SELECT asset_id FROM tw_purchasable_classification WHERE asset_type = 'ETF' AND status = 'APPROVED')`;
+const CORE_FUND_FILTER_SQL = `AND f.id IN (SELECT asset_id FROM tw_purchasable_classification WHERE asset_type = 'FUND' AND status = 'APPROVED')`;
 
 const headers = { "Access-Control-Allow-Origin": "*", "Cache-Control": "no-store" };
 const ZH = "[一-鿿]";
@@ -95,7 +103,7 @@ export async function GET(request: Request) {
       }>>(
         `SELECT id, code, name, ${column}::text AS value, latest_price::text, price_updated_at::text AS price_date,
                 COUNT(*) OVER ()::text AS total
-           FROM etfs WHERE is_active = true AND ${column} IS NOT NULL AND name ~ $3 ${categoryClause}
+           FROM etfs WHERE is_active = true AND ${column} IS NOT NULL AND name ~ $3 ${categoryClause} ${CORE_ETF_FILTER_SQL}
           ORDER BY ${column} ${sort} LIMIT $1 OFFSET $2`,
         limit, offset, ZH, ...(categoryValues.length ? [categoryValues] : []),
       );
@@ -116,7 +124,7 @@ export async function GET(request: Request) {
       }>>(
         `SELECT id, code, name, aum::text AS aum, currency, latest_price::text AS latest_price, price_updated_at::text AS price_date,
                 COUNT(*) OVER ()::text AS total
-           FROM etfs WHERE is_active = true AND aum IS NOT NULL AND name ~ $3 ${categoryClause}
+           FROM etfs WHERE is_active = true AND aum IS NOT NULL AND name ~ $3 ${categoryClause} ${CORE_ETF_FILTER_SQL}
           ORDER BY etfs.aum ${sort} LIMIT $1 OFFSET $2`,
         limit, offset, ZH, ...(categoryValues.length ? [categoryValues] : []),
       );
@@ -137,7 +145,7 @@ export async function GET(request: Request) {
       }>>(
         `SELECT id, code, name, volume::text AS volume, latest_price::text AS latest_price, price_updated_at::text AS price_date,
                 COUNT(*) OVER ()::text AS total
-           FROM etfs WHERE is_active = true AND volume IS NOT NULL AND name ~ $3 ${categoryClause}
+           FROM etfs WHERE is_active = true AND volume IS NOT NULL AND name ~ $3 ${categoryClause} ${CORE_ETF_FILTER_SQL}
           ORDER BY etfs.volume ${sort} LIMIT $1 OFFSET $2`,
         limit, offset, ZH, ...(categoryValues.length ? [categoryValues] : []),
       );
@@ -162,7 +170,7 @@ export async function GET(request: Request) {
         `SELECT id, code, name, dividend_yield::text AS dividend_yield, latest_price::text AS latest_price, price_updated_at::text AS price_date,
                 COUNT(*) OVER ()::text AS total
            FROM etfs
-          WHERE is_active = true AND currency = 'TWD' AND code !~ '\\.' AND dividend_yield IS NOT NULL AND name ~ $3 ${categoryClause}
+          WHERE is_active = true AND currency = 'TWD' AND code !~ '\\.' AND dividend_yield IS NOT NULL AND name ~ $3 ${categoryClause} ${CORE_ETF_FILTER_SQL}
           ORDER BY etfs.dividend_yield ${sort} LIMIT $1 OFFSET $2`,
         limit, offset, ZH, ...(categoryValues.length ? [categoryValues] : []),
       );
@@ -186,7 +194,7 @@ export async function GET(request: Request) {
       }>>(
         `SELECT id, code, name, beta::text AS beta, latest_price::text AS latest_price, price_updated_at::text AS price_date,
                 COUNT(*) OVER ()::text AS total
-           FROM etfs WHERE is_active = true AND beta IS NOT NULL AND name ~ $3 ${categoryClause}
+           FROM etfs WHERE is_active = true AND beta IS NOT NULL AND name ~ $3 ${categoryClause} ${CORE_ETF_FILTER_SQL}
           ORDER BY etfs.beta ${sort} LIMIT $1 OFFSET $2`,
         limit, offset, ZH, ...(categoryValues.length ? [categoryValues] : []),
       );
@@ -234,7 +242,7 @@ export async function GET(request: Request) {
              JOIN latest_metric lm ON lm.fund_id = f.id
              LEFT JOIN fund_share_classes sc ON sc.fund_id = f.id
              LEFT JOIN fund_master fm ON fm.id = sc.master_fund_id
-            WHERE f.is_active = true AND f.name ~ $3 ${fundCategoryClauseAt(5)}
+            WHERE f.is_active = true AND f.name ~ $3 ${fundCategoryClauseAt(5)} ${CORE_FUND_FILTER_SQL}
          )
          SELECT id, code, name, value::text AS value, latest_nav::text AS nav, latest_nav_date::text AS nav_date,
                 COUNT(*) OVER ()::text AS total
@@ -266,7 +274,7 @@ export async function GET(request: Request) {
            FROM funds f
            LEFT JOIN fund_share_classes sc ON sc.fund_id = f.id
            LEFT JOIN fund_master fm ON fm.id = sc.master_fund_id
-          WHERE f.is_active = true AND f.${column} IS NOT NULL AND f.name ~ $3 ${fundCategoryClauseAt(4)}
+          WHERE f.is_active = true AND f.${column} IS NOT NULL AND f.name ~ $3 ${fundCategoryClauseAt(4)} ${CORE_FUND_FILTER_SQL}
        )
        SELECT id, code, name, value::text AS value, latest_nav::text AS nav, latest_nav_date::text AS nav_date,
               COUNT(*) OVER ()::text AS total
@@ -297,7 +305,7 @@ export async function GET(request: Request) {
            FROM funds f
            LEFT JOIN fund_share_classes sc ON sc.fund_id = f.id
            LEFT JOIN fund_master fm ON fm.id = sc.master_fund_id
-          WHERE f.is_active = true AND f.morningstar BETWEEN 1 AND 5 AND f.name ~ $3
+          WHERE f.is_active = true AND f.morningstar BETWEEN 1 AND 5 AND f.name ~ $3 ${CORE_FUND_FILTER_SQL}
        )
        SELECT id, code, name, morningstar, latest_nav::text AS nav, latest_nav_date::text AS nav_date,
               COUNT(*) OVER ()::text AS total
@@ -321,7 +329,8 @@ export async function GET(request: Request) {
     // drop the zh gate, this dimension is honestly reported unsupported until the two pools are mapped.
     try {
       const snapshot = await readFundYieldSnapshot();
-      const ranked = rankFundYields(snapshot.rows).filter((r) => new RegExp(ZH).test(r.name));
+      const coreFundIds = await getCoreUniverseFundIds();
+      const ranked = rankFundYields(snapshot.rows).filter((r) => new RegExp(ZH).test(r.name) && coreFundIds.has(r.shareClassId));
       if (ranked.length === 0) return unsupported(assetType, rankingType, page, limit, "NO_REAL_DATA_FOR_ZH_UNIVERSE");
       const slice = sort === "ASC" ? [...ranked].reverse() : ranked;
       const pageRows = slice.slice(offset, offset + limit);
