@@ -53,23 +53,76 @@ export async function fetchMoneydjDisclosure(moneydjCode: string): Promise<Money
   // doesn't recognize (e.g. an ISIN passed where it expects its own short fund code) can render a
   // fallback page that still has an unrelated "資料月份：" string elsewhere (nav, footer, an ad), and a
   // whole-body regex has no way to tell that apart from the real one next to the actual holdings.
+  //
+  // 2026-10-19: MoneyDJ renders holdings in (at least) two different table layouts, and the original
+  // code here only handled one of them. Verified live against a 10-fund random sample pulled from 30h
+  // of CLOUD_MONEYDJ_FUND MONEYDJ_DISCLOSED_HOLDINGS_MISSING failures: 9 of 10 actually had a real
+  // holdings table on the page, wrongly discarded by this parser -- only 1 of 10 (a bond fund) had no
+  // holdings table at all (genuinely correct as MISSING).
+  //   Format A (2 <td> per <tr>, "投資名稱 | 比例"): weight cell is "N.NN%" -- the pre-existing branch
+  //   below handles this correctly as-is.
+  //   Format B (4 or 8 <td> per <tr>, two side-by-side groups of "投資名稱 | 投資(千股) | 比例 | 增減"):
+  //   this is the MORE COMMON real-world layout (confirmed on equity, balanced, and bond-with-named-
+  //   issues funds alike). The 比例 (percentage) cell here is a BARE NUMBER with NO "%" suffix (e.g.
+  //   "9.49") -- the "%"-suffixed value lives in the separate 增減 (day-change) column, not 比例. Not
+  //   handled at all before this fix (cells.length was never 2, so the whole row was skipped).
+  // A third, rarer layout (2 <td> per <tr>, 比例 cell literally empty/&nbsp;, e.g. funds that "only
+  // publish the top 5/10 holding NAMES, no weights") is still intentionally left as
+  // MONEYDJ_DISCLOSED_HOLDINGS_MISSING below -- holdings.weight is NOT NULL in the DB schema, so
+  // there is no valid, non-fabricated number to persist for these; changing that would need a schema
+  // change, out of scope for this fix.
+  // The page has several OTHER tables above the real holdings block (region/industry/category
+  // breakdowns) whose rows can accidentally look numeric-shaped too. Scope strictly to the
+  // table(s) whose own direct text contains "投資明細" (the "<fund name>-投資明細" caption row) --
+  // never scan every <tr> on the whole page, or those earlier tables produce false-positive rows.
   const holdings: DisclosedHolding[] = [];
   const holdingsTables = new Set<ReturnType<typeof $>>();
-  $("tr").each((_, row) => {
-    const cells = $(row)
-      .find("td")
-      .map((__, cell) => $(cell).text().replace(/\s+/g, " ").trim())
-      .get()
-      .filter(Boolean);
-    if (cells.length !== 2) return;
-    const weightMatch = cells[1].match(/^(\d+(?:\.\d+)?)%$/);
-    if (!weightMatch || cells[0].includes("投資名稱")) return;
-    const weight = Number(weightMatch[1]);
-    if (cells[0] && Number.isFinite(weight)) {
-      holdings.push({ name: cells[0], weight });
-      const table = $(row).closest("table");
-      if (table.length) holdingsTables.add(table);
-    }
+  // Locate the OUTER wrapper table(s) that actually carry a "<fund name>-投資明細" caption cell --
+  // cheerio/htmlparser2 may insert an implicit <tbody>, so walk up from the caption <td> itself
+  // (closest("table")) rather than assuming <tr> is a direct child of <table>.
+  const captionCandidates = $("td").filter((_, el) => $(el).text().includes("投資明細"));
+  const scopedTables = new Set<ReturnType<typeof $>>();
+  captionCandidates.each((_, el) => {
+    const $table = $(el).closest("table");
+    if ($table.length) scopedTables.add($table);
+  });
+  scopedTables.forEach(($table) => {
+    $table.find("tr").each((__, row) => {
+      const rawCells = $(row)
+        .find("td")
+        .map((___, cell) => $(cell).text().replace(/\s+/g, " ").trim())
+        .get();
+
+      // Format A: exactly 2 cells, "投資名稱 | N.NN%".
+      if (rawCells.length === 2) {
+        const [name, pctCell] = rawCells;
+        const weightMatch = pctCell.match(/^(\d+(?:\.\d+)?)%$/);
+        if (!weightMatch || !name || name.includes("投資名稱")) return;
+        const weight = Number(weightMatch[1]);
+        if (Number.isFinite(weight)) {
+          holdings.push({ name, weight });
+          holdingsTables.add($table);
+        }
+        return;
+      }
+
+      // Format B: repeating 4-cell groups, "投資名稱 | 投資(千股) | 比例(無%) | 增減". Handles both
+      // a single group (4 cells, odd fund out at the end) and the common 2-group/8-cell row.
+      if (rawCells.length > 0 && rawCells.length % 4 === 0) {
+        for (let i = 0; i < rawCells.length; i += 4) {
+          const name = rawCells[i];
+          const pctCell = rawCells[i + 2];
+          if (!name || name.includes("投資名稱")) continue;
+          const weightMatch = pctCell.match(/^(\d+(?:\.\d+)?)$/);
+          if (!weightMatch) continue;
+          const weight = Number(weightMatch[1]);
+          if (Number.isFinite(weight)) {
+            holdings.push({ name, weight });
+            holdingsTables.add($table);
+          }
+        }
+      }
+    });
   });
   if (!holdings.length) throw new Error("MONEYDJ_DISCLOSED_HOLDINGS_MISSING");
 
