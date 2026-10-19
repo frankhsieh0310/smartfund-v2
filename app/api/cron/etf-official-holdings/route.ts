@@ -18,9 +18,18 @@
 // Never uses the scheduler's own run time as a holdings date — each snapshot's `dataDate` always comes
 // from that issuer's own official response (see lib/etf-holdings-engine/types.ts CanonicalSnapshot).
 //
-// Trigger: GitHub Actions matrix (17 parallel jobs, fail-fast: false) ->
-//   GET ?issuer=<Name> with `Authorization: Bearer <CRON_SECRET>`, called repeatedly by that matrix
-//   job until it reports reachedEnd=true.
+// Trigger (2026-10-19): one Vercel native cron entry per issuer (vercel.json), each
+// GET ?issuer=<Name> with the platform's auto-sent `Authorization: Bearer $CRON_SECRET`. 16 issuers
+// (Mega excluded -- its official site blocks cloud/datacenter egress, updated via a separate desktop
+// fallback path) are split into 6 "waves" of 2-3 issuers each, every wave on its own distinct minute
+// offset so at most one wave's issuers (≤3) ever run concurrently against this single deployment --
+// same concurrency ceiling the old GitHub Actions matrix's `max-parallel: 3` enforced, just achieved
+// by scheduling instead of a job-level setting. Each wave repeats 3x/hour across a multi-hour evening
+// window (see vercel.json), giving every issuer several independent chances to reach reachedEnd=true
+// the same trading day even if one attempt gets interrupted. Previously: GitHub Actions matrix (16
+// parallel jobs, fail-fast: false), each calling this route in a tight bash while-loop (~every 20s)
+// until reachedEnd=true -- replaced because GitHub Actions' free Actions-minutes budget for this repo
+// was being exhausted mid-month, silently halting ALL of that workflow's scheduled triggers.
 import { isAuthorizedCron, unauthorizedCron } from "@/lib/cron/authorize";
 import { prisma } from "@/lib/prisma";
 import { upsertSnapshot, type QueryFn } from "@/lib/etf-holdings-engine/storage";
@@ -60,16 +69,26 @@ export const maxDuration = 300;
 export const dynamic = "force-dynamic";
 
 const JOB = "ETF_OFFICIAL_HOLDINGS";
+// 2026-10-19: migrated off GitHub Actions (whose own tight bash while-loop was the external re-driver
+// these two constants were originally sized for — see each one's history below) onto Vercel's native
+// cron, which fires at most every few minutes per issuer, not every ~20s. Raised both so one Vercel
+// invocation does meaningfully more real work per call instead of returning almost immediately with
+// reachedEnd=false every time — still well inside maxDuration=300s, with the same two independent
+// stop conditions (this deadline, and the DB-level transaction timeout below) doing the same job they
+// always did, just re-tuned for a coarser-grained caller.
+//
 // Real wall-clock hard stop for the whole invocation — well under Vercel's 300s maxDuration. This is
 // one of TWO independent guarantees against a stuck invocation (the other is the DB-level transaction
 // timeout below): even if every per-ticker/DB bound below somehow failed to fire, the loop's own
 // remaining-time check (MIN_REMAINING_TO_START_MS) stops starting new work comfortably before this.
-const HARD_RESPONSE_DEADLINE_MS = 120_000;
+const HARD_RESPONSE_DEADLINE_MS = 260_000;
 // A single invocation never attempts more than this many ETFs, regardless of how much time budget is
-// left — GitHub's own while-loop (cloud-data-ingestion.yml) calls this route again immediately, so
-// there is no benefit to risking a longer invocation, and real benefit (smaller blast radius per call,
-// faster checkpoint cadence) to keeping this small. Do not attempt to finish a whole issuer in one call.
-const MAX_ETFS_PER_INVOCATION = 2;
+// left. Raised from 2 (GitHub Actions' own tight while-loop called this route again immediately, so a
+// tiny per-call batch cost nothing) to a generous cap that in practice is never the binding constraint
+// -- HARD_RESPONSE_DEADLINE_MS/MIN_REMAINING_TO_START_MS above are what actually stop the loop now.
+// Kept as a sanity ceiling, not a throughput lever: do not lower this back down without re-checking
+// Vercel's own trigger frequency for this route in vercel.json.
+const MAX_ETFS_PER_INVOCATION = 200;
 // Before starting the NEXT ticker, if less than this much of HARD_RESPONSE_DEADLINE_MS remains, stop
 // cleanly (HTTP 200, reachedEnd=false) instead of risking Vercel killing the function mid-ticker. Must
 // comfortably exceed PER_ETF_TOTAL_TIMEOUT_MS so a started ticker always has room to finish.

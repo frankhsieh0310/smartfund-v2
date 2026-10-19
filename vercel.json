@@ -69,6 +69,22 @@
     { "path": "/api/cron/cloud-global-pe-recompute", "schedule": "0 */3 * * *" },
     { "path": "/api/cron/cloud-mops-financial-incremental", "schedule": "30 10 * * 1-5" },
     { "path": "/api/cron/cloud-mops-financial-incremental", "schedule": "30 14 * * 1-5" },
-    { "path": "/api/cron/cloud-sec-financial-incremental", "schedule": "0 13 * * *" }
+    { "path": "/api/cron/cloud-sec-financial-incremental", "schedule": "0 13 * * *" },
+    { "path": "/api/cron/etf-official-holdings?issuer=Cathay", "schedule": "5,25,45 11-14 * * 1-5" },
+    { "path": "/api/cron/etf-official-holdings?issuer=JPMorgan", "schedule": "5,25,45 11-14 * * 1-5" },
+    { "path": "/api/cron/etf-official-holdings?issuer=Allianz", "schedule": "5,25,45 11-14 * * 1-5" },
+    { "path": "/api/cron/etf-official-holdings?issuer=UPAMC", "schedule": "10,30,50 11-14 * * 1-5" },
+    { "path": "/api/cron/etf-official-holdings?issuer=AB", "schedule": "10,30,50 11-14 * * 1-5" },
+    { "path": "/api/cron/etf-official-holdings?issuer=Fubon", "schedule": "10,30,50 11-14 * * 1-5" },
+    { "path": "/api/cron/etf-official-holdings?issuer=CTBC", "schedule": "15,35,55 11-14 * * 1-5" },
+    { "path": "/api/cron/etf-official-holdings?issuer=KGI", "schedule": "15,35,55 11-14 * * 1-5" },
+    { "path": "/api/cron/etf-official-holdings?issuer=First", "schedule": "15,35,55 11-14 * * 1-5" },
+    { "path": "/api/cron/etf-official-holdings?issuer=FHT", "schedule": "0,20,40 11-14 * * 1-5" },
+    { "path": "/api/cron/etf-official-holdings?issuer=SinoPac", "schedule": "0,20,40 11-14 * * 1-5" },
+    { "path": "/api/cron/etf-official-holdings?issuer=Yuanta", "schedule": "0,20,40 11-14 * * 1-5" },
+    { "path": "/api/cron/etf-official-holdings?issuer=Capital", "schedule": "3,23,43 11-14 * * 1-5" },
+    { "path": "/api/cron/etf-official-holdings?issuer=Taishin", "schedule": "3,23,43 11-14 * * 1-5" },
+    { "path": "/api/cron/etf-official-holdings?issuer=Nomura", "schedule": "8,28,48 11-14 * * 1-5" },
+    { "path": "/api/cron/etf-official-holdings?issuer=BlackRock", "schedule": "8,28,48 11-14 * * 1-5" }
   ]
 }
