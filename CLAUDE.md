@@ -26,3 +26,12 @@ master 為正式基準分支。新工作一律從最新的 master 開分支；�
 起因：這幾輪（mcs-final10 ~ mcs-final13）部署到正式環境的 commit，雖然都用 `vercel deploy --prod` 正確部署了 app 程式碼，但從未 `git push` 到 GitHub，只存在本機 Temp 目錄的 worktree 裡。一旦這些暫存 worktree 被清除，這些已經在正式環境運行的程式碼就沒有任何 Git 遠端備份。
 
 **修改 `.github/workflows/` 一律走 PR 合併到 master**：部署到 Vercel（即使是 `--prod`）**不會**讓 GitHub Actions 的排程設定生效——GitHub Actions 的 `schedule` 只讀取 repository 預設分支（master）上實際的檔案內容，與 Vercel 部署來源完全無關。任何要調整排程時間、新增/移除 cron 觸發點的改動，必須透過開 PR、合併到 master 才會真的生效；只部署到 Vercel 正式環境不會變更實際觸發時刻，即使該次部署的 worktree 裡檔案內容已經改了也一樣。
+
+## GitHub 認證 token 使用範圍（2026-10-19 訂立）
+
+需要呼叫 GitHub API（開 PR、查 run 歷史、squash merge 等）時，可以用 `git credential fill` 讀取 Git Credential Manager 裡既有、使用者 `git push` 本來就在用的同一組 OAuth token——**僅限呼叫 GitHub API**，不准：
+- 印出這組 token（不寫進回覆訊息、不寫進任何 log 輸出）；
+- 寫入任何檔案（含 scratch 檔案、暫存檔）；
+- 用在 GitHub 以外的任何服務。
+
+每次用完即視為用完，不建立、不保留任何額外的憑證快取檔案。同樣的原則適用於任何其他服務的既有登入憑證（例如 Vercel CLI 的本機 token）——只能透過該服務自己的 CLI／SDK 正常呼叫使用，不准直接讀取、印出或搬移其底層憑證檔案本身。
