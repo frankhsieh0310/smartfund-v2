@@ -1,5 +1,17 @@
 @AGENTS.md
 
+## 正式資料排程一律在雲端執行（2026-10-19 訂立，最高層規則）
+
+**所有正式資料排程（任何會寫入 Production 資料庫的定期任務）一律在雲端執行（Vercel cron 或 GitHub Actions `schedule`），不准依賴使用者的個人電腦或任何 Claude Code session/視窗本身的排程機制（CronCreate、`mcp__scheduled-tasks`）繼續運作。**
+
+起因：2026-10-19 週末 Windows 自動更新重開機，導致本機 Windows 工作排程器（Task Scheduler）裡所有「僅在登入時執行」（Logon Mode: Interactive only）的工作全部中斷，直到使用者重新登入才恢復——這些工作當時承載了多項正式資料流程（tw-industry-radar 官方資料更新、SmartFund FX 系列、兆豐 ETF 持股桌機路徑等）。
+
+適用範圍與例外：
+- 新增的正式資料排程，一律優先設計成 Vercel cron（走 `vercel.json` 的 `crons`），需要外部長時間排程器時才用 GitHub Actions `schedule`——兩者都不依賴這台電腦是否開機、是否有人登入。
+- 確認無法雲端化的情況（例如對方網站的 WAF 明確封鎖雲端/機房 IP，只允許一般住宅/辦公網路，如兆豐 ETF 官方持股）才可以維持本機排程，但必須在程式註解與相關文件中明確寫出「為何無法雲端化」，並標記為已知的單點風險（本機當機、重開機、使用者未登入都會導致該資料來源中斷）。
+- 本機排程若因此保留，Windows 工作排程器的 Logon Mode 應設為「不論使用者是否登入都執行」（Run whether user is logged on or not），並開啟「錯過排定時間後盡快執行」（Run task as soon as possible after a scheduled start is missed），降低重開機造成的中斷時間；但這兩項設定變更一律需要使用者本人在 Windows 的畫面上輸入密碼完成，不准由 Claude Code 代為輸入或索取密碼。
+- Claude Code 的 `CronCreate`/`mcp__scheduled-tasks` 排程僅能用於監控、驗證、提醒等輔助性任務，不准作為任何正式資料寫入流程的唯一觸發來源——這類排程會隨 session 結束或視窗關閉而消失，沒有持久性保證。
+
 ## Supabase RLS
 
 Supabase 平台會讓 public schema 的新資料表自動開放給 anon 與 authenticated。任何新建資料表（含 migration）必須在同一次變更中執行 ENABLE ROW LEVEL SECURITY 並 REVOKE ALL FROM anon, authenticated，除非該次任務明確核准開放。
