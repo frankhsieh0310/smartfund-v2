@@ -11,7 +11,18 @@ on:
     - cron: "7 * * * *"  # Fund holdings       — every hour at :07
     - cron: "17 * * * *" # ETF price          — every hour at :17
     - cron: "27 * * * *" # Fund NAV (SITCA)   — every hour at :27
+    # 2026-10-19（使用者核准）: MoneyDJ fund NAV 原本每小時只跑一次（:37），批次大小 80 已經是
+    # route.ts 自己記錄過的 maxDuration=300s 安全上限（單次 243s 左右，再加大批次會逾時），
+    # 加大批次不可行，只能加頻率。核心母體（tw_purchasable_classification FUND APPROVED 裡有
+    # moneydj_code 對照的）共 4,994 檔，每次扣掉已經當天更新過的（already_current）後實際新處理
+    # 約 60 檔，原本每小時1次 x 24次/天 = 1,440檔/天，要跑完整整一輪（checkpoint wrapped）需要
+    # 約 3.5 天，不符合「每天都要檢查一輪」的要求。改成每小時 4 次（:02/:22/:37/:52，不跟其他
+    # 既有排程的分鐘數衝突），96次/天 x 60 = 5,760檔/天，足以在一天內跑完整一輪，不改抓取範圍、
+    # 不跳過任何基金，單純提高觸發頻率。
+    - cron: "2 * * * *"  # MoneyDJ fund NAV   — every hour at :02 (added for daily-completion)
+    - cron: "22 * * * *" # MoneyDJ fund NAV   — every hour at :22 (added for daily-completion)
     - cron: "37 * * * *" # MoneyDJ fund NAV    — every hour at :37
+    - cron: "52 * * * *" # MoneyDJ fund NAV   — every hour at :52 (added for daily-completion)
     - cron: "47 * * * *" # MoneyDJ ETF hold.   — every hour at :47
     - cron: "57 * * * *" # Global ETF hold.    — every hour at :57
     # Consensus radar (大佬觀點) is intentionally NOT scheduled here. It already has its own Vercel Cron
@@ -144,7 +155,10 @@ jobs:
             "7 * * * *")  echo "job=fund-holdings" >> "$GITHUB_OUTPUT" ;;
             "17 * * * *") echo "job=etf-price" >> "$GITHUB_OUTPUT" ;;
             "27 * * * *") echo "job=fund-nav" >> "$GITHUB_OUTPUT" ;;
+            "2 * * * *") echo "job=moneydj-fund" >> "$GITHUB_OUTPUT" ;;
+            "22 * * * *") echo "job=moneydj-fund" >> "$GITHUB_OUTPUT" ;;
             "37 * * * *") echo "job=moneydj-fund" >> "$GITHUB_OUTPUT" ;;
+            "52 * * * *") echo "job=moneydj-fund" >> "$GITHUB_OUTPUT" ;;
             "47 * * * *") echo "job=moneydj-etf" >> "$GITHUB_OUTPUT" ;;
             "57 * * * *") echo "job=global-etf-holdings" >> "$GITHUB_OUTPUT" ;;
             "20 1,4,7,10,13,16,19,22 * * *") echo "job=consensus-ingest" >> "$GITHUB_OUTPUT" ;;
