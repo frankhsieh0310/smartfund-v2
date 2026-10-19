@@ -58,7 +58,7 @@
     { "path": "/api/cron/alert-evaluate", "schedule": "*/15 * * * *" },
     { "path": "/api/cron/alert-dispatch", "schedule": "5-59/15 * * * *" },
     { "path": "/api/cron/ex-date-sync", "schedule": "40 1 * * *" },
-    { "path": "/api/cron/cloud-moneydj-fund", "schedule": "*/20 * * * *" },
+    { "path": "/api/cron/cloud-moneydj-fund", "schedule": "*/15 * * * *" },
     { "path": "/api/cron/cloud-fund-holdings?provider=ALL", "schedule": "*/20 * * * *" },
     { "path": "/api/cron/stock-technical-daily", "schedule": "0 8 * * 1-5" }
   ]

@@ -19,12 +19,16 @@ export type PipelineHealth = {
   sourceUnavailableCount24h: number;
 };
 
-// 2026-10-19（使用者核准）: 部分排程的「錯誤」其實是「來源本身沒有資料可揭露」，不是真正的
-// 管線故障——VERIFIED 實際打開 MoneyDJ 網頁核對一筆失敗樣本（ACCA190，債券型基金），頁面本身
-// 顯示的是地區別資產配置，根本沒有個股持股表格可解析，不是我方爬蟲壞掉。這種已知的「來源無
-// 資料」錯誤樣式不計入異常，但筆數仍然要在報告中列出（不是悄悄吞掉）。
+// 2026-10-19（使用者撤回上午的排除，改成更嚴格的規則）: 上午曾經把 CLOUD_MONEYDJ_FUND 的
+// MONEYDJ_DISCLOSED_HOLDINGS_MISSING 整類排除，當時的依據（ACCA190 一筆抽樣）不夠——事後用
+// 30 小時失敗紀錄隨機抽 10 檔實際打開 MoneyDJ 頁面核對，9/10 其實都有真實持股表，是解析程式的
+// bug（見 lib/cloud-ingestion/moneydjFundDisclosure.ts 同日的修正），不是「來源無資料」。
+// 現在只有 MONEYDJ_HOLDINGS_NOT_DISCLOSED（頁面自己明確顯示「目前無投資明細資料」的那一種）
+// 才算「來源無資料、不計入異常」；MONEYDJ_HOLDINGS_NAME_ONLY_NO_WEIGHT（有名稱沒比例，已知
+// 型態但還不能寫入，待 schema 核准）與 MONEYDJ_HOLDINGS_PARSE_FAILED（其他真的解析不出來的）
+// 一律算異常。
 const BENIGN_ERROR_PATTERNS: Record<string, RegExp> = {
-  CLOUD_MONEYDJ_FUND: /MONEYDJ_DISCLOSED_HOLDINGS_MISSING/,
+  CLOUD_MONEYDJ_FUND: /MONEYDJ_HOLDINGS_NOT_DISCLOSED/,
 };
 
 // Checks production_scheduler_runs for a given job_id over the last 24h. A pipeline with ZERO runs in
@@ -105,6 +109,51 @@ export async function checkPipelineRunLog(query: QueryFn, jobId: string): Promis
     lastError: last?.error ?? null,
     anomaly: anomalyReasons.length > 0,
     anomalyReasons,
+  };
+}
+
+export type MoneydjParseFailureResult = {
+  notDisclosedCount: number; // genuinely no data (MONEYDJ_HOLDINGS_NOT_DISCLOSED) -- benign
+  nameOnlyCount: number; // known shape, no weight yet, pending schema approval -- not benign
+  parseFailedCount: number; // anything else -- a real parser bug, not benign
+  /** Distinct fund codes behind nameOnlyCount/parseFailedCount, from the 24h window's sampled
+   * failures (production_scheduler_runs.details.sample_failures caps at 5 per run, so this is a
+   * representative sample, not necessarily every affected fund -- still real codes, never guessed). */
+  nameOnlyCodes: string[];
+  parseFailedCodes: string[];
+};
+
+// 2026-10-19（使用者核准）: checkPipelineRunLog's errorCount24h/sourceUnavailableCount24h only ever
+// look at ONE summary string per run (production_scheduler_runs.error, built as "{N} failures; e.g.
+// {first failure's reason}") -- accurate enough for most jobs, but CLOUD_MONEYDJ_FUND's user-facing
+// requirement is per-FUND: list the actual codes behind any real parse failure, not just classify
+// the whole run by whichever failure happened to be sampled first. This reads the richer
+// details.sample_failures array (up to 5 {code,reason} pairs per run) and classifies each one
+// individually against the three error classes moneydjFundDisclosure.ts now throws.
+export async function checkMoneydjParseFailures(query: QueryFn, windowHours = 24): Promise<MoneydjParseFailureResult> {
+  const rows = await query(
+    `SELECT details->'sample_failures' AS sample_failures
+       FROM production_scheduler_runs
+      WHERE job_id = 'CLOUD_MONEYDJ_FUND' AND started_at > now() - interval '${windowHours} hours'`,
+    [],
+  );
+  let notDisclosedCount = 0;
+  const nameOnlyCodes = new Set<string>();
+  const parseFailedCodes = new Set<string>();
+  for (const row of rows) {
+    const sampleFailures: Array<{ code: string; reason: string }> = row.sample_failures ?? [];
+    for (const f of sampleFailures) {
+      if (/MONEYDJ_HOLDINGS_NOT_DISCLOSED/.test(f.reason)) { notDisclosedCount++; continue; }
+      if (/MONEYDJ_HOLDINGS_NAME_ONLY_NO_WEIGHT/.test(f.reason)) { nameOnlyCodes.add(f.code); continue; }
+      parseFailedCodes.add(f.code);
+    }
+  }
+  return {
+    notDisclosedCount,
+    nameOnlyCount: nameOnlyCodes.size,
+    parseFailedCount: parseFailedCodes.size,
+    nameOnlyCodes: [...nameOnlyCodes].slice(0, 30),
+    parseFailedCodes: [...parseFailedCodes].slice(0, 30),
   };
 }
 

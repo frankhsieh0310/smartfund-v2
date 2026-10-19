@@ -12,7 +12,7 @@
 import { isAuthorizedCron, unauthorizedCron } from "@/lib/cron/authorize";
 import { prisma } from "@/lib/prisma";
 import { beginRun, finishRun } from "@/lib/cloud-ingestion/runContext";
-import { checkPipelineRunLog, evaluateFreshness, checkEtfDataSourceGap, evaluateYahooTwReturnConsistency, evaluateFredCommodityConsistency, checkCommodityTechnicalCoverage, checkFundPerformanceCoverage, checkEtfPerformanceCoverage, checkEtfHistoryFreshness, checkFundHistoryFreshness, checkCoreUniverseEtfCoverage, checkCoreUniverseFundCoverage, type QueryFn, type YahooTwReturnSample, type FredCommoditySample } from "@/lib/daily-health-report/checks";
+import { checkPipelineRunLog, checkMoneydjParseFailures, evaluateFreshness, checkEtfDataSourceGap, evaluateYahooTwReturnConsistency, evaluateFredCommodityConsistency, checkCommodityTechnicalCoverage, checkFundPerformanceCoverage, checkEtfPerformanceCoverage, checkEtfHistoryFreshness, checkFundHistoryFreshness, checkCoreUniverseEtfCoverage, checkCoreUniverseFundCoverage, type QueryFn, type YahooTwReturnSample, type FredCommoditySample } from "@/lib/daily-health-report/checks";
 import { CORE_COMMODITY_ROOTS } from "@/lib/cron/commodityUpdate";
 import { notifyAnomaly } from "@/lib/daily-health-report/notify";
 import { buildDailySummary } from "@/lib/daily-health-report/buildDailySummary";
@@ -75,6 +75,12 @@ export async function GET(request: Request) {
   }
 
   const pipelineHealth = await Promise.all(RUN_LOG_PIPELINES.map((j) => checkPipelineRunLog(query, j)));
+
+  // 2026-10-19（使用者核准）: checkPipelineRunLog's benign-error check only ever looks at the first
+  // sampled failure per run; this reads the full sample_failures array across the 24h window and
+  // lists the ACTUAL fund codes behind any real (non-benign) MoneyDJ parse failure, per the user's
+  // explicit requirement -- "其他解析不到的，一律算異常並列出代號".
+  const moneydjParseFailures = await checkMoneydjParseFailures(query);
 
   // tw-data-updater's stock price pipeline has no run-log signal (its crons never wrote to this
   // table) -- the only available signal is data freshness itself, checked loosely (not a full
@@ -183,6 +189,12 @@ export async function GET(request: Request) {
     ...(yahooTwCheck.anomaly ? [{ type: "YAHOO_TW_RETURN_MISMATCH", mismatches: yahooTwCheck.mismatches }] : []),
     ...(fredCommodityCheck.anomaly ? [{ type: "FRED_COMMODITY_MISMATCH", mismatches: fredCommodityCheck.mismatches }] : []),
     ...coverage.filter((c) => c.anomaly).map((c) => ({ type: "COVERAGE", label: c.label, reason: c.anomalyReason })),
+    ...(moneydjParseFailures.parseFailedCount > 0
+      ? [{ type: "MONEYDJ_PARSE_FAILED", jobId: "CLOUD_MONEYDJ_FUND", count: moneydjParseFailures.parseFailedCount, codes: moneydjParseFailures.parseFailedCodes }]
+      : []),
+    ...(moneydjParseFailures.nameOnlyCount > 0
+      ? [{ type: "MONEYDJ_NAME_ONLY_NO_WEIGHT", jobId: "CLOUD_MONEYDJ_FUND", count: moneydjParseFailures.nameOnlyCount, codes: moneydjParseFailures.nameOnlyCodes }]
+      : []),
   ];
 
   // Round-4, user-approved: send a short summary EVERY day, not only when something is wrong --
@@ -196,11 +208,12 @@ export async function GET(request: Request) {
 
   const status = anomalies.length > 0 ? "PARTIAL" : "COMPLETED";
   await finishRun(runId, JOB, "INTERNAL_HEALTH_CHECK", startedMs, {
-    status, attempted: RUN_LOG_PIPELINES.length + 2 + coverage.length, completed: RUN_LOG_PIPELINES.length + 2 + coverage.length - anomalies.length,
+    status, attempted: RUN_LOG_PIPELINES.length + 3 + coverage.length, completed: RUN_LOG_PIPELINES.length + 3 + coverage.length - anomalies.length,
     inserted: 0, updated: 0, failed: anomalies.length, retryableFailures: 0, checkpointAfter: null,
     details: {
       date: today, pipeline_health: pipelineHealth, stock_freshness: stockFreshness, domestic_fund_freshness: domesticFundFreshness,
       etf_data_source_gap: etfDataSourceGap, yahoo_tw_return_check: yahooTwCheck, fred_commodity_check: fredCommodityCheck, coverage,
+      moneydj_parse_failures: moneydjParseFailures,
       anomaly_count: anomalies.length, anomalies, notify_result: notifyResult,
     },
   });
