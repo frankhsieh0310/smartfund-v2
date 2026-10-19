@@ -59,10 +59,12 @@ export class MoneydjHoldingsNotDisclosedError extends Error {
 
 export class MoneydjHoldingsNameOnlyError extends Error {
   readonly names: string[];
-  constructor(names: string[]) {
+  readonly date: string; // YYYY-MM-DD (資料月份), same provenance as a normal disclosure's date
+  constructor(names: string[], date: string) {
     super("MONEYDJ_HOLDINGS_NAME_ONLY_NO_WEIGHT");
     this.name = "MoneydjHoldingsNameOnlyError";
     this.names = names;
+    this.date = date;
   }
 }
 
@@ -160,26 +162,36 @@ export async function fetchMoneydjDisclosure(moneydjCode: string): Promise<Money
       }
     });
   });
+  // Date must be found inside one of the scoped tables — not the page body. The caption is
+  // sometimes just outside the <table> tag itself, so also check the immediate parent — still
+  // bounded to this specific holdings block, never the whole page.
+  const findDate = (tables: Set<ReturnType<typeof $>>): string | undefined => {
+    for (const table of tables) {
+      const scope = table.text() + " " + table.parent().text();
+      const match = scope.match(/資料月份：\s*(\d{4}\/\d{2}\/\d{2})/);
+      if (match) return match[1].replaceAll("/", "-");
+    }
+    return undefined;
+  };
+
   if (!holdings.length) {
     // Genuinely no data: MoneyDJ's own page says so, inside this fund's own 投資明細 block.
     const explicitlyNoData = [...scopedTables].some(($table) => $table.text().includes("目前無投資明細資料"));
     if (explicitlyNoData) throw new MoneydjHoldingsNotDisclosedError();
     // Known shape, just no weight -- not a parse bug, but nothing valid to persist yet either
     // (holdings.weight is NOT NULL; making it nullable needs a separate, approved schema change).
-    if (nameOnlyNames.length) throw new MoneydjHoldingsNameOnlyError(nameOnlyNames);
+    // Uses the full scopedTables set for the date (not holdingsTables, which stays empty here
+    // since no weighted holding was ever pushed) -- same table the names themselves came from.
+    if (nameOnlyNames.length) {
+      const nameOnlyDate = findDate(scopedTables);
+      if (!nameOnlyDate) throw new Error("MONEYDJ_DISCLOSURE_DATE_MISSING");
+      throw new MoneydjHoldingsNameOnlyError(nameOnlyNames, nameOnlyDate);
+    }
     // Neither of the above: page format doesn't match anything recognized. A real parser bug.
     throw new Error("MONEYDJ_HOLDINGS_PARSE_FAILED");
   }
 
-  // Date must be found inside one of the tables that actually held a matched row — not the page body.
-  let date: string | undefined;
-  for (const table of holdingsTables) {
-    // The caption is sometimes just outside the <table> tag itself, so also check the immediate
-    // parent — still bounded to this specific holdings block, not the whole page.
-    const scope = table.text() + " " + table.parent().text();
-    const match = scope.match(/資料月份：\s*(\d{4}\/\d{2}\/\d{2})/);
-    if (match) { date = match[1].replaceAll("/", "-"); break; }
-  }
+  const date = findDate(holdingsTables);
   // No reliable date found in the holdings table itself: do not fall back to the page body, do not
   // guess, do not use today's fetch date. The caller must treat this as "date unavailable", not
   // persist a fabricated as_of_date.
@@ -258,4 +270,45 @@ export async function persistMoneydjDisclosure(
   const rowsPersisted = Number(readback[0]?.rows ?? 0);
   if (rowsPersisted !== disclosure.holdings.length) throw new Error("MONEYDJ_DISCLOSURE_READBACK_FAILED");
   return { rowsPersisted, isNewMonth };
+}
+
+/**
+ * Persist a MoneydjHoldingsNameOnlyError's holding names into the dedicated fund_holdings_name_only
+ * table — never into `holdings` (weight is NOT NULL there; this data has no weight at all, by
+ * design, not by omission). Idempotent upsert on (fund_id, as_of_date, source, holding_name), same
+ * "re-run the same month rewrites in place" semantics as persistMoneydjDisclosure.
+ */
+export async function persistNameOnlyHoldings(
+  prisma: PrismaClient,
+  input: { fundId: string; moneydjCode: string; date: string; names: string[] },
+): Promise<{ rowsPersisted: number }> {
+  const { fundId, date, names } = input;
+  await prisma.$transaction(
+    async (tx) => {
+      for (const [index, name] of names.entries()) {
+        await tx.$executeRawUnsafe(
+          `INSERT INTO fund_holdings_name_only (id, fund_id, holding_name, rank, as_of_date, source, created_at, updated_at)
+           VALUES ($1, $2, $3, $4, $5::date, $6, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+           ON CONFLICT (fund_id, as_of_date, source, holding_name)
+           DO UPDATE SET rank = EXCLUDED.rank, updated_at = CURRENT_TIMESTAMP`,
+          globalThis.crypto.randomUUID(),
+          fundId,
+          name,
+          index + 1,
+          date,
+          MONEYDJ_SOURCE,
+        );
+      }
+    },
+    { maxWait: 10_000, timeout: 60_000 },
+  );
+  const readback = await prisma.$queryRawUnsafe<Array<{ rows: number }>>(
+    `SELECT COUNT(*)::int AS rows FROM fund_holdings_name_only WHERE fund_id = $1 AND as_of_date = $2::date AND source = $3`,
+    fundId,
+    date,
+    MONEYDJ_SOURCE,
+  );
+  const rowsPersisted = Number(readback[0]?.rows ?? 0);
+  if (rowsPersisted !== names.length) throw new Error("MONEYDJ_NAME_ONLY_READBACK_FAILED");
+  return { rowsPersisted };
 }

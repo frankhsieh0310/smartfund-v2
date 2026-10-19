@@ -22,7 +22,9 @@ import { prisma } from "@/lib/prisma";
 import {
   fetchMoneydjDisclosure,
   MoneydjHttpError,
+  MoneydjHoldingsNameOnlyError,
   persistMoneydjDisclosure,
+  persistNameOnlyHoldings,
   MONEYDJ_SOURCE,
 } from "@/lib/cloud-ingestion/moneydjFundDisclosure";
 import {
@@ -283,9 +285,23 @@ export async function GET(request: Request) {
     startedMs,
     timeBudgetMs: TIME_BUDGET_MS,
     processOne: (fund) =>
-      fetchMoneydjDisclosure(fund.moneydjCode).then((disclosure) =>
-        persistMoneydjDisclosure(prisma, { fundId: fund.fundId, shareClassId: null, moneydjCode: fund.moneydjCode, disclosure }),
-      ),
+      fetchMoneydjDisclosure(fund.moneydjCode)
+        .then((disclosure) =>
+          persistMoneydjDisclosure(prisma, { fundId: fund.fundId, shareClassId: null, moneydjCode: fund.moneydjCode, disclosure }),
+        )
+        .catch(async (error) => {
+          // Names-only disclosure (no weight at all) is a known, recognized page shape, not a
+          // parse failure -- persist to its own dedicated table (never `holdings`, see
+          // persistNameOnlyHoldings's own doc comment) and count it as handled, same as a normal
+          // successful disclosure, instead of leaving it stuck in the generic failed/retry bucket.
+          if (error instanceof MoneydjHoldingsNameOnlyError) {
+            const { rowsPersisted } = await persistNameOnlyHoldings(prisma, {
+              fundId: fund.fundId, moneydjCode: fund.moneydjCode, date: error.date, names: error.names,
+            });
+            return { rowsPersisted, isNewMonth: true };
+          }
+          throw error;
+        }),
     onProgress: (lastSymbol, counters) =>
       writeCheckpoint(JOB, CHECKPOINT_KEY, runId, {
         lastSymbol,

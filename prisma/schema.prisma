@@ -328,6 +328,27 @@ model EtfUpcomingExRight {
   @@map("etf_upcoming_exrights")
 }
 
+// 2026-10-19（使用者核准，新增資料表）: MoneyDJ 持股頁面有一種格式只公佈「前五/十大個股名稱」，
+// 完全不公佈比例（見 lib/cloud-ingestion/moneydjFundDisclosure.ts 的 MoneydjHoldingsNameOnlyError）。
+// 不准把這類資料塞進既有的 `holdings` 表（那裡 weight 是 NOT NULL，塞一個假數字等於自己估算比例，
+// 使用者明確禁止），所以另外開一張專門存「只有名稱、沒有比例」的表，跟 `holdings` 完全分開、
+// 語意上就不會被誤當成有權重可用的持股資料。
+model FundHoldingNameOnly {
+  id          String   @id @default(uuid()) @db.Uuid
+  fundId      String   @map("fund_id")
+  holdingName String   @map("holding_name")
+  rank        Int // disclosure order on the source page (1-indexed) — the only ordering signal available, never a weight proxy
+  asOfDate    DateTime @map("as_of_date") @db.Date
+  source      String
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  fund        Fund     @relation(fields: [fundId], references: [id], onDelete: Cascade)
+
+  @@unique([fundId, asOfDate, source, holdingName])
+  @@index([fundId, asOfDate])
+  @@map("fund_holdings_name_only")
+}
+
 model EtfFlow {
   id                 String    @id @default(uuid()) @db.Uuid
   etfId              String    @map("etf_id")
@@ -644,6 +665,7 @@ model Fund {
   riskMetrics      FundRiskMetric[]
   asset            Asset?                @relation(fields: [assetId], references: [id])
   holdings         Holding[]
+  holdingsNameOnly FundHoldingNameOnly[]
 
   @@index([company])
   @@index([region, category])
