@@ -147,22 +147,31 @@ export async function GET(request: Request) {
       ))[0];
       const base = { label: r.label, ourSymbol: r.ourSymbol, fredSeriesId: r.fredSeriesId, ourDate: ourRow?.observed_date ?? null, ourClose: ourRow ? Number(ourRow.close) : null };
       if (!fredApiKey) return { ...base, fredDate: null, fredValue: null, fetchFailed: true };
-      try {
-        const url = new URL("https://api.stlouisfed.org/fred/series/observations");
-        url.searchParams.set("series_id", r.fredSeriesId);
-        url.searchParams.set("api_key", fredApiKey);
-        url.searchParams.set("file_type", "json");
-        url.searchParams.set("sort_order", "desc");
-        url.searchParams.set("limit", "1");
-        const res = await fetch(url, { signal: AbortSignal.timeout(15_000) });
-        if (!res.ok) return { ...base, fredDate: null, fredValue: null, fetchFailed: true };
-        const json = (await res.json()) as { observations?: Array<{ date: string; value: string }> };
-        const obs = json.observations?.[0];
-        const value = obs && obs.value !== "." ? Number(obs.value) : null;
-        return { ...base, fredDate: obs?.date ?? null, fredValue: value, fetchFailed: value === null };
-      } catch {
-        return { ...base, fredDate: null, fredValue: null, fetchFailed: true };
+      // 2026-10-19（使用者核准）: 抓取失敗時同一次執行內重試，最多 3 次、間隔遞增
+      // （1s/2s/4s），降低外部 API 偶發性逾時/限流被誤判成「資料異常」的機率；3 次都失敗才
+      // 真的記為 fetchFailed，報告裡會標明是外部來源問題，不是我方資料缺口。
+      const MAX_ATTEMPTS = 3;
+      for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+        try {
+          const url = new URL("https://api.stlouisfed.org/fred/series/observations");
+          url.searchParams.set("series_id", r.fredSeriesId);
+          url.searchParams.set("api_key", fredApiKey);
+          url.searchParams.set("file_type", "json");
+          url.searchParams.set("sort_order", "desc");
+          url.searchParams.set("limit", "1");
+          const res = await fetch(url, { signal: AbortSignal.timeout(15_000) });
+          if (!res.ok) throw new Error(`FRED_HTTP_${res.status}`);
+          const json = (await res.json()) as { observations?: Array<{ date: string; value: string }> };
+          const obs = json.observations?.[0];
+          const value = obs && obs.value !== "." ? Number(obs.value) : null;
+          if (value === null) throw new Error("FRED_NO_VALUE");
+          return { ...base, fredDate: obs?.date ?? null, fredValue: value, fetchFailed: false };
+        } catch {
+          if (attempt === MAX_ATTEMPTS) return { ...base, fredDate: null, fredValue: null, fetchFailed: true };
+          await new Promise((resolve) => setTimeout(resolve, 1000 * 2 ** (attempt - 1)));
+        }
       }
+      return { ...base, fredDate: null, fredValue: null, fetchFailed: true };
     }),
   );
   const fredCommodityCheck = evaluateFredCommodityConsistency(fredSamples);

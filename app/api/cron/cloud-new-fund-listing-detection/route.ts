@@ -21,9 +21,17 @@ export async function GET(request: Request) {
   if (skipped) return Response.json({ ok: true, task: "new-fund-listing-detection", skipped: true });
 
   const writeEnabled = isNewListingSyncWriteEnabled();
+  // 2026-10-19 root-cause fix: shared 120s maxDuration between domestic+offshore detection, but
+  // neither side's write loop had any time-budget awareness -- a timeout kill mid-loop never reaches
+  // finishRun(), leaving the run stuck IN_PROGRESS forever and only partially creating missing funds
+  // (VERIFIED this is why 2026-10-18 only created 63 of 454 approved-missing offshore funds). Give
+  // domestic up to 40s and offshore whatever's left of a 100s overall budget (leaving ~20s margin
+  // under the 120s maxDuration for the rest of the route + finishRun itself).
+  const overallDeadline = started + 100_000;
+  const domesticDeadline = Math.min(started + 40_000, overallDeadline);
   try {
-    const domestic = await detectNewDomesticFunds(writeEnabled);
-    const offshore = await detectNewOffshoreFunds(writeEnabled);
+    const domestic = await detectNewDomesticFunds(writeEnabled, domesticDeadline);
+    const offshore = await detectNewOffshoreFunds(writeEnabled, overallDeadline);
     await finishRun(runId, JOB, "SITCA_TDCC", started, {
       status: "COMPLETED",
       attempted: 0, completed: 0,

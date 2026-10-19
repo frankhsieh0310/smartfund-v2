@@ -1,5 +1,7 @@
 // Pure, DB-query-injected health checks for the daily report (no Next.js/Prisma import so this stays
 // unit-testable with a mock QueryFn, same convention as every other pipeline this session).
+import { lastScheduledOccurrence } from "./scheduleRegistry";
+
 export type QueryFn = (sql: string, params: any[]) => Promise<any[]>;
 
 export type PipelineHealth = {
@@ -16,9 +18,26 @@ export type PipelineHealth = {
 // Checks production_scheduler_runs for a given job_id over the last 24h. A pipeline with ZERO runs in
 // the window is itself an anomaly (the schedule expects at least one run per day for all six jobs this
 // covers) -- never silently treated as "fine because nothing to report".
+//
+// 2026-10-19（使用者核准，修正昨天的 B 類誤報——這不是使用者要求保留的規則，只有基準日邏輯
+// 是使用者昨天要求暫時沿用）：
+//
+// (a) NO_RUN_IN_LAST_24H 原本是死板的「過去24小時有沒有任何一次執行」，對平日/特定時段限定
+//     的排程（例如只在平日 06-08 點跑的 TW_ETF_DAY_CHANGE）會在健康報告自己 08:30 查詢的
+//     時間點之前誤判成「沒跑」。改成用 lib/daily-health-report/scheduleRegistry.ts 的真實排程
+//     設定算出「這支排程最近一次『應該』已經執行的時間點」，只有真的超過那個時間（留 30 分鐘
+//     寬限期，涵蓋平台排程本身的執行延遲）還沒有對應的執行紀錄，才算異常。查不到排程設定的
+//     工作（例如本身就是用自我循環 workflow 驅動、沒有單一 cron 表達式可用的排程）維持原本
+//     「過去24小時」的保守判斷，不是這次的修正範圍。
+// (b) LAST_RUN_PARTIAL 原本只看「最近一次執行」的狀態，對有 checkpoint 分段執行的排程
+//     （例如每次只處理一小批、靠多次執行慢慢清完母體），健康報告剛好查到還在跑的那一批
+//     就會誤判。改成看過去24小時的「所有」執行紀錄：只要其中任何一筆是 COMPLETED，或任何一筆
+//     的 checkpoint 回報 wrapped=true（代表母體已經跑完整整一圈），就不算異常——真正異常的
+//     情況是「過去24小時全部都是 PARTIAL/FAILED，完全沒有一次跑完整個母體」。
 export async function checkPipelineRunLog(query: QueryFn, jobId: string): Promise<PipelineHealth> {
   const rows = await query(
-    `SELECT status, error, details->>'write_error_count' AS write_error_count, started_at
+    `SELECT status, error, details->>'write_error_count' AS write_error_count, started_at,
+            details->'checkpoint_after'->>'wrapped' AS wrapped
        FROM production_scheduler_runs
       WHERE job_id = $1 AND started_at > now() - interval '24 hours'
       ORDER BY started_at DESC`,
@@ -30,18 +49,40 @@ export async function checkPipelineRunLog(query: QueryFn, jobId: string): Promis
   const last = rows[0] ?? null;
 
   const anomalyReasons: string[] = [];
-  if (rows.length === 0) anomalyReasons.push("NO_RUN_IN_LAST_24H");
+
+  // (a) 排程感知的 NO_RUN 判斷
+  const scheduledAt = lastScheduledOccurrence(jobId, new Date());
+  let hasRunInLast24h: boolean;
+  if (scheduledAt) {
+    const graceMs = 30 * 60 * 1000;
+    const overdueRows = await query(
+      `SELECT 1 FROM production_scheduler_runs WHERE job_id = $1 AND started_at >= $2::timestamptz LIMIT 1`,
+      [jobId, scheduledAt.toISOString()],
+    );
+    hasRunInLast24h = overdueRows.length > 0;
+    if (!hasRunInLast24h && Date.now() - scheduledAt.getTime() > graceMs) anomalyReasons.push("NO_RUN_IN_LAST_24H");
+  } else {
+    hasRunInLast24h = rows.length > 0;
+    if (!hasRunInLast24h) anomalyReasons.push("NO_RUN_IN_LAST_24H");
+  }
+
   if (errorCount24h > 0) anomalyReasons.push(`ERROR_COUNT_${errorCount24h}`);
   if (writeErrorCount24h > 0) anomalyReasons.push(`WRITE_ERROR_COUNT_${writeErrorCount24h}`);
-  // 2026-10-18 (使用者規則定案): 「排程超過 maxDuration、PARTIAL 且當天沒補完，都要標示異常」
-  // -- 之前只看 `error` 欄位，但好幾支排程的 PARTIAL（例如跑到 timeBudgetStop）根本不會寫
-  // `error`，導致健康報告完全看不到。現在只要最近一次執行的狀態是 PARTIAL 或 FAILED 就算異常。
-  if (last?.status === "PARTIAL") anomalyReasons.push("LAST_RUN_PARTIAL");
-  if (last?.status === "FAILED") anomalyReasons.push("LAST_RUN_FAILED");
+
+  // (b) 當天是否已完整跑過一輪（COMPLETED 或 checkpoint wrapped=true 皆算），只有兩者都沒有
+  //     才算真正的 PARTIAL 異常。
+  const hadFullPassToday = rows.some((r) => r.status === "COMPLETED" || r.wrapped === "true");
+  const allFailedOrPartial = rows.length > 0 && rows.every((r) => r.status === "PARTIAL" || r.status === "FAILED");
+  if (!hadFullPassToday && allFailedOrPartial) {
+    if (last?.status === "PARTIAL") anomalyReasons.push("LAST_RUN_PARTIAL");
+    if (last?.status === "FAILED") anomalyReasons.push("LAST_RUN_FAILED");
+  } else if (last?.status === "FAILED" && !hadFullPassToday) {
+    anomalyReasons.push("LAST_RUN_FAILED");
+  }
 
   return {
     jobId,
-    hasRunInLast24h: rows.length > 0,
+    hasRunInLast24h,
     errorCount24h,
     writeErrorCount24h,
     lastStatus: last?.status ?? null,
@@ -250,10 +291,23 @@ export async function checkCoreUniverseEtfCoverage(query: QueryFn, staleDaysThre
     "true", staleDaysThreshold,
   );
 }
+// 2026-10-19（使用者核准，「提出讓它們退出核心母體的判斷規則」）: 部分已核備、理論上「核准
+// 可銷售」的境外基金，實際上因為市場本身被凍結（VERIFIED 俄羅斯相關基金的 funds.latest_nav_date
+// 本身——不是我們自己同步落後，是 TDCC 原始資料本身——卡在 2022 年沒再更新過，對應俄烏戰爭後
+// 俄羅斯市場交易中斷），不是排程漏抓，是來源本身沒有新資料可抓。用 funds.latest_nav_date（官方
+// 發布的淨值日期本身，不是我方抓取時間）超過 180 天沒更新當判斷依據：這代表 TDCC 自己的每日
+// NAV 來源都已經很久沒有這檔基金的新資料，不只是我方排程的問題，不計入核心母體覆蓋率的分母。
+// 門檻刻意設得保守（180 天，遠超過任何正常市場的連假/假日），避免誤殺真正只是偶爾清淡交易、
+// 排程還在正常追的基金。
+const FROZEN_FUND_STALE_DAYS = 180;
+
 export async function checkCoreUniverseFundCoverage(query: QueryFn, staleDaysThreshold: number): Promise<CoverageResult> {
   return checkHistoryFreshnessLateral(
     query, "core_universe_fund", "fund_history", "date", "fund_id",
-    `(SELECT asset_id AS id FROM tw_purchasable_classification WHERE asset_type = 'FUND' AND status = 'APPROVED')`,
+    `(SELECT c.asset_id AS id FROM tw_purchasable_classification c
+        JOIN funds f ON f.id = c.asset_id
+       WHERE c.asset_type = 'FUND' AND c.status = 'APPROVED'
+         AND (f.latest_nav_date IS NULL OR f.latest_nav_date >= CURRENT_DATE - ${FROZEN_FUND_STALE_DAYS}))`,
     "true", staleDaysThreshold,
   );
 }

@@ -118,7 +118,16 @@ const CANDIDATE_BACKFILL_THRESHOLD = 50;
 // keep that backlog from being mis-announced as a brand-new product today. So this checks EVERY
 // taxId from the official list against `funds.code`, regardless of baseline/known status, and
 // creates whatever's missing; the event-log/新商品上架 `candidates` logic below is untouched.
-async function createMissingDomesticFunds(writeEnabled: boolean, existingFundCodes: Set<string>): Promise<{ taxId: string; name: string; company: string }[]> {
+// 2026-10-19 root-cause fix: this loop used to write every missing fund unconditionally, one
+// sequential prisma.fund.create() at a time, with no awareness of the route's own maxDuration (120s)
+// shared between this AND createMissingOffshoreFunds below. VERIFIED live this is exactly why
+// 2026-10-18's offshore batch only created 63 of 454 approved-missing funds (and why
+// production_scheduler_runs shows CLOUD_NEW_FUND_LISTING_DETECTION stuck IN_PROGRESS/completed_at=null
+// on 3 of the last 4 days -- a hard serverless timeout kill never reaches finishRun(), same failure
+// signature already documented and fixed for other jobs in this codebase). Fixed the same way those
+// were: a deadline check inside the loop so the function always returns control gracefully (partial
+// progress saved, remaining items picked up by tomorrow's run) instead of getting killed mid-loop.
+async function createMissingDomesticFunds(writeEnabled: boolean, existingFundCodes: Set<string>, deadlineMs: number): Promise<{ taxId: string; name: string; company: string }[]> {
   const identity = await fetchSitcaIdentityRows();
   const navRows = await fetchSitcaRows().catch(() => []); // best-effort -- NAV might not be published yet for some
   const navByTaxId = new Map(navRows.map((r) => [r.taxId, r.nav]));
@@ -134,6 +143,7 @@ async function createMissingDomesticFunds(writeEnabled: boolean, existingFundCod
 
   const created: { taxId: string; name: string; company: string }[] = [];
   for (const row of missing) {
+    if (Date.now() > deadlineMs) break; // graceful stop -- remaining rows picked up by next run
     const nav = navByTaxId.get(row.taxId) ?? null;
     await prisma.fund.create({
       data: {
@@ -167,7 +177,7 @@ function normalizeFundName(s: string): string {
   return s.replace(/[　\s]+/g, "");
 }
 
-async function createMissingOffshoreFunds(writeEnabled: boolean, existingFundNames: Set<string>): Promise<{ taxId: string; name: string; company: string }[]> {
+async function createMissingOffshoreFunds(writeEnabled: boolean, existingFundNames: Set<string>, deadlineMs: number): Promise<{ taxId: string; name: string; company: string }[]> {
   const csvText = await fetchTdccNavCsv();
   const byName = parseTdccNavCsv(csvText);
   const approvedNames = await fetchTdccOffshoreBasicInfoNames();
@@ -195,6 +205,7 @@ async function createMissingOffshoreFunds(writeEnabled: boolean, existingFundNam
 
   const created: { taxId: string; name: string; company: string }[] = [];
   for (const row of missing) {
+    if (Date.now() > deadlineMs) break; // graceful stop -- remaining rows picked up by next run
     const navRow = byName.get(row.name)!;
     const company = row.company;
     await prisma.fund.create({
@@ -218,7 +229,7 @@ async function createMissingOffshoreFunds(writeEnabled: boolean, existingFundNam
  * verified comment; the remaining 5% have no code match at all and are intentionally left out of
  * this detector — they're not resolvable to a `funds` row either way, so "new" vs "existing" can't
  * be determined for them from this CSV alone). */
-export async function detectNewDomesticFunds(writeEnabled: boolean): Promise<NewFundResult> {
+export async function detectNewDomesticFunds(writeEnabled: boolean, deadlineMs: number = Date.now() + 50_000): Promise<NewFundResult> {
   const rows = await fetchSitcaRows();
   const bySeen = new Map<string, string>(); // taxId -> name, de-duped
   for (const r of rows) bySeen.set(r.taxId, r.name);
@@ -231,7 +242,7 @@ export async function detectNewDomesticFunds(writeEnabled: boolean): Promise<New
     .filter(([taxId]) => !existingFundCodes.has(taxId) && !known.has(taxId))
     .map(([taxId, name]) => ({ key: taxId, name }));
 
-  const created = await createMissingDomesticFunds(writeEnabled, existingFundCodes);
+  const created = await createMissingDomesticFunds(writeEnabled, existingFundCodes, deadlineMs);
   const needsBackfill = !isFirstRun && candidates.length > CANDIDATE_BACKFILL_THRESHOLD;
 
   if (!writeEnabled) {
@@ -253,7 +264,7 @@ export async function detectNewDomesticFunds(writeEnabled: boolean): Promise<New
 /** Offshore funds: funds.code is NULL for most offshore funds (per tdccBatchSource.ts's own
  * documented reason), so identity here is exact fund NAME — the same join key
  * lib/offshore-nav-sync/tdccBatchSource.ts already uses for NAV writes. */
-export async function detectNewOffshoreFunds(writeEnabled: boolean): Promise<NewFundResult> {
+export async function detectNewOffshoreFunds(writeEnabled: boolean, deadlineMs: number = Date.now() + 50_000): Promise<NewFundResult> {
   const csvText = await fetchTdccNavCsv();
   const byName = parseTdccNavCsv(csvText);
 
@@ -269,7 +280,7 @@ export async function detectNewOffshoreFunds(writeEnabled: boolean): Promise<New
   // 現在跟 domestic 的 createMissingDomesticFunds 一樣，用「是否該有 funds 列」跟「今天的畫面
   // 要不要宣布為新商品」兩件事分開處理——不管 isFirstRun/needsBackfill 走哪個分支，缺漏的
   // funds 列都會檢查並（writeEnabled 時）建立。
-  const created = await createMissingOffshoreFunds(writeEnabled, existingFundNames);
+  const created = await createMissingOffshoreFunds(writeEnabled, existingFundNames, deadlineMs);
 
   // Offshore fund auto-provisioning used to be treated as a separate, harder problem (funds.code is
   // NULL for most offshore funds) -- VERIFIED 2026-10-18 that TDCC's own NAV CSV does carry a usable

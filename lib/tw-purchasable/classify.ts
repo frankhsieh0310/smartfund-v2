@@ -81,7 +81,17 @@ export async function classifyTwPurchasable(writeEnabled: boolean): Promise<Clas
   const tdccNames = await fetchTdccOffshoreBasicInfoNames();
   const normalizeFundName = (s: string) => s.replace(/[　\s]+/g, "");
   const tdccNamesNormalized = new Map([...tdccNames].map((n) => [normalizeFundName(n), n]));
-  const offshoreFunds = await prisma.fund.findMany({ select: { id: true, name: true } });
+  // 2026-10-19 root-cause fix: this used to match ALL funds by name, regardless of data_provider --
+  // VERIFIED 378 of core_universe_fund coverage gap's ~500 stale entries are data_provider='yahoo'
+  // rows, a known-stale 2026-07-24 bulk import that (per lib/data-platform/web/fundService.ts's own
+  // existing STALE_UNSYNCED_OFFSHORE_FUND_DAYS comment) has never been covered by any ongoing NAV
+  // sync since and is already hidden from the website's own listings for exactly this reason. When a
+  // genuine 'tdcc-offshore' row for the same fund name also exists, matching the 'yahoo' duplicate
+  // too just marks a second, never-updated row as "core/approved" alongside the real one -- it never
+  // gets fresh fund_history and permanently drags the coverage check down. Excluding data_provider =
+  // 'yahoo' here keeps this classification consistent with the website's own existing stale-hiding
+  // rule, not a new policy invented just for this check.
+  const offshoreFunds = await prisma.fund.findMany({ where: { NOT: { dataProvider: "yahoo" } }, select: { id: true, name: true } });
   const offshoreMatches = offshoreFunds
     .filter((f) => tdccNames.has(f.name) || tdccNamesNormalized.has(normalizeFundName(f.name)))
     .map((f) => ({
@@ -89,6 +99,20 @@ export async function classifyTwPurchasable(writeEnabled: boolean): Promise<Clas
       sourceRecordRef: tdccNames.has(f.name) ? f.name : tdccNamesNormalized.get(normalizeFundName(f.name))!,
     }));
   await upsertApproved(offshoreMatches, writeEnabled);
+  // 2026-10-19 root-cause fix (paired with the data_provider='yahoo' exclusion above): rows that
+  // were APPROVED by an earlier run before this fix existed stay APPROVED forever otherwise --
+  // upsertApproved only ever inserts/updates matches, it never revokes a stale one (deliberately, to
+  // avoid misclassifying the ~18%/12% genuine code-format-drift non-matches documented at the top of
+  // this file as "confirmed not approved"). This is a narrower, specific case: a fund row we KNOW is
+  // a stale, never-synced 2026-07-24 'yahoo' bulk-import duplicate of a real tdcc-offshore row is
+  // never a legitimate ambiguous case, so revoking it here doesn't weaken that general policy.
+  if (writeEnabled) {
+    await prisma.$executeRawUnsafe(
+      `UPDATE tw_purchasable_classification SET status = 'NOT_APPROVED', updated_at = now()
+       WHERE asset_type = 'FUND' AND status = 'APPROVED'
+         AND asset_id IN (SELECT id FROM funds WHERE data_provider = 'yahoo')`,
+    );
+  }
 
   // ETF: TWSE + TPEx t187ap47 code == etfs.code
   // 2026-10-18 修正：t187ap47 官方清單本身 VERIFIED 會包含已經不在交易的 ETF（唯讀對照
