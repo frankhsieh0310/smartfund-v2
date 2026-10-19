@@ -2,7 +2,19 @@
 
 ## Supabase RLS
 
-Supabase 平台會讓 public schema 的新資料表自動開放給 anon 與 authenticated。任何新建資料表（含 migration）必須在同一次變更中執行 ENABLE ROW LEVEL SECURITY 並 REVOKE ALL FROM anon, authenticated，除非該次任務明確核准開放。
+Supabase 平台會讓 public schema 的新資料表自動開放給 anon 與 authenticated。任何新建資料表（含 migration、備份表、暫存表）必須在同一次變更中立刻執行 ENABLE ROW LEVEL SECURITY 並 REVOKE ALL FROM anon, authenticated，除非該次任務明確核准開放。**回報中必須附上查詢證明**（例如 `pg_class.relrowsecurity`／`has_table_privilege()` 的查詢結果），不能只說「已執行」。
+
+起因（2026-10-18）：ETF 重複資料合併前建立的 23 張備份表（`*_dup_backup_20261018`）建立後沒有立刻處理 RLS，被使用者事後要求專案稽核才發現全部 23 張 RLS 關閉、`anon`／`authenticated` 都有完整 CRUD 權限，核准後才補修正。之後任何新建資料表都要在建立的同一個步驟裡做這件事，不要等事後稽核才補。
+
+## ETF 重複資料合併備份表（20261018）
+
+2026-10-18 執行 ETF 重複資料合併（100 組同代號重複 ETF，`old_id` 保留為主、`new_id` 搬完子表資料後設 `is_active=false`）前，對受影響的 23 張表各建立一份完整備份，合併已於當日 COMMIT 完成。這 23 張表全部命名為 `<原表名>_dup_backup_20261018`：
+
+`etfs_dup_backup_20261018`、`etf_history_dup_backup_20261018`、`etf_performances_dup_backup_20261018`、`holdings_dup_backup_20261018`、`etf_distribution_events_dup_backup_20261018`、`etf_yahoo_observations_dup_backup_20261018`、`etf_sector_allocations_dup_backup_20261018`、`etf_credit_rating_allocations_dup_backup_20261018`、`etf_holding_snapshots_dup_backup_20261018`、`etf_upcoming_exrights_dup_backup_20261018`、`asset_knowledge_tags_dup_backup_20261018`、`etf_asset_metrics_dup_backup_20261018`、`etf_flow_coverage_dup_backup_20261018`、`etf_yahoo_terminal_status_dup_backup_20261018`、`bond_etf_technical_analytics_dup_backup_20261018`、`bond_etf_research_snapshot_dup_backup_20261018`、`distributions_dup_backup_20261018`、`etf_flows_dup_backup_20261018`、`etf_issuer_mappings_dup_backup_20261018`、`etf_shares_outstanding_dup_backup_20261018`、`etf_creation_redemptions_dup_backup_20261018`、`etf_flow_aggregates_dup_backup_20261018`、`etf_holdings_dup_backup_20261018`。
+
+**安全狀態**：這 23 張表一開始建立時全部 RLS 關閉、`anon`／`authenticated` 兩個角色都有完整 SELECT/INSERT/UPDATE/DELETE 權限（Supabase 新表預設行為）。2026-10-18 當天發現後已立即對這 23 張表（僅限這 23 張，沒有動其他表）執行 `ENABLE ROW LEVEL SECURITY` 與 `REVOKE ALL ON ... FROM anon, authenticated`，並查詢 `pg_class.relrowsecurity`／`has_table_privilege()` 確認全部 23 張表 RLS 已開啟、兩個角色權限皆為 false。
+
+**保留期限**：保留至這次合併修正上架給使用者後一個月，之後是否刪除需使用者（frank.hsieh0310@gmail.com）明確核准，不可自行刪除。
 
 ## 分支策略
 
@@ -321,9 +333,43 @@ master 為正式基準分支。新工作一律從最新的 master 開分支；�
   這個排程的責任範圍（它只負責建檔＋設定 `data_source`，價格同步是另一個既有、獨立的排程），
   跟 `9989ecd5`（10/19 排程，確認第一個真正交易日收盤後有真實收盤價）要查的是同一件事，
   這裡不重複處理。本次查證全程唯讀，沒有對 production 做任何寫入。
-- 2026-10-19（週一）: 待檢查。
-- 2026-10-20（週二）: 待檢查。
-- 2026-10-21（週三）: 待檢查。
+- **2026-10-19（週一，原定第13項計時第1天）：❌ 不是乾淨的一天，計時尚未真正開始**——
+  `production_scheduler_runs` 當天 `DAILY_HEALTH_REPORT` 這筆（id `6fb58790-57b2-47fe-ba44-7b55bae652d9`，
+  `started_at` 2026-10-19 00:30:05 UTC）`status=PARTIAL`，`anomaly_count=13`，不是 0。逐項查證後分類：
+  - **6 筆 LAST_RUN_PARTIAL**（`ETF_RETURNS_SYNC`／`ETF_RETURNS_SYNC_TW`／`US_FUND_NAV_SYNC`／
+    `FUND_RETURNS_SYNC`／`CLOUD_ETF_PRICE`）：查各自最近 3 筆執行紀錄，全部是正常的
+    `attempted≈inserted`、命中既有已知的時間預算 steady-state（CLAUDE.md 7/17 已記錄過這個模式，
+    不是真的錯誤），健康報告剛好在這些排程還在跑／剛跑完時那個瞬間查詢，屬於查詢時間點的假警報，
+    不是新問題。
+  - **2 筆 ERROR_COUNT（`CLOUD_ETF_PRICE` 的 ERROR_COUNT_5、`CLOUD_MONEYDJ_FUND` 的
+    ERROR_COUNT_24）**：查最近 3 天紀錄，`CLOUD_ETF_PRICE` 持續出現同一種
+    `YAHOO_CHART_NULL`（每批 1 筆失敗，連續多天同樣模式）；`CLOUD_MONEYDJ_FUND` 持續出現同一種
+    `MONEYDJ_DISCLOSED_HOLDINGS_MISSING`（每批 20-25 筆失敗，連續多天同樣模式、數字穩定沒有惡化）
+    ——兩個都是既有、慢性的資料來源缺口（MoneyDJ／Yahoo chart 本身沒資料），不是今天新壞掉的，
+    也跟這次對話任何一輪的修正（ETF 下市查核、境外基金補建、ETF 合併、RLS 修正）完全無關。
+  - **`INSTITUTIONAL_UPDATE` NO_RUN_IN_LAST_24H**：查證這個 job_id 在 smartfund-v2 自己的
+    `app/api/cron/` 底下完全沒有對應路由——程式碼裡的註解證實這是 **`tw-data-updater`**（另一個
+    專案，跟這裡共用同一個 Postgres）的 institutional-update 排程，不是 smartfund-v2 自己的
+    Vercel cron，排程時間由 `tw-data-updater` 自己的機制控制，不在 `vercel.json` 裡。最近一筆
+    `status=ALREADY_DONE`（2026-10-16），值得之後跟 `tw-data-updater` 那邊確認排程是否正常，但
+    不屬於這次 smartfund-v2 健康檢查能直接修的範圍，先誠實記錄、不處理。
+  - **`TW_ETF_DAY_CHANGE`／`YAHOO_COMMODITY_TECHNICAL` NO_RUN_IN_LAST_24H**：查 `vercel.json`
+    排程分別是 `*/15 6-8 * * 1-5`、`30 21 * * 1-5`——都是平日限定時段。健康報告在台北時間
+    08:30（UTC 00:30）就查，這兩支排程當天真正的執行時段（UTC 6-8 點、UTC 21:30）都還沒到，
+    加上前一天是週末沒有平日排程，剛好被查到「過去24小時沒跑過」——這是檢查時間點早於排程視窗
+    造成的誤報，不是真的停擺，明天再查應該就正常。
+  - **`FRED_COMMODITY_MISMATCH`（WTI_CRUDE／NATURAL_GAS 都 `fetchFailed:true`）**：我方自己的
+    收盤價都有正常值（99.04、3.117），只是對照用的外部 FRED API 查詢失敗，是外部依賴問題，
+    不是我方資料有缺。
+  - **3 筆 COVERAGE 未滿 100%**（`commodity_technical` 76.9%、`core_universe_etf` 99.8%、
+    `core_universe_fund` 94.7%）：都是「接近但未滿」的覆蓋率，不是大範圍缺口，沒有進一步深查，
+    先記錄。
+  - **結論**：今天 13 筆異常裡，沒有一筆是新的真實故障，絕大多數是既有慢性缺口或查詢時間點造成
+    的誤報，但因為 `anomaly_count` 不是 0，**today 不算乾淨的一天，第13項的3個交易日計時尚未
+    真正開始**。沒有執行任何 DDL／批次 UPDATE／部署——這些異常都不是「今天能用唯讀/小修正解決」
+    的問題，需要的話應該另外排時間個別處理，不在今天的例行健檢範圍內臨時動工。
+- 2026-10-20（週二）：待檢查，如果 `anomaly_count=0` 才算第13項真正的第1天。
+- 2026-10-21（週三）：待檢查，接續 10/20 的結果往下算。
 
 **2026-10-17：釐清「15 項驗收清單」稽核的對象是 App（smartmatch-mobile），不是這個網站本身**
 - 起因：請獨立子代理提前演練 Wednesday 驗收時，我誤把「財經 App」理解成這個 Next.js 網站，
@@ -1406,3 +1452,102 @@ timestamp 欄位改用 `::text`，發現並避開了對 `timestamptz` 欄位誤�
 **往後規則**：任何需要在正式資料庫放測試資料（不管是為了測試哪個功能、不管事後會不會
 清除），**一律先提出方案，說明要寫入什麼、為什麼、怎麼清理，等使用者核准後才能執行**，
 不能自己評估「風險夠低」就動手。
+
+## 排程耗時風險稽核（2026-10-18，唯讀，只讀 production_scheduler_runs + Vercel route 原始碼）
+
+**方法 VERIFIED**：對每個 `job_id` 取最近 7 天內最近 3 次已完成（`completed_at IS NOT NULL`）
+的執行，`duration_s = completed_at - started_at`；`maxDuration` 一律從該 route 自己的
+`route.ts` 裡的 `export const maxDuration` 讀出，不臆測。凡是 `duration_s / maxDuration > 50%`
+列為風險。腳本：`scratch_job_audit2.mjs`（唯讀，已確認未執行任何 UPDATE/DELETE/DDL）。
+
+**排除項目（VERIFIED 不是本專案的 Vercel cron route，而是 tw-data-updater 的本機排程，
+共用同一張 `production_scheduler_runs` 表）**：
+- `*-yahoo-daily` 家族（16 個 job_id，如 `twse-yahoo-daily`、`nasdaq-yahoo-daily` 等）：
+  `run_key` 格式是 `<job>:<date>:PRIMARY|RETRY|PROVIDER_PROBE`，和本專案任何 Vercel route
+  的 `run_key` 格式都不同，對 `app/`、`lib/` 全專案搜尋 `PROVIDER_PROBE` 完全找不到匹配。
+- `YAHOO_COMMODITY_HISTORY`、`YAHOO_CRYPTO_BOOTSTRAP`、`YAHOO_CRYPTO_HISTORY`、
+  `YAHOO_CRYPTO_MARKETCAP`、`YAHOO_CRYPTO_QUOTE`、`YAHOO_FX_QUOTE`、`YAHOO_INDEX_HISTORY`：
+  對 `app/api/cron` 全目錄搜尋，找不到任何 route 使用這些 job 名稱（只有
+  `YAHOO_FUND_UNIVERSE_DISCOVERY` 在 `yahoo-fund-full-sweep/route.ts` 裡被確認為真，
+  `maxDuration: 300`，已納入稽核範圍）。
+以上 23 個 job_id 標示 UNKNOWN（不是本次稽核對象），不拿去跟任何 maxDuration 比較。
+
+**風險清單（VERIFIED，最近 7 天、每個 job 最近 3 次，超過其 maxDuration 50% 的執行）——
+列為本週一（10/19）到週三（10/21）觀察重點**：
+
+| job_id | maxDuration | 實際耗時 | 占比 | status |
+|---|---|---|---|---|
+| `CLOUD_SEC_FINANCIAL_INCREMENTAL` | 120s | 121.0s | **100.8%**（已超過上限）| PARTIAL |
+| `HOLDINGS_ALT_SOURCE_SYNC` | 300s | 280–283s | 93.5–94.2% | COMPLETED ×3（雖完成但貼著上限）|
+| `YAHOO_ETF_FULL_SWEEP` | 300s | 249–284s | 83.1–94.7% | COMPLETED ×3 |
+| `FUND_RETURNS_SYNC` | 290s | 268–272s | 92.3–93.9% | PARTIAL ×3 |
+| `YAHOO_COMMODITY_TECHNICAL` | 60s | 55.5s | 92.4% | COMPLETED（窗內只 1 次執行）|
+| `TW_ETF_DAY_CHANGE` | 290s | 259s | 89.3–89.4% | PARTIAL ×3 |
+| `YAHOO_FUND_FULL_SWEEP` | 300s | 241–268s | 80.5–89.2% | COMPLETED ×3 |
+| `CLOUD_ETF_PRICE` | 300s | 239–245s | 79.6–81.6% | PARTIAL ×3 |
+| `CLOUD_MONEYDJ_FUND` | 300s | 163–242s | 54.4–80.8% | 2×PARTIAL, 1×COMPLETED |
+| `CLOUD_FUND_NAV:SITCA` | 300s | 228s | 76.0% | COMPLETED |
+| `CLOUD_CONSENSUS_INGEST` | 300s | 163–167s | 54.2–55.5% | COMPLETED ×3 |
+
+**最高風險、唯一真正「超過上限」的是 `CLOUD_SEC_FINANCIAL_INCREMENTAL`**（100.8%，PARTIAL）
+——這是美股財報增量更新，10/15 那次確定被平台砍斷。其餘都在 50~95% 之間、狀態多為
+`PARTIAL`（代表任務本身有做「部份完成即返回」的保護機制，不是直接 crash，但持續貼著
+上限代表隨時可能因為上游資料量變大、或跨區延遲波動而變成真正超時）。
+
+**凍結期間不做任何處理**，純記錄供觀察，若本週一～三這些 job 又出現 `PARTIAL`/`FAILED`
+且耗時持續上升，屆時再回報。
+
+## 改善方案比較（只寫方案，不實作；供週三之後凍結解除後參考）
+
+背景：目前 Vercel functions 跑在 `iad1`（美國 Virginia），Supabase 資料庫在
+`ap-southeast-1`（新加坡），跨區單次 DB round-trip 平均 ~1.1 秒（VERIFIED，來自
+ex-date-sync 根因分析）。上面清單裡大多數貼著上限的 job，耗時結構都是「很多筆資料、
+每筆各自一次或多次 DB 寫入」的迴圈模式，和 ex-date-sync 原本卡住的模式相同。
+
+**方案 A：在 `vercel.json` 指定 function region 為 `sin1`（新加坡，離 Supabase
+`ap-southeast-1` 最近的 Vercel region）**
+- 優點：不用改任何業務邏輯／SQL，純粹配置變更；理論上能把每筆 round-trip 從 ~1.1s
+  壓到個位數毫秒等級，等比例大幅降低所有「迴圈裡逐筆 await DB」的 job 耗時。
+- 缺點／風險：
+  - 影響**全部** functions（除非逐 route 指定 region，但 Next.js on Vercel 目前的
+    region 設定是專案層級或逐 route layer，需要逐一確認哪些 route 允許個別覆寫）。
+  - 任何原本假設在美國執行、呼叫美國 API（例如部分美股資料源、SEC EDGAR）的 job，改到
+    新加坡後對那些上游 API 的延遲可能反而變差，需要逐一盤點外部依賴。
+  - 區域搬遷本身是一次性變更，牽涉 DNS/edge cache/cold start 行為可能有差異，上線當天
+    需要密切觀察，不是零風險的純配置切換。
+- 這正是目前凍結規則明確禁止的「改區域」，所以本輪只寫比較，不實作。
+
+**方案 B：把迴圈裡逐筆 await 的寫入改成批次（batch upsert / `createMany` /
+單次多值 `INSERT ... ON CONFLICT`）**
+- 優點：不用動部署架構、不影響其他未受影響的 job／API 呼叫型態；只要該 job 的資料表
+  支援批次 upsert（大部分用 Prisma 的 upsert 迴圈都能改寫成單次多值 SQL 或
+  `createMany` + 事後 `ON CONFLICT` 處理），能把「76 筆 × 1.1s」類型的瓶頸從
+  N 次 round-trip 壓到 1~少數次。
+- 缺點／風險：
+  - 需要逐個 job 檢查寫入邏輯（每筆是否有各自的條件判斷、部分失敗要不要整批 rollback
+    還是允許部份成功）——不是機械式的無腦改寫，batch 寫入通常是「全有或全無」或需要
+    額外處理單筆失敗的邏輯，原本逐筆迴圈反而比較容易做到「這筆壞掉跳過，其他照常」。
+  - 對 `PARTIAL` 狀態的既有語義（代表「處理到一半被時間限制打斷，但已寫入的那些是
+    有效的」）可能需要重新設計，批次寫入如果中途被打斷，「部分完成」的概念會變得
+    模糊（例如一次 batch SQL 要嘛整批成功要嘛整批失敗，不像逐筆迴圈能自然地留下
+    已完成的那部分）。
+  - 工作量是逐 job 評估＋改寫＋測試，不是一次性配置，初期投入比方案 A 高，但風險
+    更侵入到業務邏輯層。
+- 這是目前凍結規則明確禁止的「改寫入方式」，所以本輪只寫比較，不實作。
+
+**初步建議（僅供參考，不代表核准任何執行）**：方案 A（換 region）影響面廣但改動本身
+單純、可逐步用 Preview 驗證效果後再決定要不要正式套用；方案 B（批次寫入）改動侵入
+業務邏輯、需要逐 job 評估，但不受區域搬遷的外部依賴風險影響。兩者也可以分階段進行
+（先 A 看整體效果，再挑剩下仍貼著上限的少數 job 做 B）。凍結解除、使用者核准後才討論
+要選哪個方向或怎麼分階段。
+
+## 三天穩定測試起算點更新（2026-10-18，使用者定案）
+
+**規則**：「連續三天穩定測試」不從 10/19 開始算——使用者明確指出核心資料缺口（57 檔
+TWSE ETF 重複資料、ETF_RETURNS_SYNC_TW 卡住等）還沒修好部署前，10/19 不算第一天。
+**三天測試從核心問題修好並部署正式環境後的「第一個交易日」開始重新算**，凍結規則
+（不改區域、不改寫入方式、不開新功能）同步順延到三天測試走完為止。
+
+往後任何人（包含我自己）要推算「今天是測試第幾天」，必須先確認：(1) 核心問題是否
+已經部署到正式環境，(2) 部署當天或部署後的下一個交易日是第一天——不能單純用日期
+往後數三天。
