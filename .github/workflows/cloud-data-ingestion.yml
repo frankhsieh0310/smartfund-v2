@@ -30,7 +30,6 @@ on:
     - cron: "30 10 * * 1-5" # MOPS financial incremental — 18:30 Taipei, after-hours filing check (weekdays)
     - cron: "30 14 * * 1-5" # MOPS financial incremental (2nd pass) — 22:30 Taipei, catches late filers same day
     - cron: "0 13 * * *"    # SEC EDGAR financial incremental (discovery + bounded issuer refresh) — daily
-    - cron: "30 11 * * 1-5" # Function 2: Taiwan ETF official daily holdings — 19:30 Taipei, weekdays only
     # FX quote (2026-09-12): Vercel Hobby rejected `0 */2 * * 1-5` outright ("Hobby accounts are
     # limited to daily cron jobs") — same sub-daily limitation as everything else in this file, same
     # fix. This IS the primary FX quote trigger; Vercel's own daily quote cron (vercel.json,
@@ -164,7 +163,6 @@ jobs:
             "30 14 * * 1-5") echo "job=mops-financial-incremental" >> "$GITHUB_OUTPUT" ;;
             "0 13 * * *") echo "job=sec-financial-incremental" >> "$GITHUB_OUTPUT" ;;
             "0 */2 * * 1-5") echo "job=fx-quote" >> "$GITHUB_OUTPUT" ;;
-            "30 11 * * 1-5") echo "job=etf-official-holdings" >> "$GITHUB_OUTPUT" ;;
             *)            echo "job=${{ github.event.inputs.job || 'all' }}" >> "$GITHUB_OUTPUT" ;;
           esac
 
@@ -546,7 +544,7 @@ jobs:
   # name for a manual single-issuer dispatch, all 17 for a schedule run or issuer=all), and the real
   # job below consumes that list via fromJSON() in strategy.matrix — its own if never references matrix.
   etf-issuer-matrix-setup:
-    if: ${{ github.event.schedule == '30 11 * * 1-5' || github.event.inputs.job == 'etf-official-holdings' || github.event.inputs.job == 'all' }}
+    if: ${{ github.event.inputs.job == 'etf-official-holdings' || github.event.inputs.job == 'all' }}
     runs-on: ubuntu-latest
     outputs:
       issuers: ${{ steps.set.outputs.issuers }}
@@ -567,7 +565,7 @@ jobs:
 
   etf-official-holdings:
     needs: etf-issuer-matrix-setup
-    if: ${{ github.event.schedule == '30 11 * * 1-5' || github.event.inputs.job == 'etf-official-holdings' || github.event.inputs.job == 'all' }}
+    if: ${{ github.event.inputs.job == 'etf-official-holdings' || github.event.inputs.job == 'all' }}
     runs-on: ubuntu-latest
     timeout-minutes: 90
     strategy:
