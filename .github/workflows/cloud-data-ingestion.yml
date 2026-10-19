@@ -9,11 +9,6 @@ name: cloud-data-ingestion
 on:
   schedule:
     - cron: "7 * * * *"  # Fund holdings       — every hour at :07
-    - cron: "17 * * * *" # ETF price          — every hour at :17
-    - cron: "27 * * * *" # Fund NAV (SITCA)   — every hour at :27
-    - cron: "37 * * * *" # MoneyDJ fund NAV    — every hour at :37
-    - cron: "47 * * * *" # MoneyDJ ETF hold.   — every hour at :47
-    - cron: "57 * * * *" # Global ETF hold.    — every hour at :57
     # Consensus radar (大佬觀點) is intentionally NOT scheduled here. It already has its own Vercel Cron
     # (vercel.json: /api/workflows/bootstrap?workflow=consensus, daily 20 16 * * *) driving a Durable
     # Workflow (app/workflows/consensus-cycle.ts) that self-paces 8 ingest passes 3h apart and internally
@@ -24,19 +19,7 @@ on:
     # run_key makes a second same-window call a safe no-op, not corruption — but still pointless). Kept
     # as workflow_dispatch-only options below (job=consensus-ingest etc.) for manual/fallback use, not on
     # the automatic schedule, so Vercel Workflow stays the one PRIMARY trigger for this domain.
-    # Fundamentals freshness (我的分析 PE staleness fix) — Asia/Taipei = UTC+8
-    - cron: "30 8 * * 1-5"  # TW BWIBBU PE refresh — 16:30 Taipei, after TWSE/TPEx 13:30 close (weekdays only)
-    - cron: "0 */3 * * *"   # Global PE recompute — every 3h, bounded batch + checkpoint cycles the full NASDAQ/NYSE universe over a day
-    - cron: "30 10 * * 1-5" # MOPS financial incremental — 18:30 Taipei, after-hours filing check (weekdays)
-    - cron: "30 14 * * 1-5" # MOPS financial incremental (2nd pass) — 22:30 Taipei, catches late filers same day
-    - cron: "0 13 * * *"    # SEC EDGAR financial incremental (discovery + bounded issuer refresh) — daily
     - cron: "30 11 * * 1-5" # Function 2: Taiwan ETF official daily holdings — 19:30 Taipei, weekdays only
-    # FX quote (2026-09-12): Vercel Hobby rejected `0 */2 * * 1-5` outright ("Hobby accounts are
-    # limited to daily cron jobs") — same sub-daily limitation as everything else in this file, same
-    # fix. This IS the primary FX quote trigger; Vercel's own daily quote cron (vercel.json,
-    # 0 21 * * 1-5) is kept only as a safety net if this workflow ever fails to fire. Both call the
-    # same idempotent, stale-guarded route, so a same-day double-run is a safe no-op, not corruption.
-    - cron: "0 */2 * * 1-5" # FX quote (390 Yahoo-direct pairs, auto-chains 162 derived-cross) — every 2h weekdays
     # Crypto: daily bounded history and marketcap slices (UTC); quote is manual only.
     - cron: "39 0 * * *"        # marketcap: daily 08:39 Taipei, max 250 markets
     - cron: "23 0 * * *"        # history: daily 08:23 Taipei, existing small batches
@@ -142,22 +125,11 @@ jobs:
             "50 16 * * 1-5") echo "job=index-europe" >> "$GITHUB_OUTPUT" ;;
             "15 21 * * 1-5") echo "job=index-us" >> "$GITHUB_OUTPUT" ;;
             "7 * * * *")  echo "job=fund-holdings" >> "$GITHUB_OUTPUT" ;;
-            "17 * * * *") echo "job=etf-price" >> "$GITHUB_OUTPUT" ;;
-            "27 * * * *") echo "job=fund-nav" >> "$GITHUB_OUTPUT" ;;
-            "37 * * * *") echo "job=moneydj-fund" >> "$GITHUB_OUTPUT" ;;
-            "47 * * * *") echo "job=moneydj-etf" >> "$GITHUB_OUTPUT" ;;
-            "57 * * * *") echo "job=global-etf-holdings" >> "$GITHUB_OUTPUT" ;;
             "20 1,4,7,10,13,16,19,22 * * *") echo "job=consensus-ingest" >> "$GITHUB_OUTPUT" ;;
             "30 22 * * *") echo "job=consensus-aggregate" >> "$GITHUB_OUTPUT" ;;
             "0 0 * * *") echo "job=consensus-performance" >> "$GITHUB_OUTPUT" ;;
             "40 1,4,7,10,13,16,19,22 * * *") echo "job=consensus-flips" >> "$GITHUB_OUTPUT" ;;
             "50 23 * * *") echo "job=consensus-backfill" >> "$GITHUB_OUTPUT" ;;
-            "30 8 * * 1-5") echo "job=tw-fundamentals-refresh" >> "$GITHUB_OUTPUT" ;;
-            "0 */3 * * *") echo "job=global-pe-recompute" >> "$GITHUB_OUTPUT" ;;
-            "30 10 * * 1-5") echo "job=mops-financial-incremental" >> "$GITHUB_OUTPUT" ;;
-            "30 14 * * 1-5") echo "job=mops-financial-incremental" >> "$GITHUB_OUTPUT" ;;
-            "0 13 * * *") echo "job=sec-financial-incremental" >> "$GITHUB_OUTPUT" ;;
-            "0 */2 * * 1-5") echo "job=fx-quote" >> "$GITHUB_OUTPUT" ;;
             "30 11 * * 1-5") echo "job=etf-official-holdings" >> "$GITHUB_OUTPUT" ;;
             *)            echo "job=${{ github.event.inputs.job || 'all' }}" >> "$GITHUB_OUTPUT" ;;
           esac
