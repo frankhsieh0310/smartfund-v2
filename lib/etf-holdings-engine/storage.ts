@@ -28,12 +28,25 @@ export async function upsertSnapshot(query: QueryFn, snapshot: CanonicalSnapshot
   );
   const snapshotId = rows[0].id as string;
 
+  // 2026-10-19: root-caused a recurring etf-official-holdings failure (confirmed live, KGI issuer,
+  // ticker 009816) — Postgres rejects a single multi-row INSERT...ON CONFLICT (snapshot_id,
+  // security_code) DO UPDATE the moment the SAME security_code appears twice in that one command
+  // ("ON CONFLICT DO UPDATE command cannot affect row a second time", error 21000) — this is a
+  // hard Postgres limitation, not a transient/concurrency issue (it was initially mistaken for the
+  // same symptom as the already-fixed max-parallel concurrency issue, but recurred after that fix).
+  // The issuer's own raw daily holdings table can list the same security twice (observed: a split
+  // lot or formatting artifact upstream, not something this engine controls) — dedupe by
+  // securityCode before building the upsert payload so a stray duplicate can never poison the whole
+  // batch's write. Last occurrence wins, consistent with this same query's own ON CONFLICT semantics
+  // for a legitimate re-run (EXCLUDED always wins over the existing row).
+  const dedupedPositions = [...new Map(snapshot.positions.map((p) => [p.securityCode, p])).values()];
+
   // rank computed here (by weight desc) since it's a property of the whole snapshot, not a single position
-  const ranked = [...snapshot.positions].sort((a, b) => b.weight - a.weight);
+  const ranked = [...dedupedPositions].sort((a, b) => b.weight - a.weight);
   const rankByCode = new Map(ranked.map((p, i) => [p.securityCode, i + 1]));
 
-  for (let i = 0; i < snapshot.positions.length; i += 200) {
-    const chunk = snapshot.positions.slice(i, i + 200);
+  for (let i = 0; i < dedupedPositions.length; i += 200) {
+    const chunk = dedupedPositions.slice(i, i + 200);
     await query(
       `INSERT INTO etf_official_daily_positions
          (snapshot_id, security_code, security_name, position_type, position_amount, position_unit, weight, rank, canonical_security_id, source)

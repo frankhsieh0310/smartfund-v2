@@ -167,13 +167,28 @@ export type CryptoHistoryBatchResult = {
   failedMarkets: Array<{ id: string; symbol: string; reason: string }>;
   lastId: string | null;
   wrapped: boolean;
+  /** true if a per-candle write loop hit its deadline mid-market and broke out early (that market's
+   * remaining candles are picked up on the NEXT invocation at the same cursor position, since lastId
+   * is only ever advanced past a market once its own candle loop has actually finished). */
+  deadlineHit: boolean;
 };
 
 // Phase 2: daily history. Per market, incremental from the last known crypto_candles row — same
 // 3-day revision-reabsorb padding as FX/Index. Crypto trades 24/7 (Step 9/19): the "1d" interval
 // here is a fixed calendar-day bucket exactly as Yahoo's own chart API already returns it — no
 // weekday/holiday filtering is applied anywhere in this function.
-export async function updateCryptoHistory(cursor: string | null, batchSize = 2, symbols?: string[], writeEnabled = false): Promise<CryptoHistoryBatchResult> {
+// 2026-10-19: root-caused a 504 (Vercel's hard maxDuration kill, confirmed live -- the GitHub Actions
+// curl call that observed it ran for exactly 280s, matching this route's maxDuration to the second).
+// A market needing a full historical backfill (no existing crypto_candles row) can get up to 366 days
+// of candles back from Yahoo, and the write loop below persisted them ONE sequential upsert at a time
+// with no time-budget awareness at all -- under the DB contention this session independently observed
+// from many concurrent cron jobs hitting the same Postgres, that alone can run well past the outer
+// while-loop's own 180s HISTORY_MAX_SAFE_RUNTIME_MS check in route.ts (which only runs BETWEEN calls
+// to this function, never inside one). deadlineMs threads the same elapsed-time-budget convention
+// already used throughout this codebase (e.g. cloud-moneydj-fund's TIME_BUDGET_MS) into the inner
+// per-candle loop too, so a slow backfill breaks out and lets the next invocation's checkpoint pick up
+// the rest, instead of running the whole route past Vercel's hard kill.
+export async function updateCryptoHistory(cursor: string | null, batchSize = 2, symbols?: string[], writeEnabled = false, deadlineMs = Infinity): Promise<CryptoHistoryBatchResult> {
   // Same DB-driven default scope as updateCryptoQuotes above.
   const rows = await prisma.cryptoMarket.findMany({
     where: { exchangeId: YAHOO_EXCHANGE_ID, active: true, ...(symbols ? { providerSymbol: { in: symbols } } : {}), ...(cursor ? { id: { gt: cursor } } : {}) },
@@ -182,12 +197,18 @@ export async function updateCryptoHistory(cursor: string | null, batchSize = 2, 
     select: { id: true, providerSymbol: true },
   });
   const wrapped = rows.length < batchSize;
-  if (rows.length === 0) return { requestedMarkets: 0, updatedMarkets: 0, rowsWritten: 0, failedMarkets: [], lastId: null, wrapped: true };
+  if (rows.length === 0) return { requestedMarkets: 0, updatedMarkets: 0, rowsWritten: 0, failedMarkets: [], lastId: null, wrapped: true, deadlineHit: false };
 
   let updatedMarkets = 0, rowsWritten = 0;
   const failedMarkets: Array<{ id: string; symbol: string; reason: string }> = [];
+  // Only ever advances past a row once that row's own candle loop finishes cleanly -- a row
+  // interrupted by deadlineHit is deliberately NOT counted as "done" here, so the next invocation's
+  // cursor naturally retries it (safe: every write below is an idempotent upsert).
+  let lastCompletedId: string | null = null;
+  let deadlineHit = false;
 
   for (const row of rows) {
+    if (Date.now() >= deadlineMs) { deadlineHit = true; break; }
     try {
       const latestCandle = await prisma.cryptoCandle.findFirst({
         where: { marketId: row.id, interval: "1d" },
@@ -201,11 +222,17 @@ export async function updateCryptoHistory(cursor: string | null, batchSize = 2, 
         new Promise<null>((resolve) => setTimeout(() => resolve(null), 20_000)),
       ]);
       const candles = (chart?.candles ?? []).filter((c) => c.close != null && c.close > 0 && c.high != null && c.low != null && c.open != null);
-      if (!candles.length) { failedMarkets.push({ id: row.id, symbol: row.providerSymbol, reason: "NO_CANDLES" }); continue; }
+      if (!candles.length) { failedMarkets.push({ id: row.id, symbol: row.providerSymbol, reason: "NO_CANDLES" }); lastCompletedId = row.id; continue; }
 
       const cursorTime = latestCandle?.openTime.getTime() ?? null;
       let wrote = 0;
+      let rowDeadlineHit = false;
       for (const c of candles) {
+        // A full 366-day backfill can mean hundreds of individual upserts below; check the deadline
+        // here too (not just once per market row) so a single market needing a big backfill can't by
+        // itself run the whole route past Vercel's hard maxDuration kill (root-caused live 2026-10-19
+        // -- a GitHub Actions curl call observed hanging for exactly 280s, this route's maxDuration).
+        if (Date.now() >= deadlineMs) { rowDeadlineHit = true; deadlineHit = true; break; }
         // Raw Yahoo bar timestamp, not midnight-normalized (see indexUpdate.ts's own comment on
         // this exact lesson — normalizing here would mint a second row for the same day instead
         // of upserting the existing one).
@@ -220,6 +247,13 @@ export async function updateCryptoHistory(cursor: string | null, batchSize = 2, 
         }
         wrote++;
       }
+      if (rowDeadlineHit) {
+        // Partial progress on this row is safe (every write above already completed, idempotent
+        // upserts) -- just don't mark the row itself done, so its remaining candles get retried.
+        rowsWritten += wrote;
+        break;
+      }
+      lastCompletedId = row.id;
       rowsWritten += wrote;
       updatedMarkets++;
     } catch (error) {
@@ -227,5 +261,6 @@ export async function updateCryptoHistory(cursor: string | null, batchSize = 2, 
     }
   }
 
-  return { requestedMarkets: rows.length, updatedMarkets, rowsWritten, failedMarkets, lastId: wrapped ? null : rows.at(-1)!.id, wrapped };
+  const lastId = deadlineHit ? (lastCompletedId ?? cursor) : (wrapped ? null : rows.at(-1)!.id);
+  return { requestedMarkets: rows.length, updatedMarkets, rowsWritten, failedMarkets, lastId, wrapped: deadlineHit ? false : wrapped, deadlineHit };
 }

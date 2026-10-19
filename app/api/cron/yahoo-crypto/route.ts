@@ -122,13 +122,18 @@ async function handleCryptoRequest(request: Request) {
       const failedMarkets: Array<{ id: string; symbol: string; reason: string }> = [];
       let wrapped = false, slices = 0;
       while (Date.now() - started < HISTORY_MAX_SAFE_RUNTIME_MS) {
-        const r = await updateCryptoHistory(cursor, HISTORY_BATCH_SIZE, scope, writeEnabled);
+        // deadlineMs threaded into the per-candle write loop too -- see updateCryptoHistory's own
+        // 2026-10-19 comment: without this, one market needing a big backfill could by itself run
+        // past this HISTORY_MAX_SAFE_RUNTIME_MS check (which only runs BETWEEN calls, never inside
+        // one) all the way to Vercel's hard maxDuration kill (root-caused live, see route maxDuration).
+        const r = await updateCryptoHistory(cursor, HISTORY_BATCH_SIZE, scope, writeEnabled, started + HISTORY_MAX_SAFE_RUNTIME_MS);
         requestedMarkets += r.requestedMarkets; updatedMarkets += r.updatedMarkets; rowsWritten += r.rowsWritten;
         failedMarkets.push(...r.failedMarkets);
         cursor = r.lastId; slices++;
         const cpAfter = { lastSymbol: r.wrapped ? null : cursor, processed: (cpBefore?.processed ?? 0) + requestedMarkets, succeeded: (cpBefore?.succeeded ?? 0) + updatedMarkets, failed: failedMarkets.length };
         await writeCheckpoint(JOB, cpKey, runId, cpAfter);
         if (r.wrapped) { wrapped = true; break; }
+        if (r.deadlineHit) break;
         if (Date.now() - started >= HISTORY_MAX_SAFE_RUNTIME_MS) break;
       }
       const cpAfter = { lastSymbol: wrapped ? null : cursor, processed: (cpBefore?.processed ?? 0) + requestedMarkets, succeeded: (cpBefore?.succeeded ?? 0) + updatedMarkets, failed: failedMarkets.length };
