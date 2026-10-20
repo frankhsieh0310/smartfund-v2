@@ -12,9 +12,10 @@ export const dynamic = "force-dynamic";
 // (already confirmed set on both Preview and Production this session) purely to measure real DB round
 // trips from each region. Deleted along with this whole route once the measurement is done.
 export async function GET(request: Request) {
-  const secret = process.env.LOCAL_SCHEDULE_REPORT_SECRET;
-  const header = request.headers.get("authorization") ?? "";
-  if (!secret || header !== `Bearer ${secret}`) return Response.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+  const secret = process.env.LOCAL_SCHEDULE_REPORT_SECRET?.trim();
+  const header = (request.headers.get("authorization") ?? "").trim();
+  if (!secret) return Response.json({ ok: false, error: "Unauthorized", diag: "secret_env_not_set" }, { status: 401 });
+  if (header !== `Bearer ${secret}`) return Response.json({ ok: false, error: "Unauthorized", diag: `secret_len=${secret.length} header_len=${header.length}` }, { status: 401 });
   const timings: number[] = [];
   for (let i = 0; i < 5; i++) {
     const t0 = Date.now();
