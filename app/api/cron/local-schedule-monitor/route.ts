@@ -28,8 +28,11 @@ type WatchedSchedule = { label: string; jobIdPrefix: string };
 const WATCHED: WatchedSchedule[] = [
   { label: "SmartMatch Mega ETF Holdings（兆豐 ETF 官方持股桌機排程）", jobIdPrefix: "ETF_OFFICIAL_HOLDINGS_MEGA_DESKTOP:" },
   { label: "1330 TW Price Update（tw-industry-radar）", jobIdPrefix: "LOCAL_1330_TW_PRICE_UPDATE" },
-  { label: "1500 Institutional Update（tw-industry-radar，機構動向資料來源）", jobIdPrefix: "LOCAL_1500_INSTITUTIONAL_UPDATE" },
+  { label: "1500 Institutional Update（tw-industry-radar）", jobIdPrefix: "LOCAL_1500_INSTITUTIONAL_UPDATE" },
   { label: "1700 TW Data Final Update（tw-industry-radar）", jobIdPrefix: "LOCAL_1700_TW_DATA_FINAL_UPDATE" },
+  { label: "OpenClaw Gateway（tw-data-updater 本機長駐 daemon）", jobIdPrefix: "LOCAL_OPENCLAW_GATEWAY" },
+  { label: "tw-etf-lookup 摩根持股匯入", jobIdPrefix: "LOCAL_TW_ETF_LOOKUP_MORGAN_IMPORT" },
+  { label: "tw-etf-lookup Mega uploader", jobIdPrefix: "LOCAL_TW_ETF_LOOKUP_MEGA_UPLOADER" },
 ];
 
 export async function GET(request: Request) {

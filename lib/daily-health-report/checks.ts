@@ -513,8 +513,16 @@ export async function checkLocalScheduleReporting(query: QueryFn): Promise<Local
   const watched = [
     { label: "SmartMatch Mega ETF Holdings（兆豐 ETF 官方持股桌機排程）", jobIdPrefix: "ETF_OFFICIAL_HOLDINGS_MEGA_DESKTOP:" },
     { label: "1330 TW Price Update（tw-industry-radar）", jobIdPrefix: "LOCAL_1330_TW_PRICE_UPDATE" },
-    { label: "1500 Institutional Update（tw-industry-radar，機構動向資料來源）", jobIdPrefix: "LOCAL_1500_INSTITUTIONAL_UPDATE" },
+    // 2026-10-20 查證：機構動向即時畫面讀的是雲端 institutional_daily（tw-data-updater 自己的
+    // Vercel cron 寫入），不是這支本機排程——這支仍然值得監看（tw-industry-radar 自己用），只是
+    // 不再是「機構動向資料來源」。
+    { label: "1500 Institutional Update（tw-industry-radar）", jobIdPrefix: "LOCAL_1500_INSTITUTIONAL_UPDATE" },
     { label: "1700 TW Data Final Update（tw-industry-radar）", jobIdPrefix: "LOCAL_1700_TW_DATA_FINAL_UPDATE" },
+    // 2026-10-20 新增：第一次成功回報已確認（OpenClaw 用獨立腳本測過 reportSchedule；摩根持股
+    // 匯入／Mega uploader 都用 schtasks /run 實測過，log 裡的 REPORT 行確認 HTTP 200），才加進來。
+    { label: "OpenClaw Gateway（tw-data-updater 本機長駐 daemon）", jobIdPrefix: "LOCAL_OPENCLAW_GATEWAY" },
+    { label: "tw-etf-lookup 摩根持股匯入", jobIdPrefix: "LOCAL_TW_ETF_LOOKUP_MORGAN_IMPORT" },
+    { label: "tw-etf-lookup Mega uploader", jobIdPrefix: "LOCAL_TW_ETF_LOOKUP_MEGA_UPLOADER" },
   ];
   const missing: LocalScheduleReportingResult["missing"] = [];
   for (const w of watched) {
