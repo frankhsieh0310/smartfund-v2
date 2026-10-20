@@ -502,14 +502,20 @@ export type LocalScheduleReportingResult = {
 };
 
 // 2026-10-20（使用者訂立）: 這份健康報告自己也要把「本機排程今天沒有回報成功」列為系統問題（不
-// 只靠獨立的 local-schedule-monitor 排程，兩邊都要查，互為備援）。目前唯一已經把執行結果寫進
-// 這個資料庫 production_scheduler_runs 的本機排程是兆豐 ETF 官方持股桌機路徑（透過
-// etf-official-holdings-mega-desktop-ingest 那個既有端點）；tw-industry-radar 的
-// 1330/1500/1700、OpenClaw Gateway、tw-etf-lookup-api 的上傳器是完全不同的專案/資料庫，目前沒有
-// 寫進這裡，不是這個函式的查詢範圍——跨專案要不要讓它們也回報到這個資料庫，是另一個需要先決定
-// 的架構問題，不在這次臨時加。
+// 只靠獨立的 local-schedule-monitor 排程，兩邊都要查，互為備援）。目前已經回報的本機排程：
+// 兆豐 ETF 官方持股桌機路徑（既有的 etf-official-holdings-mega-desktop-ingest 端點），加上
+// tw-industry-radar 的 1330/1500/1700（透過新的 local-schedule-report 端點，run-scheduled-
+// update.mjs 已改好）。OpenClaw Gateway、tw-etf-lookup-api 的摩根持股匯入/Mega uploader
+// 是不同專案，端點本身已經準備好接受它們（見 local-schedule-report/route.ts 的 ALLOWED_JOB_IDS），
+// 但那幾支腳本還沒改成會呼叫這個端點，所以刻意沒有放進這裡的 watched 清單——放進去會立刻造成
+// 「從沒回報過」的假異常，等那幾支腳本真的接上了才加進來。
 export async function checkLocalScheduleReporting(query: QueryFn): Promise<LocalScheduleReportingResult> {
-  const watched = [{ label: "SmartMatch Mega ETF Holdings（兆豐 ETF 官方持股桌機排程）", jobIdPrefix: "ETF_OFFICIAL_HOLDINGS_MEGA_DESKTOP:" }];
+  const watched = [
+    { label: "SmartMatch Mega ETF Holdings（兆豐 ETF 官方持股桌機排程）", jobIdPrefix: "ETF_OFFICIAL_HOLDINGS_MEGA_DESKTOP:" },
+    { label: "1330 TW Price Update（tw-industry-radar）", jobIdPrefix: "LOCAL_1330_TW_PRICE_UPDATE" },
+    { label: "1500 Institutional Update（tw-industry-radar，機構動向資料來源）", jobIdPrefix: "LOCAL_1500_INSTITUTIONAL_UPDATE" },
+    { label: "1700 TW Data Final Update（tw-industry-radar）", jobIdPrefix: "LOCAL_1700_TW_DATA_FINAL_UPDATE" },
+  ];
   const missing: LocalScheduleReportingResult["missing"] = [];
   for (const w of watched) {
     const todayRows = await query(

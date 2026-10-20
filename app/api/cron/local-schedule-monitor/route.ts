@@ -6,12 +6,13 @@
 // last succeeded, so a silent desktop-side failure (machine off, task disabled, reboot mid-run)
 // gets caught the same evening instead of surfacing days later as stale holdings data.
 //
-// Scope note: this only covers ETF_OFFICIAL_HOLDINGS_MEGA_DESKTOP, the one local schedule that
-// already writes into THIS database (via etf-official-holdings-mega-desktop-ingest/route.ts).
-// tw-industry-radar's 1330/1500/1700, OpenClaw Gateway, and tw-etf-lookup-api's uploaders are
-// separate products with their own (or no) databases -- wiring their run results into smartfund-
-// v2's production_scheduler_runs is a cross-project design decision, not something to improvise
-// here; not implemented.
+// 2026-10-20: also watches tw-industry-radar's 1330/1500/1700 now, via the new
+// local-schedule-report/route.ts endpoint (run-scheduled-update.mjs calls it after each run).
+// OpenClaw Gateway and tw-etf-lookup-api's uploaders are separate products whose own scripts don't
+// call that endpoint yet -- the endpoint already accepts their job ids (see its ALLOWED_JOB_IDS),
+// but they're deliberately left out of WATCHED below until each script is actually updated, to
+// avoid a false "never reported" alert for something that was never wired to report in the first
+// place.
 import { isAuthorizedCron, unauthorizedCron } from "@/lib/cron/authorize";
 import { prisma } from "@/lib/prisma";
 import { beginRun, finishRun } from "@/lib/cloud-ingestion/runContext";
@@ -26,6 +27,9 @@ const JOB = "LOCAL_SCHEDULE_MONITOR";
 type WatchedSchedule = { label: string; jobIdPrefix: string };
 const WATCHED: WatchedSchedule[] = [
   { label: "SmartMatch Mega ETF Holdings（兆豐 ETF 官方持股桌機排程）", jobIdPrefix: "ETF_OFFICIAL_HOLDINGS_MEGA_DESKTOP:" },
+  { label: "1330 TW Price Update（tw-industry-radar）", jobIdPrefix: "LOCAL_1330_TW_PRICE_UPDATE" },
+  { label: "1500 Institutional Update（tw-industry-radar，機構動向資料來源）", jobIdPrefix: "LOCAL_1500_INSTITUTIONAL_UPDATE" },
+  { label: "1700 TW Data Final Update（tw-industry-radar）", jobIdPrefix: "LOCAL_1700_TW_DATA_FINAL_UPDATE" },
 ];
 
 export async function GET(request: Request) {

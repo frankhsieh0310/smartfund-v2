@@ -17,6 +17,51 @@ import { CORE_COMMODITY_ROOTS } from "@/lib/cron/commodityUpdate";
 import { notifyAnomaly } from "@/lib/daily-health-report/notify";
 import { buildDailySummary } from "@/lib/daily-health-report/buildDailySummary";
 import { fetchYahooTwPerformance } from "@/lib/yahoo/twPerformancePage";
+import { AllianzOfficialPcfAdapter } from "@/lib/etf-holdings-engine/adapters/allianz";
+import { FhtOfficialPcfAdapter } from "@/lib/etf-holdings-engine/adapters/fht";
+import { AbOfficialPcfAdapter } from "@/lib/etf-holdings-engine/adapters/ab";
+import { CtbcOfficialPcfAdapter } from "@/lib/etf-holdings-engine/adapters/ctbc";
+import { BlackRockOfficialPcfAdapter } from "@/lib/etf-holdings-engine/adapters/blackrock";
+import { FubonOfficialPcfAdapter } from "@/lib/etf-holdings-engine/adapters/fubon";
+import { UpamcOfficialPcfAdapter } from "@/lib/etf-holdings-engine/adapters/upamc";
+import { YuantaOfficialPcfAdapter } from "@/lib/etf-holdings-engine/adapters/yuanta";
+import { CapitalOfficialPcfAdapter } from "@/lib/etf-holdings-engine/adapters/capital";
+import { CathayOfficialPcfAdapter } from "@/lib/etf-holdings-engine/adapters/cathay";
+import { JpmorganOfficialPcfAdapter } from "@/lib/etf-holdings-engine/adapters/jpmorgan";
+import { KgiOfficialPcfAdapter } from "@/lib/etf-holdings-engine/adapters/kgi";
+import { FirstOfficialPcfAdapter } from "@/lib/etf-holdings-engine/adapters/first";
+import { SinoPacOfficialPcfAdapter } from "@/lib/etf-holdings-engine/adapters/sinopac";
+import { TaishinOfficialPcfAdapter } from "@/lib/etf-holdings-engine/adapters/taishin";
+import { NomuraOfficialPcfAdapter } from "@/lib/etf-holdings-engine/adapters/nomura";
+import type { OfficialPcfAdapter } from "@/lib/etf-holdings-engine/types";
+
+// 2026-10-20（使用者訂立）: EXTERNAL_DELAY 分類的查證機制。這個 map 讓健康報告能對缺資料的主動式
+// ETF 直接呼叫該投信的官方 adapter 即時查一次，記下「官網當下顯示的最新資料日期」與「查詢時間」
+// 當證據——跟 etf-official-holdings route.ts 裡 getIssuerUniverse 用同一套品牌關鍵字對應表，兩邊
+// 保持一致。
+const ACTIVE_ETF_ADAPTER_BY_KEYWORD: Array<{ keyword: string; adapter: OfficialPcfAdapter }> = [
+  { keyword: "國泰", adapter: CathayOfficialPcfAdapter }, { keyword: "摩根", adapter: JpmorganOfficialPcfAdapter },
+  { keyword: "安聯", adapter: AllianzOfficialPcfAdapter }, { keyword: "統一", adapter: UpamcOfficialPcfAdapter },
+  { keyword: "聯博", adapter: AbOfficialPcfAdapter }, { keyword: "富邦", adapter: FubonOfficialPcfAdapter },
+  { keyword: "中信", adapter: CtbcOfficialPcfAdapter }, { keyword: "凱基", adapter: KgiOfficialPcfAdapter },
+  { keyword: "第一金", adapter: FirstOfficialPcfAdapter }, { keyword: "復華", adapter: FhtOfficialPcfAdapter },
+  { keyword: "永豐", adapter: SinoPacOfficialPcfAdapter }, { keyword: "元大", adapter: YuantaOfficialPcfAdapter },
+  { keyword: "群益", adapter: CapitalOfficialPcfAdapter }, { keyword: "台新", adapter: TaishinOfficialPcfAdapter },
+  { keyword: "野村", adapter: NomuraOfficialPcfAdapter }, { keyword: "貝萊德", adapter: BlackRockOfficialPcfAdapter },
+];
+function resolveActiveEtfAdapter(name: string, provider: string): OfficialPcfAdapter | null {
+  const hit = ACTIVE_ETF_ADAPTER_BY_KEYWORD.find((e) => name.includes(e.keyword) || provider.includes(e.keyword));
+  return hit?.adapter ?? null;
+}
+// Bounded, best-effort: at most this many of the flagged gap tickers get a LIVE re-check per run (each
+// one is a real external HTTP call to that issuer's own site), and the whole step gives up once this
+// much wall-clock time has passed since route start -- same discipline as YAHOO_TW_CHECK_MAX_ELAPSED_MS
+// above, so this new step can never itself reproduce the 2026-10-20 timeout. Anything not actually
+// re-checked (skipped for budget, or the live call itself fails) stays SYSTEM by the default rule
+// below -- EXTERNAL_DELAY is only ever assigned when a fresh, timestamped probe against the issuer's
+// own site actually confirms its own latest date is still old.
+const ACTIVE_ETF_VERIFY_MAX_ITEMS = 5;
+const ACTIVE_ETF_VERIFY_MAX_ELAPSED_MS = 100_000;
 
 export const runtime = "nodejs";
 // 2026-10-20: raised from 60s after a real Vercel Runtime Timeout killed this route mid-run
@@ -130,6 +175,44 @@ export async function GET(request: Request) {
   const activeEtfOfficialHoldings = await checkActiveEtfOfficialHoldingsCoverage(query, 4);
   const localScheduleReporting = await checkLocalScheduleReporting(query);
 
+  // 2026-10-20（使用者訂立）: 對缺資料/過期的主動式 ETF，即時打一次該投信官網，記錄「官網當下
+  // 顯示的最新資料日期」跟「查詢時間」當證據——只有官網自己的最新日期確實還是舊的，才能標
+  // EXTERNAL_DELAY；查不到、查詢本身失敗、或官網其實已經有更新資料（代表是我方排程沒抓到），
+  // 一律維持 SYSTEM（預設值，不確定就算系統問題）。有界：最多查 5 檔、最多花 100 秒，避免這個
+  //新步驟自己又把整個路由拖到逾時（同一套紀律跟上面的 YAHOO_TW_CHECK_MAX_ELAPSED_MS 一樣）。
+  const activeEtfGapWithEvidence: Array<{
+    code: string; name: string; provider: string; lastDataDate: string | null;
+    category: "SYSTEM" | "EXTERNAL_DELAY"; checkedAt?: string; officialLatestDate?: string | null; verifyNote?: string;
+  }> = [];
+  for (const item of activeEtfOfficialHoldings.missingOrStale) {
+    const idx = activeEtfGapWithEvidence.length;
+    if (idx >= ACTIVE_ETF_VERIFY_MAX_ITEMS || Date.now() - startedMs > ACTIVE_ETF_VERIFY_MAX_ELAPSED_MS) {
+      activeEtfGapWithEvidence.push({ ...item, category: "SYSTEM", verifyNote: "NOT_VERIFIED_BUDGET_EXHAUSTED" });
+      continue;
+    }
+    const adapter = resolveActiveEtfAdapter(item.name, item.provider);
+    if (!adapter) {
+      activeEtfGapWithEvidence.push({ ...item, category: "SYSTEM", verifyNote: "NO_ADAPTER_RESOLVED" });
+      continue;
+    }
+    const checkedAt = new Date().toISOString();
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 15_000);
+      const snap = await adapter.fetchSnapshot(item.code, undefined, controller.signal).finally(() => clearTimeout(timer));
+      const officialLatestDate = snap.dataDate;
+      const stillOld = !!officialLatestDate && (!item.lastDataDate || officialLatestDate <= item.lastDataDate);
+      if (stillOld) {
+        activeEtfGapWithEvidence.push({ ...item, category: "EXTERNAL_DELAY", checkedAt, officialLatestDate });
+      } else {
+        // 官網其實有更新的資料，我方排程沒抓到——這是我方系統問題，不是外部延遲。
+        activeEtfGapWithEvidence.push({ ...item, category: "SYSTEM", checkedAt, officialLatestDate, verifyNote: "OFFICIAL_SITE_HAS_NEWER_DATA_NOT_YET_INGESTED" });
+      }
+    } catch (e) {
+      activeEtfGapWithEvidence.push({ ...item, category: "SYSTEM", checkedAt, verifyNote: `VERIFY_FAILED: ${e instanceof Error ? e.message : String(e)}` });
+    }
+  }
+
   // 2026-10-13 QA-round-1 addition: 3 random TWD-listed ETFs, our stored return_1y vs Yahoo奇摩's own
   // displayed value (docs/specs/yahoo-return-discrepancy.md) -- catches a parser regression (e.g. a
   // Yahoo奇摩 page redesign) or a sudden, large data error, not the few-point drift that's expected
@@ -213,7 +296,14 @@ export async function GET(request: Request) {
     ...pipelineHealth.filter((p) => p.anomaly).map((p) => ({ type: "PIPELINE", category: SYSTEM_CATEGORY, jobId: p.jobId, reasons: p.anomalyReasons })),
     ...[stockFreshness, domesticFundFreshness].filter((f) => f.anomaly).map((f) => ({ type: "FRESHNESS", category: SYSTEM_CATEGORY, label: f.label, reason: f.anomalyReason })),
     ...(etfDataSourceGap.anomaly ? [{ type: "ETF_DATA_SOURCE_GAP", category: SYSTEM_CATEGORY, newCodes: etfDataSourceGap.newCodes }] : []),
-    ...(activeEtfOfficialHoldings.anomaly ? [{ type: "ACTIVE_ETF_OFFICIAL_HOLDINGS_GAP", category: SYSTEM_CATEGORY, missingOrStale: activeEtfOfficialHoldings.missingOrStale }] : []),
+    // 每檔都已經用上面的即時查證分好 SYSTEM / EXTERNAL_DELAY，這裡依分類拆成最多兩筆，而不是
+    // 整批套同一個分類——有證據（checkedAt/officialLatestDate）支持才會出現在 EXTERNAL_DELAY 那筆。
+    ...(activeEtfGapWithEvidence.some((e) => e.category === SYSTEM_CATEGORY)
+      ? [{ type: "ACTIVE_ETF_OFFICIAL_HOLDINGS_GAP", category: SYSTEM_CATEGORY, items: activeEtfGapWithEvidence.filter((e) => e.category === SYSTEM_CATEGORY) }]
+      : []),
+    ...(activeEtfGapWithEvidence.some((e) => e.category === "EXTERNAL_DELAY")
+      ? [{ type: "ACTIVE_ETF_OFFICIAL_HOLDINGS_GAP", category: "EXTERNAL_DELAY" as const, items: activeEtfGapWithEvidence.filter((e) => e.category === "EXTERNAL_DELAY") }]
+      : []),
     ...(localScheduleReporting.anomaly ? [{ type: "LOCAL_SCHEDULE_NOT_REPORTED", category: SYSTEM_CATEGORY, missing: localScheduleReporting.missing }] : []),
     ...(yahooTwCheck.anomaly ? [{ type: "YAHOO_TW_RETURN_MISMATCH", category: SYSTEM_CATEGORY, mismatches: yahooTwCheck.mismatches }] : []),
     ...(fredCommodityCheck.anomaly ? [{ type: "FRED_COMMODITY_MISMATCH", category: SYSTEM_CATEGORY, mismatches: fredCommodityCheck.mismatches }] : []),
@@ -244,12 +334,12 @@ export async function GET(request: Request) {
     details: {
       date: today, pipeline_health: pipelineHealth, stock_freshness: stockFreshness, domestic_fund_freshness: domesticFundFreshness,
       etf_data_source_gap: etfDataSourceGap, yahoo_tw_return_check: yahooTwCheck, fred_commodity_check: fredCommodityCheck, coverage,
-      active_etf_official_holdings: activeEtfOfficialHoldings, local_schedule_reporting: localScheduleReporting,
+      active_etf_official_holdings: activeEtfOfficialHoldings, active_etf_official_holdings_evidence: activeEtfGapWithEvidence, local_schedule_reporting: localScheduleReporting,
       moneydj_parse_failures: moneydjParseFailures,
       anomaly_count: anomalies.length, system_anomaly_count: systemAnomalyCount, external_delay_anomaly_count: externalDelayAnomalyCount,
       anomalies, notify_result: notifyResult,
     },
   });
 
-  return Response.json({ ok: true, job: JOB, runId, status, anomalyCount: anomalies.length, systemAnomalyCount, externalDelayAnomalyCount, anomalies, etfDataSourceGap, activeEtfOfficialHoldings, yahooTwCheck, fredCommodityCheck, coverage, notifyResult });
+  return Response.json({ ok: true, job: JOB, runId, status, anomalyCount: anomalies.length, systemAnomalyCount, externalDelayAnomalyCount, anomalies, etfDataSourceGap, activeEtfOfficialHoldings: activeEtfGapWithEvidence, yahooTwCheck, fredCommodityCheck, coverage, notifyResult });
 }
