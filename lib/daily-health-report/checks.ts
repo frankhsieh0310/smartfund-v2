@@ -481,3 +481,34 @@ export function evaluateFredCommodityConsistency(samples: FredCommoditySample[])
     .filter((s) => s.fetchFailed || s.diffPct === null || s.diffPct > FRED_MISMATCH_THRESHOLD_PCT[s.label]);
   return { samples, mismatches, anomaly: mismatches.length > 0 };
 }
+
+export type ActiveEtfOfficialHoldingsResult = {
+  checkedCount: number;
+  missingOrStale: Array<{ code: string; name: string; provider: string; lastDataDate: string | null }>;
+  anomaly: boolean;
+};
+
+// 2026-10-20（使用者訂立）: 每一檔現行掛牌的主動式 ETF（官方基金簡稱帶「主動」前綴——這是台灣
+// 2026 年新開放的主動式 ETF 類別的官方、結構性標記，跟 lib/fundamentals brand-matching 用同一個
+// 前綴判斷），都必須有最近一個交易日的官方持股快照（etf_official_daily_snapshots）。起因：
+// etf-official-holdings 每個發行商的 FUND_ID_MAP 是寫死的靜態清單（見各 adapters/*.ts），新上市
+// 偵測（lib/cron/newListingDetection.ts）只會在 etfs 表建立新商品，不會自動把新代號加進對應發行
+// 商的 FUND_ID_MAP——這個檢查是目前唯一會主動發現「新主動式 ETF 建檔了，但官方持股抓取清單忘了
+// 加」這種落差的機制，沒有就列為異常，附上代號跟投信名稱，不只是一個數字。
+// staleDaysThreshold 用 4 天（跟既有 evaluateFreshness 的寬鬆門檻慣例一致），涵蓋連假。
+export async function checkActiveEtfOfficialHoldingsCoverage(query: QueryFn, staleDaysThreshold = 4): Promise<ActiveEtfOfficialHoldingsResult> {
+  const rows = await query(
+    `SELECT e.code, e.name, e.provider,
+            (SELECT MAX(s.data_date)::text FROM etf_official_daily_snapshots s WHERE s.etf_code = e.code) AS last_data_date
+       FROM etfs e
+      WHERE e.is_active = true AND e.name LIKE '主動%'
+      ORDER BY e.code`,
+    [],
+  );
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - staleDaysThreshold);
+  const missingOrStale = rows
+    .filter((r) => !r.last_data_date || new Date(r.last_data_date) < cutoff)
+    .map((r) => ({ code: r.code, name: r.name, provider: r.provider, lastDataDate: r.last_data_date ?? null }));
+  return { checkedCount: rows.length, missingOrStale, anomaly: missingOrStale.length > 0 };
+}

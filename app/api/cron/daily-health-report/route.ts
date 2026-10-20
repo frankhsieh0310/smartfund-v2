@@ -12,7 +12,7 @@
 import { isAuthorizedCron, unauthorizedCron } from "@/lib/cron/authorize";
 import { prisma } from "@/lib/prisma";
 import { beginRun, finishRun } from "@/lib/cloud-ingestion/runContext";
-import { checkPipelineRunLog, checkMoneydjParseFailures, evaluateFreshness, checkEtfDataSourceGap, evaluateYahooTwReturnConsistency, evaluateFredCommodityConsistency, checkCommodityTechnicalCoverage, checkFundPerformanceCoverage, checkEtfPerformanceCoverage, checkEtfHistoryFreshness, checkFundHistoryFreshness, checkCoreUniverseEtfCoverage, checkCoreUniverseFundCoverage, type QueryFn, type YahooTwReturnSample, type FredCommoditySample } from "@/lib/daily-health-report/checks";
+import { checkPipelineRunLog, checkMoneydjParseFailures, evaluateFreshness, checkEtfDataSourceGap, evaluateYahooTwReturnConsistency, evaluateFredCommodityConsistency, checkCommodityTechnicalCoverage, checkFundPerformanceCoverage, checkEtfPerformanceCoverage, checkEtfHistoryFreshness, checkFundHistoryFreshness, checkCoreUniverseEtfCoverage, checkCoreUniverseFundCoverage, checkActiveEtfOfficialHoldingsCoverage, type QueryFn, type YahooTwReturnSample, type FredCommoditySample } from "@/lib/daily-health-report/checks";
 import { CORE_COMMODITY_ROOTS } from "@/lib/cron/commodityUpdate";
 import { notifyAnomaly } from "@/lib/daily-health-report/notify";
 import { buildDailySummary } from "@/lib/daily-health-report/buildDailySummary";
@@ -127,6 +127,7 @@ export async function GET(request: Request) {
   ]);
   const coverage = [fundPerformanceCoverage, etfPerformanceCoverage, commodityTechnicalCoverage, etfHistoryFreshness, fundHistoryFreshness, coreUniverseEtfCoverage, coreUniverseFundCoverage];
   const etfDataSourceGap = await checkEtfDataSourceGap(query);
+  const activeEtfOfficialHoldings = await checkActiveEtfOfficialHoldingsCoverage(query, 4);
 
   // 2026-10-13 QA-round-1 addition: 3 random TWD-listed ETFs, our stored return_1y vs Yahoo奇摩's own
   // displayed value (docs/specs/yahoo-return-discrepancy.md) -- catches a parser regression (e.g. a
@@ -199,20 +200,31 @@ export async function GET(request: Request) {
   );
   const fredCommodityCheck = evaluateFredCommodityConsistency(fredSamples);
 
+  // 2026-10-20（使用者訂立）: 每個異常都要分類成 SYSTEM（必須為 0）或 EXTERNAL_DELAY（只有
+  // 在「實際查看來源網站、確認對方尚未公布」且附上查證時間與結果時才可以歸類，且只在分類當下
+  // 真的做了這個查證）。目前沒有任何一種異常類型內建「自動查證來源網站、記錄查證時間與結果」
+  // 的機制（BENIGN_ERROR_PATTERNS 那套只排除「來源明確回報沒有資料」這種已知良性錯誤，不等於
+  // 「已查證是外部延遲」），所以依照使用者「不確定就一律算系統問題」的規則，這裡每一項都先標
+  // SYSTEM——之後如果要讓某個檢查項目真正支援 EXTERNAL_DELAY，必須在那個檢查裡加上即時查證來源
+  // 網站的程式碼，並把查證時間/結果一起寫進這個 category 欄位旁邊，不能只是改這裡的預設值。
+  const SYSTEM_CATEGORY = "SYSTEM" as const;
   const anomalies = [
-    ...pipelineHealth.filter((p) => p.anomaly).map((p) => ({ type: "PIPELINE", jobId: p.jobId, reasons: p.anomalyReasons })),
-    ...[stockFreshness, domesticFundFreshness].filter((f) => f.anomaly).map((f) => ({ type: "FRESHNESS", label: f.label, reason: f.anomalyReason })),
-    ...(etfDataSourceGap.anomaly ? [{ type: "ETF_DATA_SOURCE_GAP", newCodes: etfDataSourceGap.newCodes }] : []),
-    ...(yahooTwCheck.anomaly ? [{ type: "YAHOO_TW_RETURN_MISMATCH", mismatches: yahooTwCheck.mismatches }] : []),
-    ...(fredCommodityCheck.anomaly ? [{ type: "FRED_COMMODITY_MISMATCH", mismatches: fredCommodityCheck.mismatches }] : []),
-    ...coverage.filter((c) => c.anomaly).map((c) => ({ type: "COVERAGE", label: c.label, reason: c.anomalyReason })),
+    ...pipelineHealth.filter((p) => p.anomaly).map((p) => ({ type: "PIPELINE", category: SYSTEM_CATEGORY, jobId: p.jobId, reasons: p.anomalyReasons })),
+    ...[stockFreshness, domesticFundFreshness].filter((f) => f.anomaly).map((f) => ({ type: "FRESHNESS", category: SYSTEM_CATEGORY, label: f.label, reason: f.anomalyReason })),
+    ...(etfDataSourceGap.anomaly ? [{ type: "ETF_DATA_SOURCE_GAP", category: SYSTEM_CATEGORY, newCodes: etfDataSourceGap.newCodes }] : []),
+    ...(activeEtfOfficialHoldings.anomaly ? [{ type: "ACTIVE_ETF_OFFICIAL_HOLDINGS_GAP", category: SYSTEM_CATEGORY, missingOrStale: activeEtfOfficialHoldings.missingOrStale }] : []),
+    ...(yahooTwCheck.anomaly ? [{ type: "YAHOO_TW_RETURN_MISMATCH", category: SYSTEM_CATEGORY, mismatches: yahooTwCheck.mismatches }] : []),
+    ...(fredCommodityCheck.anomaly ? [{ type: "FRED_COMMODITY_MISMATCH", category: SYSTEM_CATEGORY, mismatches: fredCommodityCheck.mismatches }] : []),
+    ...coverage.filter((c) => c.anomaly).map((c) => ({ type: "COVERAGE", category: SYSTEM_CATEGORY, label: c.label, reason: c.anomalyReason })),
     ...(moneydjParseFailures.parseFailedCount > 0
-      ? [{ type: "MONEYDJ_PARSE_FAILED", jobId: "CLOUD_MONEYDJ_FUND", count: moneydjParseFailures.parseFailedCount, codes: moneydjParseFailures.parseFailedCodes }]
+      ? [{ type: "MONEYDJ_PARSE_FAILED", category: SYSTEM_CATEGORY, jobId: "CLOUD_MONEYDJ_FUND", count: moneydjParseFailures.parseFailedCount, codes: moneydjParseFailures.parseFailedCodes }]
       : []),
     ...(moneydjParseFailures.nameOnlyCount > 0
-      ? [{ type: "MONEYDJ_NAME_ONLY_NO_WEIGHT", jobId: "CLOUD_MONEYDJ_FUND", count: moneydjParseFailures.nameOnlyCount, codes: moneydjParseFailures.nameOnlyCodes }]
+      ? [{ type: "MONEYDJ_NAME_ONLY_NO_WEIGHT", category: SYSTEM_CATEGORY, jobId: "CLOUD_MONEYDJ_FUND", count: moneydjParseFailures.nameOnlyCount, codes: moneydjParseFailures.nameOnlyCodes }]
       : []),
   ];
+  const systemAnomalyCount = anomalies.filter((a) => a.category === SYSTEM_CATEGORY).length;
+  const externalDelayAnomalyCount = anomalies.length - systemAnomalyCount;
 
   // Round-4, user-approved: send a short summary EVERY day, not only when something is wrong --
   // "沒收到訊息就代表出事了" means silence itself must never be the normal case. See
@@ -225,15 +237,17 @@ export async function GET(request: Request) {
 
   const status = anomalies.length > 0 ? "PARTIAL" : "COMPLETED";
   await finishRun(runId, JOB, "INTERNAL_HEALTH_CHECK", startedMs, {
-    status, attempted: RUN_LOG_PIPELINES.length + 3 + coverage.length, completed: RUN_LOG_PIPELINES.length + 3 + coverage.length - anomalies.length,
+    status, attempted: RUN_LOG_PIPELINES.length + 4 + coverage.length, completed: RUN_LOG_PIPELINES.length + 4 + coverage.length - anomalies.length,
     inserted: 0, updated: 0, failed: anomalies.length, retryableFailures: 0, checkpointAfter: null,
     details: {
       date: today, pipeline_health: pipelineHealth, stock_freshness: stockFreshness, domestic_fund_freshness: domesticFundFreshness,
       etf_data_source_gap: etfDataSourceGap, yahoo_tw_return_check: yahooTwCheck, fred_commodity_check: fredCommodityCheck, coverage,
+      active_etf_official_holdings: activeEtfOfficialHoldings,
       moneydj_parse_failures: moneydjParseFailures,
-      anomaly_count: anomalies.length, anomalies, notify_result: notifyResult,
+      anomaly_count: anomalies.length, system_anomaly_count: systemAnomalyCount, external_delay_anomaly_count: externalDelayAnomalyCount,
+      anomalies, notify_result: notifyResult,
     },
   });
 
-  return Response.json({ ok: true, job: JOB, runId, status, anomalyCount: anomalies.length, anomalies, etfDataSourceGap, yahooTwCheck, fredCommodityCheck, coverage, notifyResult });
+  return Response.json({ ok: true, job: JOB, runId, status, anomalyCount: anomalies.length, systemAnomalyCount, externalDelayAnomalyCount, anomalies, etfDataSourceGap, activeEtfOfficialHoldings, yahooTwCheck, fredCommodityCheck, coverage, notifyResult });
 }
