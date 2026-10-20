@@ -15,12 +15,32 @@ import type { CanonicalPosition, CanonicalSnapshot, OfficialPcfAdapter } from ".
 
 const BASE = "https://etf.allianzgi.com.tw/webapi";
 
-// market ticker -> official internal FundNo. Captured verbatim from
-// POST /webapi/api/Category/GetFundDropdownOptions {"TypeId":6} (one-time read 2026-09-26, never
-// guessed). Re-derive from the same endpoint if the issuer adds/removes an ETF.
-const FUND_ID_MAP: Record<string, string> = {
-  "00984A": "E0001", "00993A": "E0002", "00402A": "E0003",
-};
+// 2026-10-20: was a hardcoded 3-entry map captured once on 2026-09-26 -- missed 00412A entirely
+// (added by the issuer after that capture, never noticed because nothing re-derived the map).
+// Now discovered live, every call, from the same POST /webapi/api/Category/GetFundDropdownOptions
+// {"TypeId":6} the original map was captured from -- so a new Allianz ETF is picked up automatically
+// the next time it's requested, no code change needed. Cached in-process for the token's own
+// lifetime (same TTL as the anti-forgery token, since both come from the same bootstrap call cost).
+let dropdownCache: { map: Record<string, string>; expiresAt: number } | null = null;
+type DropdownEntry = { FundNo: string; SecuritiesCode: string };
+async function getFundIdMap(signal?: AbortSignal): Promise<Record<string, string>> {
+  if (dropdownCache && Date.now() < dropdownCache.expiresAt) return dropdownCache.map;
+  const { token, cookie } = await getAntiForgeryContext(signal);
+  const r = await fetch(`${BASE}/api/Category/GetFundDropdownOptions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-XSRF-TOKEN": token, Cookie: cookie },
+    body: JSON.stringify({ TypeId: 6 }),
+    signal,
+  });
+  if (!r.ok) throw new Error(`ALLIANZ_HTTP_${r.status}_GetFundDropdownOptions`);
+  const j: { Entries: DropdownEntry[] } = await r.json();
+  const map: Record<string, string> = {};
+  for (const e of j.Entries ?? []) {
+    if (e.SecuritiesCode && e.FundNo) map[e.SecuritiesCode] = e.FundNo;
+  }
+  dropdownCache = { map, expiresAt: Date.now() + 86_400_000 - 60_000 };
+  return map;
+}
 
 type FundAsset = { Aum: string; Units: string; Nav: string; NavDate: string; PCFDate: string };
 type TableColumn = { Name: string | null };
@@ -62,8 +82,9 @@ export const AllianzOfficialPcfAdapter: OfficialPcfAdapter = {
   issuer: "Allianz",
 
   async fetchSnapshot(etfCode: string, _date?: string, signal?: AbortSignal): Promise<CanonicalSnapshot> {
-    const fundID = FUND_ID_MAP[etfCode];
-    if (!fundID) throw new Error(`ALLIANZ_UNMAPPED_ETF_${etfCode} — not in the official GetFundDropdownOptions map, never guessed`);
+    const fundIdMap = await getFundIdMap(signal);
+    const fundID = fundIdMap[etfCode];
+    if (!fundID) throw new Error(`ALLIANZ_UNMAPPED_ETF_${etfCode} — not in the live GetFundDropdownOptions response, never guessed`);
 
     const j = await postWithToken<GetFundAssetsResponse>("/api/Fund/GetFundAssets", { FundID: fundID }, signal);
     const asset = j.Entries?.Data?.FundAsset;

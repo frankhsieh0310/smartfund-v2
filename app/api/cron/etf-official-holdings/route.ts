@@ -43,8 +43,6 @@ import {
   type CheckpointRow,
   type BoundedDbOptions,
 } from "@/lib/cloud-ingestion/runContext";
-import * as fs from "fs";
-import * as path from "path";
 
 import { NomuraOfficialPcfAdapter } from "@/lib/etf-holdings-engine/adapters/nomura";
 import { UpamcOfficialPcfAdapter } from "@/lib/etf-holdings-engine/adapters/upamc";
@@ -168,37 +166,50 @@ async function resolveCtbcLatestDate(deadlineAt: number): Promise<string> {
   throw new Error("CTBC_NO_AVAILABLE_DATE_WITHIN_7_DAYS");
 }
 
-function loadUniverse(): Record<string, string[]> {
-  const p = path.join(process.cwd(), "lib", "etf-holdings-engine", "universe_by_issuer.json");
-  return JSON.parse(fs.readFileSync(p, "utf8"));
-}
+// 2026-10-20（使用者訂立）: universe_by_issuer.json 是寫死的清單，新上市偵測只會建立 etfs 資料列，
+// 不會自動更新這份清單——這正是 00412A 等 16 檔主動式 ETF 從未被抓取過的根因（daily-health-
+// report 新的 checkActiveEtfOfficialHoldingsCoverage 抓到的缺口）。改成直接查 `etfs` 這個該投信
+// 現行掛牌（is_active=true）的名單，不再讀這個檔案（檔案本身保留，scripts/etf-holdings-engine-
+// final-gate.ts 還在用，不動它）。
+//
+// 用 provider 欄位 OR name 欄位（去掉「主動」前綴後）雙重比對，因為部分主動式 ETF 的 provider
+// 欄位本身還沒補上官方全名（例如 00981D 的 provider 是「未知（待補）」，但 name 是「主動中信非
+// 投等債」，含有「中信」這個跟既有清單同一套的品牌關鍵字），只比對 provider 會漏掉這些。
+const ISSUER_KEYWORD: Record<string, string> = {
+  Cathay: "國泰", JPMorgan: "摩根", Allianz: "安聯", UPAMC: "統一", AB: "聯博", Fubon: "富邦",
+  CTBC: "中信", KGI: "凱基", First: "第一金", FHT: "復華", SinoPac: "永豐", Yuanta: "元大",
+  Capital: "群益", Mega: "兆豐", Taishin: "台新", Nomura: "野村", BlackRock: "貝萊德",
+};
 
-// Issuer name -> { adapter, tickers }. Same 17 issuers, same canonical-count filters, as the prior
-// cross-issuer flat universe — just keyed for single-issuer lookup instead of flattened across all 17.
-function buildIssuerUniverse(): Record<string, { adapter: OfficialPcfAdapter; tickers: string[] }> {
-  const universe = loadUniverse();
-  const CATHAY_CANONICAL = universe["國泰"].filter((t) => !t.endsWith("K"));
-  const CAPITAL_ACTIVE = universe["群益"].filter((t) => t !== "00643K");
-  const SINOPAC_ACTIVE = universe["永豐"].filter((t) => t !== "00838B");
-  return {
-    Cathay: { adapter: CathayOfficialPcfAdapter, tickers: CATHAY_CANONICAL },
-    JPMorgan: { adapter: JpmorganOfficialPcfAdapter, tickers: universe["摩根"] },
-    Allianz: { adapter: AllianzOfficialPcfAdapter, tickers: universe["安聯"] },
-    UPAMC: { adapter: UpamcOfficialPcfAdapter, tickers: universe["統一"] },
-    AB: { adapter: AbOfficialPcfAdapter, tickers: universe["聯博"] },
-    Fubon: { adapter: FubonOfficialPcfAdapter, tickers: universe["富邦"] },
-    CTBC: { adapter: CtbcOfficialPcfAdapter, tickers: universe["中信"] },
-    KGI: { adapter: KgiOfficialPcfAdapter, tickers: universe["凱基"] },
-    First: { adapter: FirstOfficialPcfAdapter, tickers: universe["第一金"] },
-    FHT: { adapter: FhtOfficialPcfAdapter, tickers: universe["復華"] },
-    SinoPac: { adapter: SinoPacOfficialPcfAdapter, tickers: SINOPAC_ACTIVE },
-    Yuanta: { adapter: YuantaOfficialPcfAdapter, tickers: universe["元大"] },
-    Capital: { adapter: CapitalOfficialPcfAdapter, tickers: CAPITAL_ACTIVE },
-    Mega: { adapter: MegaOfficialPcfAdapter, tickers: universe["兆豐"] },
-    Taishin: { adapter: TaishinOfficialPcfAdapter, tickers: universe["台新"] },
-    Nomura: { adapter: NomuraOfficialPcfAdapter, tickers: universe["野村"] },
-    BlackRock: { adapter: BlackRockOfficialPcfAdapter, tickers: universe["貝萊德"] },
+// 既有、已知的個別排除——跟搬來之前完全一樣的三個例外，不是這次新增的邏輯：
+const ISSUER_EXCLUDE: Partial<Record<string, (ticker: string) => boolean>> = {
+  Cathay: (t) => t.endsWith("K"),
+  Capital: (t) => t === "00643K",
+  SinoPac: (t) => t === "00838B",
+};
+
+async function getIssuerUniverse(issuerName: string): Promise<{ adapter: OfficialPcfAdapter; tickers: string[] } | null> {
+  const adapterMap: Record<string, OfficialPcfAdapter> = {
+    Cathay: CathayOfficialPcfAdapter, JPMorgan: JpmorganOfficialPcfAdapter, Allianz: AllianzOfficialPcfAdapter,
+    UPAMC: UpamcOfficialPcfAdapter, AB: AbOfficialPcfAdapter, Fubon: FubonOfficialPcfAdapter,
+    CTBC: CtbcOfficialPcfAdapter, KGI: KgiOfficialPcfAdapter, First: FirstOfficialPcfAdapter,
+    FHT: FhtOfficialPcfAdapter, SinoPac: SinoPacOfficialPcfAdapter, Yuanta: YuantaOfficialPcfAdapter,
+    Capital: CapitalOfficialPcfAdapter, Mega: MegaOfficialPcfAdapter, Taishin: TaishinOfficialPcfAdapter,
+    Nomura: NomuraOfficialPcfAdapter, BlackRock: BlackRockOfficialPcfAdapter,
   };
+  const keyword = ISSUER_KEYWORD[issuerName];
+  const adapter = adapterMap[issuerName];
+  if (!keyword || !adapter) return null;
+  const rows = await prisma.$queryRawUnsafe<{ code: string }[]>(
+    `SELECT DISTINCT code FROM etfs
+      WHERE is_active = true
+        AND (provider LIKE '%' || $1 || '%' OR name LIKE '主動' || $1 || '%' OR name LIKE $1 || '%')
+      ORDER BY code`,
+    keyword,
+  );
+  const exclude = ISSUER_EXCLUDE[issuerName];
+  const tickers = exclude ? rows.map((r) => r.code).filter((t) => !exclude(t)) : rows.map((r) => r.code);
+  return { adapter, tickers };
 }
 
 function taipeiDateKey(iso: string | null): string | null {
@@ -255,27 +266,19 @@ export async function GET(request: Request) {
 
   const startedMs = Date.now();
 
-  const issuerUniverse = buildIssuerUniverse();
   const issuer = new URL(request.url).searchParams.get("issuer");
-  if (!issuer || !(issuer in issuerUniverse)) {
+  const issuerEntry = issuer ? await getIssuerUniverse(issuer) : null;
+  if (!issuer || !issuerEntry) {
     return Response.json(
-      { ok: false, error: `issuer query param required; one of: ${Object.keys(issuerUniverse).join(", ")}` },
+      { ok: false, error: `issuer query param required; one of: ${Object.keys(ISSUER_KEYWORD).join(", ")}` },
       { status: 400 },
     );
   }
-  const { adapter, tickers: issuerTickers } = issuerUniverse[issuer];
-  // Skip any ticker this app has already marked is_active=false (delisted / no longer tracked),
-  // e.g. CTBC's 00847B — its own official site has no holdings entry for a delisted fund at all,
-  // so retrying it every run only ever produces the same NO_ENTRY failure, which previously
-  // blocked this whole issuer from ever reaching reachedEnd=true via `stoppedOnFailure`. Checked
-  // generically against the DB here (not a per-issuer hardcoded exclusion like the existing
-  // CATHAY_CANONICAL/CAPITAL_ACTIVE/SINOPAC_ACTIVE filters in buildIssuerUniverse) so any issuer's
-  // static FUND_ID_MAP self-heals the moment a ticker is marked inactive, without a code change.
-  const inactiveRows = issuerTickers.length
-    ? await prisma.etf.findMany({ where: { code: { in: issuerTickers }, isActive: false }, select: { code: true } })
-    : [];
-  const inactiveCodes = new Set(inactiveRows.map((r) => r.code));
-  const tickers = inactiveCodes.size ? issuerTickers.filter((t) => !inactiveCodes.has(t)) : issuerTickers;
+  // 2026-10-20: tickers now come straight from `etfs WHERE is_active = true` (see getIssuerUniverse
+  // above), so a separately-filtered is_active=false exclusion pass is no longer needed here —
+  // e.g. CTBC's delisted 00847B (the original reason this exclusion was added, see history below)
+  // simply never appears in the query result in the first place.
+  const { adapter, tickers } = issuerEntry;
   const checkpointKey = `etf-official-holdings:${issuer.toLowerCase()}`;
 
   // Daily reset, scoped to this issuer only: a checkpoint from a previous Taipei calendar day never
