@@ -496,6 +496,36 @@ export type ActiveEtfOfficialHoldingsResult = {
 // 商的 FUND_ID_MAP——這個檢查是目前唯一會主動發現「新主動式 ETF 建檔了，但官方持股抓取清單忘了
 // 加」這種落差的機制，沒有就列為異常，附上代號跟投信名稱，不只是一個數字。
 // staleDaysThreshold 用 4 天（跟既有 evaluateFreshness 的寬鬆門檻慣例一致），涵蓋連假。
+export type LocalScheduleReportingResult = {
+  missing: Array<{ label: string; jobIdPrefix: string; lastSuccessAt: string | null }>;
+  anomaly: boolean;
+};
+
+// 2026-10-20（使用者訂立）: 這份健康報告自己也要把「本機排程今天沒有回報成功」列為系統問題（不
+// 只靠獨立的 local-schedule-monitor 排程，兩邊都要查，互為備援）。目前唯一已經把執行結果寫進
+// 這個資料庫 production_scheduler_runs 的本機排程是兆豐 ETF 官方持股桌機路徑（透過
+// etf-official-holdings-mega-desktop-ingest 那個既有端點）；tw-industry-radar 的
+// 1330/1500/1700、OpenClaw Gateway、tw-etf-lookup-api 的上傳器是完全不同的專案/資料庫，目前沒有
+// 寫進這裡，不是這個函式的查詢範圍——跨專案要不要讓它們也回報到這個資料庫，是另一個需要先決定
+// 的架構問題，不在這次臨時加。
+export async function checkLocalScheduleReporting(query: QueryFn): Promise<LocalScheduleReportingResult> {
+  const watched = [{ label: "SmartMatch Mega ETF Holdings（兆豐 ETF 官方持股桌機排程）", jobIdPrefix: "ETF_OFFICIAL_HOLDINGS_MEGA_DESKTOP:" }];
+  const missing: LocalScheduleReportingResult["missing"] = [];
+  for (const w of watched) {
+    const todayRows = await query(
+      `SELECT COUNT(*)::int n FROM production_scheduler_runs WHERE job_id LIKE $1 AND status IN ('COMPLETED','PARTIAL') AND started_at >= now() - interval '24 hours'`,
+      [`${w.jobIdPrefix}%`],
+    );
+    if (todayRows[0].n > 0) continue;
+    const lastSuccessRow = await query(
+      `SELECT started_at::text FROM production_scheduler_runs WHERE job_id LIKE $1 AND status IN ('COMPLETED','PARTIAL') ORDER BY started_at DESC LIMIT 1`,
+      [`${w.jobIdPrefix}%`],
+    );
+    missing.push({ label: w.label, jobIdPrefix: w.jobIdPrefix, lastSuccessAt: lastSuccessRow[0]?.started_at ?? null });
+  }
+  return { missing, anomaly: missing.length > 0 };
+}
+
 export async function checkActiveEtfOfficialHoldingsCoverage(query: QueryFn, staleDaysThreshold = 4): Promise<ActiveEtfOfficialHoldingsResult> {
   const rows = await query(
     `SELECT e.code, e.name, e.provider,
