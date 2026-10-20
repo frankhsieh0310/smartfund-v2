@@ -1,94 +1,544 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "functions": {
-    "app/api/mobile/reverse-holdings/route.ts": { "regions": ["sin1"] },
-    "app/api/cron/market-close-sync/route.ts": { "regions": ["sin1"] }
+    "app/api/mobile/reverse-holdings/route.ts": {
+      "regions": [
+        "sin1"
+      ]
+    },
+    "app/api/cron/market-close-sync/route.ts": {
+      "regions": [
+        "sin1"
+      ],
+      "memory": 1024
+    },
+    "app/api/cron/alert-dispatch/route.ts": {
+      "memory": 1024
+    },
+    "app/api/cron/alert-evaluate/route.ts": {
+      "memory": 1024
+    },
+    "app/api/cron/cloud-etf-price/route.ts": {
+      "memory": 1024
+    },
+    "app/api/cron/cloud-fund-holdings/route.ts": {
+      "memory": 1024
+    },
+    "app/api/cron/cloud-fund-nav/route.ts": {
+      "memory": 1024
+    },
+    "app/api/cron/cloud-global-etf-holdings/route.ts": {
+      "memory": 1024
+    },
+    "app/api/cron/cloud-moneydj-etf/route.ts": {
+      "memory": 1024
+    },
+    "app/api/cron/cloud-moneydj-fund/route.ts": {
+      "memory": 1024
+    },
+    "app/api/cron/cloud-new-fund-listing-detection/route.ts": {
+      "memory": 1024
+    },
+    "app/api/cron/cloud-new-listing-detection/route.ts": {
+      "memory": 1024
+    },
+    "app/api/cron/cloud-tw-fundamentals-refresh/route.ts": {
+      "memory": 1024
+    },
+    "app/api/cron/consensus-aggregate/route.ts": {
+      "memory": 1024
+    },
+    "app/api/cron/consensus-backfill/route.ts": {
+      "memory": 1024
+    },
+    "app/api/cron/consensus-flips/route.ts": {
+      "memory": 1024
+    },
+    "app/api/cron/consensus-ingest/route.ts": {
+      "memory": 1024
+    },
+    "app/api/cron/consensus-live-ingest/route.ts": {
+      "memory": 1024
+    },
+    "app/api/cron/consensus-performance/route.ts": {
+      "memory": 1024
+    },
+    "app/api/cron/consensus-push/route.ts": {
+      "memory": 1024
+    },
+    "app/api/cron/consensus-reprocess/route.ts": {
+      "memory": 1024
+    },
+    "app/api/cron/domestic-dividend-sync/route.ts": {
+      "memory": 1024
+    },
+    "app/api/cron/etf-official-holdings-canary/route.ts": {
+      "memory": 1024
+    },
+    "app/api/cron/etf-official-holdings-mega-desktop-ingest/route.ts": {
+      "memory": 1024
+    },
+    "app/api/cron/etf-returns-sync/route.ts": {
+      "memory": 1024
+    },
+    "app/api/cron/etf-returns-sync-tw/route.ts": {
+      "memory": 1024
+    },
+    "app/api/cron/ex-date-sync/route.ts": {
+      "memory": 1024
+    },
+    "app/api/cron/final-update/route.ts": {
+      "memory": 1024
+    },
+    "app/api/cron/fund-returns-sync/route.ts": {
+      "memory": 1024
+    },
+    "app/api/cron/fx-forward-reference-curve/route.ts": {
+      "memory": 1024
+    },
+    "app/api/cron/fx-global-carry-ranking/route.ts": {
+      "memory": 1024
+    },
+    "app/api/cron/fx-options-public/route.ts": {
+      "memory": 1024
+    },
+    "app/api/cron/holdings-alt-source-sync/route.ts": {
+      "memory": 1024
+    },
+    "app/api/cron/institutional-update/route.ts": {
+      "memory": 1024
+    },
+    "app/api/cron/local-schedule-monitor/route.ts": {
+      "memory": 1024
+    },
+    "app/api/cron/local-schedule-report/route.ts": {
+      "memory": 1024
+    },
+    "app/api/cron/market-close-sync-backfill/route.ts": {
+      "memory": 1024
+    },
+    "app/api/cron/offshore-dividend-sync/route.ts": {
+      "memory": 1024
+    },
+    "app/api/cron/offshore-nav-sync/route.ts": {
+      "memory": 1024
+    },
+    "app/api/cron/offshore-nav-tdcc-sync/route.ts": {
+      "memory": 1024
+    },
+    "app/api/cron/price-update/route.ts": {
+      "memory": 1024
+    },
+    "app/api/cron/sitca-nav-sync/route.ts": {
+      "memory": 1024
+    },
+    "app/api/cron/stock-technical-daily/route.ts": {
+      "memory": 1024
+    },
+    "app/api/cron/tw-etf-day-change/route.ts": {
+      "memory": 1024
+    },
+    "app/api/cron/tw-purchasable-classify/route.ts": {
+      "memory": 1024
+    },
+    "app/api/cron/us-fund-nav-sync/route.ts": {
+      "memory": 1024
+    },
+    "app/api/cron/yahoo-commodity/route.ts": {
+      "memory": 1024
+    },
+    "app/api/cron/yahoo-commodity-technical/route.ts": {
+      "memory": 1024
+    },
+    "app/api/cron/yahoo-crypto/route.ts": {
+      "memory": 1024
+    },
+    "app/api/cron/yahoo-etf/route.ts": {
+      "memory": 1024
+    },
+    "app/api/cron/yahoo-etf-distribution-backfill/route.ts": {
+      "memory": 1024
+    },
+    "app/api/cron/yahoo-etf-enrich-repair/route.ts": {
+      "memory": 1024
+    },
+    "app/api/cron/yahoo-fund/route.ts": {
+      "memory": 1024
+    },
+    "app/api/cron/yahoo-fund-enrich-repair/route.ts": {
+      "memory": 1024
+    },
+    "app/api/cron/yahoo-fx/route.ts": {
+      "memory": 1024
+    },
+    "app/api/cron/yahoo-index/route.ts": {
+      "memory": 1024
+    },
+    "app/api/cron/etf-official-holdings/route.ts": {
+      "memory": 3009
+    },
+    "app/api/cron/daily-health-report/route.ts": {
+      "memory": 3009
+    },
+    "app/api/cron/cloud-global-pe-recompute/route.ts": {
+      "memory": 3009
+    },
+    "app/api/cron/yahoo-etf-full-sweep/route.ts": {
+      "memory": 3009
+    },
+    "app/api/cron/yahoo-fund-full-sweep/route.ts": {
+      "memory": 3009
+    },
+    "app/api/cron/cloud-mops-financial-incremental/route.ts": {
+      "memory": 3009
+    },
+    "app/api/cron/cloud-sec-financial-incremental/route.ts": {
+      "memory": 3009
+    }
   },
   "crons": [
-    { "path": "/api/workflows/bootstrap?workflow=poc", "schedule": "0 5 * * *" },
-    { "path": "/api/workflows/bootstrap?workflow=consensus", "schedule": "20 16 * * *" },
-    { "path": "/api/cron/consensus-live-ingest", "schedule": "*/5 * * * *" },
-    { "path": "/api/workflows/bootstrap?workflow=yahoo-etf-full-sweep", "schedule": "0 3 * * *" },
-    { "path": "/api/workflows/bootstrap?workflow=yahoo-etf-enrich-repair", "schedule": "30 3 * * *" },
-    { "path": "/api/workflows/bootstrap?workflow=yahoo-fund-full-sweep", "schedule": "0 4 * * *" },
-    { "path": "/api/workflows/bootstrap?workflow=yahoo-fund-enrich-repair", "schedule": "30 4 * * *" },
-    { "path": "/api/workflows/bootstrap?workflow=yahoo-etf-distribution-backfill", "schedule": "0 5 * * 0" },
-    { "path": "/api/cron/yahoo-fx?phase=quote", "schedule": "0 */2 * * 1-5" },
-    { "path": "/api/cron/yahoo-fx?phase=history", "schedule": "30 21 * * 1-5" },
-    { "path": "/api/cron/yahoo-fx?phase=discovery", "schedule": "0 6 * * 0" },
-    { "path": "/api/cron/market-close-sync", "schedule": "*/15 * * * *" },
-    { "path": "/api/cron/etf-returns-sync", "schedule": "*/10 * * * *" },
-    { "path": "/api/cron/etf-returns-sync-tw", "schedule": "*/15 * * * *" },
-    { "path": "/api/cron/us-fund-nav-sync", "schedule": "*/15 23,0,1,2,3 * * *" },
-    { "path": "/api/cron/sitca-nav-sync", "schedule": "33 * * * *" },
-    { "path": "/api/cron/offshore-nav-sync", "schedule": "*/15 1-3 * * *" },
-    { "path": "/api/cron/offshore-nav-sync", "schedule": "0 4 * * *" },
-    { "path": "/api/cron/offshore-dividend-sync", "schedule": "*/15 5-8 * * *" },
-    { "path": "/api/cron/domestic-dividend-sync", "schedule": "0 2 * * *" },
-    { "path": "/api/cron/holdings-alt-source-sync", "schedule": "52 * * * *" },
-    { "path": "/api/cron/tw-purchasable-classify", "schedule": "0 0 * * *" },
-    { "path": "/api/cron/daily-health-report", "schedule": "30 0 * * *" },
-    { "path": "/api/cron/local-schedule-monitor", "schedule": "0 13 * * *" },
-    { "path": "/api/cron/tw-etf-day-change", "schedule": "*/15 6-8 * * 1-5" },
-    { "path": "/api/cron/offshore-nav-tdcc-sync", "schedule": "31 2 * * *" },
-    { "path": "/api/cron/offshore-nav-tdcc-sync", "schedule": "31 10 * * *" },
-    { "path": "/api/cron/fund-returns-sync", "schedule": "41 * * * *" },
-    { "path": "/api/cron/fund-returns-sync", "schedule": "11 * * * *" },
-    { "path": "/api/cron/yahoo-commodity?phase=history&group=cbot&symbols=ZC=F,ZW=F,KE=F,ZS=F,ZL=F,ZM=F,ZO=F,ZR=F", "schedule": "40 19 * * 1-5" },
-    { "path": "/api/cron/yahoo-commodity?phase=history&group=comex-nymex&symbols=CL=F,NG=F,GC=F,SI=F,HG=F,PL=F,PA=F,RB=F,HO=F,ALI=F", "schedule": "0 20 * * 1-5" },
-    { "path": "/api/cron/yahoo-commodity?phase=history&group=livestock&symbols=LE=F,HE=F,GF=F", "schedule": "20 20 * * 1-5" },
-    { "path": "/api/cron/yahoo-commodity?phase=history&group=ice&symbols=KC=F,CC=F,SB=F,CT=F,BZ=F,OJ=F", "schedule": "0 21 * * 1-5" },
-    { "path": "/api/cron/yahoo-commodity-technical", "schedule": "30 21 * * 1-5" },
-    { "path": "/api/cron/yahoo-index?phase=history", "schedule": "26 0 * * *" },
-    { "path": "/api/cron/yahoo-index?phase=history&market=japan&symbols=%5EN225", "schedule": "20 6 * * 1-5" },
-    { "path": "/api/cron/yahoo-index?phase=history&market=korea&symbols=%5EKS11", "schedule": "45 6 * * 1-5" },
-    { "path": "/api/cron/yahoo-index?phase=history&market=china&symbols=000001.SS,000002.SS,000003.SS,399001.SZ,399107.SZ,399108.SZ", "schedule": "20 7 * * 1-5" },
-    { "path": "/api/cron/yahoo-index?phase=history&market=philippines&symbols=PSEI.PS", "schedule": "45 7 * * 1-5" },
-    { "path": "/api/cron/yahoo-index?phase=history&market=hongkong&symbols=%5EHSI", "schedule": "25 8 * * 1-5" },
-    { "path": "/api/cron/yahoo-index?phase=history&market=sea&symbols=%5EJKSE,%5EKLSE,%5ESTI", "schedule": "15 9 * * 1-5" },
-    { "path": "/api/cron/yahoo-index?phase=history&market=india&symbols=%5EBSESN", "schedule": "15 10 * * 1-5" },
-    { "path": "/api/cron/yahoo-index?phase=history&market=russia&symbols=RTSI.ME", "schedule": "5 16 * * 1-5" },
-    { "path": "/api/cron/yahoo-index?phase=history&market=europe&symbols=%5EGDAXI,%5EFTSE,%5EFCHI", "schedule": "50 16 * * 1-5" },
-    { "path": "/api/cron/yahoo-index?phase=history&market=us&symbols=%5EDJI,%5EGSPC,%5EIXIC,%5ESOX", "schedule": "15 21 * * 1-5" },
-    { "path": "/api/cron/yahoo-crypto?phase=marketcap", "schedule": "39 0 * * *" },
-    { "path": "/api/cron/yahoo-crypto?phase=history", "schedule": "23 0 * * *" },
-    { "path": "/api/cron/yahoo-crypto?phase=quote", "schedule": "0 */4 * * *" },
-    { "path": "/api/cron/yahoo-crypto?phase=bootstrap", "schedule": "10 0 * * *" },
-    { "path": "/api/cron/cloud-new-listing-detection", "schedule": "15 1 * * *" },
-    { "path": "/api/cron/cloud-new-fund-listing-detection", "schedule": "25 1 * * *" },
-    { "path": "/api/cron/alert-evaluate", "schedule": "*/15 * * * *" },
-    { "path": "/api/cron/alert-dispatch", "schedule": "5-59/15 * * * *" },
-    { "path": "/api/cron/ex-date-sync", "schedule": "40 1 * * *" },
-    { "path": "/api/cron/cloud-moneydj-fund", "schedule": "*/15 * * * *" },
-    { "path": "/api/cron/cloud-fund-holdings?provider=ALL", "schedule": "*/20 * * * *" },
-    { "path": "/api/cron/stock-technical-daily", "schedule": "0 8 * * 1-5" },
-    { "path": "/api/cron/cloud-etf-price", "schedule": "17 * * * *" },
-    { "path": "/api/cron/cloud-fund-nav?provider=ALL", "schedule": "27 * * * *" },
-    { "path": "/api/cron/cloud-moneydj-etf", "schedule": "47 * * * *" },
-    { "path": "/api/cron/cloud-global-etf-holdings?provider=ALL", "schedule": "57 * * * *" },
-    { "path": "/api/cron/cloud-tw-fundamentals-refresh", "schedule": "30 8 * * 1-5" },
-    { "path": "/api/cron/cloud-global-pe-recompute", "schedule": "0 */3 * * *" },
-    { "path": "/api/cron/cloud-mops-financial-incremental", "schedule": "30 10 * * 1-5" },
-    { "path": "/api/cron/cloud-mops-financial-incremental", "schedule": "30 14 * * 1-5" },
-    { "path": "/api/cron/cloud-sec-financial-incremental", "schedule": "0 13 * * *" },
-    { "path": "/api/cron/etf-official-holdings?issuer=Cathay", "schedule": "5,25,45 11-14 * * 1-5" },
-    { "path": "/api/cron/etf-official-holdings?issuer=JPMorgan", "schedule": "5,25,45 11-14 * * 1-5" },
-    { "path": "/api/cron/etf-official-holdings?issuer=Allianz", "schedule": "5,25,45 11-14 * * 1-5" },
-    { "path": "/api/cron/etf-official-holdings?issuer=UPAMC", "schedule": "10,30,50 11-14 * * 1-5" },
-    { "path": "/api/cron/etf-official-holdings?issuer=AB", "schedule": "10,30,50 11-14 * * 1-5" },
-    { "path": "/api/cron/etf-official-holdings?issuer=Fubon", "schedule": "10,30,50 11-14 * * 1-5" },
-    { "path": "/api/cron/etf-official-holdings?issuer=CTBC", "schedule": "15,35,55 11-14 * * 1-5" },
-    { "path": "/api/cron/etf-official-holdings?issuer=KGI", "schedule": "15,35,55 11-14 * * 1-5" },
-    { "path": "/api/cron/etf-official-holdings?issuer=First", "schedule": "15,35,55 11-14 * * 1-5" },
-    { "path": "/api/cron/etf-official-holdings?issuer=FHT", "schedule": "0,20,40 11-14 * * 1-5" },
-    { "path": "/api/cron/etf-official-holdings?issuer=SinoPac", "schedule": "0,20,40 11-14 * * 1-5" },
-    { "path": "/api/cron/etf-official-holdings?issuer=Yuanta", "schedule": "0,20,40 11-14 * * 1-5" },
-    { "path": "/api/cron/etf-official-holdings?issuer=Capital", "schedule": "3,23,43 11-14 * * 1-5" },
-    { "path": "/api/cron/etf-official-holdings?issuer=Taishin", "schedule": "3,23,43 11-14 * * 1-5" },
-    { "path": "/api/cron/etf-official-holdings?issuer=Nomura", "schedule": "8,28,48 11-14 * * 1-5" },
-    { "path": "/api/cron/etf-official-holdings?issuer=BlackRock", "schedule": "8,28,48 11-14 * * 1-5" },
-    { "path": "/api/cron/fx-forward-reference-curve", "schedule": "15 19 * * *" },
-    { "path": "/api/cron/fx-global-carry-ranking", "schedule": "30 19 * * *" },
-    { "path": "/api/cron/fx-options-public", "schedule": "49 13 * * *" }
+    {
+      "path": "/api/workflows/bootstrap?workflow=poc",
+      "schedule": "0 5 * * *"
+    },
+    {
+      "path": "/api/workflows/bootstrap?workflow=consensus",
+      "schedule": "20 16 * * *"
+    },
+    {
+      "path": "/api/cron/consensus-live-ingest",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/workflows/bootstrap?workflow=yahoo-etf-full-sweep",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/workflows/bootstrap?workflow=yahoo-etf-enrich-repair",
+      "schedule": "30 3 * * *"
+    },
+    {
+      "path": "/api/workflows/bootstrap?workflow=yahoo-fund-full-sweep",
+      "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/workflows/bootstrap?workflow=yahoo-fund-enrich-repair",
+      "schedule": "30 4 * * *"
+    },
+    {
+      "path": "/api/workflows/bootstrap?workflow=yahoo-etf-distribution-backfill",
+      "schedule": "0 5 * * 0"
+    },
+    {
+      "path": "/api/cron/yahoo-fx?phase=quote",
+      "schedule": "0 */2 * * 1-5"
+    },
+    {
+      "path": "/api/cron/yahoo-fx?phase=history",
+      "schedule": "30 21 * * 1-5"
+    },
+    {
+      "path": "/api/cron/yahoo-fx?phase=discovery",
+      "schedule": "0 6 * * 0"
+    },
+    {
+      "path": "/api/cron/market-close-sync",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/etf-returns-sync",
+      "schedule": "*/10 * * * *"
+    },
+    {
+      "path": "/api/cron/etf-returns-sync-tw",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/us-fund-nav-sync",
+      "schedule": "*/15 23,0,1,2,3 * * *"
+    },
+    {
+      "path": "/api/cron/sitca-nav-sync",
+      "schedule": "33 * * * *"
+    },
+    {
+      "path": "/api/cron/offshore-nav-sync",
+      "schedule": "*/15 1-3 * * *"
+    },
+    {
+      "path": "/api/cron/offshore-nav-sync",
+      "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/cron/offshore-dividend-sync",
+      "schedule": "*/15 5-8 * * *"
+    },
+    {
+      "path": "/api/cron/domestic-dividend-sync",
+      "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/cron/holdings-alt-source-sync",
+      "schedule": "52 * * * *"
+    },
+    {
+      "path": "/api/cron/tw-purchasable-classify",
+      "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/daily-health-report",
+      "schedule": "30 0 * * *"
+    },
+    {
+      "path": "/api/cron/local-schedule-monitor",
+      "schedule": "0 13 * * *"
+    },
+    {
+      "path": "/api/cron/tw-etf-day-change",
+      "schedule": "*/15 6-8 * * 1-5"
+    },
+    {
+      "path": "/api/cron/offshore-nav-tdcc-sync",
+      "schedule": "31 2 * * *"
+    },
+    {
+      "path": "/api/cron/offshore-nav-tdcc-sync",
+      "schedule": "31 10 * * *"
+    },
+    {
+      "path": "/api/cron/fund-returns-sync",
+      "schedule": "41 * * * *"
+    },
+    {
+      "path": "/api/cron/fund-returns-sync",
+      "schedule": "11 * * * *"
+    },
+    {
+      "path": "/api/cron/yahoo-commodity?phase=history&group=cbot&symbols=ZC=F,ZW=F,KE=F,ZS=F,ZL=F,ZM=F,ZO=F,ZR=F",
+      "schedule": "40 19 * * 1-5"
+    },
+    {
+      "path": "/api/cron/yahoo-commodity?phase=history&group=comex-nymex&symbols=CL=F,NG=F,GC=F,SI=F,HG=F,PL=F,PA=F,RB=F,HO=F,ALI=F",
+      "schedule": "0 20 * * 1-5"
+    },
+    {
+      "path": "/api/cron/yahoo-commodity?phase=history&group=livestock&symbols=LE=F,HE=F,GF=F",
+      "schedule": "20 20 * * 1-5"
+    },
+    {
+      "path": "/api/cron/yahoo-commodity?phase=history&group=ice&symbols=KC=F,CC=F,SB=F,CT=F,BZ=F,OJ=F",
+      "schedule": "0 21 * * 1-5"
+    },
+    {
+      "path": "/api/cron/yahoo-commodity-technical",
+      "schedule": "30 21 * * 1-5"
+    },
+    {
+      "path": "/api/cron/yahoo-index?phase=history",
+      "schedule": "26 0 * * *"
+    },
+    {
+      "path": "/api/cron/yahoo-index?phase=history&market=japan&symbols=%5EN225",
+      "schedule": "20 6 * * 1-5"
+    },
+    {
+      "path": "/api/cron/yahoo-index?phase=history&market=korea&symbols=%5EKS11",
+      "schedule": "45 6 * * 1-5"
+    },
+    {
+      "path": "/api/cron/yahoo-index?phase=history&market=china&symbols=000001.SS,000002.SS,000003.SS,399001.SZ,399107.SZ,399108.SZ",
+      "schedule": "20 7 * * 1-5"
+    },
+    {
+      "path": "/api/cron/yahoo-index?phase=history&market=philippines&symbols=PSEI.PS",
+      "schedule": "45 7 * * 1-5"
+    },
+    {
+      "path": "/api/cron/yahoo-index?phase=history&market=hongkong&symbols=%5EHSI",
+      "schedule": "25 8 * * 1-5"
+    },
+    {
+      "path": "/api/cron/yahoo-index?phase=history&market=sea&symbols=%5EJKSE,%5EKLSE,%5ESTI",
+      "schedule": "15 9 * * 1-5"
+    },
+    {
+      "path": "/api/cron/yahoo-index?phase=history&market=india&symbols=%5EBSESN",
+      "schedule": "15 10 * * 1-5"
+    },
+    {
+      "path": "/api/cron/yahoo-index?phase=history&market=russia&symbols=RTSI.ME",
+      "schedule": "5 16 * * 1-5"
+    },
+    {
+      "path": "/api/cron/yahoo-index?phase=history&market=europe&symbols=%5EGDAXI,%5EFTSE,%5EFCHI",
+      "schedule": "50 16 * * 1-5"
+    },
+    {
+      "path": "/api/cron/yahoo-index?phase=history&market=us&symbols=%5EDJI,%5EGSPC,%5EIXIC,%5ESOX",
+      "schedule": "15 21 * * 1-5"
+    },
+    {
+      "path": "/api/cron/yahoo-crypto?phase=marketcap",
+      "schedule": "39 0 * * *"
+    },
+    {
+      "path": "/api/cron/yahoo-crypto?phase=history",
+      "schedule": "23 0 * * *"
+    },
+    {
+      "path": "/api/cron/yahoo-crypto?phase=quote",
+      "schedule": "0 */4 * * *"
+    },
+    {
+      "path": "/api/cron/yahoo-crypto?phase=bootstrap",
+      "schedule": "10 0 * * *"
+    },
+    {
+      "path": "/api/cron/cloud-new-listing-detection",
+      "schedule": "15 1 * * *"
+    },
+    {
+      "path": "/api/cron/cloud-new-fund-listing-detection",
+      "schedule": "25 1 * * *"
+    },
+    {
+      "path": "/api/cron/alert-evaluate",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/alert-dispatch",
+      "schedule": "5-59/15 * * * *"
+    },
+    {
+      "path": "/api/cron/ex-date-sync",
+      "schedule": "40 1 * * *"
+    },
+    {
+      "path": "/api/cron/cloud-moneydj-fund",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/cloud-fund-holdings?provider=ALL",
+      "schedule": "*/20 * * * *"
+    },
+    {
+      "path": "/api/cron/stock-technical-daily",
+      "schedule": "0 8 * * 1-5"
+    },
+    {
+      "path": "/api/cron/cloud-etf-price",
+      "schedule": "17 * * * *"
+    },
+    {
+      "path": "/api/cron/cloud-fund-nav?provider=ALL",
+      "schedule": "27 * * * *"
+    },
+    {
+      "path": "/api/cron/cloud-moneydj-etf",
+      "schedule": "47 * * * *"
+    },
+    {
+      "path": "/api/cron/cloud-global-etf-holdings?provider=ALL",
+      "schedule": "57 * * * *"
+    },
+    {
+      "path": "/api/cron/cloud-tw-fundamentals-refresh",
+      "schedule": "30 8 * * 1-5"
+    },
+    {
+      "path": "/api/cron/cloud-global-pe-recompute",
+      "schedule": "0 */3 * * *"
+    },
+    {
+      "path": "/api/cron/cloud-mops-financial-incremental",
+      "schedule": "30 10 * * 1-5"
+    },
+    {
+      "path": "/api/cron/cloud-mops-financial-incremental",
+      "schedule": "30 14 * * 1-5"
+    },
+    {
+      "path": "/api/cron/cloud-sec-financial-incremental",
+      "schedule": "0 13 * * *"
+    },
+    {
+      "path": "/api/cron/etf-official-holdings?issuer=Cathay",
+      "schedule": "5,25,45 11-14 * * 1-5"
+    },
+    {
+      "path": "/api/cron/etf-official-holdings?issuer=JPMorgan",
+      "schedule": "5,25,45 11-14 * * 1-5"
+    },
+    {
+      "path": "/api/cron/etf-official-holdings?issuer=Allianz",
+      "schedule": "5,25,45 11-14 * * 1-5"
+    },
+    {
+      "path": "/api/cron/etf-official-holdings?issuer=UPAMC",
+      "schedule": "10,30,50 11-14 * * 1-5"
+    },
+    {
+      "path": "/api/cron/etf-official-holdings?issuer=AB",
+      "schedule": "10,30,50 11-14 * * 1-5"
+    },
+    {
+      "path": "/api/cron/etf-official-holdings?issuer=Fubon",
+      "schedule": "10,30,50 11-14 * * 1-5"
+    },
+    {
+      "path": "/api/cron/etf-official-holdings?issuer=CTBC",
+      "schedule": "15,35,55 11-14 * * 1-5"
+    },
+    {
+      "path": "/api/cron/etf-official-holdings?issuer=KGI",
+      "schedule": "15,35,55 11-14 * * 1-5"
+    },
+    {
+      "path": "/api/cron/etf-official-holdings?issuer=First",
+      "schedule": "15,35,55 11-14 * * 1-5"
+    },
+    {
+      "path": "/api/cron/etf-official-holdings?issuer=FHT",
+      "schedule": "0,20,40 11-14 * * 1-5"
+    },
+    {
+      "path": "/api/cron/etf-official-holdings?issuer=SinoPac",
+      "schedule": "0,20,40 11-14 * * 1-5"
+    },
+    {
+      "path": "/api/cron/etf-official-holdings?issuer=Yuanta",
+      "schedule": "0,20,40 11-14 * * 1-5"
+    },
+    {
+      "path": "/api/cron/etf-official-holdings?issuer=Capital",
+      "schedule": "3,23,43 11-14 * * 1-5"
+    },
+    {
+      "path": "/api/cron/etf-official-holdings?issuer=Taishin",
+      "schedule": "3,23,43 11-14 * * 1-5"
+    },
+    {
+      "path": "/api/cron/etf-official-holdings?issuer=Nomura",
+      "schedule": "8,28,48 11-14 * * 1-5"
+    },
+    {
+      "path": "/api/cron/etf-official-holdings?issuer=BlackRock",
+      "schedule": "8,28,48 11-14 * * 1-5"
+    },
+    {
+      "path": "/api/cron/fx-forward-reference-curve",
+      "schedule": "15 19 * * *"
+    },
+    {
+      "path": "/api/cron/fx-global-carry-ranking",
+      "schedule": "30 19 * * *"
+    },
+    {
+      "path": "/api/cron/fx-options-public",
+      "schedule": "49 13 * * *"
+    }
+  ],
+  "regions": [
+    "sin1"
   ]
 }
