@@ -22,5 +22,23 @@ export async function GET(request: Request) {
     await prisma.$queryRawUnsafe(`SELECT 1`);
     timings.push(Date.now() - t0);
   }
-  return Response.json({ ok: true, region: process.env.VERCEL_REGION ?? "unknown", timingsMs: timings, avgMs: timings.reduce((a, b) => a + b, 0) / timings.length });
+
+  const externalSources = {
+    FRED: "https://api.stlouisfed.org/fred/series/observations?series_id=DCOILWTICO&api_key=invalid&file_type=json",
+    SEC_EDGAR: "https://data.sec.gov/submissions/CIK0000320193.json",
+    Yahoo_Finance: "https://query1.finance.yahoo.com/v8/finance/chart/AAPL",
+    iShares_BlackRock: "https://www.blackrock.com/tw/individual",
+  };
+  const externalTimings: Record<string, { ms: number; status: number | null; error: string | null }> = {};
+  for (const [label, url] of Object.entries(externalSources)) {
+    const t0 = Date.now();
+    try {
+      const res = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" }, signal: AbortSignal.timeout(15_000) });
+      externalTimings[label] = { ms: Date.now() - t0, status: res.status, error: null };
+    } catch (e) {
+      externalTimings[label] = { ms: Date.now() - t0, status: null, error: e instanceof Error ? e.message : String(e) };
+    }
+  }
+
+  return Response.json({ ok: true, region: process.env.VERCEL_REGION ?? "unknown", timingsMs: timings, avgMs: timings.reduce((a, b) => a + b, 0) / timings.length, externalTimings });
 }
