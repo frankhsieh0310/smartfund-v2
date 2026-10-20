@@ -19,8 +19,21 @@ import { buildDailySummary } from "@/lib/daily-health-report/buildDailySummary";
 import { fetchYahooTwPerformance } from "@/lib/yahoo/twPerformancePage";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+// 2026-10-20: raised from 60s after a real Vercel Runtime Timeout killed this route mid-run
+// (production_scheduler_runs left a permanently-stuck IN_PROGRESS row, no finishRun ever reached --
+// see YAHOO_TW_CHECK_MAX_ELAPSED_MS below for the actual root cause and the matching bail-out guard).
+export const maxDuration = 180;
 export const dynamic = "force-dynamic";
+// Wall-clock cutoff (elapsed since route start) for the Yahoo奇摩 consistency loop below: each sample
+// can take up to a 15s fetch timeout (fetchYahooTwPerformance) plus a mandatory 3.2s courtesy delay --
+// 3 samples worst case is ~54.6s, which is almost exactly what pushed 2026-10-19's run to 54s and
+// 2026-10-20's run past the old 60s maxDuration entirely (confirmed via Vercel's own "Task timed out
+// after 60 seconds" log for that invocation -- the run never reached finishRun, so the stuck row never
+// recorded an anomaly list at all, not even a real "0 anomalies" result). The loop now checks this
+// before starting each sample and stops early once it's spent too long already (recording any
+// remaining samples as fetchFailed, never fabricated), so a slow/rate-limited Yahoo day degrades this
+// one check instead of risking the whole route again even at the new, larger maxDuration.
+const YAHOO_TW_CHECK_MAX_ELAPSED_MS = 40_000;
 
 const JOB = "DAILY_HEALTH_REPORT";
 const query: QueryFn = (sql, params) => prisma.$queryRawUnsafe<any[]>(sql, ...params);
@@ -125,6 +138,10 @@ export async function GET(request: Request) {
   );
   const yahooTwSamples: YahooTwReturnSample[] = [];
   for (const row of sampleRows) {
+    if (Date.now() - startedMs > YAHOO_TW_CHECK_MAX_ELAPSED_MS) {
+      yahooTwSamples.push({ code: row.code, ourReturn1y: row.return_1y, yahooTwReturn1y: null, fetchFailed: true });
+      break; // already spent too long on this check this run -- stop before risking the whole route
+    }
     try {
       const perf = await fetchYahooTwPerformance(row.data_source);
       yahooTwSamples.push({ code: row.code, ourReturn1y: row.return_1y, yahooTwReturn1y: perf?.navReturn.y1 ?? null, fetchFailed: perf === null });
