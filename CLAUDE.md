@@ -1,5 +1,25 @@
 @AGENTS.md
 
+## 新 worktree 的 Vercel 專案連結（2026-10-19 訂立）
+
+任何新的 `git worktree add` 完成後，部署前必須先把既有 `smartfund-v2` 目錄下的 `.vercel\project.json` 複製過去，確認內容是 `projectId: prj_1KrCMg3BVSPuYqqmigFVksTn1Xa0`、`orgId: team_D42Dk8aVzncrm2MAPDeJ25i3`、`projectName: smartfund-v2`，再執行任何 `vercel deploy`。起因：2026-10-19 晚間一次 `vercel deploy`（分支 `migrate/fx-scripts-to-vercel-cron-20261019`）因為新 worktree 沒有這個檔案，自動建立了一個全新空專案 `claude-smartfund-fxmigrate`（已於同日確認無網域、無環境變數後刪除）。
+
+## 正式資料排程一律在雲端執行（2026-10-19 訂立，最高層規則）
+
+**所有正式資料排程（任何會寫入 Production 資料庫的定期任務）一律在雲端執行（Vercel cron 或 GitHub Actions `schedule`），不准依賴使用者的個人電腦或任何 Claude Code session/視窗本身的排程機制（`CronCreate`、`mcp__scheduled-tasks`）繼續運作。**
+
+起因：2026-10-19 週末 Windows 自動更新重開機，導致本機 Windows 工作排程器裡所有「僅在登入時執行」（Logon Mode: Interactive only）的工作全部中斷，直到使用者重新登入才恢復——這些工作當時承載了多項正式資料流程（tw-industry-radar 官方資料更新、SmartFund FX 系列、兆豐 ETF 持股桌機路徑等）。
+
+**兆豐（Mega）ETF 官方持股——明確、永久例外**：Mega 官網的 WAF 會封鎖雲端/機房網段的出口 IP，已實測確認 Vercel 與 GitHub Actions 兩邊的出口 IP 都收到一致的 HTTP 403 Access Denied。這個資料來源**確定永久留在本機排程**（`\SmartMatch Mega ETF Holdings`，`run-mega-desktop-fallback.ps1` → 桌機專用 ingest 端點 → Production），**不准嘗試任何繞過封鎖的做法**（換 User-Agent、代理、Residential proxy 等皆不行）。本機排程已於 2026-10-19 改成 S4U 登入（不論使用者是否登入都執行）+ 錯過時間盡快執行，降低重開機造成的中斷時間。
+
+**其餘本機排程——列入三天穩定測試結束後的搬遷待辦**（以下皆已於 2026-10-19 先補強成 S4U，但最終仍要搬到 Vercel cron）：
+1. **`\1500 Institutional Update`（第一優先）**——財經 App「機構動向」資料來源，tw-industry-radar `npm run schedule:1500`。
+2. `\1330 TW Price Update`、`\1700 TW Data Final Update`——同專案，`npm run schedule:1330`／`schedule:1700`。
+3. `\tw-etf-lookup 摩根持股匯入`——目前讀取桌面「摩根持股下載\待匯入」資料夾、資料只存在桌機 SQLite，搬雲端前要先決定資料落地位置（Production Postgres 還是維持桌機 SQLite），範圍比單純搬 cron 大。
+4. `\OpenClaw Gateway`——tw-data-updater 本機長駐 daemon，內部排程狀態存在未解析的 SQLite，搬之前要先解析清楚實際排程內容。
+
+一般原則：新增的正式資料排程一律優先設計成 Vercel cron；確認無法雲端化（如上述 Mega 案例）才可維持本機排程，但必須在程式註解與文件中明確寫出「為何無法雲端化」，並視為已知單點風險。Claude Code 的 `CronCreate`/`mcp__scheduled-tasks` 僅能用於監控、驗證、提醒等輔助性任務，不准作為任何正式資料寫入流程的唯一觸發來源。
+
 ## 正式資料寫入管道（使用者 2026-10-19 晚間訂立，最高層規則）
 
 **正式資料的寫入一律透過正式排程本身處理，不准用本機腳本直接連正式資料庫寫入**——除非使用者在該次指令裡明確寫出「核准你直接對正式資料庫執行」這類字句。
@@ -142,6 +162,8 @@ master 為正式基準分支。新工作一律從最新的 master 開分支；�
 
 **第 13、14 項補充查證（2026-10-16，部署後）**
 - 第 13 項 3 個交易日計時起點：使用者已明確指示從 **2026-10-19（週一）** 起算（10/17-18 為週末非交易日）。
+  **⚠️ 此起算假設後來被更嚴格的規則取代，見本檔案「三天穩定測試起算點更新」一節：10/19 健康報告
+  有 13 個異常，實際不算第 1 天，正確起點是「異常數為 0 的第一個交易日」。**
 - 第 14 項帳號刪除實測：公開註冊路徑（`/auth/v1/signup`，用 publishable key）會卡在「需要 email 確認才能拿到 session」——不是技術卡住，是這個 Supabase 專案的設定如此，已照使用者指示準備 PowerShell 腳本作為替代（見下）。查證過程中額外發現**本機 `.env` 的 `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` 有一個 O/0 打字錯誤**（`6iV00` 應為 `6iVO0`），跟 Vercel Production 實際值不一致，只是本機診斷用值錄錯，不影響正式環境（Vercel 自己的值是對的）。
 - PowerShell 實測腳本 `scratch/claude-account-delete-flow-test.ps1` 已逐行核對現有 `/api/me`、`/api/watchlists` 程式碼，確認腳本跟現在的正式環境行為一致，使用者只需貼上 `$ServiceRoleKey`／`$PublishableKey` 兩個值後整段執行。
 
@@ -294,7 +316,9 @@ master 為正式基準分支。新工作一律從最新的 master 開分支；�
   **跟前面的監看排程一樣，這個只存在於目前這個對話 session 裡，session 結束就會消失**——如果
   10/21 這段時間這個對話沒有保持開啟，要請使用者在新對話主動提醒我跑這個驗收流程。
 
-**第 13 項：3 個交易日 daily-health-report 計時（起算 2026-10-19 週一）**
+**第 13 項：3 個交易日 daily-health-report 計時**
+**⚠️ 起算日已更正，不是 2026-10-19 週一**——10/19 當天 13 個異常，依「異常數為 0 的第一個交易日」
+規則不算第 1 天，見本檔案「三天穩定測試起算點更新」一節與 2026-10-19 當天查證記錄。
 - 已設定一個工作階段內的排程（cron job `8722122f`，平日台北時間 9:13 am 前後，7 天後自動過期），每天檢查
   前一天 00:30 UTC 的 `daily-health-report` 結果，異常當天查修，正常/異常都寫回這個區塊。
 - **重要限制**：這個排程只存在於目前這個對話 session 的記憶體裡，session 結束（使用者關閉這個對話、
@@ -1575,7 +1599,7 @@ TWSE ETF 重複資料、ETF_RETURNS_SYNC_TW 卡住等）還沒修好部署前，
 已經部署到正式環境，(2) 部署當天或部署後的下一個交易日是第一天——不能單純用日期
 往後數三天。
 
-## 2026-10-19（週一，三天穩定測試第 1 天）：6 檔新上市 ETF 收盤價 + 當日健檢結果
+## 2026-10-19（週一，⚠️更正：不算三天穩定測試第 1 天，見下方結論）：6 檔新上市 ETF 收盤價 + 當日健檢結果
 
 **6 檔新上市 ETF（00409A/00410A/00412A/009828/00411A/00987D）第一個真正交易日收盤價查證：**
 
@@ -1601,7 +1625,7 @@ TWSE ETF 重複資料、ETF_RETURNS_SYNC_TW 卡住等）還沒修好部署前，
     這類已核准範圍的問題），且目前只是時間差、不是資料源本身抓不到，依照安全規則
     沒有執行任何手動 UPDATE。**後續應再次查核這兩檔是否已補上今天的真實收盤價**。
 
-**第 13 項三天穩定測試第 1 天（2026-10-19）健檢結果：**
+**第 13 項健檢結果（2026-10-19，⚠️不算三天穩定測試第 1 天，見下方更正）：**
 
 - **執行時間 — VERIFIED**：`DAILY_HEALTH_REPORT` 準時於 00:30:05 UTC（08:30:05 台北）
   執行，狀態 `PARTIAL`（只要發現異常，這個 job 的設計就是回報 PARTIAL，不代表 job
@@ -1638,3 +1662,39 @@ TWSE ETF 重複資料、ETF_RETURNS_SYNC_TW 卡住等）還沒修好部署前，
   已經在今天稍早的 `34b80c2ac` 部署裡修掉（只是部署時間晚於報告執行時間，等明天
   報告才會反映出來），其餘是正常的批次執行中狀態或覆蓋率逐步回補中，沒有發現需要
   當天緊急修復的新 bug。
+
+**⚠️ 更正（2026-10-19 當天，使用者糾正）**：上面兩個標題原本寫「三天穩定測試第 1 天」
+是錯的。**10/19 的健康報告有 13 個異常（`anomaly_count` 不是 0），依照本檔案稍早
+「三天穩定測試起算點更新」那條規則（三天測試從核心問題修好並部署後的「第一個交易
+日」開始算，且往前幾節已經明確記錄過 2026-10-19 原定第 1 天但「❌ 不是乾淨的一天，
+計時尚未真正開始」），10/19 不能算第 1 天**。這點我自己在同一份文件稍早的章節
+（「2026-10-19（週一，原定第13項計時第1天）：❌ 不是乾淨的一天，計時尚未真正開始」）
+已經正確記錄過，但在為這次 6 檔 ETF／健檢查證新增小節時，標題又誤寫回「第 1 天」，
+前後矛盾——已訂正。
+
+**正確規則重申**：三天穩定測試從「健康報告 `anomaly_count = 0` 的第一個交易日」開始
+算，不是從「核心問題部署後的下一個交易日」這種較寬鬆的條件開始算（那是舊版規則的
+用詞，這次使用者進一步收斂為更明確、可機械判斷的標準：異常數必須是 0）。10/19 當天
+13 個異常，**不是**第 1 天。10/20（週二）08:30 報告執行後，若 `anomaly_count = 0`
+才正式算三天測試第 1 天；若仍 >0，繼續往後順延，直到出現異常數為 0 的交易日為止。
+
+**2026-10-20（週二）：⚠️ 健檢本身執行逾時，連「異常數」都拿不到——不算乾淨的一天，計時仍未開始**
+
+- **執行狀態 — VERIFIED**：`DAILY_HEALTH_REPORT` 於 00:30:06 UTC（08:30:06 台北）啟動，`production_scheduler_runs` 留下一筆永久卡住的 `IN_PROGRESS`（`completed_at=null`），從未呼叫 `finishRun`。查 Vercel 正式環境 function log，確認原因：
+  ```
+  Vercel Runtime Timeout Error: Task timed out after 60 seconds
+  requestPath: /api/cron/daily-health-report
+  ```
+  **這不是「0 個異常」，是這次健檢完全沒跑完**，沒有任何異常清單可看。
+- **根因 — VERIFIED**：耗時已連續多天上升（10/14 11s → 10/15 26s → 10/16 25s → 10/17 25s → 10/18 26s → 10/19 54s → 10/20 逾時），這次終於超過路由原本 `maxDuration=60`。追到原始碼：`yahooTwCheck` 這段對 3 檔隨機 TWD ETF 逐一（非平行）呼叫 `fetchYahooTwPerformance`（外部 Yahoo奇摩頁面，本身有 15 秒逾時）、每檔之間再強制睡 3.2 秒——3 檔最壞情況單獨就要 ~54.6 秒，跟 10/19 實測的 54 秒幾乎吻合，10/20 只是剛好更慢一點就直接爆掉整個 60 秒預算。跟這次雲端化 etf-official-holdings／外匯三支排程**沒有關係**，是這個健檢 job 自己原本就有的設計風險（把會變慢的外部呼叫塞進一個時間預算很緊的路由），只是這幾天剛好被撞到。
+- **修法 — 已完成開發＋型別檢查＋build＋唯讀 dry-run 驗證＋Preview 部署，等你執行正式部署**（分支 `fix/daily-health-report-timeout-20261020`，commit `894c22413`，從目前正式環境 commit `64f917643` 開出）：
+  1. `maxDuration` 60→180 秒（跟其他已經為 Vercel cron 調過預算的路由同一個量級）。
+  2. 在 Yahoo 迴圈裡加一個經過時間檢查：執行到這個路由已經花了 40 秒以上，就不再嘗試剩下的樣本，直接記成 `fetchFailed`（不捏造假資料），讓這一項檢查自己降級，不會再拖垮整個路由。
+  3. 唯讀 dry-run（同樣的查詢＋迴圈邏輯，對正式環境 DB 跑一次，沒有寫入任何資料）確認邏輯正確，耗時正常（這次抽到的 3 檔都在 11 秒內完成）。
+  4. Preview 部署驗證：`vercel curl --deployment` 打 `/api/cron/daily-health-report`，正確回 401 Unauthorized（路由存在、認證生效）。
+  - **部署指令（由你執行）**：
+    ```powershell
+    cd "C:\Users\User\AppData\Local\Temp\claude-smartfund-health-report-fix"
+    npx vercel deploy --prod --meta commit=$(git rev-parse HEAD)
+    ```
+- **對三天計時的影響**：10/20 不算乾淨的一天（連異常數都沒有，更不可能是 0），**計時仍未開始**，跟 10/19 一樣繼續往後順延。要等這個修正部署到正式環境、且某一天的健檢真正跑完並回報 `anomaly_count = 0`，才正式算三天測試第 1 天。
