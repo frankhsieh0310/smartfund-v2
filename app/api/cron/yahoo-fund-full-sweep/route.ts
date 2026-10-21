@@ -127,6 +127,9 @@ export async function GET(request: Request) {
 
     let attempted = 0, coreOk = 0, navHistoryOk = 0, holdingsOk = 0, morningstarOk = 0, failed = 0;
     let navRows = 0, distRows = 0, holdRows = 0, scIns = 0, scUpd = 0, mCreated = 0, mLinked = 0;
+    // 2026-10-21（使用者核准，部署前必改）: 幣別無法對應成ISO時整個symbol不建立，獨立計數、不
+    // 跟一般failed混在一起，讓呼叫端跟健康報告都能明確看到這個特定原因。
+    const currencyUnresolvedSymbols: { symbol: string; rawCurrency: string | null | undefined }[] = [];
     for (const sym of slice) {
       if (Date.now() - started > TIME_BUDGET_MS) break;
       attempted++;
@@ -138,6 +141,7 @@ export async function GET(request: Request) {
           continue;
         }
         const r = await ingestUsFundShareClass(query, rec, mastersHoldingsWrittenThisRun, queryTx);
+        if (r.currencyUnresolved) currencyUnresolvedSymbols.push({ symbol: sym, rawCurrency: r.currencyRaw });
         if (r.coreOk) {
           coreOk++;
           if (r.shareClassInserted) scIns++;
@@ -175,6 +179,7 @@ export async function GET(request: Request) {
       auth_cookie_present: authDiag.lastCookiePresent, auth_crumb_present: authDiag.lastCrumbPresent,
       universe_size: symbols.length, index_before: startIdx, index_after: cpAfter.lastSymbol, wrapped,
       concurrency: 1, runtime_ms: Date.now() - started,
+      currency_unresolved_count: currencyUnresolvedSymbols.length, currency_unresolved_symbols: currencyUnresolvedSymbols.slice(0, 20),
     };
     await finishRun(runId, JOB, "YAHOO", started, {
       status: failed > 0 && coreOk === 0 ? "PARTIAL" : "COMPLETED",

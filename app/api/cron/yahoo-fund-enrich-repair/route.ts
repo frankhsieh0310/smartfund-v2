@@ -56,12 +56,14 @@ export async function GET(request: Request) {
 
     const mastersHoldingsWrittenThisRun = new Set<string>();
     let attempted = 0, repaired = 0, navAlsoOk = 0, holdingsAlsoOk = 0, stillFailing = 0, markedNotAvailable = 0;
+    const currencyUnresolvedSymbols: { symbol: string; rawCurrency: string | null | undefined }[] = [];
     for (const row of queueRows) {
       if (Date.now() - started > TIME_BUDGET_MS) break;
       attempted++;
       try {
         const rec = await enrichFundFromYahoo(row.symbol, stats);
         const ok = rec ? (await ingestUsFundShareClass(query, rec, mastersHoldingsWrittenThisRun, queryTx)) : null;
+        if (ok?.currencyUnresolved) currencyUnresolvedSymbols.push({ symbol: row.symbol, rawCurrency: ok.currencyRaw });
         if (ok?.coreOk) {
           repaired++;
           if (ok.navHistoryOk) navAlsoOk++;
@@ -110,6 +112,7 @@ export async function GET(request: Request) {
       rate_limited: stats.rateLimited, crumb_refresh: stats.crumbRefresh, enrich_failures: stats.failures ?? {},
       auth_cookie_present: authDiag.lastCookiePresent, auth_crumb_present: authDiag.lastCrumbPresent,
       runtime_ms: Date.now() - started,
+      currency_unresolved_count: currencyUnresolvedSymbols.length, currency_unresolved_symbols: currencyUnresolvedSymbols.slice(0, 20),
     };
     await finishRun(runId, JOB, "YAHOO", started, {
       status: attempted > 0 && repaired === 0 ? "PARTIAL" : "COMPLETED",

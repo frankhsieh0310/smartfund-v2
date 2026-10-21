@@ -325,6 +325,26 @@ export async function GET(request: Request) {
   // funds_currency_backup_yahoo_20261021），checkCoreUniverseFundCurrencyFormat的範圍也已經
   // 擴大到全表，這個獨立的count不再需要，由上面那個全表檢查統一負責。
 
+  // 2026-10-21（使用者核准，部署前必改第3點）: lib/yahoo/fundIngest.ts的三個呼叫方
+  // （yahoo-fund、yahoo-fund-full-sweep、yahoo-fund-enrich-repair，job_id都以YAHOO_FUND開頭）
+  // 現在幣別轉換不出來時會回報currency_unresolved_count/currency_unresolved_symbols到run
+  // log的details裡——這裡把最近24小時內這幾個job的這個數字加總，>0就算SYSTEM異常，確保不會
+  // 又像6,716筆那次一樣，問題存在很久都沒人發現。
+  const yahooFundCurrencyUnresolvedRows = await query(
+    `SELECT job_id, details FROM production_scheduler_runs
+     WHERE job_id LIKE 'YAHOO_FUND%' AND started_at >= now() - interval '24 hours'
+     ORDER BY started_at DESC`,
+    [],
+  );
+  let yahooFundCurrencyUnresolvedTotal = 0;
+  const yahooFundCurrencyUnresolvedSamples: { jobId: string; symbol: string; rawCurrency: string | null }[] = [];
+  for (const row of yahooFundCurrencyUnresolvedRows as { job_id: string; details: any }[]) {
+    yahooFundCurrencyUnresolvedTotal += row.details?.currency_unresolved_count ?? 0;
+    for (const s of row.details?.currency_unresolved_symbols ?? []) {
+      if (yahooFundCurrencyUnresolvedSamples.length < 20) yahooFundCurrencyUnresolvedSamples.push({ jobId: row.job_id, symbol: s.symbol, rawCurrency: s.rawCurrency ?? null });
+    }
+  }
+
   // 2026-10-21（使用者核准，不准猜測幣別）: newFundListingDetection.ts 現在遇到無法對應成合法ISO
   // 代碼的幣別時完全不建立那筆 funds 列（lib/cron/newFundListingDetection.ts 的
   // skippedInvalidCurrency），而不是像之前那樣退回預設值掩蓋掉——但「不猜」不等於「沒事」，這裡
@@ -568,6 +588,9 @@ export async function GET(request: Request) {
     ...(newFundIsinConflicts.length > 0
       ? [{ type: "NEW_FUND_ISIN_NAME_CONFLICT", category: SYSTEM_CATEGORY, count: newFundIsinConflicts.length, items: newFundIsinConflicts }]
       : []),
+    ...(yahooFundCurrencyUnresolvedTotal > 0
+      ? [{ type: "YAHOO_FUND_CURRENCY_UNRESOLVED", category: SYSTEM_CATEGORY, count: yahooFundCurrencyUnresolvedTotal, items: yahooFundCurrencyUnresolvedSamples }]
+      : []),
   ];
   const systemAnomalyCount = anomalies.filter((a) => a.category === SYSTEM_CATEGORY).length;
   const externalDelayAnomalyCount = anomalies.length - systemAnomalyCount;
@@ -596,6 +619,7 @@ export async function GET(request: Request) {
       moneydj_parse_failures: moneydjParseFailures,
       fund_currency_format_check: currencyFormatCheck, fund_currency_official_check: currencyOfficialCheck, new_fund_skipped_invalid_currency: newFundSkippedCurrency,
       new_fund_create_failures: newFundCreateFailures, new_fund_isin_conflicts: newFundIsinConflicts,
+      yahoo_fund_currency_unresolved_total: yahooFundCurrencyUnresolvedTotal, yahoo_fund_currency_unresolved_samples: yahooFundCurrencyUnresolvedSamples,
       anomaly_count: anomalies.length, system_anomaly_count: systemAnomalyCount, external_delay_anomaly_count: externalDelayAnomalyCount,
       anomalies, notify_result: notifyResult,
     },

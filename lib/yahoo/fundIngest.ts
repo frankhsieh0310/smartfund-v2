@@ -15,6 +15,7 @@
 // Morningstar fields are FUND-ONLY.
 
 import { fetchQuoteSummary, fetchChartFull, screenerPage, rawNum, rawText, sleep, type RateStats } from "./productSession";
+import { mapTdccCurrencyToIso } from "../tdcc-currency-map";
 
 export type QueryFn = (sql: string, params: any[]) => Promise<any[]>;
 // 2026-10-21（台股拼圖效能回報，使用者單次授權）: holdings 的 DELETE＋逐筆 INSERT 原本各自獨立
@@ -237,6 +238,12 @@ export type IngestResult = {
   holdingsWritten: number;
   morningstar: { overall: number | null; risk: number | null; category: string | null; rank: number | null };
   error?: string;
+  /** 2026-10-21（使用者核准，部署前必改）: Yahoo給的currency格式不合法、套用
+   * lib/tdcc-currency-map.ts的中文→ISO對照表也轉換不出來時設為true。此時整個symbol完全不
+   * 建立（新的fund_master/funds/fund_share_classes都不寫），不猜任何值；呼叫端必須把這個
+   * 計入run log跟健康報告的SYSTEM異常，不能靜默略過。 */
+  currencyUnresolved: boolean;
+  currencyRaw?: string | null;
 };
 
 /**
@@ -255,18 +262,30 @@ export async function ingestUsFundShareClass(
     shareClassInserted: false, shareClassUpdated: false,
     masterCreated: false, masterLinked: false, navRowsWritten: 0, distributionRows: 0, holdingsWritten: 0,
     morningstar: { overall: rec.msOverall, risk: rec.msRisk, category: rec.msCategory, rank: rec.msRank3y },
+    currencyUnresolved: false,
   };
   try {
     const stem = masterStem(rec.name);
     const family = rec.family ?? "UNKNOWN";
     const providerMasterKey = `YAHOO:${family}|${stem}`.slice(0, 200);
-    // 2026-10-21（使用者核准，全碼庫fund建立路徑檢查）: Yahoo quoteSummary的pr.currency欄位
-    // VERIFIED會偶爾回傳非ISO格式的字串（這是funds表6,714筆中文幣別——美元/新台幣/歐元等——
-    // 的根因，全部都是data_provider='yahoo'）。原本不管格式對不對都直接寫進去，現在先驗證
-    // 格式，不是合法三碼大寫ISO代碼就當作沒有這個資訊（null），讓下面既有的COALESCE(...,'USD')
-    // 接手，不把原始的非ISO字串寫進任何currency欄位（fund_master.base_currency、
-    // funds.currency、fund_share_classes.currency 都用這個驗證過的值）。
-    const isoCurrency = rec.currency && /^[A-Z]{3}$/.test(rec.currency) ? rec.currency : null;
+    // 2026-10-21（使用者核准，部署前必改）: Yahoo quoteSummary的pr.currency欄位VERIFIED會偶爾
+    // 回傳非ISO格式的字串（這是funds表6,714筆中文幣別的根因，全部都是data_provider='yahoo'）。
+    // 格式驗證不過時，先套用lib/tdcc-currency-map.ts的共用中文→ISO對照表（同一份TDCC/SITCA
+    // 排程在用的那份，不是另外寫一套）；轉換成功就用轉換後的ISO值，不當成「沒有資料」。轉換
+    // 還是轉不出來（既不是合法ISO格式、也不在對照表裡），才真的當成currencyUnresolved——這個
+    // symbol完全不建立（見下面的early return），不猜任何值、不用'USD'接手掩蓋掉。
+    // rec.currency本身是null（Yahoo根本沒給幣別欄位，不是格式錯誤）則維持原本行為：這個管線
+    // 本來就只收Yahoo US mutual fund，沒有幣別資訊時預設USD是合理的網域知識，不是亂猜。
+    let isoCurrency: string | null = null;
+    let currencyUnresolved = false;
+    if (rec.currency) {
+      if (/^[A-Z]{3}$/.test(rec.currency)) isoCurrency = rec.currency;
+      else {
+        const mapped = mapTdccCurrencyToIso(rec.currency);
+        if (mapped) isoCurrency = mapped;
+        else { currencyUnresolved = true; res.currencyUnresolved = true; res.currencyRaw = rec.currency; }
+      }
+    }
 
     // --- 1) Fund Master (Tier A: exact family+stem). SELECT-then-INSERT (no unique on provider_master_key).
     let masterId: string | null = null;
@@ -312,6 +331,14 @@ export async function ingestUsFundShareClass(
       );
       res.shareClassUpdated = true;
     } else {
+      // 2026-10-21（使用者核准，部署前必改）: 新建的funds列NOT NULL、沒有"未知"可寫——幣別轉換
+      // 不出來（currencyUnresolved）時這個symbol完全不建立，記錄到res讓呼叫端寫進run log＋
+      // 健康報告SYSTEM異常，絕不用'USD'當預設值掩蓋掉。fund_master若剛剛在上面已建立/連結，
+      // 保留不動（base_currency可為null，是分組用的key，不影響正確性，不需要跟著回滾）。
+      if (currencyUnresolved) {
+        res.error = `CURRENCY_UNRESOLVED: "${rec.currency}" 不是合法ISO格式、tdcc-currency-map也查不到對應，新symbol不建立`;
+        return res;
+      }
       const ins = await query(
         `INSERT INTO funds
            (id, name, legal_name, company, currency, category, region, morningstar, morningstar_risk,

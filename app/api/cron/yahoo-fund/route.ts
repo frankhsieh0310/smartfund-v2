@@ -83,6 +83,7 @@ export async function GET(request: Request) {
     const mastersHoldings = new Set<string>();
     let attempted = 0, ok = 0, failed = 0, scIns = 0, scUpd = 0, masterCreated = 0, masterLinked = 0;
     let navRows = 0, distRows = 0, holdRows = 0, msPop = 0, msRiskPop = 0, msCatPop = 0;
+    const currencyUnresolvedSymbols: { symbol: string; rawCurrency: string | null | undefined }[] = [];
     for (const sym of symbols) {
       if (Date.now() - started > TIME_BUDGET_MS) break;
       attempted++;
@@ -90,6 +91,7 @@ export async function GET(request: Request) {
         const rec = await enrichFundFromYahoo(sym);
         if (!rec) { failed++; continue; }
         const r = await ingestUsFundShareClass(query, rec, mastersHoldings, queryTx);
+        if (r.currencyUnresolved) currencyUnresolvedSymbols.push({ symbol: sym, rawCurrency: r.currencyRaw });
         if (r.ok) {
           ok++;
           if (r.shareClassInserted) scIns++;
@@ -116,6 +118,7 @@ export async function GET(request: Request) {
       navRowsWritten: navRows, distributionRows: distRows, holdingsWritten: holdRows,
       morningstarPopulated: msPop, morningstarRiskPopulated: msRiskPop, morningstarCategoryPopulated: msCatPop,
       stats, runtime_ms: Date.now() - started,
+      currency_unresolved_count: currencyUnresolvedSymbols.length, currency_unresolved_symbols: currencyUnresolvedSymbols.slice(0, 20),
     };
     await finishRun(runId, JOB, "YAHOO", started, {
       status: failed > 0 && ok === 0 ? "PARTIAL" : "COMPLETED",
