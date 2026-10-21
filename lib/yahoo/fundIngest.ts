@@ -17,6 +17,13 @@
 import { fetchQuoteSummary, fetchChartFull, screenerPage, rawNum, rawText, sleep, type RateStats } from "./productSession";
 
 export type QueryFn = (sql: string, params: any[]) => Promise<any[]>;
+// 2026-10-21（台股拼圖效能回報，使用者單次授權）: holdings 的 DELETE＋逐筆 INSERT 原本各自獨立
+// commit，每次 commit 都觸發一次 refresh_reverse_products（平均526ms），120秒內觸發242次、
+// 占滿共用資料庫1個核心。改成這個函式把整組語句包成一個交易一次送出，由呼叫端用
+// prisma.$transaction(statements.map(...)) 實作——觸發器、刷新函式、寫入內容/欄位完全不變，
+// 只改變commit次數。交易失敗時Prisma $transaction本身就會整筆rollback，呼叫端仍用原本的
+// try/catch記錄res.error，行為不變。
+export type TransactionQueryFn = (statements: Array<{ sql: string; params: any[] }>) => Promise<void>;
 
 // 2026-09-11 module split (same ETF-reliability fix applied here per the Fund sweep mandate):
 // topHoldings fetched separately so a holdings-only miss never blocks core metadata/Morningstar/NAV.
@@ -241,6 +248,7 @@ export async function ingestUsFundShareClass(
   query: QueryFn,
   rec: FundRecord,
   mastersHoldingsWrittenThisRun: Set<string>,
+  queryTx: TransactionQueryFn,
 ): Promise<IngestResult> {
   const res: IngestResult = {
     symbol: rec.symbol, ok: false, coreOk: false, navHistoryOk: false, holdingsOk: false,
@@ -401,20 +409,21 @@ export async function ingestUsFundShareClass(
       if (masterId && !mastersHoldingsWrittenThisRun.has(masterId) && rec.holdingsAvailable && rec.topHoldings.length) {
         mastersHoldingsWrittenThisRun.add(masterId);
         // idempotent replace of this master representative's YAHOO holdings
-        await query(`DELETE FROM holdings WHERE fund_id = $1 AND source = 'YAHOO_QUOTE_SUMMARY'`, [fundId]);
         // Yahoo's topHoldings quoteSummary module carries no "as of" date for the portfolio snapshot
         // itself — only composition (name/ticker/weight). Per the holdings date-source rule: never
         // substitute the fetch date (or any other date) for a date the source doesn't actually give.
         // as_of_date stays NULL (requires holdings.as_of_date nullable — see
         // prisma/migrations/20261003010000_holdings_as_of_date_nullable); the row is still useful for
         // composition, it's just honestly undated.
-        for (const h of rec.topHoldings) {
-          await query(
-            `INSERT INTO holdings (id, asset_type, fund_id, share_class_id, as_of_date, rank, holding_name, holding_code, weight, source, source_record_id, created_at)
+        // 2026-10-21: DELETE + 逐筆 INSERT 包成一個交易一次commit，見上面 TransactionQueryFn 說明。
+        await queryTx([
+          { sql: `DELETE FROM holdings WHERE fund_id = $1 AND source = 'YAHOO_QUOTE_SUMMARY'`, params: [fundId] },
+          ...rec.topHoldings.map((h) => ({
+            sql: `INSERT INTO holdings (id, asset_type, fund_id, share_class_id, as_of_date, rank, holding_name, holding_code, weight, source, source_record_id, created_at)
              VALUES (gen_random_uuid()::text, 'FUND', $1::text, NULL, NULL, $2::int, $3::text, $4::text, $5::numeric, 'YAHOO_QUOTE_SUMMARY', $6::text, NOW())`,
-            [fundId, h.rank, h.name.slice(0, 300), h.ticker, h.weight == null ? null : h.weight / 100, `${h.rank}:${(h.ticker ?? h.name).slice(0, 80)}`],
-          );
-        }
+            params: [fundId, h.rank, h.name.slice(0, 300), h.ticker, h.weight == null ? null : h.weight / 100, `${h.rank}:${(h.ticker ?? h.name).slice(0, 80)}`],
+          })),
+        ]);
         res.holdingsWritten = rec.topHoldings.length;
       }
       res.holdingsOk = rec.holdingsAvailable;

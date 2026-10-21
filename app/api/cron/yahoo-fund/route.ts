@@ -19,6 +19,10 @@ export const maxDuration = 300;
 export const dynamic = "force-dynamic";
 
 const query = (sql: string, params: unknown[]) => prisma.$queryRawUnsafe(sql, ...params) as Promise<any[]>;
+// 2026-10-21（台股拼圖效能回報，使用者單次授權）: 一組語句包成一個交易一次commit，減少
+// refresh_reverse_products觸發器的觸發次數——見 lib/yahoo/fundIngest.ts TransactionQueryFn 說明。
+const queryTx = (statements: Array<{ sql: string; params: unknown[] }>) =>
+  prisma.$transaction(statements.map((s) => prisma.$queryRawUnsafe(s.sql, ...s.params))).then(() => undefined);
 const TIME_BUDGET_MS = 250_000;
 
 export async function GET(request: Request) {
@@ -85,7 +89,7 @@ export async function GET(request: Request) {
       try {
         const rec = await enrichFundFromYahoo(sym);
         if (!rec) { failed++; continue; }
-        const r = await ingestUsFundShareClass(query, rec, mastersHoldings);
+        const r = await ingestUsFundShareClass(query, rec, mastersHoldings, queryTx);
         if (r.ok) {
           ok++;
           if (r.shareClassInserted) scIns++;

@@ -8,9 +8,14 @@
 // 'TOP_HOLDINGS_ONLY' + a distinct source means readers that prefer OFFICIAL_ISSUER > MONEYDJ > YAHOO
 // keep doing so. No ETF Morningstar fields are written (Yahoo doesn't expose them for ETFs).
 
+import { randomUUID } from "crypto";
 import { fetchQuoteSummary, rawNum, rawText, type RateStats } from "./productSession";
 
 export type QueryFn = (sql: string, params: any[]) => Promise<any[]>;
+// 2026-10-21（台股拼圖效能回報，使用者單次授權）: holdings 快照INSERT＋逐筆INSERT原本各自獨立
+// commit，每次commit觸發一次refresh_reverse_products（平均526ms）——見lib/yahoo/fundIngest.ts
+// TransactionQueryFn同一份說明。呼叫端用prisma.$transaction(statements.map(...))實作。
+export type TransactionQueryFn = (statements: Array<{ sql: string; params: any[] }>) => Promise<void>;
 
 // 2026-09-11 module split (STEP 6 of the enrich-reliability fix): topHoldings is fetched in its own
 // quoteSummary call so a holdings-specific failure (or the extra payload weight making that one call
@@ -59,7 +64,8 @@ export type EtfEnrichResult = {
 export async function enrichEtfProduct(
   query: QueryFn,
   input: { etfId: string; symbol: string },
-  stats?: RateStats,
+  stats: RateStats | undefined,
+  queryTx: TransactionQueryFn,
 ): Promise<EtfEnrichResult> {
   const out: EtfEnrichResult = {
     etfId: input.etfId, symbol: input.symbol, ok: false, coreOk: false, holdingsOk: false,
@@ -85,7 +91,7 @@ export async function enrichEtfProduct(
   // so a mid-way exception still returns coreOk=true with whatever partial writes landed, instead of
   // throwing out to the caller and looking identical to "quoteSummary itself failed".
   try {
-    await writeEtfEnrichData(query, input, { fp, ks, sd, pr, perf, th, srcUrl, retrievedAt }, out);
+    await writeEtfEnrichData(query, input, { fp, ks, sd, pr, perf, th, srcUrl, retrievedAt }, out, queryTx);
   } catch (e) {
     out.error = `WRITE_FAILED: ${String((e as Error).message ?? e).slice(0, 200)}`;
   }
@@ -98,6 +104,7 @@ async function writeEtfEnrichData(
   input: { etfId: string; symbol: string },
   ctx: { fp: any; ks: any; sd: any; pr: any; perf: any; th: any; srcUrl: string; retrievedAt: string },
   out: EtfEnrichResult,
+  queryTx: TransactionQueryFn,
 ): Promise<void> {
   const { fp, ks, sd, pr, perf, th, srcUrl, retrievedAt } = ctx;
   // 1) etfs metadata (COALESCE — never clobber a good value with null)
@@ -166,35 +173,39 @@ async function writeEtfEnrichData(
       [input.etfId, sourceRecordId],
     );
     let snapId = found[0]?.id;
+    // 2026-10-21: 快照INSERT（如果需要）＋所有持股INSERT包成一個交易一次commit。陣列形式的
+    // prisma.$transaction沒辦法把某一句的RETURNING結果傳給下一句，所以snapshot的id改成JS端
+    // 用randomUUID()先產生好，兩邊語句都直接帶這個已知值，不再依賴gen_random_uuid()+RETURNING。
+    const statements: Array<{ sql: string; params: any[] }> = [];
     if (!snapId) {
-      const ins = await query(
-        `INSERT INTO etf_holding_snapshots
+      snapId = randomUUID();
+      statements.push({
+        sql: `INSERT INTO etf_holding_snapshots
            (id, etf_id, effective_date, report_date, source, source_type, source_url, source_record_id, retrieved_at,
             checksum, source_row_count, parsed_row_count, canonical_row_count, verification_status, license_status,
             completeness_status, quality_status, quality_metrics, parser_version, archive_lineage)
-         VALUES (gen_random_uuid(), $1, NULL, NULL, 'YAHOO_QUOTE_SUMMARY', 'PROVIDER_OBSERVATION', $2, $3, $4::timestamptz,
-            $5, $6, $6, $6, 'SOURCE_PARSED', 'TERMS_REVIEW_REQUIRED', 'TOP_HOLDINGS_ONLY', 'PARTIAL_DATE_UNKNOWN',
-            $7::jsonb, 'yahoo-top-holdings-v2', $8::jsonb)
-         RETURNING id::text`,
-        [
-          input.etfId, srcUrl, sourceRecordId, retrievedAt, input.symbol.slice(0, 32) || retrievedAt, holdings.length,
+         VALUES ($1::uuid, $2, NULL, NULL, 'YAHOO_QUOTE_SUMMARY', 'PROVIDER_OBSERVATION', $3, $4, $5::timestamptz,
+            $6, $7, $7, $7, 'SOURCE_PARSED', 'TERMS_REVIEW_REQUIRED', 'TOP_HOLDINGS_ONLY', 'PARTIAL_DATE_UNKNOWN',
+            $8::jsonb, 'yahoo-top-holdings-v2', $9::jsonb)`,
+        params: [
+          snapId, input.etfId, srcUrl, sourceRecordId, retrievedAt, input.symbol.slice(0, 32) || retrievedAt, holdings.length,
           JSON.stringify({ sourceDateStatus: "UNKNOWN", retrievedAt }),
           JSON.stringify({ provider: "YAHOO_QUOTE_SUMMARY", module: "topHoldings", symbol: input.symbol }),
         ],
-      );
-      snapId = ins[0]?.id;
+      });
     }
     for (const h of holdings) {
       const rowId = `${h.rank}:${h.ticker ?? h.name}`.slice(0, 240);
-      await query(
-        `INSERT INTO etf_holdings
+      statements.push({
+        sql: `INSERT INTO etf_holdings
            (id, snapshot_id, etf_id, effective_date, holding_type, holding_name, ticker, weight, source_row_id, verification_status, quality_status, raw_row)
          VALUES (gen_random_uuid(), $1::uuid, $2, NULL, 'SECURITY', $3, $4, $5, $6, 'SOURCE_PARSED', 'PARTIAL_DATE_UNKNOWN', $7::jsonb)
          ON CONFLICT (snapshot_id, source_row_id) DO UPDATE SET
            holding_name = EXCLUDED.holding_name, ticker = EXCLUDED.ticker, weight = EXCLUDED.weight, raw_row = EXCLUDED.raw_row`,
-        [snapId, input.etfId, h.name, h.ticker, h.weight, rowId, JSON.stringify(h.raw)],
-      );
+        params: [snapId, input.etfId, h.name, h.ticker, h.weight, rowId, JSON.stringify(h.raw)],
+      });
     }
+    await queryTx(statements);
     out.holdingsWritten = holdings.length;
   }
 

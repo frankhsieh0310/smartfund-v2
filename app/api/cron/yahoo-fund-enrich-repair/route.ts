@@ -15,6 +15,10 @@ export const maxDuration = 300;
 export const dynamic = "force-dynamic";
 
 const query = (sql: string, params: unknown[]) => prisma.$queryRawUnsafe(sql, ...params) as Promise<any[]>;
+// 2026-10-21（台股拼圖效能回報，使用者單次授權）: 一組語句包成一個交易一次commit——見
+// lib/yahoo/fundIngest.ts TransactionQueryFn 說明。
+const queryTx = (statements: Array<{ sql: string; params: unknown[] }>) =>
+  prisma.$transaction(statements.map((s) => prisma.$queryRawUnsafe(s.sql, ...s.params))).then(() => undefined);
 const TIME_BUDGET_MS = 240_000;
 const JOB = "YAHOO_FUND_ENRICH_REPAIR";
 const LOCK_WINDOW_MINUTES = 6;
@@ -57,7 +61,7 @@ export async function GET(request: Request) {
       attempted++;
       try {
         const rec = await enrichFundFromYahoo(row.symbol, stats);
-        const ok = rec ? (await ingestUsFundShareClass(query, rec, mastersHoldingsWrittenThisRun)) : null;
+        const ok = rec ? (await ingestUsFundShareClass(query, rec, mastersHoldingsWrittenThisRun, queryTx)) : null;
         if (ok?.coreOk) {
           repaired++;
           if (ok.navHistoryOk) navAlsoOk++;

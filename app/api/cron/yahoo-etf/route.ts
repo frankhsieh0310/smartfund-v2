@@ -17,6 +17,10 @@ export const maxDuration = 300;
 export const dynamic = "force-dynamic";
 
 const query = (sql: string, params: unknown[]) => prisma.$queryRawUnsafe(sql, ...params) as Promise<any[]>;
+// 2026-10-21（台股拼圖效能回報，使用者單次授權）: 一組語句包成一個交易一次commit——見
+// lib/yahoo/etfEnrich.ts TransactionQueryFn 說明。
+const queryTx = (statements: Array<{ sql: string; params: unknown[] }>) =>
+  prisma.$transaction(statements.map((s) => prisma.$queryRawUnsafe(s.sql, ...s.params))).then(() => undefined);
 const TIME_BUDGET_MS = 250_000;
 const SYMBOL_RE = /^[A-Za-z0-9.^=-]{1,15}$/;
 
@@ -77,7 +81,7 @@ export async function GET(request: Request) {
           const r = await ingestEtfHistory(query, { etfId: e.id, symbol: sym });
           if (r.ok) { ok++; rowsWritten += r.rowsWritten; distEvents += r.distributionEvents; } else failed++;
         } else {
-          const r = await enrichEtfProduct(query, { etfId: e.id, symbol: sym });
+          const r = await enrichEtfProduct(query, { etfId: e.id, symbol: sym }, undefined, queryTx);
           if (r.ok) { ok++; holdingsWritten += r.holdingsWritten; perfWritten += r.performanceWritten; } else failed++;
         }
       } catch { failed++; }

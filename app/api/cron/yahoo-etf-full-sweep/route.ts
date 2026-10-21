@@ -24,6 +24,10 @@ export const maxDuration = 300;
 export const dynamic = "force-dynamic";
 
 const query = (sql: string, params: unknown[]) => prisma.$queryRawUnsafe(sql, ...params) as Promise<any[]>;
+// 2026-10-21（台股拼圖效能回報，使用者單次授權）: 一組語句包成一個交易一次commit——見
+// lib/yahoo/etfEnrich.ts TransactionQueryFn 說明。
+const queryTx = (statements: Array<{ sql: string; params: unknown[] }>) =>
+  prisma.$transaction(statements.map((s) => prisma.$queryRawUnsafe(s.sql, ...s.params))).then(() => undefined);
 const TIME_BUDGET_MS = 240_000; // stay well under maxDuration so a checkpoint write always happens
 const SYMBOL_RE = /^[A-Za-z0-9.^=-]{1,15}$/;
 const JOB = "YAHOO_ETF_FULL_SWEEP";
@@ -136,7 +140,7 @@ export async function GET(request: Request) {
       try {
         const h = await ingestEtfHistory(query, { etfId: e.id, symbol: sym });
         if (h.ok) { histOk++; histRows += h.rowsWritten; distEvents += h.distributionEvents; } else failed++;
-        const p = await enrichEtfProduct(query, { etfId: e.id, symbol: sym }, stats);
+        const p = await enrichEtfProduct(query, { etfId: e.id, symbol: sym }, stats, queryTx);
         if (p.coreOk) { enrichCoreOk++; perfRows += p.performanceWritten; } else failed++;
         if (p.holdingsOk) { holdingsOk++; holdRows += p.holdingsWritten; }
         await recordEnrichOutcome(e.id, sym, p.coreOk, p.coreOk ? undefined : stats.lastFailure, null);
