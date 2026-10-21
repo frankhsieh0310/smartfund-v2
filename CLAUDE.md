@@ -1,8 +1,13 @@
 @AGENTS.md
 
-## 新 worktree 的 Vercel 專案連結（2026-10-19 訂立）
+## 新 worktree 的 Vercel 專案連結（2026-10-19 訂立，2026-10-20 補強）
 
-任何新的 `git worktree add` 完成後，部署前必須先把既有 `smartfund-v2` 目錄下的 `.vercel\project.json` 複製過去，確認內容是 `projectId: prj_1KrCMg3BVSPuYqqmigFVksTn1Xa0`、`orgId: team_D42Dk8aVzncrm2MAPDeJ25i3`、`projectName: smartfund-v2`，再執行任何 `vercel deploy`。起因：2026-10-19 晚間一次 `vercel deploy`（分支 `migrate/fx-scripts-to-vercel-cron-20261019`）因為新 worktree 沒有這個檔案，自動建立了一個全新空專案 `claude-smartfund-fxmigrate`（已於同日確認無網域、無環境變數後刪除）。
+任何新的 `git worktree add` 完成後，部署前必須：
+1. 先建立 `.vercel` 資料夾（`mkdir -p .vercel`），**確認資料夾真的建立成功**，再把既有 `smartfund-v2` 目錄下的 `.vercel\project.json` 複製過去。
+2. 複製完**必須用 `cat`／`Read` 實際印出複製後的檔案內容**，確認是 `projectId: prj_1KrCMg3BVSPuYqqmigFVksTn1Xa0`、`orgId: team_D42Dk8aVzncrm2MAPDeJ25i3`、`projectName: smartfund-v2`，不能只看 `cp` 指令有沒有報錯（尤其不准把 `cp` 的錯誤導到 `2>/dev/null` 吞掉）。
+3. 確認無誤後才執行任何 `vercel deploy`。
+
+起因：2026-10-19 晚間一次 `vercel deploy`（分支 `migrate/fx-scripts-to-vercel-cron-20261019`）因為新 worktree 沒有這個檔案，自動建立了一個全新空專案 `claude-smartfund-fxmigrate`。**2026-10-20 同一個錯誤又發生一次**（分支 `feat/wire-remaining-local-schedules-20261020`）：這次是因為在 `.vercel` 資料夾還不存在時就執行 `cp ... .vercel/project.json 2>/dev/null`，`cp` 因為目的地資料夾不存在而失敗，但錯誤被 `2>/dev/null` 吞掉，沒有發現，直接 `vercel deploy` 又建出一個新空專案 `claude-smartfund-watchlist`。兩次都已確認無網域、無環境變數後刪除。**只是「跑過複製指令」不等於「複製成功」，一定要實際讀出複製後的內容再往下做。**
 
 ## 正式資料排程一律在雲端執行（2026-10-19 訂立，最高層規則）
 
@@ -13,10 +18,18 @@
 **兆豐（Mega）ETF 官方持股——明確、永久例外**：Mega 官網的 WAF 會封鎖雲端/機房網段的出口 IP，已實測確認 Vercel 與 GitHub Actions 兩邊的出口 IP 都收到一致的 HTTP 403 Access Denied。這個資料來源**確定永久留在本機排程**（`\SmartMatch Mega ETF Holdings`，`run-mega-desktop-fallback.ps1` → 桌機專用 ingest 端點 → Production），**不准嘗試任何繞過封鎖的做法**（換 User-Agent、代理、Residential proxy 等皆不行）。本機排程已於 2026-10-19 改成 S4U 登入（不論使用者是否登入都執行）+ 錯過時間盡快執行，降低重開機造成的中斷時間。
 
 **其餘本機排程——列入三天穩定測試結束後的搬遷待辦**（以下皆已於 2026-10-19 先補強成 S4U，但最終仍要搬到 Vercel cron）：
-1. **`\1500 Institutional Update`（第一優先）**——財經 App「機構動向」資料來源，tw-industry-radar `npm run schedule:1500`。
-2. `\1330 TW Price Update`、`\1700 TW Data Final Update`——同專案，`npm run schedule:1330`／`schedule:1700`。
+1. ~~`\1500 Institutional Update`~~ **2026-10-20 更正：維持本機，不搬遷，不是待辦**——見下方「機構動向資料來源」一節，財經 App／台股產業雷達的「機構動向」即時畫面讀的是雲端的 `institutional_daily`（由 `tw-data-updater` 自己的 Vercel 專案排程寫入），跟這支本機排程寫的本機 JSON 檔案是兩條獨立路徑，不是同一份資料的雲端/本機版本。
+2. `\1330 TW Price Update`、`\1700 TW Data Final Update`——tw-industry-radar，`npm run schedule:1330`／`schedule:1700`。
 3. `\tw-etf-lookup 摩根持股匯入`——目前讀取桌面「摩根持股下載\待匯入」資料夾、資料只存在桌機 SQLite，搬雲端前要先決定資料落地位置（Production Postgres 還是維持桌機 SQLite），範圍比單純搬 cron 大。
 4. `\OpenClaw Gateway`——tw-data-updater 本機長駐 daemon，內部排程狀態存在未解析的 SQLite，搬之前要先解析清楚實際排程內容。
+
+## 機構動向資料來源（2026-10-20 查證，使用者核准結論）
+
+**VERIFIED**：tw-industry-radar（App.tsx）的「機構動向」畫面實際上是**即時呼叫** `https://smartfund-v2.vercel.app/api/mobile/current-institutional`（真實程式碼確認，`runtimeApi`／`INSTITUTIONAL_API` 常數），這個 API 查的是 `institutional_daily` 這張表。這張表**已經由 `tw-data-updater` 自己獨立的 Vercel 專案**（`projectId: prj_AmVk6nzIM8mXs8mtMpdJ3ac3Q1Ei`，見其 `vercel.json`）的雲端排程 `/api/cron/institutional-update` 寫入，一天跑 5 次（07:30/08:00/08:30/09:00/10:00 UTC，平日）。
+
+本機 `\1500 Institutional Update`（tw-industry-radar 自己的 `update-institutional-data.mjs`）寫的是**另一個完全獨立的本機 JSON 檔案**（`data/generated/institutional-data.json`），只在 App 下次重新 build 時才會被打包進去，是初始/離線資料路徑，不是使用者實際看到的即時畫面。
+
+**結論（使用者 2026-10-20 核准）：`\1500` 維持現狀，不搬遷、不停用**——它跟「機構動向」即時畫面是兩條不相關的路徑，搬不搬都不影響使用者看到的機構動向資料。上面第 1 點的搬遷待辦已撤銷。
 
 一般原則：新增的正式資料排程一律優先設計成 Vercel cron；確認無法雲端化（如上述 Mega 案例）才可維持本機排程，但必須在程式註解與文件中明確寫出「為何無法雲端化」，並視為已知單點風險。Claude Code 的 `CronCreate`/`mcp__scheduled-tasks` 僅能用於監控、驗證、提醒等輔助性任務，不准作為任何正式資料寫入流程的唯一觸發來源。
 
@@ -1698,3 +1711,20 @@ TWSE ETF 重複資料、ETF_RETURNS_SYNC_TW 卡住等）還沒修好部署前，
     npx vercel deploy --prod --meta commit=$(git rev-parse HEAD)
     ```
 - **對三天計時的影響**：10/20 不算乾淨的一天（連異常數都沒有，更不可能是 0），**計時仍未開始**，跟 10/19 一樣繼續往後順延。要等這個修正部署到正式環境、且某一天的健檢真正跑完並回報 `anomaly_count = 0`，才正式算三天測試第 1 天。
+
+**2026-10-21（週三）：VERIFIED 準時跑完，9 個異常，全部 SYSTEM，不是乾淨的一天，計時仍未開始**
+
+- **執行狀態 — VERIFIED**：`DAILY_HEALTH_REPORT` 00:30:05 UTC（08:30:05 台北）準時執行，`status=PARTIAL`，`anomaly_count=9`，`system_anomaly_count=9`，`external_delay_anomaly_count=0`（目前沒有任何檢查支援即時查證來源網站，依規則全部預設 SYSTEM）。Telegram 通知已送達（`httpStatus=200`）。
+- **9 個異常逐項**：
+  1. `CLOUD_ETF_PRICE`：`ERROR_COUNT_1`，單次 `YAHOO_CHART_NULL`，疑似單一代號暫時性抓取失敗，非新問題。
+  2. `CLOUD_SEC_FINANCIAL_INCREMENTAL`：`ERROR_COUNT_1`＋`LAST_RUN_PARTIAL`，5 個 CIK `SEC_NO_CANONICAL_FACTS`（查無可用財務科目），非新問題。
+  3. `LOCAL_SCHEDULE_NOT_REPORTED`：`\1330`／`\1500`／`\1700` 今天都還沒回報成功——**VERIFIED 這是預期中的，不是真異常**：這三支的回報程式碼是 10/20 下午才部署，部署時間已經晚於 10/20 當天這三支原本的執行時間，10/21 今天 13:30/15:00/17:00 台北才是它們接上新程式碼後的第一次真正機會，這次健檢（08:30）發生在那之前，自然還查不到。
+  4. `YAHOO_TW_RETURN_MISMATCH`：代號 `00990B` 我方與 Yahoo 奇摩回報的 `return_1y` 都是 `null`——兩邊都沒有資料，不是比對出錯，疑似這檔本身資料缺口，非今天新問題。
+  5. `FRED_COMMODITY_MISMATCH`：WTI／天然氣兩個樣本都 `fetchFailed=true`、`fredValue=null`——**VERIFIED 根因是 `FRED_API_KEY` 這個環境變數在正式環境沒有設定**（兩個樣本行為完全一致、沒有任何部分成功，符合程式碼裡「沒有 API 金鑰就直接標記失敗，不嘗試呼叫」的那條路徑，不是網路或 sin1 連線問題——sin1 對外連線昨天已經實測過 FRED 可以連得到）。**這不是能用安全的程式碼修正解決的問題，需要你自己去 FRED（St. Louis Fed）申請一個免費 API 金鑰、用 `vercel env add FRED_API_KEY production` 設定**，沒有金鑰我這邊沒辦法繞過。
+  6. `COVERAGE core_universe_etf`：99.8%（6111/6126），非新問題，一直在這個範圍。
+  7. `COVERAGE core_universe_fund`：85.5%（4467/5224），既有、持續在補的缺口，非新問題。
+  8. `MONEYDJ_PARSE_FAILED`：35 個基金代號解析失敗（列在 `moneydj_parse_failures.parseFailedCodes`），既有缺口，非新問題。
+  9.（與第 8 項同一個 job）`CLOUD_MONEYDJ_FUND` pipeline 本身：`ERROR_COUNT_12`，`sourceUnavailableCount24h=84`（這 84 筆是良性的「官網未公開持股」，已經被排除在外，不計入這個異常數字）。
+- **唯一真正「今天才發現」的新東西**：第 5 項 FRED 金鑰缺失——**VERIFIED 這是真的缺口，但不是昨天搬到 sin1 造成的**，是這個檢查原本就需要的金鑰一直沒有設定，今天才第一次被系統性地發現並記錄下來。
+- **16 檔主動式 ETF 缺口**：VERIFIED 確認維持修復狀態，`active_etf_official_holdings.missingOrStale = []`（0 筆）。
+- **結論**：今天沒有執行任何資料庫寫入、DDL 或部署動作——9 筆異常裡，8 筆是既有、非今天造成的缺口，1 筆（FRED 金鑰）需要你自己申請金鑰才能解決，沒有發現需要今天緊急修復、且我能安全動手修的新 bug。**10/21 不算乾淨的一天，三天穩定測試計時仍未開始**，繼續往後順延，直到出現異常數為 0 的交易日。
