@@ -70,7 +70,16 @@ async function derivativeDetail(assetId: string) {
 
 async function resolveDetail(assetId: string, assetType: AssetType, period: Period | null) {
   if (assetType === 'STOCK') return getStockDetail(assetId);
-  if (assetType === 'ETF') return getEtfDetail(assetId);
+  if (assetType === 'ETF') {
+    const response = await getEtfDetail(assetId);
+    // 2026-10-21（14點任務第3項）: App端 EtfItem 型別把 dividendYield 當成最外層欄位讀
+    // （src/detail/service.ts），但 getEtfDetail() 實際只把它放在 metrics.dividendYield 裡——
+    // 導致所有ETF（不只00981D，0056高股息也一樣）在App detail頁的殖利率永遠讀不到值，
+    // 即使資料庫裡的 etfs.dividend_yield 本身是對的。這裡補一份到最外層，跟FUND分支既有的
+        // 攤平慣例一致，不動 getEtfDetail() 本身（web頁面等其他讀 metrics.dividendYield 的地方不受影響）。
+    if (!response.data) return response;
+    return { ...response, data: { ...response.data, dividendYield: response.data.metrics.dividendYield } };
+  }
   if (assetType === 'INDEX') return getIndexDetail(assetId);
   if (assetType === 'FX') return getFxDetail(assetId);
   if (assetType === 'MACRO') return macroDetail(assetId);
