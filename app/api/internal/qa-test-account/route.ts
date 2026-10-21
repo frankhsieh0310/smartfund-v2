@@ -1,21 +1,28 @@
-// 2026-10-21（14點任務第4/5/6/8項，使用者核准的臨時Preview專用route）: 用伺服器端已設定的
-// SUPABASE_SERVICE_ROLE_KEY建立/重用唯一一個寫死email的QA測試帳號，回傳一次性magic-link OTP
+// 2026-10-21（14點任務第4/5/6/8項，使用者核准併入正式部署的臨時route）: 用伺服器端已設定的
+// SUPABASE_SERVICE_ROLE_KEY建立唯一一個寫死email的QA測試帳號，回傳一次性magic-link OTP
 // token（不是密碼，不是service role key本身），讓測試端用anon key呼叫
 // supabase.auth.verifyOtp()換取真實session登入。金鑰本身永遠不離開這支route的伺服器端執行環境
 // ——不回傳、不印出、不寫入任何log/commit。
 //
-// 只能建立這一個寫死的email，不接受任何輸入參數改變這一點。只部署到Preview，測試完成後這支
-// route本身跟它所在的臨時分支/Preview部署都要刪除（見CLAUDE.md「測試帳號建立方式」那條）。
+// 四個安全條件（使用者2026-10-21明確要求，全部必須做到）：
+//   1. QA_TEST_ACCOUNT_SECRET驗證——沒有正確密鑰一律401。
+//   2. 寫死只能建立 smartmatch-qa-20261021@example.com 這一個email，不接受任何參數。
+//   3. 自動失效——用 production_scheduler_runs 表（既有表，不是新建）寫一筆
+//      job_id='QA_TEST_ACCOUNT_LIFECYCLE' 的建立成功紀錄；之後任何呼叫，不管Supabase那邊的
+//      帳號是不是已經被「刪除帳號」流程刪掉了，一律410，不會再建立第二次。
+//   4. 只回傳User UID與session token，不回傳金鑰或任何其他使用者資料。
+//
+// 下一次部署必須移除這支route（連同QA_TEST_ACCOUNT_SECRET環境變數一起移除，見CLAUDE.md）。
 import { createClient } from "@supabase/supabase-js";
+import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const QA_EMAIL = "smartmatch-qa-20261021@example.com" as const;
+const LIFECYCLE_JOB_ID = "QA_TEST_ACCOUNT_LIFECYCLE" as const;
 
 function isAuthorized(request: Request): boolean {
-  // 這支route是一次性臨時用途，不重用LOCAL_SCHEDULE_REPORT_SECRET（那是給正式排程用的）——
-  // 另外建一個只存在Preview、agent自己產生、從未讀取任何既有密鑰的新變數。
   const secret = process.env.QA_TEST_ACCOUNT_SECRET;
   if (!secret) return false;
   const header = request.headers.get("authorization") ?? "";
@@ -25,6 +32,13 @@ function isAuthorized(request: Request): boolean {
 export async function POST(request: Request) {
   if (!isAuthorized(request)) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
+  // 條件3：自動失效檢查——先於任何其他動作，不管Supabase端那個帳號現在是否還存在。
+  const already = await prisma.$queryRawUnsafe<{ c: number }[]>(
+    `SELECT count(*)::int c FROM production_scheduler_runs WHERE job_id = $1`,
+    LIFECYCLE_JOB_ID,
+  );
+  if (already[0].c > 0) return Response.json({ error: "QA_TEST_ACCOUNT_ALREADY_CREATED_ONCE_PERMANENTLY_DISABLED" }, { status: 410 });
+
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !serviceRoleKey) {
@@ -33,35 +47,29 @@ export async function POST(request: Request) {
   const admin = createClient(url, serviceRoleKey, { auth: { autoRefreshToken: false, persistSession: false } });
 
   try {
-    // 先直接嘗試建立這個寫死的email；如果之前測試已經建立過，會失敗，再查既有帳號重用，不重複建立。
-    let userId: string | null = null;
     const { data: created, error: createError } = await admin.auth.admin.createUser({
       email: QA_EMAIL,
       email_confirm: true,
       user_metadata: { qa_test_account: true, created_for: "14-point-task-2026-10-21" },
     });
-
-    if (createError) {
-      // 已存在就查出既有的 user id 重用，不是錯誤。
-      if (createError.message.toLowerCase().includes("already") || createError.status === 422) {
-        const { data: page1, error: page1Error } = await admin.auth.admin.listUsers({ perPage: 1000, page: 1 });
-        if (page1Error) return Response.json({ error: `LOOKUP_EXISTING_FAILED: ${page1Error.message}` }, { status: 500 });
-        const existing = page1.users.find((u) => u.email === QA_EMAIL);
-        if (!existing) return Response.json({ error: "CREATE_FAILED_AND_NOT_FOUND", detail: createError.message }, { status: 500 });
-        userId = existing.id;
-      } else {
-        return Response.json({ error: `CREATE_USER_FAILED: ${createError.message}` }, { status: 500 });
-      }
-    } else {
-      userId = created.user.id;
+    if (createError || !created.user) {
+      return Response.json({ error: `CREATE_USER_FAILED: ${createError?.message}` }, { status: 500 });
     }
+    const userId = created.user.id;
 
     const { data: link, error: linkError } = await admin.auth.admin.generateLink({ type: "magiclink", email: QA_EMAIL });
     if (linkError || !link) return Response.json({ error: `GENERATE_LINK_FAILED: ${linkError?.message}` }, { status: 500 });
 
+    // 一定要在成功建立之後才寫入失效標記——寫入失敗不影響這次回應，但下一次呼叫會因為查不到
+    // 這筆紀錄而再試一次建立，createUser對同一個email第二次呼叫本來就會失敗，是安全的降級。
+    await prisma.$executeRawUnsafe(
+      `INSERT INTO production_scheduler_runs (id, job_id, exchange, run_type, status, started_at, completed_at, attempted, completed, inserted, updated, failed)
+       VALUES (gen_random_uuid()::text, $1, 'N/A', 'QA_TEST_ACCOUNT', 'COMPLETED', NOW(), NOW(), 1, 1, 1, 0, 0)`,
+      LIFECYCLE_JOB_ID,
+    );
+
     return Response.json({
       userId,
-      email: QA_EMAIL,
       hashedToken: link.properties.hashed_token,
       note: "用 anon key 呼叫 supabase.auth.verifyOtp({ token_hash: hashedToken, type: 'email' }) 換取真實 session，這個 token 用過一次或過期後就失效。",
     });
