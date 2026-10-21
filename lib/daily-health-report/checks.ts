@@ -121,6 +121,18 @@ export async function checkPipelineRunLog(query: QueryFn, jobId: string): Promis
     anomalyReasons.push("LAST_RUN_FAILED");
   }
 
+  // 2026-10-21（使用者核准，查IN_PROGRESS根因）: VERIFIED CLOUD_NEW_FUND_LISTING_DETECTION在
+  // 10/16、10/17、10/19連續卡在IN_PROGRESS，這個函式完全沒抓到——上面兩個分支只檢查
+  // PARTIAL/FAILED，IN_PROGRESS兩者都不是，永遠卡住的執行紀錄就這樣對健康報告隱形。這裡補上：
+  // 最新一筆是IN_PROGRESS、而且開始時間已經超過30分鐘（這些cron route的maxDuration都在120秒
+  // 等級，正常執行不可能跑這麼久，30分鐘是留寬裕的保守門檻，避免把「還在跑」誤判成「卡住」）。
+  if (last?.status === "IN_PROGRESS") {
+    const startedAtMs = last.started_at ? new Date(last.started_at).getTime() : null;
+    if (startedAtMs !== null && Date.now() - startedAtMs > 30 * 60 * 1000) {
+      anomalyReasons.push("STUCK_IN_PROGRESS");
+    }
+  }
+
   return {
     jobId,
     hasRunInLast24h,

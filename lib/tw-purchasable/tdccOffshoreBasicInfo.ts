@@ -27,8 +27,16 @@ export function parseTdccOffshoreBasicInfoCsv(csvText: string): Set<string> {
   return names;
 }
 
+// 2026-10-21（使用者核准，查IN_PROGRESS根因）: VERIFIED這兩個fetch呼叫原本完全沒有timeout，
+// 發生在createMissingOffshoreFunds的迴圈deadline保護「之外」（迴圈開始前就先呼叫），TDCC端一旦
+// 回應慢，會卡住整個serverless function直到Vercel 120秒硬限制殺掉它，finishRun永遠不會被呼叫到
+// ——這是10/16、10/17、10/19卡在IN_PROGRESS最可能的根因（跟2026-10-19那次只修迴圈內
+// deadline、沒修迴圈外fetch的那個已知根因修正是互補的缺口，不是同一個問題）。補上跟同專案其他
+// TDCC fetch一致的30秒AbortSignal.timeout，和dataset 3-4(tdccBatchSource.ts)用同樣的值。
+const FETCH_TIMEOUT_MS = 30_000;
+
 export async function fetchTdccOffshoreBasicInfoNames(): Promise<Set<string>> {
-  const res = await fetch(TDCC_OFFSHORE_BASIC_INFO_URL, { headers: { Accept: "text/csv" } });
+  const res = await fetch(TDCC_OFFSHORE_BASIC_INFO_URL, { headers: { Accept: "text/csv" }, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
   if (!res.ok) throw new Error(`TDCC 3-2 fetch failed: ${res.status}`);
   const csvText = await res.text();
   return parseTdccOffshoreBasicInfoCsv(csvText);
@@ -38,7 +46,7 @@ export async function fetchTdccOffshoreBasicInfoNames(): Promise<Set<string>> {
 // 不要用佔位文字。回傳 name -> 總代理名稱 的 Map；沒有值或空字串就不放進 Map，由呼叫端自己
 // 決定沒有總代理名稱時怎麼處理，這裡不編造。
 export async function fetchTdccOffshoreBasicInfoAgents(): Promise<Map<string, string>> {
-  const res = await fetch(TDCC_OFFSHORE_BASIC_INFO_URL, { headers: { Accept: "text/csv" } });
+  const res = await fetch(TDCC_OFFSHORE_BASIC_INFO_URL, { headers: { Accept: "text/csv" }, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
   if (!res.ok) throw new Error(`TDCC 3-2 fetch failed: ${res.status}`);
   const csvText = await res.text();
   const agents = new Map<string, string>();
