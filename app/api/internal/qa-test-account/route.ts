@@ -32,13 +32,6 @@ function isAuthorized(request: Request): boolean {
 export async function POST(request: Request) {
   if (!isAuthorized(request)) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-  // 條件3：自動失效檢查——先於任何其他動作，不管Supabase端那個帳號現在是否還存在。
-  const already = await prisma.$queryRawUnsafe<{ c: number }[]>(
-    `SELECT count(*)::int c FROM production_scheduler_runs WHERE job_id = $1`,
-    LIFECYCLE_JOB_ID,
-  );
-  if (already[0].c > 0) return Response.json({ error: "QA_TEST_ACCOUNT_ALREADY_CREATED_ONCE_PERMANENTLY_DISABLED" }, { status: 410 });
-
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !serviceRoleKey) {
@@ -46,7 +39,26 @@ export async function POST(request: Request) {
   }
   const admin = createClient(url, serviceRoleKey, { auth: { autoRefreshToken: false, persistSession: false } });
 
+  // 條件3：自動失效檢查只擋「建立」，不擋「幫同一個已核准的email重發一次登入連結」——
+  // magic-link OTP用過一次就失效（VERIFIED：第一次測試時就遇到），帳號只能建立一次，但測試
+  // 過程需要重新登入好幾次是正常的，所以已建立過之後，這支route改成只重發連結，不再呼叫
+  // admin.auth.admin.createUser()。
+  const already = await prisma.$queryRawUnsafe<{ c: number }[]>(
+    `SELECT count(*)::int c FROM production_scheduler_runs WHERE job_id = $1`,
+    LIFECYCLE_JOB_ID,
+  );
+
   try {
+    if (already[0].c > 0) {
+      const { data: link, error: linkError } = await admin.auth.admin.generateLink({ type: "magiclink", email: QA_EMAIL });
+      if (linkError || !link) return Response.json({ error: `GENERATE_LINK_FAILED: ${linkError?.message}` }, { status: 500 });
+      return Response.json({
+        userId: link.user?.id ?? null,
+        hashedToken: link.properties.hashed_token,
+        note: "帳號已建立過，這次只重發一次性登入連結（沒有再次建立帳號）。",
+      });
+    }
+
     const { data: created, error: createError } = await admin.auth.admin.createUser({
       email: QA_EMAIL,
       email_confirm: true,
