@@ -17,6 +17,7 @@ import { prisma } from "@/lib/prisma";
 import { fetchSitcaRows, fetchSitcaIdentityRows } from "@/lib/sitca-nav-sync/sitcaFetch";
 import { fetchTdccNavCsv, parseTdccNavCsv } from "@/lib/offshore-nav-sync/tdccBatchSource";
 import { fetchTdccOffshoreBasicInfoNames, fetchTdccOffshoreBasicInfoAgents } from "@/lib/tw-purchasable/tdccOffshoreBasicInfo";
+import { isValidIsoCurrency } from "@/lib/tdcc-currency-map";
 
 const DOMESTIC_SOURCE = "SITCA nav.csv (基金統編 diff)";
 const OFFSHORE_SOURCE = "TDCC opendata 3-4 (基金名稱 diff)";
@@ -184,7 +185,7 @@ async function createMissingDomesticFunds(writeEnabled: boolean, existingFundCod
     // 真實、合法ISO格式的幣別資料，這筆就完全不建立——下一輪 detection 會再試一次（因為沒進
     // existingFundCodes，也沒被標記成baseline），等真的有合法幣別資料才建立，絕不猜。
     const rawCurrency = navRow?.currency ?? null;
-    if (!rawCurrency || !/^[A-Z]{3}$/.test(rawCurrency)) {
+    if (!isValidIsoCurrency(rawCurrency)) {
       skippedInvalidCurrency.push({ taxId: row.taxId, name: row.name, rawCurrency });
       continue;
     }
@@ -280,7 +281,7 @@ async function createMissingOffshoreFunds(
     // lib/tdcc-currency-map.ts）。現在改成：幣別不是合法ISO格式就完全不建立這筆，下一輪
     // detection 會再試一次（沒進 existingFundNames，也沒被標記成baseline）。
     const rawCurrency = navRow.currency;
-    if (!rawCurrency || !/^[A-Z]{3}$/.test(rawCurrency)) {
+    if (!isValidIsoCurrency(rawCurrency)) {
       skippedInvalidCurrency.push({ taxId: row.taxId, name: row.name, rawCurrency });
       continue;
     }

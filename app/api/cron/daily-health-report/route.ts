@@ -13,7 +13,7 @@ import { isAuthorizedCron, unauthorizedCron } from "@/lib/cron/authorize";
 import { prisma } from "@/lib/prisma";
 import { beginRun, finishRun } from "@/lib/cloud-ingestion/runContext";
 import { checkPipelineRunLog, checkMoneydjParseFailures, evaluateFreshness, checkEtfDataSourceGap, evaluateYahooTwReturnConsistency, evaluateFredCommodityConsistency, checkCommodityTechnicalCoverage, checkFundPerformanceCoverage, checkEtfPerformanceCoverage, checkEtfHistoryFreshness, checkFundHistoryFreshness, checkCoreUniverseEtfCoverage, checkCoreUniverseFundCoverage, checkCoreUniverseFundGapDetail, checkCoreUniverseEtfGapDetail, checkActiveEtfOfficialHoldingsCoverage, checkLocalScheduleReporting, checkCoreUniverseFundCurrencyFormat, evaluateFundCurrencyOfficialConsistency, type QueryFn, type YahooTwReturnSample, type FredCommoditySample, type FundCurrencyOfficialSample } from "@/lib/daily-health-report/checks";
-import { mapTdccCurrencyToIso } from "@/lib/tdcc-currency-map";
+import { mapTdccCurrencyToIso, isValidIsoCurrency } from "@/lib/tdcc-currency-map";
 import { fetchYahooChartPeriod } from "@/lib/services/dataProviders/yahoo/yahooClient";
 import { CORE_COMMODITY_ROOTS } from "@/lib/cron/commodityUpdate";
 import { notifyAnomaly } from "@/lib/daily-health-report/notify";
@@ -313,7 +313,7 @@ export async function GET(request: Request) {
       // best-effort only -- missing TDCC data this run just means fewer samples, never blocks the report.
     }
     for (const row of coreUniverseCurrencyRows as { code: string; currency: string | null; data_provider: string | null }[]) {
-      if (!/^[A-Z]{3}$/.test(row.currency ?? "")) continue; // format violations already covered by currencyFormatCheck above
+      if (!isValidIsoCurrency(row.currency)) continue; // format/registry violations already covered by currencyFormatCheck above
       const officialIso = row.data_provider === "tdcc-offshore" ? tdccIsoByCode.get(row.code) : sitcaIsoByCode.get(row.code);
       if (officialIso) currencyOfficialSamples.push({ code: row.code, dbCurrency: row.currency, officialIsoCurrency: officialIso, source: row.data_provider === "tdcc-offshore" ? "TDCC" : "SITCA" });
     }

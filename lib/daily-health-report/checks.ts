@@ -1,6 +1,7 @@
 // Pure, DB-query-injected health checks for the daily report (no Next.js/Prisma import so this stays
 // unit-testable with a mock QueryFn, same convention as every other pipeline this session).
 import { lastScheduledOccurrence } from "./scheduleRegistry";
+import { ISO_4217_CURRENCY_CODES } from "../tdcc-currency-map";
 
 export type QueryFn = (sql: string, params: any[]) => Promise<any[]>;
 
@@ -587,16 +588,20 @@ export type FundCurrencyFormatResult = {
 // 不需要比對官方資料就能判定異常，當作最後一道防呆：未來任何批次更新或任何來源的新建流程只要
 // 漏了幣別對應，隔天就會被這個檢查抓到。
 export async function checkCoreUniverseFundCurrencyFormat(query: QueryFn): Promise<FundCurrencyFormatResult> {
+  // 2026-10-21（使用者核准，不能只檢查三個大寫字母）: 改用正式ISO 4217現行流通代碼清單比對
+  // （lib/tdcc-currency-map.ts的ISO_4217_CURRENCY_CODES，跟所有寫入路徑共用同一份），不再只驗證
+  // 格式——"XYZ"這種格式對但查無此幣別的字串現在會被正確判定為異常。
+  const validCodes = [...ISO_4217_CURRENCY_CODES];
   const rows = await query(
     `SELECT code, name, currency, data_provider FROM funds
-     WHERE currency IS NOT NULL AND currency !~ '^[A-Z]{3}$'
+     WHERE currency IS NOT NULL AND NOT (currency = ANY($1::text[]))
      LIMIT 50`,
-    [],
+    [validCodes],
   );
   const countRow = await query(
     `SELECT count(*)::int AS n FROM funds
-     WHERE currency IS NOT NULL AND currency !~ '^[A-Z]{3}$'`,
-    [],
+     WHERE currency IS NOT NULL AND NOT (currency = ANY($1::text[]))`,
+    [validCodes],
   );
   const invalid = rows.map((r: any) => ({ code: r.code, name: r.name, currency: r.currency, dataProvider: r.data_provider }));
   return { checkedCount: Number(countRow[0]?.n ?? invalid.length), invalid, anomaly: invalid.length > 0 };

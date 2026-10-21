@@ -15,7 +15,7 @@
 // Morningstar fields are FUND-ONLY.
 
 import { fetchQuoteSummary, fetchChartFull, screenerPage, rawNum, rawText, sleep, type RateStats } from "./productSession";
-import { mapTdccCurrencyToIso } from "../tdcc-currency-map";
+import { mapTdccCurrencyToIso, isValidIsoCurrency } from "../tdcc-currency-map";
 
 export type QueryFn = (sql: string, params: any[]) => Promise<any[]>;
 // 2026-10-21（台股拼圖效能回報，使用者單次授權）: holdings 的 DELETE＋逐筆 INSERT 原本各自獨立
@@ -268,23 +268,25 @@ export async function ingestUsFundShareClass(
     const stem = masterStem(rec.name);
     const family = rec.family ?? "UNKNOWN";
     const providerMasterKey = `YAHOO:${family}|${stem}`.slice(0, 200);
-    // 2026-10-21（使用者核准，部署前必改）: Yahoo quoteSummary的pr.currency欄位VERIFIED會偶爾
-    // 回傳非ISO格式的字串（這是funds表6,714筆中文幣別的根因，全部都是data_provider='yahoo'）。
-    // 格式驗證不過時，先套用lib/tdcc-currency-map.ts的共用中文→ISO對照表（同一份TDCC/SITCA
-    // 排程在用的那份，不是另外寫一套）；轉換成功就用轉換後的ISO值，不當成「沒有資料」。轉換
-    // 還是轉不出來（既不是合法ISO格式、也不在對照表裡），才真的當成currencyUnresolved——這個
-    // symbol完全不建立（見下面的early return），不猜任何值、不用'USD'接手掩蓋掉。
-    // rec.currency本身是null（Yahoo根本沒給幣別欄位，不是格式錯誤）則維持原本行為：這個管線
-    // 本來就只收Yahoo US mutual fund，沒有幣別資訊時預設USD是合理的網域知識，不是亂猜。
+    // 2026-10-21（使用者核准，部署前必改＋後續兩點補強）: Yahoo quoteSummary的pr.currency欄位
+    // VERIFIED會偶爾回傳非ISO格式的字串（這是funds表6,714筆中文幣別的根因，全部都是
+    // data_provider='yahoo'；而且這6,716筆裡本來就有TWD、AUD、ZAR等多種幣別，「Yahoo基金一定是
+    // USD」這個前提不成立，不能把「完全沒給」也當成「預設USD沒關係」）。格式驗證改用
+    // lib/tdcc-currency-map.ts的isValidIsoCurrency()（比對正式ISO 4217現行流通代碼清單，不是
+    // 只檢查三個大寫字母——"XYZ"這種格式對但查無此幣別的字串現在會被正確判定為無效）。
+    // 不合法時先套用共用中文→ISO對照表（同一份TDCC/SITCA排程在用的，不是另外寫一套）；轉換
+    // 成功就用轉換後的值。rec.currency完全是null（Yahoo根本沒給欄位）現在也視為
+    // currencyUnresolved，跟格式錯誤一樣處理——不再預設USD。
     let isoCurrency: string | null = null;
     let currencyUnresolved = false;
-    if (rec.currency) {
-      if (/^[A-Z]{3}$/.test(rec.currency)) isoCurrency = rec.currency;
-      else {
-        const mapped = mapTdccCurrencyToIso(rec.currency);
-        if (mapped) isoCurrency = mapped;
-        else { currencyUnresolved = true; res.currencyUnresolved = true; res.currencyRaw = rec.currency; }
-      }
+    if (isValidIsoCurrency(rec.currency)) {
+      isoCurrency = rec.currency;
+    } else if (rec.currency) {
+      const mapped = mapTdccCurrencyToIso(rec.currency);
+      if (mapped) isoCurrency = mapped;
+      else { currencyUnresolved = true; res.currencyUnresolved = true; res.currencyRaw = rec.currency; }
+    } else {
+      currencyUnresolved = true; res.currencyUnresolved = true; res.currencyRaw = null;
     }
 
     // --- 1) Fund Master (Tier A: exact family+stem). SELECT-then-INSERT (no unique on provider_master_key).
@@ -346,7 +348,7 @@ export async function ingestUsFundShareClass(
             return_1y, return_3y, return_5y, return_10y, expense_ratio, aum, latest_nav, latest_nav_date,
             inception_date, is_active, data_provider, data_source, last_nav_source, created_at, updated_at)
          VALUES
-           (gen_random_uuid()::text, $1::text, $1::text, $2::text, COALESCE($3::text,'USD'), $4::text, 'US', $5::int, $6::int,
+           (gen_random_uuid()::text, $1::text, $1::text, $2::text, $3::text, $4::text, 'US', $5::int, $6::int,
             $7::text, $8::int, CASE WHEN $5::int IS NOT NULL OR $6::int IS NOT NULL THEN 'YAHOO_QUOTE_SUMMARY' END,
             CASE WHEN $5::int IS NOT NULL OR $6::int IS NOT NULL THEN NOW() END,
             $9::numeric, $10::numeric, $11::numeric, $12::numeric, $13::numeric, $14::numeric, NULL, NULL,

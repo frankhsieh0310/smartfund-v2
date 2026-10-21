@@ -30,3 +30,31 @@ export const TDCC_CURRENCY_MAP: Record<string, string> = {
 export function mapTdccCurrencyToIso(raw: string): string | null {
   return TDCC_CURRENCY_MAP[raw.trim()] ?? null;
 }
+
+// 2026-10-21（使用者核准，不能只檢查三個大寫字母）: 正式的 ISO 4217 現行流通貨幣代碼清單
+// （不含已停用/歷史代碼），所有「這個字串是不是合法幣別代碼」的檢查都要用這份共用清單，不能
+// 只驗證格式（三碼大寫字母）——"XYZ" 這種格式正確但根本不是貨幣的字串必須被當成無效。
+export const ISO_4217_CURRENCY_CODES: ReadonlySet<string> = new Set([
+  "AED", "AFN", "ALL", "AMD", "ANG", "AOA", "ARS", "AUD", "AWG", "AZN",
+  "BAM", "BBD", "BDT", "BGN", "BHD", "BIF", "BMD", "BND", "BOB", "BRL",
+  "BSD", "BTN", "BWP", "BYN", "BZD", "CAD", "CDF", "CHF", "CLP", "CNY",
+  "COP", "CRC", "CUP", "CVE", "CZK", "DJF", "DKK", "DOP", "DZD", "EGP",
+  "ERN", "ETB", "EUR", "FJD", "FKP", "GBP", "GEL", "GHS", "GIP", "GMD",
+  "GNF", "GTQ", "GYD", "HKD", "HNL", "HTG", "HUF", "IDR", "ILS", "INR",
+  "IQD", "IRR", "ISK", "JMD", "JOD", "JPY", "KES", "KGS", "KHR", "KMF",
+  "KPW", "KRW", "KWD", "KYD", "KZT", "LAK", "LBP", "LKR", "LRD", "LSL",
+  "LYD", "MAD", "MDL", "MGA", "MKD", "MMK", "MNT", "MOP", "MRU", "MUR",
+  "MVR", "MWK", "MXN", "MYR", "MZN", "NAD", "NGN", "NIO", "NOK", "NPR",
+  "NZD", "OMR", "PAB", "PEN", "PGK", "PHP", "PKR", "PLN", "PYG", "QAR",
+  "RON", "RSD", "RUB", "RWF", "SAR", "SBD", "SCR", "SDG", "SEK", "SGD",
+  "SHP", "SLE", "SOS", "SRD", "SSP", "STN", "SYP", "SZL", "THB", "TJS",
+  "TMT", "TND", "TOP", "TRY", "TTD", "TWD", "TZS", "UAH", "UGX", "USD",
+  "UYU", "UZS", "VES", "VND", "VUV", "WST", "XAF", "XCD", "XOF", "XPF",
+  "YER", "ZAR", "ZMW", "ZWL",
+]);
+
+/** 嚴格ISO 4217驗證：格式(三碼大寫)對了還不夠，必須在正式現行流通貨幣代碼清單裡，"XYZ"這種
+ * 查無此幣別的字串一律視為無效。所有寫入路徑跟健康檢查都用這一份，不能各自寫一套格式檢查。 */
+export function isValidIsoCurrency(value: string | null | undefined): value is string {
+  return !!value && ISO_4217_CURRENCY_CODES.has(value);
+}
