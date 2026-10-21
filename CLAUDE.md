@@ -1793,3 +1793,28 @@ TWSE ETF 重複資料、ETF_RETURNS_SYNC_TW 卡住等）還沒修好部署前，
 **核心ETF覆蓋率 99.8%（13~15檔，第2項）**：全部逐檔查完，**VERIFIED 全部是美股（NYSEArca/NasdaqGM）冷門主題型ETF**（ProShares、Bitwise、American Century等發行，規模小、交易量低），直接查Yahoo Chart API：`MID`最近2個交易日Yahoo自己回傳null，`ANEW`/`CTEX`/`SUPL`/`DAT`/`MAKX`/`AETH`/`CLIX`這7檔Yahoo完全查不到近期資料（`EMSC`只查到1天）。已加上自動化的即時查證（跟核心基金同一套紀律，有界：最多8檔/20秒），能找到Yahoo有資料但我方沒寫入的才標SYSTEM，Yahoo自己也沒有才標EXTERNAL_DELAY。
 
 **CLOUD_SEC_FINANCIAL_INCREMENTAL的LAST_RUN_PARTIAL（第3項）**：**VERIFIED 確認是判斷邏輯問題，不是排程本身的bug**——這支排程的母體裡「永遠」至少有一個CIK是`SEC_NO_CANONICAL_FACTS`（SEC本身確認查無財務科目，例如今天發現的Guardian Metal Resources），舊邏輯把這種永久性缺口當成普通失敗，導致`status`永遠是PARTIAL，`checkPipelineRunLog`的「當天是否跑完整整一輪」判斷因此永遠拿不到`COMPLETED`，`LAST_RUN_PARTIAL`變成每天必跳、永遠修不好的假異常。已修正：永久性失敗（`SEC_NO_CANONICAL_FACTS`）單獨計數，只有真正的可重試失敗才會讓狀態變成PARTIAL/FAILED——這樣往後只要當天沒有「新的」可重試失敗，就會正確回報COMPLETED。
+
+## 第三輪深查：境外基金改用TDCC官方資料、美股ETF下市清理、幣別修正、SITCA延遲根因（2026-10-21）
+
+部署 `a0b608a0c` 之後，使用者要求繼續查完4件事。分支 `fix/daily-ops-20261021-r3`（從 `a0b608a0c` 開出），commit `40cfbd4b6`，型別檢查通過、Preview驗證過（路由正確回401）。
+
+**1. 境外基金改用TDCC官方資料集 — VERIFIED，發現既有管線早就存在，只是有bug**：
+- **重大發現**：TDCC官方境外基金淨值資料集（dataset 3-4）的管線（`app/api/cron/offshore-nav-tdcc-sync`、`lib/offshore-nav-sync/tdccBatchSource.ts`）**早就已經開發、部署、排程中**（vercel.json已有，每天10:30/18:30台北各跑一次），不是今天新建的。今天的實測顯示它確實在正常運作（今早02:31 UTC那次寫入3,613筆）。
+- **根因**：即便這支管線在跑，核心母體缺口仍然卡在520筆的原因是**程式碼bug**——name比對的候選名單寫死只抓`data_provider='yahoo'`的基金，code比對的候選名單只抓`code IS NOT NULL`的基金；520筆缺口裡443筆（87%）剛好是`data_provider='tdcc-offshore'`又`code IS NULL`，兩條分支都沒資格進去，完全卡在中間。直接拿這443筆的基金名稱比對剛抓下來的TDCC CSV，**443/443全部都能找到真實（非-9999）淨值**。
+- **已修正**：name比對的WHERE子句加上`OR (data_provider='tdcc-offshore' AND code IS NULL)`，不影響code比對分支（`code IS NOT NULL`完全沒重疊）。
+- **修正前後覆蓋率（已在sin1外的production DB上直接驗證資料存在，等下次排程真正寫入後覆蓋率才會真的變動）**：目前 85.0%（4993/5872）→ 下次排程執行後預期 92.6%（5436/5872）。67筆code比對分支裡還有23筆是SITCA/TDCC當天剛好還沒公布比我方現有資料更新的淨值（卡在10/16，與第4項是同一個來源端延遲現象），44筆是TDCC自己的`-9999`「尚未公布」標記，都是真的沒資料，不是bug。Yahoo對照（876筆既有mapping + 昨天加的自我擴充)維持備援角色不變。
+
+**2. 13檔美股ETF下市清理 — VERIFIED，已核准執行**：
+- 逐檔用Nasdaq官方`nasdaqlisted.txt`＋`otherlisted.txt`（用已知仍在掛牌的SPY交叉驗證檔案格式讀取正確）查證：`TINT`／`VERS`／`OND`／`ANEW`／`MID`／`CTEX`／`EMSC`／`SUPL`／`DAT`／`MAKX`／`AETH`／`CLIX`（12檔，全部在歷史資料最後都停在10/13~10/16且完全不在兩份官方清單裡）＋`^QCLR`（第13檔，exchange欄位是"Nasdaq GIDS"、name欄位是"GLOBAL X FDS"，明顯是資料品質問題，不是真正的ETF代號）。
+- **已執行**（使用者核准）：`etfs.is_active`→`false`（13筆，before/after查詢證明，另外查最近5分鐘設為inactive的筆數=13，確認沒有動到其他筆）；`tw_purchasable_classification.status`：'APPROVED'→'NOT_APPROVED'（同樣13筆，同樣before/after證明）。
+- **整個美股ETF核心母體再查一次**：還有28檔不在官方清單裡，但**VERIFIED這28檔全部有到10/19的新鮮資料**（主要是一大批剛上市的「Leverage Shares 2X Long ○○ Daily ETF」單一股票槓桿型新產品，以及少數其他新基金）——判斷是Nasdaq官方清單對極新上市的標的有更新延遲，不是下市，**沒有動這28檔**。
+
+**3. 4檔幣別錯誤 — VERIFIED，已核准修正**：
+- 直接查今天的SITCA CSV官方幣別欄位：`31972676G`→USD、`31972676I`→AUD、`88091357E`→USD、`88091357G`→USD（原本全部錯寫成TWD）。
+- **已執行**（使用者核准）：只更新這4筆的`currency`欄位，before/after查詢證明四筆分別從TWD改成對應的真實幣別。
+- **廣泛掃描**：拿全部有`code`的基金跟SITCA CSV官方幣別欄位比對，**發現186筆（不含已修的4筆）幣別跟官方資料不一致**，大多是外幣級別（人民幣/南非幣/美元）被登記成TWD。**依指示列出數量，沒有動**——這麼大量不一致，加上`navWriter.ts`原本的註解暗示`funds.currency`可能被設計成「family層級」，需要你先決定這個欄位的設計意圖再決定怎麼處理，不適合我自己猜。
+
+**4. 171檔卡在10/16、190檔不在CSV裡 — VERIFIED根因，不是我們的bug**：
+- 直接上SITCA官網（`sitca.org.tw`的「基金非營業日」查詢頁，非CSV，官方公告系統）用基金統編查「元大新中國基金」：**官方明確公告 2026-10-19 是這檔基金的非營業日**（連同其新臺幣/美元/人民幣三個級別）。
+- 同時發現：今天抓到的SITCA CSV本身，即使是知名的大基金，日期大多卡在20261019，只有少數基金有20261020——**代表SITCA整個資料集本身對外發布就有約1~2天的正常延遲**，不是只有中國主題基金的問題。
+- **結論**：這不是我們用錯資料集（基金統編跟SITCA官方「非營業日」查詢頁、CSV兩邊都對得上，代碼和名稱都正確），也不是分類錯誤，是SITCA官方發布本身的正常延遲＋這批中國/人民幣主題基金額外有自己的非營業日公告。**沒有程式碼可以修，等SITCA真正公布後，既有排程會自動抓到**（`filterNewerThanStored`已經是「只要CSV日期比我方新就寫入」，不需要額外修正）。
