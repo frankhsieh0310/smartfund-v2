@@ -1851,3 +1851,16 @@ TWSE ETF 重複資料、ETF_RETURNS_SYNC_TW 卡住等）還沒修好部署前，
 - **範圍備註**：只修了基金詳情頁（`/funds/[id]`）的主要NAV卡片；`/funds`列表頁的NAV欄位目前仍是共用的`numberLabel`，null時顯示「—」，沒有特別改——那個欄位是很多資產類型共用的格式化函式，要加這個特例需要先擴充共用的`SummaryMetrics`型別，影響面較大，今天先不動，如果你要列表頁也顯示一樣的文字請再說。
 
 **健康報告修正 — VERIFIED**：`checkCoreUniverseFundGapDetail`回傳多加`latestNavDate`欄位；`daily-health-report/route.ts`的證據判斷新增：SITCA顯示'-'但`latestNavDate`已經是null的，歸進新的`coreUniverseFundNeverReported`陣列（跟原本`coreUniverseFundGapWithEvidence`分開），**完全不進異常清單**，只在`details.core_universe_fund_never_reported_count`／`_sample`裡列數量供參考；tdcc-offshore也加了對應的TDCC dataset 3-4查證（有界、best-effort，查不到就這次先跳過，下次再抓）。用真正的`checks.ts`函式（不是手刻重寫）對正式環境資料跑過一次，確認175筆（172+3）正確進到新分類、不會出現在異常清單裡。
+
+## 第六輪：/funds 列表頁與App API也要一致（2026-10-21）
+
+使用者要求列表頁跟App的淨值欄位也要顯示一樣的訊息。分支`fix/daily-ops-20261021-r6`（從`c31b19007`開出），commit`4dcb3fc41`，型別檢查通過、Preview實際頁面curl驗證過。
+
+**實作 — VERIFIED**：
+- `fundService.ts`的`FundListItem`（基金列表專用型別，跟ETF/FX共用的`SummaryMetrics`完全分開）新增`navPending`布林欄位。
+- `/funds`列表頁：表格因空間有限顯示「尚未申報」，滑鼠移過去（`title`屬性）顯示完整的「官方尚未申報淨值：核准銷售中，尚未開始每日申報」；卡片版（手機版面）直接顯示完整文字，不縮短。
+- `/api/mobile/current-market-data`（App吃的API）：FUND分支的SQL新增`navPending`欄位，純附加、不改既有`nav`/`navDate`欄位格式，向下相容。
+
+**驗證 — VERIFIED**：直接curl Preview的`/funds`頁面，確認HTML裡出現「尚未申報」字樣；直接curl mobile API，確認JSON回應裡`"navPending":true`正確出現在對應基金上。**另外特別確認ETF頁面跟ETF的mobile API完全沒有出現這兩個關鍵字**，證明沒有動到其他資產類型。
+
+**範圍備註（誠實揭露）**：**原生App本身的畫面渲染程式碼在另一個獨立的repo（`smartmatch-mobile`），今天完全沒有碰**——只在smartfund-v2這邊的API回應裡加上`navPending`這個欄位，讓App那邊「如果」要顯示同樣文字，資料已經準備好了，但App自己畫面上目前還不會顯示這段文字，除非之後去`smartmatch-mobile`那個repo也做對應修改。今天驗證範圍僅限於「API回應正確帶出欄位」，不是「App畫面上真的看到文字」。
