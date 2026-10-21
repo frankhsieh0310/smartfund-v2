@@ -8,6 +8,17 @@
 
 往後任何要加進 `checkLocalScheduleReporting` 的 `watched` 清單的本機排程，**一律先用 `schtasks /run` 或直接執行實測，確認第一次回報成功（看到 `local-schedule-report` 回 HTTP 200、且 `production_scheduler_runs` 真的多一筆對應 `job_id` 的成功紀錄）之後才能加進去**，不准只看程式碼寫得對就先加進監看清單——這正是 10/20 1330/1500/1700 剛接上新程式碼那天造成一次誤報 Telegram 的原因（程式碼本身沒錯，只是還沒到它們當天真正執行的時間點）。
 
+## 執行本機腳本前的安全規則（2026-10-21 訂立）
+
+**執行任何本機腳本（包含為了診斷/查根因而執行）之前，一律先讀完腳本完整內容。** 腳本裡如果有下列任何一種動作：
+- 部署動作（`vercel deploy`、`vercel deploy --prod`、或任何會觸發 CI/CD 的指令）
+- 寫入正式資料庫的動作（非唯讀 SELECT）
+- 發送通知的動作（Telegram、email、webhook 等）
+
+**一律不准為了「只是要診斷」而直接執行，必須改用其他方式**（例如：只抽出腳本裡的唯讀/查詢部分單獨執行、用環境變數關閉寫入側的部分、或直接用資料庫查詢代替跑整支腳本），**或是先問使用者再執行**。
+
+起因：2026-10-21 為了診斷 `\1330 TW Price Update` 的 `Last Result=1`，直接執行了 `node scripts/run-scheduled-update.mjs tw-price`——沒有先讀完這支腳本，不知道它本身就包含 `npm run build:web` + `npx vercel deploy --prod`（部署 tw-industry-radar 自己的獨立站點）。結果這次診斷動作觸發了一次不在今天排程表上、使用者沒有核准的正式環境部署（雖然部署內容跟原本排定會跑的完全一樣，沒有造成實際損害，但這正是「我不是正式部署的唯一核准者」這條最高層規則要防止的情況，不能靠「反正內容一樣就沒事」當事後理由）。
+
 ## 新 worktree 的 Vercel 專案連結（2026-10-19 訂立，2026-10-20 補強）
 
 任何新的 `git worktree add` 完成後，部署前必須：
@@ -1761,3 +1772,24 @@ TWSE ETF 重複資料、ETF_RETURNS_SYNC_TW 卡住等）還沒修好部署前，
 - **使用者畫面現況 — VERIFIED**：全repo搜尋 `fx_metrics`（`fx-forward-reference-curve`／`fx-global-carry-ranking` 這兩支雲端排程唯一的寫入目標），**沒有任何 app 頁面或對外 API 讀取這張表**——這兩支排程產生的資料目前完全沒有在 App 或網站任何畫面上顯示給使用者看。「使用者現在看到的是哪一天的數字」這個問題的答案是：**使用者現在沒有看到任何這兩個指標的數字**，不是看到舊數字。
 - **原始資料為什麼停更 — VERIFIED**：負責把新資料寫進 `fx_forward_observations`／`economic_values` 這兩張原始表的腳本（`scripts/data/fx-forward-points/run-fx-forward-points.ts`、`scripts/data/fx-carry-cip/run-fx-carry-cip-analytics.ts`）**只存在使用者本機、從來沒有 commit 進 git**（`git log --all` 查這兩個路徑只有一次很久以前的「working tree snapshot」備份 commit），而且**本機工作排程裡完全沒有排這兩支腳本**（只有下游的「材料化/計算」那一步 `\SmartFund-FX-Forward-Reference-Curve` 被排程、現在已停用）。換句話說：原始資料擷取這一段從來沒有被排程過，只有已經停更的舊資料被下游計算腳本每天重算，資料當然越來越舊。
 - **建議，待你決定**：這兩個指標完全沒有使用者會看到，且擷取腳本從未進版控、原始邏輯細節只存在未提交的本機檔案裡，要「恢復每日更新」等同於重新開發一條全新的雲端擷取管線（抓即期/遠期匯率報價源、利率曲線源），工作量不小。**今天沒有在沒有你確認的情況下擅自決定要不要做**，先維持現狀（下游計算排程雲端版已確認能正常跑、只是吃不到新原始資料；本機對應的 2 支舊排程已停用）。沒有加「資料新鮮度」檢查進健康報告，因為目前的結論是「這兩個指標根本沒有畫面在用，加異常檢查只會製造每天一定會跳的假警報」——如果你決定要恢復，我會同時把新鮮度檢查加回去。
+
+## 核心母金覆蓋率缺口深查（2026-10-21 第二輪）
+
+接續「正式環境 commit `3ddf0502f`，等你部署」之後，使用者要求今天徹底查完核心基金 85.5%、核心 ETF 15 檔缺口、SEC LAST_RUN_PARTIAL 三項。全部查完，分支 `fix/daily-ops-20261021-r2`（從 `3ddf0502f` 開出），commit `a0b608a0c`，型別檢查通過、20項單元測試全過、Preview 驗證過（3 個改到的路由都正確回 401，確認建置成功）。
+
+**核心基金覆蓋率 85.5%（1a/1b/1c/1d）**：
+- **a. 是否是名單問題 — VERIFIED 部分屬實**：`tdcc-offshore`（520筆）**確實是名單問題**——`offshore-nav-sync` 的 Yahoo fundId 對照表是 2026-10-12 做的一次性清查，寫死存在 `production_scheduler_checkpoints` 一筆資料，從來沒有重新跑過；532 筆缺口裡 453 筆是 10/12 之後才核准的基金，從來沒機會被收進這份清單。`null-provider`（362筆）與 `SITCA`（11筆）**不是名單問題**——`sitca-nav-sync` 本身就是即時查 DB（`WHERE data_provider NOT IN ('yahoo','SEC')`），新基金本來就會被看到，真正卡住的是別的原因（見下）。
+- **b. 三類各抽3檔查官方來源 — VERIFIED，附證據**：
+  - tdcc-offshore：抽樣用 Yahoo TW 自己的基金搜尋（`FundServices.fundsSearch`）實測，~15-20% 能找到精確比對（EXACT name match），其餘查無——Yahoo TW 自己的基金資料庫本來就沒收錄這些冷門幣別/級別的子類。
+  - null-provider（第一金3檔）：直接抓 SITCA 官方 CSV（`https://www.sitca.org.tw/MemberK0000/F/03/nav.csv`），3檔都在清單上、淨值欄位是 `-`（剛核備的新級別，SITCA自己還沒公布第一筆淨值）。
+  - SITCA（元大1檔+其他）：同一份CSV，`00684942D` 淨值也是 `-`，同上。
+- **c. 修正 — 已完成，部分已自動化成健康報告的即時查證**：
+  1. tdcc-offshore：`offshore-nav-sync` 每次執行新增一段有界的「自我擴充」步驟（`discoverMapping.ts`），用跟原始清查一樣嚴格的規則（只接受唯一精確全字串比對），找到就併入同一筆 checkpoint，找不到就記錄證據（`mapping_unresolved_sample`）、不猜測。這樣新基金核准後，排程會自己逐步補上，不需要再人工重跑一次性清查。
+  2. null-provider/SITCA：daily-health-report 新增即時查證——抓一次 SITCA CSV，缺口裡的每一檔比對：CSV顯示`-`（還沒公布）或完全不在CSV裡但本方資料庫顯示先前有真實淨值（疑似來源端暫停公告）都標 `EXTERNAL_DELAY`，CSV有真實數字但我方沒寫入才標 `SYSTEM`。
+  3. **發現但沒有自動修正的部分**：全量跑一次 SITCA CSV 比對後，369筆裡 175筆確認`-`、約190筆確認不在CSV裡（且這190筆裡107筆是中國/人民幣主題基金，171筆全部卡在同一天 2026-10-16，強烈指向10/17後某個來源端事件，不是我方bug，但沒有進一步查證是哪個事件）、**4筆是真正的資料問題**：`合庫新興多重收益基金`與`大華銀新加坡房地產收益基金`各2個子級別，`funds.currency`欄位寫成TWD，但這些子級別名稱本身是USD/AUD（SITCA官方CSV也確認是USD）。navWriter的幣別閘門因此正確地擋下寫入（防止幣別錯置寫壞淨值），但程式碼註解顯示`funds.currency`被設計成「fund-family層級，不是per-class」——**不確定這4筆是單純打錯字還是家族層級設計下本來就不該被寫入**，沒有擅自改這個欄位（財務資料，不能猜），留給你決定。
+  4. 已清算/停售/合併：今天沒有在我方資料庫發現任何核心母體基金標記為已清算/停售（`is_active`全部是true），171檔疑似suspended的基金目前仍是active狀態，沒有退出核心母體的依據，先維持現狀。
+  5. **還沒做**：補抓一輪並回報修正後覆蓋率——tdcc-offshore的自我擴充要等下一次`offshore-nav-sync`排程真正執行（每15分鐘一次，*/20其中之一，部署後最多等20分鐘）才會生效；null-provider/SITCA的175+190筆本質上大多是EXTERNAL_DELAY（來源端沒資料/疑似暫停），不是能補抓就解決的，補抓也不會改變覆蓋率數字。部署後下次健康報告會用新邏輯重新分類，到時候回報。
+
+**核心ETF覆蓋率 99.8%（13~15檔，第2項）**：全部逐檔查完，**VERIFIED 全部是美股（NYSEArca/NasdaqGM）冷門主題型ETF**（ProShares、Bitwise、American Century等發行，規模小、交易量低），直接查Yahoo Chart API：`MID`最近2個交易日Yahoo自己回傳null，`ANEW`/`CTEX`/`SUPL`/`DAT`/`MAKX`/`AETH`/`CLIX`這7檔Yahoo完全查不到近期資料（`EMSC`只查到1天）。已加上自動化的即時查證（跟核心基金同一套紀律，有界：最多8檔/20秒），能找到Yahoo有資料但我方沒寫入的才標SYSTEM，Yahoo自己也沒有才標EXTERNAL_DELAY。
+
+**CLOUD_SEC_FINANCIAL_INCREMENTAL的LAST_RUN_PARTIAL（第3項）**：**VERIFIED 確認是判斷邏輯問題，不是排程本身的bug**——這支排程的母體裡「永遠」至少有一個CIK是`SEC_NO_CANONICAL_FACTS`（SEC本身確認查無財務科目，例如今天發現的Guardian Metal Resources），舊邏輯把這種永久性缺口當成普通失敗，導致`status`永遠是PARTIAL，`checkPipelineRunLog`的「當天是否跑完整整一輪」判斷因此永遠拿不到`COMPLETED`，`LAST_RUN_PARTIAL`變成每天必跳、永遠修不好的假異常。已修正：永久性失敗（`SEC_NO_CANONICAL_FACTS`）單獨計數，只有真正的可重試失敗才會讓狀態變成PARTIAL/FAILED——這樣往後只要當天沒有「新的」可重試失敗，就會正確回報COMPLETED。
