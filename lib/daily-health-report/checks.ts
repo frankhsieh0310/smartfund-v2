@@ -571,6 +571,61 @@ export function evaluateFredCommodityConsistency(samples: FredCommoditySample[])
   return { samples, mismatches, anomaly: mismatches.length > 0 };
 }
 
+export type FundCurrencyFormatResult = {
+  checkedCount: number;
+  /** funds whose currency is not a valid 3-letter uppercase ISO 4217 code (e.g. leftover Chinese
+   * text like "日幣") -- a format violation is always wrong regardless of what the correct value
+   * should be, so this never needs an official-data comparison to flag. */
+  invalid: Array<{ code: string | null; name: string; currency: string | null; dataProvider: string | null }>;
+  anomaly: boolean;
+};
+
+// 2026-10-21（使用者核准的1,016檔幣別修正後新增）: 修正過程中發現 funds.currency 曾被寫入中文
+// 字串（CUR_MAP 漏了「日幣」「加幣」兩個 TDCC 實際用字，76+3檔被原樣寫入中文，見
+// lib/tdcc-currency-map.ts 的修正記錄），且另外發現 data_provider='yahoo' 的既有 6,714 筆從一開始
+// 就是中文字串（更早、範圍更大、跟今天的TDCC/SITCA修正無關的既有問題，尚待使用者決定是否處理）。
+// 這個檢查只收斂「核心母體」（tdcc-offshore + 國內SITCA範圍，即 data_provider IN ('tdcc-offshore')
+// OR data_provider IS NULL）：格式不是三碼大寫ISO代碼，不管該填什麼值，先天就是錯的，不需要比對
+// 官方資料就能判定異常，當作最後一道防呆——未來任何批次更新如果又漏了某個幣別對應，隔天就會被
+// 這個檢查抓到，而不是像這次一樣要等人工抽查才發現。
+export async function checkCoreUniverseFundCurrencyFormat(query: QueryFn): Promise<FundCurrencyFormatResult> {
+  const rows = await query(
+    `SELECT code, name, currency, data_provider FROM funds
+     WHERE (data_provider = 'tdcc-offshore' OR data_provider IS NULL)
+       AND currency IS NOT NULL AND currency !~ '^[A-Z]{3}$'
+     LIMIT 50`,
+    [],
+  );
+  const countRow = await query(
+    `SELECT count(*)::int AS n FROM funds
+     WHERE (data_provider = 'tdcc-offshore' OR data_provider IS NULL)
+       AND currency IS NOT NULL AND currency !~ '^[A-Z]{3}$'`,
+    [],
+  );
+  const invalid = rows.map((r: any) => ({ code: r.code, name: r.name, currency: r.currency, dataProvider: r.data_provider }));
+  return { checkedCount: Number(countRow[0]?.n ?? invalid.length), invalid, anomaly: invalid.length > 0 };
+}
+
+export type FundCurrencyOfficialSample = {
+  code: string;
+  dbCurrency: string | null;
+  officialIsoCurrency: string; // already translated to ISO by the caller (TDCC_CURRENCY_MAP / SITCA's own ISO column)
+  source: "TDCC" | "SITCA";
+};
+export type FundCurrencyOfficialResult = {
+  samples: FundCurrencyOfficialSample[];
+  mismatches: FundCurrencyOfficialSample[];
+  anomaly: boolean;
+};
+
+// 跟上面的格式檢查互補：格式檢查抓「寫錯格式」，這個抓「格式正確但幣別本身跟官方資料不一致」
+// （例如又有新基金被用錯的幣別建立）。samples 由呼叫端（health-report route）用當天的 TDCC/SITCA
+// 官方資料 + lib/tdcc-currency-map.ts 建出來，這裡只做純比對，維持跟其他 evaluate* 函式一樣可測試。
+export function evaluateFundCurrencyOfficialConsistency(samples: FundCurrencyOfficialSample[]): FundCurrencyOfficialResult {
+  const mismatches = samples.filter((s) => s.dbCurrency !== s.officialIsoCurrency);
+  return { samples, mismatches, anomaly: mismatches.length > 0 };
+}
+
 export type ActiveEtfOfficialHoldingsResult = {
   checkedCount: number;
   missingOrStale: Array<{ code: string; name: string; provider: string; lastDataDate: string | null }>;

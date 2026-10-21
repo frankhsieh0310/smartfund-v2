@@ -12,7 +12,8 @@
 import { isAuthorizedCron, unauthorizedCron } from "@/lib/cron/authorize";
 import { prisma } from "@/lib/prisma";
 import { beginRun, finishRun } from "@/lib/cloud-ingestion/runContext";
-import { checkPipelineRunLog, checkMoneydjParseFailures, evaluateFreshness, checkEtfDataSourceGap, evaluateYahooTwReturnConsistency, evaluateFredCommodityConsistency, checkCommodityTechnicalCoverage, checkFundPerformanceCoverage, checkEtfPerformanceCoverage, checkEtfHistoryFreshness, checkFundHistoryFreshness, checkCoreUniverseEtfCoverage, checkCoreUniverseFundCoverage, checkCoreUniverseFundGapDetail, checkCoreUniverseEtfGapDetail, checkActiveEtfOfficialHoldingsCoverage, checkLocalScheduleReporting, type QueryFn, type YahooTwReturnSample, type FredCommoditySample } from "@/lib/daily-health-report/checks";
+import { checkPipelineRunLog, checkMoneydjParseFailures, evaluateFreshness, checkEtfDataSourceGap, evaluateYahooTwReturnConsistency, evaluateFredCommodityConsistency, checkCommodityTechnicalCoverage, checkFundPerformanceCoverage, checkEtfPerformanceCoverage, checkEtfHistoryFreshness, checkFundHistoryFreshness, checkCoreUniverseEtfCoverage, checkCoreUniverseFundCoverage, checkCoreUniverseFundGapDetail, checkCoreUniverseEtfGapDetail, checkActiveEtfOfficialHoldingsCoverage, checkLocalScheduleReporting, checkCoreUniverseFundCurrencyFormat, evaluateFundCurrencyOfficialConsistency, type QueryFn, type YahooTwReturnSample, type FredCommoditySample, type FundCurrencyOfficialSample } from "@/lib/daily-health-report/checks";
+import { mapTdccCurrencyToIso } from "@/lib/tdcc-currency-map";
 import { fetchYahooChartPeriod } from "@/lib/services/dataProviders/yahoo/yahooClient";
 import { CORE_COMMODITY_ROOTS } from "@/lib/cron/commodityUpdate";
 import { notifyAnomaly } from "@/lib/daily-health-report/notify";
@@ -200,9 +201,11 @@ export async function GET(request: Request) {
   // dataset today with zero NAV ever published. Counted here, surfaced once as a count
   // (details.core_universe_fund_never_reported_count), and excluded from the anomaly list entirely.
   const coreUniverseFundNeverReported: Array<{ code: string | null; name: string; dataProvider: string | null }> = [];
+  // hoisted out of the block below so the 幣別健康檢查 further down can reuse this same fetch
+  // instead of calling the SITCA CSV endpoint a second time.
+  let sitcaCsvRows: string[][] | null = null;
   {
     const checkedAt = new Date().toISOString();
-    let sitcaCsvRows: string[][] | null = null;
     let sitcaFetchError: string | null = null;
     try {
       const res = await fetch("https://www.sitca.org.tw/MemberK0000/F/03/nav.csv", { signal: AbortSignal.timeout(15_000) });
@@ -265,6 +268,81 @@ export async function GET(request: Request) {
         // picked up again next time; never blocks the rest of the report.
       }
     }
+  }
+
+  // 2026-10-21（使用者核准，幣別修正後新增）: 每日幣別健康檢查，兩層防呆。
+  // (a) 格式檢查：核心母體（tdcc-offshore + null provider）裡 currency 不是三碼大寫ISO代碼——
+  //     這次 76+3 檔中文幣別就是這樣被發現的，往後任何一次批次更新或新上市基金建立如果又漏了
+  //     某個幣別對應，隔天這裡就會抓到，不用再等人工抽查。
+  // (b) 官方資料比對：拿當天的 TDCC dataset 3-2（境外）與 SITCA CSV（境內，沿用上面已經抓過的
+  //     sitcaCsvRows，不重複呼叫）跟 funds.currency 比對，抓「格式正確但幣別本身跟官方不一致」
+  //     （例如新基金被用錯的幣別建立）。有界：只比對核心母體裡找得到官方幣別的基金。
+  const currencyFormatCheck = await checkCoreUniverseFundCurrencyFormat(query);
+  const currencyOfficialSamples: FundCurrencyOfficialSample[] = [];
+  {
+    const coreUniverseCurrencyRows = await query(
+      `SELECT code, currency, data_provider FROM funds WHERE (data_provider = 'tdcc-offshore' OR data_provider IS NULL) AND code IS NOT NULL`,
+      [],
+    );
+    // SITCA 側：沿用上面已經抓過的 sitcaCsvRows（幣別在第11欄，index 10；基金統編在第4欄 index 3）。
+    const sitcaIsoByCode = new Map<string, string>();
+    if (sitcaCsvRows) for (const cols of sitcaCsvRows) if (cols.length >= 11 && cols[3] && cols[10]) sitcaIsoByCode.set(cols[3], cols[10].trim());
+    // TDCC 側：用同一份 dataset 3-2（跟核備名單比對共用一次 fetch，有15秒逾時、best-effort）。
+    const tdccIsoByCode = new Map<string, string>();
+    try {
+      const res = await fetch("https://opendata.tdcc.com.tw/getOD.ashx?id=3-2", { signal: AbortSignal.timeout(15_000) });
+      if (res.ok) {
+        const text = (await res.text()).replace(/^﻿/, "");
+        const lines = text.split(/\r?\n/).filter(Boolean);
+        const header = lines[0].split(",");
+        const codeIdx = header.indexOf("基金代碼");
+        const curIdx = header.indexOf("計價幣別");
+        for (let i = 1; i < lines.length; i++) {
+          const cols = lines[i].split(",");
+          const raw = cols[curIdx];
+          const iso = raw ? mapTdccCurrencyToIso(raw) : null;
+          if (cols[codeIdx] && iso) tdccIsoByCode.set(cols[codeIdx], iso);
+        }
+      }
+    } catch {
+      // best-effort only -- missing TDCC data this run just means fewer samples, never blocks the report.
+    }
+    for (const row of coreUniverseCurrencyRows as { code: string; currency: string | null; data_provider: string | null }[]) {
+      if (!/^[A-Z]{3}$/.test(row.currency ?? "")) continue; // format violations already covered by currencyFormatCheck above
+      const officialIso = row.data_provider === "tdcc-offshore" ? tdccIsoByCode.get(row.code) : sitcaIsoByCode.get(row.code);
+      if (officialIso) currencyOfficialSamples.push({ code: row.code, dbCurrency: row.currency, officialIsoCurrency: officialIso, source: row.data_provider === "tdcc-offshore" ? "TDCC" : "SITCA" });
+    }
+  }
+  const currencyOfficialCheck = evaluateFundCurrencyOfficialConsistency(currencyOfficialSamples);
+
+  // 2026-10-21（使用者核准的唯讀分析）: checkCoreUniverseFundCurrencyFormat 的範圍只有
+  // data_provider IN ('tdcc-offshore', NULL)，不包含 data_provider='yahoo'——這不是為了讓報告
+  // 乾淨才排除，是因為今天的任務範圍本來就只有TDCC/SITCA核心母體。但 data_provider='yahoo' 另外
+  // 存在 6,714 筆（+MoneyDJ 2筆）currency 是中文字串，VERIFIED 全部都不在核心母體清單裡
+  // （tw_purchasable_classification.status='APPROVED' 比對結果=0），所以不會出現在任何使用者
+  // 真正看得到的列表/搜尋頁。這是一個真實存在、目前完全沒有任何監控覆蓋的既有問題，不是「排除
+  // 整類讓報告變乾淨」——這裡誠實地把筆數算出來、每天都顯示在報告的 details 裡（不是anomalies，
+  // 因為使用者還沒核准怎麼修，不應該每天报紅造成警報疲乏），等使用者決定修正方案後再決定要不要
+  // 升級成正式異常。
+  const yahooFundCurrencyChineseLabelCount = (await query(
+    `SELECT count(*)::int AS n FROM funds WHERE data_provider = 'yahoo' AND currency IS NOT NULL AND currency !~ '^[A-Z]{3}$'`,
+    [],
+  ))[0]?.n ?? 0;
+
+  // 2026-10-21（使用者核准，不准猜測幣別）: newFundListingDetection.ts 現在遇到無法對應成合法ISO
+  // 代碼的幣別時完全不建立那筆 funds 列（lib/cron/newFundListingDetection.ts 的
+  // skippedInvalidCurrency），而不是像之前那樣退回預設值掩蓋掉——但「不猜」不等於「沒事」，這裡
+  // 把最近一次 CLOUD_NEW_FUND_LISTING_DETECTION 執行記錄下的 skippedInvalidCurrency 撈出來當異常，
+  // 確保它不會被靜默吞掉。
+  const newFundSkippedCurrencyRows = await query(
+    `SELECT details FROM production_scheduler_runs WHERE job_id = 'CLOUD_NEW_FUND_LISTING_DETECTION' AND started_at >= now() - interval '24 hours' ORDER BY started_at DESC LIMIT 1`,
+    [],
+  );
+  const newFundSkippedCurrency: { taxId: string; name: string; rawCurrency: string | null; side: "DOMESTIC" | "OFFSHORE" }[] = [];
+  const latestNewFundDetails = newFundSkippedCurrencyRows[0]?.details as { domestic?: { skippedInvalidCurrency?: any[] }; offshore?: { skippedInvalidCurrency?: any[] } } | undefined;
+  if (latestNewFundDetails) {
+    for (const r of latestNewFundDetails.domestic?.skippedInvalidCurrency ?? []) newFundSkippedCurrency.push({ ...r, side: "DOMESTIC" });
+    for (const r of latestNewFundDetails.offshore?.skippedInvalidCurrency ?? []) newFundSkippedCurrency.push({ ...r, side: "OFFSHORE" });
   }
 
   // 2026-10-21（使用者核准）: core_universe_etf 15 檔缺口（今天查時剩 13 檔）——VERIFIED 逐檔直接
@@ -466,6 +544,15 @@ export async function GET(request: Request) {
     ...(moneydjParseFailures.nameOnlyCount > 0
       ? [{ type: "MONEYDJ_NAME_ONLY_NO_WEIGHT", category: SYSTEM_CATEGORY, jobId: "CLOUD_MONEYDJ_FUND", count: moneydjParseFailures.nameOnlyCount, codes: moneydjParseFailures.nameOnlyCodes }]
       : []),
+    ...(currencyFormatCheck.anomaly
+      ? [{ type: "FUND_CURRENCY_INVALID_FORMAT", category: SYSTEM_CATEGORY, checkedCount: currencyFormatCheck.checkedCount, invalid: currencyFormatCheck.invalid }]
+      : []),
+    ...(currencyOfficialCheck.anomaly
+      ? [{ type: "FUND_CURRENCY_OFFICIAL_MISMATCH", category: SYSTEM_CATEGORY, mismatches: currencyOfficialCheck.mismatches }]
+      : []),
+    ...(newFundSkippedCurrency.length > 0
+      ? [{ type: "NEW_FUND_SKIPPED_INVALID_CURRENCY", category: SYSTEM_CATEGORY, count: newFundSkippedCurrency.length, items: newFundSkippedCurrency }]
+      : []),
   ];
   const systemAnomalyCount = anomalies.filter((a) => a.category === SYSTEM_CATEGORY).length;
   const externalDelayAnomalyCount = anomalies.length - systemAnomalyCount;
@@ -481,7 +568,7 @@ export async function GET(request: Request) {
 
   const status = anomalies.length > 0 ? "PARTIAL" : "COMPLETED";
   await finishRun(runId, JOB, "INTERNAL_HEALTH_CHECK", startedMs, {
-    status, attempted: RUN_LOG_PIPELINES.length + 5 + coverage.length, completed: RUN_LOG_PIPELINES.length + 5 + coverage.length - anomalies.length,
+    status, attempted: RUN_LOG_PIPELINES.length + 7 + coverage.length, completed: RUN_LOG_PIPELINES.length + 7 + coverage.length - anomalies.length,
     inserted: 0, updated: 0, failed: anomalies.length, retryableFailures: 0, checkpointAfter: null,
     details: {
       date: today, pipeline_health: pipelineHealth, stock_freshness: stockFreshness, domestic_fund_freshness: domesticFundFreshness,
@@ -492,10 +579,12 @@ export async function GET(request: Request) {
       core_universe_fund_never_reported_sample: coreUniverseFundNeverReported.slice(0, 20),
       core_universe_etf_gap_evidence: coreUniverseEtfGapWithEvidence,
       moneydj_parse_failures: moneydjParseFailures,
+      fund_currency_format_check: currencyFormatCheck, fund_currency_official_check: currencyOfficialCheck, new_fund_skipped_invalid_currency: newFundSkippedCurrency,
+      yahoo_fund_currency_chinese_label_count_known_pending_issue: yahooFundCurrencyChineseLabelCount,
       anomaly_count: anomalies.length, system_anomaly_count: systemAnomalyCount, external_delay_anomaly_count: externalDelayAnomalyCount,
       anomalies, notify_result: notifyResult,
     },
   });
 
-  return Response.json({ ok: true, job: JOB, runId, status, anomalyCount: anomalies.length, systemAnomalyCount, externalDelayAnomalyCount, anomalies, etfDataSourceGap, activeEtfOfficialHoldings: activeEtfGapWithEvidence, yahooTwCheck, fredCommodityCheck, coverage, notifyResult });
+  return Response.json({ ok: true, job: JOB, runId, status, anomalyCount: anomalies.length, systemAnomalyCount, externalDelayAnomalyCount, anomalies, etfDataSourceGap, activeEtfOfficialHoldings: activeEtfGapWithEvidence, yahooTwCheck, fredCommodityCheck, coverage, currencyFormatCheck, currencyOfficialCheck, notifyResult });
 }
