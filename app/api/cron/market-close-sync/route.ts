@@ -718,6 +718,12 @@ export async function GET(request: Request) {
     if (state.sweepComplete && !fetchFailedThisMarket && !rateLimitStop) {
       const nowMsForDue = Date.now();
       const duePending = state.pending.filter((p) => isDueForRecheck(p, nowMsForDue));
+      // 2026-10-21（使用者核准，第二輪降負載第2項）: duePending是在迴圈開始前就已經算好的完整
+      // 清單（跟Phase 1的cursor分頁式候選名單不同，那個是真正邊掃邊決定、沒辦法事先知道全部，
+      // 所以沒有同樣處理），每個chunk處理的etfId彼此不重疊，同一次執行內後面的chunk不會需要讀到
+      // 前面chunk剛寫的新資料——所以一次查完、用Map快取，取代原本「每個chunk都查一次
+      // lookupLastKnownClose」（原本2分鐘內被呼叫98次，見CLAUDE.md負載調查記錄）。
+      const lastKnownClosesAll = await lookupLastKnownClose(duePending.map((p) => p.etfId));
       for (let i = 0; i < duePending.length; i += SPARK_MAX_SYMBOLS_PER_BATCH) {
         if (Date.now() >= marketDeadlineMs || Date.now() - startedMs > TIME_BUDGET_MS) break;
         const chunk = duePending.slice(i, i + SPARK_MAX_SYMBOLS_PER_BATCH);
@@ -734,7 +740,7 @@ export async function GET(request: Request) {
 
         const byCandle = new Map(batch.candles.map((c) => [c.symbol, c]));
         const dbRows = await lookupDbRowsForTargetDate(chunk.map((p) => p.etfId), targetLocalDate);
-        const lastKnownCloses = await lookupLastKnownClose(chunk.map((p) => p.etfId));
+        const lastKnownCloses = lastKnownClosesAll;
 
         const observations: Array<{ etfId: string; symbol: string; classification: ShadowClassification }> = [];
         const chunkWritable: WritablePrice[] = [];
