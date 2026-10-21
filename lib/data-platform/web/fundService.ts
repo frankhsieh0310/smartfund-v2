@@ -47,6 +47,12 @@ export interface FundListItem {
   freshnessStatus: ReturnType<typeof freshnessStatus>;
   publicReady: boolean;
   source: string | null;
+  // 2026-10-21（使用者核准）: VERIFIED live -- 175 funds are still approved for sale but the
+  // official source (SITCA/TDCC) has never once published a NAV for this specific share class
+  // (latestNav AND latestNavDate both null -- not "reported before, now stale", which stays
+  // UNAVAILABLE/freshnessStatus as before). Only this list/table surfaces the distinction via this
+  // one flag; FUND-only, does not touch SummaryMetrics (shared with ETF/FX/etc).
+  navPending: boolean;
 }
 
 // 2026-10-14 QA-round-1 fix: 4,577 offshore foreign-currency share classes (data_provider='yahoo')
@@ -108,7 +114,7 @@ export async function getFundList(query: FundListQuery = {}): Promise<ServiceRes
   const updated = rows.reduce<Date | null>((value, row) => !value || row.updatedAt > value ? row.updatedAt : value, null);
   const source = rows.length === 1 ? rows[0].lastNavSource ?? rows[0].dataSource ?? rows[0].dataProvider : "MULTIPLE_VERIFIED_PROVIDERS";
   const provenance = buildProvenance({ source, asOfDate: latest, lastUpdated: updated });
-  return { data: rows.map((row) => ({ identity: fundIdentity(row, duplicateNames), isin: row.isin, metrics: fundMetrics(row), company: row.company, category: row.category, fundCategory: mapFundMainCategory(row.category), fundSubcategory: row.category, riskLevel: row.riskLevel, freshnessStatus: freshnessStatus(row.latestNavDate, "PUBLICATION_AWARE"), publicReady: row.latestNav != null && row.latestNavDate != null && readyByFund.get(row.id) === true && !["STALE","UNKNOWN","UNAVAILABLE"].includes(freshnessStatus(row.latestNavDate, "PUBLICATION_AWARE")), source: row.lastNavSource ?? row.dataSource ?? row.dataProvider })), meta: { asOfDate: provenance.asOfDate, lastUpdated: provenance.lastUpdated, freshnessStatus: freshnessStatus(latest, "PUBLICATION_AWARE"), source, provenance, coverageStatus: "PARTIAL_CURRENT" }, pagination: paginationMeta(page, pageSize, total), error: null };
+  return { data: rows.map((row) => ({ identity: fundIdentity(row, duplicateNames), isin: row.isin, metrics: fundMetrics(row), company: row.company, category: row.category, fundCategory: mapFundMainCategory(row.category), fundSubcategory: row.category, riskLevel: row.riskLevel, freshnessStatus: freshnessStatus(row.latestNavDate, "PUBLICATION_AWARE"), publicReady: row.latestNav != null && row.latestNavDate != null && readyByFund.get(row.id) === true && !["STALE","UNKNOWN","UNAVAILABLE"].includes(freshnessStatus(row.latestNavDate, "PUBLICATION_AWARE")), source: row.lastNavSource ?? row.dataSource ?? row.dataProvider, navPending: row.latestNav == null && row.latestNavDate == null })), meta: { asOfDate: provenance.asOfDate, lastUpdated: provenance.lastUpdated, freshnessStatus: freshnessStatus(latest, "PUBLICATION_AWARE"), source, provenance, coverageStatus: "PARTIAL_CURRENT" }, pagination: paginationMeta(page, pageSize, total), error: null };
 }
 
 export async function getFundFilterOptions(): Promise<{ companies: string[]; currencies: string[]; categories: string[]; riskLevels: number[] }> {
