@@ -62,7 +62,23 @@ export async function checkPipelineRunLog(query: QueryFn, jobId: string): Promis
 
   const benignPattern = BENIGN_ERROR_PATTERNS[jobId];
   const isBenignError = (errMsg: string | null) => !!errMsg && !!benignPattern && benignPattern.test(errMsg);
-  const errorCount24h = rows.filter((r) => r.error != null && !isBenignError(r.error)).length;
+  // 2026-10-21（使用者核准）: VERIFIED live case -- CLOUD_ETF_PRICE's 01:17 run failed one symbol
+  // (00408A, YAHOO_CHART_NULL), but the very next 02:17 run (same checkpoint, same symbol pool)
+  // came back completely clean and the symbol already has today's expected data -- that was a
+  // transient upstream hiccup the pipeline's own hourly retry already absorbed, not an open
+  // problem. Counting every error row inside the 24h window (old behavior) kept re-flagging a
+  // failure the pipeline had already healed itself. Only count errors as still-unresolved: scan
+  // from the newest run backwards and stop as soon as a clean (non-error) run is hit -- a later
+  // clean run is itself the evidence that whatever failed earlier that day no longer needs
+  // surfacing as a system anomaly.
+  const errorCount24h = (() => {
+    let n = 0;
+    for (const r of rows) {
+      if (r.error == null || isBenignError(r.error)) break;
+      n++;
+    }
+    return n;
+  })();
   const sourceUnavailableCount24h = rows.filter((r) => isBenignError(r.error)).length;
   const writeErrorCount24h = rows.reduce((sum, r) => sum + (Number(r.write_error_count) || 0), 0);
   const last = rows[0] ?? null;
@@ -437,10 +453,22 @@ export type YahooTwReturnCheckResult = {
 // project's own investigation found is never going to match exactly.
 const MISMATCH_THRESHOLD_PCT_POINTS = 15;
 
+// 2026-10-21（使用者核准）: VERIFIED live -- 00990B（國泰收益非投等債，2026-06-29 才上市，不到
+// 4 個月）被標成 mismatch，但實際上我方和 Yahoo奇摩兩邊的 return_1y 都是 null（都認為「還沒有
+// 一年可算」，完全一致），不是對不上。舊邏輯把「兩邊都是 null」跟「fetchFailed」混在同一個
+// `diff === null` 分支，等於把「雙方一致地沒有資料」誤判成異常。只有「一邊有值、另一邊沒有」
+// 才是真正的分歧，才該算 mismatch；兩邊都是 null 時 diff 本來就該是 null，但不計入異常。
 export function evaluateYahooTwReturnConsistency(samples: YahooTwReturnSample[]): YahooTwReturnCheckResult {
   const mismatches = samples
     .map((s) => ({ ...s, diff: s.ourReturn1y != null && s.yahooTwReturn1y != null ? Math.abs(s.ourReturn1y - s.yahooTwReturn1y) : null }))
-    .filter((s) => s.fetchFailed || s.diff === null || s.diff > MISMATCH_THRESHOLD_PCT_POINTS);
+    .filter((s) => {
+      if (s.fetchFailed) return true;
+      const bothNull = s.ourReturn1y == null && s.yahooTwReturn1y == null;
+      if (bothNull) return false; // 雙方一致沒有資料（例如新上市未滿一年）——不是分歧
+      const oneSided = (s.ourReturn1y == null) !== (s.yahooTwReturn1y == null);
+      if (oneSided) return true; // 一邊有值一邊沒有——真的分歧
+      return s.diff !== null && s.diff > MISMATCH_THRESHOLD_PCT_POINTS;
+    });
   return { samples, mismatches, anomaly: mismatches.length > 0 };
 }
 

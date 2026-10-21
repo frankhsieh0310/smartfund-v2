@@ -283,15 +283,22 @@ export async function persistNameOnlyHoldings(
   input: { fundId: string; moneydjCode: string; date: string; names: string[] },
 ): Promise<{ rowsPersisted: number }> {
   const { fundId, date, names } = input;
+  // 2026-10-21（使用者核准）: VERIFIED live -- every one of the 35 "MONEYDJ_PARSE_FAILED" codes the
+  // health report flagged today was actually this same Postgres 42804 error ("column \"id\" is of
+  // type uuid but expression is of type text"), not a parser bug at all. $executeRawUnsafe's $1
+  // binds a JS string (globalThis.crypto.randomUUID()) with no cast against a uuid column, so EVERY
+  // name-only disclosure (the 2nd of the three known page shapes, already correctly recognized and
+  // routed here by MoneydjHoldingsNameOnlyError) failed to persist and fell through to the generic
+  // failure bucket. Generating the id with gen_random_uuid() server-side avoids the type mismatch
+  // entirely.
   await prisma.$transaction(
     async (tx) => {
       for (const [index, name] of names.entries()) {
         await tx.$executeRawUnsafe(
           `INSERT INTO fund_holdings_name_only (id, fund_id, holding_name, rank, as_of_date, source, created_at, updated_at)
-           VALUES ($1, $2, $3, $4, $5::date, $6, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+           VALUES (gen_random_uuid(), $1, $2, $3, $4::date, $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
            ON CONFLICT (fund_id, as_of_date, source, holding_name)
            DO UPDATE SET rank = EXCLUDED.rank, updated_at = CURRENT_TIMESTAMP`,
-          globalThis.crypto.randomUUID(),
           fundId,
           name,
           index + 1,

@@ -61,8 +61,11 @@ export async function POST(request: Request) {
   if (!jobId || !ALLOWED_JOB_IDS.has(jobId)) {
     return Response.json({ ok: false, error: `jobId must be one of: ${[...ALLOWED_JOB_IDS].join(", ")}` }, { status: 400 });
   }
-  if (status !== "COMPLETED" && status !== "FAILED") {
-    return Response.json({ ok: false, error: "status must be COMPLETED or FAILED" }, { status: 400 });
+  // SKIPPED（2026-10-21 使用者訂立）：給 OpenClaw Gateway wrapper 用 -- 重開機時登入/開機觸發幾乎
+  // 同時啟動兩個 wrapper 行程，晚到的那個偵測到 port 已被佔用就不搶啟動、回報 SKIPPED 並正常結束。
+  // 不計入 completed 也不計入 failed，單純留一筆紀錄，不讓 local-schedule-monitor 誤判成沒回報。
+  if (status !== "COMPLETED" && status !== "FAILED" && status !== "SKIPPED") {
+    return Response.json({ ok: false, error: "status must be COMPLETED, FAILED, or SKIPPED" }, { status: 400 });
   }
   const detailText = typeof detail === "string" ? detail.slice(0, 2000) : null;
 

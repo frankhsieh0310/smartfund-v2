@@ -28,20 +28,29 @@ const SEC_HEADERS = { Accept: "application/json", "User-Agent": process.env.SEC_
 const ALLOWED_FORMS = new Set(["10-K", "10-Q", "20-F", "40-F", "10-K/A", "10-Q/A", "20-F/A", "40-F/A"]);
 
 type SecUnitFact = { start?: string; end?: string; val?: number; accn?: string; fp?: string; form?: string; filed?: string };
-type SecCompanyFacts = { facts?: { "us-gaap"?: Record<string, { units?: Record<string, SecUnitFact[]> }>; dei?: Record<string, { units?: Record<string, SecUnitFact[]> }> } };
+type SecCompanyFacts = { facts?: { "us-gaap"?: Record<string, { units?: Record<string, SecUnitFact[]> }>; "ifrs-full"?: Record<string, { units?: Record<string, SecUnitFact[]> }>; dei?: Record<string, { units?: Record<string, SecUnitFact[]> }> } };
 // Same alias table as the existing writer, trimmed to what "我的分析" + canonical EPS actually consume.
-const CONCEPTS: Record<string, Array<{ namespace: "us-gaap" | "dei"; name: string }>> = {
-  revenue: [{ namespace: "us-gaap", name: "RevenueFromContractWithCustomerExcludingAssessedTax" }, { namespace: "us-gaap", name: "RevenueFromContractWithCustomerIncludingAssessedTax" }, { namespace: "us-gaap", name: "Revenues" }, { namespace: "us-gaap", name: "SalesRevenueNet" }],
-  gross_profit: [{ namespace: "us-gaap", name: "GrossProfit" }],
-  operating_income: [{ namespace: "us-gaap", name: "OperatingIncomeLoss" }],
-  net_income: [{ namespace: "us-gaap", name: "NetIncomeLoss" }, { namespace: "us-gaap", name: "ProfitLoss" }],
-  basic_eps: [{ namespace: "us-gaap", name: "EarningsPerShareBasic" }],
-  diluted_eps: [{ namespace: "us-gaap", name: "EarningsPerShareDiluted" }],
-  operating_cash_flow: [{ namespace: "us-gaap", name: "NetCashProvidedByUsedInOperatingActivities" }, { namespace: "us-gaap", name: "NetCashProvidedByUsedInOperatingActivitiesContinuingOperations" }],
-  capital_expenditure: [{ namespace: "us-gaap", name: "PaymentsToAcquirePropertyPlantAndEquipment" }, { namespace: "us-gaap", name: "PaymentsForProceedsFromPropertyPlantAndEquipment" }],
-  total_assets: [{ namespace: "us-gaap", name: "Assets" }],
-  total_liabilities: [{ namespace: "us-gaap", name: "Liabilities" }],
-  shareholders_equity: [{ namespace: "us-gaap", name: "StockholdersEquity" }, { namespace: "us-gaap", name: "StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest" }],
+// 2026-10-21（使用者核准）: VERIFIED live against SEC's companyfacts API for the 5 CIKs the health
+// report flagged as SEC_NO_CANONICAL_FACTS -- 4 of them (Northern Dynasty Minerals, LuxExperience
+// B.V., Magnitude International, New Pacific Metals) are foreign private issuers filing 20-F under
+// the ifrs-full taxonomy with ZERO us-gaap facts, so the us-gaap-only alias table above always
+// normalized to an empty array even though SEC genuinely has 100+ ifrs-full facts for each. This is
+// our own gap (missing taxonomy), not a source-side absence. ifrs-full aliases added below, ranked
+// after every us-gaap alias so a us-gaap filer's own facts always win when both exist. The 5th CIK
+// (Guardian Metal Resources PLC, 0002039972) has neither us-gaap nor ifrs-full facts at all (only
+// "ffd"/"dei") -- genuinely no canonical facts in either taxonomy, correctly stays permanent.
+const CONCEPTS: Record<string, Array<{ namespace: "us-gaap" | "dei" | "ifrs-full"; name: string }>> = {
+  revenue: [{ namespace: "us-gaap", name: "RevenueFromContractWithCustomerExcludingAssessedTax" }, { namespace: "us-gaap", name: "RevenueFromContractWithCustomerIncludingAssessedTax" }, { namespace: "us-gaap", name: "Revenues" }, { namespace: "us-gaap", name: "SalesRevenueNet" }, { namespace: "ifrs-full", name: "Revenue" }],
+  gross_profit: [{ namespace: "us-gaap", name: "GrossProfit" }, { namespace: "ifrs-full", name: "GrossProfit" }],
+  operating_income: [{ namespace: "us-gaap", name: "OperatingIncomeLoss" }, { namespace: "ifrs-full", name: "ProfitLossFromOperatingActivities" }],
+  net_income: [{ namespace: "us-gaap", name: "NetIncomeLoss" }, { namespace: "us-gaap", name: "ProfitLoss" }, { namespace: "ifrs-full", name: "ProfitLoss" }],
+  basic_eps: [{ namespace: "us-gaap", name: "EarningsPerShareBasic" }, { namespace: "ifrs-full", name: "BasicEarningsLossPerShare" }, { namespace: "ifrs-full", name: "BasicAndDilutedEarningsLossPerShare" }],
+  diluted_eps: [{ namespace: "us-gaap", name: "EarningsPerShareDiluted" }, { namespace: "ifrs-full", name: "DilutedEarningsLossPerShare" }, { namespace: "ifrs-full", name: "BasicAndDilutedEarningsLossPerShare" }],
+  operating_cash_flow: [{ namespace: "us-gaap", name: "NetCashProvidedByUsedInOperatingActivities" }, { namespace: "us-gaap", name: "NetCashProvidedByUsedInOperatingActivitiesContinuingOperations" }, { namespace: "ifrs-full", name: "CashFlowsFromUsedInOperatingActivities" }],
+  capital_expenditure: [{ namespace: "us-gaap", name: "PaymentsToAcquirePropertyPlantAndEquipment" }, { namespace: "us-gaap", name: "PaymentsForProceedsFromPropertyPlantAndEquipment" }, { namespace: "ifrs-full", name: "PurchaseOfPropertyPlantAndEquipmentClassifiedAsInvestingActivities" }],
+  total_assets: [{ namespace: "us-gaap", name: "Assets" }, { namespace: "ifrs-full", name: "Assets" }],
+  total_liabilities: [{ namespace: "us-gaap", name: "Liabilities" }, { namespace: "ifrs-full", name: "Liabilities" }],
+  shareholders_equity: [{ namespace: "us-gaap", name: "StockholdersEquity" }, { namespace: "us-gaap", name: "StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest" }, { namespace: "ifrs-full", name: "EquityAttributableToOwnersOfParent" }, { namespace: "ifrs-full", name: "Equity" }],
 };
 
 function normalizedTicker(ticker: string): string { return ticker.toUpperCase().replaceAll(".", "-"); }

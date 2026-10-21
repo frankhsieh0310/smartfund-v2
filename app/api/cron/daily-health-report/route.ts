@@ -239,14 +239,14 @@ export async function GET(request: Request) {
   const yahooTwCheck = evaluateYahooTwReturnConsistency(yahooTwSamples);
 
   // Weekend list item 6: cross-check our Yahoo-sourced WTI/Natural Gas closes against FRED's own
-  // published spot series. FRED_API_KEY missing/misconfigured is itself treated as fetchFailed
-  // (surfaced as an anomaly) rather than silently skipped -- a broken cross-check is worse than no
-  // cross-check if it just goes quiet.
+  // published spot series. Uses FRED's public, keyless CSV endpoint (fredgraph.csv) instead of the
+  // api_key-gated JSON endpoint -- 2026-10-21（使用者核准）: FRED_API_KEY is not set in Vercel
+  // production (confirmed via `vercel env ls production`), and this endpoint needs no key at all,
+  // so the cross-check no longer depends on that env var being configured anywhere.
   const fredRoots: Array<{ label: FredCommoditySample["label"]; rootId: string; ourSymbol: string; fredSeriesId: string }> = [
     { label: "WTI_CRUDE", rootId: "ceebeb1f-3616-4d38-ab85-a7de76455d9a", ourSymbol: "CL=F", fredSeriesId: "DCOILWTICO" },
     { label: "NATURAL_GAS", rootId: "8c9966ab-8e29-43bc-a4ff-e908fef9b2c2", ourSymbol: "NG=F", fredSeriesId: "DHHNGSP" },
   ];
-  const fredApiKey = process.env.FRED_API_KEY;
   const fredSamples: FredCommoditySample[] = await Promise.all(
     fredRoots.map(async (r): Promise<FredCommoditySample> => {
       const ourRow = (await prisma.$queryRawUnsafe<Array<{ observed_date: string; close: string }>>(
@@ -254,26 +254,28 @@ export async function GET(request: Request) {
         r.rootId,
       ))[0];
       const base = { label: r.label, ourSymbol: r.ourSymbol, fredSeriesId: r.fredSeriesId, ourDate: ourRow?.observed_date ?? null, ourClose: ourRow ? Number(ourRow.close) : null };
-      if (!fredApiKey) return { ...base, fredDate: null, fredValue: null, fetchFailed: true };
-      // 2026-10-19（使用者核准）: 抓取失敗時同一次執行內重試，最多 3 次、間隔遞增
-      // （1s/2s/4s），降低外部 API 偶發性逾時/限流被誤判成「資料異常」的機率；3 次都失敗才
-      // 真的記為 fetchFailed，報告裡會標明是外部來源問題，不是我方資料缺口。
+      // 抓取失敗時同一次執行內重試，最多 3 次、間隔遞增（1s/2s/4s），降低外部來源偶發性逾時/限流
+      // 被誤判成「資料異常」的機率；3 次都失敗才真的記為 fetchFailed。
       const MAX_ATTEMPTS = 3;
       for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
         try {
-          const url = new URL("https://api.stlouisfed.org/fred/series/observations");
-          url.searchParams.set("series_id", r.fredSeriesId);
-          url.searchParams.set("api_key", fredApiKey);
-          url.searchParams.set("file_type", "json");
-          url.searchParams.set("sort_order", "desc");
-          url.searchParams.set("limit", "1");
+          const url = new URL("https://fred.stlouisfed.org/graph/fredgraph.csv");
+          url.searchParams.set("id", r.fredSeriesId);
           const res = await fetch(url, { signal: AbortSignal.timeout(15_000) });
           if (!res.ok) throw new Error(`FRED_HTTP_${res.status}`);
-          const json = (await res.json()) as { observations?: Array<{ date: string; value: string }> };
-          const obs = json.observations?.[0];
-          const value = obs && obs.value !== "." ? Number(obs.value) : null;
-          if (value === null) throw new Error("FRED_NO_VALUE");
-          return { ...base, fredDate: obs?.date ?? null, fredValue: value, fetchFailed: false };
+          const csv = await res.text();
+          const lines = csv.trim().split("\n").slice(1); // drop header row ("DATE,<series_id>")
+          let obs: { date: string; value: string } | null = null;
+          for (let i = lines.length - 1; i >= 0; i--) {
+            const [date, value] = lines[i].split(",");
+            if (date && value && value !== ".") {
+              obs = { date, value };
+              break;
+            }
+          }
+          const value = obs ? Number(obs.value) : null;
+          if (value === null || Number.isNaN(value)) throw new Error("FRED_NO_VALUE");
+          return { ...base, fredDate: obs!.date, fredValue: value, fetchFailed: false };
         } catch {
           if (attempt === MAX_ATTEMPTS) return { ...base, fredDate: null, fredValue: null, fetchFailed: true };
           await new Promise((resolve) => setTimeout(resolve, 1000 * 2 ** (attempt - 1)));

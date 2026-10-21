@@ -46,6 +46,28 @@ function test(name: string, fn: () => Promise<void> | void) {
     assert.equal(r.writeErrorCount24h, 5);
   });
 
+  // 2026-10-21: VERIFIED live case -- CLOUD_ETF_PRICE's 01:17 run failed one symbol, but the next
+  // (02:17) run was clean and the symbol already had fresh data. A later clean run is evidence the
+  // pipeline already self-healed; only an unresolved streak at the top (newest-first) should count.
+  test("checkPipelineRunLog: an older error followed by a newer clean run -> self-healed, no anomaly", async () => {
+    const query: QueryFn = async () => [
+      { status: "PARTIAL", error: null, write_error_count: "0", started_at: new Date() }, // newest
+      { status: "PARTIAL", error: "1 failures; e.g. YAHOO_CHART_NULL", write_error_count: "0", started_at: new Date(Date.now() - 3600_000) },
+    ];
+    const r = await checkPipelineRunLog(query, "SOME_JOB");
+    assert.equal(r.errorCount24h, 0);
+  });
+
+  test("checkPipelineRunLog: the newest run itself still has an error -> still unresolved", async () => {
+    const query: QueryFn = async () => [
+      { status: "PARTIAL", error: "1 failures; e.g. YAHOO_CHART_NULL", write_error_count: "0", started_at: new Date() }, // newest
+      { status: "PARTIAL", error: null, write_error_count: "0", started_at: new Date(Date.now() - 3600_000) },
+    ];
+    const r = await checkPipelineRunLog(query, "SOME_JOB");
+    assert.equal(r.errorCount24h, 1);
+    assert.equal(r.anomaly, true);
+  });
+
   test("evaluateFreshness: no data -> anomaly NO_DATA", () => {
     const r = evaluateFreshness("test", null, 3);
     assert.equal(r.anomaly, true);
@@ -120,6 +142,20 @@ function test(name: string, fn: () => Promise<void> | void) {
     const r = evaluateYahooTwReturnConsistency([
       { code: "0056", ourReturn1y: 69.38, yahooTwReturn1y: null, fetchFailed: true },
     ]);
+    assert.equal(r.anomaly, true);
+  });
+
+  // 2026-10-21: VERIFIED live case -- 00990B (listed 2026-06-29, under 4 months old) has ourReturn1y
+  // AND yahooTwReturn1y both null, and both sides agreeing there's no 1-year return yet is NOT a
+  // mismatch. Only a one-sided null (we have a value and Yahoo doesn't, or vice versa) is a real
+  // disagreement worth flagging.
+  test("evaluateYahooTwReturnConsistency: both sides null (too new for a 1y return) -> no anomaly", () => {
+    const r = evaluateYahooTwReturnConsistency([{ code: "00990B", ourReturn1y: null, yahooTwReturn1y: null, fetchFailed: false }]);
+    assert.equal(r.anomaly, false);
+  });
+
+  test("evaluateYahooTwReturnConsistency: one side null, other has a value -> anomaly", () => {
+    const r = evaluateYahooTwReturnConsistency([{ code: "0099X", ourReturn1y: 12.3, yahooTwReturn1y: null, fetchFailed: false }]);
     assert.equal(r.anomaly, true);
   });
 
