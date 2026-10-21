@@ -430,15 +430,19 @@ export async function checkCoreUniverseFundCoverage(query: QueryFn, staleDaysThr
   );
 }
 
-export type CoreUniverseFundGapRow = { fundId: string; code: string | null; name: string; dataProvider: string | null };
+export type CoreUniverseFundGapRow = { fundId: string; code: string | null; name: string; dataProvider: string | null; latestNavDate: string | null };
 
 // 2026-10-21（使用者核准）: the bare % from checkCoreUniverseFundCoverage above isn't enough to tell
 // SYSTEM from EXTERNAL_DELAY -- the caller (route.ts, which unlike this file is allowed to make
 // outbound fetches) cross-references this list against SITCA's own published NAV CSV to classify
 // each one with real evidence, same discipline as the active-ETF gap check already does.
+// `latestNavDate` is included so the caller can tell "approved for sale but the source has never
+// once published a NAV for this share class" (latestNavDate IS NULL) apart from "reported before,
+// now stale" (latestNavDate is some old date) -- the former is its own category (see route.ts),
+// not a daily-recurring EXTERNAL_DELAY anomaly.
 export async function checkCoreUniverseFundGapDetail(query: QueryFn, staleDaysThreshold: number): Promise<CoreUniverseFundGapRow[]> {
   const rows = await query(
-    `SELECT c.asset_id AS "fundId", f.code, f.name, f.data_provider AS "dataProvider"
+    `SELECT c.asset_id AS "fundId", f.code, f.name, f.data_provider AS "dataProvider", f.latest_nav_date::text AS "latestNavDate"
        FROM tw_purchasable_classification c
        JOIN funds f ON f.id = c.asset_id
       WHERE c.asset_type = 'FUND' AND c.status = 'APPROVED'

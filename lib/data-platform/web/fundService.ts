@@ -225,7 +225,15 @@ export async function getFundDetail(identifier: string, relationLimit = 20, rang
     : Array.from({ length: FUND_DETAIL_LIMITS.history }, (_, index) => chronologicalHistory[Math.round(index * (chronologicalHistory.length - 1) / (FUND_DETAIL_LIMITS.history - 1))]);
   const data: FundDetailData = {
     identity: { ...fundIdentity(row), isin: row.isin, code: row.code }, company: row.company.trim() || null, assetClass: classificationAssetClass, category: row.category, fundCategory: mapFundMainCategory(row.category), fundSubcategory: row.category, riskRating: row.riskLevel, dividendYield: numberOrNull(row.dividendYieldA),
-    nav: { coverage: row.latestNav === null ? "UNAVAILABLE" : "AVAILABLE", data: { value: numberOrNull(row.latestNav), currency: row.currency, date: isoOrNull(row.latestNavDate) }, provenance },
+    // 2026-10-21（使用者核准）: VERIFIED live -- a fund still approved for sale (e.g. TDCC's own
+    // dataset 3-2 confirms it today) can have a share class that has NEVER had the source publish a
+    // single NAV for it at all (latestNav AND latestNavDate both null -- not "went stale after
+    // reporting once", genuinely zero history ever). Reuses the existing SOURCE_PENDING coverage
+    // state (same one "Fund Flows" already uses) so the UI shows "官方尚未申報淨值" instead of a
+    // bare dash that reads the same as any other missing-data case. A fund that reported before and
+    // then went stale (latestNavDate is set, just old) is a different, already-handled case and
+    // stays UNAVAILABLE here -- distinguishing the two is the whole point of this fix.
+    nav: { coverage: row.latestNav !== null ? "AVAILABLE" : row.latestNavDate === null ? "SOURCE_PENDING" : "UNAVAILABLE", data: { value: numberOrNull(row.latestNav), currency: row.currency, date: isoOrNull(row.latestNavDate) }, provenance },
     history: { coverage: sectionCoverage(historyRows.length, historyRows.length < 2), range, maxPoints: FUND_DETAIL_LIMITS.history, data: sampledHistory.map((item) => ({ date: item.date.toISOString(), nav: numberOrNull(item.nav) })), provenance: historyProvenance },
     performance: { coverage: latestReturns && [latestReturns.return1m, latestReturns.return3m, latestReturns.return6m, latestReturns.returnYtd, latestReturns.return1y, latestReturns.return3y, latestReturns.return5y].some((value) => value !== null) ? "AVAILABLE" : "UNAVAILABLE", data: { return1M: numberOrNull(latestReturns?.return1m), return3M: numberOrNull(latestReturns?.return3m), return6M: numberOrNull(latestReturns?.return6m), returnYtd: numberOrNull(latestReturns?.returnYtd), return1Y: numberOrNull(latestReturns?.return1y), return3YAnnualized: numberOrNull(latestReturns?.return3y), return5YAnnualized: numberOrNull(latestReturns?.return5y), semantics: "NAV_RETURN" }, provenance: performanceProvenance },
     riskMetrics: { coverage: sectionCoverage(riskMetrics.length), data: riskMetrics.map((item) => ({ metricCode: item.metricCode, period: item.period, value: Number(item.value), asOfDate: item.asOfDate.toISOString(), calculationMethod: item.calculationMethod, observationCount: item.observationCount, source: item.source, returnSemantics: item.returnSemantics })), provenance: buildProvenance({ source: riskLatest?.source, sourceRecordId: riskLatest?.id, asOfDate: riskLatest?.asOfDate, lastUpdated: riskLatest?.updatedAt }) },

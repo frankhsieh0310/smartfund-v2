@@ -31,7 +31,7 @@ export default async function FundDetailPage({ params, searchParams }: { params:
         <div className="flex flex-wrap items-start justify-between gap-6"><div className="max-w-4xl"><p className="font-mono text-xs text-[#F5B700]">{text(fund.identity.code)}{fund.identity.isin ? ` · ISIN ${fund.identity.isin}` : ""}</p><h1 className="mt-3 text-3xl font-black tracking-tight text-white sm:text-5xl">{fund.identity.name}</h1><p className="mt-4 text-sm text-slate-400">{text(fund.company)} · {text(fund.assetClass)} · {text(fund.category)}</p></div><Coverage value={response.meta.coverageStatus} /></div>
       </section>
       <section className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Summary label="最新 NAV" value={`${number(fund.nav.data.value, 4)} ${fund.nav.data.currency ?? ""}`} note={date(fund.nav.data.date)} />
+        <Summary label="最新 NAV" value={fund.nav.coverage === "SOURCE_PENDING" ? "官方尚未申報淨值" : `${number(fund.nav.data.value, 4)} ${fund.nav.data.currency ?? ""}`} note={fund.nav.coverage === "SOURCE_PENDING" ? "核准銷售中，尚未開始每日申報" : date(fund.nav.data.date)} />
         <Summary label="1Y NAV 報酬" value={percent(fund.performance.data.return1Y)} note="以 NAV 計算" />
         <Summary label="風險等級" value={fund.riskRating === null ? "—" : `等級 ${fund.riskRating}`} note="來源未提供時不推估" />
         <Summary label="資料狀態" value={response.meta.freshnessStatus} note={`更新 ${date(response.meta.lastUpdated)}`} />

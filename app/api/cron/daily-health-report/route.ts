@@ -192,6 +192,14 @@ export async function GET(request: Request) {
     code: string | null; name: string; dataProvider: string | null;
     category: "SYSTEM" | "EXTERNAL_DELAY"; reason: string; checkedAt: string;
   }> = [];
+  // 2026-10-21（使用者核准）: a fund still approved for sale (confirmed via the official source)
+  // whose share class has NEVER had a NAV published at all (latestNavDate IS NULL -- not "reported
+  // before, now stale") is its own category, not a daily-recurring EXTERNAL_DELAY anomaly. VERIFIED
+  // live: MGF35/MGF38 (hongleong Dragon Growth/India Equity I-acc) and the Russia/UEAHAA pair, plus
+  // 11 SITCA domestic share classes, all still show up in TDCC/SITCA's own "approved for sale"
+  // dataset today with zero NAV ever published. Counted here, surfaced once as a count
+  // (details.core_universe_fund_never_reported_count), and excluded from the anomaly list entirely.
+  const coreUniverseFundNeverReported: Array<{ code: string | null; name: string; dataProvider: string | null }> = [];
   {
     const checkedAt = new Date().toISOString();
     let sitcaCsvRows: string[][] | null = null;
@@ -208,18 +216,53 @@ export async function GET(request: Request) {
     if (sitcaCsvRows) for (const cols of sitcaCsvRows) if (cols.length >= 7 && cols[3]) sitcaByCode.set(cols[3], cols[6]);
 
     for (const fund of coreUniverseFundGapRows) {
-      if (fund.dataProvider === "tdcc-offshore") continue; // handled by the self-extending mapping fix instead, not evidence-checked here
+      if (fund.dataProvider === "tdcc-offshore") continue; // handled separately below (TDCC source, not SITCA)
       if (!sitcaCsvRows) {
         coreUniverseFundGapWithEvidence.push({ code: fund.code, name: fund.name, dataProvider: fund.dataProvider, category: "SYSTEM", reason: `SITCA_CSV_FETCH_FAILED: ${sitcaFetchError}`, checkedAt });
         continue;
       }
       const csvNav = fund.code ? sitcaByCode.get(fund.code) : undefined;
       if (csvNav === "-" || csvNav === "") {
-        coreUniverseFundGapWithEvidence.push({ code: fund.code, name: fund.name, dataProvider: fund.dataProvider, category: "EXTERNAL_DELAY", reason: "SITCA_LISTED_NAV_NOT_YET_PUBLISHED", checkedAt });
+        if (fund.latestNavDate === null) {
+          coreUniverseFundNeverReported.push({ code: fund.code, name: fund.name, dataProvider: fund.dataProvider });
+        } else {
+          coreUniverseFundGapWithEvidence.push({ code: fund.code, name: fund.name, dataProvider: fund.dataProvider, category: "EXTERNAL_DELAY", reason: "SITCA_LISTED_NAV_NOT_YET_PUBLISHED", checkedAt });
+        }
       } else if (csvNav === undefined) {
         coreUniverseFundGapWithEvidence.push({ code: fund.code, name: fund.name, dataProvider: fund.dataProvider, category: "EXTERNAL_DELAY", reason: "ABSENT_FROM_TODAYS_SITCA_CSV_DESPITE_PRIOR_REAL_NAV", checkedAt });
       } else {
         coreUniverseFundGapWithEvidence.push({ code: fund.code, name: fund.name, dataProvider: fund.dataProvider, category: "SYSTEM", reason: `SITCA_HAS_REAL_NAV_${csvNav}_NOT_INGESTED`, checkedAt });
+      }
+    }
+
+    // tdcc-offshore: a fund with latestNavDate=null is either never-reported (if TDCC's own NAV
+    // dataset 3-4 has no valid row for it at all, confirmed live for the Russia/UEAHAA pair and
+    // MGF35/MGF38 -- see CLAUDE.md for the full investigation) or just hasn't been resolved by the
+    // self-extending mapping yet (regular EXTERNAL_DELAY/SYSTEM territory, already handled by that
+    // fix). Only the confirmed-never-reported ones are pulled out here; everything else for
+    // tdcc-offshore stays un-evidence-checked as before (self-extending mapping handles the gap).
+    const tdccNeverReportedCandidates = coreUniverseFundGapRows.filter((f) => f.dataProvider === "tdcc-offshore" && f.latestNavDate === null);
+    if (tdccNeverReportedCandidates.length > 0) {
+      try {
+        const res = await fetch("https://opendata.tdcc.com.tw/getOD.ashx?id=3-4", { signal: AbortSignal.timeout(20_000) });
+        if (res.ok) {
+          const text = await res.text();
+          const codesInNav = new Set<string>();
+          const namesInNav = new Set<string>();
+          for (const line of text.split("\n")) {
+            const p = line.trim().split(",");
+            if (p.length < 6) continue;
+            if (p[0]) codesInNav.add(p[0]);
+            if (p[1]) namesInNav.add(p[1]);
+          }
+          for (const fund of tdccNeverReportedCandidates) {
+            const inNav = fund.code ? codesInNav.has(fund.code) : namesInNav.has(fund.name);
+            if (!inNav) coreUniverseFundNeverReported.push({ code: fund.code, name: fund.name, dataProvider: fund.dataProvider });
+          }
+        }
+      } catch {
+        // best-effort only -- these funds just stay out of coreUniverseFundNeverReported this run,
+        // picked up again next time; never blocks the rest of the report.
       }
     }
   }
@@ -445,6 +488,8 @@ export async function GET(request: Request) {
       etf_data_source_gap: etfDataSourceGap, yahoo_tw_return_check: yahooTwCheck, fred_commodity_check: fredCommodityCheck, coverage,
       active_etf_official_holdings: activeEtfOfficialHoldings, active_etf_official_holdings_evidence: activeEtfGapWithEvidence, local_schedule_reporting: localScheduleReporting,
       core_universe_fund_gap_evidence: coreUniverseFundGapWithEvidence,
+      core_universe_fund_never_reported_count: coreUniverseFundNeverReported.length,
+      core_universe_fund_never_reported_sample: coreUniverseFundNeverReported.slice(0, 20),
       core_universe_etf_gap_evidence: coreUniverseEtfGapWithEvidence,
       moneydj_parse_failures: moneydjParseFailures,
       anomaly_count: anomalies.length, system_anomaly_count: systemAnomalyCount, external_delay_anomaly_count: externalDelayAnomalyCount,
