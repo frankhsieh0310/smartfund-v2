@@ -367,10 +367,6 @@
     {
       "path": "/api/cron/fx-global-carry-ranking",
       "schedule": "30 19 * * *"
-    },
-    {
-      "path": "/api/cron/fx-options-public",
-      "schedule": "49 13 * * *"
     }
   ],
   "regions": [
