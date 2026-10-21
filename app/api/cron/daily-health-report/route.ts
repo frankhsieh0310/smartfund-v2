@@ -506,11 +506,18 @@ export async function GET(request: Request) {
           const res = await fetch(url, { signal: AbortSignal.timeout(15_000) });
           if (!res.ok) throw new Error(`FRED_HTTP_${res.status}`);
           const csv = await res.text();
+          // 2026-10-21 23:20 夜間dry-run發現：FRED在「排定維護」期間仍回HTTP 200，但內容是
+          // maintenance頁面的HTML，不是CSV（VERIFIED直接curl該URL看到"Site Maintenance"頁面）。
+          // 原本沒驗證內容格式，把HTML某一行當CSV硬切，巧合切出"date"="    <link href=...Open+
+          // Sans:300,400,700..."、"value"=400，被當成真實數值，誤報WTI/天然氣跟FRED差75%~99%。
+          // 現在明確驗證內容確實是CSV（不是HTML），而且日期欄位必須是YYYY-MM-DD格式，不是CSV或
+          // 格式不對的內容一律當成fetchFailed，不再硬解析。
+          if (csv.trimStart().startsWith("<")) throw new Error("FRED_RESPONSE_NOT_CSV_LIKELY_MAINTENANCE_PAGE");
           const lines = csv.trim().split("\n").slice(1); // drop header row ("DATE,<series_id>")
           let obs: { date: string; value: string } | null = null;
           for (let i = lines.length - 1; i >= 0; i--) {
             const [date, value] = lines[i].split(",");
-            if (date && value && value !== ".") {
+            if (date && /^\d{4}-\d{2}-\d{2}$/.test(date) && value && value !== ".") {
               obs = { date, value };
               break;
             }
