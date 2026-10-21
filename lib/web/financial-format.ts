@@ -28,3 +28,18 @@ const formatLargeMoney = (value: number | null, currency: string) => {
 
 export const formatTurnover = formatLargeMoney;
 export const formatMarketCap = formatLargeMoney;
+
+// 2026-10-21（使用者核准的畫面顯示層統一）: 資料庫一律存ISO 4217代碼（今天的幣別修正已經讓
+// 全部funds.currency都是ISO格式），畫面一律轉成中文顯示——避免「同一個頁面有的基金顯示JPY、
+// 有的顯示日圓」這種不一致。只改顯示文字，不改版面、顏色、排版。
+const ISO_CURRENCY_ZH: Record<string, string> = {
+  USD: "美元", TWD: "新台幣", EUR: "歐元", AUD: "澳幣", CNY: "人民幣", CNH: "離岸人民幣",
+  ZAR: "南非幣", JPY: "日圓", GBP: "英鎊", SGD: "新加坡幣", NZD: "紐西蘭幣", HKD: "港幣",
+  CAD: "加拿大幣", SEK: "瑞典幣", CHF: "瑞士法郎", NOK: "挪威幣",
+};
+
+/** ISO 4217代碼轉中文幣別名稱，查不到的代碼（未預期的新幣別）原樣顯示代碼，不隱藏、不報錯。 */
+export const formatCurrencyZh = (currency: string | null | undefined): string => {
+  if (!currency) return "—";
+  return ISO_CURRENCY_ZH[currency] ?? currency;
+};

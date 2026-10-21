@@ -580,26 +580,22 @@ export type FundCurrencyFormatResult = {
   anomaly: boolean;
 };
 
-// 2026-10-21（使用者核准的1,016檔幣別修正後新增）: 修正過程中發現 funds.currency 曾被寫入中文
-// 字串（CUR_MAP 漏了「日幣」「加幣」兩個 TDCC 實際用字，76+3檔被原樣寫入中文，見
-// lib/tdcc-currency-map.ts 的修正記錄），且另外發現 data_provider='yahoo' 的既有 6,714 筆從一開始
-// 就是中文字串（更早、範圍更大、跟今天的TDCC/SITCA修正無關的既有問題，尚待使用者決定是否處理）。
-// 這個檢查只收斂「核心母體」（tdcc-offshore + 國內SITCA範圍，即 data_provider IN ('tdcc-offshore')
-// OR data_provider IS NULL）：格式不是三碼大寫ISO代碼，不管該填什麼值，先天就是錯的，不需要比對
-// 官方資料就能判定異常，當作最後一道防呆——未來任何批次更新如果又漏了某個幣別對應，隔天就會被
-// 這個檢查抓到，而不是像這次一樣要等人工抽查才發現。
+// 2026-10-21（使用者核准）: 原本只收斂「核心母體」（tdcc-offshore + SITCA），因為當時
+// data_provider='yahoo' 的6,714筆既有中文幣別還沒核准修正、範圍擴大會天天誤報。現在那6,714+2筆
+// 已經核准並執行修正（見 funds_currency_backup_yahoo_20261021 備份表），範圍正式擴大到全表
+// funds，不再排除任何data_provider——格式不是三碼大寫ISO代碼，不管該填什麼值，先天就是錯的，
+// 不需要比對官方資料就能判定異常，當作最後一道防呆：未來任何批次更新或任何來源的新建流程只要
+// 漏了幣別對應，隔天就會被這個檢查抓到。
 export async function checkCoreUniverseFundCurrencyFormat(query: QueryFn): Promise<FundCurrencyFormatResult> {
   const rows = await query(
     `SELECT code, name, currency, data_provider FROM funds
-     WHERE (data_provider = 'tdcc-offshore' OR data_provider IS NULL)
-       AND currency IS NOT NULL AND currency !~ '^[A-Z]{3}$'
+     WHERE currency IS NOT NULL AND currency !~ '^[A-Z]{3}$'
      LIMIT 50`,
     [],
   );
   const countRow = await query(
     `SELECT count(*)::int AS n FROM funds
-     WHERE (data_provider = 'tdcc-offshore' OR data_provider IS NULL)
-       AND currency IS NOT NULL AND currency !~ '^[A-Z]{3}$'`,
+     WHERE currency IS NOT NULL AND currency !~ '^[A-Z]{3}$'`,
     [],
   );
   const invalid = rows.map((r: any) => ({ code: r.code, name: r.name, currency: r.currency, dataProvider: r.data_provider }));

@@ -260,6 +260,13 @@ export async function ingestUsFundShareClass(
     const stem = masterStem(rec.name);
     const family = rec.family ?? "UNKNOWN";
     const providerMasterKey = `YAHOO:${family}|${stem}`.slice(0, 200);
+    // 2026-10-21（使用者核准，全碼庫fund建立路徑檢查）: Yahoo quoteSummary的pr.currency欄位
+    // VERIFIED會偶爾回傳非ISO格式的字串（這是funds表6,714筆中文幣別——美元/新台幣/歐元等——
+    // 的根因，全部都是data_provider='yahoo'）。原本不管格式對不對都直接寫進去，現在先驗證
+    // 格式，不是合法三碼大寫ISO代碼就當作沒有這個資訊（null），讓下面既有的COALESCE(...,'USD')
+    // 接手，不把原始的非ISO字串寫進任何currency欄位（fund_master.base_currency、
+    // funds.currency、fund_share_classes.currency 都用這個驗證過的值）。
+    const isoCurrency = rec.currency && /^[A-Z]{3}$/.test(rec.currency) ? rec.currency : null;
 
     // --- 1) Fund Master (Tier A: exact family+stem). SELECT-then-INSERT (no unique on provider_master_key).
     let masterId: string | null = null;
@@ -269,7 +276,7 @@ export async function ingestUsFundShareClass(
       const ins = await query(
         `INSERT INTO fund_master (id, canonical_name, base_currency, provider_master_key, created_at, updated_at)
          VALUES (gen_random_uuid()::text, $1, $2, $3, NOW(), NOW()) RETURNING id::text`,
-        [rec.name.replace(SUFFIX_RE, "").trim().slice(0, 240) || rec.name.slice(0, 240), rec.currency, providerMasterKey],
+        [rec.name.replace(SUFFIX_RE, "").trim().slice(0, 240) || rec.name.slice(0, 240), isoCurrency, providerMasterKey],
       );
       masterId = ins[0].id;
       res.masterCreated = true;
@@ -299,7 +306,7 @@ export async function ingestUsFundShareClass(
            inception_date = COALESCE(to_timestamp($16::numeric)::date, inception_date),
            data_provider = 'yahoo', last_nav_source = 'YAHOO_QUOTE_SUMMARY', updated_at = NOW()
          WHERE id = $1`,
-        [fundId, rec.name.slice(0, 500), (rec.family ?? "UNKNOWN").slice(0, 200), rec.currency, rec.category,
+        [fundId, rec.name.slice(0, 500), (rec.family ?? "UNKNOWN").slice(0, 200), isoCurrency, rec.category,
          rec.msOverall, rec.msRisk, rec.msCategory, rec.msRank3y,
          rec.r1y, rec.r3y, rec.r5y, rec.r10y, rec.netExpense, rec.netAssets, rec.inceptionEpoch],
       );
@@ -318,7 +325,7 @@ export async function ingestUsFundShareClass(
             $9::numeric, $10::numeric, $11::numeric, $12::numeric, $13::numeric, $14::numeric, NULL, NULL,
             to_timestamp($15::numeric)::date, true, 'yahoo', $16::text, 'YAHOO_QUOTE_SUMMARY', NOW(), NOW())
          RETURNING id::text`,
-        [rec.name.slice(0, 500), (rec.family ?? "UNKNOWN").slice(0, 200), rec.currency, rec.category,
+        [rec.name.slice(0, 500), (rec.family ?? "UNKNOWN").slice(0, 200), isoCurrency, rec.category,
          rec.msOverall, rec.msRisk, rec.msCategory, rec.msRank3y,
          rec.r1y, rec.r3y, rec.r5y, rec.r10y, rec.netExpense, rec.netAssets, rec.inceptionEpoch, rec.symbol],
       );
@@ -333,7 +340,7 @@ export async function ingestUsFundShareClass(
           minimum_initial_investment, master_fund_id, share_class_type, created_at, updated_at)
        VALUES (gen_random_uuid()::text, $1::text, $2::text, $3::text, $4::text, 'ACTIVE', $5::text, $3::text, $6::numeric, $7::text, $8::text, NOW(), NOW())
        ON CONFLICT DO NOTHING`,
-      [fundId, rec.name.slice(0, 500), rec.symbol, rec.currency, SOURCE, rec.initInvestment, masterId,
+      [fundId, rec.name.slice(0, 500), rec.symbol, isoCurrency, SOURCE, rec.initInvestment, masterId,
        rec.legalType?.slice(0, 60) ?? null],
     );
     const scRow = await query(
