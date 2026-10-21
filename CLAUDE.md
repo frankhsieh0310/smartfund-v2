@@ -1837,3 +1837,17 @@ TWSE ETF 重複資料、ETF_RETURNS_SYNC_TW 卡住等）還沒修好部署前，
 **2. 境外基金覆蓋率 — UNKNOWN，等今晚18:30台北的排程**：目前伺服器時間12:34台北，下一次`offshore-nav-tdcc-sync`排定18:30台北執行。已提前完整分類剩餘缺口的每一類原因（今天510筆tdcc-offshore缺口）：443筆今晚會被修好的name比對抓到；40筆是TDCC自己的`-9999`（確認尚未公布，EXTERNAL_DELAY）；23筆TDCC目前公布的日期跟我方已有的資料是同一天（還沒更新到更新的，EXTERNAL_DELAY）；4筆TDCC CSV完全查不到代碼，其中1筆是摩根俄羅斯基金（已知俄烏戰爭後市場凍結案例，見既有文件），另外3筆（宏利巨龍增長、宏利印度股票、摩根美國全方位股票澎幣對沖）還沒逐一查證原因，需要之後再查。**已排定今晚18:30之後的自動查核**，屆時確認實際覆蓋率是否達到92.6%、443筆是否真的全部補上。
 
 **3. EXTERNAL_DELAY分類邏輯 — VERIFIED 用今天真實資料跑過，正確**：直接執行健康報告的即時查證邏輯（上午已經寫好，不是今天新寫的）對照今天真實的SITCA CSV：domestic/SITCA類別目前的365筆缺口，**365筆全部正確分類為EXTERNAL_DELAY，0筆錯誤標成SYSTEM**。目前的邏輯是「代號查CSV是'-'或完全不在CSV裡，就算EXTERNAL_DELAY」，沒有額外去查SITCA官方「非營業日」公告頁本身——但因為兩種情況（公告的非營業日、公會1~2天正常延遲）在CSV上都會呈現同一種「沒有今天的紀錄」症狀，目前這套邏輯已經正確覆蓋兩種情況，沒有發現任何假SYSTEM，判斷不需要額外加查官方公告頁那層複雜度。
+
+## 第五輪：MGF35/MGF38/UEAHAA等「從未申報淨值」級別的全面處理（2026-10-21）
+
+使用者確認MGF35/MGF38/UEAHAA不是清算/改名/代碼錯誤之後，追加要求：畫面不准顯示空白/0，健康報告不准每天重複列為異常，並要求全面檢查同類級別。分支`fix/daily-ops-20261021-r5`（從`d10375255`開出），commit`c31b19007`，型別檢查通過、20項單元測試全過、Preview實際畫面驗證過。
+
+**全面掃描結果 — VERIFIED**：用「latest_nav_date為null（我方從未確認拿到過淨值）且官方來源（SITCA CSV的'-'佔位、或TDCC dataset 3-4完全查無代碼/名稱）也確認從未公布」雙重條件，掃出**domestic/SITCA 172筆、tdcc-offshore 3筆（MGF38、俄羅斯基金、UEAHAA——MGF35因為確實有過4筆舊history且latest_nav_date有值，不算在「從未」這一類，維持一般EXTERNAL_DELAY）**，共175筆。這是今天才第一次完整掃出的真實規模，遠比原本以為的3筆多。
+
+**畫面修正 — VERIFIED**：
+- `fundService.ts`的`nav.coverage`新增條件：`latestNav`跟`latestNavDate`都是null時回傳`SOURCE_PENDING`（沿用既有「Fund Flows」分區已經在用的同一個狀態，不是新發明的狀態值），其餘（曾經報過、現在只是舊）維持`UNAVAILABLE`不變。
+- 基金詳情頁「最新NAV」卡片：`SOURCE_PENDING`時顯示「官方尚未申報淨值」＋「核准銷售中，尚未開始每日申報」，不再是容易誤讀成「沒資料/零」的單一「—」符號。
+- 已用Preview直接curl驗證：UEAHAA（`a725f72d-...`）正確顯示新文字；對照組一般基金（兆豐中國A股，`c548a689-...`）維持原本顯示「16.01 CNY」不受影響。
+- **範圍備註**：只修了基金詳情頁（`/funds/[id]`）的主要NAV卡片；`/funds`列表頁的NAV欄位目前仍是共用的`numberLabel`，null時顯示「—」，沒有特別改——那個欄位是很多資產類型共用的格式化函式，要加這個特例需要先擴充共用的`SummaryMetrics`型別，影響面較大，今天先不動，如果你要列表頁也顯示一樣的文字請再說。
+
+**健康報告修正 — VERIFIED**：`checkCoreUniverseFundGapDetail`回傳多加`latestNavDate`欄位；`daily-health-report/route.ts`的證據判斷新增：SITCA顯示'-'但`latestNavDate`已經是null的，歸進新的`coreUniverseFundNeverReported`陣列（跟原本`coreUniverseFundGapWithEvidence`分開），**完全不進異常清單**，只在`details.core_universe_fund_never_reported_count`／`_sample`裡列數量供參考；tdcc-offshore也加了對應的TDCC dataset 3-4查證（有界、best-effort，查不到就這次先跳過，下次再抓）。用真正的`checks.ts`函式（不是手刻重寫）對正式環境資料跑過一次，確認175筆（172+3）正確進到新分類、不會出現在異常清單裡。
