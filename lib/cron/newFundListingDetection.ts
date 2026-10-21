@@ -127,10 +127,20 @@ const CANDIDATE_BACKFILL_THRESHOLD = 50;
 // signature already documented and fixed for other jobs in this codebase). Fixed the same way those
 // were: a deadline check inside the loop so the function always returns control gracefully (partial
 // progress saved, remaining items picked up by tomorrow's run) instead of getting killed mid-loop.
+// 2026-10-21 root-cause fix (user-approved, item 1b): this used to hardcode currency: "TWD" for
+// EVERY domestic (SITCA) fund it creates, even though a domestic-trust-company fund can itself be a
+// foreign-currency share class (e.g. 合庫新興多重收益基金A(USD不配息) -- a SITCA-registered fund
+// whose own 幣別 column is USD, not TWD). fetchSitcaRows() already returns each row's real
+// `currency` (SitcaRawRow.currency, from the CSV's 幣別 column) -- it was being fetched and then
+// discarded (only `.nav` was kept), so the hardcoded "TWD" below was never corrected even though the
+// real value was sitting right there. Verified live against 186 funds this round found with a
+// currency mismatch against today's SITCA CSV -- fixing the source here stops NEW funds from being
+// created with the same wrong value; it does not touch any of the 186 existing rows, which the user
+// is fixing separately after officially sourcing each one's real currency.
 async function createMissingDomesticFunds(writeEnabled: boolean, existingFundCodes: Set<string>, deadlineMs: number): Promise<{ taxId: string; name: string; company: string }[]> {
   const identity = await fetchSitcaIdentityRows();
   const navRows = await fetchSitcaRows().catch(() => []); // best-effort -- NAV might not be published yet for some
-  const navByTaxId = new Map(navRows.map((r) => [r.taxId, r.nav]));
+  const navByTaxId = new Map(navRows.map((r) => [r.taxId, r]));
 
   const seenTaxIds = new Set<string>();
   const missing: { taxId: string; name: string; company: string }[] = [];
@@ -144,16 +154,16 @@ async function createMissingDomesticFunds(writeEnabled: boolean, existingFundCod
   const created: { taxId: string; name: string; company: string }[] = [];
   for (const row of missing) {
     if (Date.now() > deadlineMs) break; // graceful stop -- remaining rows picked up by next run
-    const nav = navByTaxId.get(row.taxId) ?? null;
+    const navRow = navByTaxId.get(row.taxId);
     await prisma.fund.create({
       data: {
         name: row.name,
         code: row.taxId,
         company: row.company,
-        currency: "TWD",
+        currency: navRow?.currency ?? "TWD", // TWD only when NAV (and so currency) hasn't published yet
         dataProvider: "SITCA",
         isActive: true,
-        latestNav: nav ?? undefined,
+        latestNav: navRow?.nav ?? undefined,
       },
     });
     created.push(row);
