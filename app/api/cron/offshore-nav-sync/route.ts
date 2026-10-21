@@ -1,8 +1,16 @@
-// Task R3/Z follow-up: auto-updates NAV for the subset of the 962 tdcc-offshore funds whose Yahoo
-// mapping (lib/offshore-nav-sync/mapping.ts, seeded once into the existing
-// production_scheduler_checkpoints table -- no new table) was an EXACT name match with no currency or
-// class inconsistency flagged. Anything flagged "有疑慮" during the original sweep is permanently
-// excluded here, never guessed at.
+// Task R3/Z follow-up: auto-updates NAV for the subset of tdcc-offshore funds whose Yahoo mapping
+// (lib/offshore-nav-sync/mapping.ts, stored in the existing production_scheduler_checkpoints table
+// -- no new table) was an EXACT name match with no currency or class inconsistency flagged. Anything
+// flagged "有疑慮" during the original one-time sweep (2026-10-12) is permanently excluded here,
+// never guessed at.
+//
+// 2026-10-21: that sweep was one-time and the mapping never grew -- any fund approved afterward had
+// no chance to be in it at all (453 of the 532-fund core_universe_fund gap, verified). Each run now
+// spends a small bounded slice (discoverMapping.ts, DISCOVERY_TIME_BUDGET_MS below) trying to
+// resolve newly-approved funds the same way the original sweep did (EXACT name match only), and
+// persists anything it finds back into the same checkpoint row -- so the mapping keeps growing on
+// its own instead of needing another one-time sweep. Anything it can't resolve exactly is logged
+// with evidence (details.mapping_unresolved_sample) and stays excluded, same as the original rule.
 //
 // One Yahoo request per fund (FundServices.fundsPriceHistory), >=1.1s apart, inside a 240s wall-clock
 // budget per invocation -- the daily 09:00-12:00 Taipei / 15-min schedule spreads the ~894 eligible
@@ -12,8 +20,9 @@
 // fetches and classifies but writes nothing.
 import { isAuthorizedCron, unauthorizedCron } from "@/lib/cron/authorize";
 import { prisma } from "@/lib/prisma";
-import { beginRun, finishRun } from "@/lib/cloud-ingestion/runContext";
-import { loadMapping } from "@/lib/offshore-nav-sync/mapping";
+import { beginRun, finishRun, writeCheckpoint } from "@/lib/cloud-ingestion/runContext";
+import { loadMapping, MAPPING_CHECKPOINT_KEY } from "@/lib/offshore-nav-sync/mapping";
+import { discoverNewMappings } from "@/lib/offshore-nav-sync/discoverMapping";
 import { loadDailyProgress, saveDailyProgress } from "@/lib/offshore-nav-sync/completion";
 import { loadKnownNoData, saveKnownNoData, isOnCooldown } from "@/lib/offshore-nav-sync/knownNoData";
 import { fetchOffshoreNav, RateLimitedError } from "@/lib/offshore-nav-sync/navFetch";
@@ -63,6 +72,25 @@ export async function GET(request: Request) {
       details: { run_mode: currentRunMode(), reason: "MAPPING_EMPTY_NOT_YET_SEEDED" },
     });
     return Response.json({ ok: true, job: JOB, runId, status: "COMPLETED", mappingEmpty: true });
+  }
+
+  // 2026-10-21（使用者核准）: the mapping was a one-time sweep (see mapping.ts's own doc comment) and
+  // never grew as new tdcc-offshore funds got approved -- 453 of the 532-fund core_universe_fund gap
+  // were created after that sweep and never had a chance to be in it at all. Self-extend it here:
+  // bounded, rate-limited, EXACT-name-match only (same rule the original sweep used), appended to
+  // (never replacing) the existing 876 entries. This slice shares the route's overall wall clock but
+  // is capped well under it, so it can never starve the NAV-fetch budget below a useful minimum.
+  const DISCOVERY_TIME_BUDGET_MS = 45_000;
+  const DISCOVERY_REQUEST_SPACING_MS = 1_100;
+  const { discovered, unresolved } = await discoverNewMappings(query, mapping, DISCOVERY_TIME_BUDGET_MS, DISCOVERY_REQUEST_SPACING_MS);
+  if (discovered.length > 0) {
+    mapping.push(...discovered);
+    // Same SHADOW MODE gate as everything else below -- discovery still runs and classifies (so a
+    // shadow-mode Preview run's own report is accurate), but only a write-enabled run persists the
+    // extended mapping, consistent with "writes nothing" unless OFFSHORE_NAV_SYNC_WRITE is "on".
+    if (writeEnabledThisRun) {
+      await writeCheckpoint(JOB, MAPPING_CHECKPOINT_KEY, runId, { lastSymbol: JSON.stringify(mapping), processed: mapping.length, succeeded: discovered.length, failed: unresolved.length });
+    }
   }
 
   const attemptedToday = await loadDailyProgress(query, today);
@@ -141,6 +169,8 @@ export async function GET(request: Request) {
       rate_limited: rateLimited, http_status: httpStatus,
       write_candidate_count: candidates.length, written: writeResult.written, write_error_count: writeResult.writeErrorCount,
       attempted_today_total: mergedAttempted.size, cooldown_skipped_count: cooldownSkippedCount,
+      mapping_discovered_count: discovered.length, mapping_unresolved_count: unresolved.length,
+      mapping_unresolved_sample: unresolved.slice(0, 10),
     },
   });
 
@@ -149,5 +179,6 @@ export async function GET(request: Request) {
     mappingSize: mapping.length, pendingBeforeRun: pending.length, attempted,
     noDataCount, jumpReviewCount, errorCount, rateLimited, httpStatus,
     writeCandidateCount: candidates.length, written: writeResult.written, writeErrorCount: writeResult.writeErrorCount,
+    mappingDiscoveredCount: discovered.length, mappingUnresolvedCount: unresolved.length,
   });
 }

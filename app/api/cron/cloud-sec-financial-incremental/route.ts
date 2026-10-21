@@ -197,6 +197,17 @@ export async function GET(request: Request) {
   let attempted = 0;
   let inserted = 0;
   let failed = 0;
+  // 2026-10-21（使用者核准）: VERIFIED live -- the 5 CIKs flagged SEC_NO_CANONICAL_FACTS today (and
+  // the 1 that's genuinely permanent, Guardian Metal Resources) will throw this SAME error on every
+  // future run too; it's SEC's companyfacts API itself confirming the company has no us-gaap/
+  // ifrs-full facts to offer, not something a retry ever resolves. Counting it as an ordinary
+  // `failed` made `status` PARTIAL on literally every run forever (this job's universe always has
+  // at least one such CIK), which in turn made checkPipelineRunLog's "hadFullPassToday" check never
+  // true and permanently flagged LAST_RUN_PARTIAL -- an unfixable, daily-recurring false anomaly for
+  // a condition that isn't actually wrong. Tracked separately so a run where every OTHER CIK
+  // succeeded reports COMPLETED, matching this job's own "permanentUnavailable" concept already used
+  // by the local (non-cloud) mirror script for the exact same classification.
+  let permanentFailed = 0;
   let latestFiledAt: string | null = null;
   const failures: Array<{ cik: string; reason: string }> = [];
   for (const cik of toProcess) {
@@ -235,7 +246,9 @@ export async function GET(request: Request) {
       }
     } catch (error) {
       failed++;
-      failures.push({ cik, reason: error instanceof Error ? error.message : String(error) });
+      const reason = error instanceof Error ? error.message : String(error);
+      if (reason === "SEC_NO_CANONICAL_FACTS") permanentFailed++;
+      failures.push({ cik, reason });
     }
     await new Promise((r) => setTimeout(r, 250)); // bounded request rate, per SEC fair-access policy
   }
@@ -246,11 +259,16 @@ export async function GET(request: Request) {
   ).then((r) => r[0]?.n ?? 0);
   const after = { lastSymbol: toProcess.at(-1) ?? before?.lastSymbol ?? null, processed: (before?.processed ?? 0) + attempted, succeeded: (before?.succeeded ?? 0) + (attempted - failed), failed: (before?.failed ?? 0) + failed, updatedAt: new Date().toISOString() };
   await writeCheckpoint(JOB, CHECKPOINT_KEY, runId, { lastSymbol: after.lastSymbol, processed: after.processed, succeeded: after.succeeded, failed: after.failed });
-  const status = attempted > 0 && failed === attempted ? "FAILED" : failed > 0 ? "PARTIAL" : "COMPLETED";
+  const retryableFailed = failed - permanentFailed;
+  const status = attempted > 0 && retryableFailed === attempted ? "FAILED" : retryableFailed > 0 ? "PARTIAL" : "COMPLETED";
+  // error only reflects retryable failures too -- a run whose only failures are permanent
+  // SEC_NO_CANONICAL_FACTS CIKs has nothing actionable to surface as an "error" (see
+  // checkPipelineRunLog's self-heal logic, which treats a non-null error as still-unresolved).
+  const retryableFailures = failures.filter((f) => f.reason !== "SEC_NO_CANONICAL_FACTS");
   await finishRun(runId, JOB, PROVIDER, startedMs, {
-    status, attempted, completed: attempted - failed, inserted, updated: 0, failed, retryableFailures: failed,
-    checkpointAfter: after, error: failures.length ? JSON.stringify(failures.slice(0, 5)) : null,
-    details: { discovered_ciks: discoveredIssuerCiks.length, from_backlog: pendingCiks.length, deferred_to_next_run: deferred, pending_queue_depth: pendingQueueDepthAfter, latest_filed_at: latestFiledAt, sample_failures: failures.slice(0, 5) },
+    status, attempted, completed: attempted - failed, inserted, updated: 0, failed, retryableFailures: retryableFailed,
+    checkpointAfter: after, error: retryableFailures.length ? JSON.stringify(retryableFailures.slice(0, 5)) : null,
+    details: { discovered_ciks: discoveredIssuerCiks.length, from_backlog: pendingCiks.length, deferred_to_next_run: deferred, pending_queue_depth: pendingQueueDepthAfter, latest_filed_at: latestFiledAt, sample_failures: failures.slice(0, 5), permanent_failed: permanentFailed },
   });
 
   return Response.json({ ok: status !== "FAILED", job: JOB, runId, issuersDiscovered: discoveredIssuerCiks.length, issuersRefreshed: attempted - failed, factsWritten: inserted, failed, deferredToNextRun: deferred, pendingQueueDepth: pendingQueueDepthAfter, latestFiledAt, runtimeMs: Date.now() - startedMs, status });

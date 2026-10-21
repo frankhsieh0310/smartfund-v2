@@ -12,7 +12,8 @@
 import { isAuthorizedCron, unauthorizedCron } from "@/lib/cron/authorize";
 import { prisma } from "@/lib/prisma";
 import { beginRun, finishRun } from "@/lib/cloud-ingestion/runContext";
-import { checkPipelineRunLog, checkMoneydjParseFailures, evaluateFreshness, checkEtfDataSourceGap, evaluateYahooTwReturnConsistency, evaluateFredCommodityConsistency, checkCommodityTechnicalCoverage, checkFundPerformanceCoverage, checkEtfPerformanceCoverage, checkEtfHistoryFreshness, checkFundHistoryFreshness, checkCoreUniverseEtfCoverage, checkCoreUniverseFundCoverage, checkActiveEtfOfficialHoldingsCoverage, checkLocalScheduleReporting, type QueryFn, type YahooTwReturnSample, type FredCommoditySample } from "@/lib/daily-health-report/checks";
+import { checkPipelineRunLog, checkMoneydjParseFailures, evaluateFreshness, checkEtfDataSourceGap, evaluateYahooTwReturnConsistency, evaluateFredCommodityConsistency, checkCommodityTechnicalCoverage, checkFundPerformanceCoverage, checkEtfPerformanceCoverage, checkEtfHistoryFreshness, checkFundHistoryFreshness, checkCoreUniverseEtfCoverage, checkCoreUniverseFundCoverage, checkCoreUniverseFundGapDetail, checkCoreUniverseEtfGapDetail, checkActiveEtfOfficialHoldingsCoverage, checkLocalScheduleReporting, type QueryFn, type YahooTwReturnSample, type FredCommoditySample } from "@/lib/daily-health-report/checks";
+import { fetchYahooChartPeriod } from "@/lib/services/dataProviders/yahoo/yahooClient";
 import { CORE_COMMODITY_ROOTS } from "@/lib/cron/commodityUpdate";
 import { notifyAnomaly } from "@/lib/daily-health-report/notify";
 import { buildDailySummary } from "@/lib/daily-health-report/buildDailySummary";
@@ -175,6 +176,97 @@ export async function GET(request: Request) {
   const activeEtfOfficialHoldings = await checkActiveEtfOfficialHoldingsCoverage(query, 4);
   const localScheduleReporting = await checkLocalScheduleReporting(query);
 
+  // 2026-10-21（使用者核准）: core_universe_fund 覆蓋率缺口的證據分類——VERIFIED 直接查證過：
+  // 1) null-provider／SITCA 這兩類的缺口，SITCA_NAV_SYNC 本身已經是即時查 DB（不是靠名單，見
+  //    checks.ts 註解），不是名單問題；真正根因要看 SITCA 官方 CSV 當天到底公布了什麼。
+  // 2) tdcc-offshore 這一類才是真正的「名單」問題（offshore-nav-sync 的 mapping 是 2026-10-12
+  //    的一次性清單，見 discoverMapping.ts），已經用自我擴充機制修好，這裡不用再查證據——新
+  //    發現的對應關係會在下一輪 offshore-nav-sync 執行時自動補上。
+  // 一次性抓 SITCA 公開 CSV（不需要金鑰、不是逐檔查詢），對缺口裡的 null-provider/SITCA 基金用
+  // 基金統編（=funds.code）比對：CSV 裡這個代號的淨值欄位是 "-"（已存在但還沒公布首次淨值）才算
+  // EXTERNAL_DELAY；代號完全不在 CSV 裡、但本方資料庫顯示先前有過真實淨值（代表來源端可能暫停
+  // 這檔的淨值公告）也算 EXTERNAL_DELAY，附上「查詢時間＋先前最後淨值日期」當證據；代號在 CSV
+  // 裡有真實數值、我方卻沒寫入，才是真正的 SYSTEM 問題（我方排程/比對邏輯有缺口，需要另外查）。
+  const coreUniverseFundGapRows = await checkCoreUniverseFundGapDetail(query, 4);
+  const coreUniverseFundGapWithEvidence: Array<{
+    code: string | null; name: string; dataProvider: string | null;
+    category: "SYSTEM" | "EXTERNAL_DELAY"; reason: string; checkedAt: string;
+  }> = [];
+  {
+    const checkedAt = new Date().toISOString();
+    let sitcaCsvRows: string[][] | null = null;
+    let sitcaFetchError: string | null = null;
+    try {
+      const res = await fetch("https://www.sitca.org.tw/MemberK0000/F/03/nav.csv", { signal: AbortSignal.timeout(15_000) });
+      if (!res.ok) throw new Error(`SITCA_CSV_HTTP_${res.status}`);
+      const text = await res.text();
+      sitcaCsvRows = text.split("\n").map((l) => l.split(","));
+    } catch (e) {
+      sitcaFetchError = e instanceof Error ? e.message : String(e);
+    }
+    const sitcaByCode = new Map<string, string>(); // code -> nav string ("-" means not yet published)
+    if (sitcaCsvRows) for (const cols of sitcaCsvRows) if (cols.length >= 7 && cols[3]) sitcaByCode.set(cols[3], cols[6]);
+
+    for (const fund of coreUniverseFundGapRows) {
+      if (fund.dataProvider === "tdcc-offshore") continue; // handled by the self-extending mapping fix instead, not evidence-checked here
+      if (!sitcaCsvRows) {
+        coreUniverseFundGapWithEvidence.push({ code: fund.code, name: fund.name, dataProvider: fund.dataProvider, category: "SYSTEM", reason: `SITCA_CSV_FETCH_FAILED: ${sitcaFetchError}`, checkedAt });
+        continue;
+      }
+      const csvNav = fund.code ? sitcaByCode.get(fund.code) : undefined;
+      if (csvNav === "-" || csvNav === "") {
+        coreUniverseFundGapWithEvidence.push({ code: fund.code, name: fund.name, dataProvider: fund.dataProvider, category: "EXTERNAL_DELAY", reason: "SITCA_LISTED_NAV_NOT_YET_PUBLISHED", checkedAt });
+      } else if (csvNav === undefined) {
+        coreUniverseFundGapWithEvidence.push({ code: fund.code, name: fund.name, dataProvider: fund.dataProvider, category: "EXTERNAL_DELAY", reason: "ABSENT_FROM_TODAYS_SITCA_CSV_DESPITE_PRIOR_REAL_NAV", checkedAt });
+      } else {
+        coreUniverseFundGapWithEvidence.push({ code: fund.code, name: fund.name, dataProvider: fund.dataProvider, category: "SYSTEM", reason: `SITCA_HAS_REAL_NAV_${csvNav}_NOT_INGESTED`, checkedAt });
+      }
+    }
+  }
+
+  // 2026-10-21（使用者核准）: core_universe_etf 15 檔缺口（今天查時剩 13 檔）——VERIFIED 逐檔直接
+  // 打 Yahoo Chart API 查證，全部是美股/那斯達克上市的小型主題型 ETF（ProShares、Bitwise、
+  // American Century 等發行的冷門主題基金），Yahoo 自己對這些近期交易日的資料也是 null 或完全
+  // 查無結果（量太小、Yahoo 自己資料就缺），不是我方排程的 bug。跟上面 core_universe_fund 同一套
+  // 證據紀律：用同一支 fetchYahooChartPeriod（CLOUD_ETF_PRICE 用的那支），只查最近 5 天，Yahoo
+  // 回應裡最後一筆有收盤價就算「來源端其實有資料、我方沒抓到」=SYSTEM；Yahoo 本身也查不到/全是
+  // null 才算 EXTERNAL_DELAY。有界：最多查 8 檔、最多花 30 秒。
+  const coreUniverseEtfGapRows = await checkCoreUniverseEtfGapDetail(query, 4);
+  const CORE_ETF_GAP_VERIFY_MAX_ITEMS = 8;
+  const CORE_ETF_GAP_VERIFY_MAX_ELAPSED_MS = 20_000;
+  const coreUniverseEtfGapWithEvidence: Array<{
+    code: string; name: string; category: "SYSTEM" | "EXTERNAL_DELAY"; reason: string; checkedAt: string;
+  }> = [];
+  {
+    const verifyStartedMs = Date.now();
+    for (const etf of coreUniverseEtfGapRows) {
+      const checkedAt = new Date().toISOString();
+      // Bounded against BOTH this check's own small slice (CORE_ETF_GAP_VERIFY_MAX_ELAPSED_MS) AND
+      // the overall route clock (startedMs) -- this check runs before the existing active-ETF (100s)
+      // and Yahoo-TW (40s) budgets, which are themselves measured from the same startedMs and will
+      // adapt downward automatically, but this guard keeps this check itself from being the one that
+      // eats into maxDuration=180 if a slow Yahoo response stalls it.
+      if (coreUniverseEtfGapWithEvidence.length >= CORE_ETF_GAP_VERIFY_MAX_ITEMS || Date.now() - verifyStartedMs > CORE_ETF_GAP_VERIFY_MAX_ELAPSED_MS || Date.now() - startedMs > 120_000) {
+        coreUniverseEtfGapWithEvidence.push({ code: etf.code, name: etf.name, category: "SYSTEM", reason: "NOT_VERIFIED_BUDGET_EXHAUSTED", checkedAt });
+        continue;
+      }
+      try {
+        const symbol = etf.dataSource ?? etf.code;
+        const period2 = Math.floor(Date.now() / 1000);
+        const period1 = period2 - 5 * 24 * 60 * 60;
+        const chart = await fetchYahooChartPeriod(symbol, period1, period2);
+        const latestRealClose = chart?.candles.filter((c) => c.close != null).at(-1);
+        if (latestRealClose) {
+          coreUniverseEtfGapWithEvidence.push({ code: etf.code, name: etf.name, category: "SYSTEM", reason: `YAHOO_HAS_DATA_AS_OF_${latestRealClose.date.toISOString().slice(0, 10)}_NOT_INGESTED`, checkedAt });
+        } else {
+          coreUniverseEtfGapWithEvidence.push({ code: etf.code, name: etf.name, category: "EXTERNAL_DELAY", reason: chart ? "YAHOO_RETURNED_NO_REAL_CLOSE_IN_LAST_5D" : "YAHOO_CHART_NULL", checkedAt });
+        }
+      } catch (e) {
+        coreUniverseEtfGapWithEvidence.push({ code: etf.code, name: etf.name, category: "SYSTEM", reason: `VERIFY_FAILED: ${e instanceof Error ? e.message : String(e)}`, checkedAt });
+      }
+    }
+  }
+
   // 2026-10-20（使用者訂立）: 對缺資料/過期的主動式 ETF，即時打一次該投信官網，記錄「官網當下
   // 顯示的最新資料日期」跟「查詢時間」當證據——只有官網自己的最新日期確實還是舊的，才能標
   // EXTERNAL_DELAY；查不到、查詢本身失敗、或官網其實已經有更新資料（代表是我方排程沒抓到），
@@ -309,7 +401,22 @@ export async function GET(request: Request) {
     ...(localScheduleReporting.anomaly ? [{ type: "LOCAL_SCHEDULE_NOT_REPORTED", category: SYSTEM_CATEGORY, missing: localScheduleReporting.missing }] : []),
     ...(yahooTwCheck.anomaly ? [{ type: "YAHOO_TW_RETURN_MISMATCH", category: SYSTEM_CATEGORY, mismatches: yahooTwCheck.mismatches }] : []),
     ...(fredCommodityCheck.anomaly ? [{ type: "FRED_COMMODITY_MISMATCH", category: SYSTEM_CATEGORY, mismatches: fredCommodityCheck.mismatches }] : []),
-    ...coverage.filter((c) => c.anomaly).map((c) => ({ type: "COVERAGE", category: SYSTEM_CATEGORY, label: c.label, reason: c.anomalyReason })),
+    // core_universe_fund 的缺口現在有即時證據分類（見上面 coreUniverseFundGapWithEvidence），不
+    // 再用這裡的籠統 COVERAGE 寫法；其他覆蓋率檢查（包含 core_universe_etf，還沒做證據查證）
+    // 維持原本行為。
+    ...coverage.filter((c) => c.anomaly && c.label !== "core_universe_fund" && c.label !== "core_universe_etf").map((c) => ({ type: "COVERAGE", category: SYSTEM_CATEGORY, label: c.label, reason: c.anomalyReason })),
+    ...(coreUniverseFundGapWithEvidence.some((e) => e.category === SYSTEM_CATEGORY)
+      ? [{ type: "COVERAGE", category: SYSTEM_CATEGORY, label: "core_universe_fund", reason: coreUniverseFundCoverage.anomalyReason, items: coreUniverseFundGapWithEvidence.filter((e) => e.category === SYSTEM_CATEGORY) }]
+      : []),
+    ...(coreUniverseFundGapWithEvidence.some((e) => e.category === "EXTERNAL_DELAY")
+      ? [{ type: "COVERAGE", category: "EXTERNAL_DELAY" as const, label: "core_universe_fund", reason: coreUniverseFundCoverage.anomalyReason, items: coreUniverseFundGapWithEvidence.filter((e) => e.category === "EXTERNAL_DELAY") }]
+      : []),
+    ...(coreUniverseEtfGapWithEvidence.some((e) => e.category === SYSTEM_CATEGORY)
+      ? [{ type: "COVERAGE", category: SYSTEM_CATEGORY, label: "core_universe_etf", reason: coreUniverseEtfCoverage.anomalyReason, items: coreUniverseEtfGapWithEvidence.filter((e) => e.category === SYSTEM_CATEGORY) }]
+      : []),
+    ...(coreUniverseEtfGapWithEvidence.some((e) => e.category === "EXTERNAL_DELAY")
+      ? [{ type: "COVERAGE", category: "EXTERNAL_DELAY" as const, label: "core_universe_etf", reason: coreUniverseEtfCoverage.anomalyReason, items: coreUniverseEtfGapWithEvidence.filter((e) => e.category === "EXTERNAL_DELAY") }]
+      : []),
     ...(moneydjParseFailures.parseFailedCount > 0
       ? [{ type: "MONEYDJ_PARSE_FAILED", category: SYSTEM_CATEGORY, jobId: "CLOUD_MONEYDJ_FUND", count: moneydjParseFailures.parseFailedCount, codes: moneydjParseFailures.parseFailedCodes }]
       : []),
@@ -337,6 +444,8 @@ export async function GET(request: Request) {
       date: today, pipeline_health: pipelineHealth, stock_freshness: stockFreshness, domestic_fund_freshness: domesticFundFreshness,
       etf_data_source_gap: etfDataSourceGap, yahoo_tw_return_check: yahooTwCheck, fred_commodity_check: fredCommodityCheck, coverage,
       active_etf_official_holdings: activeEtfOfficialHoldings, active_etf_official_holdings_evidence: activeEtfGapWithEvidence, local_schedule_reporting: localScheduleReporting,
+      core_universe_fund_gap_evidence: coreUniverseFundGapWithEvidence,
+      core_universe_etf_gap_evidence: coreUniverseEtfGapWithEvidence,
       moneydj_parse_failures: moneydjParseFailures,
       anomaly_count: anomalies.length, system_anomaly_count: systemAnomalyCount, external_delay_anomaly_count: externalDelayAnomalyCount,
       anomalies, notify_result: notifyResult,

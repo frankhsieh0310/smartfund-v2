@@ -68,6 +68,19 @@ function test(name: string, fn: () => Promise<void> | void) {
     assert.equal(r.anomaly, true);
   });
 
+  // 2026-10-21: VERIFIED live -- CLOUD_SEC_FINANCIAL_INCREMENTAL's route now reports status
+  // COMPLETED when every failure is the permanent SEC_NO_CANONICAL_FACTS case (fixed in that route
+  // itself), but this BENIGN_ERROR_PATTERNS entry is defense in depth for an older run's error field.
+  test("checkPipelineRunLog: CLOUD_SEC_FINANCIAL_INCREMENTAL's permanent SEC_NO_CANONICAL_FACTS is benign, not an error", async () => {
+    const query: QueryFn = async () => [
+      { status: "COMPLETED", error: '[{"cik":"0002039972","reason":"SEC_NO_CANONICAL_FACTS"}]', write_error_count: "0", started_at: new Date() },
+    ];
+    const r = await checkPipelineRunLog(query, "CLOUD_SEC_FINANCIAL_INCREMENTAL");
+    assert.equal(r.errorCount24h, 0);
+    assert.equal(r.sourceUnavailableCount24h, 1);
+    assert.equal(r.anomaly, false);
+  });
+
   test("evaluateFreshness: no data -> anomaly NO_DATA", () => {
     const r = evaluateFreshness("test", null, 3);
     assert.equal(r.anomaly, true);

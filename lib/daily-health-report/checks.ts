@@ -29,6 +29,11 @@ export type PipelineHealth = {
 // 一律算異常。
 const BENIGN_ERROR_PATTERNS: Record<string, RegExp> = {
   CLOUD_MONEYDJ_FUND: /MONEYDJ_HOLDINGS_NOT_DISCLOSED/,
+  // 2026-10-21: the route itself already excludes permanent SEC_NO_CANONICAL_FACTS CIKs from its own
+  // `error` field (see cloud-sec-financial-incremental/route.ts), so this rarely needs to match
+  // anything in practice -- kept as defense in depth in case an older run's error field (written
+  // before that fix was deployed) still contains one.
+  CLOUD_SEC_FINANCIAL_INCREMENTAL: /SEC_NO_CANONICAL_FACTS/,
 };
 
 // Checks production_scheduler_runs for a given job_id over the last 24h. A pipeline with ZERO runs in
@@ -384,6 +389,26 @@ export async function checkCoreUniverseEtfCoverage(query: QueryFn, staleDaysThre
     "true", staleDaysThreshold,
   );
 }
+
+export type CoreUniverseEtfGapRow = { etfId: string; code: string; name: string; dataSource: string | null; exchange: string | null };
+
+// 2026-10-21（使用者核准）: 跟 checkCoreUniverseFundGapDetail 同一個理由——這裡只回傳缺口本身，
+// 證據查證（打 Yahoo Chart API 確認來源端近期到底有沒有資料）留給 route.ts 做，這個檔案保持
+// 不碰網路、可單元測試的原則。
+export async function checkCoreUniverseEtfGapDetail(query: QueryFn, staleDaysThreshold: number): Promise<CoreUniverseEtfGapRow[]> {
+  const rows = await query(
+    `SELECT c.asset_id AS "etfId", e.code, e.name, e.data_source AS "dataSource", e.exchange
+       FROM tw_purchasable_classification c
+       JOIN etfs e ON e.id = c.asset_id
+      WHERE c.asset_type = 'ETF' AND c.status = 'APPROVED'
+        AND (
+          (SELECT MAX(h.date) FROM etf_history h WHERE h.etf_id = c.asset_id) IS NULL
+          OR (SELECT MAX(h.date) FROM etf_history h WHERE h.etf_id = c.asset_id) < CURRENT_DATE - $1::int
+        )`,
+    [staleDaysThreshold],
+  );
+  return rows;
+}
 // 2026-10-19（使用者核准，「提出讓它們退出核心母體的判斷規則」）: 部分已核備、理論上「核准
 // 可銷售」的境外基金，實際上因為市場本身被凍結（VERIFIED 俄羅斯相關基金的 funds.latest_nav_date
 // 本身——不是我們自己同步落後，是 TDCC 原始資料本身——卡在 2022 年沒再更新過，對應俄烏戰爭後
@@ -403,6 +428,28 @@ export async function checkCoreUniverseFundCoverage(query: QueryFn, staleDaysThr
          AND (f.latest_nav_date IS NULL OR f.latest_nav_date >= CURRENT_DATE - ${FROZEN_FUND_STALE_DAYS}))`,
     "true", staleDaysThreshold,
   );
+}
+
+export type CoreUniverseFundGapRow = { fundId: string; code: string | null; name: string; dataProvider: string | null };
+
+// 2026-10-21（使用者核准）: the bare % from checkCoreUniverseFundCoverage above isn't enough to tell
+// SYSTEM from EXTERNAL_DELAY -- the caller (route.ts, which unlike this file is allowed to make
+// outbound fetches) cross-references this list against SITCA's own published NAV CSV to classify
+// each one with real evidence, same discipline as the active-ETF gap check already does.
+export async function checkCoreUniverseFundGapDetail(query: QueryFn, staleDaysThreshold: number): Promise<CoreUniverseFundGapRow[]> {
+  const rows = await query(
+    `SELECT c.asset_id AS "fundId", f.code, f.name, f.data_provider AS "dataProvider"
+       FROM tw_purchasable_classification c
+       JOIN funds f ON f.id = c.asset_id
+      WHERE c.asset_type = 'FUND' AND c.status = 'APPROVED'
+        AND (f.latest_nav_date IS NULL OR f.latest_nav_date >= CURRENT_DATE - ${FROZEN_FUND_STALE_DAYS})
+        AND (
+          (SELECT MAX(h.date) FROM fund_history h WHERE h.fund_id = c.asset_id) IS NULL
+          OR (SELECT MAX(h.date) FROM fund_history h WHERE h.fund_id = c.asset_id) < CURRENT_DATE - $1::int
+        )`,
+    [staleDaysThreshold],
+  );
+  return rows;
 }
 
 // etf_history (1,836 萬筆) -- universe = 全部 active ETF，4 天內有新資料才算 fresh（跟既有
