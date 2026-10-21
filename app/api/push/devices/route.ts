@@ -1,7 +1,10 @@
 import {prisma} from '@/lib/prisma';
 import {getAccountForRequest} from '@/lib/auth/userService';
 export const runtime='nodejs';export const dynamic='force-dynamic';
-const ok=(data:unknown,status=200)=>Response.json({data,error:null},{status,headers:{'Cache-Control':'no-store'}}),fail=(message:string,status=400)=>Response.json({data:null,error:{message}},{status});
+// 2026-10-21（14點任務第6項，跟/api/alerts同一個發現）: 補上CORS header跟OPTIONS handler。
+const corsHeaders={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET, POST, PATCH, DELETE, OPTIONS','Access-Control-Allow-Headers':'Content-Type, Authorization'};
+export function OPTIONS(){return new Response(null,{status:204,headers:corsHeaders})}
+const ok=(data:unknown,status=200)=>Response.json({data,error:null},{status,headers:{'Cache-Control':'no-store',...corsHeaders}}),fail=(message:string,status=400)=>Response.json({data:null,error:{message}},{status,headers:corsHeaders});
 const json=(r:Request)=>r.json().catch(()=>({})) as Promise<Record<string,unknown>>,str=(v:unknown,n=500)=>typeof v==='string'&&v.trim()?v.trim().slice(0,n):null;
 const profiles=(prisma as unknown as {watchlistNotificationProfile:any}).watchlistNotificationProfile;
 async function owner(r:Request){const user=await getAccountForRequest(r);if(!user)throw Error('AUTH');return user}

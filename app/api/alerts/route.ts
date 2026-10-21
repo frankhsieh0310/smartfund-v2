@@ -13,7 +13,13 @@ const OPERATORS=['ABOVE','BELOW','CROSS_ABOVE','CROSS_BELOW','PERCENT_CHANGE','A
 // CLAUDE.md's 2026-10-18 entries for the full verification. The data this metric needs now exists.
 const CAPABILITIES:Record<string,string[]>={STOCK:['PRICE','CHANGE','PERCENT_CHANGE'],ETF:['PRICE','NAV','CHANGE','PERCENT_CHANGE','DIVIDEND_YIELD','DAYS_TO_EX_DATE'],FUND:['NAV','DIVIDEND_YIELD'],INDEX:['VALUE','CHANGE','PERCENT_CHANGE'],FIXED_INCOME:['YIELD'],FX:['RATE','CHANGE','PERCENT_CHANGE'],MACRO:['VALUE'],COMMODITY:['PRICE','CHANGE','PERCENT_CHANGE'],CRYPTO:['PRICE','CHANGE','PERCENT_CHANGE'],DERIVATIVES:['PRICE','VOLUME','OPENINTEREST','IV','DELTA','GAMMA','THETA','VEGA']};
 const text=(v:unknown,n=100)=>typeof v==='string'&&v.trim()?v.trim().slice(0,n):null; const body=(r:Request)=>r.json().catch(()=>({})) as Promise<Record<string,unknown>>;
-const ok=(data:unknown,status=200)=>Response.json({data,error:null},{status,headers:{'Cache-Control':'no-store'}}); const fail=(message:string,status=400)=>Response.json({data:null,error:{message}},{status});
+// 2026-10-21（14點任務第6項）: 這個route從來沒有CORS header跟OPTIONS handler——原生App不受
+// CORS限制所以一直沒被發現，但Expo web（包含測試用的瀏覽器預覽）會先送preflight OPTIONS，沒有
+// Access-Control-Allow-Origin就直接擋下，連真正的GET/POST都不會送出。跟這個檔案其他mobile API
+// route用同一組header慣例。
+const corsHeaders={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET, POST, PATCH, DELETE, OPTIONS','Access-Control-Allow-Headers':'Content-Type, Authorization'};
+export function OPTIONS(){return new Response(null,{status:204,headers:corsHeaders})}
+const ok=(data:unknown,status=200)=>Response.json({data,error:null},{status,headers:{'Cache-Control':'no-store',...corsHeaders}}); const fail=(message:string,status=400)=>Response.json({data:null,error:{message}},{status,headers:corsHeaders});
 async function account(request:Request){const value=await getAccountForRequest(request);if(!value)throw new Error('AUTH');return value}
 async function ownedRule(id:string,userId:string){return prisma.watchlistAlertRule.findFirst({where:{id,ownerUserId:userId}})}
 function parameters(value:unknown){

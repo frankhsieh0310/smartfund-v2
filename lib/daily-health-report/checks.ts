@@ -361,12 +361,17 @@ export async function checkHistoryFreshnessLateral(
   staleDaysThreshold: number,
   suppressAnomaly = false,
 ): Promise<CoverageResult> {
+  // 2026-10-21（使用者核准修正）: 原本是CROSS JOIN LATERAL——一個資產如果在${table}裡完全
+  // 沒有任何一列紀錄，LATERAL子查詢回傳0列，CROSS JOIN（inner）就把整個資產排除在universe
+  // 分母之外，覆蓋率因此被灌水（VERIFIED：core_universe_fund因此把195檔從未抓過history的
+  // 基金排除在外，universe從真實的5872被算成5677）。改成LEFT JOIN LATERAL，這類資產
+  // latest.d會是NULL，正確算進universe但不算進fresh，不再被悄悄藏起來。
   const rows = await query(
     `SELECT
        COUNT(*) FILTER (WHERE latest.d >= CURRENT_DATE - $1::int)::int AS fresh,
        COUNT(*)::int AS universe
      FROM ${universeTable} u
-     CROSS JOIN LATERAL (SELECT ${dateCol} AS d FROM ${table} h WHERE h.${idCol} = u.id ORDER BY h.${dateCol} DESC LIMIT 1) latest
+     LEFT JOIN LATERAL (SELECT ${dateCol} AS d FROM ${table} h WHERE h.${idCol} = u.id ORDER BY h.${dateCol} DESC LIMIT 1) latest ON true
      WHERE ${universeWhereSql}`,
     [staleDaysThreshold],
   );
@@ -420,12 +425,17 @@ export async function checkCoreUniverseEtfGapDetail(query: QueryFn, staleDaysThr
 const FROZEN_FUND_STALE_DAYS = 180;
 
 export async function checkCoreUniverseFundCoverage(query: QueryFn, staleDaysThreshold: number): Promise<CoverageResult> {
+  // 2026-10-21（使用者核准修正）: 官方從未申報過淨值的基金（latest_nav_date IS NULL）現在改成
+  // 直接排除在這個指標的universe之外——它們已經有自己獨立的分類（見下面
+  // checkCoreUniverseFundNeverReported / route.ts的core_universe_fund_never_reported_count），
+  // 不該在LEFT JOIN LATERAL修好之後又跑回這個「新鮮度覆蓋率」指標裡被當成異常。
   return checkHistoryFreshnessLateral(
     query, "core_universe_fund", "fund_history", "date", "fund_id",
     `(SELECT c.asset_id AS id FROM tw_purchasable_classification c
         JOIN funds f ON f.id = c.asset_id
        WHERE c.asset_type = 'FUND' AND c.status = 'APPROVED'
-         AND (f.latest_nav_date IS NULL OR f.latest_nav_date >= CURRENT_DATE - ${FROZEN_FUND_STALE_DAYS}))`,
+         AND f.latest_nav_date IS NOT NULL
+         AND f.latest_nav_date >= CURRENT_DATE - ${FROZEN_FUND_STALE_DAYS})`,
     "true", staleDaysThreshold,
   );
 }
