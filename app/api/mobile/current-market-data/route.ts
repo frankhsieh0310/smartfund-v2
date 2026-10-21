@@ -29,7 +29,11 @@ if(q.get('withFundamentals')==='1'&&ticker){
     :{revenue:'revenue',grossProfit:'gross_profit',operatingIncome:'operating_income',eps:'basic_eps',totalAssets:'total_assets',totalLiabilities:'total_liabilities',ocf:'operating_cash_flow',capex:'capital_expenditure'};
   const qSpan=isTw?'':`AND (period_end - period_start) BETWEEN 75 AND 100`; // ~1 quarter; excludes cumulative-YTD duplicates
   const ySpan=isTw?'':`AND (period_end - period_start) BETWEEN 350 AND 380`; // full fiscal year (for FCF, which SEC also reports YTD in 10-Qs)
-  const fetchFacts=(metric:string,span:string)=>prisma.$queryRawUnsafe<any[]>(`SELECT period_end::text AS "periodEnd",fiscal_period AS "fiscalPeriod",value::text FROM stock_financial_facts WHERE stock_id=$1 AND metric=$2 AND source=$3 ${span} ORDER BY period_end DESC`,stockRow.id,metric,source);
+  const fetchFacts=(metric:string,span:string)=>prisma.$queryRawUnsafe<any[]>(`SELECT period_end::text AS "periodEnd",fiscal_period AS "fiscalPeriod",value::text,unit FROM stock_financial_facts WHERE stock_id=$1 AND metric=$2 AND source=$3 ${span} ORDER BY period_end DESC`,stockRow.id,metric,source);
+  // stock_financial_facts.unit carries a "*_THOUSAND(S)" suffix when MOPS/SEC report a raw figure in
+  // thousands of the reporting currency (e.g. financial.revenue for TW stocks) — absolute (non-ratio)
+  // metrics must be scaled back up to full currency units before use, same rule as the web detail page.
+  const scaled=(row:any)=>row?Number(row.value)*(String(row.unit??'').includes('THOUSAND')?1000:1):null;
   const [rev,gp,oi,epsRows,ta,tl]=await Promise.all([fetchFacts(M.revenue,qSpan),fetchFacts(M.grossProfit,qSpan),fetchFacts(M.operatingIncome,qSpan),fetchFacts(M.eps,qSpan),fetchFacts(M.totalAssets,''),fetchFacts(M.totalLiabilities,'')]);
   const [ocfY,capexY]=M.capex?await Promise.all([fetchFacts(M.ocf,ySpan),fetchFacts(M.capex,ySpan)]):[[],[]];
   const peMetric=isTw?'valuation.pe':'valuation.pe.ttm.point_in_time';
@@ -43,14 +47,14 @@ if(q.get('withFundamentals')==='1'&&ticker){
   const metricOut=(value:number|null,periodEnd:string|null,src:string,staleAfterDays:number)=>value==null||periodEnd==null?null:{value,as_of:periodEnd,source:src,stale:ageDays(periodEnd)>staleAfterDays};
   const revPY=priorYear(rev),epsPY=priorYear(epsRows);
   const fundamentals={
-    revenue: rev[0]?metricOut(Number(rev[0].value),rev[0].periodEnd,source,200):null,
-    revenue_growth: (rev[0]&&revPY)?metricOut((Number(rev[0].value)/Number(revPY.value)-1)*100,rev[0].periodEnd,source,200):null,
+    revenue: rev[0]?metricOut(scaled(rev[0]),rev[0].periodEnd,source,200):null,
+    revenue_growth: (rev[0]&&revPY)?metricOut((scaled(rev[0])!/scaled(revPY)!-1)*100,rev[0].periodEnd,source,200):null,
     eps: epsRows[0]?metricOut(Number(epsRows[0].value),epsRows[0].periodEnd,source,200):null,
     eps_growth: (epsRows[0]&&epsPY)?metricOut((Number(epsRows[0].value)/Number(epsPY.value)-1)*100,epsRows[0].periodEnd,source,200):null,
-    gross_margin: close(gp,rev)?metricOut((Number(gp[0].value)/Number(rev[0].value))*100,rev[0].periodEnd,source,200):null,
-    operating_margin: close(oi,rev)?metricOut((Number(oi[0].value)/Number(rev[0].value))*100,rev[0].periodEnd,source,200):null,
-    debt_ratio: close(ta,tl)?metricOut((Number(tl[0].value)/Number(ta[0].value))*100,ta[0].periodEnd,source,200):null,
-    free_cash_flow: (M.capex&&close(ocfY,capexY))?metricOut(Number(ocfY[0].value)-Number(capexY[0].value),ocfY[0].periodEnd,source,400):null,
+    gross_margin: close(gp,rev)?metricOut((scaled(gp[0])!/scaled(rev[0])!)*100,rev[0].periodEnd,source,200):null,
+    operating_margin: close(oi,rev)?metricOut((scaled(oi[0])!/scaled(rev[0])!)*100,rev[0].periodEnd,source,200):null,
+    debt_ratio: close(ta,tl)?metricOut((scaled(tl[0])!/scaled(ta[0])!)*100,ta[0].periodEnd,source,200):null,
+    free_cash_flow: (M.capex&&close(ocfY,capexY))?metricOut(scaled(ocfY[0])!-scaled(capexY[0])!,ocfY[0].periodEnd,source,400):null,
     pe: peRows[0]?metricOut(Number(peRows[0].value),peRows[0].periodEnd,peMetric,30):null,
     dividend_yield: (divRows.length&&Number(stockRow.latestClose)>0)?metricOut((divRows.reduce((sum:number,r:any)=>sum+Number(r.value),0)/Number(stockRow.latestClose))*100,new Date().toISOString().slice(0,10),'YAHOO_CHART_API',400):null,
   };
