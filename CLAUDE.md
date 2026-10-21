@@ -1864,3 +1864,15 @@ TWSE ETF 重複資料、ETF_RETURNS_SYNC_TW 卡住等）還沒修好部署前，
 **驗證 — VERIFIED**：直接curl Preview的`/funds`頁面，確認HTML裡出現「尚未申報」字樣；直接curl mobile API，確認JSON回應裡`"navPending":true`正確出現在對應基金上。**另外特別確認ETF頁面跟ETF的mobile API完全沒有出現這兩個關鍵字**，證明沒有動到其他資產類型。
 
 **範圍備註（誠實揭露）**：**原生App本身的畫面渲染程式碼在另一個獨立的repo（`smartmatch-mobile`），今天完全沒有碰**——只在smartfund-v2這邊的API回應裡加上`navPending`這個欄位，讓App那邊「如果」要顯示同樣文字，資料已經準備好了，但App自己畫面上目前還不會顯示這段文字，除非之後去`smartmatch-mobile`那個repo也做對應修改。今天驗證範圍僅限於「API回應正確帶出欄位」，不是「App畫面上真的看到文字」。
+
+## 第七輪：smartmatch-mobile App畫面 + 回頭補一個smartfund-v2 backend缺口（2026-10-21）
+
+使用者核准App畫面也要改，要求在`smartmatch-mobile`開新分支（不准EAS build/發布）。過程中發現一個smartfund-v2這邊沒做完的事，變成兩個repo各一個分支。
+
+**發現的backend缺口 — VERIFIED**：App的基金詳情頁走的是`/api/mobile/assets/[assetId]?type=FUND`這支**完全獨立**的端點（不是round5/6改的`/api/funds/[id]`或`/api/mobile/current-market-data`），這支端點雖然底層也呼叫`getFundDetail`（round5已經修好`nav.coverage`），但自己把回應打平成純數值欄位時**沒有把`coverage`帶出來**，所以App端完全看不到SOURCE_PENDING這個狀態。**已修正**：smartfund-v2這邊開了`fix/daily-ops-20261021-r7`（從`4dcb3fc41`開出，commit`6228a86ac`），純附加`navPending`布林欄位，Preview驗證過（UEAHAA回傳`navPending:true`、對照組回傳`false`且其他欄位不變）。**這支還沒部署到正式環境**，在你部署之前App那邊看到的還是舊畫面。
+
+**smartmatch-mobile這邊 — VERIFIED 已完成，只commit+push，沒有build/發布**：
+- 新分支`fix/fund-nav-pending-display-20261021`（從`origin/master`開出，不是目前checkout的`fix/hide-unbuilt-entries`——那個分支領先master 30個commit、最新一次commit訊息自己寫「partially unverified」，避免今天的改動混進那堆未驗證的東西），commit`8814ce8`，已push。
+- 修改3個檔案：`src/detail/types.ts`（`AssetDetailLite`加`navPending?`）、`src/detail/service.ts`（`WebMetrics`加`navPending?`，`normalize()`只對`assetType==="FUND"`才會設true，其他資產類型完全不受影響）、`app/asset/[assetId].tsx`（主要數值卡片：`navPending`時顯示「官方尚未申報淨值」＋「核准銷售中，尚未開始每日申報」，取代原本的價格/漲跌/資料日期區塊）。
+- **全app搜尋過，沒有找到任何「基金列表」畫面會顯示裸的淨值數字**——search.tsx／watchlist.tsx只顯示名稱/代號，ranking-center.tsx顯示的是資產規模或報酬率（不是NAV），都不是這次要改的對象，所以只改了詳情頁，列表頁沒有對應項目需要改。
+- 用Expo web（`npx expo start --web`，接正式環境API`https://www.smartmatchpilot.com`，`.env.local`複製自既有repo）實際打開UEAHAA跟對照組一般基金各一次，**截圖存證**：目前（round-7還沒部署）UEAHAA仍顯示舊版「—」，對照組正常顯示「16.01 CNY」——這證實了程式碼邏輯對、只是在等後端資料。**等你部署round-7到正式環境後，需要再開一次Expo web重新截圖確認UEAHAA真的變成「官方尚未申報淨值」**，今天還沒有這張「修好之後」的截圖。
