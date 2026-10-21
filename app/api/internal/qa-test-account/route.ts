@@ -14,7 +14,9 @@ export const dynamic = "force-dynamic";
 const QA_EMAIL = "smartmatch-qa-20261021@example.com" as const;
 
 function isAuthorized(request: Request): boolean {
-  const secret = process.env.LOCAL_SCHEDULE_REPORT_SECRET;
+  // 這支route是一次性臨時用途，不重用LOCAL_SCHEDULE_REPORT_SECRET（那是給正式排程用的）——
+  // 另外建一個只存在Preview、agent自己產生、從未讀取任何既有密鑰的新變數。
+  const secret = process.env.QA_TEST_ACCOUNT_SECRET;
   if (!secret) return false;
   const header = request.headers.get("authorization") ?? "";
   return header === `Bearer ${secret}`;
