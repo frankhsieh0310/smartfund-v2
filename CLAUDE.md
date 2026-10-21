@@ -1899,3 +1899,16 @@ TWSE ETF 重複資料、ETF_RETURNS_SYNC_TW 卡住等）還沒修好部署前，
 ## round-7部署確認（2026-10-21）
 
 使用者部署`6228a86ac`後，**VERIFIED**：正式環境`/api/mobile/assets/<UEAHAA的id>?type=FUND`回傳`"navPending":true`；重開Expo web（接正式環境API）截圖確認：UEAHAA詳情頁正確顯示「官方尚未申報淨值」＋「核准銷售中，尚未開始每日申報」；對照組兆豐中國A股基金（`c548a689-...`）維持原本「16.01 CNY」、報酬率、資料日期顯示，完全不受影響。smartfund-v2與smartmatch-mobile兩邊的這項功能今天的工作到此全部驗證完成。
+
+## 全repo備份盤點＋新規則（2026-10-21）
+
+使用者核准一次性例外（不影響盤點本身的唯讀原則）：掃描這台機器上所有相關repo／worktree，找出從未push過的commit，全部建`backup/`分支push備份。
+
+**VERIFIED 完成清單**：
+- `smartmatch-mobile`：`backup/mobile-unpushed-20261021`（19個commit，從`fix/hide-unbuilt-entries`本機HEAD `dccce50`建出，`git ls-remote`核對SHA一致）。
+- `smartfund-v2`：掃描全部75個worktree，15個有未push commit（含`mcs-deploy`本身185個commit，是今天與過去數週全部CLAUDE.md紀錄的本體，風險最高、優先處理），全部15個建`backup/*-unpushed-20261021`分支push，`git ls-remote`逐一核對SHA一致。
+- `tw-data-updater`：**VERIFIED 原本完全沒有GitHub remote**。已建立**private**儲存庫`frankhsieh0310/tw-data-updater`（用API建立後，另外獨立發GET `/repos/frankhsieh0310/tw-data-updater`查詢`private:true`／`visibility:private`二次確認），設為origin，push `master`／`claude/vibrant-hertz-941a96`兩個分支（兩者其實是同一個commit`13c3c6d`，只有這一次commit）。**安全掃描 VERIFIED 乾淨**：`.gitignore`已排除`.env*`／`node_modules`／`.local-schedule-report-secret`；對這唯一一次commit的全部75個追蹤檔案做了連線字串／API金鑰/token樣式（`postgres://`、`sk-`、`ghp_`、`eyJ`開頭、AWS金鑰、PEM私鑰區塊）與通用`password/secret/token=`賦值兩種掃描，**都是0筆命中**。**本機6個未commit的修改沒有動工作目錄**：3個已追蹤檔案用`git stash create`產生快照、3個未追蹤檔案用`git hash-object -w`+`git mktree`手動組成完整樹狀態（純物件庫操作，全程`git status`確認工作目錄分毫未變），合併成一個快照commit，**同樣做了安全掃描（0筆命中）**後才push成`backup/uncommitted-20261021`分支。`git ls-remote`核對全部3個分支SHA與本機一致。
+  - **待你決定（沒有擅自修改）**：`.gitignore`目前只排除`.local-schedule-report-secret`這個精確檔名，沒有`*.local-schedule-report-secret`這種萬用字元版本，也沒有明確排除`*.key`／`*.pem`／`*.sqlite`／`*.db`——這次掃描這些都沒有實際命中，純粹是未來的潛在風險，沒有自己加規則進`.gitignore`。
+- `tw-etf-lookup-api`、`tw-industry-radar`：使用者說明這兩個屬於「台股App」，由另一個視窗處理，這次**沒有動**。
+
+**新規則（使用者核准，寫入CLAUDE.md）**：**每個專案都必須有GitHub私人（private）儲存庫備份**，不准只存在本機。新建專案／新worktree完成實質工作後，若確認還沒有remote，應主動提醒使用者或依指示建立。
