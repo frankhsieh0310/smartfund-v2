@@ -1818,3 +1818,22 @@ TWSE ETF 重複資料、ETF_RETURNS_SYNC_TW 卡住等）還沒修好部署前，
 - 直接上SITCA官網（`sitca.org.tw`的「基金非營業日」查詢頁，非CSV，官方公告系統）用基金統編查「元大新中國基金」：**官方明確公告 2026-10-19 是這檔基金的非營業日**（連同其新臺幣/美元/人民幣三個級別）。
 - 同時發現：今天抓到的SITCA CSV本身，即使是知名的大基金，日期大多卡在20261019，只有少數基金有20261020——**代表SITCA整個資料集本身對外發布就有約1~2天的正常延遲**，不是只有中國主題基金的問題。
 - **結論**：這不是我們用錯資料集（基金統編跟SITCA官方「非營業日」查詢頁、CSV兩邊都對得上，代碼和名稱都正確），也不是分類錯誤，是SITCA官方發布本身的正常延遲＋這批中國/人民幣主題基金額外有自己的非營業日公告。**沒有程式碼可以修，等SITCA真正公布後，既有排程會自動抓到**（`filterNewerThanStored`已經是「只要CSV日期比我方新就寫入」，不需要額外修正）。
+
+## 第四輪：186筆幣別正式修正、TDCC覆蓋率驗證、EXTERNAL_DELAY邏輯確認（2026-10-21）
+
+部署`40cfbd4b6`之後，使用者決定「幣別以各級別官方幣別為準」，核准修正186筆。分支`fix/daily-ops-20261021-r4`（從`40cfbd4b6`開出），commit`d10375255`，型別檢查通過、Preview驗證過。
+
+**1a. 影響面分析 — VERIFIED，確認安全**：全repo搜尋`funds.currency`的讀取點（`fundService.ts`／`compareService.ts`／`rankingService.ts`／mobile API等），**沒有任何地方把`funds.currency`用在匯率換算或計算邏輯裡**——每一處都只是「原封不動顯示這個字串當幣別標籤」，NAV數值本身是獨立欄位、不受影響。唯一的篩選用途是ETF的`currency='TWD'`篩選（首頁排行等），但那是`etfs`表自己的欄位，跟`funds.currency`完全無關，FUND這邊目前沒有任何功能依賴`currency='TWD'`做篩選。**結論：改這186筆不會動到任何計算或排行結果，只會修正顯示的幣別標籤**。
+
+**1b. 寫入源頭 — VERIFIED，找到並修好**：186筆裡8筆是`data_provider='SITCA'`（還在持續運作的管線寫入），178筆是`data_provider=NULL`的既有舊資料（2026-07-04批次建立，早於現有所有排程，沒有任何現行程式碼會再寫到它們）。追到`lib/cron/newFundListingDetection.ts`的`createMissingDomesticFunds`——`fetchSitcaRows()`早就回傳每筆真實幣別（CSV的幣別欄），但程式只取`.nav`、丟掉`.currency`，硬寫死`currency: "TWD"`。**已修正**：改成讀取並使用`navRow.currency`，TWD只在真的查無資料時當保守預設值。178筆既有舊資料沒有現行寫入源頭會重犯，不需要額外修正程式碼。
+
+**1c. 186筆修正 — VERIFIED 已完成，核准條件全部符合**：
+- 逐筆用當天SITCA CSV官方幣別欄位比對，186/186都查得到官方資料（無「查無官方資料」案例）。
+- 備份表`funds_currency_fix_backup_20261021`：`CREATE TABLE ... AS SELECT`（186筆，COUNT確認）、立即`ALTER TABLE ... ENABLE ROW LEVEL SECURITY`、`REVOKE ALL ... FROM anon, authenticated`（查詢`information_schema.role_table_grants`確認anon/authenticated無任何權限、`pg_class.relrowsecurity=true`）。
+- 單一交易內完成：備份＋鎖權限＋186筆UPDATE，執行前後筆數都是186（一致），額外查「最近2分鐘內被改動的筆數」精確等於186，確認沒有動到其他筆。
+
+**1d. 網站/App抽查5筆 — VERIFIED**：直接打正式環境API（`/api/funds/<id>`），5筆（兆豐中國A股基金人民幣、元大0至2年投資級企業債券基金美元I類型、華南永昌中國A股基金美元、群益華夏盛世基金N人民幣、群益華夏盛世基金美元）幣別標籤跟NAV數值全部正確（幣別改成CNY/USD，NAV數值本身沒有變動，跟1a的分析一致）。因為是純資料修正，不需要重新部署就已經在線上生效。
+
+**2. 境外基金覆蓋率 — UNKNOWN，等今晚18:30台北的排程**：目前伺服器時間12:34台北，下一次`offshore-nav-tdcc-sync`排定18:30台北執行。已提前完整分類剩餘缺口的每一類原因（今天510筆tdcc-offshore缺口）：443筆今晚會被修好的name比對抓到；40筆是TDCC自己的`-9999`（確認尚未公布，EXTERNAL_DELAY）；23筆TDCC目前公布的日期跟我方已有的資料是同一天（還沒更新到更新的，EXTERNAL_DELAY）；4筆TDCC CSV完全查不到代碼，其中1筆是摩根俄羅斯基金（已知俄烏戰爭後市場凍結案例，見既有文件），另外3筆（宏利巨龍增長、宏利印度股票、摩根美國全方位股票澎幣對沖）還沒逐一查證原因，需要之後再查。**已排定今晚18:30之後的自動查核**，屆時確認實際覆蓋率是否達到92.6%、443筆是否真的全部補上。
+
+**3. EXTERNAL_DELAY分類邏輯 — VERIFIED 用今天真實資料跑過，正確**：直接執行健康報告的即時查證邏輯（上午已經寫好，不是今天新寫的）對照今天真實的SITCA CSV：domestic/SITCA類別目前的365筆缺口，**365筆全部正確分類為EXTERNAL_DELAY，0筆錯誤標成SYSTEM**。目前的邏輯是「代號查CSV是'-'或完全不在CSV裡，就算EXTERNAL_DELAY」，沒有額外去查SITCA官方「非營業日」公告頁本身——但因為兩種情況（公告的非營業日、公會1~2天正常延遲）在CSV上都會呈現同一種「沒有今天的紀錄」症狀，目前這套邏輯已經正確覆蓋兩種情況，沒有發現任何假SYSTEM，判斷不需要額外加查官方公告頁那層複雜度。
