@@ -117,6 +117,11 @@ const RUN_LOG_PIPELINES = [
   "CLOUD_SEC_FINANCIAL_INCREMENTAL",
   "CLOUD_CONSENSUS_INGEST",
   "TW_PURCHASABLE_CLASSIFY",
+  // 2026-10-21（使用者核准，第一優先修正第5項）: 這支排程完全不在清單裡，是10/20那次FAILED
+  // run、以及10/16、10/17、10/19連續3天卡在IN_PROGRESS都沒被健康報告抓到的直接原因——這裡的
+  // checkPipelineRunLog只檢查「有在清單裡」的job_id，不在清單裡的job不管跑成什麼樣子都不會
+  // 被看到。
+  "CLOUD_NEW_FUND_LISTING_DETECTION",
 ];
 
 export async function GET(request: Request) {
@@ -315,19 +320,10 @@ export async function GET(request: Request) {
   }
   const currencyOfficialCheck = evaluateFundCurrencyOfficialConsistency(currencyOfficialSamples);
 
-  // 2026-10-21（使用者核准的唯讀分析）: checkCoreUniverseFundCurrencyFormat 的範圍只有
-  // data_provider IN ('tdcc-offshore', NULL)，不包含 data_provider='yahoo'——這不是為了讓報告
-  // 乾淨才排除，是因為今天的任務範圍本來就只有TDCC/SITCA核心母體。但 data_provider='yahoo' 另外
-  // 存在 6,714 筆（+MoneyDJ 2筆）currency 是中文字串，VERIFIED 全部都不在核心母體清單裡
-  // （tw_purchasable_classification.status='APPROVED' 比對結果=0），所以不會出現在任何使用者
-  // 真正看得到的列表/搜尋頁。這是一個真實存在、目前完全沒有任何監控覆蓋的既有問題，不是「排除
-  // 整類讓報告變乾淨」——這裡誠實地把筆數算出來、每天都顯示在報告的 details 裡（不是anomalies，
-  // 因為使用者還沒核准怎麼修，不應該每天报紅造成警報疲乏），等使用者決定修正方案後再決定要不要
-  // 升級成正式異常。
-  const yahooFundCurrencyChineseLabelCount = (await query(
-    `SELECT count(*)::int AS n FROM funds WHERE data_provider = 'yahoo' AND currency IS NOT NULL AND currency !~ '^[A-Z]{3}$'`,
-    [],
-  ))[0]?.n ?? 0;
+  // 2026-10-21（使用者核准）: 原本data_provider='yahoo'的6,714筆（+MoneyDJ 2筆）中文幣別只用
+  // 一個非異常的count追蹤，等使用者核准後才升級——現在已經核准並執行修正（備份表
+  // funds_currency_backup_yahoo_20261021），checkCoreUniverseFundCurrencyFormat的範圍也已經
+  // 擴大到全表，這個獨立的count不再需要，由上面那個全表檢查統一負責。
 
   // 2026-10-21（使用者核准，不准猜測幣別）: newFundListingDetection.ts 現在遇到無法對應成合法ISO
   // 代碼的幣別時完全不建立那筆 funds 列（lib/cron/newFundListingDetection.ts 的
@@ -339,10 +335,23 @@ export async function GET(request: Request) {
     [],
   );
   const newFundSkippedCurrency: { taxId: string; name: string; rawCurrency: string | null; side: "DOMESTIC" | "OFFSHORE" }[] = [];
-  const latestNewFundDetails = newFundSkippedCurrencyRows[0]?.details as { domestic?: { skippedInvalidCurrency?: any[] }; offshore?: { skippedInvalidCurrency?: any[] } } | undefined;
+  // 2026-10-21（使用者核准，第一優先修正第3、5項）: 單筆fund.create()失敗（createFailures）或
+  // ISIN已存在但名稱比對判定缺漏（skippedIsinConflict）都要列為SYSTEM異常，不能只靠「整次run
+  // 有沒有FAILED」這種粗粒度的checkPipelineRunLog——一次run即使最終COMMITTED，裡面某幾筆
+  // createFailures仍然代表真實資料缺口。
+  const newFundCreateFailures: { taxId: string; name: string; error: string; side: "DOMESTIC" | "OFFSHORE" }[] = [];
+  const newFundIsinConflicts: { taxId: string; name: string; isin: string; existingName: string; existingCode: string | null; side: "DOMESTIC" | "OFFSHORE" }[] = [];
+  const latestNewFundDetails = newFundSkippedCurrencyRows[0]?.details as {
+    domestic?: { skippedInvalidCurrency?: any[]; createFailures?: any[]; skippedIsinConflict?: any[] };
+    offshore?: { skippedInvalidCurrency?: any[]; createFailures?: any[]; skippedIsinConflict?: any[] };
+  } | undefined;
   if (latestNewFundDetails) {
     for (const r of latestNewFundDetails.domestic?.skippedInvalidCurrency ?? []) newFundSkippedCurrency.push({ ...r, side: "DOMESTIC" });
     for (const r of latestNewFundDetails.offshore?.skippedInvalidCurrency ?? []) newFundSkippedCurrency.push({ ...r, side: "OFFSHORE" });
+    for (const r of latestNewFundDetails.domestic?.createFailures ?? []) newFundCreateFailures.push({ ...r, side: "DOMESTIC" });
+    for (const r of latestNewFundDetails.offshore?.createFailures ?? []) newFundCreateFailures.push({ ...r, side: "OFFSHORE" });
+    for (const r of latestNewFundDetails.domestic?.skippedIsinConflict ?? []) newFundIsinConflicts.push({ ...r, side: "DOMESTIC" });
+    for (const r of latestNewFundDetails.offshore?.skippedIsinConflict ?? []) newFundIsinConflicts.push({ ...r, side: "OFFSHORE" });
   }
 
   // 2026-10-21（使用者核准）: core_universe_etf 15 檔缺口（今天查時剩 13 檔）——VERIFIED 逐檔直接
@@ -553,6 +562,12 @@ export async function GET(request: Request) {
     ...(newFundSkippedCurrency.length > 0
       ? [{ type: "NEW_FUND_SKIPPED_INVALID_CURRENCY", category: SYSTEM_CATEGORY, count: newFundSkippedCurrency.length, items: newFundSkippedCurrency }]
       : []),
+    ...(newFundCreateFailures.length > 0
+      ? [{ type: "NEW_FUND_CREATE_FAILED", category: SYSTEM_CATEGORY, count: newFundCreateFailures.length, items: newFundCreateFailures }]
+      : []),
+    ...(newFundIsinConflicts.length > 0
+      ? [{ type: "NEW_FUND_ISIN_NAME_CONFLICT", category: SYSTEM_CATEGORY, count: newFundIsinConflicts.length, items: newFundIsinConflicts }]
+      : []),
   ];
   const systemAnomalyCount = anomalies.filter((a) => a.category === SYSTEM_CATEGORY).length;
   const externalDelayAnomalyCount = anomalies.length - systemAnomalyCount;
@@ -580,7 +595,7 @@ export async function GET(request: Request) {
       core_universe_etf_gap_evidence: coreUniverseEtfGapWithEvidence,
       moneydj_parse_failures: moneydjParseFailures,
       fund_currency_format_check: currencyFormatCheck, fund_currency_official_check: currencyOfficialCheck, new_fund_skipped_invalid_currency: newFundSkippedCurrency,
-      yahoo_fund_currency_chinese_label_count_known_pending_issue: yahooFundCurrencyChineseLabelCount,
+      new_fund_create_failures: newFundCreateFailures, new_fund_isin_conflicts: newFundIsinConflicts,
       anomaly_count: anomalies.length, system_anomaly_count: systemAnomalyCount, external_delay_anomaly_count: externalDelayAnomalyCount,
       anomalies, notify_result: notifyResult,
     },

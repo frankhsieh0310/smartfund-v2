@@ -100,6 +100,15 @@ export type NewFundResult = {
    * baseline，所以不會被誤判成「已處理」）。呼叫端（cron route）必須把這個清單算進異常，絕不能
    * 靜默忽略。 */
   skippedInvalidCurrency: { taxId: string; name: string; rawCurrency: string | null }[];
+  /** 2026-10-21（使用者核准，第一優先修正）: 名稱比對判定「缺漏」，但這檔基金的ISIN其實已經
+   * 存在於funds表（通常是官方來源把同一個ISIN的顯示名稱換了個寫法，例如幣別標示從「星幣」
+   * 換成「美元」），不是真的新基金——不建立，記錄在這裡讓健康報告抓到，需要人工確認是改名還是
+   * 資料品質問題。 */
+  skippedIsinConflict: { taxId: string; name: string; isin: string; existingName: string; existingCode: string | null }[];
+  /** 2026-10-21（使用者核准）: 單筆fund.create()失敗（例如上面沒攔到的其他unique constraint）
+   * 只記錄並跳過這一筆，不能讓整個迴圈中斷——否則這一筆後面所有本來能成功建立的基金全部漏掉
+   * （這正是cf98e72d5之前、10/20那次FAILED run的根因）。 */
+  createFailures: { taxId: string; name: string; error: string }[];
 };
 
 // 2026-10-17: an earlier bug (unbatched sequential inserts, see batchInsertEvents's doc comment)
@@ -143,7 +152,14 @@ const CANDIDATE_BACKFILL_THRESHOLD = 50;
 // currency mismatch against today's SITCA CSV -- fixing the source here stops NEW funds from being
 // created with the same wrong value; it does not touch any of the 186 existing rows, which the user
 // is fixing separately after officially sourcing each one's real currency.
-async function createMissingDomesticFunds(writeEnabled: boolean, existingFundCodes: Set<string>, deadlineMs: number): Promise<{ created: { taxId: string; name: string; company: string }[]; skippedInvalidCurrency: { taxId: string; name: string; rawCurrency: string | null }[] }> {
+type CreateMissingResult = {
+  created: { taxId: string; name: string; company: string }[];
+  skippedInvalidCurrency: { taxId: string; name: string; rawCurrency: string | null }[];
+  skippedIsinConflict: { taxId: string; name: string; isin: string; existingName: string; existingCode: string | null }[];
+  createFailures: { taxId: string; name: string; error: string }[];
+};
+
+async function createMissingDomesticFunds(writeEnabled: boolean, existingFundCodes: Set<string>, deadlineMs: number): Promise<CreateMissingResult> {
   const identity = await fetchSitcaIdentityRows();
   const navRows = await fetchSitcaRows().catch(() => []); // best-effort -- NAV might not be published yet for some
   const navByTaxId = new Map(navRows.map((r) => [r.taxId, r]));
@@ -155,10 +171,11 @@ async function createMissingDomesticFunds(writeEnabled: boolean, existingFundCod
     seenTaxIds.add(row.taxId);
     missing.push(row);
   }
-  if (!writeEnabled || missing.length === 0) return { created: [], skippedInvalidCurrency: [] };
+  if (!writeEnabled || missing.length === 0) return { created: [], skippedInvalidCurrency: [], skippedIsinConflict: [], createFailures: [] };
 
   const created: { taxId: string; name: string; company: string }[] = [];
   const skippedInvalidCurrency: { taxId: string; name: string; rawCurrency: string | null }[] = [];
+  const createFailures: { taxId: string; name: string; error: string }[] = [];
   for (const row of missing) {
     if (Date.now() > deadlineMs) break; // graceful stop -- remaining rows picked up by next run
     const navRow = navByTaxId.get(row.taxId);
@@ -171,20 +188,26 @@ async function createMissingDomesticFunds(writeEnabled: boolean, existingFundCod
       skippedInvalidCurrency.push({ taxId: row.taxId, name: row.name, rawCurrency });
       continue;
     }
-    await prisma.fund.create({
-      data: {
-        name: row.name,
-        code: row.taxId,
-        company: row.company,
-        currency: rawCurrency,
-        dataProvider: "SITCA",
-        isActive: true,
-        latestNav: navRow?.nav ?? undefined,
-      },
-    });
-    created.push(row);
+    // 2026-10-21（使用者核准，第一優先修正）: 單筆失敗只記錄並跳過，不能讓整個迴圈中斷——否則
+    // 這一筆之後所有本來能成功建立的基金全部漏掉，這正是10/20那次FAILED run的根因。
+    try {
+      await prisma.fund.create({
+        data: {
+          name: row.name,
+          code: row.taxId,
+          company: row.company,
+          currency: rawCurrency,
+          dataProvider: "SITCA",
+          isActive: true,
+          latestNav: navRow?.nav ?? undefined,
+        },
+      });
+      created.push(row);
+    } catch (e) {
+      createFailures.push({ taxId: row.taxId, name: row.name, error: e instanceof Error ? e.message : String(e) });
+    }
   }
-  return { created, skippedInvalidCurrency };
+  return { created, skippedInvalidCurrency, skippedIsinConflict: [], createFailures };
 }
 
 // 2026-10-18（使用者核准的最小新增方案）: offshore 的「auto-provisioning 是另一個更難的問題」
@@ -203,7 +226,12 @@ function normalizeFundName(s: string): string {
   return s.replace(/[　\s]+/g, "");
 }
 
-async function createMissingOffshoreFunds(writeEnabled: boolean, existingFundNames: Set<string>, deadlineMs: number): Promise<{ created: { taxId: string; name: string; company: string }[]; skippedInvalidCurrency: { taxId: string; name: string; rawCurrency: string | null }[] }> {
+async function createMissingOffshoreFunds(
+  writeEnabled: boolean,
+  existingFundNames: Set<string>,
+  existingByIsin: Map<string, { name: string; isin: string | null; code: string | null }>,
+  deadlineMs: number,
+): Promise<CreateMissingResult> {
   const csvText = await fetchTdccNavCsv();
   const byName = parseTdccNavCsv(csvText);
   const approvedNames = await fetchTdccOffshoreBasicInfoNames();
@@ -227,14 +255,24 @@ async function createMissingOffshoreFunds(writeEnabled: boolean, existingFundNam
     const company = agentsByName.get(name) ?? agentsByNormalizedName.get(normalizeFundName(name)) ?? "";
     missing.push({ taxId: row.code, name, company });
   }
-  if (!writeEnabled || missing.length === 0) return { created: [], skippedInvalidCurrency: [] };
+  if (!writeEnabled || missing.length === 0) return { created: [], skippedInvalidCurrency: [], skippedIsinConflict: [], createFailures: [] };
 
   const created: { taxId: string; name: string; company: string }[] = [];
   const skippedInvalidCurrency: { taxId: string; name: string; rawCurrency: string | null }[] = [];
+  const skippedIsinConflict: { taxId: string; name: string; isin: string; existingName: string; existingCode: string | null }[] = [];
+  const createFailures: { taxId: string; name: string; error: string }[] = [];
   for (const row of missing) {
     if (Date.now() > deadlineMs) break; // graceful stop -- remaining rows picked up by next run
     const navRow = byName.get(row.name)!;
     const company = row.company;
+    // 2026-10-21（使用者核准，第一優先修正）: 名稱比對判定「缺漏」，但ISIN其實已經存在於funds
+    // 表——不是新基金，是官方把顯示名稱換了寫法（見上面detectNewOffshoreFunds的註解，VERIFIED
+    // SG9999001127案例）。用ISIN比對，不再只靠名稱。
+    if (navRow.isin && existingByIsin.has(navRow.isin)) {
+      const existing = existingByIsin.get(navRow.isin)!;
+      skippedIsinConflict.push({ taxId: row.taxId, name: row.name, isin: navRow.isin, existingName: existing.name, existingCode: existing.code });
+      continue;
+    }
     // 2026-10-21（使用者核准，不准猜測幣別）: dataset 3-4 目前本身就是ISO代碼（VERIFIED，EUR/USD/
     // AUD/JPY/ZAR/GBP/CAD/CHF/NZD/HKD/SGD/SEK），但不保證永遠如此。原本遇到不是三碼大寫ISO格式
     // 的原始字串時會退回預設"USD"（funds.currency是NOT NULL、沒有"未知"可以表達）——這等於用
@@ -246,21 +284,28 @@ async function createMissingOffshoreFunds(writeEnabled: boolean, existingFundNam
       skippedInvalidCurrency.push({ taxId: row.taxId, name: row.name, rawCurrency });
       continue;
     }
-    await prisma.fund.create({
-      data: {
-        name: row.name,
-        company,
-        currency: rawCurrency,
-        dataProvider: "tdcc-offshore",
-        isActive: true,
-        latestNav: navRow.nav,
-        latestNavDate: new Date(navRow.navDate),
-        isin: navRow.isin ?? undefined,
-      },
-    });
-    created.push({ ...row, company });
+    // 2026-10-21（使用者核准，第一優先修正）: 單筆失敗只記錄並跳過，不能讓整個迴圈中斷——這正是
+    // 10/20那次FAILED run的根因（一筆unique constraint錯誤讓後面所有本來能成功建立的基金全部
+    // 漏掉）。
+    try {
+      await prisma.fund.create({
+        data: {
+          name: row.name,
+          company,
+          currency: rawCurrency,
+          dataProvider: "tdcc-offshore",
+          isActive: true,
+          latestNav: navRow.nav,
+          latestNavDate: new Date(navRow.navDate),
+          isin: navRow.isin ?? undefined,
+        },
+      });
+      created.push({ ...row, company });
+    } catch (e) {
+      createFailures.push({ taxId: row.taxId, name: row.name, error: e instanceof Error ? e.message : String(e) });
+    }
   }
-  return { created, skippedInvalidCurrency };
+  return { created, skippedInvalidCurrency, skippedIsinConflict, createFailures };
 }
 
 /** Domestic funds: identity key is 基金統編 (== funds.code for ~95% of rows per sitcaFetch.ts's own
@@ -280,23 +325,23 @@ export async function detectNewDomesticFunds(writeEnabled: boolean, deadlineMs: 
     .filter(([taxId]) => !existingFundCodes.has(taxId) && !known.has(taxId))
     .map(([taxId, name]) => ({ key: taxId, name }));
 
-  const { created, skippedInvalidCurrency } = await createMissingDomesticFunds(writeEnabled, existingFundCodes, deadlineMs);
+  const { created, skippedInvalidCurrency, skippedIsinConflict, createFailures } = await createMissingDomesticFunds(writeEnabled, existingFundCodes, deadlineMs);
   const needsBackfill = !isFirstRun && candidates.length > CANDIDATE_BACKFILL_THRESHOLD;
 
   if (!writeEnabled) {
-    return { isFirstRun, seeded: isFirstRun ? bySeen.size : 0, newlyDetected: isFirstRun || needsBackfill ? [] : candidates, created, skippedInvalidCurrency, baselineBackfilled: needsBackfill ? candidates.length : 0 };
+    return { isFirstRun, seeded: isFirstRun ? bySeen.size : 0, newlyDetected: isFirstRun || needsBackfill ? [] : candidates, created, skippedInvalidCurrency, skippedIsinConflict, createFailures, baselineBackfilled: needsBackfill ? candidates.length : 0 };
   }
 
   if (isFirstRun) {
     await seedBaseline("DOMESTIC_FUND", DOMESTIC_SOURCE, [...bySeen.entries()].map(([taxId, name]) => ({ key: taxId, name })));
-    return { isFirstRun: true, seeded: bySeen.size, newlyDetected: [], created, skippedInvalidCurrency, baselineBackfilled: 0 };
+    return { isFirstRun: true, seeded: bySeen.size, newlyDetected: [], created, skippedInvalidCurrency, skippedIsinConflict, createFailures, baselineBackfilled: 0 };
   }
   if (needsBackfill) {
     await seedBaseline("DOMESTIC_FUND", DOMESTIC_SOURCE, candidates);
-    return { isFirstRun: false, seeded: 0, newlyDetected: [], created, skippedInvalidCurrency, baselineBackfilled: candidates.length };
+    return { isFirstRun: false, seeded: 0, newlyDetected: [], created, skippedInvalidCurrency, skippedIsinConflict, createFailures, baselineBackfilled: candidates.length };
   }
   await logNewFunds("DOMESTIC_FUND", DOMESTIC_SOURCE, candidates);
-  return { isFirstRun: false, seeded: 0, newlyDetected: candidates, created, skippedInvalidCurrency, baselineBackfilled: 0 };
+  return { isFirstRun: false, seeded: 0, newlyDetected: candidates, created, skippedInvalidCurrency, skippedIsinConflict, createFailures, baselineBackfilled: 0 };
 }
 
 /** Offshore funds: funds.code is NULL for most offshore funds (per tdccBatchSource.ts's own
@@ -306,7 +351,16 @@ export async function detectNewOffshoreFunds(writeEnabled: boolean, deadlineMs: 
   const csvText = await fetchTdccNavCsv();
   const byName = parseTdccNavCsv(csvText);
 
-  const existingFundNames = new Set((await prisma.fund.findMany({ select: { name: true } })).map((f) => f.name));
+  const existingFundRows = await prisma.fund.findMany({ select: { name: true, isin: true, code: true } });
+  const existingFundNames = new Set(existingFundRows.map((f) => f.name));
+  // 2026-10-21（使用者核准，第一優先修正）: 10/20那次FAILED run的根因——名稱比對判定「缺漏」，
+  // 但這檔的ISIN其實已經存在於funds表（官方把顯示名稱換了寫法，例如幣別標示從「星幣」換成
+  // 「美元」，ISIN不變）。VERIFIED案例：TDCC NAV CSV目前把ISIN SG9999001127標成「新加坡大華
+  // 新加坡增長基金(美元)」，但這個ISIN在funds表裡已經存在，名稱是「新加坡大華新加坡增長基金
+  // (星幣)」(code=USGFSG)——純名稱比對完全看不出這是同一檔基金，直到INSERT時unique
+  // constraint才爆出來，而且會讓整個迴圈中斷（後面所有本來能成功建立的基金全部漏掉）。現在改成
+  // 先查ISIN是否已存在，已存在就不建立、歸類成skippedIsinConflict，不再依賴純名稱比對。
+  const existingByIsin = new Map(existingFundRows.filter((f) => f.isin).map((f) => [f.isin as string, f]));
   const isFirstRun = !(await hasAnyBaseline("OFFSHORE_FUND", OFFSHORE_SOURCE));
   const known = isFirstRun ? new Set<string>() : await knownKeys("OFFSHORE_FUND", OFFSHORE_SOURCE);
 
@@ -318,7 +372,7 @@ export async function detectNewOffshoreFunds(writeEnabled: boolean, deadlineMs: 
   // 現在跟 domestic 的 createMissingDomesticFunds 一樣，用「是否該有 funds 列」跟「今天的畫面
   // 要不要宣布為新商品」兩件事分開處理——不管 isFirstRun/needsBackfill 走哪個分支，缺漏的
   // funds 列都會檢查並（writeEnabled 時）建立。
-  const { created, skippedInvalidCurrency } = await createMissingOffshoreFunds(writeEnabled, existingFundNames, deadlineMs);
+  const { created, skippedInvalidCurrency, skippedIsinConflict, createFailures } = await createMissingOffshoreFunds(writeEnabled, existingFundNames, existingByIsin, deadlineMs);
 
   // Offshore fund auto-provisioning used to be treated as a separate, harder problem (funds.code is
   // NULL for most offshore funds) -- VERIFIED 2026-10-18 that TDCC's own NAV CSV does carry a usable
@@ -326,17 +380,17 @@ export async function detectNewOffshoreFunds(writeEnabled: boolean, deadlineMs: 
   const needsBackfill = !isFirstRun && candidates.length > CANDIDATE_BACKFILL_THRESHOLD;
 
   if (!writeEnabled) {
-    return { isFirstRun, seeded: isFirstRun ? candidates.length : 0, newlyDetected: isFirstRun || needsBackfill ? [] : candidates, created, skippedInvalidCurrency, baselineBackfilled: needsBackfill ? candidates.length : 0 };
+    return { isFirstRun, seeded: isFirstRun ? candidates.length : 0, newlyDetected: isFirstRun || needsBackfill ? [] : candidates, created, skippedInvalidCurrency, skippedIsinConflict, createFailures, baselineBackfilled: needsBackfill ? candidates.length : 0 };
   }
 
   if (isFirstRun) {
     await seedBaseline("OFFSHORE_FUND", OFFSHORE_SOURCE, [...byName.keys()].map((name) => ({ key: name, name })));
-    return { isFirstRun: true, seeded: byName.size, newlyDetected: [], created, skippedInvalidCurrency, baselineBackfilled: 0 };
+    return { isFirstRun: true, seeded: byName.size, newlyDetected: [], created, skippedInvalidCurrency, skippedIsinConflict, createFailures, baselineBackfilled: 0 };
   }
   if (needsBackfill) {
     await seedBaseline("OFFSHORE_FUND", OFFSHORE_SOURCE, candidates);
-    return { isFirstRun: false, seeded: 0, newlyDetected: [], created, skippedInvalidCurrency, baselineBackfilled: candidates.length };
+    return { isFirstRun: false, seeded: 0, newlyDetected: [], created, skippedInvalidCurrency, skippedIsinConflict, createFailures, baselineBackfilled: candidates.length };
   }
   await logNewFunds("OFFSHORE_FUND", OFFSHORE_SOURCE, candidates);
-  return { isFirstRun: false, seeded: 0, newlyDetected: candidates, created, skippedInvalidCurrency, baselineBackfilled: 0 };
+  return { isFirstRun: false, seeded: 0, newlyDetected: candidates, created, skippedInvalidCurrency, skippedIsinConflict, createFailures, baselineBackfilled: 0 };
 }

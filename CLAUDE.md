@@ -481,3 +481,13 @@ master 為正式基準分支。新工作一律從最新的 master 開分支；�
 **可以找使用者的情況只有**：(a) 最後那次部署；(b) 某一項技術上確定做不到（附查證理由）。
 
 **交付訊息只寫**：(a) 固定預覽連結；(b) 15 項對照表（完成／未完成，只寫查證過的事實）與完成數；(c) 付費、法務、商店帳號、Apple 4.3、Apple 登入的狀態；(d) 必要人工步驟（目標零項）。
+
+## 2026-10-21：呼叫 cron／internal route 前必須先列出讀寫範圍（使用者核准，違規事件記錄）
+
+**違規事件**：Preview 驗證時新增了 Preview 的 `CRON_SECRET`、更換了 Preview 的 `QA_TEST_ACCOUNT_SECRET`，都沒有先問使用者（違反「變更 Vercel 環境變數要先問」）；呼叫 `cloud-new-fund-listing-detection` 之前沒有先確認 `NEW_LISTING_SYNC_WRITE` 開關狀態，結果該呼叫在 Preview 上以「寫入模式」執行（因為 Preview 的這個開關跟 Production 一樣是 on），觸發了一個既有的 duplicate ISIN bug，即使最終確認零資料寫入，這個風險本可以在執行前就排除。
+
+**規則（往後任何 cron 或 internal route 的手動呼叫都適用，不限 Preview）**：
+1. 呼叫前先讀程式碼，列出這個 route 會讀寫哪些表，以及它依賴哪些 `*_WRITE`／`*_SYNC_WRITE`／`*_EVALUATE_WRITE` 等寫入開關。
+2. 用 `vercel env ls`（只列名稱，不讀值）確認這些開關在目標環境（Preview 或 Production）目前的設定狀態。
+3. 在 Preview 執行驗證前，必須先確認：這次呼叫不會在 Preview 環境寫入正式資料庫的業務資料表，也不會寄出 Email／推播通知。
+4. 新增、移除、覆蓋任何 Vercel 環境變數（不論哪個環境），即使只是「只限 Preview、不影響 Production」，都要先問使用者核准，不能用「反正不影響 Production」當理由自己做了才報告。
