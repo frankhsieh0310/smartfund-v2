@@ -8,6 +8,7 @@ import { getStockDetail, getStockHistory } from '@/lib/data-platform/web/stockSe
 import { getGovernmentYieldDetail } from '@/lib/services/governmentYieldService';
 import { WebDataError } from '@/lib/data-platform/web/errors';
 import { getCommodityDetail, getCommodityHistory, isCoreCommodityRoot } from '@/lib/data-platform/web/commodityService';
+import { getCryptoDetail, getCryptoHistory } from '@/lib/data-platform/web/cryptoService';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -30,13 +31,19 @@ const idOrSymbolFilter = (assetId: string) => (UUID_RE.test(assetId) ? [{ id: as
 const meta = (asOfDate: Date | null, source: string | null, coverageStatus: 'FULL' | 'PARTIAL_CURRENT' | 'UNKNOWN' = 'FULL') => ({ asOfDate: asOfDate?.toISOString() ?? null, lastUpdated: asOfDate?.toISOString() ?? null, freshnessStatus: asOfDate ? 'CURRENT' as const : 'UNKNOWN' as const, source, coverageStatus });
 
 async function marketDetail(assetId: string, assetType: 'COMMODITY' | 'CRYPTO') {
-  // 2026-10-21（14點任務第3項）: market_master/market_data（這個函式原本唯一的資料來源）這條
-  // 商品/加密貨幣共用的舊管線已經在2026-08-18停止更新（VERIFIED：crypto也卡在同一天，是舊管線
-  // 本身的問題，不是這次改動造成的）。18個核心商品期貨已經有獨立、每天都在正常寫入的
-  // Commodity Core Universe 資料（futures_root_market_observations / futures_technical_analytics），
-  // 優先改用那條；不在18個核心商品清單裡的（目前沒有）或crypto，維持走原本的舊資料來源。
+  // 2026-10-21（14點任務第3項，crypto見第4項）: market_master/market_data（這個函式原本唯一的
+  // 資料來源）這條商品/加密貨幣共用的舊管線已經在2026-08-18停止更新（VERIFIED：crypto也卡在同
+  // 一天，是舊管線本身的問題，不是這次改動造成的）。18個核心商品期貨已經有獨立、每天都在正常
+  // 寫入的 Commodity Core Universe 資料（futures_root_market_observations /
+  // futures_technical_analytics），crypto則有Yahoo全幣種雲端管線每天在寫 crypto_market_snapshots /
+  // crypto_candles（見 cryptoService.ts）；兩者都優先改用，查不到（市場尚未被該管線收錄）才
+  // fallback回原本的舊資料來源。
   if (assetType === 'COMMODITY' && isCoreCommodityRoot(assetId)) {
     const detail = await getCommodityDetail(assetId);
+    if (detail) return { data: detail, meta: meta(detail.asOfDate ? new Date(detail.asOfDate) : null, detail.source), error: null };
+  }
+  if (assetType === 'CRYPTO') {
+    const detail = await getCryptoDetail(assetId);
     if (detail) return { data: detail, meta: meta(detail.asOfDate ? new Date(detail.asOfDate) : null, detail.source), error: null };
   }
   const row = await prisma.marketMaster.findFirst({ where: { assetType, OR: [{ id: assetId }, { symbol: { equals: assetId, mode: 'insensitive' } }] } });
@@ -165,10 +172,16 @@ async function directHistory(assetId: string, assetType: 'MACRO' | 'COMMODITY' |
     const rows = await prisma.economicValue.findMany({ where: { seriesId: series.id, value: { not: null }, ...(from ? { date: { gte: from } } : {}) }, orderBy: { date: 'asc' }, take: 5000 });
     return { points: sample(rows.map((row) => ({ date: row.date.toISOString(), value: Number(row.value) }))), meta: meta(rows.at(-1)?.date ?? null, series.source) };
   }
-  // 見 marketDetail() 同一段說明：18個核心商品期貨改走還在正常更新的 Commodity Core Universe。
+  // 見 marketDetail() 同一段說明：18個核心商品期貨改走還在正常更新的 Commodity Core Universe，
+  // crypto改走Yahoo雲端管線的K線（crypto_candles）。K線補history還在用checkpoint慢慢追趕全市場
+  // （VERIFIED 2026-10-21：BTC落後約一個月），所以標PARTIAL_CURRENT；仍遠比凍結在08-18的舊資料新。
   if (assetType === 'COMMODITY' && isCoreCommodityRoot(assetId)) {
     const history = await getCommodityHistory(assetId, from ?? null);
     if (history) return { points: sample(history.points), meta: meta(history.latestDate, history.source) };
+  }
+  if (assetType === 'CRYPTO') {
+    const history = await getCryptoHistory(assetId, from ?? null);
+    if (history) return { points: sample(history.points), meta: meta(history.latestDate, history.source, 'PARTIAL_CURRENT') };
   }
   const master = await prisma.marketMaster.findFirst({ where: { assetType, OR: [{ id: assetId }, { symbol: { equals: assetId, mode: 'insensitive' } }] } });
   if (!master) throw new Error(`${assetType} not found.`);
