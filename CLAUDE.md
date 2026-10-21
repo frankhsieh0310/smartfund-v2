@@ -1,5 +1,13 @@
 @AGENTS.md
 
+## 台股產業雷達本機排程決定（2026-10-21 訂立）
+
+1330/1500/1700（tw-industry-radar）**確定留在本機，不建立新的 Vercel 專案**。這三支腳本本身包含 `npm run build:web` + `vercel deploy --prod`（部署 tw-industry-radar 自己的獨立站點），不是單純資料抓取——移到雲端牽涉另一個完整專案的架構決定，使用者已決定維持現狀。
+
+## 新增本機排程監看規則（2026-10-21 訂立）
+
+往後任何要加進 `checkLocalScheduleReporting` 的 `watched` 清單的本機排程，**一律先用 `schtasks /run` 或直接執行實測，確認第一次回報成功（看到 `local-schedule-report` 回 HTTP 200、且 `production_scheduler_runs` 真的多一筆對應 `job_id` 的成功紀錄）之後才能加進去**，不准只看程式碼寫得對就先加進監看清單——這正是 10/20 1330/1500/1700 剛接上新程式碼那天造成一次誤報 Telegram 的原因（程式碼本身沒錯，只是還沒到它們當天真正執行的時間點）。
+
 ## 新 worktree 的 Vercel 專案連結（2026-10-19 訂立，2026-10-20 補強）
 
 任何新的 `git worktree add` 完成後，部署前必須：
@@ -1728,3 +1736,28 @@ TWSE ETF 重複資料、ETF_RETURNS_SYNC_TW 卡住等）還沒修好部署前，
 - **唯一真正「今天才發現」的新東西**：第 5 項 FRED 金鑰缺失——**VERIFIED 這是真的缺口，但不是昨天搬到 sin1 造成的**，是這個檢查原本就需要的金鑰一直沒有設定，今天才第一次被系統性地發現並記錄下來。
 - **16 檔主動式 ETF 缺口**：VERIFIED 確認維持修復狀態，`active_etf_official_holdings.missingOrStale = []`（0 筆）。
 - **結論**：今天沒有執行任何資料庫寫入、DDL 或部署動作——9 筆異常裡，8 筆是既有、非今天造成的缺口，1 筆（FRED 金鑰）需要你自己申請金鑰才能解決，沒有發現需要今天緊急修復、且我能安全動手修的新 bug。**10/21 不算乾淨的一天，三天穩定測試計時仍未開始**，繼續往後順延，直到出現異常數為 0 的交易日。
+
+**2026-10-21（週三）補充：同一天更深入複查，4 項上面寫的「非新問題/既有缺口」其實是可修的真 bug，已修好等你部署**
+
+上面這份是今天早上第一次看到報告時的初步分類，當時沒時間深挖每一項的真正根因。使用者今天下午追加完整指令要求逐一查到底，複查後發現以下 4 項其實不是「既有缺口、沒事可做」，是真的程式碼 bug，已經在 worktree `C:\Users\User\AppData\Local\Temp\claude-smartfund-dailyfix-20261021`（分支 `fix/daily-ops-20261021`，從正式環境目前的 commit `762a749de` 開出）修好、型別檢查通過、單元測試通過（19 項全過）、Preview 部署驗證過，commit `3ddf0502f`：
+
+1. **FRED_API_KEY 缺失（第5項）**：不要求你申請金鑰。改用 FRED 官方不需要金鑰的 CSV 端點（`https://fred.stlouisfed.org/graph/fredgraph.csv?id=<series>`）。VERIFIED 已經部署一個臨時探測路由到 Preview，實際從 sin1（`VERCEL_REGION=sin1`）打這個端點，DCOILWTICO 63ms/200、DHHNGSP 199ms/200，都拿到真實資料，探測路由已移除。
+2. **CLOUD_SEC_FINANCIAL_INCREMENTAL 的 5 個 CIK（第2項）**：VERIFIED 直接打 SEC `companyfacts` API 查這 5 個 CIK，4 個（Northern Dynasty Minerals、LuxExperience B.V.、Magnitude International、New Pacific Metals）是外國申報人，用 `ifrs-full` 分類申報 20-F/40-F，`us-gaap` 完全是 0 筆——但我們的 `CONCEPTS` 對照表只認 `us-gaap`，所以明明 SEC 有 86~145 筆真實財務科目，卻被判定「查無資料」。這是我們自己的分類表缺口，不是 SEC 沒資料。已加上對應的 `ifrs-full` 別名，修後用同一批真實資料重跑驗證，4 個都能正常抓出 86~145 筆。第 5 個（Guardian Metal Resources PLC）VERIFIED 真的兩種分類都是 0 筆，維持正確地算永久缺口。
+3. **MONEYDJ_PARSE_FAILED 35 個代號（第8項）＋CLOUD_MONEYDJ_FUND ERROR_COUNT_12（第9項，同一根因）**：VERIFIED 不是解析失敗，是寫入時的型別錯誤——`persistNameOnlyHoldings` 用 JS 產生的 `randomUUID()` 字串綁定到 `uuid` 型別的 `id` 欄位，沒有做 `::uuid` 轉型，Postgres 丟 `42804`，導致「名稱公開、比例未公開」這種本來已經正確辨識、該走專屬表 `fund_holdings_name_only` 的狀況，每次都在寫入這一步炸掉，掉回籠統的「解析失敗」分類。改成 SQL 端 `gen_random_uuid()`，已經在一個會自動 rollback 的交易裡對正式環境實測成功。這個 bug 影響今天看到的全部 35 個代號。
+4. **CLOUD_ETF_PRICE ERROR_COUNT_1（第1項）**：VERIFIED 01:17 那次跑失敗的 `00408A`，下一次（02:17）就乾淨跑完，`etf_history` 裡這檔已經有到 10/20 的資料——是排程自己的重試機制已經補好的暫時性失敗。原本的 `errorCount24h` 邏輯只看「過去24小時內有幾次跑含錯誤」，不管後面有沒有補好，等於把已經自我修復的問題持續標成異常。改成只算「從最新一次往回數，連續未解決的那一段」，後面接一次乾淨的執行就代表已經修好，不再計入。
+5. **00990B YAHOO_TW_RETURN_MISMATCH（第4項）附帶修正**：VERIFIED 這檔 2026-06-29 才上市、不到 4 個月，我方和 Yahoo 奇摩都正確地回報 `return_1y=null`——兩邊一致地「還沒有資料」被舊邏輯誤判成「對不上」。改成只有「一邊有值一邊沒有」才算真分歧。
+6. **OpenClaw Gateway 重開機雙觸發雜訊**：`gateway-wrapper.mjs` 加上啟動前的 port 18789 佔用偵測，偵測到已有服務在跑就回報 `SKIPPED` 正常結束，不搶 port；`local-schedule-report` 端點同步加上 `SKIPPED` 這個合法狀態值。VERIFIED 用跟 wrapper 裡同一段邏輯對現在真的在跑的 OpenClaw 測過，正確判定 port 已佔用。
+
+**尚未解決、需要之後繼續追的**：
+- `COVERAGE core_universe_fund` 85.5%（757~893 筆缺口，查詢時點不同有些微差異）：VERIFIED 分佈為 `tdcc-offshore` provider 520 筆、`data_provider=null`（多為 SITCA 國內基金）362 筆、`SITCA` 11 筆——但還沒追到「為什麆 `OFFSHORE_NAV_SYNC`／SITCA 這兩條既有在正常跑、回報健康的排程，卻沒有把這些特定基金的歷史資料寫進 `fund_history`」的具體原因（游標/批次邏輯、基金代號對應問題都有可能，需要再花時間讀 `tdccBatchSource.ts`／SITCA 擷取邏輯才能定案，今天時間不夠）。**沒有做任何猜測性的修正**，維持現狀，下次再查。
+- `core_universe_etf` 99.8%（15/6126 缺口）：還沒個別查這 15 檔，優先度低於上面的 fund 缺口。
+- `CLOUD_SEC_FINANCIAL_INCREMENTAL` 的 `LAST_RUN_PARTIAL`：這支本來就是「每天一次、增量處理」的設計，有沒有「正常情況下永遠不會真正 wrapped/COMPLETED，所以這個異常理由其實該調整判斷邏輯」還沒查證，今天沒有動這部分。
+
+**部署狀態**：以上 1-6 項全部在 commit `3ddf0502f1c49f5caf9d41b66a40c8e016d0e538`，等你執行 `vercel deploy --prod`（指令見下方，我沒有自己部署）。
+
+## 外匯資料過舊調查（2026-10-21）
+
+`fx_forward_observations`（停在 2021-06-30）／`economic_values`（停在 2026-08-11）：
+- **使用者畫面現況 — VERIFIED**：全repo搜尋 `fx_metrics`（`fx-forward-reference-curve`／`fx-global-carry-ranking` 這兩支雲端排程唯一的寫入目標），**沒有任何 app 頁面或對外 API 讀取這張表**——這兩支排程產生的資料目前完全沒有在 App 或網站任何畫面上顯示給使用者看。「使用者現在看到的是哪一天的數字」這個問題的答案是：**使用者現在沒有看到任何這兩個指標的數字**，不是看到舊數字。
+- **原始資料為什麼停更 — VERIFIED**：負責把新資料寫進 `fx_forward_observations`／`economic_values` 這兩張原始表的腳本（`scripts/data/fx-forward-points/run-fx-forward-points.ts`、`scripts/data/fx-carry-cip/run-fx-carry-cip-analytics.ts`）**只存在使用者本機、從來沒有 commit 進 git**（`git log --all` 查這兩個路徑只有一次很久以前的「working tree snapshot」備份 commit），而且**本機工作排程裡完全沒有排這兩支腳本**（只有下游的「材料化/計算」那一步 `\SmartFund-FX-Forward-Reference-Curve` 被排程、現在已停用）。換句話說：原始資料擷取這一段從來沒有被排程過，只有已經停更的舊資料被下游計算腳本每天重算，資料當然越來越舊。
+- **建議，待你決定**：這兩個指標完全沒有使用者會看到，且擷取腳本從未進版控、原始邏輯細節只存在未提交的本機檔案裡，要「恢復每日更新」等同於重新開發一條全新的雲端擷取管線（抓即期/遠期匯率報價源、利率曲線源），工作量不小。**今天沒有在沒有你確認的情況下擅自決定要不要做**，先維持現狀（下游計算排程雲端版已確認能正常跑、只是吃不到新原始資料；本機對應的 2 支舊排程已停用）。沒有加「資料新鮮度」檢查進健康報告，因為目前的結論是「這兩個指標根本沒有畫面在用，加異常檢查只會製造每天一定會跳的假警報」——如果你決定要恢復，我會同時把新鮮度檢查加回去。
