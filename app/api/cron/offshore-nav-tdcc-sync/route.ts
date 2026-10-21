@@ -67,8 +67,17 @@ export async function GET(request: Request) {
   // decides writability purely by comparing the CSV's navDate against the fund's own stored
   // latest_nav_date, so a fund with a genuinely newer NAV is never stuck waiting out a staleness
   // window again.
+  //
+  // 2026-10-21（使用者核准）: VERIFIED live -- the name-matched population below was scoped to
+  // data_provider='yahoo' only, so a tdcc-offshore fund with NO `code` (443 of the 520-fund gap in
+  // core_universe_fund's tdcc-offshore slice, ~85%) had no path into EITHER branch here at all: not
+  // the code-matched branch (requires code IS NOT NULL) and not this one (wrong data_provider).
+  // Cross-checked all 443 against this same CSV by exact name -- every single one has a real,
+  // non-"-9999" NAV sitting right there. Added `data_provider = 'tdcc-offshore' AND code IS NULL` to
+  // this query (name-matching only, since these funds have no code to match by) fixes exactly that
+  // gap without touching the code-matched branch's own population (code IS NOT NULL) at all.
   const [rawCandidateFunds, codeCandidateFunds, yahooMapping] = await Promise.all([
-    query(`SELECT id, name, latest_nav_date::text AS "latestNavDate" FROM funds WHERE data_provider = 'yahoo'`, []),
+    query(`SELECT id, name, latest_nav_date::text AS "latestNavDate" FROM funds WHERE data_provider = 'yahoo' OR (data_provider = 'tdcc-offshore' AND code IS NULL)`, []),
     // Task (this round): fund 107 and 24 siblings (data_provider='tdcc-offshore') were excluded from
     // every NAV pipeline — this query's old WHERE clause never selected them at all, even though
     // their NAV is sitting in this exact CSV right now. These funds carry TDCC's own 基金代碼
