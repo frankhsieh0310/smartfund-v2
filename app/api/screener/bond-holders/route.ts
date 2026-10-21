@@ -64,16 +64,27 @@ export async function GET(request: Request) {
   let fundResultsByIssuer: Array<{ fundId: string; code: string | null; name: string; holdingName: string; weightPct: number; asOfDate: string | null; matchMethod: "ISSUER" }> = [];
 
   if (targetIssuerKey) {
-    const fundRows = await prisma.$queryRawUnsafe<FundDisclosureRow[]>(
+    // 2026-10-21（14點任務第10項）: 這條查詢原本完全沒有 WHERE 過濾 holding_name，等於每次搜尋
+    // 都把 MONEYDJ_PUBLIC_DISCLOSURE 來源的全部基金持股（約300萬筆）整批拉進 Node 再用 JS
+    // parseBondDisclosureName 逐筆判斷——VERIFIED 本機實測單次查詢超過30秒沒回應，這就是「債券
+    // 反查失效」的真正原因（不是回錯結果，是慢到看起來像當機）。normalizeIssuer() 只會從
+    // holding_name 做大寫化/移除樣板字/移除非英數字元，不會憑空生出新文字，所以任何能比對上
+    // targetIssuerKey 的列，它的 holding_name 一定原封不動包含 targetIssuerKey 的第一個字——用
+    // 這個字先在 SQL 端做 ILIKE 粗篩，絕不會濾掉真正該比對上的列，只是把要搬進 JS 的候選列從
+    // 300萬筆縮小到幾十～幾百筆，比對邏輯本身完全沒變。
+    const issuerFirstWord = targetIssuerKey.split(" ")[0];
+    const fundRows = issuerFirstWord.length < 2 ? [] : await prisma.$queryRawUnsafe<FundDisclosureRow[]>(
       `WITH latest AS (
          SELECT h.fund_id, h.holding_name, h.weight, h.as_of_date,
                 ROW_NUMBER() OVER (PARTITION BY h.fund_id, h.holding_name ORDER BY h.as_of_date DESC NULLS LAST) rn
            FROM holdings h
           WHERE h.asset_type = 'FUND' AND h.fund_id IS NOT NULL AND h.source = 'MONEYDJ_PUBLIC_DISCLOSURE'
+            AND h.holding_name ILIKE '%' || $1 || '%'
        )
        SELECT l.fund_id, f.code, f.name, l.holding_name, l.weight::text AS weight, l.as_of_date::text
          FROM latest l JOIN funds f ON f.id = l.fund_id
         WHERE l.rn = 1 AND f.is_active`,
+      issuerFirstWord,
     );
 
     const seenNameParsed = new Set<string>();

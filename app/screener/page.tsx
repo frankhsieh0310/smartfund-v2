@@ -23,11 +23,7 @@ const investmentItems = [
 ];
 const researchItems = [
   { label: "SmartMatch", href: "/quiz" }, { label: "篩選器", href: "/screener" },
-  { label: "商品比較", href: "/compare" }, { label: "投資組合健檢", href: "/portfolio" },
-];
-const dataItems = [
-  { label: "經濟數據" }, { label: "殖利率" }, { label: "經濟日曆" }, { label: "財報日曆" },
-  { label: "配息日曆" }, { label: "IPO" }, { label: "公司行動" }, { label: "機構持股" },
+  { label: "商品比較（尚未開放）" }, { label: "投資組合健檢", href: "/portfolio" },
 ];
 
 function HeaderDropdown({ label, items, open, onToggle, onClose }: {
@@ -88,7 +84,6 @@ export default function ScreenerPage() {
             <HeaderDropdown label="研究工具" items={researchItems} open={activeDropdown === "research"} onToggle={() => setActiveDropdown((value) => value === "research" ? null : "research")} onClose={() => setActiveDropdown(null)} />
             <Link href="/rankings" className="whitespace-nowrap py-7 transition-colors hover:text-white">排行榜</Link>
             <Link href="/portfolio" className="whitespace-nowrap py-7 transition-colors hover:text-white">投資組合</Link>
-            <HeaderDropdown label="資料中心" items={dataItems} open={activeDropdown === "data"} onToggle={() => setActiveDropdown((value) => value === "data" ? null : "data")} onClose={() => setActiveDropdown(null)} />
             <Link href="/pricing" className="whitespace-nowrap py-7 transition-colors hover:text-[#F5B700]">會員專區</Link>
           </nav>
           <div className="flex items-center gap-2 sm:gap-4">

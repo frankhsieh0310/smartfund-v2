@@ -4,9 +4,6 @@ import Link from "next/link";
 import { AuthButton } from "@/components/auth/AuthButton";
 import { useEffect, useRef, useState } from "react";
 
-const assetTabs = ["股票", "ETF", "基金", "債券", "REITs", "Crypto"];
-const rankingFilters = ["熱門", "漲幅", "跌幅", "成交活躍", "近期表現"];
-const tableHeadings = ["排名", "名稱", "代碼", "市場", "最新值", "漲跌", "漲跌幅", "近期報酬", "操作"];
 
 const investmentItems = [
   { label: "股票" }, { label: "ETF", href: "/etf" }, { label: "基金", href: "/funds" },
@@ -15,13 +12,8 @@ const investmentItems = [
 ];
 const researchItems = [
   { label: "SmartMatch", href: "/quiz" }, { label: "篩選器", href: "/etf" },
-  { label: "商品比較", href: "/compare" }, { label: "投資組合健檢", href: "/portfolio" },
+  { label: "商品比較（尚未開放）" }, { label: "投資組合健檢", href: "/portfolio" },
 ];
-const dataItems = [
-  { label: "經濟數據" }, { label: "殖利率" }, { label: "經濟日曆" }, { label: "財報日曆" },
-  { label: "配息日曆" }, { label: "IPO" }, { label: "公司行動" }, { label: "機構持股" },
-];
-
 function HeaderDropdown({ label, items, open, onToggle, onClose }: {
   label: string;
   items: ReadonlyArray<{ label: string; href?: string }>;
@@ -46,8 +38,6 @@ function HeaderDropdown({ label, items, open, onToggle, onClose }: {
 }
 
 export default function RankingsPage() {
-  const [activeAsset, setActiveAsset] = useState("股票");
-  const [activeFilter, setActiveFilter] = useState("熱門");
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const headerRef = useRef<HTMLElement>(null);
 
@@ -80,7 +70,6 @@ export default function RankingsPage() {
             <HeaderDropdown label="研究工具" items={researchItems} open={activeDropdown === "research"} onToggle={() => setActiveDropdown((value) => value === "research" ? null : "research")} onClose={() => setActiveDropdown(null)} />
             <Link href="/rankings" className="whitespace-nowrap py-7 text-white">排行榜</Link>
             <Link href="/portfolio" className="whitespace-nowrap py-7 transition-colors hover:text-white">投資組合</Link>
-            <HeaderDropdown label="資料中心" items={dataItems} open={activeDropdown === "data"} onToggle={() => setActiveDropdown((value) => value === "data" ? null : "data")} onClose={() => setActiveDropdown(null)} />
             <Link href="/pricing" className="whitespace-nowrap py-7 transition-colors hover:text-[#F5B700]">會員專區</Link>
           </nav>
           <div className="flex items-center gap-2 sm:gap-4">
@@ -100,38 +89,13 @@ export default function RankingsPage() {
           <div className="text-[13px] text-slate-500">資料更新時間：—</div>
         </section>
 
-        <section className="mt-8 overflow-hidden rounded-2xl border border-white/[0.09] bg-white/[0.035]">
-          <div className="overflow-x-auto border-b border-white/[0.08] px-5">
-            <div className="flex min-w-max gap-2 py-4">
-              {assetTabs.map((asset) => (
-                <button key={asset} type="button" onClick={() => setActiveAsset(asset)} className={`rounded-lg px-5 py-2.5 text-[14px] font-bold transition-colors ${activeAsset === asset ? "bg-[#F5B700] text-[#07111f]" : "text-slate-400 hover:bg-white/[0.06] hover:text-white"}`}>{asset}</button>
-              ))}
-            </div>
-          </div>
-          <div className="overflow-x-auto border-b border-white/[0.08] px-5">
-            <div className="flex min-w-max gap-2 py-4">
-              {rankingFilters.map((filter) => (
-                <button key={filter} type="button" onClick={() => setActiveFilter(filter)} className={`rounded-lg border px-4 py-2 text-[13px] font-semibold transition-colors ${activeFilter === filter ? "border-white/20 bg-white/[0.09] text-white" : "border-transparent text-slate-500 hover:text-slate-300"}`}>{filter}</button>
-              ))}
-            </div>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[1080px] text-left text-[13px]">
-              <thead className="border-b border-white/[0.08] text-slate-500">
-                <tr>{tableHeadings.map((heading) => <th key={heading} className="px-5 py-4 font-semibold">{heading}</th>)}</tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td colSpan={9} className="px-6 py-20 text-center">
-                    <div className="text-[11px] font-bold tracking-[0.2em] text-[#F5B700]/70">DATA PENDING</div>
-                    <div className="mt-4 text-[18px] font-bold text-slate-300">排行榜資料準備中</div>
-                    <div className="mt-2 text-[13px] text-slate-600">資料完成後將顯示全球市場最新排行。</div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+        {/* 2026-10-21（14點任務第10項）: 這個區塊原本的資產/篩選分頁完全沒接任何資料，點了也
+            不會改變任何東西，表格永遠固定顯示「資料準備中」——對使用者來說是一堆看起來能互動、
+            其實全部死掉的控制項。隱藏這些假互動，只留誠實的待補說明。 */}
+        <section className="mt-8 overflow-hidden rounded-2xl border border-white/[0.09] bg-white/[0.035] px-6 py-16 text-center">
+          <div className="text-[11px] font-bold tracking-[0.2em] text-[#F5B700]/70">DATA PENDING</div>
+          <div className="mt-4 text-[18px] font-bold text-slate-300">排行榜資料準備中</div>
+          <div className="mt-2 text-[13px] text-slate-600">資料完成後將顯示全球市場最新排行。</div>
         </section>
 
         <section className="mt-10 flex flex-col justify-between gap-7 rounded-2xl border border-[#F5B700]/20 bg-[#F5B700]/[0.055] p-7 md:flex-row md:items-center md:p-9">
