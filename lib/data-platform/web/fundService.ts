@@ -7,6 +7,7 @@ import { buildProvenance } from "./provenance.ts";
 import { isoOrNull, numberOrNull, type CanonicalIdentity, type HistoryQuery, type ListQuery, type Provenance, type ResponseMeta, type ServiceResponse, type SummaryMetrics } from "./types.ts";
 import { mapFundMainCategory, type FundMainCategory } from "./fundCategoryMapping.ts";
 import { getCoreUniverseFundIds } from "../../tw-purchasable/coreUniverseFilter.ts";
+import { getNonRepresentativeShareClassFundIds, getShareClassCountMap } from "./fundShareClassGrouping.ts";
 
 // 2026-10-16: 925 distinct fund names (1,887 rows) share a display name with at least one other
 // fund row -- VERIFIED live these are overwhelmingly genuinely different, real, purchasable share
@@ -53,6 +54,9 @@ export interface FundListItem {
   // UNAVAILABLE/freshnessStatus as before). Only this list/table surfaces the distinction via this
   // one flag; FUND-only, does not touch SummaryMetrics (shared with ETF/FX/etc).
   navPending: boolean;
+  // 2026-10-21（14點任務第2項）: 同一產品的其他級別數量（含自己），僅對代表級別>1 時才有意義；
+  // 沒有分組記錄的基金固定是 1。給前端顯示「共 N 個級別」徽章用。
+  shareClassCount: number;
 }
 
 // 2026-10-14 QA-round-1 fix: 4,577 offshore foreign-currency share classes (data_provider='yahoo')
@@ -72,10 +76,13 @@ export async function getFundList(query: FundListQuery = {}): Promise<ServiceRes
   const direction: Prisma.SortOrder = query.direction === "desc" ? "desc" : "asc";
   // 2026-10-19（使用者商品範圍規則，最高層）: 只顯示「台灣買得到」的核心母體基金（SITCA 國內
   // 基金＋TDCC 3-2 境內核備境外基金）。
-  const coreFundIds = await getCoreUniverseFundIds();
+  const [coreFundIds, nonRepresentativeShareClassFundIds] = await Promise.all([
+    getCoreUniverseFundIds(),
+    getNonRepresentativeShareClassFundIds(),
+  ]);
   const where = {
     isActive: true,
-    id: { in: Array.from(coreFundIds) },
+    id: { in: Array.from(coreFundIds), notIn: Array.from(nonRepresentativeShareClassFundIds) },
     NOT: {
       dataProvider: "yahoo",
       lastNavSource: null,
@@ -110,11 +117,12 @@ export async function getFundList(query: FundListQuery = {}): Promise<ServiceRes
     : new Set<string>();
   const readiness = rows.length ? await prisma.$queryRaw<Array<{id:string;history_ready:boolean}>>(Prisma.sql`SELECT f.id,EXISTS(SELECT 1 FROM fund_history h WHERE h.fund_id=f.id OFFSET 19 LIMIT 1) history_ready FROM funds f WHERE f.id IN (${Prisma.join(rows.map(row=>row.id))})`) : [];
   const readyByFund = new Map(readiness.map(row=>[row.id,row.history_ready]));
+  const shareClassCountMap = await getShareClassCountMap();
   const latest = rows.reduce<Date | null>((value, row) => !value || (row.latestNavDate && row.latestNavDate > value) ? row.latestNavDate : value, null);
   const updated = rows.reduce<Date | null>((value, row) => !value || row.updatedAt > value ? row.updatedAt : value, null);
   const source = rows.length === 1 ? rows[0].lastNavSource ?? rows[0].dataSource ?? rows[0].dataProvider : "MULTIPLE_VERIFIED_PROVIDERS";
   const provenance = buildProvenance({ source, asOfDate: latest, lastUpdated: updated });
-  return { data: rows.map((row) => ({ identity: fundIdentity(row, duplicateNames), isin: row.isin, metrics: fundMetrics(row), company: row.company, category: row.category, fundCategory: mapFundMainCategory(row.category), fundSubcategory: row.category, riskLevel: row.riskLevel, freshnessStatus: freshnessStatus(row.latestNavDate, "PUBLICATION_AWARE"), publicReady: row.latestNav != null && row.latestNavDate != null && readyByFund.get(row.id) === true && !["STALE","UNKNOWN","UNAVAILABLE"].includes(freshnessStatus(row.latestNavDate, "PUBLICATION_AWARE")), source: row.lastNavSource ?? row.dataSource ?? row.dataProvider, navPending: row.latestNav == null && row.latestNavDate == null })), meta: { asOfDate: provenance.asOfDate, lastUpdated: provenance.lastUpdated, freshnessStatus: freshnessStatus(latest, "PUBLICATION_AWARE"), source, provenance, coverageStatus: "PARTIAL_CURRENT" }, pagination: paginationMeta(page, pageSize, total), error: null };
+  return { data: rows.map((row) => ({ identity: fundIdentity(row, duplicateNames), isin: row.isin, metrics: fundMetrics(row), company: row.company, category: row.category, fundCategory: mapFundMainCategory(row.category), fundSubcategory: row.category, riskLevel: row.riskLevel, freshnessStatus: freshnessStatus(row.latestNavDate, "PUBLICATION_AWARE"), publicReady: row.latestNav != null && row.latestNavDate != null && readyByFund.get(row.id) === true && !["STALE","UNKNOWN","UNAVAILABLE"].includes(freshnessStatus(row.latestNavDate, "PUBLICATION_AWARE")), source: row.lastNavSource ?? row.dataSource ?? row.dataProvider, navPending: row.latestNav == null && row.latestNavDate == null, shareClassCount: shareClassCountMap.get(row.id) ?? 1 })), meta: { asOfDate: provenance.asOfDate, lastUpdated: provenance.lastUpdated, freshnessStatus: freshnessStatus(latest, "PUBLICATION_AWARE"), source, provenance, coverageStatus: "PARTIAL_CURRENT" }, pagination: paginationMeta(page, pageSize, total), error: null };
 }
 
 export async function getFundFilterOptions(): Promise<{ companies: string[]; currencies: string[]; categories: string[]; riskLevels: number[] }> {
