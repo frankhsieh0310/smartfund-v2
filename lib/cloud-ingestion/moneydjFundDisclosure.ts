@@ -277,6 +277,82 @@ export async function persistMoneydjDisclosure(
 }
 
 /**
+ * 2026-10-22（使用者核准，共用資料庫負載第二項）: 批次版本的persistMoneydjDisclosure——把多檔
+ * 基金的holdings寫入包進同一個transaction（同一個advisory lock只取一次），讓holdings表上的
+ * 觸發器鏈（enqueue_reverse_products -> reverse_refresh_queue -> flush_reverse_products ->
+ * refresh_reverse_products）只在這個transaction commit時觸發一次，而不是每檔基金各自觸發一次。
+ * 寫入邏輯跟單檔版本逐行對應，沒有改SQL本身；只是把「每檔開一個transaction」改成「這批開一個
+ * transaction」。readback驗證搬到transaction commit之後，逐檔確認（沿用原本的失敗即丟錯語意）。
+ */
+export async function persistMoneydjDisclosureBatch(
+  prisma: PrismaClient,
+  items: Array<{ fundId: string; shareClassId: string | null; moneydjCode: string; disclosure: MoneydjDisclosure }>,
+): Promise<Array<{ fundId: string; rowsPersisted: number; isNewMonth: boolean }>> {
+  if (items.length === 0) return [];
+
+  const priorMaxRows = await prisma.$queryRawUnsafe<Array<{ fund_id: string; max: Date | null }>>(
+    `SELECT fund_id, MAX(as_of_date) AS max FROM holdings WHERE fund_id = ANY($1) AND source = $2 GROUP BY fund_id`,
+    items.map((i) => i.fundId),
+    MONEYDJ_SOURCE,
+  );
+  const priorMaxByFund = new Map(priorMaxRows.map((r) => [r.fund_id, r.max ? new Date(r.max).toISOString().slice(0, 10) : null]));
+  const filingIdByFund = new Map(items.map((i) => [i.fundId, `moneydj:${i.moneydjCode.toLowerCase()}:${i.disclosure.date}`]));
+
+  await prisma.$transaction(
+    async (tx) => {
+      const lock = await tx.$queryRawUnsafe<Array<{ locked: boolean }>>(
+        `SELECT pg_try_advisory_xact_lock(hashtext($1)) AS locked`,
+        MONEYDJ_ADVISORY_LOCK,
+      );
+      if (!lock[0]?.locked) throw new Error("MONEYDJ_DISCLOSURE_SINGLE_WRITER_LOCKED");
+      for (const item of items) {
+        const filingId = filingIdByFund.get(item.fundId)!;
+        for (const [index, holding] of item.disclosure.holdings.entries()) {
+          await tx.$executeRawUnsafe(
+            `INSERT INTO holdings
+               (id, asset_type, fund_id, share_class_id, as_of_date, rank, holding_name, holding_code,
+                weight, security_id, source, source_record_id, filing_id, weight_method, created_at)
+             VALUES (gen_random_uuid(), 'FUND', $1, $2, $3::date, $4, $5, NULL, $6, NULL, $7, $8, $9, $10, CURRENT_TIMESTAMP)
+             ON CONFLICT (fund_id, source, filing_id, source_record_id)
+               WHERE fund_id IS NOT NULL AND source IS NOT NULL AND filing_id IS NOT NULL AND source_record_id IS NOT NULL
+             DO UPDATE SET rank = EXCLUDED.rank, holding_name = EXCLUDED.holding_name,
+                           weight = EXCLUDED.weight, weight_method = EXCLUDED.weight_method`,
+            item.fundId,
+            item.shareClassId,
+            item.disclosure.date,
+            index + 1,
+            holding.name,
+            holding.weight,
+            MONEYDJ_SOURCE,
+            `${item.disclosure.date}:${index + 1}:${holding.name}`,
+            filingId,
+            item.disclosure.scope,
+          );
+        }
+      }
+    },
+    { maxWait: 20_000, timeout: 90_000 },
+  );
+
+  const results: Array<{ fundId: string; rowsPersisted: number; isNewMonth: boolean }> = [];
+  for (const item of items) {
+    const filingId = filingIdByFund.get(item.fundId)!;
+    const readback = await prisma.$queryRawUnsafe<Array<{ rows: number }>>(
+      `SELECT COUNT(*)::int AS rows FROM holdings WHERE fund_id = $1 AND source = $2 AND filing_id = $3`,
+      item.fundId,
+      MONEYDJ_SOURCE,
+      filingId,
+    );
+    const rowsPersisted = Number(readback[0]?.rows ?? 0);
+    if (rowsPersisted !== item.disclosure.holdings.length) throw new Error(`MONEYDJ_DISCLOSURE_READBACK_FAILED:${item.fundId}`);
+    const priorMax = priorMaxByFund.get(item.fundId) ?? null;
+    const isNewMonth = !priorMax || item.disclosure.date > priorMax;
+    results.push({ fundId: item.fundId, rowsPersisted, isNewMonth });
+  }
+  return results;
+}
+
+/**
  * Persist a MoneydjHoldingsNameOnlyError's holding names into the dedicated fund_holdings_name_only
  * table — never into `holdings` (weight is NOT NULL there; this data has no weight at all, by
  * design, not by omission). Idempotent upsert on (fund_id, as_of_date, source, holding_name), same

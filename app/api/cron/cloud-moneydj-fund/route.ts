@@ -24,9 +24,11 @@ import {
   MoneydjHttpError,
   MoneydjHoldingsNameOnlyError,
   persistMoneydjDisclosure,
+  persistMoneydjDisclosureBatch,
   persistNameOnlyHoldings,
   MONEYDJ_SOURCE,
 } from "@/lib/cloud-ingestion/moneydjFundDisclosure";
+import { isMoneydjFundBatchRefreshEnabled, moneydjFundBatchRefreshInnerSize } from "@/lib/cron/moneydjFundBatchRefreshGate";
 import {
   beginRun,
   finishRun,
@@ -181,6 +183,92 @@ export async function runMoneydjBatch(
   return { attempted, updatedFunds, rowsPersisted, failed, retryable, http403, http429, alreadyCurrent, backoffStop, timeBudgetStop, failures, lastId };
 }
 
+// 2026-10-22（使用者核准，共用資料庫負載第二項）: 批次刷新版本——跟runMoneydjBatch共用同一套
+// fetch/錯誤處理/time-budget/backoff邏輯，差別只在「抓到的disclosure先放進buffer，累積到
+// innerBatchSize或遇到backoff/time-budget/迴圈結束才一次性呼叫persistBatch」，讓多檔的holdings
+// 寫入包進同一個transaction（見persistMoneydjDisclosureBatch），減少refresh_reverse_products的
+// 觸發次數。name-only揭露（fund_holdings_name_only）不受影響，持續逐檔立即寫入（那張表沒有
+// holdings的trigger鏈問題）。
+export async function runMoneydjBatchGrouped(
+  codes: MappedFund[],
+  opts: {
+    cursor: string;
+    startedMs: number;
+    timeBudgetMs: number;
+    innerBatchSize: number;
+    now?: () => number;
+    sleep?: (ms: number) => Promise<void>;
+    fetchOne: (fund: MappedFund) => Promise<{ disclosure: import("@/lib/cloud-ingestion/moneydjFundDisclosure").MoneydjDisclosure } | { nameOnly: { rowsPersisted: number } }>;
+    persistBatch: (
+      items: Array<{ fund: MappedFund; disclosure: import("@/lib/cloud-ingestion/moneydjFundDisclosure").MoneydjDisclosure }>,
+    ) => Promise<Array<{ fundId: string; rowsPersisted: number; isNewMonth: boolean }>>;
+    onProgress: (lastId: string, counters: { attempted: number; updatedFunds: number; failed: number }) => Promise<void>;
+  },
+): Promise<MoneydjBatchOutcome> {
+  const now = opts.now ?? Date.now;
+  const sleep = opts.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
+
+  let attempted = 0, updatedFunds = 0, rowsPersisted = 0, failed = 0, retryable = 0;
+  let http403 = 0, http429 = 0, alreadyCurrent = 0;
+  let backoffStop = false, timeBudgetStop = false;
+  const failures: Array<{ code: string; reason: string }> = [];
+  let lastId = opts.cursor;
+  let buffer: Array<{ fund: MappedFund; disclosure: import("@/lib/cloud-ingestion/moneydjFundDisclosure").MoneydjDisclosure }> = [];
+  let bufferLastId = lastId;
+
+  const flush = async () => {
+    if (buffer.length === 0) return;
+    const results = await opts.persistBatch(buffer);
+    const byFund = new Map(results.map((r) => [r.fundId, r]));
+    for (const item of buffer) {
+      const r = byFund.get(item.fund.fundId);
+      if (r) {
+        rowsPersisted += r.rowsPersisted;
+        if (r.isNewMonth) updatedFunds++;
+        else alreadyCurrent++;
+      }
+    }
+    buffer = [];
+    await opts.onProgress(bufferLastId, { attempted, updatedFunds, failed });
+  };
+
+  for (const fund of codes) {
+    if (now() - opts.startedMs > opts.timeBudgetMs) { timeBudgetStop = true; break; }
+    lastId = fund.portfolioKey;
+    attempted++;
+    try {
+      const result = await opts.fetchOne(fund);
+      if ("nameOnly" in result) {
+        rowsPersisted += result.nameOnly.rowsPersisted;
+        updatedFunds++; // 沿用原本把name-only disclosure算成已處理(isNewMonth=true)的慣例
+      } else {
+        buffer.push({ fund, disclosure: result.disclosure });
+        bufferLastId = lastId;
+        if (buffer.length >= opts.innerBatchSize) await flush();
+      }
+    } catch (error) {
+      if (error instanceof MoneydjHttpError) {
+        if (error.httpStatus === 403) http403++; else http429++;
+        failed++; retryable++;
+        failures.push({ code: fund.moneydjCode, reason: `HTTP_${error.httpStatus}` });
+        await flush();
+        await opts.onProgress(lastId, { attempted, updatedFunds, failed });
+        await sleep(2_000);
+        backoffStop = true;
+        break;
+      }
+      failed++;
+      const message = String(error).slice(0, 300);
+      if (/READBACK_FAILED|SINGLE_WRITER_LOCKED/.test(message)) retryable++;
+      failures.push({ code: fund.moneydjCode, reason: message });
+    }
+    await opts.onProgress(lastId, { attempted, updatedFunds, failed });
+  }
+  await flush();
+
+  return { attempted, updatedFunds, rowsPersisted, failed, retryable, http403, http429, alreadyCurrent, backoffStop, timeBudgetStop, failures, lastId };
+}
+
 // 2026-10-08: dedup by master fund. A master's share classes all disclose the SAME underlying
 // portfolio (that's the whole point of f48d8e25a/8b83d4a27's master-fund model) — fetching and
 // writing MoneyDJ holdings separately for every share class was pure waste, since
@@ -280,36 +368,75 @@ export async function GET(request: Request) {
     codes = await nextCodes(cursor, batch);
   }
 
-  const outcome = await runMoneydjBatch(codes, {
-    cursor,
-    startedMs,
-    timeBudgetMs: TIME_BUDGET_MS,
-    processOne: (fund) =>
-      fetchMoneydjDisclosure(fund.moneydjCode)
-        .then((disclosure) =>
-          persistMoneydjDisclosure(prisma, { fundId: fund.fundId, shareClassId: null, moneydjCode: fund.moneydjCode, disclosure }),
-        )
-        .catch(async (error) => {
-          // Names-only disclosure (no weight at all) is a known, recognized page shape, not a
-          // parse failure -- persist to its own dedicated table (never `holdings`, see
-          // persistNameOnlyHoldings's own doc comment) and count it as handled, same as a normal
-          // successful disclosure, instead of leaving it stuck in the generic failed/retry bucket.
-          if (error instanceof MoneydjHoldingsNameOnlyError) {
-            const { rowsPersisted } = await persistNameOnlyHoldings(prisma, {
-              fundId: fund.fundId, moneydjCode: fund.moneydjCode, date: error.date, names: error.names,
-            });
-            return { rowsPersisted, isNewMonth: true };
+  // 2026-10-22（使用者核准，共用資料庫負載第二項）: 預設(開關關閉)維持原本逐檔各自commit的
+  // runMoneydjBatch，行為完全不變。開關開了才走runMoneydjBatchGrouped，把holdings寫入包成
+  // MONEYDJ_FUND_BATCH_REFRESH_INNER_SIZE檔一個transaction。
+  const batchRefreshEnabled = isMoneydjFundBatchRefreshEnabled();
+  const innerBatchSize = moneydjFundBatchRefreshInnerSize();
+
+  const outcome = batchRefreshEnabled
+    ? await runMoneydjBatchGrouped(codes, {
+        cursor,
+        startedMs,
+        timeBudgetMs: TIME_BUDGET_MS,
+        innerBatchSize,
+        fetchOne: async (fund) => {
+          try {
+            const disclosure = await fetchMoneydjDisclosure(fund.moneydjCode);
+            return { disclosure };
+          } catch (error) {
+            if (error instanceof MoneydjHoldingsNameOnlyError) {
+              const { rowsPersisted } = await persistNameOnlyHoldings(prisma, {
+                fundId: fund.fundId, moneydjCode: fund.moneydjCode, date: error.date, names: error.names,
+              });
+              return { nameOnly: { rowsPersisted } };
+            }
+            throw error;
           }
-          throw error;
-        }),
-    onProgress: (lastSymbol, counters) =>
-      writeCheckpoint(JOB, CHECKPOINT_KEY, runId, {
-        lastSymbol,
-        processed: (before?.processed ?? 0) + counters.attempted,
-        succeeded: (before?.succeeded ?? 0) + counters.updatedFunds,
-        failed: (before?.failed ?? 0) + counters.failed,
-      }),
-  });
+        },
+        persistBatch: (items) =>
+          persistMoneydjDisclosureBatch(
+            prisma,
+            items.map(({ fund, disclosure }) => ({ fundId: fund.fundId, shareClassId: null, moneydjCode: fund.moneydjCode, disclosure })),
+          ),
+        onProgress: (lastSymbol, counters) =>
+          writeCheckpoint(JOB, CHECKPOINT_KEY, runId, {
+            lastSymbol,
+            processed: (before?.processed ?? 0) + counters.attempted,
+            succeeded: (before?.succeeded ?? 0) + counters.updatedFunds,
+            failed: (before?.failed ?? 0) + counters.failed,
+          }),
+      })
+    : await runMoneydjBatch(codes, {
+        cursor,
+        startedMs,
+        timeBudgetMs: TIME_BUDGET_MS,
+        processOne: (fund) =>
+          fetchMoneydjDisclosure(fund.moneydjCode)
+            .then((disclosure) =>
+              persistMoneydjDisclosure(prisma, { fundId: fund.fundId, shareClassId: null, moneydjCode: fund.moneydjCode, disclosure }),
+            )
+            .catch(async (error) => {
+              // Names-only disclosure (no weight at all) is a known, recognized page shape, not a
+              // parse failure -- persist to its own dedicated table (never `holdings`, see
+              // persistNameOnlyHoldings's own doc comment) and count it as handled, same as a normal
+              // successful disclosure, instead of leaving it stuck in the generic failed/retry bucket.
+              if (error instanceof MoneydjHoldingsNameOnlyError) {
+                const { rowsPersisted } = await persistNameOnlyHoldings(prisma, {
+                  fundId: fund.fundId, moneydjCode: fund.moneydjCode, date: error.date, names: error.names,
+                });
+                return { rowsPersisted, isNewMonth: true };
+              }
+              throw error;
+            }),
+        onProgress: (lastSymbol, counters) =>
+          writeCheckpoint(JOB, CHECKPOINT_KEY, runId, {
+            lastSymbol,
+            processed: (before?.processed ?? 0) + counters.attempted,
+            succeeded: (before?.succeeded ?? 0) + counters.updatedFunds,
+            failed: (before?.failed ?? 0) + counters.failed,
+          }),
+      });
   const {
     attempted,
     updatedFunds,
