@@ -122,6 +122,12 @@ const RUN_LOG_PIPELINES = [
   // checkPipelineRunLog只檢查「有在清單裡」的job_id，不在清單裡的job不管跑成什麼樣子都不會
   // 被看到。
   "CLOUD_NEW_FUND_LISTING_DETECTION",
+  // 2026-10-22（使用者核准，三.5稽核發現）: 同一種「回報成功但實際沒寫入」的問題——這支
+  // route上游（economic_values的EFFR/ESTR/SONIA）從2026-08-10起就沒有新資料，但這個job
+  // 本身每天照樣回報COMPLETED，因為沒被列在這個清單裡，checkPipelineRunLog完全不會檢查
+  // 它的run log，連續40+天沒人發現。route本身已經改成寫入0筆時回報SKIPPED（見該檔案
+  // 註解），這裡加進清單才能讓SKIPPED真的被health report看到。
+  "FX_CARRY_CIP_ANALYTICS",
 ];
 
 export async function GET(request: Request) {
@@ -160,14 +166,28 @@ export async function GET(request: Request) {
   );
   const domesticFundFreshness = evaluateFreshness("domestic_fund_nav", domesticFundFreshRow[0]?.max_date ?? null, 4);
 
-  // 2026-10-22（使用者核准，CBOE本機殘留鎖檔修復的延伸稽核，二.6）：fx_metrics整張表
-  // 過去完全沒有freshness check，CBOE三個指數停止更新長達數月都沒人發現。這裡用整張表
-  // 最新一筆observed_at（不分metric種類）——發現即使排除已知停更的CBOE三指數，其餘所有
-  // metric種類最新也只到40天前（2026-09-12），即使FX_CARRY_CIP_ANALYTICS這個job每天
-  // 都回報COMPLETED，也沒有真的寫入新資料，是一個獨立於CBOE之外、本次新發現、尚未
-  // 排查根因的SYSTEM異常，先用freshness check讓它在每日報告中可見，根因留待下一輪處理。
+  // 2026-10-22（使用者核准，第13項持續健檢的延伸稽核）：fx_metrics整張表過去完全沒有
+  // freshness check，CBOE三個指數停止更新長達數月都沒人發現。這裡用整張表最新一筆
+  // observed_at（不分metric種類），但明確排除以下三個已經VERIFIED官方永久停編的legacy
+  // CBOE外匯選擇權波動率指數（metric=FX_OPTION_IMPLIED_VOL_INDEX_30D，pair_symbol分別
+  // 是EVZ/BPVIX/JYVIX）——這三個不是「我們的程式忘了更新」，是官方本身已經不再發布：
+  //   - EVZ（歐元選擇權波動率指數）：CBOE官方公告自2025-01-27起停止編製／發布
+  //     （https://www.cboe.com/, CBOE官方停編公告PDF；FRED鏡像序列EVZCLS已標記
+  //     "DISCONTINUED"，最後資料2025-03-11，與本資料庫吻合：
+  //     https://fred.stlouisfed.org/series/EVZCLS）。
+  //   - BPVIX（英鎊選擇權波動率指數）：本資料庫最後一筆observed_at是2023-07-14，
+  //     CBOE官網／FRED都已查無任何更晚的官方發布，判定為官方停編
+  //     （https://www.cboe.com/us/indices/dashboard/BPVIX/）。
+  //   - JYVIX（日圓選擇權波動率指數）：本資料庫最後一筆observed_at是2022-11-07，
+  //     同樣官方端查無更晚發布，判定為官方停編
+  //     （https://www.cboe.com/us/indices/dashboard/JYVIX/）。
+  // 這三個指數本身的本機抓取排程（\SmartFund_FX_Options_Public）已於2026-10-22停用
+  // （Disable，保留排程本身與route程式碼，未刪除），不再每天嘗試一定失敗的官方抓取。
+  // 只排除這三個代碼，fx_metrics其他所有指標（RETURN_*/CARRY_*/CROSS_RATE_MID等）
+  // 照常納入下面的新鮮度檢查，不受影響。
   const fxMetricsFreshRow = await prisma.$queryRawUnsafe<Array<{ max_date: string | null }>>(
-    `SELECT to_char(max(observed_at), 'YYYY-MM-DD') AS max_date FROM fx_metrics`,
+    `SELECT to_char(max(observed_at), 'YYYY-MM-DD') AS max_date FROM fx_metrics
+     WHERE NOT (metric = 'FX_OPTION_IMPLIED_VOL_INDEX_30D' AND pair_symbol IN ('EVZ','BPVIX','JYVIX'))`,
   );
   const fxMetricsFreshness = evaluateFreshness("fx_metrics", fxMetricsFreshRow[0]?.max_date ?? null, 4);
 

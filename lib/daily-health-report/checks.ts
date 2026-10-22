@@ -133,6 +133,16 @@ export async function checkPipelineRunLog(query: QueryFn, jobId: string): Promis
     }
   }
 
+  const consecutiveSkipped = (() => {
+    let n = 0;
+    for (const r of rows) {
+      if (r.status !== "SKIPPED") break;
+      n++;
+    }
+    return n;
+  })();
+  if (consecutiveSkipped >= 3) anomalyReasons.push(`CONSECUTIVE_SKIPPED_${consecutiveSkipped}`);
+
   return {
     jobId,
     hasRunInLast24h,

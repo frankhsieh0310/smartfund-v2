@@ -97,13 +97,24 @@ export async function GET(request: Request) {
 
     const after = stats.history_rows;
     const rowsAdded = Math.max(0, after - before);
+    // 2026-10-22（使用者核准）：這支route之前不論rowsAdded是多少都無條件回報COMPLETED，造成
+    // 上游economic_values（EFFR/ESTR/SONIA）從2026-08-10起就沒有新資料，但這個job每天照樣
+    // 回報COMPLETED，連續40+天沒人發現——根因其實在上游（run-global-money-market.ts沒有任何
+    // 排程或cron觸發它，也完全沒有log到production_scheduler_runs，是個孤兒腳本，見CLAUDE.md
+    // 記錄）。這裡修正回報邏輯本身：寫入0筆新資料時一律回報SKIPPED（不是COMPLETED），讓既有
+    // 的checkPipelineRunLog／freshness check能偵測到連續多天SKIPPED，不會再被無條件COMPLETED
+    // 蓋掉。SQL本身沒有改（ON CONFLICT DO UPDATE的既有行為不變），只改回報狀態。
+    const status = rowsAdded > 0 ? "COMPLETED" : "SKIPPED";
     await finishRun(runId, JOB, PROVIDER, startedMs, {
-      status: "COMPLETED", attempted: after, completed: after, inserted: rowsAdded, updated: 0, failed: 0,
+      status, attempted: after, completed: after, inserted: rowsAdded, updated: 0, failed: 0,
       retryableFailures: 0, checkpointAfter: null,
-      details: { before, after, policyRateSeries: policy, ...stats },
+      details: {
+        before, after, policyRateSeries: policy, ...stats,
+        skippedReason: rowsAdded === 0 ? "NO_NEW_UPSTREAM_ECONOMIC_VALUES_ROWS" : null,
+      },
     });
 
-    return Response.json({ ok: true, job: JOB, runId, before, after, rowsAdded, policyRateSeries: policy, ...stats, runtimeMs: Date.now() - startedMs });
+    return Response.json({ ok: true, job: JOB, runId, status, before, after, rowsAdded, policyRateSeries: policy, ...stats, runtimeMs: Date.now() - startedMs });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     await finishRun(runId, JOB, PROVIDER, startedMs, { status: "FAILED", attempted: 0, completed: 0, inserted: 0, updated: 0, failed: 1, retryableFailures: 0, checkpointAfter: null, error: message });
