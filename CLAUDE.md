@@ -1,5 +1,13 @@
 @AGENTS.md
 
+## 密鑰產生
+
+任何需要產生新密鑰/隨機值的場合，一律用`[System.Security.Cryptography.RandomNumberGenerator]`（PowerShell）或Node.js的`crypto.randomBytes`，**不准用`Get-Random`**——`Get-Random`不是密碼學等級的亂數產生器（2026-10-22使用者核准修正，當次已產生的密鑰因為是臨時性質不用重做，之後一律用密碼學等級的產生器）。
+
+## QA測試帳號route下架流程（2026-10-22）
+
+`app/api/internal/qa-test-account/route.ts`目前還在正式環境上，**在對外提到這支route的網址之前，一律不准**。測試帳號第4/5/6/8點做完、透過App「刪除帳號」流程把測試帳號刪掉之後，**下一次部署一定要**：移除整支route程式碼、刪除Production的`QA_TEST_ACCOUNT_SECRET`環境變數、刪除`qa_secret.txt`（連同`C:\Users\User\AppData\Local\smartfund-qa\`整個資料夾），並附證明（diff Production環境變數清單、確認route回404、確認檔案已刪除）。另外，這支route的程式碼目前沒有「建立過一次就失效回410」的判斷（跟最早的設計註解不符，已知差異，使用者核准**不補這個功能**，因為反正route本身即將下架）。
+
 ## Supabase RLS
 
 Supabase 平台會讓 public schema 的新資料表自動開放給 anon 與 authenticated。任何新建資料表（含 migration）必須在同一次變更中執行 ENABLE ROW LEVEL SECURITY 並 REVOKE ALL FROM anon, authenticated，除非該次任務明確核准開放。
