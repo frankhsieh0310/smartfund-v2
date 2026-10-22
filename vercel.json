@@ -367,6 +367,10 @@
     {
       "path": "/api/cron/fx-global-carry-ranking",
       "schedule": "30 19 * * *"
+    },
+    {
+      "path": "/api/cron/money-market-rates",
+      "schedule": "0 19 * * *"
     }
   ],
   "regions": [

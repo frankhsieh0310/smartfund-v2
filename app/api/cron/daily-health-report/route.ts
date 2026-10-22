@@ -128,6 +128,9 @@ const RUN_LOG_PIPELINES = [
   // 它的run log，連續40+天沒人發現。route本身已經改成寫入0筆時回報SKIPPED（見該檔案
   // 註解），這裡加進清單才能讓SKIPPED真的被health report看到。
   "FX_CARRY_CIP_ANALYTICS",
+  // 2026-10-22（使用者核准，第二項）: 新的雲端cron，取代原本完全沒有排程、沒有run log的
+  // 本機孤兒腳本（scripts/data/money-market/run-global-money-market.ts）。
+  "MONEY_MARKET_RATES",
 ];
 
 export async function GET(request: Request) {
@@ -190,6 +193,18 @@ export async function GET(request: Request) {
      WHERE NOT (metric = 'FX_OPTION_IMPLIED_VOL_INDEX_30D' AND pair_symbol IN ('EVZ','BPVIX','JYVIX'))`,
   );
   const fxMetricsFreshness = evaluateFreshness("fx_metrics", fxMetricsFreshRow[0]?.max_date ?? null, 4);
+
+  // 2026-10-22（使用者核准，第二項）: EFFR/ESTR/SONIA這三個序列本身過去也完全沒有新鮮度檢查，
+  // 是造成40+天沒人發現的直接原因之一。改用雲端cron（/api/cron/money-market-rates）之後，
+  // 這裡直接檢查economic_values自己的最新日期，不透過下游的fx_metrics間接推論。
+  const moneyMarketFreshRow = await prisma.$queryRawUnsafe<Array<{ max_date: string | null }>>(
+    `SELECT to_char(max(v.date), 'YYYY-MM-DD') AS max_date
+     FROM economic_values v JOIN economic_series s ON s.id = v.series_id
+     WHERE (s.provider, s.series_id) IN (
+       ('Federal Reserve Bank of New York','EFFR'), ('European Central Bank','ESTR'), ('Bank of England','SONIA')
+     )`,
+  );
+  const moneyMarketFreshness = evaluateFreshness("money_market_rates_effr_estr_sonia", moneyMarketFreshRow[0]?.max_date ?? null, 4);
 
   // 2026-10-18 (使用者規則定案，第 2b 項): 判斷依據從「排程有沒有報錯」改成「母體裡真的有
   //多少比例在最近一個更新日拿到資料」。只挑小表（fund_performances/etf_performances/
@@ -586,7 +601,7 @@ export async function GET(request: Request) {
   const SYSTEM_CATEGORY = "SYSTEM" as const;
   const anomalies = [
     ...pipelineHealth.filter((p) => p.anomaly).map((p) => ({ type: "PIPELINE", category: SYSTEM_CATEGORY, jobId: p.jobId, reasons: p.anomalyReasons })),
-    ...[stockFreshness, domesticFundFreshness, fxMetricsFreshness].filter((f) => f.anomaly).map((f) => ({ type: "FRESHNESS", category: SYSTEM_CATEGORY, label: f.label, reason: f.anomalyReason })),
+    ...[stockFreshness, domesticFundFreshness, fxMetricsFreshness, moneyMarketFreshness].filter((f) => f.anomaly).map((f) => ({ type: "FRESHNESS", category: SYSTEM_CATEGORY, label: f.label, reason: f.anomalyReason })),
     ...(etfDataSourceGap.anomaly ? [{ type: "ETF_DATA_SOURCE_GAP", category: SYSTEM_CATEGORY, newCodes: etfDataSourceGap.newCodes }] : []),
     // 每檔都已經用上面的即時查證分好 SYSTEM / EXTERNAL_DELAY，這裡依分類拆成最多兩筆，而不是
     // 整批套同一個分類——有證據（checkedAt/officialLatestDate）支持才會出現在 EXTERNAL_DELAY 那筆。
@@ -648,7 +663,7 @@ export async function GET(request: Request) {
   // buildDailySummary.ts for the message format (unit-tested separately).
   const summary = buildDailySummary({
     today, anomalyCount: anomalies.length, pipelineHealth,
-    freshness: [stockFreshness, domesticFundFreshness, fxMetricsFreshness], etfDataSourceGap, yahooTwCheck, fredCommodityCheck, coverage,
+    freshness: [stockFreshness, domesticFundFreshness, fxMetricsFreshness, moneyMarketFreshness], etfDataSourceGap, yahooTwCheck, fredCommodityCheck, coverage,
   });
   const notifyResult = await notifyAnomaly(summary);
 
@@ -657,7 +672,7 @@ export async function GET(request: Request) {
     status, attempted: RUN_LOG_PIPELINES.length + 7 + coverage.length, completed: RUN_LOG_PIPELINES.length + 7 + coverage.length - anomalies.length,
     inserted: 0, updated: 0, failed: anomalies.length, retryableFailures: 0, checkpointAfter: null,
     details: {
-      date: today, pipeline_health: pipelineHealth, stock_freshness: stockFreshness, domestic_fund_freshness: domesticFundFreshness, fx_metrics_freshness: fxMetricsFreshness,
+      date: today, pipeline_health: pipelineHealth, stock_freshness: stockFreshness, domestic_fund_freshness: domesticFundFreshness, fx_metrics_freshness: fxMetricsFreshness, money_market_freshness: moneyMarketFreshness,
       etf_data_source_gap: etfDataSourceGap, yahoo_tw_return_check: yahooTwCheck, fred_commodity_check: fredCommodityCheck, coverage,
       active_etf_official_holdings: activeEtfOfficialHoldings, active_etf_official_holdings_evidence: activeEtfGapWithEvidence, local_schedule_reporting: localScheduleReporting,
       core_universe_fund_gap_evidence: coreUniverseFundGapWithEvidence,
