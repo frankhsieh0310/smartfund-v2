@@ -103,6 +103,11 @@ const RUN_LOG_PIPELINES = [
   "ETF_RETURNS_SYNC_TW",
   "US_FUND_NAV_SYNC",
   "SITCA_NAV_SYNC",
+  // 2026-10-22（使用者核准，第一條永久規則：只處理四類核心母體）: YAHOO_FUND_FULL_SWEEP（美國
+  // 共同基金全量掃描，15,858檔，台灣買不到，不屬於四類核心母體）已經在這裡移除、Vercel
+  // Workflow正式取消執行、vercel.json的每日啟動cron也已經拿掉——故意不再放進RUN_LOG_PIPELINES
+  // 清單，避免它停掉之後被誤判成NO_RUN_IN_LAST_24H異常。看下面coreScopeGuard，改用「確保它
+  // 沒有被重新啟動」的反向檢查取代。
   "OFFSHORE_NAV_SYNC",
   "INSTITUTIONAL_UPDATE",
   "CLOUD_ETF_PRICE",
@@ -111,7 +116,6 @@ const RUN_LOG_PIPELINES = [
   "FUND_RETURNS_SYNC",
   "TW_ETF_DAY_CHANGE",
   "YAHOO_ETF_FULL_SWEEP",
-  "YAHOO_FUND_FULL_SWEEP",
   "YAHOO_COMMODITY_TECHNICAL",
   "HOLDINGS_ALT_SOURCE_SYNC",
   "CLOUD_SEC_FINANCIAL_INCREMENTAL",
@@ -229,6 +233,18 @@ export async function GET(request: Request) {
     `SELECT to_char(max(as_of_date), 'YYYY-MM-DD') AS max_date FROM global_index_snapshots`,
   );
   const globalIndexFreshness = evaluateFreshness("global_index_snapshots", globalIndexFreshRow[0]?.max_date ?? null, 4);
+
+  // 2026-10-22（使用者核准，第一條永久規則）: YAHOO_FUND_FULL_SWEEP（美國共同基金全量掃描，
+  // 不屬於四類核心母體）已經永久停用——這裡做反向檢查，確保它沒有被意外重新啟動（例如有人
+  // 不小心把vercel.json的cron entry加回去，或Vercel Workflow被重新start()）。過去24小時內
+  // 如果出現任何一筆新的執行紀錄，就是異常。
+  const decommissionedRows = await prisma.$queryRawUnsafe<Array<{ job_id: string; started_at: string }>>(
+    `SELECT job_id, started_at::text FROM production_scheduler_runs
+     WHERE job_id IN ('YAHOO_FUND_FULL_SWEEP', 'YAHOO_FUND_ENRICH_REPAIR', 'YAHOO_FUND_UNIVERSE_DISCOVERY')
+       AND started_at > now() - interval '24 hours'
+     ORDER BY started_at DESC`,
+  );
+  const decommissionedJobReactivated = decommissionedRows.length > 0;
 
   // 2026-10-18 (使用者規則定案，第 2b 項): 判斷依據從「排程有沒有報錯」改成「母體裡真的有
   //多少比例在最近一個更新日拿到資料」。只挑小表（fund_performances/etf_performances/
@@ -627,6 +643,7 @@ export async function GET(request: Request) {
     ...pipelineHealth.filter((p) => p.anomaly).map((p) => ({ type: "PIPELINE", category: SYSTEM_CATEGORY, jobId: p.jobId, reasons: p.anomalyReasons })),
     ...[stockFreshness, domesticFundFreshness, fxMetricsFreshness, moneyMarketFreshness, globalIndexFreshness].filter((f) => f.anomaly).map((f) => ({ type: "FRESHNESS", category: SYSTEM_CATEGORY, label: f.label, reason: f.anomalyReason })),
     ...(etfDataSourceGap.anomaly ? [{ type: "ETF_DATA_SOURCE_GAP", category: SYSTEM_CATEGORY, newCodes: etfDataSourceGap.newCodes }] : []),
+    ...(decommissionedJobReactivated ? [{ type: "OUT_OF_SCOPE_JOB_REACTIVATED", category: SYSTEM_CATEGORY, rows: decommissionedRows }] : []),
     // 每檔都已經用上面的即時查證分好 SYSTEM / EXTERNAL_DELAY，這裡依分類拆成最多兩筆，而不是
     // 整批套同一個分類——有證據（checkedAt/officialLatestDate）支持才會出現在 EXTERNAL_DELAY 那筆。
     ...(activeEtfGapWithEvidence.some((e) => e.category === SYSTEM_CATEGORY)
