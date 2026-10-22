@@ -25,8 +25,11 @@ export async function GET(request: Request) {
   try {
     const result = await classifyTwPurchasable(writeEnabled);
     const totalMatched = result.domesticFund.matched + result.offshoreFund.matched + result.etf.matched + result.usEtf.matched;
+    // 2026-10-22（使用者核准，三.三稽核發現）: 之前不論totalMatched掉到0或write gate狀態都無條件
+    // 回報COMPLETED。
+    const status = writeEnabled && totalMatched === 0 ? "PARTIAL" : "COMPLETED";
     await finishRun(runId, JOB, "SITCA_TDCC_TWSE_TPEX", started, {
-      status: "COMPLETED",
+      status,
       attempted: result.domesticFund.officialCount + result.offshoreFund.officialCount + result.etf.officialCount + result.usEtf.candidateCount,
       completed: totalMatched,
       inserted: writeEnabled ? totalMatched : 0,

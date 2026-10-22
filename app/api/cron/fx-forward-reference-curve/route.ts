@@ -53,10 +53,15 @@ export async function GET(request: Request) {
     ))[0];
 
     const rowsAdded = Math.max(0, stats.rows - before);
+    // 2026-10-22（使用者核准，三.三稽核發現，同fx-global-carry-ranking那次的修法）: 之前不論
+    // rowsAdded是多少都無條件回報COMPLETED。latest observed_at目前是2021-06-30，上游
+    // fx_forward_observations本身很久沒有新的DIRECT_FORWARD_OUTRIGHT資料，寫入0筆時改回報
+    // SKIPPED，而不是繼續偽裝成COMPLETED。
+    const status = rowsAdded > 0 ? "COMPLETED" : "SKIPPED";
     await finishRun(runId, JOB, PROVIDER, startedMs, {
-      status: "COMPLETED", attempted: stats.rows, completed: stats.rows, inserted: rowsAdded, updated: 0, failed: 0,
+      status, attempted: stats.rows, completed: stats.rows, inserted: rowsAdded, updated: 0, failed: 0,
       retryableFailures: 0, checkpointAfter: null,
-      details: { before, after: stats.rows, forwardPairs: stats.pairs, tenors: stats.tenors, ndf, earliest: stats.earliest, latest: stats.latest },
+      details: { before, after: stats.rows, forwardPairs: stats.pairs, tenors: stats.tenors, ndf, earliest: stats.earliest, latest: stats.latest, skippedReason: rowsAdded === 0 ? "NO_NEW_UPSTREAM_FORWARD_OBSERVATIONS" : null },
     });
 
     return Response.json({ ok: true, job: JOB, runId, before, after: stats.rows, rowsAdded, forwardPairs: stats.pairs, tenors: stats.tenors, ndf, runtimeMs: Date.now() - startedMs });

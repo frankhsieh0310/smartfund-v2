@@ -130,7 +130,13 @@ export async function GET(request: Request) {
     await sleep(REQUEST_SPACING_MS);
   }
 
-  const status = "COMPLETED";
+  // 2026-10-22（使用者核准，三.三稽核發現）: 之前不論errorCount/totalWriteErrorCount/有沒有真的
+  // 寫入都無條件回報COMPLETED——VERIFIED fund_distribution_observations已經8天沒有新資料
+  // （上次created_at 2026-10-14），但這支route一直回報COMPLETED，完全沒人發現。
+  const status = errorCount > 0 && monthsCompleted === 0 ? "FAILED"
+    : errorCount > 0 || totalWriteErrorCount > 0 ? "PARTIAL"
+    : writeEnabledThisRun && monthsAttempted > 0 && totalWritten === 0 ? "PARTIAL"
+    : "COMPLETED";
   await finishRun(runId, JOB, PROVIDER, startedMs, {
     status, attempted: monthsAttempted, completed: monthsCompleted, inserted: totalWritten, updated: 0,
     failed: errorCount + totalWriteErrorCount, retryableFailures: rateLimited ? pendingMonths.length - monthsAttempted : 0,

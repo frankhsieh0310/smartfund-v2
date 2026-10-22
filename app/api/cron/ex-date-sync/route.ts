@@ -25,8 +25,14 @@ export async function GET(request: Request) {
 
   try {
     const result = await runExDateSync(writeEnabled, (msg) => console.log(msg));
+    // 2026-10-22（使用者核准，三.三稽核發現）: 之前不論result.errors或有沒有真的寫入都無條件
+    // 回報COMPLETED。
+    const status = result.errors > 0 && result.upserted === 0 ? "FAILED"
+      : result.errors > 0 ? "PARTIAL"
+      : writeEnabled && result.matchedEtfs > 0 && result.upserted === 0 ? "PARTIAL"
+      : "COMPLETED";
     await finishRun(runId, JOB, "TWSE_TPEX_EXRIGHT", started, {
-      status: "COMPLETED", attempted: result.matchedEtfs, completed: result.upserted,
+      status, attempted: result.matchedEtfs, completed: result.upserted,
       inserted: result.upserted, updated: 0, failed: result.errors, retryableFailures: 0, checkpointAfter: null,
       details: { writeEnabled, ...result },
     });

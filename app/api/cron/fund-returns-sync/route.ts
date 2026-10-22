@@ -117,7 +117,9 @@ export async function GET(request: Request) {
     processed: attempted, succeeded: written, failed: noData + failed,
   });
 
-  const status = rateLimitStop || timeBudgetStop ? "PARTIAL" : "COMPLETED";
+  // 2026-10-22（使用者核准，三.三稽核發現）: 之前failed>0但沒觸發rate/time限制時，就算written=0
+  // 也還是COMPLETED。
+  const status = rateLimitStop || timeBudgetStop ? "PARTIAL" : writeEnabled && attempted > 0 && written === 0 ? "PARTIAL" : "COMPLETED";
   await finishRun(runId, JOB, "YAHOO_FUND_PERFORMANCE_PAGE", startedMs, {
     status, attempted, completed: written, inserted: written, updated: 0, failed: noData + failed, retryableFailures: 0,
     checkpointAfter: null,

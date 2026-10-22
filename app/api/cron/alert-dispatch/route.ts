@@ -21,8 +21,11 @@ export async function GET(request: Request) {
 
   try {
     const result = await runAlertDispatch(writeEnabled);
+    // 2026-10-22（使用者核准，三.三稽核發現）: 之前不論result.failed都無條件回報COMPLETED。
+    // attempted=0是正常情況（沒有新occurrence要發送），不算異常；failed>0才算。
+    const status = result.failed > 0 && result.delivered === 0 ? "FAILED" : result.failed > 0 ? "PARTIAL" : "COMPLETED";
     await finishRun(runId, JOB, "EXPO_PUSH", started, {
-      status: "COMPLETED", attempted: result.attempted, completed: result.delivered,
+      status, attempted: result.attempted, completed: result.delivered,
       inserted: 0, updated: 0, failed: result.failed, retryableFailures: 0, checkpointAfter: null,
       details: { writeEnabled, ...result },
     });

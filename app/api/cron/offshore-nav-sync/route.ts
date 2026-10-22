@@ -66,12 +66,15 @@ export async function GET(request: Request) {
 
   const mapping = await loadMapping(query);
   if (mapping.length === 0) {
+    // 2026-10-22（使用者核准，三.三稽核發現）: 這個分支之前回報COMPLETED——如果mapping一直是空的
+    // （不是「這次剛好跑完seed」而是「seed從來沒做過/被清空」），每次都COMPLETED會完全看不出
+    // 這支job其實什麼都沒做。改回報SKIPPED，讓checkPipelineRunLog的連續SKIPPED偵測能抓到。
     await finishRun(runId, JOB, "YAHOO_FUND_PRICE_HISTORY", startedMs, {
-      status: "COMPLETED", attempted: 0, completed: 0, inserted: 0, updated: 0, failed: 0, retryableFailures: 0,
+      status: "SKIPPED", attempted: 0, completed: 0, inserted: 0, updated: 0, failed: 0, retryableFailures: 0,
       error: null, checkpointAfter: null,
       details: { run_mode: currentRunMode(), reason: "MAPPING_EMPTY_NOT_YET_SEEDED" },
     });
-    return Response.json({ ok: true, job: JOB, runId, status: "COMPLETED", mappingEmpty: true });
+    return Response.json({ ok: true, job: JOB, runId, status: "SKIPPED", mappingEmpty: true });
   }
 
   // 2026-10-21（使用者核准）: the mapping was a one-time sweep (see mapping.ts's own doc comment) and
@@ -158,7 +161,12 @@ export async function GET(request: Request) {
     await saveKnownNoData(query, knownNoData);
   }
 
-  const status = "COMPLETED";
+  // 2026-10-22（使用者核准，三.三稽核發現）: 之前不論errorCount/有沒有真的寫入都無條件回報
+  // COMPLETED。
+  const status = errorCount > 0 && writeResult.written === 0 ? "FAILED"
+    : errorCount > 0 || writeResult.writeErrorCount > 0 ? "PARTIAL"
+    : writeEnabledThisRun && attempted > 0 && writeResult.written === 0 ? "PARTIAL"
+    : "COMPLETED";
   await finishRun(runId, JOB, "YAHOO_FUND_PRICE_HISTORY", startedMs, {
     status, attempted, completed: writeResult.written, inserted: writeResult.written, updated: 0,
     failed: errorCount + writeResult.writeErrorCount, retryableFailures: rateLimited ? pending.length - attempted : 0,

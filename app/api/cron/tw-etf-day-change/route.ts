@@ -61,7 +61,7 @@ export async function GET(request: Request) {
     ...(afterCode ? [afterCode] : []),
   );
 
-  let attempted = 0, written = 0, noData = 0, failed = 0;
+  let attempted = 0, written = 0, fetchedCount = 0, noData = 0, failed = 0;
   let lastCode: string | null = afterCode;
   let rateLimitStop = false;
   let timeBudgetStop = false;
@@ -72,6 +72,9 @@ export async function GET(request: Request) {
     try {
       const change = await fetchYahooTwDayChange(row.data_source);
       if (change) {
+        // 2026-10-22（使用者核准，三.三稽核發現）: written原本不管writeEnabled是不是on都會加1，
+        // 造成details.inserted宣稱有寫入，但write gate關著時其實一筆都沒真的寫進DB——改成只有
+        // 真的執行INSERT時才算written，抓到成功fetch的另外用fetchedCount追蹤。
         if (writeEnabled) {
           await prisma.$executeRawUnsafe(
             `INSERT INTO etf_performances (id, etf_id, date, return_1d, created_at)
@@ -79,8 +82,9 @@ export async function GET(request: Request) {
              ON CONFLICT (etf_id, date) DO UPDATE SET return_1d = EXCLUDED.return_1d`,
             row.id, today, change.changePercent,
           );
+          written++;
         }
-        written++;
+        fetchedCount++;
       } else {
         noData++;
       }
@@ -97,11 +101,13 @@ export async function GET(request: Request) {
     processed: attempted, succeeded: written, failed: noData + failed,
   });
 
-  const status = rateLimitStop || timeBudgetStop ? "PARTIAL" : "COMPLETED";
+  const status = rateLimitStop || timeBudgetStop ? "PARTIAL"
+    : writeEnabled && fetchedCount > 0 && written === 0 ? "PARTIAL"
+    : "COMPLETED";
   await finishRun(runId, JOB, "YAHOO_TW_QUOTE_PAGE", startedMs, {
     status, attempted, completed: written, inserted: written, updated: 0, failed: noData + failed, retryableFailures: 0,
     checkpointAfter: null,
-    details: { writeEnabled, rateLimitStop, timeBudgetStop, lastCode },
+    details: { writeEnabled, rateLimitStop, timeBudgetStop, lastCode, fetchedCount },
   });
 
   return Response.json({ ok: true, job: JOB, runId, status, attempted, written, noData, failed, writeEnabled, lastCode });

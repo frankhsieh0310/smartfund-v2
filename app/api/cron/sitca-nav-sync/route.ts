@@ -158,7 +158,11 @@ export async function GET(request: Request) {
   const matchedByCode = matched.filter((m) => m.matchedBy === "CODE").length;
   const matchedByName = matched.filter((m) => m.matchedBy === "NAME").length;
 
-  const status = "COMPLETED";
+  // 2026-10-22（使用者核准，三.三稽核發現）: 之前不論write_error_count或matched數量掉到0都無
+  // 條件回報COMPLETED。
+  const status = writeResult.writeErrorCount > 0 ? "PARTIAL"
+    : writeEnabledThisRun && candidates.length > 0 && writeResult.written === 0 ? "PARTIAL"
+    : "COMPLETED";
   await finishRun(runId, JOB, "SITCA_FSC_OFFICIAL_DAILY_NAV_CSV", startedMs, {
     status, attempted: rows.length, completed: writeResult.written, inserted: writeResult.written, updated: 0,
     failed: unmatched.length + writeResult.writeErrorCount, retryableFailures: 0, checkpointAfter: null,

@@ -855,7 +855,6 @@ export async function GET(request: Request) {
     detail.coreUniverseAfter = rows.filter((r) => coreUniverseIds.has(r.id) && !isHongKongCurrencyCounter(r.data_source)).length;
   }
 
-  const status = rateLimitStop ? "PARTIAL" : timeBudgetStop ? "PARTIAL" : "COMPLETED";
   const totalRequested = marketDetails.reduce((s, m) => s + m.requested, 0);
   const totalFetchErrors = marketDetails.reduce((s, m) => s + m.fetchErrorCount, 0);
   const totalFailed = marketDetails.reduce((s, m) => s + m.classifications.SOURCE_MISSING + m.classifications.NO_BAR_FOR_TARGET_DATE, 0) + totalFetchErrors;
@@ -865,6 +864,11 @@ export async function GET(request: Request) {
   const totalHistoryWritten = marketDetails.reduce((s, m) => s + m.historyWritten, 0);
   const totalEtfsUpdated = marketDetails.reduce((s, m) => s + m.etfsUpdated, 0);
   const totalWriteErrorCount = marketDetails.reduce((s, m) => s + m.writeErrorCount, 0);
+  // 2026-10-22（使用者核准，三.三稽核發現）: 之前只看rate/time限制，沒檢查write gate開著卻
+  // 一筆都沒寫入（etf_history是daily-health-report明確排除在coverage檢查之外的大表，一旦這裡
+  // 也不檢查，整個停擺會完全沒人發現）。
+  const status = rateLimitStop ? "PARTIAL" : timeBudgetStop ? "PARTIAL"
+    : isWriteEnabled() && totalRequested > 0 && totalHistoryWritten === 0 ? "PARTIAL" : "COMPLETED";
   const runMode = currentRunMode();
   // Task W6: logs exactly what this invocation itself read for the write switch, and which
   // deployment it ran on — answers "did it actually see MARKET_CLOSE_SYNC_WRITE=on" from the run log

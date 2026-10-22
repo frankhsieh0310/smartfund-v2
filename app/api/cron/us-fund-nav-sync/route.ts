@@ -215,7 +215,12 @@ export async function GET(request: Request) {
     processed: attempted, succeeded: written, failed: noDataCount + transientFailureCount + writeErrorCount,
   });
 
-  const status = rateLimitStop || timeBudgetStop ? "PARTIAL" : "COMPLETED";
+  // 2026-10-22（使用者核准，三.三稽核發現）: 之前只看rate/time限制，writeErrorCount或write
+  // gate開著卻written=0的情況完全沒guard。
+  const status = rateLimitStop || timeBudgetStop ? "PARTIAL"
+    : writeErrorCount > 0 ? "PARTIAL"
+    : writeEnabledThisRun && attempted > 0 && written === 0 ? "PARTIAL"
+    : "COMPLETED";
   const fetchFailed = noDataCount + transientFailureCount;
   await finishRun(runId, JOB, "YAHOO_SPARK", startedMs, {
     status, attempted, completed: written, inserted: written, updated: 0, failed: fetchFailed + writeErrorCount, retryableFailures: transientFailureCount,

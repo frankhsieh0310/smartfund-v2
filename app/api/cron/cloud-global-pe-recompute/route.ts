@@ -113,8 +113,13 @@ export async function GET(request: Request) {
   const after = { lastSymbol: nextCursor, processed: (before?.processed ?? 0) + attempted, succeeded: (before?.succeeded ?? 0) + computed, failed: (before?.failed ?? 0) + insufficient, updatedAt: new Date().toISOString() };
   await writeCheckpoint(JOB, CHECKPOINT_KEY, runId, { lastSymbol: after.lastSymbol, processed: after.processed, succeeded: after.succeeded, failed: after.failed });
 
+  // 2026-10-22（使用者核准，三.三稽核發現）: 之前不論insufficient佔比多少都無條件回報COMPLETED。
+  // insufficient≈64%是這個計算本身的正常穩態（很多標的缺EPS資料算不出TTM P/E，不是bug），用
+  // 「失敗比例>0」當門檻會讓這支route永遠變成PARTIAL、失去訊號意義；改用「attempted>0但
+  // computed完全是0」這個更直接的真異常（代表整批都算不出來，不是正常的部分缺資料）。
+  const status = attempted > 0 && computed === 0 ? "PARTIAL" : "COMPLETED";
   await finishRun(runId, JOB, PROVIDER, startedMs, {
-    status: "COMPLETED", attempted, completed: computed, inserted: insertedCount, updated: 0, failed: insufficient,
+    status, attempted, completed: computed, inserted: insertedCount, updated: 0, failed: insufficient,
     retryableFailures: 0, checkpointAfter: after, error: null,
     details: { batch_size: batch, wrapped, reached_end: reachedEnd, priority_tickers: PRIORITY_TICKERS, computed, insufficient_data: insufficient, split_adjusted_count: splitAdjustedCount, restated_count: restatedCount },
   });

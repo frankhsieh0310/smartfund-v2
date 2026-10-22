@@ -122,7 +122,13 @@ export async function GET(request: Request) {
 
   await flush(); // final partial chunk
 
-  const status = "COMPLETED";
+  // 2026-10-22（使用者核准，三.三稽核發現）: 之前不論errorCount/有沒有真的寫入都無條件回報
+  // COMPLETED——VERIFIED fund_distribution_observations這個來源已經21天沒有新資料，而且沒有
+  // 任何freshness check，一直回報COMPLETED沒人發現。
+  const status = errorCount > 0 && totalWritten === 0 ? "FAILED"
+    : errorCount > 0 || totalWriteErrorCount > 0 ? "PARTIAL"
+    : writeEnabledThisRun && attempted > 0 && totalWritten === 0 ? "PARTIAL"
+    : "COMPLETED";
   await finishRun(runId, JOB, PROVIDER, startedMs, {
     status, attempted, completed: totalWritten, inserted: totalWritten, updated: 0,
     failed: errorCount + totalWriteErrorCount, retryableFailures: rateLimited ? pending.length - attempted : 0,

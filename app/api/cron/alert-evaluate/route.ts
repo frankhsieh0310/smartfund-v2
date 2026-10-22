@@ -20,8 +20,10 @@ export async function GET(request: Request) {
 
   try {
     const result = await runAlertEvaluate(writeEnabled);
+    // 2026-10-22（使用者核准，三.三稽核發現）: 之前不論result.errors都無條件回報COMPLETED。
+    const status = result.errors > 0 && result.errors === result.attempted ? "FAILED" : result.errors > 0 ? "PARTIAL" : "COMPLETED";
     await finishRun(runId, JOB, "INTERNAL", started, {
-      status: "COMPLETED", attempted: result.attempted, completed: result.attempted - result.errors,
+      status, attempted: result.attempted, completed: result.attempted - result.errors,
       inserted: result.triggeredNew, updated: 0, failed: result.errors, retryableFailures: 0, checkpointAfter: null,
       details: { writeEnabled, ...result },
     });

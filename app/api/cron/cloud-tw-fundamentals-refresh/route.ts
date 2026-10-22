@@ -103,7 +103,10 @@ export async function GET(request: Request) {
   const after = { lastSymbol: date, processed: (before?.processed ?? 0) + targets.length, succeeded: (before?.succeeded ?? 0) + inserted, failed: (before?.failed ?? 0) + failed, updatedAt: new Date().toISOString() };
   await writeCheckpoint(JOB, CHECKPOINT_KEY, runId, { lastSymbol: after.lastSymbol, processed: after.processed, succeeded: after.succeeded, failed: after.failed });
 
-  const status = failed === 2 ? "FAILED" : failed > 0 ? "PARTIAL" : "COMPLETED";
+  // 2026-10-22（使用者核准，三.三稽核發現）: 之前兩邊都HTTP 200回傳空資料（inserted=0，沒有
+  // 丟錯）時完全沒guard，直接算COMPLETED——VERIFIED stock_financial_facts這個來源已經6天沒有
+  // 新資料（上次2026-10-16），但一直回報COMPLETED沒人發現。
+  const status = failed === 2 ? "FAILED" : failed > 0 ? "PARTIAL" : targets.length > 0 && inserted === 0 ? "PARTIAL" : "COMPLETED";
   await finishRun(runId, JOB, PROVIDER, startedMs, {
     status, attempted: targets.length, completed: inserted, inserted, updated: 0, failed,
     retryableFailures: failed, checkpointAfter: after, error: failed ? JSON.stringify(perExchange) : null,

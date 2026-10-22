@@ -104,8 +104,14 @@ export async function GET(request: Request) {
     ? await writeTdccNavBatch(query, candidates, new Date().toISOString())
     : { written: 0, writeErrorCount: 0, writeErrorFundIds: [] };
 
+  // 2026-10-22（使用者核准，三.三稽核發現）: 之前不論result.writeErrorCount或matched是否掉到0
+  // 都無條件回報COMPLETED。
+  const status = result.writeErrorCount > 0 && result.written === 0 ? "FAILED"
+    : result.writeErrorCount > 0 ? "PARTIAL"
+    : writeEnabled && matched > 0 && result.written === 0 ? "PARTIAL"
+    : "COMPLETED";
   await finishRun(runId, JOB, TDCC_NAV_SOURCE, startedMs, {
-    status: "COMPLETED", attempted: candidateFunds.length + codeCandidateFunds.length, completed: result.written, inserted: result.written,
+    status, attempted: candidateFunds.length + codeCandidateFunds.length, completed: result.written, inserted: result.written,
     updated: 0, failed: result.writeErrorCount, retryableFailures: 0, checkpointAfter: null,
     details: {
       writeEnabled, rawCandidateCount: rawCandidateFunds.length, yahooMappingExcludedCount: rawCandidateFunds.length - candidateFunds.length,

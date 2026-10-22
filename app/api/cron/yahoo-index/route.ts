@@ -80,7 +80,13 @@ export async function GET(request: Request) {
       const cpAfter = { lastSymbol: wrapped ? null : cursor, processed: (cpBefore?.processed ?? 0) + requestedIndexes, succeeded: (cpBefore?.succeeded ?? 0) + updatedIndexes, failed: failedIndexes.length };
       await writeCheckpoint(JOB, cpKey, runId, cpAfter);
 
-      await finishRun(runId, JOB, "YAHOO", started, { status: failedIndexes.length > 0 && updatedIndexes === 0 ? "PARTIAL" : "COMPLETED", attempted: requestedIndexes, completed: updatedIndexes, inserted: 0, updated: updatedIndexes, failed: failedIndexes.length, retryableFailures: failedIndexes.length, checkpointAfter: { ...cpAfter, updatedAt: new Date().toISOString() }, details: { slices, wrapped, staleSkipped, noNewData, writeEnabled } });
+      // 2026-10-22（使用者核准，三.三稽核發現）: 之前只有failed>0時才算PARTIAL，write gate關著
+      // 或單純沒更新時完全沒guard——VERIFIED global_index_snapshots已經39天沒有新資料，而且這個
+      // job完全不在daily-health-report的監控清單裡，兩個問題疊加，完全沒人發現。
+      const quoteStatus = failedIndexes.length > 0 && updatedIndexes === 0 ? "PARTIAL"
+        : writeEnabled && requestedIndexes > 0 && updatedIndexes === 0 && staleSkipped === 0 ? "PARTIAL"
+        : "COMPLETED";
+      await finishRun(runId, JOB, "YAHOO", started, { status: quoteStatus, attempted: requestedIndexes, completed: updatedIndexes, inserted: 0, updated: updatedIndexes, failed: failedIndexes.length, retryableFailures: failedIndexes.length, checkpointAfter: { ...cpAfter, updatedAt: new Date().toISOString() }, details: { slices, wrapped, staleSkipped, noNewData, writeEnabled } });
       return Response.json({ ok: true, task: "yahoo-index", phase, writeEnabled, requestedIndexes, updatedIndexes, staleSkipped, noNewData, failedIndexes, wrapped, slices });
     } else {
       let requestedIndexes = 0, updatedIndexes = 0, rowsWritten = 0;

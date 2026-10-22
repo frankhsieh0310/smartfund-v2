@@ -131,6 +131,22 @@ const RUN_LOG_PIPELINES = [
   // 2026-10-22（使用者核准，第二項）: 新的雲端cron，取代原本完全沒有排程、沒有run log的
   // 本機孤兒腳本（scripts/data/money-market/run-global-money-market.ts）。
   "MONEY_MARKET_RATES",
+  // 2026-10-22（使用者核准，三.三全面盤點，5個平行代理稽核85個雲端cron後找到的缺口）：以下
+  // 全部先前都不在這份清單裡，不管跑成什麼樣子（包括VERIFIED已經真的停擺的OFFSHORE_DIVIDEND_SYNC
+  // 21天、CLOUD_TW_FUNDAMENTALS_REFRESH 6天、YAHOO_INDEX_QUOTE 39天）都不會被health report看到。
+  "OFFSHORE_NAV_TDCC_SYNC",
+  "OFFSHORE_DIVIDEND_SYNC",
+  "DOMESTIC_DIVIDEND_SYNC",
+  "EX_DATE_SYNC",
+  "CLOUD_GLOBAL_PE_RECOMPUTE",
+  "CLOUD_TW_FUNDAMENTALS_REFRESH",
+  "CONSENSUS_LIVE_INGEST",
+  "STOCK_TECHNICAL_DAILY_TW",
+  "YAHOO_INDEX_QUOTE",
+  "YAHOO_INDEX_HISTORY",
+  "FX_FORWARD_POINTS_REFERENCE_CURVE",
+  "ALERT_DISPATCH",
+  "ALERT_EVALUATE",
 ];
 
 export async function GET(request: Request) {
@@ -205,6 +221,14 @@ export async function GET(request: Request) {
      )`,
   );
   const moneyMarketFreshness = evaluateFreshness("money_market_rates_effr_estr_sonia", moneyMarketFreshRow[0]?.max_date ?? null, 4);
+
+  // 2026-10-22（使用者核准，三.三全面盤點）: global_index_snapshots之前完全沒有freshness
+  // check——VERIFIED最新as_of_date卡在2026-09-13，已經39天沒更新，YAHOO_INDEX_QUOTE這個job
+  // 也不在RUN_LOG_PIPELINES清單裡，兩個缺口疊加，完全沒人發現。
+  const globalIndexFreshRow = await prisma.$queryRawUnsafe<Array<{ max_date: string | null }>>(
+    `SELECT to_char(max(as_of_date), 'YYYY-MM-DD') AS max_date FROM global_index_snapshots`,
+  );
+  const globalIndexFreshness = evaluateFreshness("global_index_snapshots", globalIndexFreshRow[0]?.max_date ?? null, 4);
 
   // 2026-10-18 (使用者規則定案，第 2b 項): 判斷依據從「排程有沒有報錯」改成「母體裡真的有
   //多少比例在最近一個更新日拿到資料」。只挑小表（fund_performances/etf_performances/
@@ -601,7 +625,7 @@ export async function GET(request: Request) {
   const SYSTEM_CATEGORY = "SYSTEM" as const;
   const anomalies = [
     ...pipelineHealth.filter((p) => p.anomaly).map((p) => ({ type: "PIPELINE", category: SYSTEM_CATEGORY, jobId: p.jobId, reasons: p.anomalyReasons })),
-    ...[stockFreshness, domesticFundFreshness, fxMetricsFreshness, moneyMarketFreshness].filter((f) => f.anomaly).map((f) => ({ type: "FRESHNESS", category: SYSTEM_CATEGORY, label: f.label, reason: f.anomalyReason })),
+    ...[stockFreshness, domesticFundFreshness, fxMetricsFreshness, moneyMarketFreshness, globalIndexFreshness].filter((f) => f.anomaly).map((f) => ({ type: "FRESHNESS", category: SYSTEM_CATEGORY, label: f.label, reason: f.anomalyReason })),
     ...(etfDataSourceGap.anomaly ? [{ type: "ETF_DATA_SOURCE_GAP", category: SYSTEM_CATEGORY, newCodes: etfDataSourceGap.newCodes }] : []),
     // 每檔都已經用上面的即時查證分好 SYSTEM / EXTERNAL_DELAY，這裡依分類拆成最多兩筆，而不是
     // 整批套同一個分類——有證據（checkedAt/officialLatestDate）支持才會出現在 EXTERNAL_DELAY 那筆。
@@ -663,7 +687,7 @@ export async function GET(request: Request) {
   // buildDailySummary.ts for the message format (unit-tested separately).
   const summary = buildDailySummary({
     today, anomalyCount: anomalies.length, pipelineHealth,
-    freshness: [stockFreshness, domesticFundFreshness, fxMetricsFreshness, moneyMarketFreshness], etfDataSourceGap, yahooTwCheck, fredCommodityCheck, coverage,
+    freshness: [stockFreshness, domesticFundFreshness, fxMetricsFreshness, moneyMarketFreshness, globalIndexFreshness], etfDataSourceGap, yahooTwCheck, fredCommodityCheck, coverage,
   });
   const notifyResult = await notifyAnomaly(summary);
 
@@ -672,7 +696,7 @@ export async function GET(request: Request) {
     status, attempted: RUN_LOG_PIPELINES.length + 7 + coverage.length, completed: RUN_LOG_PIPELINES.length + 7 + coverage.length - anomalies.length,
     inserted: 0, updated: 0, failed: anomalies.length, retryableFailures: 0, checkpointAfter: null,
     details: {
-      date: today, pipeline_health: pipelineHealth, stock_freshness: stockFreshness, domestic_fund_freshness: domesticFundFreshness, fx_metrics_freshness: fxMetricsFreshness, money_market_freshness: moneyMarketFreshness,
+      date: today, pipeline_health: pipelineHealth, stock_freshness: stockFreshness, domestic_fund_freshness: domesticFundFreshness, fx_metrics_freshness: fxMetricsFreshness, money_market_freshness: moneyMarketFreshness, global_index_freshness: globalIndexFreshness,
       etf_data_source_gap: etfDataSourceGap, yahoo_tw_return_check: yahooTwCheck, fred_commodity_check: fredCommodityCheck, coverage,
       active_etf_official_holdings: activeEtfOfficialHoldings, active_etf_official_holdings_evidence: activeEtfGapWithEvidence, local_schedule_reporting: localScheduleReporting,
       core_universe_fund_gap_evidence: coreUniverseFundGapWithEvidence,
