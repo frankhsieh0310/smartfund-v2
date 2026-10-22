@@ -500,3 +500,15 @@ master 為正式基準分支。新工作一律從最新的 master 開分支；�
 1. 同一個產品（例如smartfund-v2）在同一天／同一輪工作期間，只在**一條**部署分支上修改——不要為了平行處理不同任務各自開新worktree再各自改同一個repo。
 2. 如果真的需要在不同worktree做不同任務（例如一個在查資料庫負載、一個在修幣別bug），**合併回部署分支**才算這項任務完成，不能讓它停在自己的worktree裡沒人知道要合併。
 3. 部署前的清單必須包含：確認目前所有平行worktree是否有尚未合併進部署分支的commit，逐一列出並合併（`cherry-pick`優先於`merge`，因為前者對每個commit單獨衝突處理更清楚；不准`rebase`改寫已經push過的歷史、不准`force-push`）。
+
+## 2026-10-22：每次正式部署後，固定把本機執行用checkout同步到同一個commit
+
+**背景**：`C:\Users\User\Desktop\smartfund-v2`（分支`recovery/authoritative-smartfund`，Windows排程實際執行的那份checkout）VERIFIED落後部署分支309個commit，而且本機有3支排程（`SmartFund-CorporateActions`、`SmartFund-ShareBuyback`、`SmartMatch Mega ETF Holdings`）執行的腳本（及其依賴的`.ts`邏輯檔）原本**完全沒有被任何分支追蹤**——這代表落後的本機checkout不只是「舊版bug」的風險，直接切換到部署commit甚至會把這些排程需要的檔案從磁碟上刪掉。2026-10-22已經把這3支腳本（含它們真正呼叫的`.ts`檔）補進`fix/daily-ops-20261021-r10`，解除這個阻塞。
+
+**固定步驟（每次`vercel deploy --prod`部署完成後，使用者本人部署完才做，我不自己發起部署）**：
+1. 確認部署的commit SHA（`vercel ls --prod --json`的`meta.gitCommitSha`）。
+2. 選一個不在任何本機排程執行時段內的時間（檢查`Get-ScheduledTaskInfo`的排程時間表，避開前後各留一點緩衝）。
+3. 切換前先確認`runtime/`、`.local-schedule-report-secret`、`.env`等未追蹤檔案都還在原地不動（`git status`應該只顯示這些是untracked，不會因為checkout動作被清掉——Git本身不會動untracked檔案，但仍要切換後再次確認）。
+4. 在`C:\Users\User\Desktop\smartfund-v2`執行`git fetch`+`git checkout <部署commit sha>`（detached HEAD即可，不需要建分支）。
+5. 切換後，手動執行一次`SmartFund-CorporateActions`、`SmartFund-ShareBuyback`、`SmartMatch Mega ETF Holdings`這3支排程，各自附上寫入前後筆數、run log、以及（如果該腳本有串`local-schedule-report`）回報結果，確認在新commit下仍能正常運作。
+6. **不准**在本機排程執行前自動`git pull`——同步只在這個部署後的固定步驟裡手動做一次，排程本身不應該有改動程式碼的副作用。
