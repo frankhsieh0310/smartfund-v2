@@ -1,0 +1,50 @@
+existing active ETFs before discovery: 12802
+discovered 6599 unique Yahoo ETF symbols across 36 shards
+per_shard_totals: {"_unfiltered_top":1000,"PCX":2646,"NAS":0,"NYQ":78,"BTS":1525,"LSE":4249,"IOB":161,"AQS":251,"GER":6047,"DUS":5757,"FRA":2439,"MCE":6,"MIL":2239,"PAR":835,"AMS":727,"STO":28,"OSL":2,"VIE":384,"BUD":29,"WSE":45,"IST":30,"JPX":469,"HKG":326,"KSC":1900,"TAI":260,"TWO":122,"ASX":365,"SES":76,"JKT":43,"VSE":18,"TOR":1682,"MEX":534,"TLV":497,"SAU":14,"DOH":2,"NGM":1223}
+  …200/6599  matched 137  inserted 63  failed 0
+  …400/6599  matched 278  inserted 122  failed 0
+  …600/6599  matched 411  inserted 189  failed 0
+  …800/6599  matched 535  inserted 264  failed 0
+  …1000/6599  matched 653  inserted 345  failed 1
+  …1200/6599  matched 851  inserted 347  failed 1
+  …1400/6599  matched 1051  inserted 347  failed 1
+  …1600/6599  matched 1250  inserted 348  failed 1
+  …1800/6599  matched 1448  inserted 350  failed 1
+  …2000/6599  matched 1620  inserted 378  failed 1
+  …2200/6599  matched 1713  inserted 485  failed 1
+  …2400/6599  matched 1713  inserted 685  failed 1
+  …2600/6599  matched 1713  inserted 885  failed 1
+  …2800/6599  matched 1713  inserted 1085  failed 1
+  …3000/6599  matched 1713  inserted 1285  failed 1
+  …3200/6599  matched 1713  inserted 1485  failed 1
+  …3400/6599  matched 1713  inserted 1685  failed 1
+  …3600/6599  matched 1713  inserted 1883  failed 1
+  …3800/6599  matched 1713  inserted 2083  failed 1
+  …4000/6599  matched 1713  inserted 2267  failed 3
+  …4200/6599  matched 1713  inserted 2467  failed 3
+  …4400/6599  matched 1862  inserted 2517  failed 4
+  …4600/6599  matched 2044  inserted 2535  failed 4
+  …4800/6599  matched 2068  inserted 2711  failed 4
+  …5000/6599  matched 2124  inserted 2855  failed 4
+  …5200/6599  matched 2243  inserted 2936  failed 4
+  …5400/6599  matched 2243  inserted 3136  failed 4
+  …5600/6599  matched 2309  inserted 3270  failed 4
+  …5800/6599  matched 2309  inserted 3470  failed 4
+  …6000/6599  matched 2309  inserted 3670  failed 4
+  …6200/6599  matched 2309  inserted 3870  failed 4
+  …6400/6599  matched 2350  inserted 4029  failed 4
+{
+  "ETF_DISCOVERED_TOTAL": 6599,
+  "ETF_MATCHED_EXISTING": 2546,
+  "ETF_NET_NEW_INSERTED": 4032,
+  "ETF_NOT_ETF_QUOTE_TYPE_SKIPPED": 17,
+  "ETF_DISCOVER_FAILED": 4,
+  "ETF_TOTAL_BEFORE": 12802,
+  "ETF_TOTAL_AFTER": 16834,
+  "runtime_s": 3819,
+  "stats": {
+    "calls": 314,
+    "rateLimited": 0,
+    "crumbRefresh": 0
+  }
+}

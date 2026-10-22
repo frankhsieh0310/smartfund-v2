@@ -1,0 +1,27 @@
+{
+  "version":"GLOBAL_FUTURES_PUBLIC_EXPANSION_V1",
+  "asset":"GLOBAL_FUTURES","priority":9,"existingFuturesPriority":0,"idleOnly":true,"uncertainIdleMeansWait":true,
+  "dbPool":"SUPABASE_TRANSACTION_POOLING_6543_PGBOUNCER","maxDbConcurrency":1,"batchSize":1,
+  "fullEligibleUniverse":true,"deepestReliablePublicHistory":true,"incremental":true,"scheduledRefresh":true,
+  "sourcePriority":["OFFICIAL_REGULATOR","OFFICIAL_EXCHANGE","OFFICIAL_CLEARINGHOUSE","OFFICIAL_BENCHMARK","SUPPLEMENTAL_PUBLIC","SMARTFUND_DERIVED"],
+  "routes":[
+    {"id":"TRADINGVIEW_FUTURES_REFERENCE","status":"SOURCE_ACCESS_PROTECTED","adapter":null,"source":"https://www.tradingview.com/policies/","products":"REFERENCE_ONLY","blocked":"AUTOMATED_COLLECTION_AND_NON_DISPLAY_MARKET_DATA_USE_PROHIBITED;NO_SYMBOL_OR_PRICE_INGESTION"},
+    {"id":"INVESTING_FUTURES_PUBLIC_CATALOG","status":"ACCESS_CONSTRAINED_FAIL_CLOSED_AUTO_RETRY","adapter":"FUTURES_INVESTING_PUBLIC_CATALOG","source":"https://www.investing.com/commodities/futures-specifications","products":"DYNAMIC_PUBLIC_CATALOG","blocked":"HTTP_403_ON_ORDINARY_NODE_ROUTE;BROWSER_VISIBLE_DISCOVERY_ONLY;TERMS_REVIEW_REQUIRED_FOR_STORAGE"},
+    {"id":"CFTC_COT","status":"ROUTED_PUBLIC_OFFICIAL","adapter":"GLOBAL_FUTURES_POSITIONING","source":"https://www.cftc.gov/MarketReports/CommitmentsofTraders/HistoricalCompressed/index.htm","families":["LEGACY","DISAGGREGATED","TRADERS_IN_FINANCIAL_FUTURES"],"grain":["report_family","cftc_contract_market_code","report_date"],"derivedMethodology":"CFTC_POSITIONING_DERIVED_V1"},
+    {"id":"LME_PUBLIC","status":"ROUTED_PUBLIC_ONLY","adapter":"EXISTING_EXCHANGE_WORKERS","source":"https://www.lme.com/en/Market-Data","products":["COPPER","ALUMINUM","ZINC","NICKEL","LEAD","TIN"],"blocked":"EXTERNALLY_BLOCKED_LICENSE_NON_PUBLIC_MARKET_DATA"},
+    {"id":"SGX_PUBLIC","status":"BACKGROUND_ADAPTER_REQUIRED","adapter":"COMMON_EXCHANGE_DERIVATIVES","source":"https://www.sgx.com/derivatives/delayed-prices-futures","products":["NIKKEI","FTSE_CHINA_A50","IRON_ORE","ASIAN_FX"]},
+    {"id":"HKEX_PUBLIC","status":"ROUTED_PUBLIC_ONLY","adapter":"COMMON_EXCHANGE_DERIVATIVES","source":"https://www.hkex.com.hk/Market-Data/Futures-and-Options-Prices","products":["HSI_FUTURES","HSI_OPTIONS","HSCEI_FUTURES","HSCEI_OPTIONS"],"blocked":"EXTERNALLY_BLOCKED_LICENSE_BULK_PORTIONS"},
+    {"id":"KRX_PUBLIC","status":"BACKGROUND_ADAPTER_REQUIRED","adapter":"COMMON_EXCHANGE_DERIVATIVES","source":"https://global.krx.co.kr/contents/GLB/05/0501/0501010000/GLB0501010000.jsp","products":["KOSPI200_FUTURES","KOSPI200_OPTIONS"]},
+    {"id":"ASX_PUBLIC","status":"BACKGROUND_ADAPTER_REQUIRED","adapter":"COMMON_EXCHANGE_DERIVATIVES","source":"https://www.asx.com.au/markets/trade-our-derivatives-market/overview"},
+    {"id":"B3_PUBLIC","status":"BACKGROUND_ADAPTER_REQUIRED","adapter":"COMMON_EXCHANGE_DERIVATIVES","source":"https://www.b3.com.br/en_us/market-data-and-indices/data-services/market-data/"},
+    {"id":"NSE_PUBLIC","status":"BACKGROUND_ADAPTER_REQUIRED","adapter":"COMMON_EXCHANGE_DERIVATIVES","source":"https://www.nseindia.com/market-data/equity-derivatives-watch"},
+    {"id":"COMEX_WAREHOUSE","status":"ROUTED_PUBLIC_OFFICIAL","adapter":"EXCHANGE_WAREHOUSE_INVENTORY_LAYER","source":"https://www.cmegroup.com/clearing/operations-and-deliveries/nymex-delivery-notices.html","products":["GOLD","SILVER","COPPER"]},
+    {"id":"LME_WAREHOUSE","status":"ROUTED_PUBLIC_ONLY","adapter":"EXCHANGE_WAREHOUSE_INVENTORY_LAYER","source":"https://www.lme.com/en/Market-Data/Reports-and-data/Warehouse-and-stocks-reports","blocked":"EXTERNALLY_BLOCKED_LICENSE_DETAILED_DAILY"},
+    {"id":"OPTIONS_IV_GREEKS","status":"INPUT_GATED_AUTO_CONTINUING","adapter":"FUTURES_OPTIONS_DERIVED_V1","source":"SMARTFUND_DERIVED","models":["BLACK_76","BLACK_SCHOLES"]},
+    {"id":"CONTINUOUS_CONTRACT_V1","status":"ROUTED_DETERMINISTIC_METHODOLOGY","adapter":"FUTURES_CONTINUOUS_CONTRACT_METHODOLOGY_V1","source":"SMARTFUND_DERIVED"},
+    {"id":"DCE_PUBLIC","status":"WAITING_DEPENDENCY","adapter":"PUBLIC_LEGAL_ROUTE_ONLY","source":"http://www.dce.com.cn/DCE/Products/"},
+    {"id":"SHFE_PUBLIC","status":"ROUTED_PUBLIC_DELAYED","adapter":"PUBLIC_LEGAL_ROUTE_ONLY","source":"https://www.shfe.com.cn/eng/MarketData/"},
+    {"id":"INE_PUBLIC","status":"WAITING_DEPENDENCY","adapter":"PUBLIC_LEGAL_ROUTE_ONLY","source":"https://www.ine.cn/eng/marketdata/"}
+  ],
+  "linkageOwners":{"WAREHOUSE":"EXCHANGE_WAREHOUSE_INVENTORY_LAYER","INDEX":"GLOBAL_INDEX","COMMODITY":"GLOBAL_COMMODITY","FIXED_INCOME":"GLOBAL_FIXED_INCOME","FX":"GLOBAL_FX","CRYPTO":"GLOBAL_CRYPTO","LOCALE":"ACTIVE_SHARED_LOCALE_MODEL"}
+}

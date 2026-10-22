@@ -1,0 +1,52 @@
+resuming from cursor=(start)  processed-so-far=0
+  …50/1500  hist 50  enrich 50  failed 0
+  …100/1500  hist 99  enrich 99  failed 2
+  …150/1500  hist 149  enrich 149  failed 2
+  …200/1500  hist 197  enrich 197  failed 6
+  …250/1500  hist 247  enrich 247  failed 6
+  …300/1500  hist 297  enrich 297  failed 6
+  …350/1500  hist 345  enrich 346  failed 9
+  …400/1500  hist 395  enrich 396  failed 9
+  …450/1500  hist 443  enrich 444  failed 13
+  …500/1500  hist 493  enrich 494  failed 13
+  …550/1500  hist 543  enrich 544  failed 13
+  …600/1500  hist 593  enrich 594  failed 13
+  …650/1500  hist 643  enrich 644  failed 13
+  …700/1500  hist 692  enrich 693  failed 15
+  …750/1500  hist 742  enrich 743  failed 15
+  …800/1500  hist 792  enrich 793  failed 15
+  …850/1500  hist 840  enrich 841  failed 19
+  …900/1500  hist 890  enrich 891  failed 19
+  …950/1500  hist 940  enrich 941  failed 19
+  …1000/1500  hist 989  enrich 990  failed 21
+  …1050/1500  hist 1038  enrich 1039  failed 23
+  …1100/1500  hist 1088  enrich 1089  failed 23
+  …1150/1500  hist 1137  enrich 1138  failed 25
+  …1200/1500  hist 1185  enrich 1186  failed 29
+  …1250/1500  hist 1234  enrich 1235  failed 31
+  …1300/1500  hist 1284  enrich 1285  failed 31
+  …1350/1500  hist 1334  enrich 1335  failed 31
+  …1400/1500  hist 1384  enrich 1385  failed 31
+  …1450/1500  hist 1434  enrich 1435  failed 31
+  …1500/1500  hist 1484  enrich 1485  failed 31
+{
+  "SWEEP_CHUNK_ATTEMPTED": 1500,
+  "SWEEP_HISTORY_OK": 1484,
+  "SWEEP_ENRICH_OK": 1485,
+  "SWEEP_HISTORY_ROWS": 566638,
+  "SWEEP_HOLDINGS_ROWS": 6088,
+  "SWEEP_PERF_ROWS": 1107,
+  "SWEEP_DISTRIBUTION_EVENTS": 5823,
+  "SWEEP_FAILED": 31,
+  "SWEEP_NO_SYMBOL": 0,
+  "WRAPPED_FULL_LAP": false,
+  "CUMULATIVE_PROCESSED": 1500,
+  "CUMULATIVE_SUCCEEDED": 1484,
+  "CUMULATIVE_FAILED": 31,
+  "runtime_s": 4423,
+  "stats": {
+    "calls": 0,
+    "rateLimited": 0,
+    "crumbRefresh": 0
+  }
+}

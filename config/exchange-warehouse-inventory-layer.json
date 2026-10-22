@@ -1,0 +1,6 @@
+{
+  "version":"EXCHANGE_WAREHOUSE_INVENTORY_LAYER_V1","sourceOwner":"EXCHANGE_WAREHOUSE_INVENTORY_LAYER",
+  "consumers":["GLOBAL_FUTURES","GLOBAL_COMMODITY"],"deduplicationKey":["exchange","commodity","warehouse_location","observation_date","unit","source_record_id"],
+  "fields":["registered_stock","eligible_stock","on_warrant","cancelled_warrant","total_stock","deposit","withdrawal","stock_change","as_of","retrieved_at"],
+  "derived":["INVENTORY_CHANGE_1D","INVENTORY_CHANGE_1W","INVENTORY_CHANGE_1M","INVENTORY_MOMENTUM","INVENTORY_PERCENTILE","INVENTORY_VS_PRICE","INVENTORY_VS_BASIS","INVENTORY_VS_CURVE","CANCELLED_WARRANT_RATIO"]
+}

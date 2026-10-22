@@ -1,0 +1,7 @@
+{
+  "asset": "GLOBAL_INSIDER_OWNERSHIP",
+  "modes": ["Historical", "Latest", "Incremental"],
+  "fields": ["holdingPercent", "shares", "votingPower", "ownershipChange"],
+  "operations": ["Archive", "Retry", "Checkpoint", "Scheduler"],
+  "historicalStartYear": 1994
+}

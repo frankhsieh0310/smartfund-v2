@@ -1,0 +1,28 @@
+import assert from "node:assert/strict";
+import { access, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { join, resolve } from "node:path";
+import { tmpdir } from "node:os";
+import { applyContractSemantics,classify,clearStaleSingleWriter,delta,type Snapshot } from "./runtime-supervisor-core.ts";
+const base:Snapshot={pid:100,processAlive:true,state:"AUTO_CONTINUING",heartbeat:"2026-01-01",checkpoint:"A",processed:10,rows:100,coverage:50,pending:10,failed:0,earliest:"2020-01-01",latest:"2026-01-01",historyYears:6,density:1,lastSuccess:"2026-01-01",lastDbWrite:"2026-01-01",lastTargetProgress:"2026-01-01",nextRun:null,blocker:null,codeVersion:"v1"};
+assert.equal(classify(base,{...base,processed:11},delta(base,{...base,processed:11}),true),"PROGRESSING");
+assert.equal(classify(base,base,delta(base,base),true),"STALLED");
+assert.equal(classify(base,{...base,processAlive:false,pid:null},delta(base,{...base,processAlive:false,pid:null}),true),"DEAD");
+const now=Date.now(),future=new Date(now+60_000).toISOString(),overdue=new Date(now-60_000).toISOString();
+assert.equal(classify(base,{...base,state:"SCHEDULED_WAIT",processAlive:false,pid:null,nextRun:future},delta(base,{...base,state:"SCHEDULED_WAIT",processAlive:false,pid:null,nextRun:future}),true,now),"SCHEDULED_WAIT");
+assert.equal(classify(base,{...base,state:"SCHEDULED_WAIT",processAlive:false,pid:null,nextRun:overdue},delta(base,{...base,state:"SCHEDULED_WAIT",processAlive:false,pid:null,nextRun:overdue}),true,now),"DEAD");
+assert.equal(applyContractSemantics("SCHEDULED_WAIT",{...base,processAlive:false,pid:null,nextRun:null},{mode:"continuous",requiredAutonomous:true,startupGraceExpired:true,now}),"DEAD");
+assert.equal(applyContractSemantics("SCHEDULED_WAIT",{...base,processAlive:false,pid:null,nextRun:null},{mode:"scheduled",requiredAutonomous:true,startupGraceExpired:true,now}),"DEAD");
+assert.equal(applyContractSemantics("DEAD",{...base,processAlive:false,pid:null,nextRun:future},{mode:"scheduled",requiredAutonomous:true,startupGraceExpired:true,now}),"SCHEDULED_WAIT");
+assert.equal(classify(base,{...base,blocker:"EMAXCONNSESSION database"},delta(base,{...base,blocker:"EMAXCONNSESSION database"}),true),"BLOCKED_DB");
+assert.equal(classify(base,{...base,blocker:"HTTP 403 auth"},delta(base,{...base,blocker:"HTTP 403 auth"}),true),"BLOCKED_AUTH");
+assert.equal(delta(base,{...base,pending:8}).pending,-2);
+const simulation=await mkdtemp(join(tmpdir(),"smartmatch-recovery-")),lock=join(simulation,"single-writer.lock"),checkpoint=join(simulation,"checkpoint.json"),marker={cursor:"PRESERVED",rows:123};
+await writeFile(lock,JSON.stringify({pid:2147483647}));await writeFile(checkpoint,JSON.stringify(marker));
+const stale=await clearStaleSingleWriter(lock,()=>false);assert.equal(stale.removed,true);assert.deepEqual(JSON.parse(await readFile(checkpoint,"utf8")),marker);
+await writeFile(lock,JSON.stringify({pid:42}));const live=await clearStaleSingleWriter(lock,pid=>pid===42);assert.equal(live.reason,"LIVE_OWNER");assert.equal(JSON.parse(await readFile(lock,"utf8")).pid,42);
+await rm(lock);await writeFile(lock,JSON.stringify({processId:2147483647}));assert.equal((await clearStaleSingleWriter(lock,()=>false)).reason,"STALE_OWNER");
+const registry=JSON.parse((await readFile(resolve("config/global-runtime-supervisor.json"),"utf8")).replace(/^\\uFEFF/,""));
+const owners=["ETF_ANALYTICS","GLOBAL_ETF_FLOWS","FUND_NAV_OWNED_CHILD","FUTURES_COMMODITY","FUTURES_POSITIONING","OFFICIAL_FINANCIAL_TWSE","OFFICIAL_FINANCIAL_TPEX","OFFICIAL_FINANCIAL_NASDAQ","OFFICIAL_FINANCIAL_AMEX","FIXED_INCOME_PUBLIC_EXPANSION","CRYPTO","GLOBAL_STOCK_PRICE_HISTORY"];
+for(const owner of owners){const entry=[...registry.assets,...registry.childWorkers].find((item:any)=>item.owner===owner);assert.ok(entry,`missing contract ${owner}`);assert.equal(entry.recovery.requiredAutonomous,true);assert.ok(["continuous","scheduled","publication"].includes(entry.recovery.executionMode));const launcher=entry.recovery.args.find((arg:string)=>/\.(ts|ps1)$/.test(arg));assert.ok(launcher,`missing launcher ${owner}`);await access(resolve(entry.recovery.workingDirectory,launcher));assert.ok(entry.recovery.singleWriterPath&&entry.recovery.heartbeatPath&&entry.recovery.checkpointPath);assert.equal(applyContractSemantics("SCHEDULED_WAIT",{...base,pid:null,processAlive:false,nextRun:null},{mode:entry.recovery.executionMode,requiredAutonomous:true,startupGraceExpired:true,now}),"DEAD",owner);}
+await rm(simulation,{recursive:true,force:true});
+console.log("runtime supervisor tests passed");

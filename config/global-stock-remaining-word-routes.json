@@ -1,0 +1,45 @@
+{
+  "version": "GLOBAL_STOCK_REMAINING_WORD_ROUTES_V1",
+  "asset": "GLOBAL_STOCK",
+  "execution": {
+    "mode": "ORDINARY_NODE_LIFECYCLE_ONLY",
+    "fullEligibleUniverse": true,
+    "fullReliableHistory": true,
+    "incremental": true,
+    "scheduledRefresh": true,
+    "dbPool": "SUPABASE_TRANSACTION_POOLING_6543_PGBOUNCER",
+    "maxDbConcurrency": 1,
+    "boundedBatches": true,
+    "idempotentWrites": true
+  },
+  "safety": {
+    "gsP0IdentityBridge": "WAITING_DEPENDENCY_BLOCKED_SHARED_MIGRATION_LEDGER",
+    "migrationLedgerModified": false,
+    "historicalRestart": false,
+    "universeRebuild": false,
+    "railwayOwnershipPreserved": true,
+    "duplicateWorkers": false
+  },
+  "routes": [
+    {"domain":"IDENTITY_ISSUER_SECURITY_GRAPH","status":"WAITING_DEPENDENCY","owner":"GLEIF_SHARED_ENTITY_LAYER + GLOBAL_STOCK_ORCHESTRATOR","route":"GLEIF/SEC evidence feeds bridge dependency without canonical writes","requirement":"AUTHORIZED_SHARED_MIGRATION_LEDGER_RESOLUTION"},
+    {"domain":"FUNDAMENTALS_FULL_DEPTH","status":"AUTO_CONTINUING","owner":"OFFICIAL_FINANCIAL_SUPERVISOR","route":"SEC/official filings -> stock_financial_facts -> deterministic ratios"},
+    {"domain":"VALUATION_HISTORY","status":"INPUT_GATED_AUTO_CONTINUING","owner":"GLOBAL_STOCK_GAP_CONSUMER","route":"PIT price + filing facts + shares/debt/cash; forward metrics require verified estimates","requirement":"VERIFIED_POINT_IN_TIME_INPUT_SET"},
+    {"domain":"CAPITAL_ALLOCATION","status":"AUTO_CONTINUING","owner":"STOCK_CAPITAL_ALLOCATION_PID_9900","route":"existing capital-allocation worker only"},
+    {"domain":"CORPORATE_ACTIONS_PRODUCT_LIFECYCLE","status":"AUTO_CONTINUING","owner":"GLOBAL_CORPORATE_ACTIONS","route":"official/exchange/issuer events -> canonical dated corporate actions"},
+    {"domain":"OWNERSHIP","status":"INPUT_GATED_AUTO_CONTINUING","owner":"INSTITUTIONAL_HOLDINGS + INSIDER_OWNERSHIP + ETF_FUND_HOLDINGS","route":"dated official 13F/filing/shared holdings observations","requirement":"VERIFIED_DATED_HOLDER_SECURITY_MAPPING"},
+    {"domain":"SHARE_CAPITAL_STRUCTURE","status":"INPUT_GATED_AUTO_CONTINUING","owner":"OFFICIAL_FINANCIAL_SUPERVISOR + SHARE_BUYBACK","route":"official shares/debt/cash plus PIT price; float remains gated","requirement":"RELIABLE_FLOAT_OR_COMPLETE_PIT_INPUTS"},
+    {"domain":"SEGMENT_GEOGRAPHIC_REVENUE","status":"INPUT_GATED_AUTO_CONTINUING","owner":"OFFICIAL_FINANCIAL_SUPERVISOR","route":"structured official filing segments preserving issuer taxonomy","requirement":"STRUCTURED_SEGMENT_FACTS_IN_EXISTING_FILING_PAYLOAD"},
+    {"domain":"SUPPLY_CHAIN_COMPANY_RELATIONSHIPS","status":"NEEDS_SOURCE","owner":"SOURCE_REGISTRY","route":"verified relationship graph only","requirement":"OFFICIAL_FILING_OR_REGULATORY_RELATIONSHIP_DATASET_WITH_ENTITY_IDS_AND_EFFECTIVE_DATES"},
+    {"domain":"FACTOR_STYLE","status":"INPUT_GATED_AUTO_CONTINUING","owner":"GLOBAL_STOCK_GAP_CONSUMER","route":"versioned deterministic fundamentals + price methodology","requirement":"MINIMUM_HISTORY_AND_COMPARABLE_FUNDAMENTALS"},
+    {"domain":"TECHNICAL_QUANT","status":"AUTO_CONTINUING","owner":"EXISTING_STOCK_TECHNICAL_LIFECYCLE","route":"existing returns/technical/rolling analytics; no duplicate indicators"},
+    {"domain":"EVENTS_FILINGS","status":"AUTO_CONTINUING","owner":"OFFICIAL_FINANCIAL_SUPERVISOR + EARNINGS_CALENDAR + COMPANY_GUIDANCE","route":"official dated filings/events with PIT semantics"},
+    {"domain":"MANAGEMENT_GOVERNANCE","status":"NEEDS_SOURCE","owner":"SOURCE_REGISTRY","route":"dated structured official officer/board observations only","requirement":"OFFICIAL_STRUCTURED_MANAGEMENT_HISTORY_WITH_ROLE_START_END_DATES"},
+    {"domain":"DIVIDEND_INCOME","status":"AUTO_CONTINUING","owner":"GLOBAL_CORPORATE_ACTIONS + DIVIDEND_CALENDAR","route":"dated verified dividends plus deterministic history analytics"},
+    {"domain":"RISK_PROFESSIONAL_ANALYTICS","status":"INPUT_GATED_AUTO_CONTINUING","owner":"GLOBAL_STOCK_GAP_CONSUMER + EXISTING_STOCK_TECHNICAL_LIFECYCLE","route":"price/fundamental history with explicit benchmark and methodology","requirement":"MINIMUM_OBSERVATION_WINDOW_AND_BENCHMARK_WHERE_REQUIRED"},
+    {"domain":"CROSS_ASSET_LINKAGE","status":"INPUT_GATED_AUTO_CONTINUING","owner":"SHARED_HOLDINGS + INDEX_CONSTITUENTS + GLEIF_SHARED_ENTITY_LAYER","route":"verified canonical shared mappings only","requirement":"CANONICAL_SECURITY_OR_ISSUER_MAPPING"},
+    {"domain":"THEME_TOPIC_EXPOSURE","status":"NEEDS_SOURCE","owner":"SHARED_SOURCE_REGISTRY","route":"existing verified SmartFund mappings only; no taxonomy generation","requirement":"VERIFIED_SECURITY_THEME_MAPPING_WITH_PROVENANCE"},
+    {"domain":"DATA_TRUST_PIT","status":"AUTO_CONTINUING","owner":"ALL_EXISTING_STOCK_WORKERS","route":"row provenance + PIT + revision/restatement + methodology contract"},
+    {"domain":"MULTILINGUAL_IDENTITY","status":"INPUT_GATED_AUTO_CONTINUING","owner":"ACTIVE_SHARED_LOCALE_MODEL","route":"official localized names through shared locale lifecycle","requirement":"OFFICIAL_LOCALIZED_NAME_INPUT"},
+    {"domain":"OFFICIAL_SOURCE_DISCOVERY_REUSE","status":"INPUT_GATED_AUTO_CONTINUING","owner":"SHARED_SOURCE_REGISTRY","route":"reuse registered SFB/TAIFEX discoveries; no recrawl","requirement":"REGISTERED_HIGH_VALUE_STOCK_ROUTE"}
+  ]
+}

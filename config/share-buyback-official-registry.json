@@ -1,0 +1,16 @@
+{
+  "asset": "GLOBAL_SHARE_BUYBACK",
+  "version": 1,
+  "sources": [
+    { "id": "SEC_EDGAR", "market": "US", "operator": "SEC", "name": "EDGAR company submissions", "url": "https://www.sec.gov/files/company_tickers.json", "kind": "registry", "active": true },
+    { "id": "NYSE", "market": "US", "operator": "NYSE", "name": "NYSE issuer news", "url": "https://www.nyse.com/news", "kind": "announcement", "active": true },
+    { "id": "NASDAQ", "market": "US", "operator": "NASDAQ", "name": "Nasdaq market activity news", "url": "https://www.nasdaq.com/market-activity", "kind": "announcement", "active": true },
+    { "id": "LSE", "market": "GB", "operator": "London Stock Exchange", "name": "RNS news explorer", "url": "https://www.londonstockexchange.com/news", "kind": "announcement", "active": true },
+    { "id": "JPX", "market": "JP", "operator": "Japan Exchange Group", "name": "Company announcements", "url": "https://www.jpx.co.jp/english/listing/disclosure/index.html", "kind": "announcement", "active": true },
+    { "id": "HKEX", "market": "HK", "operator": "HKEX", "name": "HKEXnews issuer documents", "url": "https://www1.hkexnews.hk/search/titlesearch.xhtml?lang=en", "kind": "announcement", "active": true },
+    { "id": "TWSE_MOPS", "market": "TW", "operator": "TWSE", "name": "MOPS material information", "url": "https://mops.twse.com.tw/mops/web/t05st01", "kind": "announcement", "active": true },
+    { "id": "SGX", "market": "SG", "operator": "SGX", "name": "Company announcements", "url": "https://www.sgx.com/securities/company-announcements", "kind": "announcement", "active": true },
+    { "id": "ASX", "market": "AU", "operator": "ASX", "name": "Company announcements", "url": "https://www.asx.com.au/markets/trade-our-cash-market/announcements", "kind": "announcement", "active": true },
+    { "id": "KRX", "market": "KR", "operator": "KRX", "name": "KIND disclosures", "url": "https://kind.krx.co.kr/disclosure/todaydisclosure.do?method=searchTodayDisclosureMain", "kind": "announcement", "active": true }
+  ]
+}

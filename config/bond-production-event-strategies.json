@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "mode": "EVENT_DRIVEN",
+  "polling": false,
+  "defaultPolicy": "DENY",
+  "strategies": [
+    {
+      "asset": "BOND",
+      "category": "GOVERNMENT",
+      "market": "US_TREASURY",
+      "source": "TREASURY_DIRECT",
+      "events": [
+        "SECURITY_DISCOVERED",
+        "AUCTION_ANNOUNCED",
+        "AUCTION_RESULT_PUBLISHED",
+        "LIFECYCLE_UPDATED",
+        "OFFICIAL_OBSERVATION_PUBLISHED",
+        "LATEST_MARKET_OBSERVATION_PUBLISHED"
+      ],
+      "handler": "scripts/data/bond/run-production-us-treasury.ts",
+      "enabled": true
+    },
+    {
+      "asset": "BOND",
+      "category": "GOVERNMENT",
+      "market": "TAIWAN_GOVERNMENT",
+      "source": "CENTRAL_BANK_REPUBLIC_OF_CHINA",
+      "events": [
+        "SECURITY_DISCOVERED",
+        "AUCTION_ANNOUNCED",
+        "AUCTION_RESULT_PUBLISHED",
+        "LIFECYCLE_UPDATED",
+        "OFFICIAL_OBSERVATION_PUBLISHED",
+        "LATEST_MARKET_OBSERVATION_PUBLISHED"
+      ],
+      "handler": "scripts/data/bond/run-production-taiwan-government.ts",
+      "enabled": true
+    },
+    {
+      "asset": "BOND",
+      "category": "GOVERNMENT",
+      "market": "FINLAND_GOVERNMENT",
+      "source": "TREASURY_FINLAND",
+      "events": [
+        "SECURITY_DISCOVERED",
+        "ISSUANCE_UPDATED",
+        "AUCTION_ANNOUNCED",
+        "AUCTION_RESULT_PUBLISHED",
+        "LIFECYCLE_UPDATED",
+        "OFFICIAL_OBSERVATION_PUBLISHED",
+        "LATEST_MARKET_OBSERVATION_PUBLISHED"
+      ],
+      "handler": "scripts/data/bond/run-production-finland-government.ts",
+      "enabled": true
+    }
+  ]
+}

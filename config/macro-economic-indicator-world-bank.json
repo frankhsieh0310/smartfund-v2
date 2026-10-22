@@ -1,0 +1,21 @@
+{
+  "source": "World Bank Indicators API",
+  "baseUrl": "https://api.worldbank.org/v2",
+  "countries": [
+    {"iso3":"EMU","name":"Euro Area"},{"iso3":"CHN","name":"China"},{"iso3":"JPN","name":"Japan"},{"iso3":"GBR","name":"United Kingdom"},{"iso3":"TWN","name":"Taiwan"},{"iso3":"KOR","name":"South Korea"},{"iso3":"CAN","name":"Canada"},{"iso3":"AUS","name":"Australia"},{"iso3":"IND","name":"India"},{"iso3":"SGP","name":"Singapore"},{"iso3":"HKG","name":"Hong Kong"},{"iso3":"CHE","name":"Switzerland"},{"iso3":"NZL","name":"New Zealand"},{"iso3":"BRA","name":"Brazil"},{"iso3":"MEX","name":"Mexico"}
+  ],
+  "indicators": [
+    {"id":"SL.EMP.TOTL.SP.ZS","indicator":"EMPLOYMENT_POPULATION_RATIO","domain":"EMPLOYMENT","unit":"PERCENT_15_PLUS","frequency":"ANNUAL"},
+    {"id":"SL.UEM.TOTL.ZS","indicator":"UNEMPLOYMENT_RATE","domain":"EMPLOYMENT","unit":"PERCENT_LABOR_FORCE","frequency":"ANNUAL"},
+    {"id":"SL.TLF.CACT.ZS","indicator":"LABOR_FORCE_PARTICIPATION","domain":"EMPLOYMENT","unit":"PERCENT_15_PLUS","frequency":"ANNUAL"},
+    {"id":"FP.CPI.TOTL","indicator":"CPI_HEADLINE","domain":"INFLATION","unit":"INDEX_2010_100","frequency":"ANNUAL"},
+    {"id":"NY.GDP.MKTP.CD","indicator":"NOMINAL_GDP","domain":"GDP","unit":"CURRENT_USD","frequency":"ANNUAL"},
+    {"id":"NY.GDP.MKTP.KD","indicator":"REAL_GDP","domain":"GDP","unit":"CONSTANT_2015_USD","frequency":"ANNUAL"},
+    {"id":"NY.GDP.MKTP.KD.ZG","indicator":"GDP_GROWTH_YOY","domain":"GDP","unit":"PERCENT","frequency":"ANNUAL"},
+    {"id":"NY.GDP.DEFL.ZS","indicator":"GDP_DEFLATOR","domain":"GDP","unit":"INDEX_2015_100","frequency":"ANNUAL"},
+    {"id":"NV.IND.MANF.KD.ZG","indicator":"MANUFACTURING_OUTPUT_GROWTH","domain":"MANUFACTURING","unit":"PERCENT","frequency":"ANNUAL"},
+    {"id":"NE.CON.PRVT.CD","indicator":"HOUSEHOLD_CONSUMPTION","domain":"CONSUMPTION","unit":"CURRENT_USD","frequency":"ANNUAL"},
+    {"id":"NE.EXP.GNFS.CD","indicator":"EXPORTS_GOODS_SERVICES","domain":"TRADE","unit":"CURRENT_USD","frequency":"ANNUAL"},
+    {"id":"NE.IMP.GNFS.CD","indicator":"IMPORTS_GOODS_SERVICES","domain":"TRADE","unit":"CURRENT_USD","frequency":"ANNUAL"}
+  ]
+}

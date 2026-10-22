@@ -1,0 +1,38 @@
+{
+  "version": 2,
+  "asset": "GLOBAL_FX",
+  "pollIntervalMs": 60000,
+  "databaseBackoffMs": [30000, 60000, 120000, 300000],
+  "boundedBatchSize": 4,
+  "gapConsumerBatchSize": 1,
+  "maxDbConcurrency": 1,
+  "dbPoolMode": "SUPABASE_TRANSACTION_POOLING_6543_PGBOUNCER",
+  "counts": { "pairs": 528, "currencies": 33 },
+  "sharedMarketDataInfrastructure": {
+    "reuse": ["MARKET_QUOTE", "INTRADAY_BAR", "FRESHNESS", "PROVENANCE"],
+    "mode": "LOGICAL_CONTRACT_REUSE",
+    "newGenericQuoteWriterCreated": false
+  },
+  "domains": [
+    { "id": "SPOT_HISTORY_INTRADAY", "runtime": "fx", "priority": "P0A", "status": "CURRENT_AND_AUTO_UPDATING" },
+    { "id": "FORWARD_POINTS", "runtime": "fx-forward-points", "priority": "P0B", "status": "LICENSE_CONSTRAINED" },
+    { "id": "FX_RESERVES", "runtime": "fx-reserves", "priority": "P0B", "status": "CURRENT_AND_AUTO_UPDATING" }
+  ],
+  "capabilities": [
+    { "id": "CURRENT_SPOT", "priority": "P0A", "status": "CURRENT_AND_AUTO_UPDATING" },
+    { "id": "BID_ASK", "priority": "P0A", "status": "SOURCE_CONSTRAINED" },
+    { "id": "INTRADAY_1M", "priority": "P0A", "status": "TIME_DEPTH_CONSTRAINED" },
+    { "id": "INTRADAY_5M", "priority": "P0A", "status": "TIME_DEPTH_CONSTRAINED" },
+    { "id": "DAILY_HISTORY", "priority": "P0A", "status": "MAX_SOURCE_DEPTH_REACHED" },
+    { "id": "CROSS_RATE", "priority": "P0A", "status": "DERIVATION_NOT_READY" },
+    { "id": "PROVENANCE", "priority": "P0A", "status": "CURRENT_AND_AUTO_UPDATING" },
+    { "id": "FORWARD_POINTS", "priority": "P0B", "status": "LICENSE_CONSTRAINED" },
+    { "id": "FORWARD_CURVE", "priority": "P0B", "status": "DERIVATION_NOT_READY" },
+    { "id": "TECHNICAL_ANALYSIS", "priority": "P0B", "status": "CURRENT_AND_AUTO_UPDATING" },
+    { "id": "PERFORMANCE", "priority": "P0B", "status": "CURRENT_AND_AUTO_UPDATING" },
+    { "id": "VOLATILITY", "priority": "P0B", "status": "CURRENT_AND_AUTO_UPDATING" },
+    { "id": "FX_RESERVES", "priority": "P0B", "status": "SOURCE_CONSTRAINED" },
+    { "id": "CARRY", "priority": "P1", "status": "INPUT_CONSTRAINED" },
+    { "id": "FX_FUTURES_MAPPING", "priority": "P1", "status": "MAPPING_CONSTRAINED" }
+  ]
+}

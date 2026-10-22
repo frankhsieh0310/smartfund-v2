@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "timezone": "UTC",
+  "incrementalIntervalMinutes": 60,
+  "retry": { "maxAttempts": 8, "baseDelaySeconds": 30, "maxDelaySeconds": 3600 },
+  "request": { "timeoutSeconds": 30, "userAgent": "SmartFund-GlobalAnalystEstimates/1.0 data-operations@smartfund.local" }
+}

@@ -1,0 +1,65 @@
+{
+  "asset": "CROSS_CURRENCY_BASIS",
+  "semanticPolicy": "DIRECT_ADMINISTRATOR_OR_MARKET_OBSERVATION_ONLY",
+  "syntheticCanonicalQuotesAllowed": false,
+  "selectedPath": "CME_XEURBI_API",
+  "sources": [
+    {
+      "id": "CME_XEURBI_API",
+      "name": "CME EUR/USD Cross Currency Basis Index API",
+      "administrator": "CME Group Benchmark Administration Limited",
+      "classification": "LICENSE_REQUIRED",
+      "verificationStatus": "VERIFIED_SOURCE_AUTH_BLOCKED",
+      "official": true,
+      "regulatedAdministrator": true,
+      "administratorStatus": "UK_FCA_AUTHORIZED_BENCHMARK_ADMINISTRATOR",
+      "productCode": "XEURBI",
+      "baseUrl": "https://markets.api.cmegroup.com/xccy/v1/",
+      "latestPath": "latest",
+      "historyPath": "history",
+      "authentication": "OAUTH2_ENTITLED_CLIENT_API_ID",
+      "licenseStatus": "LICENSE_AND_ENTITLEMENT_REQUIRED",
+      "publicationFrequency": "DAILY_BUSINESS_DAYS",
+      "publicationTime": "APPROX_15:10_UTC",
+      "supportedPairs": ["EUR/USD"],
+      "supportedTenors": ["3M_IMM_NEARBY"],
+      "unit": "BASIS_POINTS",
+      "basisAppliedToLeg": "EUR_ESTR_LEG",
+      "quoteConvention": "NEXT_QUARTERLY_IMM_3M_ESTR_BASIS_VS_USD_SOFR_IMPLIED_FROM_EURUSD_FX_FUTURES",
+      "signConvention": "INDEX_VALUE_IS_BPS_DEVIATION_APPLIED_TO_OBSERVED_3M_ESTR_RATE",
+      "quoteType": "FIXING",
+      "benchmarkRegime": "ESTR_SOFR_FUTURES",
+      "methodologyUrl": "https://www.cmegroup.com/market-data/files/cme-eur-usd-cross-currency-basis-index-methodology.pdf",
+      "documentationUrl": "https://cmegroupclientsite.atlassian.net/wiki/spaces/EPICSANDBOX/pages/457320601/CME+Cross+Currency+API",
+      "licenseUrl": "https://www.cmegroup.com/market-data/license-data.html",
+      "canFetchNow": false,
+      "blockedReason": "No entitled CME OAuth client API ID or confirmed redistribution/use license is configured."
+    },
+    {
+      "id": "BIS_DATA_PORTAL",
+      "classification": "NOT_DIRECT_BASIS",
+      "verificationStatus": "REJECTED_SEMANTICS"
+    },
+    {
+      "id": "ECB_DATA_PORTAL_EMMS_MMS",
+      "classification": "NOT_DIRECT_BASIS",
+      "verificationStatus": "REJECTED_SEMANTICS"
+    },
+    {
+      "id": "DTCC_PUBLIC_DERIVATIVES_REPORTS",
+      "classification": "NOT_DIRECT_BASIS",
+      "verificationStatus": "REJECTED_SEMANTICS"
+    },
+    {
+      "id": "LCH_SWAPCLEAR_SETTLEMENT_PRICES",
+      "classification": "TERMS_REVIEW_REQUIRED",
+      "verificationStatus": "PAIR_TENOR_BASIS_DIMENSIONS_UNVERIFIED"
+    },
+    {
+      "id": "LICENSED_PROFESSIONAL_XCCY_CURVES",
+      "classification": "LICENSE_REQUIRED",
+      "verificationStatus": "VENDOR_AND_ENTITLEMENT_NOT_CONFIGURED",
+      "supportedPairs": ["EUR/USD", "USD/JPY", "GBP/USD"]
+    }
+  ]
+}

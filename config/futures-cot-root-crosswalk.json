@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "method": "EXACT_CFTC_CONTRACT_MARKET_CODE",
+  "mappings": [
+    {"code":"001602","exchange":"CBOT","root":"ZW"},
+    {"code":"002602","exchange":"CBOT","root":"ZC"},
+    {"code":"023651","exchange":"NYMEX","root":"NG"},
+    {"code":"057642","exchange":"CME_GROUP","root":"LE"},
+    {"code":"067651","exchange":"NYMEX","root":"CL"},
+    {"code":"084691","exchange":"COMEX","root":"SI"},
+    {"code":"085692","exchange":"COMEX","root":"HG"},
+    {"code":"088691","exchange":"COMEX","root":"GC"},
+    {"code":"124603","exchange":"CME","root":"YM"},
+    {"code":"13874A","exchange":"CME","root":"ES"},
+    {"code":"209742","exchange":"CME","root":"NQ"},
+    {"code":"239742","exchange":"CME","root":"RTY"}
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "version": 4,
+  "asset": "GLOBAL_DIVIDEND_CALENDAR",
+  "role": "READ_TIME_SEMANTIC_OVERLAY",
+  "canonicalWriter": "GLOBAL_CORPORATE_ACTIONS",
+  "rules": {
+    "upstreamAvailability": {
+      "verified": "Source, source URL, source record ID, action taxonomy and amount are present",
+      "semanticConstrained": "No verified dividend date semantics are present",
+      "provenanceConstrained": "Required provenance reference is absent"
+    },
+    "dateStates": [
+      "VERIFIED",
+      "SOURCE_NOT_REPORTED",
+      "SOURCE_CONSTRAINED",
+      "NOT_APPLICABLE"
+    ],
+    "noDateSubstitution": true,
+    "typeRule": "Use upstream action_type only; never infer from amount",
+    "frequencyRule": "Requires sufficient verified dated history; otherwise DATE_CONSTRAINED or INSUFFICIENT_HISTORY",
+    "upcomingRule": "Requires a verified future ex, record, or payment date"
+  },
+  "deferred": [
+    "TTM_DIVIDEND",
+    "TRAILING_YIELD",
+    "DIVIDEND_GROWTH",
+    "DIVIDEND_STREAK",
+    "INSTRUMENT_BRIDGES",
+    "NON_US_EXPANSION",
+    "LICENSED_FEEDS"
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "version": "COMMODITY_FUTURES_PUBLIC_SOURCE_POLICY_V1",
+  "owner": "COMMODITY_FUTURES_PUBLIC_DATA_OWNER",
+  "maxDbConcurrency": 1,
+  "canonicalWriter": "GLOBAL_COMMODITY_FUTURES",
+  "sources": [
+    {
+      "id": "OFFICIAL_EXCHANGE_EXISTING",
+      "state": "ACTIVE_EXISTING_LIFECYCLE",
+      "use": ["IDENTITY", "SPECIFICATION", "OHLC", "SETTLEMENT", "VOLUME", "OPEN_INTEREST", "CONTRACT_LIFECYCLE"],
+      "writer": "GLOBAL_COMMODITY_FUTURES"
+    },
+    {
+      "id": "INVESTING_PUBLIC",
+      "state": "ACCESS_CONSTRAINED",
+      "use": ["DISCOVERY_CAPABILITY_ONLY"],
+      "blocked": "HTTP_403_ON_ORDINARY_NODE_ROUTE;TERMS_REVIEW_REQUIRED_FOR_STORAGE",
+      "observationIngestion": false
+    },
+    {
+      "id": "TRADINGVIEW",
+      "state": "BLOCKED_LICENSE",
+      "use": ["HUMAN_DISPLAY_REFERENCE_ONLY"],
+      "blocked": "DISPLAY_ONLY_LICENSE;AUTOMATED_COLLECTION_AND_NON_DISPLAY_PROCESSING_PROHIBITED",
+      "symbolIngestion": false,
+      "observationIngestion": false
+    }
+  ],
+  "continuousPolicy": {
+    "tradingViewSymbolsAreEvidence": false,
+    "requiresCanonicalContractChain": true,
+    "requiresVerifiedExpiries": true,
+    "requiresVersionedRollRule": true,
+    "syntheticCreationFromExternalContinuousPage": false
+  }
+}

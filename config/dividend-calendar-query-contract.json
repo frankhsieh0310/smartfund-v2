@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "projectionVersion": "1.0.0",
+  "canonicalWriter": "GLOBAL_CORPORATE_ACTIONS",
+  "canonicalRelation": "corporate_actions",
+  "role": "READ_PROJECTION",
+  "securityTypeContract": {
+    "rule": "Only canonical relational links; never infer from ticker or name",
+    "currentEligibleType": "DIVIDEND_EVENT_LINKED_SECURITY",
+    "futureTypes": ["COMMON_EQUITY", "PREFERRED_EQUITY", "REIT", "ETF", "FUND"]
+  },
+  "dateContract": {
+    "announcementDate": "corporate_actions.announcement_date",
+    "effectiveDate": "corporate_actions.effective_date; not assumed to be exDate",
+    "exDate": "explicit source field only",
+    "recordDate": "explicit source field only",
+    "paymentDate": "explicit source field only"
+  },
+  "dividendTypes": ["REGULAR", "SPECIAL", "INTERIM", "FINAL", "RETURN_OF_CAPITAL", "STOCK_DIVIDEND", "OTHER", "UNKNOWN"],
+  "frequency": { "values": ["MONTHLY", "QUARTERLY", "SEMI_ANNUAL", "ANNUAL", "IRREGULAR", "UNKNOWN"], "minimumEvents": 3, "unknownWhenInsufficient": true },
+  "calendarStatuses": ["ANNOUNCED", "UPCOMING_EX_DATE", "EX_DATE_TODAY", "AWAITING_RECORD_DATE", "AWAITING_PAYMENT", "PAYMENT_TODAY", "COMPLETED", "CANCELLED", "REVISED", "UNKNOWN"],
+  "search": ["ticker", "name", "market", "country", "date", "dividendType"],
+  "filter": ["exDateRange", "paymentDateRange", "market", "country", "currency", "dividendType", "calendarStatus"],
+  "compare": ["latestDividend", "frequency", "ttmDividend", "trailingYield", "growth1Y", "growth3Y", "nextExDate", "nextPaymentDate"],
+  "missingMetricValue": "UNAVAILABLE",
+  "noDividendState": "NO_DIVIDEND_FOUND_VERIFIED"
+}

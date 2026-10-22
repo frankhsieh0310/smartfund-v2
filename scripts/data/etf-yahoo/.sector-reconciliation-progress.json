@@ -1,0 +1,25 @@
+{
+ "nextIdx": 15,
+ "total": 15,
+ "counts": {
+  "YAHOO_FETCHED": 10,
+  "YAHOO_WITH_SECTOR": 9,
+  "YAHOO_NO_SECTOR": 1,
+  "YAHOO_FETCH_FAILED": 5,
+  "MATCHED": 9,
+  "MISSING_IN_DB": 0,
+  "MISMATCH": 0,
+  "DUPLICATE_IN_DB": 0
+ },
+ "gaps": [],
+ "stats": {
+  "calls": 15,
+  "rateLimited": 0,
+  "crumbRefresh": 0,
+  "failures": {
+   "OTHER": 5
+  },
+  "lastFailure": "OTHER"
+ },
+ "elapsed_s": 1
+}

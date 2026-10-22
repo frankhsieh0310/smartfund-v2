@@ -1,0 +1,17 @@
+[
+ {
+  "id": "a927fe0a-ae1c-4976-9539-bff534165e85",
+  "job_id": "YAHOO_ETF_FULL_SWEEP",
+  "status": "COMPLETED",
+  "started_at": "2026-09-11 11:04:39.927554+00",
+  "completed_at": "2026-09-11 11:08:38.692653+00",
+  "trig": "CLOUD_SCHEDULED",
+  "cp": {
+   "failed": 54,
+   "processed": 6527,
+   "succeeded": 6509,
+   "lastSymbol": "6373bdc4-da25-4a21-84e4-6338320846b4"
+  }
+ }
+]
+CURRENT CHECKPOINT: {"checkpoint_key":"yahoo-etf-full-sweep","last_symbol":"6373bdc4-da25-4a21-84e4-6338320846b4","processed":6527,"succeeded":6509,"failed":54,"updated_at":"2026-09-11 11:08:37.556538+00"}

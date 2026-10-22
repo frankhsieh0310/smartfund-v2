@@ -1,0 +1,303 @@
+[
+ {
+  "id": "85fa4f67-c665-4a60-a71c-b6ec218ad732",
+  "code": "SKFS",
+  "name": "利安資金韓國基金(新元)",
+  "currency": "新加坡幣",
+  "data_provider": "tdcc-offshore"
+ },
+ {
+  "id": "3d771886-d0c7-4535-b6f8-e75cf1bc9a70",
+  "code": "99346928A",
+  "name": "元大台灣加權股價指數基金-新台幣A類型",
+  "currency": "新台幣",
+  "data_provider": null
+ },
+ {
+  "id": "e8f57357-285b-40eb-a3c5-140b8b6d17dc",
+  "code": "99346928B",
+  "name": "元大台灣加權股價指數基金-新台幣R類型",
+  "currency": "新台幣",
+  "data_provider": null
+ },
+ {
+  "id": "85b51b9c-8a3e-4091-9829-1a00bb2348fb",
+  "code": "75970963A",
+  "name": "元大台灣卓越50ETF連結基金-新台幣A類型不配息",
+  "currency": "新台幣",
+  "data_provider": null
+ },
+ {
+  "id": "2afdcc8e-334d-4339-ab1c-08b2959af4a3",
+  "code": "75970963B",
+  "name": "元大台灣卓越50ETF連結基金-新台幣B類型配息",
+  "currency": "新台幣",
+  "data_provider": null
+ },
+ {
+  "id": "d28d91a3-6a27-456b-afb2-a7c3d29dd57a",
+  "code": "92001765",
+  "name": "元大多多基金",
+  "currency": "新台幣",
+  "data_provider": null
+ },
+ {
+  "id": "f14f9208-e871-4468-93ff-906975a16780",
+  "code": "81584335",
+  "name": "元大高科技基金",
+  "currency": "新台幣",
+  "data_provider": null
+ },
+ {
+  "id": "07dbdaba-1fe9-46ce-b837-0261c787dcb4",
+  "code": "88277760A",
+  "name": "兆豐全球元宇宙科技基金(新台幣)",
+  "currency": "新台幣",
+  "data_provider": null
+ },
+ {
+  "id": "c4b8de78-eb80-4cda-ae58-0f083baef9a3",
+  "code": "88277760B",
+  "name": "兆豐全球元宇宙科技基金(新台幣)-後收",
+  "currency": "新台幣",
+  "data_provider": null
+ },
+ {
+  "id": "423e1b22-5528-45b9-9411-bca80fc84afd",
+  "code": "76941376",
+  "name": "匯豐成功基金",
+  "currency": "新台幣",
+  "data_provider": null
+ },
+ {
+  "id": "9824be4d-88d4-480e-af53-7104a34ccee1",
+  "code": "73982057A",
+  "name": "宏利臺灣股息收益基金A類型",
+  "currency": "新台幣",
+  "data_provider": null
+ },
+ {
+  "id": "ce9f6509-ccb3-40bd-9f76-1af6644fe4b6",
+  "code": "88106817A",
+  "name": "富蘭克林華美AI新科技基金-新台幣",
+  "currency": "新台幣",
+  "data_provider": null
+ },
+ {
+  "id": "ef5433bb-2d00-4e65-8e85-63f1670d4bb9",
+  "code": "88106817B",
+  "name": "富蘭克林華美AI新科技基金-新台幣N類型",
+  "currency": "新台幣",
+  "data_provider": null
+ },
+ {
+  "id": "7e68053d-67ba-40fa-ae57-298d4d50ab44",
+  "code": "72938499A",
+  "name": "復華亞太神龍科技基金-新臺幣",
+  "currency": "新台幣",
+  "data_provider": null
+ },
+ {
+  "id": "c6dfa179-ff29-4296-ad68-23bd1faae46e",
+  "code": "21759676A",
+  "name": "復華全方位基金A類型",
+  "currency": "新台幣",
+  "data_provider": null
+ },
+ {
+  "id": "5e83875f-bd4d-4f85-8df5-be76ed1323b8",
+  "code": "21759676B",
+  "name": "復華全方位基金TISA類型",
+  "currency": "新台幣",
+  "data_provider": null
+ },
+ {
+  "id": "e7d4de44-f729-4c86-a4da-b1ab503c757b",
+  "code": "10300441A",
+  "name": "復華全球大趨勢基金-新臺幣",
+  "currency": "新台幣",
+  "data_provider": null
+ },
+ {
+  "id": "6aa70461-19c9-42df-9298-47425363ef85",
+  "code": "42400078A",
+  "name": "復華全球物聯網科技基金-新臺幣",
+  "currency": "新台幣",
+  "data_provider": null
+ },
+ {
+  "id": "0e458739-e554-454f-ad82-e136bbf7ea98",
+  "code": "01032162",
+  "name": "摩根台灣增長基金",
+  "currency": "新台幣",
+  "data_provider": null
+ },
+ {
+  "id": "c4fbdff0-e9b5-49f1-b1e0-64f46c711ca6",
+  "code": "20096209B",
+  "name": "摩根東方科技基金-數位型",
+  "currency": "新台幣",
+  "data_provider": null
+ },
+ {
+  "id": "57a5908d-7ecd-44de-88f3-68f24fc6715b",
+  "code": "20096209A",
+  "name": "摩根東方科技基金-累積型",
+  "currency": "新台幣",
+  "data_provider": null
+ },
+ {
+  "id": "c6671d4c-b3dd-4d15-ac21-4adc7a65b8ff",
+  "code": "73989256",
+  "name": "景順台灣科技基金",
+  "currency": "新台幣",
+  "data_provider": null
+ },
+ {
+  "id": "db197a34-e460-4460-a454-1ecb5519417b",
+  "code": "92019786B",
+  "name": "景順潛力基金TISA類型新台幣",
+  "currency": "新台幣",
+  "data_provider": null
+ },
+ {
+  "id": "cd2ceed6-d8ca-4dbc-ab26-0a30d9f39199",
+  "code": "92019786A",
+  "name": "景順潛力基金累積型新台幣",
+  "currency": "新台幣",
+  "data_provider": null
+ },
+ {
+  "id": "9d3260b9-e423-4d3b-a218-7bda5e932dd0",
+  "code": "77074486B",
+  "name": "永豐臺灣ESG永續優選基金-A年配類型",
+  "currency": "新台幣",
+  "data_provider": null
+ },
+ {
+  "id": "45c41a39-6902-4ba3-8a1f-29f8e53be064",
+  "code": "77074486A",
+  "name": "永豐臺灣ESG永續優選基金-A累積類型",
+  "currency": "新台幣",
+  "data_provider": null
+ },
+ {
+  "id": "7c62660b-7346-434b-8183-3a9026e67cab",
+  "code": "77074486C",
+  "name": "永豐臺灣ESG永續優選基金-I類型",
+  "currency": "新台幣",
+  "data_provider": null
+ },
+ {
+  "id": "58950435-34b3-44df-8ece-037a9f715273",
+  "code": "14692623A",
+  "name": "瀚亞美國高科技基金A類型-新臺幣",
+  "currency": "新台幣",
+  "data_provider": null
+ },
+ {
+  "id": "cc8a8689-099b-47a6-a814-f258136f2362",
+  "code": "14692623C",
+  "name": "瀚亞美國高科技基金SA類型-新臺幣",
+  "currency": "新台幣",
+  "data_provider": null
+ },
+ {
+  "id": "b043187c-6c47-45e7-86bb-2510a9acf3e5",
+  "code": "17612378",
+  "name": "第一金亞洲科技基金",
+  "currency": "新台幣",
+  "data_provider": null
+ },
+ {
+  "id": "f3dc98e0-5983-410a-8090-f97da84fe887",
+  "code": "73723123A",
+  "name": "第一金全球AI人工智慧基金-新臺幣",
+  "currency": "新台幣",
+  "data_provider": null
+ },
+ {
+  "id": "8fb573ae-2a8d-448a-a790-ba479f4eaeff",
+  "code": "73723123C",
+  "name": "第一金全球AI人工智慧基金-新臺幣-N",
+  "currency": "新台幣",
+  "data_provider": null
+ },
+ {
+  "id": "f8ac6ac9-1751-4418-90f7-cc8fe8b6b1a9",
+  "code": "97997635A",
+  "name": "聯博大利基金-A2類型(新台幣)",
+  "currency": "新台幣",
+  "data_provider": null
+ },
+ {
+  "id": "0b46c3c5-9a13-4e7e-81d7-a0d84407c9a3",
+  "code": "97997635B",
+  "name": "聯博大利基金-TISA類型(新台幣)",
+  "currency": "新台幣",
+  "data_provider": null
+ },
+ {
+  "id": "aca2502f-0f08-412e-b5ca-55928ce35b60",
+  "code": "42333698A",
+  "name": "華南永昌全球物聯網精選基金(新台幣)",
+  "currency": "新台幣",
+  "data_provider": null
+ },
+ {
+  "id": "4d1d9303-a1ff-488b-a9e0-e8c1def99e7e",
+  "code": "88277760C",
+  "name": "兆豐全球元宇宙科技基金(美元)",
+  "currency": "美元",
+  "data_provider": null
+ },
+ {
+  "id": "353f9ded-7dc9-4515-87f0-fbca3aa8d9c8",
+  "code": "88277760D",
+  "name": "兆豐全球元宇宙科技基金(美元)-後收",
+  "currency": "美元",
+  "data_provider": null
+ },
+ {
+  "id": "2e7eb270-83a4-4937-8d1d-0ffd5b37ffee",
+  "code": "SKFU",
+  "name": "利安資金韓國基金(美元)",
+  "currency": "美元",
+  "data_provider": "tdcc-offshore"
+ },
+ {
+  "id": "6d51ca57-022a-4066-9c0b-c8d71e4b0ef6",
+  "code": "ACCY110",
+  "name": "國泰中小成長基金-I類型(美元)",
+  "currency": "美元",
+  "data_provider": "MoneyDJ"
+ },
+ {
+  "id": "075f0e50-8517-4159-ae3f-186e790c9d04",
+  "code": "ACCY109",
+  "name": "國泰小龍基金-I類型(美元)",
+  "currency": "美元",
+  "data_provider": "MoneyDJ"
+ },
+ {
+  "id": "0d017c8e-1e74-4a95-81ff-6132bea766f4",
+  "code": "14692623B",
+  "name": "瀚亞美國高科技基金A類型-美元",
+  "currency": "美元",
+  "data_provider": null
+ },
+ {
+  "id": "01da26aa-6b3e-474e-87cf-c737d86bcbfd",
+  "code": "88277760E",
+  "name": "兆豐全球元宇宙科技基金(人民幣)",
+  "currency": "離岸人民幣",
+  "data_provider": null
+ },
+ {
+  "id": "131309ee-d581-4b5c-964f-b1a015de1ead",
+  "code": "88277760F",
+  "name": "兆豐全球元宇宙科技基金(人民幣)-後收",
+  "currency": "離岸人民幣",
+  "data_provider": null
+ }
+]

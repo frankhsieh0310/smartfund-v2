@@ -1,0 +1,10 @@
+{
+  "asset":"GLOBAL_REIT",
+  "service":"smartfund-v2",
+  "createRailwayService":false,
+  "command":"node --experimental-strip-types scripts/data/reit/run-global-reit.ts",
+  "timezone":"UTC",
+  "incrementalCron":"17 * * * *",
+  "retryCron":"47 * * * *",
+  "archiveCron":"30 2 * * *"
+}

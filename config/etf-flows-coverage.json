@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "asset": "GLOBAL_ETF_FLOWS",
+  "dimensions": ["historical", "latest", "incremental", "creation", "redemption", "sharesOutstanding", "netFlow", "netAssets", "archive", "retry", "checkpoint", "scheduler"],
+  "statuses": ["COMPLETE", "PARTIAL", "SOURCE_NOT_CONFIGURED", "RETRY_PENDING", "PARSE_FAILURE"],
+  "default": "SOURCE_NOT_CONFIGURED"
+}

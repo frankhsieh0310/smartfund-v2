@@ -1,0 +1,61 @@
+{
+  "asset": "GLOBAL_CREDIT_DERIVATIVES",
+  "sources": [
+    {
+      "id": "dtcc-sec-credit-public-dissemination",
+      "authority": "DTCC Data Repository (U.S.) LLC / U.S. SEC Regulation SBSR",
+      "jurisdiction": "SEC",
+      "urlTemplate": "https://pddata.dtcc.com/ppd/api/report/cumulative/sec/SEC_CUMULATIVE_CREDITS_{DATE}.zip",
+      "format": "official-public-zip-csv",
+      "scope": ["CORPORATE_SINGLE_NAME_CDS", "NARROW_BASED_CREDIT_INDEX"],
+      "license": "PUBLIC_REGULATORY_DISSEMINATION"
+    },
+    {
+      "id": "dtcc-cftc-credit-public-dissemination",
+      "authority": "DTCC Data Repository (U.S.) LLC / U.S. CFTC Part 43",
+      "jurisdiction": "CFTC",
+      "urlTemplate": "https://pddata.dtcc.com/ppd/api/report/cumulative/cftc/CFTC_CUMULATIVE_CREDITS_{DATE}.zip",
+      "format": "official-public-zip-csv",
+      "scope": ["SOVEREIGN_CDS", "BROAD_BASED_CREDIT_INDEX"],
+      "license": "PUBLIC_REGULATORY_DISSEMINATION"
+    }
+  ],
+  "licenseRestricted": [
+    {
+      "scope": "CDX_BENCHMARK_QUOTES_AND_CONSTITUENTS",
+      "status": "LICENSE_RESTRICTED",
+      "reason": "No licensed public benchmark feed is configured; regulatory transaction reports remain eligible."
+    },
+    {
+      "scope": "ITRAXX_BENCHMARK_QUOTES_AND_CONSTITUENTS",
+      "status": "LICENSE_RESTRICTED",
+      "reason": "No licensed public benchmark feed is configured; regulatory transaction reports remain eligible."
+    },
+    {
+      "scope": "SINGLE_NAME_CDS_COMPOSITE_BID_ASK_QUOTES",
+      "status": "LICENSE_RESTRICTED",
+      "reason": "No licensed public evaluated-pricing feed is configured; regulatory transaction reports remain eligible."
+    }
+  ],
+  "sourceDiscovery": [
+    {
+      "domain": "SEC_CREDIT_DERIVATIVE_TRANSACTIONS",
+      "source": "DTCC DDR SEC Public Price Dissemination",
+      "classification": "OFFICIAL_PUBLIC",
+      "semantics": "TRANSACTION_OBSERVATION"
+    },
+    {
+      "domain": "ANNA_DSB_UPI_REFERENCE",
+      "source": "ANNA DSB",
+      "classification": "ACCESS_CONSTRAINED",
+      "semantics": "REFERENCE_DATA",
+      "notes": "Do not infer missing contract terms from free text."
+    },
+    {
+      "domain": "SOVEREIGN_CDS_MARKET_QUOTES",
+      "source": "UNKNOWN",
+      "classification": "SOURCE_PENDING",
+      "semantics": "MARKET_QUOTE_OBSERVATION"
+    }
+  ]
+}

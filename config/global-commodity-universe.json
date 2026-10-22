@@ -1,0 +1,318 @@
+{
+  "version": 1,
+  "asset": "GLOBAL_COMMODITY",
+  "layer": "L2",
+  "generatedAt": "2026-08-04",
+  "categories": [
+    "ENERGY",
+    "PRECIOUS_METALS",
+    "INDUSTRIAL_METALS",
+    "AGRICULTURE",
+    "LIVESTOCK",
+    "SOFT_COMMODITIES",
+    "SHIPPING",
+    "CARBON",
+    "ELECTRICITY",
+    "FERTILIZER",
+    "RARE_EARTH"
+  ],
+  "commodities": [
+    {
+      "id": "WTI",
+      "name": "WTI Crude Oil",
+      "category": "ENERGY",
+      "canonicalUnit": "USD/BBL",
+      "datasetIds": [
+        "EIA_PETROLEUM_PRICES",
+        "EIA_WEEKLY_PETROLEUM"
+      ],
+      "active": true
+    },
+    {
+      "id": "BRENT",
+      "name": "Brent Crude Oil",
+      "category": "ENERGY",
+      "canonicalUnit": "USD/BBL",
+      "datasetIds": [
+        "EIA_PETROLEUM_PRICES"
+      ],
+      "active": true
+    },
+    {
+      "id": "NATURAL_GAS",
+      "name": "Natural Gas",
+      "category": "ENERGY",
+      "canonicalUnit": "USD/MMBTU",
+      "datasetIds": [
+        "EIA_NATURAL_GAS"
+      ],
+      "active": true
+    },
+    {
+      "id": "GASOLINE",
+      "name": "Motor Gasoline",
+      "category": "ENERGY",
+      "canonicalUnit": "USD/GALLON",
+      "datasetIds": [
+        "EIA_PETROLEUM_PRICES",
+        "EIA_WEEKLY_PETROLEUM"
+      ],
+      "active": true
+    },
+    {
+      "id": "GOLD",
+      "name": "Gold",
+      "category": "PRECIOUS_METALS",
+      "canonicalUnit": "USD/TROY_OZ",
+      "datasetIds": [
+        "LBMA_PRICES"
+      ],
+      "active": true
+    },
+    {
+      "id": "SILVER",
+      "name": "Silver",
+      "category": "PRECIOUS_METALS",
+      "canonicalUnit": "USD/TROY_OZ",
+      "datasetIds": [
+        "LBMA_PRICES"
+      ],
+      "active": true
+    },
+    {
+      "id": "PLATINUM",
+      "name": "Platinum",
+      "category": "PRECIOUS_METALS",
+      "canonicalUnit": "USD/TROY_OZ",
+      "datasetIds": [
+        "LBMA_PRICES"
+      ],
+      "active": true
+    },
+    {
+      "id": "PALLADIUM",
+      "name": "Palladium",
+      "category": "PRECIOUS_METALS",
+      "canonicalUnit": "USD/TROY_OZ",
+      "datasetIds": [
+        "LBMA_PRICES"
+      ],
+      "active": true
+    },
+    {
+      "id": "COPPER",
+      "name": "Copper",
+      "category": "INDUSTRIAL_METALS",
+      "canonicalUnit": "USD/TONNE",
+      "datasetIds": [
+        "LME_MARKET_WAREHOUSE",
+        "USGS_MINERAL_STATS"
+      ],
+      "active": true
+    },
+    {
+      "id": "ALUMINUM",
+      "name": "Aluminum",
+      "category": "INDUSTRIAL_METALS",
+      "canonicalUnit": "USD/TONNE",
+      "datasetIds": [
+        "LME_MARKET_WAREHOUSE",
+        "USGS_MINERAL_STATS"
+      ],
+      "active": true
+    },
+    {
+      "id": "NICKEL",
+      "name": "Nickel",
+      "category": "INDUSTRIAL_METALS",
+      "canonicalUnit": "USD/TONNE",
+      "datasetIds": [
+        "LME_MARKET_WAREHOUSE",
+        "USGS_MINERAL_STATS"
+      ],
+      "active": true
+    },
+    {
+      "id": "ZINC",
+      "name": "Zinc",
+      "category": "INDUSTRIAL_METALS",
+      "canonicalUnit": "USD/TONNE",
+      "datasetIds": [
+        "LME_MARKET_WAREHOUSE",
+        "USGS_MINERAL_STATS"
+      ],
+      "active": true
+    },
+    {
+      "id": "CORN",
+      "name": "Corn",
+      "category": "AGRICULTURE",
+      "canonicalUnit": "USD/BUSHEL",
+      "datasetIds": [
+        "USDA_QUICK_STATS",
+        "USDA_PSD"
+      ],
+      "active": true
+    },
+    {
+      "id": "WHEAT",
+      "name": "Wheat",
+      "category": "AGRICULTURE",
+      "canonicalUnit": "USD/BUSHEL",
+      "datasetIds": [
+        "USDA_QUICK_STATS",
+        "USDA_PSD"
+      ],
+      "active": true
+    },
+    {
+      "id": "SOYBEANS",
+      "name": "Soybeans",
+      "category": "AGRICULTURE",
+      "canonicalUnit": "USD/BUSHEL",
+      "datasetIds": [
+        "USDA_QUICK_STATS",
+        "USDA_PSD"
+      ],
+      "active": true
+    },
+    {
+      "id": "RICE",
+      "name": "Rice",
+      "category": "AGRICULTURE",
+      "canonicalUnit": "USD/CWT",
+      "datasetIds": [
+        "USDA_PSD",
+        "FAOSTAT_CROPS_LIVESTOCK"
+      ],
+      "active": true
+    },
+    {
+      "id": "LIVE_CATTLE",
+      "name": "Live Cattle",
+      "category": "LIVESTOCK",
+      "canonicalUnit": "USD/LB",
+      "datasetIds": [
+        "USDA_QUICK_STATS",
+        "CME_SETTLEMENTS"
+      ],
+      "active": true
+    },
+    {
+      "id": "LEAN_HOGS",
+      "name": "Lean Hogs",
+      "category": "LIVESTOCK",
+      "canonicalUnit": "USD/LB",
+      "datasetIds": [
+        "USDA_QUICK_STATS",
+        "CME_SETTLEMENTS"
+      ],
+      "active": true
+    },
+    {
+      "id": "COFFEE",
+      "name": "Coffee",
+      "category": "SOFT_COMMODITIES",
+      "canonicalUnit": "USD/LB",
+      "datasetIds": [
+        "FAOSTAT_CROPS_LIVESTOCK",
+        "CME_SETTLEMENTS"
+      ],
+      "active": true
+    },
+    {
+      "id": "COCOA",
+      "name": "Cocoa",
+      "category": "SOFT_COMMODITIES",
+      "canonicalUnit": "USD/TONNE",
+      "datasetIds": [
+        "FAOSTAT_CROPS_LIVESTOCK",
+        "CME_SETTLEMENTS"
+      ],
+      "active": true
+    },
+    {
+      "id": "SUGAR",
+      "name": "Sugar",
+      "category": "SOFT_COMMODITIES",
+      "canonicalUnit": "USD/LB",
+      "datasetIds": [
+        "USDA_PSD",
+        "CME_SETTLEMENTS"
+      ],
+      "active": true
+    },
+    {
+      "id": "COTTON",
+      "name": "Cotton",
+      "category": "SOFT_COMMODITIES",
+      "canonicalUnit": "USD/LB",
+      "datasetIds": [
+        "USDA_QUICK_STATS",
+        "USDA_PSD"
+      ],
+      "active": true
+    },
+    {
+      "id": "DRY_BULK_SHIPPING",
+      "name": "Dry Bulk Shipping",
+      "category": "SHIPPING",
+      "canonicalUnit": "INDEX_POINTS",
+      "datasetIds": [
+        "BALTIC_INDICES"
+      ],
+      "active": true
+    },
+    {
+      "id": "EU_ALLOWANCE",
+      "name": "EU Emission Allowance",
+      "category": "CARBON",
+      "canonicalUnit": "EUR/TONNE_CO2E",
+      "datasetIds": [
+        "EU_ETS_REGISTRY",
+        "EEX_MARKET"
+      ],
+      "active": true
+    },
+    {
+      "id": "EU_ELECTRICITY",
+      "name": "European Electricity",
+      "category": "ELECTRICITY",
+      "canonicalUnit": "EUR/MWH",
+      "datasetIds": [
+        "ENTSOE_MARKET"
+      ],
+      "active": true
+    },
+    {
+      "id": "POTASH",
+      "name": "Potash",
+      "category": "FERTILIZER",
+      "canonicalUnit": "USD/TONNE",
+      "datasetIds": [
+        "USGS_MINERAL_STATS"
+      ],
+      "active": true
+    },
+    {
+      "id": "PHOSPHATE_ROCK",
+      "name": "Phosphate Rock",
+      "category": "FERTILIZER",
+      "canonicalUnit": "USD/TONNE",
+      "datasetIds": [
+        "USGS_MINERAL_STATS"
+      ],
+      "active": true
+    },
+    {
+      "id": "RARE_EARTHS",
+      "name": "Rare Earths",
+      "category": "RARE_EARTH",
+      "canonicalUnit": "VARIOUS",
+      "datasetIds": [
+        "USGS_MINERAL_STATS"
+      ],
+      "active": true
+    }
+  ]
+}

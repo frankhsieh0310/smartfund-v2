@@ -1,0 +1,17 @@
+{
+  "asset": "GLOBAL_CORPORATE_ACTIONS",
+  "reviewedAt": "2026-08-10",
+  "sources": [
+    {"id":"SEC","jurisdiction":"US","status":"ACTIVE_PRODUCTION","licenseStatus":"PUBLIC","sourceType":"REGULATOR_XBRL","officialUrl":"https://data.sec.gov/api/xbrl/"},
+    {"id":"NYSE","jurisdiction":"US","status":"LICENSE_PENDING","licenseStatus":"COMMERCIAL","sourceType":"EXCHANGE_CORPORATE_ACTION_FEED","officialUrl":"https://www.nyse.com/market-data/corporate-actions/market-event-feed"},
+    {"id":"NASDAQ","jurisdiction":"US","status":"LICENSE_PENDING","licenseStatus":"COMMERCIAL_OR_ACCOUNT_REQUIRED","sourceType":"EXCHANGE_DATA_FEED","officialUrl":"https://www.nasdaqtrader.com/content/technicalsupport/specifications/dataproducts/nfndataspecification.pdf"},
+    {"id":"TWSE","jurisdiction":"TAIWAN","status":"CANARY_READY_IDENTITY_BLOCKED","licenseStatus":"PUBLIC_PAGE_PAID_FULL_FILE","sourceType":"EXCHANGE_PUBLIC_REPORT","officialUrl":"https://www.twse.com.tw/exchangeReport/TWT48U?response=json"},
+    {"id":"TPEx","jurisdiction":"TAIWAN","status":"SOURCE_PENDING","licenseStatus":"UNVERIFIED","sourceType":"EXCHANGE","officialUrl":"https://www.tpex.org.tw"},
+    {"id":"JPX","jurisdiction":"JAPAN","status":"LICENSE_PENDING","licenseStatus":"COMMERCIAL","sourceType":"EXCHANGE_DATA_SERVICE","officialUrl":"https://www.jpx.co.jp/english/markets/other-data-services/j-quants-api/index.html"},
+    {"id":"HKEX","jurisdiction":"HONG_KONG","status":"SOURCE_PENDING","licenseStatus":"UNVERIFIED_MACHINE_FEED","sourceType":"EXCHANGE_DISCLOSURE","officialUrl":"https://www.hkexnews.hk/index.htm"},
+    {"id":"SGX","jurisdiction":"SINGAPORE","status":"ACCESS_BLOCKED","licenseStatus":"PUBLIC_PAGE","sourceType":"EXCHANGE_PUBLIC_CORPORATE_ACTIONS","officialUrl":"https://www.sgx.com/securities/corporate-actions"},
+    {"id":"ASX","jurisdiction":"AUSTRALIA","status":"LICENSE_PENDING","licenseStatus":"COMMERCIAL","sourceType":"ISO_20022_EXCHANGE_FEED","officialUrl":"https://www.asx.com.au/connectivity-and-data/information-services/reference-data/real-time-corporate-actions"},
+    {"id":"LSE","jurisdiction":"UK_EUROPE","status":"LICENSE_PENDING","licenseStatus":"COMMERCIAL","sourceType":"EXCHANGE_DATAFILE","officialUrl":"https://docs.londonstockexchange.com/sites/default/files/documents/corporate-actions-datafile-service-description.pdf"},
+    {"id":"KRX","jurisdiction":"KOREA","status":"SOURCE_PENDING","licenseStatus":"UNVERIFIED_MACHINE_FEED","sourceType":"EXCHANGE_REGULATOR_DISCLOSURE","officialUrl":"https://global.krx.co.kr"}
+  ]
+}

@@ -1,0 +1,266 @@
+{
+  "version": 1,
+  "policy": {
+    "scopeKey": ["domain", "market", "mode"],
+    "exclusiveOwnerPerScope": true,
+    "unknownNodesMayWrite": false,
+    "fallbackScopesForbidden": ["ALL", "US", "GLOBAL"]
+  },
+  "nodes": [
+    {
+      "name": "MASTER",
+      "nodeId": "smartfund-master",
+      "role": "MASTER",
+      "status": "ACTIVE",
+      "assignments": [
+        "global-roadmap",
+        "worker-assignment",
+        "railway-handoff",
+        "bond",
+        "global-indices",
+        "volatility",
+        "fx",
+        "commodity",
+        "crypto",
+        "government-yield",
+        "policy-money-market-rates",
+        "credit-spreads",
+        "economic",
+        "shipping-energy-housing-liquidity"
+      ],
+      "scopedAssignments": [
+        { "domain": "FX", "market": "FX_SPOT", "mode": "INCREMENTAL" },
+        { "domain": "FX_FORWARD_POINTS", "market": "FORWARD_CURVES", "mode": "INCREMENTAL" },
+        { "domain": "FX_RESERVES", "market": "UNITED_STATES", "mode": "INCREMENTAL" },
+        { "domain": "BOND", "market": "US_TREASURY", "mode": "HISTORICAL" },
+        { "domain": "BOND", "market": "US_TREASURY", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "TAIWAN_GOVERNMENT", "mode": "HISTORICAL" },
+        { "domain": "BOND", "market": "TAIWAN_GOVERNMENT", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "JAPAN_GOVERNMENT", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "UNITED_KINGDOM_GOVERNMENT", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "GERMANY_GOVERNMENT", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "FRANCE_GOVERNMENT", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "ITALY_GOVERNMENT", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "SPAIN_GOVERNMENT", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "NETHERLANDS_GOVERNMENT", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "CANADA_GOVERNMENT", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "AUSTRALIA_GOVERNMENT", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "KOREA_GOVERNMENT", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "SINGAPORE_GOVERNMENT", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "HONG_KONG_GOVERNMENT", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "CHINA_GOVERNMENT", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "SWITZERLAND_GOVERNMENT", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "SWEDEN_GOVERNMENT", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "NORWAY_GOVERNMENT", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "DENMARK_GOVERNMENT", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "FINLAND_GOVERNMENT", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "BELGIUM_GOVERNMENT", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "AUSTRIA_GOVERNMENT", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "IRELAND_GOVERNMENT", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "PORTUGAL_GOVERNMENT", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "GREECE_GOVERNMENT", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "NEW_ZEALAND_GOVERNMENT", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "INDIA_GOVERNMENT", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "INDONESIA_GOVERNMENT", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "MALAYSIA_GOVERNMENT", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "THAILAND_GOVERNMENT", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "PHILIPPINES_GOVERNMENT", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "VIETNAM_GOVERNMENT", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "BRAZIL_GOVERNMENT", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "MEXICO_GOVERNMENT", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "CHILE_GOVERNMENT", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "COLOMBIA_GOVERNMENT", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "SOUTH_AFRICA_GOVERNMENT", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "ISRAEL_GOVERNMENT", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "SAUDI_ARABIA_GOVERNMENT", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "UNITED_STATES_CORPORATE", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "TAIWAN_CORPORATE", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "JAPAN_CORPORATE", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "EUROPE_CORPORATE", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "UNITED_KINGDOM_CORPORATE", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "CANADA_CORPORATE", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "AUSTRALIA_CORPORATE", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "KOREA_CORPORATE", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "HONG_KONG_CORPORATE", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "SINGAPORE_CORPORATE", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "CHINA_ONSHORE_CORPORATE", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "CHINA_OFFSHORE_CORPORATE", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "EMERGING_MARKET_CORPORATE", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "AGENCY", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "MUNICIPAL", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "COVERED", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "CONVERTIBLE", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "FINANCIAL", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "AT1", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "COCO", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "SUBORDINATED", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "ABS", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "MBS", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "GREEN_BOND", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "SOCIAL_BOND", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "SUSTAINABILITY_BOND", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "INFLATION_LINKED", "mode": "COMPLETION" },
+        { "domain": "BOND", "market": "SUKUK", "mode": "COMPLETION" }
+      ],
+      "authorizedQueue": [
+        "BOND",
+        "GLOBAL_INDIVIDUAL_BOND_COMPLETION",
+        "GLOBAL_INDICES",
+        "VOLATILITY",
+        "FX",
+        "COMMODITY",
+        "CRYPTO",
+        "GOVERNMENT_YIELD",
+        "POLICY_MONEY_MARKET_RATES",
+        "CREDIT_SPREADS",
+        "ECONOMIC",
+        "SHIPPING_ENERGY_HOUSING_LIQUIDITY"
+      ]
+    },
+    {
+      "name": "RAILWAY",
+      "nodeId": "railway-production",
+      "role": "PRODUCTION",
+      "status": "ACTIVE",
+      "assignments": [
+        "stock-daily",
+        "asset-daily",
+        "macro-incremental",
+        "financial-incremental",
+        "retry",
+        "scheduler"
+      ],
+      "scopedAssignments": [
+        { "domain": "FINANCIAL", "market": "NASDAQ", "mode": "INCREMENTAL" },
+        { "domain": "FINANCIAL", "market": "NYSE", "mode": "INCREMENTAL" },
+        { "domain": "FINANCIAL", "market": "AMEX", "mode": "INCREMENTAL" }
+      ]
+    },
+    {
+      "name": "RAILWAY-BOND",
+      "nodeId": "railway-bond-production",
+      "role": "PRODUCTION",
+      "status": "ACTIVE",
+      "assignments": [
+        "bond-incremental",
+        "bond-freshness",
+        "bond-retry",
+        "bond-scheduler"
+      ],
+      "scopedAssignments": [
+        { "domain": "BOND", "market": "US_TREASURY", "mode": "INCREMENTAL" },
+        { "domain": "BOND", "market": "TAIWAN_GOVERNMENT", "mode": "INCREMENTAL" }
+      ],
+      "authorizedQueue": [
+        "US_TREASURY",
+        "TAIWAN_GOVERNMENT"
+      ],
+      "failurePolicy": {
+        "singleItemFailure": "RECORD_FAILURE_ADVANCE_CHECKPOINT_CONTINUE",
+        "blockedScope": "SAVE_STATE_EXIT_WITHOUT_CROSS_DOMAIN_FALLBACK"
+      }
+    },
+    {
+      "name": "WORKER-01",
+      "nodeId": "worker-01-main",
+      "role": "HISTORICAL_WORKER",
+      "status": "DISABLED",
+      "assignments": [],
+      "pausedAssignments": [
+        {
+          "domain": "FINANCIAL",
+          "market": "NASDAQ",
+          "mode": "HISTORICAL",
+          "status": "SUPERSEDED_BY_GLOBAL_STOCK_COMPLETION"
+        }
+      ]
+    },
+    {
+      "name": "WORKER-02",
+      "nodeId": "worker-02-desktop",
+      "role": "GLOBAL_STOCK_COMPLETION_WORKER",
+      "status": "ACTIVE",
+      "assignments": [
+        "global-stock-data-completion"
+      ],
+      "scopedAssignments": [
+        { "domain": "STOCK", "market": "TWSE", "mode": "COMPLETION" },
+        { "domain": "STOCK", "market": "TPEX", "mode": "COMPLETION" },
+        { "domain": "STOCK", "market": "NASDAQ", "mode": "COMPLETION" },
+        { "domain": "STOCK", "market": "NYSE", "mode": "COMPLETION" },
+        { "domain": "STOCK", "market": "AMEX", "mode": "COMPLETION" },
+        { "domain": "STOCK", "market": "JAPAN", "mode": "COMPLETION" },
+        { "domain": "STOCK", "market": "KOREA", "mode": "COMPLETION" },
+        { "domain": "STOCK", "market": "HONG_KONG", "mode": "COMPLETION" },
+        { "domain": "STOCK", "market": "CHINA_SHANGHAI", "mode": "COMPLETION" },
+        { "domain": "STOCK", "market": "CHINA_SHENZHEN", "mode": "COMPLETION" },
+        { "domain": "STOCK", "market": "SINGAPORE", "mode": "COMPLETION" },
+        { "domain": "STOCK", "market": "CANADA", "mode": "COMPLETION" },
+        { "domain": "STOCK", "market": "AUSTRALIA", "mode": "COMPLETION" },
+        { "domain": "STOCK", "market": "UNITED_KINGDOM", "mode": "COMPLETION" },
+        { "domain": "STOCK", "market": "GERMANY", "mode": "COMPLETION" },
+        { "domain": "STOCK", "market": "FRANCE", "mode": "COMPLETION" },
+        { "domain": "STOCK", "market": "NETHERLANDS", "mode": "COMPLETION" },
+        { "domain": "STOCK", "market": "SPAIN", "mode": "COMPLETION" },
+        { "domain": "STOCK", "market": "ITALY", "mode": "COMPLETION" },
+        { "domain": "STOCK", "market": "SWITZERLAND", "mode": "COMPLETION" },
+        { "domain": "STOCK", "market": "SWEDEN", "mode": "COMPLETION" }
+      ],
+      "authorizedLayers": [
+        "UNIVERSE_IDENTITY",
+        "HISTORICAL_PRICE",
+        "LATEST_FRESHNESS_VALIDATION",
+        "CORPORATE_ACTIONS",
+        "FINANCIAL_HISTORICAL",
+        "FINANCIAL_COMPLETENESS",
+        "DERIVED_METRICS",
+        "TECHNICAL_INDICATORS",
+        "RISK_RETURN",
+        "DIVIDEND_ANALYTICS",
+        "OWNERSHIP",
+        "INSIDER",
+        "SHORT_INTEREST",
+        "ANALYST_ESTIMATES",
+        "EVENTS_FILINGS",
+        "CLASSIFICATION",
+        "DATA_QUALITY_LINEAGE"
+      ],
+      "failurePolicy": {
+        "singleItemFailure": "RECORD_FAILURE_ADVANCE_CHECKPOINT_CONTINUE",
+        "blockedScope": "SAVE_STATE_CONTINUE_NEXT_AUTHORIZED_SCOPE"
+      },
+      "pausedAssignments": [
+        {
+          "domain": "FINANCIAL",
+          "market": "NYSE",
+          "mode": "HISTORICAL",
+          "status": "PAUSED_BY_PRIORITY_REALLOCATION",
+          "checkpoint": "EMR / 825"
+        }
+      ],
+      "authorizedQueue": [
+        "TWSE",
+        "TPEX",
+        "NASDAQ",
+        "NYSE",
+        "AMEX",
+        "JAPAN",
+        "KOREA",
+        "HONG_KONG",
+        "CHINA_SHANGHAI",
+        "CHINA_SHENZHEN",
+        "SINGAPORE",
+        "CANADA",
+        "AUSTRALIA",
+        "UNITED_KINGDOM",
+        "GERMANY",
+        "FRANCE",
+        "NETHERLANDS",
+        "SPAIN",
+        "ITALY",
+        "SWITZERLAND",
+        "SWEDEN"
+      ]
+    }
+  ]
+}

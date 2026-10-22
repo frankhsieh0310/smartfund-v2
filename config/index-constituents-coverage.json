@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "asset": "GLOBAL_INDEX_CONSTITUENTS",
+  "statuses": ["COMPLETE","PARTIAL","BLOCKED_LICENSE","BLOCKED_AUTH","SOURCE_NOT_PROVIDED","PARSE_FAILURE","RETRY_PENDING"],
+  "dimensions": ["historical","latest","weightChange","entry","removal","archive","retry","checkpoint","scheduler"],
+  "default": "SOURCE_NOT_PROVIDED"
+}

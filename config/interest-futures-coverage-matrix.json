@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "evidenceAsOf": "2026-08-10",
+  "asset": "GLOBAL_INTEREST_RATE_FUTURES",
+  "rows": [
+    { "instrumentId": "CME_SOFR_3M", "identityStatus": "STRUCTURED_SOURCE_ACCESS_CONSTRAINED", "currentSettlementStatus": "SOURCE_CONSTRAINED", "historyStatus": "HISTORY_SOURCE_CONSTRAINED", "historyDepth": "NONE", "volumeStatus": "SOURCE_PENDING", "openInterestStatus": "SOURCE_PENDING", "contractStructureStatus": "NOT_READY", "lifecycleStatus": "NOT_READY", "continuousStatus": "BLOCKED_INSUFFICIENT_CONTRACT_CHAIN", "analyticsStatus": "NOT_AVAILABLE", "provenanceStatus": "NOT_AVAILABLE", "freshnessStatus": "SOURCE_CONSTRAINED", "sourceState": "SOURCE_ACCESS_BLOCKED_CONFIRMED", "licenseState": "NOT_CONFIRMED", "detailReadiness": "SOURCE_CONSTRAINED" },
+    { "instrumentId": "CME_SOFR_1M", "identityStatus": "STRUCTURED_SOURCE_ACCESS_CONSTRAINED", "currentSettlementStatus": "SOURCE_CONSTRAINED", "historyStatus": "HISTORY_SOURCE_CONSTRAINED", "historyDepth": "NONE", "volumeStatus": "SOURCE_PENDING", "openInterestStatus": "SOURCE_PENDING", "contractStructureStatus": "NOT_READY", "lifecycleStatus": "NOT_READY", "continuousStatus": "BLOCKED_INSUFFICIENT_CONTRACT_CHAIN", "analyticsStatus": "NOT_AVAILABLE", "provenanceStatus": "NOT_AVAILABLE", "freshnessStatus": "SOURCE_CONSTRAINED", "sourceState": "SOURCE_ACCESS_BLOCKED_CONFIRMED", "licenseState": "NOT_CONFIRMED", "detailReadiness": "SOURCE_CONSTRAINED" },
+    { "instrumentId": "CME_FED_FUNDS_30D", "identityStatus": "STRUCTURED_SOURCE_ACCESS_CONSTRAINED", "currentSettlementStatus": "SOURCE_CONSTRAINED", "historyStatus": "HISTORY_SOURCE_CONSTRAINED", "historyDepth": "NONE", "volumeStatus": "SOURCE_PENDING", "openInterestStatus": "SOURCE_PENDING", "contractStructureStatus": "NOT_READY", "lifecycleStatus": "NOT_READY", "continuousStatus": "BLOCKED_INSUFFICIENT_CONTRACT_CHAIN", "analyticsStatus": "NOT_AVAILABLE", "provenanceStatus": "NOT_AVAILABLE", "freshnessStatus": "SOURCE_CONSTRAINED", "sourceState": "SOURCE_ACCESS_BLOCKED_CONFIRMED", "licenseState": "NOT_CONFIRMED", "detailReadiness": "SOURCE_CONSTRAINED" },
+    { "instrumentId": "CME_EURODOLLAR", "identityStatus": "STRUCTURED_HISTORICAL_SOURCE_ACCESS_CONSTRAINED", "currentSettlementStatus": "NOT_APPLICABLE", "historyStatus": "HISTORY_SOURCE_CONSTRAINED", "historyDepth": "NONE", "volumeStatus": "SOURCE_PENDING", "openInterestStatus": "SOURCE_PENDING", "contractStructureStatus": "NOT_READY", "lifecycleStatus": "NOT_READY", "continuousStatus": "BLOCKED_INSUFFICIENT_CONTRACT_CHAIN", "analyticsStatus": "NOT_AVAILABLE", "provenanceStatus": "NOT_AVAILABLE", "freshnessStatus": "NOT_APPLICABLE", "sourceState": "SOURCE_ACCESS_BLOCKED_CONFIRMED", "licenseState": "NOT_CONFIRMED", "detailReadiness": "SOURCE_CONSTRAINED" },
+    { "instrumentId": "ICE_EURIBOR_3M", "identityStatus": "STRUCTURED_SEMANTICS_PENDING", "currentSettlementStatus": "SOURCE_SEMANTICS_PENDING", "historyStatus": "HISTORY_SEMANTICS_PENDING", "historyDepth": "NONE", "volumeStatus": "SOURCE_PENDING", "openInterestStatus": "SOURCE_PENDING", "contractStructureStatus": "NOT_READY", "lifecycleStatus": "NOT_READY", "continuousStatus": "BLOCKED_INSUFFICIENT_CONTRACT_CHAIN", "analyticsStatus": "NOT_AVAILABLE", "provenanceStatus": "NOT_AVAILABLE", "freshnessStatus": "SOURCE_CONSTRAINED", "sourceState": "SOURCE_SEMANTICS_PENDING", "licenseState": "NOT_CONFIRMED", "detailReadiness": "NOT_READY" },
+    { "instrumentId": "ICE_SONIA_3M", "identityStatus": "STRUCTURED_SEMANTICS_PENDING", "currentSettlementStatus": "SOURCE_SEMANTICS_PENDING", "historyStatus": "HISTORY_SEMANTICS_PENDING", "historyDepth": "NONE", "volumeStatus": "SOURCE_PENDING", "openInterestStatus": "SOURCE_PENDING", "contractStructureStatus": "NOT_READY", "lifecycleStatus": "NOT_READY", "continuousStatus": "BLOCKED_INSUFFICIENT_CONTRACT_CHAIN", "analyticsStatus": "NOT_AVAILABLE", "provenanceStatus": "NOT_AVAILABLE", "freshnessStatus": "SOURCE_CONSTRAINED", "sourceState": "SOURCE_SEMANTICS_PENDING", "licenseState": "NOT_CONFIRMED", "detailReadiness": "NOT_READY" },
+    { "instrumentId": "EUREX_SARON_3M", "identityStatus": "STRUCTURED_SOURCE_ACCESS_CONSTRAINED", "currentSettlementStatus": "SOURCE_CONSTRAINED", "historyStatus": "HISTORY_SOURCE_CONSTRAINED", "historyDepth": "NONE", "volumeStatus": "SOURCE_PENDING", "openInterestStatus": "SOURCE_PENDING", "contractStructureStatus": "NOT_READY", "lifecycleStatus": "NOT_READY", "continuousStatus": "BLOCKED_INSUFFICIENT_CONTRACT_CHAIN", "analyticsStatus": "NOT_AVAILABLE", "provenanceStatus": "NOT_AVAILABLE", "freshnessStatus": "SOURCE_CONSTRAINED", "sourceState": "SOURCE_ACCESS_BLOCKED_CONFIRMED", "licenseState": "NOT_CONFIRMED", "detailReadiness": "SOURCE_CONSTRAINED" },
+    { "instrumentId": "SGX_TONA_3M", "identityStatus": "INCOMPLETE_SOURCE_ACCESS_CONSTRAINED", "currentSettlementStatus": "SOURCE_CONSTRAINED", "historyStatus": "HISTORY_SOURCE_CONSTRAINED", "historyDepth": "NONE", "volumeStatus": "SOURCE_PENDING", "openInterestStatus": "SOURCE_PENDING", "contractStructureStatus": "NOT_READY", "lifecycleStatus": "NOT_READY", "continuousStatus": "BLOCKED_INSUFFICIENT_CONTRACT_CHAIN", "analyticsStatus": "NOT_AVAILABLE", "provenanceStatus": "NOT_AVAILABLE", "freshnessStatus": "SOURCE_CONSTRAINED", "sourceState": "SOURCE_ACCESS_BLOCKED_CONFIRMED", "licenseState": "NOT_CONFIRMED", "detailReadiness": "SOURCE_CONSTRAINED" },
+    { "instrumentId": "OSE_TONA_3M", "identityStatus": "VERIFIED_OFFICIAL", "currentSettlementStatus": "SOURCE_READY", "historyStatus": "SHORT_HISTORY", "historyDepth": "2_UNIQUE_OBSERVATIONS_0.38_DAY", "volumeStatus": "SOURCE_NOT_AVAILABLE", "openInterestStatus": "SOURCE_NOT_AVAILABLE", "contractStructureStatus": "READY", "lifecycleStatus": "READY_EXPIRATION_ONLY", "continuousStatus": "BLOCKED_INSUFFICIENT_CONTRACT_CHAIN", "analyticsStatus": "NOT_AVAILABLE_INSUFFICIENT_HISTORY", "provenanceStatus": "READY", "freshnessStatus": "WAITING_FOR_SETTLEMENT", "sourceState": "SOURCE_READY", "licenseState": "PUBLIC", "detailReadiness": "NOT_READY" }
+  ],
+  "summary": {
+    "rows": 9,
+    "unknownSourceStates": 0,
+    "sourceReady": 1,
+    "sourceAccessBlocked": 6,
+    "sourceSemanticsPending": 2,
+    "sourceNotAvailable": 0,
+    "licensePending": 0,
+    "transientNetworkTerminalStates": 0,
+    "historyGe1YReady": 0,
+    "historyShort": 1,
+    "historySourceConstrained": 6,
+    "historySemanticsPending": 2,
+    "historyLicenseConstrained": 0,
+    "volumeSourcePending": 8,
+    "volumeSourceNotAvailable": 1,
+    "openInterestSourcePending": 8,
+    "openInterestSourceNotAvailable": 1,
+    "contractStructureReady": 1,
+    "lifecycleReady": 1,
+    "detailReady": 0,
+    "detailSourceConstrained": 6,
+    "detailLicenseConstrainedReady": 0,
+    "detailNotReady": 3
+  }
+}

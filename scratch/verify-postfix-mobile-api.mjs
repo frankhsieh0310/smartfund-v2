@@ -1,0 +1,15 @@
+import { PrismaClient } from '@prisma/client';
+const prisma = new PrismaClient();
+const url = `https://smartfund-v2.vercel.app/api/mobile/current-market-data?scope=all&asset=FUND`;
+const res = await fetch(url);
+const json = await res.json();
+const rows = json.data?.funds ?? [];
+console.log(`Live API post-fix returned ${rows.length} funds`);
+const liveIds = new Set(rows.map(r => r.fundId));
+const dbNew = await prisma.$queryRawUnsafe(`SELECT id FROM funds WHERE is_active=true AND COALESCE(data_provider,'') NOT IN ('yahoo','SEC')`);
+const dbNewIds = new Set(dbNew.map(r => r.id));
+console.log(`DB new-condition set (post-fix): ${dbNewIds.size}`);
+const missing = [...dbNewIds].filter(id => !liveIds.has(id));
+const extra = [...liveIds].filter(id => !dbNewIds.has(id));
+console.log(`Missing: ${missing.length}, Extra: ${extra.length}`);
+await prisma.$disconnect();

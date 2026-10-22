@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "asset": "GLOBAL_MACRO_EXPECTATIONS_VINTAGE_PIT",
+  "maxDbConcurrency": 1,
+  "batchSize": 100,
+  "pollIntervalMs": 300000,
+  "checkpoint": "runtime/macro-expectations-vintage-pit/checkpoint.json",
+  "sourcePolicy": {
+    "officialPublicFirst": true,
+    "commercialConsensus": "LICENSE_CONSTRAINED",
+    "fabricatedConsensusForbidden": true,
+    "fuzzyEventMappingForbidden": true,
+    "latestValueAsHistoricalVintageForbidden": true
+  },
+  "revisionBearingProviders": ["FRED", "BEA", "BLS", "ECB", "OECD", "IMF", "WORLD BANK", "BOE", "BOC"],
+  "vintageClasses": [
+    "TRUE_SOURCE_VINTAGE",
+    "SOURCE_REVISION_HISTORY",
+    "FIRST_OBSERVED_BY_SMARTFUND"
+  ],
+  "sourceRoutes": [
+    {"source":"EXISTING_OFFICIAL_CALENDARS","consensus":"SOURCE_DEPENDENT","revision":"SOURCE_DEPENDENT","vintage":"EVENT_AS_OF_TIMESTAMP","status":"ACTIVE"},
+    {"source":"LEGACY_ECONOMIC_VALUES","consensus":"MAPPING_PENDING","revision":"SOURCE_FIELD_ONLY","vintage":"FIRST_OBSERVED_BY_SMARTFUND","status":"ACTIVE_EXACT_MATCH_ONLY"},
+    {"source":"FRED_ALFRED","consensus":"NOT_APPLICABLE","revision":"TRUE_SOURCE_REVISION","vintage":"TRUE_SOURCE_VINTAGE","status":"BOUNDED_QUEUE_SOURCE_AUTH_REQUIRED"},
+    {"source":"ECB_BOE_BOC_OECD_IMF_WORLD_BANK","consensus":"SOURCE_DEPENDENT","revision":"SOURCE_DEPENDENT","vintage":"FIRST_OBSERVED_BY_SMARTFUND_UNLESS_SOURCE_PROVES_VINTAGE","status":"REGISTERED_EXISTING_ROUTES"}
+  ]
+}

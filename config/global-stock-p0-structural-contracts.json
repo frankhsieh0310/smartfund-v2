@@ -1,0 +1,75 @@
+{
+  "version": "GLOBAL_STOCK_P0_STRUCTURAL_BLOCKER_RECOVERY_V2",
+  "mode": "EXISTING_SCHEMA_ONLY",
+  "identityCompletenessRule": {
+    "requiredAllMarkets": ["symbol", "officialName", "exchange", "country", "currency", "status", "source", "verificationStatus"],
+    "jurisdictionRules": {
+      "US": ["verified provider/security identity", "MIC when available", "CUSIP only when applicable and licensed"],
+      "UK": ["verified provider/security identity", "SEDOL or ISIN when an authorized source provides it"],
+      "TW": ["official code", "exchange", "ISIN only when an official source provides it"],
+      "DEFAULT": ["verified provider/security identity", "jurisdiction-applicable identifiers only"]
+    },
+    "nullableNotFailure": ["isin", "cusip", "sedol", "figi", "mic", "providerExternalId", "listingDate", "delistingDate", "primaryListing"]
+  },
+  "bridge": {
+    "mode": "RUNTIME_EVIDENCE_PROJECTION_ONLY",
+    "verifiedMethods": ["EXACT_ISIN", "EXACT_FIGI", "EXACT_CUSIP_WHERE_APPLICABLE", "EXACT_SEDOL_WHERE_APPLICABLE", "EXACT_MIC_PLUS_SYMBOL", "EXACT_VERIFIED_PROVIDER_ID"],
+    "forbiddenMethods": ["FUZZY_NAME", "NAME_SIMILARITY", "LLM_MAPPING"],
+    "ambiguousPolicy": "NEVER_AUTO_WRITE"
+  },
+  "taxonomy": {
+    "canonicalFields": ["stockId", "sector", "industry", "subIndustry", "classificationSystem", "classificationCode", "asOfDate", "source", "verificationStatus"],
+    "displayPolicy": "PRESERVE_SOURCE_CLASSIFICATION; map to display taxonomy only with an explicit versioned crosswalk",
+    "sources": {
+      "US": [
+        { "name": "SEC EDGAR Submissions", "system": "SIC", "url": "https://www.sec.gov/search-filings/edgar-application-programming-interfaces", "status": "SOURCE_PATH_VERIFIED" }
+      ],
+      "TAIWAN": [
+        { "name": "TWSE OpenAPI", "system": "TWSE_INDUSTRY", "url": "https://openapi.twse.com.tw/", "status": "SOURCE_PATH_VERIFIED" },
+        { "name": "TWSE Industry Classification Rules", "system": "TWSE_INDUSTRY", "url": "https://twse-regulation.twse.com.tw/m/en/LawContent.aspx?FID=FL007104", "status": "SOURCE_PATH_VERIFIED" }
+      ],
+      "JAPAN": [
+        { "name": "JPX Listed Company Search", "system": "JPX_SECTOR_33", "url": "https://www.jpx.co.jp/english/listing/co-search/01.html", "status": "SOURCE_PATH_VERIFIED" },
+        { "name": "JPX Sector Classifications", "system": "JPX_SECTOR_33", "url": "https://www.jpx.co.jp/english/sicc/sectors/01.html", "status": "SOURCE_PATH_VERIFIED" }
+      ],
+      "HK_EUROPE": [
+        { "name": "HKEX HSICS adoption", "system": "HSICS", "url": "https://www.hkex.com.hk/News/Regulatory-Announcements/2007/071211news?sc_lang=en", "status": "SOURCE_PATH_VERIFIED_HK_ONLY" },
+        { "name": "Europe jurisdiction-specific official registers", "system": null, "url": null, "status": "ADAPTER_NOT_READY_NO_SINGLE_OFFICIAL_EU_TAXONOMY" }
+      ]
+    }
+  },
+  "marketStructure": {
+    "fields": ["latestPrice", "previousClose", "change", "changePercent", "volume", "sharesOutstanding", "marketCap", "currency", "asOfTimestamp", "source", "verificationStatus"],
+    "nullable": ["sharesOutstanding", "marketCap"],
+    "marketCapRule": "VERIFIED_SOURCE_OR_PRICE_X_VERIFIED_SHARES",
+    "forbiddenSharesInputs": ["FLOAT_SHARES", "ISSUED_SHARES", "DILUTED_WEIGHTED_AVERAGE"]
+  },
+  "sharesOutstanding": {
+    "fields": ["stockId", "sharesOutstanding", "sharesType", "asOfDate", "source", "verificationStatus"],
+    "acceptedMarketCapType": "BASIC_SHARES_OUTSTANDING"
+  },
+  "financialCoverage": {
+    "flags": ["HAS_INCOME_STATEMENT", "HAS_BALANCE_SHEET", "HAS_CASH_FLOW", "HAS_TTM", "HAS_QUARTERLY", "HAS_ANNUAL", "HAS_PUBLICATION_DATE", "HAS_RESTATEMENT_EVIDENCE"]
+  },
+  "performance": {
+    "source": "DERIVED_FROM_CANONICAL_STOCK_HISTORY",
+    "metrics": ["RETURN_1D", "RETURN_1W", "RETURN_1M", "RETURN_3M", "RETURN_6M", "RETURN_YTD", "RETURN_1Y", "RETURN_3Y", "RETURN_5Y", "RETURN_10Y"]
+  },
+  "risk": {
+    "source": "DERIVED_FROM_CANONICAL_STOCK_HISTORY",
+    "metrics": ["VOLATILITY_30D", "VOLATILITY_90D", "VOLATILITY_1Y", "MAX_DRAWDOWN_1Y", "MAX_DRAWDOWN_3Y", "MAX_DRAWDOWN_5Y", "ATH", "ATH_DATE", "DRAWDOWN_FROM_ATH"]
+  },
+  "valuation": {
+    "metrics": ["PE_TTM", "PB", "PS_TTM", "DIVIDEND_YIELD", "ROE", "ROA", "DEBT_TO_EQUITY", "FCF_YIELD"],
+    "rule": "NULL_UNLESS_ALL_INPUTS_HAVE_VERIFIED_LINEAGE_AND_COMPATIBLE_AS_OF_DATES"
+  },
+  "pointInTime": {
+    "contract": "AS_KNOWN_AT(timestamp)",
+    "rule": "publicationDate <= timestamp OR publicationDate IS NULL AND filingDate <= timestamp; never periodEnd alone"
+  },
+  "provenance": {
+    "domains": ["IDENTITY", "TAXONOMY", "MARKET", "HISTORY", "FINANCIAL", "EVENT_LINK", "ANALYTICS"],
+    "fields": ["source", "sourceType", "sourceRecordId", "providerMethod", "asOfDate", "ingestedAtOrCalculatedAt", "verificationStatus"],
+    "legacyTechnicalStatus": "LEGACY_DERIVED_UNVERIFIED"
+  }
+}

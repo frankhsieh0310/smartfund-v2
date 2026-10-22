@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "intervals": ["1m","5m","15m","30m","60m","4h","1D","1W","1M"],
+  "capabilities": {"historical":true,"latest":true,"intraday":true,"continuousContract":true,"openInterest":true,"volume":true,"settlement":true,"comparison":true,"chart":true,"technical":true,"archive":true,"retry":true,"checkpoint":true,"scheduler":true},
+  "fields": ["open","high","low","close","volume","openInterest","settlement","contractMonth","expiration","continuousContract","timestamp","timezone","exchange","source","quality","rollMethod","rollDate","underlyingIndex"],
+  "contractIsolationRequired": true
+}

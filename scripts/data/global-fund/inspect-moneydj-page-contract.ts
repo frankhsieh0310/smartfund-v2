@@ -1,0 +1,3 @@
+import {load} from "cheerio";
+async function main(){for(const code of ["HSZ47","ALH40"]){const u=`https://www.moneydj.com/funddj/yp/yp013000.djhtm?a=${code}&topc=`,b=await(await fetch(u,{headers:{"user-agent":"Mozilla/5.0 SmartFund Fund Research/1.0"}})).arrayBuffer(),h=new TextDecoder("big5").decode(b),$=load(h);console.log(JSON.stringify({code,iframes:$("iframe").map((_,e)=>$(e).attr("src")).get(),links:$("a").map((_,e)=>$(e).attr("href")).get().filter(x=>x&&/yp013|holding|asset/i.test(x)).slice(0,30),tables:$("table").map((i,e)=>{const text=$(e).text().replace(/\s+/g," ").trim();return /投資|區域|產業|持股|類股/.test(text)?{i,text:text.slice(0,1000)}:null}).get().filter(Boolean)},null,2))}}
+main();

@@ -1,0 +1,33 @@
+{
+  "version": "1.0",
+  "productionService": "smartfund-v2",
+  "timezone": "UTC",
+  "incrementalIntervalMinutes": 15,
+  "officialRegistry": [
+    { "id": "FED", "name": "Federal Reserve", "official": true, "baseUrl": "https://www.federalreserve.gov/" },
+    { "id": "ECB", "name": "European Central Bank", "official": true, "baseUrl": "https://data-api.ecb.europa.eu/" },
+    { "id": "BIS", "name": "Bank for International Settlements", "official": true, "baseUrl": "https://data.bis.org/" },
+    { "id": "IMF", "name": "International Monetary Fund", "official": true, "baseUrl": "https://www.imf.org/external/datamapper/api/" },
+    { "id": "ICE", "name": "Intercontinental Exchange", "official": true, "baseUrl": "https://www.ice.com/" },
+    { "id": "FRED", "name": "Federal Reserve Bank of St. Louis FRED", "official": true, "baseUrl": "https://fred.stlouisfed.org/" }
+  ],
+  "intervals": ["1m", "5m", "15m", "30m", "60m", "4h", "1D", "1W", "1M"],
+  "capabilities": ["HISTORICAL", "LATEST", "INTRADAY", "COMPARISON", "CHART", "TECHNICAL", "ARCHIVE", "RETRY", "CHECKPOINT", "SCHEDULER", "INCREMENTAL"],
+  "universe": [
+    { "id": "DXY", "name": "US Dollar Index (DXY)", "kind": "LICENSED", "source": "ICE", "status": "REGISTRY_ONLY", "reason": "No unauthenticated official public OHLC API; futures and ETF substitution prohibited." },
+    { "id": "BBDXY", "name": "Bloomberg Dollar Spot Index", "kind": "LICENSED", "source": "BLOOMBERG", "status": "REGISTRY_ONLY", "reason": "No unauthenticated official public OHLC API." },
+    { "id": "FED_BROAD_DOLLAR", "name": "Nominal Broad U.S. Dollar Index", "kind": "OFFICIAL", "source": "FRED", "series": "DTWEXBGS", "status": "ACTIVE" },
+    { "id": "FED_TRADE_WEIGHTED_DOLLAR", "name": "Trade Weighted U.S. Dollar Index: Broad, Goods and Services", "kind": "OFFICIAL", "source": "FRED", "series": "DTWEXBGS", "status": "ACTIVE" },
+    { "id": "BIS_USD_NEER", "name": "US Dollar Nominal Effective Exchange Rate", "kind": "OFFICIAL", "source": "FRED", "series": "NBUSBIS", "status": "ACTIVE" },
+    { "id": "BIS_USD_REER", "name": "US Dollar Real Effective Exchange Rate", "kind": "OFFICIAL", "source": "FRED", "series": "RBUSBIS", "status": "ACTIVE" },
+    { "id": "EUR_INDEX", "name": "Euro Currency Index", "kind": "DERIVED_SPOT", "currency": "EUR", "status": "ACTIVE" },
+    { "id": "JPY_INDEX", "name": "Japanese Yen Index", "kind": "DERIVED_SPOT", "currency": "JPY", "status": "ACTIVE" },
+    { "id": "GBP_INDEX", "name": "British Pound Index", "kind": "DERIVED_SPOT", "currency": "GBP", "status": "ACTIVE" },
+    { "id": "CHF_INDEX", "name": "Swiss Franc Index", "kind": "DERIVED_SPOT", "currency": "CHF", "status": "ACTIVE" },
+    { "id": "CAD_INDEX", "name": "Canadian Dollar Index", "kind": "DERIVED_SPOT", "currency": "CAD", "status": "ACTIVE" },
+    { "id": "AUD_INDEX", "name": "Australian Dollar Index", "kind": "DERIVED_SPOT", "currency": "AUD", "status": "ACTIVE" },
+    { "id": "NZD_INDEX", "name": "New Zealand Dollar Index", "kind": "DERIVED_SPOT", "currency": "NZD", "status": "ACTIVE" },
+    { "id": "CNY_INDEX", "name": "Chinese Yuan Index", "kind": "DERIVED_SPOT", "currency": "CNY", "status": "ACTIVE", "legalAvailability": "Public spot reference components only; not represented as the licensed CFETS index." }
+  ],
+  "derivedBasket": ["USD", "EUR", "JPY", "GBP", "CHF", "CAD", "AUD", "NZD", "CNY"]
+}

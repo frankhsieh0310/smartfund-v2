@@ -1,0 +1,11 @@
+{
+  "asset":"GLOBAL_REIT",
+  "scope":"all_officially_listed_global_reits",
+  "entityTypes":["Equity REIT","Mortgage REIT","Hybrid REIT","Infrastructure REIT"],
+  "propertyTypes":["Healthcare","Industrial","Retail","Residential","Office","Hotel","Data Center","Self Storage","Timber","Specialty"],
+  "identityFields":["reitName","ticker","isin","exchange","country","currency","ipoDate"],
+  "fundamentalFields":["marketCap","sharesOutstanding","dividendYield","distribution","nav","ffo","affo","occupancy","leverage","sector","propertyType","manager","sponsor","holdings"],
+  "historicalFields":["historicalPrice","historicalNav"],
+  "members":[],
+  "populationMode":"official_registry_discovery"
+}

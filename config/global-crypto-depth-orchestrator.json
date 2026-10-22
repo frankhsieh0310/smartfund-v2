@@ -1,0 +1,52 @@
+{
+  "version": 2,
+  "asset": "GLOBAL_CRYPTO",
+  "pollIntervalMs": 60000,
+  "databaseBackoffMs": [30000, 60000, 120000, 300000],
+  "boundedBatchSize": 4,
+  "counts": { "assets": 19, "pairs": 19, "historyRowsBaseline": 43684 },
+  "canonicalRelations": [
+    "crypto_networks", "crypto_assets", "crypto_exchanges", "crypto_markets",
+    "crypto_candles", "crypto_market_snapshots", "crypto_market_cap_supply",
+    "crypto_metrics", "crypto_analytics", "crypto_coverage", "crypto_work_items"
+  ],
+  "writerPolicy": {
+    "runtime": "crypto",
+    "reuseExistingSupervisor": true,
+    "createWriter": false,
+    "oneWriterPerDomain": true,
+    "orderBookRetention": "BOUNDED_SNAPSHOTS_AND_AGGREGATES_ONLY",
+    "fullChainIndexing": false
+  },
+  "domains": [
+    { "id": "GLOBAL_CRYPTO_PIPELINE", "runtime": "crypto", "priority": "P0A", "status": "CURRENT_AND_AUTO_UPDATING" }
+  ],
+  "capabilities": [
+    { "id": "ASSET_IDENTITY", "priority": "P0A", "status": "CURRENT_AND_AUTO_UPDATING" },
+    { "id": "MARKET_IDENTITY", "priority": "P0A", "status": "CURRENT_AND_AUTO_UPDATING" },
+    { "id": "CURRENT_PRICE", "priority": "P0A", "status": "CURRENT_AND_AUTO_UPDATING" },
+    { "id": "INTRADAY", "priority": "P0A", "status": "TIME_DEPTH_CONSTRAINED" },
+    { "id": "PRICE_HISTORY", "priority": "P0A", "status": "CURRENT_AND_AUTO_UPDATING" },
+    { "id": "MAX_HISTORY", "priority": "P0A", "status": "TIME_DEPTH_CONSTRAINED" },
+    { "id": "MARKET_CAP", "priority": "P0A", "status": "CURRENT_AND_AUTO_UPDATING" },
+    { "id": "MARKET_CAP_HISTORY", "priority": "P0A", "status": "TIME_DEPTH_CONSTRAINED" },
+    { "id": "SUPPLY", "priority": "P0A", "status": "CURRENT_AND_AUTO_UPDATING" },
+    { "id": "SUPPLY_HISTORY", "priority": "P0A", "status": "TIME_DEPTH_CONSTRAINED" },
+    { "id": "FUNDING_RATE", "priority": "P0A", "status": "CURRENT_AND_AUTO_UPDATING" },
+    { "id": "OPEN_INTEREST", "priority": "P0A", "status": "CURRENT_AND_AUTO_UPDATING" },
+    { "id": "PROVENANCE", "priority": "P0A", "status": "CURRENT_AND_AUTO_UPDATING" },
+    { "id": "ONCHAIN", "priority": "P0B", "status": "SOURCE_CONSTRAINED" },
+    { "id": "NETWORK_ACTIVITY", "priority": "P0B", "status": "SOURCE_CONSTRAINED" },
+    { "id": "STABLECOIN", "priority": "P0B", "status": "CURRENT_AND_AUTO_UPDATING" },
+    { "id": "STABLECOIN_RESERVES", "priority": "P0B", "status": "SOURCE_CONSTRAINED" },
+    { "id": "BTC_DOMINANCE", "priority": "P0B", "status": "SOURCE_CONSTRAINED" },
+    { "id": "TOTAL_MARKET_CAP", "priority": "P0B", "status": "SOURCE_CONSTRAINED" },
+    { "id": "TECHNICAL_ANALYTICS", "priority": "P0B", "status": "CONFIGURATION_CONSTRAINED" },
+    { "id": "PERFORMANCE_RISK", "priority": "P0B", "status": "CURRENT_AND_AUTO_UPDATING" },
+    { "id": "LIQUIDATIONS", "priority": "P1", "status": "SOURCE_CONSTRAINED" },
+    { "id": "ORDER_BOOK", "priority": "P1", "status": "CONFIGURATION_CONSTRAINED" },
+    { "id": "HOLDER_DISTRIBUTION", "priority": "P1", "status": "SOURCE_CONSTRAINED" },
+    { "id": "RELATIVE_ANALYTICS", "priority": "P1", "status": "INPUT_CONSTRAINED" },
+    { "id": "EXCHANGE_MARKET_STRUCTURE", "priority": "P1", "status": "TIME_DEPTH_CONSTRAINED" }
+  ]
+}

@@ -1,0 +1,3418 @@
+[
+  {
+    "issuer": "Cathay",
+    "ticker": "00400A",
+    "dataDate": "2026-09-24",
+    "rows": 47,
+    "types": [
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Cathay",
+    "ticker": "00636",
+    "dataDate": "2026-09-24",
+    "rows": 49,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Cathay",
+    "ticker": "00655L",
+    "dataDate": "2026-09-24",
+    "rows": 2,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Cathay",
+    "ticker": "00656R",
+    "dataDate": "2026-09-24",
+    "rows": 1,
+    "types": [
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Cathay",
+    "ticker": "00657",
+    "dataDate": "2026-09-24",
+    "rows": 226,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Cathay",
+    "ticker": "00663L",
+    "dataDate": "2026-09-24",
+    "rows": 1,
+    "types": [
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Cathay",
+    "ticker": "00664R",
+    "dataDate": "2026-09-24",
+    "rows": 1,
+    "types": [
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Cathay",
+    "ticker": "00668",
+    "dataDate": "2026-09-23",
+    "rows": 31,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Cathay",
+    "ticker": "00669R",
+    "dataDate": "2026-09-23",
+    "rows": 1,
+    "types": [
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Cathay",
+    "ticker": "00688L",
+    "dataDate": "2026-09-23",
+    "rows": 1,
+    "types": [
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Cathay",
+    "ticker": "00689R",
+    "dataDate": "2026-09-23",
+    "rows": 1,
+    "types": [
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Cathay",
+    "ticker": "00701",
+    "dataDate": "2026-09-24",
+    "rows": 31,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Cathay",
+    "ticker": "00702",
+    "dataDate": "2026-09-23",
+    "rows": 50,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Cathay",
+    "ticker": "00735",
+    "dataDate": "2026-09-24",
+    "rows": 79,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Cathay",
+    "ticker": "00736",
+    "dataDate": "2026-09-23",
+    "rows": 213,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Cathay",
+    "ticker": "00737",
+    "dataDate": "2026-09-23",
+    "rows": 112,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Cathay",
+    "ticker": "00770",
+    "dataDate": "2026-09-23",
+    "rows": 280,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Cathay",
+    "ticker": "00830",
+    "dataDate": "2026-09-23",
+    "rows": 31,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Cathay",
+    "ticker": "00852L",
+    "dataDate": "2026-09-23",
+    "rows": 1,
+    "types": [
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Cathay",
+    "ticker": "00865B",
+    "dataDate": "2026-09-23",
+    "rows": 53,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Cathay",
+    "ticker": "00875",
+    "dataDate": "2026-09-23",
+    "rows": 62,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Cathay",
+    "ticker": "00878",
+    "dataDate": "2026-09-24",
+    "rows": 30,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Cathay",
+    "ticker": "00881",
+    "dataDate": "2026-09-24",
+    "rows": 31,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Cathay",
+    "ticker": "00893",
+    "dataDate": "2026-09-23",
+    "rows": 31,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Cathay",
+    "ticker": "00898",
+    "dataDate": "2026-09-23",
+    "rows": 49,
+    "types": [
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Cathay",
+    "ticker": "00909",
+    "dataDate": "2026-09-23",
+    "rows": 30,
+    "types": [
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Cathay",
+    "ticker": "00916",
+    "dataDate": "2026-09-23",
+    "rows": 50,
+    "types": [
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Cathay",
+    "ticker": "00922",
+    "dataDate": "2026-09-24",
+    "rows": 50,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Cathay",
+    "ticker": "009817",
+    "dataDate": "2026-09-24",
+    "rows": 2,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Cathay",
+    "ticker": "00687B",
+    "dataDate": "2026-09-23",
+    "rows": 40,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Cathay",
+    "ticker": "00687C",
+    "dataDate": "2026-09-23",
+    "rows": 40,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Cathay",
+    "ticker": "00725B",
+    "dataDate": "2026-09-23",
+    "rows": 213,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Cathay",
+    "ticker": "00726B",
+    "dataDate": "2026-09-23",
+    "rows": 206,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Cathay",
+    "ticker": "00727B",
+    "dataDate": "2026-09-23",
+    "rows": 216,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Cathay",
+    "ticker": "00761B",
+    "dataDate": "2026-09-23",
+    "rows": 484,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Cathay",
+    "ticker": "00780B",
+    "dataDate": "2026-09-23",
+    "rows": 43,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Cathay",
+    "ticker": "00781B",
+    "dataDate": "2026-09-23",
+    "rows": 95,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Cathay",
+    "ticker": "00782B",
+    "dataDate": "2026-09-23",
+    "rows": 163,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Cathay",
+    "ticker": "00799B",
+    "dataDate": "2026-09-23",
+    "rows": 222,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Cathay",
+    "ticker": "00933B",
+    "dataDate": "2026-09-23",
+    "rows": 131,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Cathay",
+    "ticker": "00990B",
+    "dataDate": "2026-09-23",
+    "rows": 94,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "JPMorgan",
+    "ticker": "00401A",
+    "dataDate": "2026-09-29",
+    "rows": 22,
+    "types": [
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "JPMorgan",
+    "ticker": "00989A",
+    "dataDate": "2026-09-29",
+    "rows": 20,
+    "types": [
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Allianz",
+    "ticker": "00402A",
+    "dataDate": "2026-09-23",
+    "rows": 50,
+    "types": [
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Allianz",
+    "ticker": "00984A",
+    "dataDate": "2026-09-24",
+    "rows": 97,
+    "types": [
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Allianz",
+    "ticker": "00993A",
+    "dataDate": "2026-09-24",
+    "rows": 54,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "UPAMC",
+    "ticker": "00403A",
+    "dataDate": "2026-09-24",
+    "rows": 50,
+    "types": [
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "UPAMC",
+    "ticker": "00757",
+    "dataDate": "2026-09-23",
+    "rows": 11,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "UPAMC",
+    "ticker": "00939",
+    "dataDate": "2026-09-24",
+    "rows": 41,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "UPAMC",
+    "ticker": "009811",
+    "dataDate": "2026-09-23",
+    "rows": 53,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "UPAMC",
+    "ticker": "00981A",
+    "dataDate": "2026-09-24",
+    "rows": 51,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "UPAMC",
+    "ticker": "00988A",
+    "dataDate": "2026-09-23",
+    "rows": 42,
+    "types": [
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "UPAMC",
+    "ticker": "00411A",
+    "dataDate": "2026-09-23",
+    "rows": 32,
+    "types": [
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "UPAMC",
+    "ticker": "00853B",
+    "dataDate": "2026-09-23",
+    "rows": 294,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "UPAMC",
+    "ticker": "00931B",
+    "dataDate": "2026-09-23",
+    "rows": 40,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "UPAMC",
+    "ticker": "00966B",
+    "dataDate": "2026-09-23",
+    "rows": 84,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "UPAMC",
+    "ticker": "00987D",
+    "dataDate": "2026-09-23",
+    "rows": 3,
+    "types": [
+      "BOND",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "AB",
+    "ticker": "00404A",
+    "dataDate": "2026-09-24",
+    "rows": 10,
+    "types": [
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "AB",
+    "ticker": "00984D",
+    "dataDate": "2026-09-23",
+    "rows": 399,
+    "types": [
+      "BOND",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "AB",
+    "ticker": "00980D",
+    "dataDate": "2026-09-23",
+    "rows": 10,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Fubon",
+    "ticker": "00405A",
+    "dataDate": "2026-09-24",
+    "rows": 47,
+    "types": [
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Fubon",
+    "ticker": "0052",
+    "dataDate": "2026-09-24",
+    "rows": 76,
+    "types": [
+      "FUTURE",
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Fubon",
+    "ticker": "0057",
+    "dataDate": "2026-09-24",
+    "rows": 77,
+    "types": [
+      "FUTURE",
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Fubon",
+    "ticker": "006205",
+    "dataDate": "2026-09-24",
+    "rows": 167,
+    "types": [
+      "FUTURE",
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Fubon",
+    "ticker": "006208",
+    "dataDate": "2026-09-24",
+    "rows": 53,
+    "types": [
+      "FUTURE",
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Fubon",
+    "ticker": "00625K",
+    "dataDate": "2026-09-23",
+    "rows": 234,
+    "types": [
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Fubon",
+    "ticker": "00633L",
+    "dataDate": "2026-09-24",
+    "rows": 3,
+    "types": [
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Fubon",
+    "ticker": "00634R",
+    "dataDate": "2026-09-24",
+    "rows": 3,
+    "types": [
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Fubon",
+    "ticker": "00639",
+    "dataDate": "2026-09-24",
+    "rows": 97,
+    "types": [
+      "FUTURE",
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Fubon",
+    "ticker": "00640L",
+    "dataDate": "2026-09-24",
+    "rows": 2,
+    "types": [
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Fubon",
+    "ticker": "00641R",
+    "dataDate": "2026-09-24",
+    "rows": 3,
+    "types": [
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Fubon",
+    "ticker": "00645",
+    "dataDate": "2026-09-24",
+    "rows": 1041,
+    "types": [
+      "FUTURE",
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Fubon",
+    "ticker": "00652",
+    "dataDate": "2026-09-23",
+    "rows": 53,
+    "types": [
+      "FUTURE",
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Fubon",
+    "ticker": "00653L",
+    "dataDate": "2026-09-23",
+    "rows": 2,
+    "types": [
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Fubon",
+    "ticker": "00654R",
+    "dataDate": "2026-09-23",
+    "rows": 2,
+    "types": [
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Fubon",
+    "ticker": "00662",
+    "dataDate": "2026-09-23",
+    "rows": 104,
+    "types": [
+      "FUTURE",
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Fubon",
+    "ticker": "00665L",
+    "dataDate": "2026-09-24",
+    "rows": 2,
+    "types": [
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Fubon",
+    "ticker": "00666R",
+    "dataDate": "2026-09-24",
+    "rows": 2,
+    "types": [
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Fubon",
+    "ticker": "00670L",
+    "dataDate": "2026-09-23",
+    "rows": 2,
+    "types": [
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Fubon",
+    "ticker": "00671R",
+    "dataDate": "2026-09-23",
+    "rows": 2,
+    "types": [
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Fubon",
+    "ticker": "00675L",
+    "dataDate": "2026-09-24",
+    "rows": 2,
+    "types": [
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Fubon",
+    "ticker": "00676R",
+    "dataDate": "2026-09-24",
+    "rows": 2,
+    "types": [
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Fubon",
+    "ticker": "00692",
+    "dataDate": "2026-09-24",
+    "rows": 103,
+    "types": [
+      "FUTURE",
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Fubon",
+    "ticker": "00700",
+    "dataDate": "2026-09-24",
+    "rows": 49,
+    "types": [
+      "FUTURE",
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Fubon",
+    "ticker": "00709",
+    "dataDate": "2026-09-23",
+    "rows": 435,
+    "types": [
+      "FUTURE",
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Fubon",
+    "ticker": "00717",
+    "dataDate": "2026-09-23",
+    "rows": 234,
+    "types": [
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Fubon",
+    "ticker": "00730",
+    "dataDate": "2026-09-24",
+    "rows": 33,
+    "types": [
+      "FUTURE",
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Fubon",
+    "ticker": "00733",
+    "dataDate": "2026-09-24",
+    "rows": 52,
+    "types": [
+      "FUTURE",
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Fubon",
+    "ticker": "00783",
+    "dataDate": "2026-09-24",
+    "rows": 479,
+    "types": [
+      "FUTURE",
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Fubon",
+    "ticker": "00885",
+    "dataDate": "2026-09-24",
+    "rows": 31,
+    "types": [
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Fubon",
+    "ticker": "00892",
+    "dataDate": "2026-09-24",
+    "rows": 33,
+    "types": [
+      "FUTURE",
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Fubon",
+    "ticker": "00895",
+    "dataDate": "2026-09-23",
+    "rows": 33,
+    "types": [
+      "FUTURE",
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Fubon",
+    "ticker": "00897",
+    "dataDate": "2026-09-23",
+    "rows": 50,
+    "types": [
+      "FUTURE",
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Fubon",
+    "ticker": "00900",
+    "dataDate": "2026-09-24",
+    "rows": 33,
+    "types": [
+      "FUTURE",
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Fubon",
+    "ticker": "00903",
+    "dataDate": "2026-09-23",
+    "rows": 33,
+    "types": [
+      "FUTURE",
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Fubon",
+    "ticker": "00908",
+    "dataDate": "2026-09-23",
+    "rows": 31,
+    "types": [
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Fubon",
+    "ticker": "00920",
+    "dataDate": "2026-09-23",
+    "rows": 35,
+    "types": [
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Fubon",
+    "ticker": "009802",
+    "dataDate": "2026-09-24",
+    "rows": 55,
+    "types": [
+      "FUTURE",
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Fubon",
+    "ticker": "009809",
+    "dataDate": "2026-09-24",
+    "rows": 38,
+    "types": [
+      "FUTURE",
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Fubon",
+    "ticker": "00982D",
+    "dataDate": "2026-09-23",
+    "rows": 66,
+    "types": [
+      "BOND",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Fubon",
+    "ticker": "00983D",
+    "dataDate": "2026-09-23",
+    "rows": 84,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Fubon",
+    "ticker": "00694B",
+    "dataDate": "2026-09-23",
+    "rows": 94,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Fubon",
+    "ticker": "00695B",
+    "dataDate": "2026-09-23",
+    "rows": 14,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Fubon",
+    "ticker": "00696B",
+    "dataDate": "2026-09-23",
+    "rows": 41,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Fubon",
+    "ticker": "00740B",
+    "dataDate": "2026-09-23",
+    "rows": 194,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Fubon",
+    "ticker": "00741B",
+    "dataDate": "2026-09-23",
+    "rows": 162,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Fubon",
+    "ticker": "00746B",
+    "dataDate": "2026-09-23",
+    "rows": 499,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Fubon",
+    "ticker": "00785B",
+    "dataDate": "2026-09-23",
+    "rows": 109,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Fubon",
+    "ticker": "00845B",
+    "dataDate": "2026-09-23",
+    "rows": 202,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Fubon",
+    "ticker": "00846B",
+    "dataDate": "2026-09-23",
+    "rows": 69,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Fubon",
+    "ticker": "009814",
+    "dataDate": "2026-09-23",
+    "rows": 478,
+    "types": [
+      "FUTURE",
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "CTBC",
+    "ticker": "00406A",
+    "dataDate": null,
+    "rows": 0,
+    "types": [],
+    "pass": false,
+    "error": "CTBC_DATE_REQUIRED_00406A — this adapter does not default to today; caller must pass an explicit official data date"
+  },
+  {
+    "issuer": "CTBC",
+    "ticker": "00752",
+    "dataDate": null,
+    "rows": 0,
+    "types": [],
+    "pass": false,
+    "error": "CTBC_DATE_REQUIRED_00752 — this adapter does not default to today; caller must pass an explicit official data date"
+  },
+  {
+    "issuer": "CTBC",
+    "ticker": "00753L",
+    "dataDate": null,
+    "rows": 0,
+    "types": [],
+    "pass": false,
+    "error": "CTBC_DATE_REQUIRED_00753L — this adapter does not default to today; caller must pass an explicit official data date"
+  },
+  {
+    "issuer": "CTBC",
+    "ticker": "00882",
+    "dataDate": null,
+    "rows": 0,
+    "types": [],
+    "pass": false,
+    "error": "CTBC_DATE_REQUIRED_00882 — this adapter does not default to today; caller must pass an explicit official data date"
+  },
+  {
+    "issuer": "CTBC",
+    "ticker": "00891",
+    "dataDate": null,
+    "rows": 0,
+    "types": [],
+    "pass": false,
+    "error": "CTBC_DATE_REQUIRED_00891 — this adapter does not default to today; caller must pass an explicit official data date"
+  },
+  {
+    "issuer": "CTBC",
+    "ticker": "00894",
+    "dataDate": null,
+    "rows": 0,
+    "types": [],
+    "pass": false,
+    "error": "CTBC_DATE_REQUIRED_00894 — this adapter does not default to today; caller must pass an explicit official data date"
+  },
+  {
+    "issuer": "CTBC",
+    "ticker": "00896",
+    "dataDate": null,
+    "rows": 0,
+    "types": [],
+    "pass": false,
+    "error": "CTBC_DATE_REQUIRED_00896 — this adapter does not default to today; caller must pass an explicit official data date"
+  },
+  {
+    "issuer": "CTBC",
+    "ticker": "00902",
+    "dataDate": null,
+    "rows": 0,
+    "types": [],
+    "pass": false,
+    "error": "CTBC_DATE_REQUIRED_00902 — this adapter does not default to today; caller must pass an explicit official data date"
+  },
+  {
+    "issuer": "CTBC",
+    "ticker": "00912",
+    "dataDate": null,
+    "rows": 0,
+    "types": [],
+    "pass": false,
+    "error": "CTBC_DATE_REQUIRED_00912 — this adapter does not default to today; caller must pass an explicit official data date"
+  },
+  {
+    "issuer": "CTBC",
+    "ticker": "00917",
+    "dataDate": null,
+    "rows": 0,
+    "types": [],
+    "pass": false,
+    "error": "CTBC_DATE_REQUIRED_00917 — this adapter does not default to today; caller must pass an explicit official data date"
+  },
+  {
+    "issuer": "CTBC",
+    "ticker": "00934",
+    "dataDate": null,
+    "rows": 0,
+    "types": [],
+    "pass": false,
+    "error": "CTBC_DATE_REQUIRED_00934 — this adapter does not default to today; caller must pass an explicit official data date"
+  },
+  {
+    "issuer": "CTBC",
+    "ticker": "00941",
+    "dataDate": null,
+    "rows": 0,
+    "types": [],
+    "pass": false,
+    "error": "CTBC_DATE_REQUIRED_00941 — this adapter does not default to today; caller must pass an explicit official data date"
+  },
+  {
+    "issuer": "CTBC",
+    "ticker": "00954",
+    "dataDate": null,
+    "rows": 0,
+    "types": [],
+    "pass": false,
+    "error": "CTBC_DATE_REQUIRED_00954 — this adapter does not default to today; caller must pass an explicit official data date"
+  },
+  {
+    "issuer": "CTBC",
+    "ticker": "00956",
+    "dataDate": null,
+    "rows": 0,
+    "types": [],
+    "pass": false,
+    "error": "CTBC_DATE_REQUIRED_00956 — this adapter does not default to today; caller must pass an explicit official data date"
+  },
+  {
+    "issuer": "CTBC",
+    "ticker": "00963",
+    "dataDate": null,
+    "rows": 0,
+    "types": [],
+    "pass": false,
+    "error": "CTBC_DATE_REQUIRED_00963 — this adapter does not default to today; caller must pass an explicit official data date"
+  },
+  {
+    "issuer": "CTBC",
+    "ticker": "00964",
+    "dataDate": null,
+    "rows": 0,
+    "types": [],
+    "pass": false,
+    "error": "CTBC_DATE_REQUIRED_00964 — this adapter does not default to today; caller must pass an explicit official data date"
+  },
+  {
+    "issuer": "CTBC",
+    "ticker": "009800",
+    "dataDate": null,
+    "rows": 0,
+    "types": [],
+    "pass": false,
+    "error": "CTBC_DATE_REQUIRED_009800 — this adapter does not default to today; caller must pass an explicit official data date"
+  },
+  {
+    "issuer": "CTBC",
+    "ticker": "009801",
+    "dataDate": null,
+    "rows": 0,
+    "types": [],
+    "pass": false,
+    "error": "CTBC_DATE_REQUIRED_009801 — this adapter does not default to today; caller must pass an explicit official data date"
+  },
+  {
+    "issuer": "CTBC",
+    "ticker": "009819",
+    "dataDate": null,
+    "rows": 0,
+    "types": [],
+    "pass": false,
+    "error": "CTBC_DATE_REQUIRED_009819 — this adapter does not default to today; caller must pass an explicit official data date"
+  },
+  {
+    "issuer": "CTBC",
+    "ticker": "009828",
+    "dataDate": null,
+    "rows": 0,
+    "types": [],
+    "pass": false,
+    "error": "CTBC_DATE_REQUIRED_009828 — this adapter does not default to today; caller must pass an explicit official data date"
+  },
+  {
+    "issuer": "CTBC",
+    "ticker": "00983A",
+    "dataDate": null,
+    "rows": 0,
+    "types": [],
+    "pass": false,
+    "error": "CTBC_DATE_REQUIRED_00983A — this adapter does not default to today; caller must pass an explicit official data date"
+  },
+  {
+    "issuer": "CTBC",
+    "ticker": "00995A",
+    "dataDate": null,
+    "rows": 0,
+    "types": [],
+    "pass": false,
+    "error": "CTBC_DATE_REQUIRED_00995A — this adapter does not default to today; caller must pass an explicit official data date"
+  },
+  {
+    "issuer": "CTBC",
+    "ticker": "00772B",
+    "dataDate": null,
+    "rows": 0,
+    "types": [],
+    "pass": false,
+    "error": "CTBC_DATE_REQUIRED_00772B — this adapter does not default to today; caller must pass an explicit official data date"
+  },
+  {
+    "issuer": "CTBC",
+    "ticker": "00773B",
+    "dataDate": null,
+    "rows": 0,
+    "types": [],
+    "pass": false,
+    "error": "CTBC_DATE_REQUIRED_00773B — this adapter does not default to today; caller must pass an explicit official data date"
+  },
+  {
+    "issuer": "CTBC",
+    "ticker": "00795B",
+    "dataDate": null,
+    "rows": 0,
+    "types": [],
+    "pass": false,
+    "error": "CTBC_DATE_REQUIRED_00795B — this adapter does not default to today; caller must pass an explicit official data date"
+  },
+  {
+    "issuer": "CTBC",
+    "ticker": "00847B",
+    "dataDate": null,
+    "rows": 0,
+    "types": [],
+    "pass": false,
+    "error": "CTBC_DATE_REQUIRED_00847B — this adapter does not default to today; caller must pass an explicit official data date"
+  },
+  {
+    "issuer": "CTBC",
+    "ticker": "00848B",
+    "dataDate": null,
+    "rows": 0,
+    "types": [],
+    "pass": false,
+    "error": "CTBC_DATE_REQUIRED_00848B — this adapter does not default to today; caller must pass an explicit official data date"
+  },
+  {
+    "issuer": "CTBC",
+    "ticker": "00849B",
+    "dataDate": null,
+    "rows": 0,
+    "types": [],
+    "pass": false,
+    "error": "CTBC_DATE_REQUIRED_00849B — this adapter does not default to today; caller must pass an explicit official data date"
+  },
+  {
+    "issuer": "CTBC",
+    "ticker": "00862B",
+    "dataDate": null,
+    "rows": 0,
+    "types": [],
+    "pass": false,
+    "error": "CTBC_DATE_REQUIRED_00862B — this adapter does not default to today; caller must pass an explicit official data date"
+  },
+  {
+    "issuer": "CTBC",
+    "ticker": "00863B",
+    "dataDate": null,
+    "rows": 0,
+    "types": [],
+    "pass": false,
+    "error": "CTBC_DATE_REQUIRED_00863B — this adapter does not default to today; caller must pass an explicit official data date"
+  },
+  {
+    "issuer": "CTBC",
+    "ticker": "00864B",
+    "dataDate": null,
+    "rows": 0,
+    "types": [],
+    "pass": false,
+    "error": "CTBC_DATE_REQUIRED_00864B — this adapter does not default to today; caller must pass an explicit official data date"
+  },
+  {
+    "issuer": "CTBC",
+    "ticker": "00884B",
+    "dataDate": null,
+    "rows": 0,
+    "types": [],
+    "pass": false,
+    "error": "CTBC_DATE_REQUIRED_00884B — this adapter does not default to today; caller must pass an explicit official data date"
+  },
+  {
+    "issuer": "CTBC",
+    "ticker": "00928",
+    "dataDate": null,
+    "rows": 0,
+    "types": [],
+    "pass": false,
+    "error": "CTBC_DATE_REQUIRED_00928 — this adapter does not default to today; caller must pass an explicit official data date"
+  },
+  {
+    "issuer": "CTBC",
+    "ticker": "00948B",
+    "dataDate": null,
+    "rows": 0,
+    "types": [],
+    "pass": false,
+    "error": "CTBC_DATE_REQUIRED_00948B — this adapter does not default to today; caller must pass an explicit official data date"
+  },
+  {
+    "issuer": "CTBC",
+    "ticker": "00955",
+    "dataDate": null,
+    "rows": 0,
+    "types": [],
+    "pass": false,
+    "error": "CTBC_DATE_REQUIRED_00955 — this adapter does not default to today; caller must pass an explicit official data date"
+  },
+  {
+    "issuer": "CTBC",
+    "ticker": "00981D",
+    "dataDate": null,
+    "rows": 0,
+    "types": [],
+    "pass": false,
+    "error": "CTBC_DATE_REQUIRED_00981D — this adapter does not default to today; caller must pass an explicit official data date"
+  },
+  {
+    "issuer": "KGI",
+    "ticker": "00407A",
+    "dataDate": "2026-09-24",
+    "rows": 50,
+    "types": [
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "KGI",
+    "ticker": "00915",
+    "dataDate": "2026-09-24",
+    "rows": 31,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "KGI",
+    "ticker": "00926",
+    "dataDate": "2026-09-23",
+    "rows": 56,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "KGI",
+    "ticker": "00938",
+    "dataDate": "2026-09-24",
+    "rows": 31,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "KGI",
+    "ticker": "00945B",
+    "dataDate": "2026-09-23",
+    "rows": 180,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "KGI",
+    "ticker": "00952",
+    "dataDate": "2026-09-24",
+    "rows": 51,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "KGI",
+    "ticker": "009816",
+    "dataDate": "2026-09-24",
+    "rows": 51,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "KGI",
+    "ticker": "00981T",
+    "dataDate": "2026-09-23",
+    "rows": 82,
+    "types": [
+      "EQUITY",
+      "FUTURE",
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "KGI",
+    "ticker": "00749B",
+    "dataDate": "2026-09-23",
+    "rows": 157,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "KGI",
+    "ticker": "00750B",
+    "dataDate": "2026-09-23",
+    "rows": 174,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "KGI",
+    "ticker": "00777B",
+    "dataDate": "2026-09-23",
+    "rows": 342,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "KGI",
+    "ticker": "00778B",
+    "dataDate": "2026-09-23",
+    "rows": 29,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "KGI",
+    "ticker": "00779B",
+    "dataDate": "2026-09-23",
+    "rows": 20,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "KGI",
+    "ticker": "00840B",
+    "dataDate": "2026-09-23",
+    "rows": 245,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "KGI",
+    "ticker": "00841B",
+    "dataDate": "2026-09-23",
+    "rows": 129,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "KGI",
+    "ticker": "00890B",
+    "dataDate": "2026-09-23",
+    "rows": 160,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "KGI",
+    "ticker": "00950B",
+    "dataDate": "2026-09-23",
+    "rows": 227,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "KGI",
+    "ticker": "00980T",
+    "dataDate": "2026-09-23",
+    "rows": 63,
+    "types": [
+      "EQUITY",
+      "FUTURE",
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "First",
+    "ticker": "00408A",
+    "dataDate": "2026-09-24",
+    "rows": 50,
+    "types": [
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "First",
+    "ticker": "00728",
+    "dataDate": "2026-09-24",
+    "rows": 32,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "First",
+    "ticker": "00910",
+    "dataDate": "2026-09-23",
+    "rows": 30,
+    "types": [
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "First",
+    "ticker": "00994A",
+    "dataDate": "2026-09-24",
+    "rows": 38,
+    "types": [
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "First",
+    "ticker": "00834B",
+    "dataDate": "2026-09-23",
+    "rows": 63,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "First",
+    "ticker": "00981B",
+    "dataDate": "2026-09-23",
+    "rows": 165,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "FHT",
+    "ticker": "00409A",
+    "dataDate": "2026-09-23",
+    "rows": 49,
+    "types": [
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "FHT",
+    "ticker": "006207",
+    "dataDate": "2026-09-24",
+    "rows": 251,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "FHT",
+    "ticker": "00650L",
+    "dataDate": "2026-09-24",
+    "rows": 1,
+    "types": [
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "FHT",
+    "ticker": "00651R",
+    "dataDate": "2026-09-24",
+    "rows": 1,
+    "types": [
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "FHT",
+    "ticker": "00710B",
+    "dataDate": "2026-09-23",
+    "rows": 236,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "FHT",
+    "ticker": "00711B",
+    "dataDate": "2026-09-23",
+    "rows": 260,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "FHT",
+    "ticker": "00712",
+    "dataDate": "2026-09-23",
+    "rows": 29,
+    "types": [
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "FHT",
+    "ticker": "00731",
+    "dataDate": "2026-09-24",
+    "rows": 36,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "FHT",
+    "ticker": "00924",
+    "dataDate": "2026-09-23",
+    "rows": 147,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "FHT",
+    "ticker": "00929",
+    "dataDate": "2026-09-24",
+    "rows": 51,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "FHT",
+    "ticker": "00949",
+    "dataDate": "2026-09-24",
+    "rows": 31,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "FHT",
+    "ticker": "00991A",
+    "dataDate": "2026-09-24",
+    "rows": 50,
+    "types": [
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "FHT",
+    "ticker": "00758B",
+    "dataDate": "2026-09-23",
+    "rows": 118,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "FHT",
+    "ticker": "00759B",
+    "dataDate": "2026-09-23",
+    "rows": 122,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "FHT",
+    "ticker": "00760B",
+    "dataDate": "2026-09-23",
+    "rows": 137,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "FHT",
+    "ticker": "00768B",
+    "dataDate": "2026-09-23",
+    "rows": 40,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "FHT",
+    "ticker": "00789B",
+    "dataDate": "2026-09-23",
+    "rows": 326,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "FHT",
+    "ticker": "00791B",
+    "dataDate": "2026-09-23",
+    "rows": 81,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "FHT",
+    "ticker": "00877",
+    "dataDate": "2026-09-24",
+    "rows": 48,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "FHT",
+    "ticker": "00986D",
+    "dataDate": "2026-09-23",
+    "rows": 27,
+    "types": [
+      "FUTURE",
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "FHT",
+    "ticker": "00998A",
+    "dataDate": "2026-09-23",
+    "rows": 52,
+    "types": [
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "SinoPac",
+    "ticker": "00410A",
+    "dataDate": "2026-09-24",
+    "rows": 29,
+    "types": [
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "SinoPac",
+    "ticker": "006204",
+    "dataDate": "2026-09-24",
+    "rows": 277,
+    "types": [
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "SinoPac",
+    "ticker": "00901",
+    "dataDate": "2026-09-24",
+    "rows": 51,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "SinoPac",
+    "ticker": "00907",
+    "dataDate": "2026-09-24",
+    "rows": 31,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "SinoPac",
+    "ticker": "00930",
+    "dataDate": "2026-09-24",
+    "rows": 40,
+    "types": [
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "SinoPac",
+    "ticker": "00836B",
+    "dataDate": "2026-09-23",
+    "rows": 135,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "SinoPac",
+    "ticker": "00856B",
+    "dataDate": "2026-09-23",
+    "rows": 38,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "SinoPac",
+    "ticker": "00857B",
+    "dataDate": "2026-09-23",
+    "rows": 40,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "SinoPac",
+    "ticker": "00858",
+    "dataDate": "2026-09-23",
+    "rows": 206,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "SinoPac",
+    "ticker": "00886",
+    "dataDate": "2026-09-23",
+    "rows": 103,
+    "types": [
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "SinoPac",
+    "ticker": "00887",
+    "dataDate": "2026-09-23",
+    "rows": 45,
+    "types": [
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "SinoPac",
+    "ticker": "00888",
+    "dataDate": "2026-09-24",
+    "rows": 57,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "SinoPac",
+    "ticker": "00958B",
+    "dataDate": "2026-09-23",
+    "rows": 69,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Yuanta",
+    "ticker": "0050",
+    "dataDate": "2026-09-24",
+    "rows": 52,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Yuanta",
+    "ticker": "0051",
+    "dataDate": "2026-09-24",
+    "rows": 102,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Yuanta",
+    "ticker": "0053",
+    "dataDate": "2026-09-24",
+    "rows": 240,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Yuanta",
+    "ticker": "0055",
+    "dataDate": "2026-09-24",
+    "rows": 16,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Yuanta",
+    "ticker": "0056",
+    "dataDate": "2026-09-24",
+    "rows": 51,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Yuanta",
+    "ticker": "0061",
+    "dataDate": "2026-09-24",
+    "rows": 2,
+    "types": [
+      "FUTURE",
+      "OTHER"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Yuanta",
+    "ticker": "006203",
+    "dataDate": "2026-09-24",
+    "rows": 75,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Yuanta",
+    "ticker": "006206",
+    "dataDate": "2026-09-24",
+    "rows": 44,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Yuanta",
+    "ticker": "00631L",
+    "dataDate": "2026-09-24",
+    "rows": 3,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Yuanta",
+    "ticker": "00632R",
+    "dataDate": "2026-09-24",
+    "rows": 1,
+    "types": [
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Yuanta",
+    "ticker": "00635U",
+    "dataDate": "2026-09-23",
+    "rows": 1,
+    "types": [
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Yuanta",
+    "ticker": "00637L",
+    "dataDate": "2026-09-24",
+    "rows": 3,
+    "types": [
+      "FUTURE",
+      "OTHER"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Yuanta",
+    "ticker": "00638R",
+    "dataDate": "2026-09-24",
+    "rows": 1,
+    "types": [
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Yuanta",
+    "ticker": "00642U",
+    "dataDate": "2026-09-23",
+    "rows": 1,
+    "types": [
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Yuanta",
+    "ticker": "00646",
+    "dataDate": "2026-09-23",
+    "rows": 504,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Yuanta",
+    "ticker": "00647L",
+    "dataDate": "2026-09-23",
+    "rows": 1,
+    "types": [
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Yuanta",
+    "ticker": "00648R",
+    "dataDate": "2026-09-23",
+    "rows": 1,
+    "types": [
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Yuanta",
+    "ticker": "00660",
+    "dataDate": "2026-09-23",
+    "rows": 51,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Yuanta",
+    "ticker": "00661",
+    "dataDate": "2026-09-24",
+    "rows": 226,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Yuanta",
+    "ticker": "00673R",
+    "dataDate": "2026-09-23",
+    "rows": 1,
+    "types": [
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Yuanta",
+    "ticker": "00674R",
+    "dataDate": "2026-09-23",
+    "rows": 1,
+    "types": [
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Yuanta",
+    "ticker": "00680L",
+    "dataDate": "2026-09-23",
+    "rows": 1,
+    "types": [
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Yuanta",
+    "ticker": "00681R",
+    "dataDate": "2026-09-23",
+    "rows": 1,
+    "types": [
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Yuanta",
+    "ticker": "00682U",
+    "dataDate": "2026-09-23",
+    "rows": 1,
+    "types": [
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Yuanta",
+    "ticker": "00683L",
+    "dataDate": "2026-09-23",
+    "rows": 1,
+    "types": [
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Yuanta",
+    "ticker": "00684R",
+    "dataDate": "2026-09-23",
+    "rows": 1,
+    "types": [
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Yuanta",
+    "ticker": "00706L",
+    "dataDate": "2026-09-23",
+    "rows": 1,
+    "types": [
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Yuanta",
+    "ticker": "00707R",
+    "dataDate": "2026-09-23",
+    "rows": 1,
+    "types": [
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Yuanta",
+    "ticker": "00708L",
+    "dataDate": "2026-09-23",
+    "rows": 1,
+    "types": [
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Yuanta",
+    "ticker": "00713",
+    "dataDate": "2026-09-24",
+    "rows": 51,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Yuanta",
+    "ticker": "00738U",
+    "dataDate": "2026-09-23",
+    "rows": 1,
+    "types": [
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Yuanta",
+    "ticker": "00739",
+    "dataDate": "2026-09-23",
+    "rows": 387,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Yuanta",
+    "ticker": "00762",
+    "dataDate": "2026-09-23",
+    "rows": 85,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Yuanta",
+    "ticker": "00771",
+    "dataDate": "2026-09-23",
+    "rows": 88,
+    "types": [
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Yuanta",
+    "ticker": "00850",
+    "dataDate": "2026-09-24",
+    "rows": 111,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Yuanta",
+    "ticker": "00861",
+    "dataDate": "2026-09-23",
+    "rows": 50,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Yuanta",
+    "ticker": "00876",
+    "dataDate": "2026-09-23",
+    "rows": 106,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Yuanta",
+    "ticker": "00940",
+    "dataDate": "2026-09-24",
+    "rows": 51,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Yuanta",
+    "ticker": "00965",
+    "dataDate": "2026-09-23",
+    "rows": 52,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Yuanta",
+    "ticker": "009820",
+    "dataDate": "2026-09-23",
+    "rows": 52,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Yuanta",
+    "ticker": "00990A",
+    "dataDate": "2026-09-23",
+    "rows": 48,
+    "types": [
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Yuanta",
+    "ticker": "006201",
+    "dataDate": "2026-09-24",
+    "rows": 53,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Yuanta",
+    "ticker": "00679B",
+    "dataDate": "2026-09-23",
+    "rows": 40,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Yuanta",
+    "ticker": "00697B",
+    "dataDate": "2026-09-23",
+    "rows": 13,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Yuanta",
+    "ticker": "00719B",
+    "dataDate": "2026-09-23",
+    "rows": 72,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Yuanta",
+    "ticker": "00720B",
+    "dataDate": "2026-09-23",
+    "rows": 296,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Yuanta",
+    "ticker": "00751B",
+    "dataDate": "2026-09-23",
+    "rows": 365,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Yuanta",
+    "ticker": "00786B",
+    "dataDate": "2026-09-23",
+    "rows": 87,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Yuanta",
+    "ticker": "00787B",
+    "dataDate": "2026-09-23",
+    "rows": 130,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Yuanta",
+    "ticker": "00788B",
+    "dataDate": "2026-09-23",
+    "rows": 221,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Yuanta",
+    "ticker": "00870B",
+    "dataDate": "2026-09-23",
+    "rows": 81,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Yuanta",
+    "ticker": "00967B",
+    "dataDate": "2026-09-23",
+    "rows": 30,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Yuanta",
+    "ticker": "00968B",
+    "dataDate": "2026-09-23",
+    "rows": 167,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Yuanta",
+    "ticker": "00969B",
+    "dataDate": "2026-09-23",
+    "rows": 28,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Capital",
+    "ticker": "00643",
+    "dataDate": "2026-09-24",
+    "rows": 103,
+    "types": [
+      "EQUITY",
+      "FUTURE",
+      "OTHER"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Capital",
+    "ticker": "00678",
+    "dataDate": "2026-09-23",
+    "rows": 246,
+    "types": [
+      "EQUITY",
+      "OTHER"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Capital",
+    "ticker": "00685L",
+    "dataDate": null,
+    "rows": 0,
+    "types": [],
+    "pass": false,
+    "error": "fetch failed"
+  },
+  {
+    "issuer": "Capital",
+    "ticker": "00686R",
+    "dataDate": "2026-09-24",
+    "rows": 9,
+    "types": [
+      "FUTURE",
+      "OTHER"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Capital",
+    "ticker": "00714",
+    "dataDate": "2026-09-23",
+    "rows": 60,
+    "types": [
+      "EQUITY",
+      "OTHER"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Capital",
+    "ticker": "00919",
+    "dataDate": "2026-09-24",
+    "rows": 107,
+    "types": [
+      "EQUITY",
+      "FUTURE",
+      "OTHER"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Capital",
+    "ticker": "00923",
+    "dataDate": "2026-09-24",
+    "rows": 53,
+    "types": [
+      "EQUITY",
+      "FUTURE",
+      "OTHER"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Capital",
+    "ticker": "00927",
+    "dataDate": "2026-09-24",
+    "rows": 35,
+    "types": [
+      "EQUITY",
+      "FUTURE",
+      "OTHER"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Capital",
+    "ticker": "00946",
+    "dataDate": "2026-09-24",
+    "rows": 55,
+    "types": [
+      "EQUITY",
+      "FUTURE",
+      "OTHER"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Capital",
+    "ticker": "00953B",
+    "dataDate": "2026-09-23",
+    "rows": 362,
+    "types": [
+      "BOND",
+      "OTHER"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Capital",
+    "ticker": "009824",
+    "dataDate": "2026-09-23",
+    "rows": 57,
+    "types": [
+      "EQUITY",
+      "FUTURE",
+      "OTHER"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Capital",
+    "ticker": "00982A",
+    "dataDate": "2026-09-24",
+    "rows": 65,
+    "types": [
+      "EQUITY",
+      "OTHER"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Capital",
+    "ticker": "00985B",
+    "dataDate": "2026-09-23",
+    "rows": 449,
+    "types": [
+      "BOND",
+      "OTHER"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Capital",
+    "ticker": "00992A",
+    "dataDate": "2026-09-24",
+    "rows": 45,
+    "types": [
+      "EQUITY",
+      "OTHER"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Capital",
+    "ticker": "00997A",
+    "dataDate": "2026-09-23",
+    "rows": 58,
+    "types": [
+      "EQUITY",
+      "OTHER"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Capital",
+    "ticker": "00722B",
+    "dataDate": "2026-09-23",
+    "rows": 92,
+    "types": [
+      "BOND",
+      "OTHER"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Capital",
+    "ticker": "00723B",
+    "dataDate": "2026-09-23",
+    "rows": 144,
+    "types": [
+      "BOND",
+      "OTHER"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Capital",
+    "ticker": "00724B",
+    "dataDate": "2026-09-23",
+    "rows": 160,
+    "types": [
+      "BOND",
+      "OTHER"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Capital",
+    "ticker": "00754B",
+    "dataDate": "2026-09-23",
+    "rows": 128,
+    "types": [
+      "BOND",
+      "OTHER"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Capital",
+    "ticker": "00755B",
+    "dataDate": "2026-09-23",
+    "rows": 356,
+    "types": [
+      "BOND",
+      "OTHER"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Capital",
+    "ticker": "00756B",
+    "dataDate": "2026-09-23",
+    "rows": 82,
+    "types": [
+      "BOND",
+      "OTHER"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Capital",
+    "ticker": "00764B",
+    "dataDate": "2026-09-23",
+    "rows": 24,
+    "types": [
+      "BOND",
+      "OTHER"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Capital",
+    "ticker": "00792B",
+    "dataDate": "2026-09-23",
+    "rows": 432,
+    "types": [
+      "BOND",
+      "OTHER"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Capital",
+    "ticker": "00859B",
+    "dataDate": "2026-09-23",
+    "rows": 45,
+    "types": [
+      "BOND",
+      "OTHER"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Capital",
+    "ticker": "00860B",
+    "dataDate": null,
+    "rows": 0,
+    "types": [],
+    "pass": false,
+    "error": "fetch failed"
+  },
+  {
+    "issuer": "Capital",
+    "ticker": "00937B",
+    "dataDate": "2026-09-23",
+    "rows": 222,
+    "types": [
+      "BOND",
+      "OTHER"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Capital",
+    "ticker": "009823",
+    "dataDate": null,
+    "rows": 0,
+    "types": [],
+    "pass": false,
+    "error": "fetch failed"
+  },
+  {
+    "issuer": "Mega",
+    "ticker": "00690",
+    "dataDate": "2026-09-24",
+    "rows": 31,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Mega",
+    "ticker": "00911",
+    "dataDate": "2026-09-23",
+    "rows": 30,
+    "types": [
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Mega",
+    "ticker": "00913",
+    "dataDate": "2026-09-24",
+    "rows": 31,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Mega",
+    "ticker": "00921",
+    "dataDate": "2026-09-24",
+    "rows": 34,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Mega",
+    "ticker": "00932",
+    "dataDate": "2026-09-24",
+    "rows": 51,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Mega",
+    "ticker": "00943",
+    "dataDate": "2026-09-24",
+    "rows": 51,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Mega",
+    "ticker": "00982T",
+    "dataDate": "2026-09-23",
+    "rows": 40,
+    "types": [
+      "EQUITY",
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Mega",
+    "ticker": "00996A",
+    "dataDate": "2026-09-24",
+    "rows": 52,
+    "types": [
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Mega",
+    "ticker": "00957B",
+    "dataDate": "2026-09-23",
+    "rows": 168,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Taishin",
+    "ticker": "00703",
+    "dataDate": "2026-09-24",
+    "rows": 98,
+    "types": [
+      "FUTURE",
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Taishin",
+    "ticker": "00775B",
+    "dataDate": "2026-09-24",
+    "rows": 232,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Taishin",
+    "ticker": "00851",
+    "dataDate": "2026-09-24",
+    "rows": 59,
+    "types": [
+      "FUTURE",
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Taishin",
+    "ticker": "00904",
+    "dataDate": "2026-09-24",
+    "rows": 32,
+    "types": [
+      "FUTURE",
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Taishin",
+    "ticker": "00936",
+    "dataDate": "2026-09-24",
+    "rows": 31,
+    "types": [
+      "FUTURE",
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Taishin",
+    "ticker": "00947",
+    "dataDate": "2026-09-24",
+    "rows": 51,
+    "types": [
+      "FUTURE",
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Taishin",
+    "ticker": "00951",
+    "dataDate": "2026-09-24",
+    "rows": 51,
+    "types": [
+      "FUTURE",
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Taishin",
+    "ticker": "00962",
+    "dataDate": "2026-09-24",
+    "rows": 51,
+    "types": [
+      "FUTURE",
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Taishin",
+    "ticker": "009805",
+    "dataDate": "2026-09-24",
+    "rows": 51,
+    "types": [
+      "FUTURE",
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Taishin",
+    "ticker": "00986A",
+    "dataDate": "2026-09-24",
+    "rows": 36,
+    "types": [
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Taishin",
+    "ticker": "00987A",
+    "dataDate": "2026-09-24",
+    "rows": 28,
+    "types": [
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Taishin",
+    "ticker": "00734B",
+    "dataDate": "2026-09-24",
+    "rows": 58,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Taishin",
+    "ticker": "00842B",
+    "dataDate": "2026-09-24",
+    "rows": 41,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Taishin",
+    "ticker": "00844B",
+    "dataDate": "2026-09-24",
+    "rows": 85,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Taishin",
+    "ticker": "00867B",
+    "dataDate": "2026-09-24",
+    "rows": 96,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Taishin",
+    "ticker": "00942B",
+    "dataDate": "2026-09-24",
+    "rows": 207,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Taishin",
+    "ticker": "00970B",
+    "dataDate": "2026-09-24",
+    "rows": 151,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Taishin",
+    "ticker": "009806",
+    "dataDate": "2026-09-24",
+    "rows": 142,
+    "types": [
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Taishin",
+    "ticker": "009807",
+    "dataDate": "2026-09-24",
+    "rows": 64,
+    "types": [
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Taishin",
+    "ticker": "00980B",
+    "dataDate": "2026-09-24",
+    "rows": 121,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Taishin",
+    "ticker": "00989B",
+    "dataDate": "2026-09-24",
+    "rows": 120,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Nomura",
+    "ticker": "00935",
+    "dataDate": "2026-09-24",
+    "rows": 51,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Nomura",
+    "ticker": "00944",
+    "dataDate": "2026-09-24",
+    "rows": 51,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Nomura",
+    "ticker": "00960",
+    "dataDate": "2026-09-18",
+    "rows": 40,
+    "types": [
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Nomura",
+    "ticker": "00971",
+    "dataDate": "2026-09-23",
+    "rows": 50,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Nomura",
+    "ticker": "00972",
+    "dataDate": "2026-09-24",
+    "rows": 51,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Nomura",
+    "ticker": "00980A",
+    "dataDate": "2026-09-24",
+    "rows": 51,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Nomura",
+    "ticker": "009812",
+    "dataDate": "2026-09-24",
+    "rows": 2,
+    "types": [
+      "FUTURE",
+      "OTHER"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Nomura",
+    "ticker": "009821",
+    "dataDate": "2026-09-23",
+    "rows": 40,
+    "types": [
+      "EQUITY"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Nomura",
+    "ticker": "00985A",
+    "dataDate": "2026-09-24",
+    "rows": 51,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Nomura",
+    "ticker": "00999A",
+    "dataDate": "2026-09-24",
+    "rows": 56,
+    "types": [
+      "EQUITY",
+      "FUTURE"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "Nomura",
+    "ticker": "00987B",
+    "dataDate": "2026-09-23",
+    "rows": 40,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "BlackRock",
+    "ticker": "009813",
+    "dataDate": "2026-09-24",
+    "rows": 56,
+    "types": [
+      "EQUITY",
+      "OTHER"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "BlackRock",
+    "ticker": "009826",
+    "dataDate": "2026-09-24",
+    "rows": 1553,
+    "types": [
+      "EQUITY",
+      "OTHER"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "BlackRock",
+    "ticker": "00991B",
+    "dataDate": "2026-09-24",
+    "rows": 317,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  },
+  {
+    "issuer": "BlackRock",
+    "ticker": "00985D",
+    "dataDate": "2026-09-24",
+    "rows": 190,
+    "types": [
+      "BOND"
+    ],
+    "pass": true
+  }
+]

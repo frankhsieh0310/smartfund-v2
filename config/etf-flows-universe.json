@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "asset": "GLOBAL_ETF_FLOWS",
+  "identityPolicy": "Map ticker and issuer to canonical ETF identity; never infer identity from display name alone.",
+  "frequencies": ["DAILY", "WEEKLY", "MONTHLY", "QUARTERLY", "YTD"],
+  "fields": ["dailyFlow", "weeklyFlow", "monthlyFlow", "quarterlyFlow", "ytdFlow", "sharesOutstanding", "creation", "redemption", "netFlow", "netAssets"]
+}

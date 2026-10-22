@@ -1,0 +1,368 @@
+{
+  "GC=F": {
+    "chart": {
+      "result": [
+        {
+          "meta": {
+            "currency": "USD",
+            "symbol": "GC=F",
+            "exchangeName": "CMX",
+            "fullExchangeName": "COMEX",
+            "instrumentType": "FUTURE",
+            "firstTradeDate": 967608000,
+            "regularMarketTime": 1789389744,
+            "hasPrePostMarketData": false,
+            "gmtoffset": -14400,
+            "timezone": "EDT",
+            "exchangeTimezoneName": "America/New_York",
+            "regularMarketPrice": 4321.1,
+            "regularMarketChangePercent": -1.991,
+            "fulldayPrice": 4321.1,
+            "fulldayChange": -87.8,
+            "fulldayChangePercent": -1.991,
+            "fiftyTwoWeekHigh": 5586.2,
+            "fiftyTwoWeekLow": 3635.1,
+            "regularMarketDayHigh": 4396.8,
+            "regularMarketDayLow": 4313,
+            "regularMarketVolume": 76882,
+            "shortName": "Gold Dec 26",
+            "chartPreviousClose": 4416,
+            "priceHint": 2,
+            "currentTradingPeriod": {
+              "pre": {
+                "timezone": "EDT",
+                "end": 1789358400,
+                "start": 1789358400,
+                "gmtoffset": -14400
+              },
+              "regular": {
+                "timezone": "EDT",
+                "end": 1789444740,
+                "start": 1789358400,
+                "gmtoffset": -14400
+              },
+              "post": {
+                "timezone": "EDT",
+                "end": 1789444740,
+                "start": 1789444740,
+                "gmtoffset": -14400
+              }
+            },
+            "dataGranularity": "1d",
+            "range": "5d",
+            "validRanges": [
+              "1d",
+              "5d",
+              "1mo",
+              "3mo",
+              "6mo",
+              "1y",
+              "2y",
+              "5y",
+              "10y",
+              "ytd",
+              "max"
+            ]
+          },
+          "timestamp": [
+            1788926400,
+            1789012800,
+            1789099200,
+            1789358400
+          ],
+          "indicators": {
+            "quote": [
+              {
+                "open": [
+                  4398.7001953125,
+                  4418.89990234375,
+                  4365.7998046875,
+                  4375
+                ],
+                "low": [
+                  4397.39990234375,
+                  4330.7001953125,
+                  4365.7998046875,
+                  4313
+                ],
+                "volume": [
+                  86,
+                  73,
+                  73,
+                  76882
+                ],
+                "close": [
+                  4416,
+                  4364.5,
+                  4366.2001953125,
+                  4321.10009765625
+                ],
+                "high": [
+                  4416,
+                  4420,
+                  4389.5,
+                  4396.7998046875
+                ]
+              }
+            ],
+            "adjclose": [
+              {
+                "adjclose": [
+                  4416,
+                  4364.5,
+                  4366.2001953125,
+                  4321.10009765625
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "error": null
+    }
+  },
+  "SI=F": {
+    "chart": {
+      "result": [
+        {
+          "meta": {
+            "currency": "USD",
+            "symbol": "SI=F",
+            "exchangeName": "CMX",
+            "fullExchangeName": "COMEX",
+            "instrumentType": "FUTURE",
+            "firstTradeDate": 967608000,
+            "regularMarketTime": 1789389797,
+            "hasPrePostMarketData": false,
+            "gmtoffset": -14400,
+            "timezone": "EDT",
+            "exchangeTimezoneName": "America/New_York",
+            "regularMarketPrice": 63.56,
+            "regularMarketChangePercent": -2.497,
+            "fulldayPrice": 63.56,
+            "fulldayChange": -1.628,
+            "fulldayChangePercent": -2.497,
+            "fiftyTwoWeekHigh": 121.3,
+            "fiftyTwoWeekLow": 41.495,
+            "regularMarketDayHigh": 64.98,
+            "regularMarketDayLow": 62.8,
+            "regularMarketVolume": 20317,
+            "shortName": "Silver Dec 26",
+            "chartPreviousClose": 67.942,
+            "priceHint": 2,
+            "currentTradingPeriod": {
+              "pre": {
+                "timezone": "EDT",
+                "start": 1789358400,
+                "end": 1789358400,
+                "gmtoffset": -14400
+              },
+              "regular": {
+                "timezone": "EDT",
+                "start": 1789358400,
+                "end": 1789444740,
+                "gmtoffset": -14400
+              },
+              "post": {
+                "timezone": "EDT",
+                "start": 1789444740,
+                "end": 1789444740,
+                "gmtoffset": -14400
+              }
+            },
+            "dataGranularity": "1d",
+            "range": "5d",
+            "validRanges": [
+              "1d",
+              "5d",
+              "1mo",
+              "3mo",
+              "6mo",
+              "1y",
+              "2y",
+              "5y",
+              "10y",
+              "ytd",
+              "max"
+            ]
+          },
+          "timestamp": [
+            1788926400,
+            1789012800,
+            1789099200,
+            1789358400
+          ],
+          "indicators": {
+            "quote": [
+              {
+                "high": [
+                  68.1050033569336,
+                  64.41000366210938,
+                  64.55400085449219,
+                  64.9800033569336
+                ],
+                "open": [
+                  66.30000305175781,
+                  64.19499969482422,
+                  63.290000915527344,
+                  64.78500366210938
+                ],
+                "close": [
+                  67.94200134277344,
+                  64.28399658203125,
+                  64.55400085449219,
+                  63.560001373291016
+                ],
+                "low": [
+                  66.30000305175781,
+                  64.1449966430664,
+                  63.099998474121094,
+                  62.79999923706055
+                ],
+                "volume": [
+                  138,
+                  275,
+                  275,
+                  20317
+                ]
+              }
+            ],
+            "adjclose": [
+              {
+                "adjclose": [
+                  67.94200134277344,
+                  64.28399658203125,
+                  64.55400085449219,
+                  63.560001373291016
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "error": null
+    }
+  },
+  "HG=F": {
+    "chart": {
+      "result": [
+        {
+          "meta": {
+            "currency": "USD",
+            "symbol": "HG=F",
+            "exchangeName": "CMX",
+            "fullExchangeName": "COMEX",
+            "instrumentType": "FUTURE",
+            "firstTradeDate": 967608000,
+            "regularMarketTime": 1789389798,
+            "hasPrePostMarketData": false,
+            "gmtoffset": -14400,
+            "timezone": "EDT",
+            "exchangeTimezoneName": "America/New_York",
+            "regularMarketPrice": 6.398,
+            "regularMarketChangePercent": -2.283,
+            "fulldayPrice": 6.398,
+            "fulldayChange": -0.149,
+            "fulldayChangePercent": -2.283,
+            "fiftyTwoWeekHigh": 6.806,
+            "fiftyTwoWeekLow": 4.522,
+            "regularMarketDayHigh": 6.552,
+            "regularMarketDayLow": 6.38,
+            "regularMarketVolume": 25959,
+            "shortName": "Copper Dec 26",
+            "chartPreviousClose": 6.804,
+            "priceHint": 4,
+            "currentTradingPeriod": {
+              "pre": {
+                "timezone": "EDT",
+                "end": 1789358400,
+                "start": 1789358400,
+                "gmtoffset": -14400
+              },
+              "regular": {
+                "timezone": "EDT",
+                "end": 1789444740,
+                "start": 1789358400,
+                "gmtoffset": -14400
+              },
+              "post": {
+                "timezone": "EDT",
+                "end": 1789444740,
+                "start": 1789444740,
+                "gmtoffset": -14400
+              }
+            },
+            "dataGranularity": "1d",
+            "range": "5d",
+            "validRanges": [
+              "1d",
+              "5d",
+              "1mo",
+              "3mo",
+              "6mo",
+              "1y",
+              "2y",
+              "5y",
+              "10y",
+              "ytd",
+              "max"
+            ]
+          },
+          "timestamp": [
+            1788926400,
+            1789012800,
+            1789099200,
+            1789358400
+          ],
+          "indicators": {
+            "quote": [
+              {
+                "close": [
+                  6.803500175476074,
+                  6.4670000076293945,
+                  6.4695000648498535,
+                  6.398499965667725
+                ],
+                "high": [
+                  6.805500030517578,
+                  6.752500057220459,
+                  6.484000205993652,
+                  6.552499771118164
+                ],
+                "low": [
+                  6.663000106811523,
+                  6.441500186920166,
+                  6.447500228881836,
+                  6.380000114440918
+                ],
+                "volume": [
+                  933,
+                  1731,
+                  1731,
+                  25959
+                ],
+                "open": [
+                  6.663000106811523,
+                  6.752500057220459,
+                  6.447500228881836,
+                  6.552499771118164
+                ]
+              }
+            ],
+            "adjclose": [
+              {
+                "adjclose": [
+                  6.803500175476074,
+                  6.4670000076293945,
+                  6.4695000648498535,
+                  6.398499965667725
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "error": null
+    }
+  }
+}

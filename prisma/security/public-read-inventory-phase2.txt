@@ -1,0 +1,12 @@
+# Public-read inventory — RLS Security Phase 2
+
+Tables reviewed: 314
+Confirmed public direct reads: 0
+Confirmed authenticated direct reads: 0
+Server-only: 314
+Unresolved: 0
+
+Evidence: the repository's Supabase client is used for Auth only. Search,
+compare, public market pages, watchlists, alerts, and mobile asset details read
+through server-side API routes backed by Prisma. No table, RPC, realtime, or
+direct PostgREST read was found in browser/mobile code.

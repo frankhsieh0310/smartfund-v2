@@ -5,6 +5,7 @@
 // Backed by consensus_flip_signals (real detected flips only — no view heuristic, no fake).
 
 import { prisma } from "@/lib/prisma";
+import { organizationDisplayZh, personDisplayZh, personShortNameZh, sourceDisplayZh } from "@/lib/consensus/displayLocalization";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -61,9 +62,12 @@ export async function GET(request: Request) {
       flips: rows.map((r) => ({
         id: String(r.id),
         person: String(r.person),
+        person_display_zh: personDisplayZh(String(r.person)),
+        person_short_name_zh: personShortNameZh(String(r.person)),
         person_slug: String(r.person_slug),
         category: (r.category as string) ?? null,
         organization: (r.organization as string) ?? null,
+        organization_display_zh: organizationDisplayZh((r.organization as string) ?? null),
         symbol: String(r.symbol),
         company_name: (r.company_name as string) ?? null,
         relation_type: String(r.relation_type),
@@ -80,6 +84,7 @@ export async function GET(request: Request) {
         source_grade: (r.source_grade as string) ?? null,
         source_url: String(r.source_url ?? ""),
         source_title: (r.source_title as string) ?? null,
+        source_display_zh: sourceDisplayZh(String(r.source_url ?? ""), (r.source_title as string) ?? null),
         summary: (r.summary_zh as string) ?? (r.theme as string) ?? null,
         notified: r.notified_at != null,
       })),

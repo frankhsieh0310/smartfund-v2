@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "funds": [
+    { "fundId": "025b7023-323f-427e-8427-8d264d97501a", "shareClassId": "47da3a4b-68a1-41d2-9623-912a883d79b7", "companyId": "alliancebernstein", "companyName": "AllianceBernstein", "source": "AB_OFFICIAL_DOCUMENTS", "sourceRecordId": "AB_PRODUCT_RANGE_2026" },
+    { "fundId": "ca4a33c2-4ad8-47df-9627-952538cd6906", "shareClassId": "5e919518-275f-401f-8c77-9e332aa9b3bf", "companyId": "alliancebernstein", "companyName": "AllianceBernstein", "source": "AB_OFFICIAL_DOCUMENTS", "sourceRecordId": "AB_PRODUCT_RANGE_2026" },
+    { "fundId": "d16b934d-c936-4ae5-8b59-3bcee04f20da", "shareClassId": "7952b3d3-52c5-4b27-a013-5636745ef08a", "companyId": "franklin-templeton", "companyName": "Franklin Templeton", "source": "FRANKLIN_TW_OFFICIAL_DOCUMENTS", "sourceRecordId": "FRANKLIN_MONTHREPORT_107_20260730" },
+    { "fundId": "279924b4-0dce-40a7-a5ac-5d50321caf99", "shareClassId": "8663dca0-aeb8-4157-a1ce-b515614dd90a", "companyId": "franklin-templeton", "companyName": "Franklin Templeton", "source": "FRANKLIN_TW_OFFICIAL_DOCUMENTS", "sourceRecordId": "FRANKLIN_MONTHREPORT_1107_20260630" },
+    { "fundId": "abf367dc-427f-4c20-9030-a3e71df9fed2", "shareClassId": "d185bc03-2794-42a4-bc67-c46f0d49dba3", "companyId": "schroders", "companyName": "Schroders", "source": "SCHRODERS_OFFICIAL_DOCUMENTS", "sourceRecordId": "D4915EDD-264D-452A-BFD2-F255A72541F0" },
+    { "fundId": "44d03387-9cf1-4896-a3cf-9d02ae76e11a", "shareClassId": "5dddefa6-ceef-44eb-b8ec-d8ea743f3c3d", "companyId": "schroders", "companyName": "Schroders", "source": "SCHRODERS_OFFICIAL_DOCUMENTS", "sourceRecordId": "D4915EDD-264D-452A-BFD2-F255A72541F0" }
+  ]
+}

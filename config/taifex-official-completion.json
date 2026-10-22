@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "asset": "FUTURES",
+  "exchange": "TAIFEX",
+  "maxDbConcurrency": 1,
+  "boundedBatchSize": 1,
+  "locales": ["zh-TW", "en"],
+  "sources": [
+    {"id":"product-universe-zh","url":"https://www.taifex.com.tw/cht/4/contractName1","domain":"PRODUCT_UNIVERSE","status":"AUTO_CONTINUING","parser":"PRODUCT_IDENTITY_HTML","locale":"zh-TW"},
+    {"id":"product-universe-en","url":"https://www.taifex.com.tw/enl/eng4/contractName","domain":"PRODUCT_UNIVERSE","status":"AUTO_CONTINUING","parser":"PRODUCT_IDENTITY_HTML","locale":"en"},
+    {"id":"futures-daily","url":"https://www.taifex.com.tw/cht/3/futDailyMarketReport","domain":"FUTURES_DAILY_MARKET","status":"AUTO_CONTINUING","parser":"EXISTING_TAIFEX_DAILY"},
+    {"id":"options-daily","url":"https://www.taifex.com.tw/cht/3/optDailyMarketReport","domain":"OPTIONS_DAILY_MARKET","status":"AUTO_CONTINUING","parser":"TAIFEX_DAILY_TABLE"},
+    {"id":"institutional-futures","url":"https://www.taifex.com.tw/cht/3/futContractsDateExcel","domain":"INSTITUTIONAL_POSITIONING","status":"AUTO_CONTINUING","parser":"TAIFEX_INSTITUTIONAL_TABLE"},
+    {"id":"institutional-options","url":"https://www.taifex.com.tw/cht/3/optContractsDate","domain":"INSTITUTIONAL_POSITIONING","status":"AUTO_CONTINUING","parser":"TAIFEX_INSTITUTIONAL_TABLE"},
+    {"id":"large-traders","url":"https://www.taifex.com.tw/cht/3/largeTraderFutQry","domain":"LARGE_TRADER","status":"AUTO_CONTINUING","parser":"TAIFEX_LARGE_TRADER_TABLE"},
+    {"id":"put-call","url":"https://www.taifex.com.tw/cht/3/pcRatio","domain":"PUT_CALL","status":"AUTO_CONTINUING","parser":"TAIFEX_PUT_CALL_TABLE"},
+    {"id":"volatility","url":"https://www.taifex.com.tw/enl/eng7/vixDaily3MNew","domain":"VOLATILITY","status":"AUTO_CONTINUING","parser":"EXISTING_TAIFEX_VIX"},
+    {"id":"margin-current","url":"https://www.taifex.com.tw/cht/5/indexMarging","domain":"CONTRACT_ECONOMICS","status":"AUTO_CONTINUING","parser":"EXISTING_CONTRACT_ECONOMICS"},
+    {"id":"margin-history","url":"https://www.taifex.com.tw/cht/5/indexMarging","domain":"MARGIN_HISTORY","status":"INPUT_GATED_AUTO_CONTINUING","parser":"TAIFEX_DATED_MARGIN_DISCLOSURE"},
+    {"id":"market-statistics","url":"https://www.taifex.com.tw/cht/7/tradeStatistics1","domain":"MARKET_STATISTICS","status":"AUTO_CONTINUING","parser":"TAIFEX_STATISTICS_TABLE"},
+    {"id":"intraday","url":"https://www.taifex.com.tw/cht/3/dlFutPrevious30DaysSalesData","domain":"INTRADAY","status":"INPUT_GATED_AUTO_CONTINUING","parser":"TAIFEX_OFFICIAL_DOWNLOAD"},
+    {"id":"options-greeks","url":"https://www.taifex.com.tw/cht/3/optDailyMarketReport","domain":"OPTIONS_GREEKS","status":"SOURCE_NOT_PUBLIC","parser":null}
+  ],
+  "discoveryMaps": [
+    "https://www.sfb.gov.tw/ch/home.jsp?id=134&parentpath=0,9",
+    "https://www.taifex.com.tw/cht/13/internationalFinanceLink",
+    "https://www.taifex.com.tw/cht/13/foreignExchangeLink",
+    "https://www.taifex.com.tw/cht/13/peerUnitLink",
+    "https://www.taifex.com.tw/cht/13/realTimeInfoLink"
+  ]
+}

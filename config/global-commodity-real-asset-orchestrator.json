@@ -1,0 +1,40 @@
+{
+  "version": 2,
+  "asset": "GLOBAL_COMMODITY_REAL_ASSET",
+  "task": "GLOBAL_COMMODITY_REAL_ASSET_CONTINUOUS_PROFESSIONAL_DEPTH_ORCHESTRATION_V2",
+  "pollIntervalMs": 60000,
+  "domains": [
+    { "id": "PRICE_REFERENCE", "runtime": "commodity", "checkpoint": "desktop-supervisor/health.json", "priority": "P0A" },
+    { "id": "INVENTORY", "runtime": "commodity-inventory", "checkpoint": "checkpoint.json", "priority": "P0A" },
+    { "id": "ENERGY_PHYSICAL", "runtime": "energy-physical-supply-demand", "checkpoint": "heartbeat.json", "priority": "P0A" },
+    { "id": "ELECTRICITY", "runtime": "electricity-markets", "checkpoint": "checkpoint.json", "priority": "P0B" },
+    { "id": "AGRICULTURE", "runtime": "commodity-inventory", "checkpoint": "checkpoint.json", "priority": "P0B" },
+    { "id": "METALS", "runtime": "commodity-inventory", "checkpoint": "checkpoint.json", "priority": "P0B" },
+    { "id": "CARBON", "runtime": "carbon-markets", "checkpoint": "checkpoint.json", "priority": "P0B" },
+    { "id": "SHIPPING", "runtime": "shipping-index", "checkpoint": "checkpoint.json", "priority": "P0B" }
+  ],
+  "capabilities": [
+    { "id": "COMMODITY_IDENTITY", "priority": "P0A", "status": "CURRENT_AND_AUTO_UPDATING" },
+    { "id": "CURRENT_SPOT_REFERENCE_PRICE", "priority": "P0A", "status": "TIME_DEPTH_CONSTRAINED" },
+    { "id": "PRICE_HISTORY", "priority": "P0A", "status": "MAX_SOURCE_DEPTH_REACHED" },
+    { "id": "INTRADAY_WHERE_NATIVE", "priority": "P0A", "status": "SOURCE_CONSTRAINED" },
+    { "id": "SOURCE_DATASET_LINEAGE", "priority": "P0A", "status": "MAPPING_CONSTRAINED" },
+    { "id": "PROVENANCE", "priority": "P0A", "status": "CURRENT_AND_AUTO_UPDATING" },
+    { "id": "ENERGY_INVENTORY", "priority": "P0A", "status": "CURRENT_AND_AUTO_UPDATING" },
+    { "id": "ENERGY_PRODUCTION_FLOWS", "priority": "P0A", "status": "CURRENT_AND_AUTO_UPDATING" },
+    { "id": "ELECTRICITY", "priority": "P0B", "status": "TIME_DEPTH_CONSTRAINED" },
+    { "id": "AGRICULTURE_VINTAGES", "priority": "P0B", "status": "INPUT_CONSTRAINED" },
+    { "id": "METALS_PHYSICAL", "priority": "P0B", "status": "ACCESS_CONSTRAINED" },
+    { "id": "GOLD_SUPPLY_DEMAND", "priority": "P0B", "status": "SOURCE_CONSTRAINED" },
+    { "id": "CARBON", "priority": "P0B", "status": "CURRENT_AND_AUTO_UPDATING" },
+    { "id": "SHIPPING", "priority": "P0B", "status": "LICENSE_CONSTRAINED" },
+    { "id": "TECHNICAL_PRICE_ANALYTICS", "priority": "P1", "status": "INPUT_CONSTRAINED" },
+    { "id": "CROSS_DOMAIN_PHYSICAL_ANALYTICS", "priority": "P1", "status": "MAPPING_CONSTRAINED" }
+  ],
+  "futuresBoundary": {
+    "owner": "GLOBAL_FUTURES/COMMODITY_FUTURES",
+    "linkageOnly": true,
+    "relations": ["carbon_futures_mappings"],
+    "dataCopyAllowed": false
+  }
+}

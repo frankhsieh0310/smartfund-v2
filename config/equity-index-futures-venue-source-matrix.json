@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "candidateLimitPerVenue": 2,
+  "firstBatchVenueLimit": 5,
+  "statusVocabulary": ["PUBLIC_OFFICIAL", "PUBLIC_DELAYED", "LICENSE_REQUIRED", "ACCESS_BLOCKED", "SOURCE_PENDING", "NOT_AVAILABLE"],
+  "venues": [
+    {
+      "venue": "CME",
+      "batch": 1,
+      "candidates": [
+        {"url":"https://www.cmegroup.com/markets/equities.html","sourceType":"OFFICIAL_PRODUCT_PAGES","status":"PUBLIC_OFFICIAL","capabilities":["SPECIFICATION_SOURCE"]},
+        {"url":"https://www.cmegroup.com/market-data/settlements.html","sourceType":"OFFICIAL_SETTLEMENTS","status":"SOURCE_PENDING","capabilities":["SETTLEMENT_SOURCE","VOLUME_SOURCE","OPEN_INTEREST_SOURCE"]}
+      ]
+    },
+    {
+      "venue": "TAIFEX",
+      "batch": 1,
+      "candidates": [
+        {"url":"https://www.taifex.com.tw/enl/eng3/futDailyMarketReport","sourceType":"OFFICIAL_DAILY_REPORT","status":"PUBLIC_OFFICIAL","capabilities":["CONTRACT_MASTER_SOURCE","CURRENT_SOURCE","HISTORY_SOURCE","VOLUME_SOURCE","OPEN_INTEREST_SOURCE"]},
+        {"url":"https://www.taifex.com.tw/enl/eng2/stockLists","sourceType":"OFFICIAL_PRODUCT_INFORMATION","status":"SOURCE_PENDING","capabilities":["SPECIFICATION_SOURCE","LIFECYCLE_SOURCE"]}
+      ]
+    },
+    {
+      "venue": "OSE",
+      "batch": 1,
+      "candidates": [
+        {"url":"https://port.jpx.co.jp/jpxhp/main/index.aspx?F=e_future&disptype=day_through","sourceType":"OFFICIAL_DELAYED_QUOTES","status":"PUBLIC_DELAYED","capabilities":["CONTRACT_MASTER_SOURCE","CURRENT_SOURCE","SETTLEMENT_SOURCE","VOLUME_SOURCE","OPEN_INTEREST_SOURCE"]},
+        {"url":"https://www.jpx.co.jp/english/markets/derivatives/reference/index.html","sourceType":"OFFICIAL_REFERENCE_DATA","status":"PUBLIC_OFFICIAL","capabilities":["CONTRACT_MASTER_SOURCE","SPECIFICATION_SOURCE","LIFECYCLE_SOURCE"]}
+      ]
+    },
+    {
+      "venue": "EUREX",
+      "batch": 1,
+      "candidates": [
+        {"url":"https://www.eurex.com/ex-en/data/statistics","sourceType":"OFFICIAL_STATISTICS","status":"PUBLIC_OFFICIAL","capabilities":["VOLUME_SOURCE","OPEN_INTEREST_SOURCE"]},
+        {"url":"https://www.eurex.com/ex-en/markets/idx","sourceType":"OFFICIAL_PRODUCT_PAGES","status":"PUBLIC_OFFICIAL","capabilities":["SPECIFICATION_SOURCE","LIFECYCLE_SOURCE"]}
+      ]
+    },
+    {
+      "venue": "HKEX",
+      "batch": 1,
+      "candidates": [
+        {"url":"https://www.hkex.com.hk/Market-Data/Futures-and-Options-Prices","sourceType":"OFFICIAL_DELAYED_MARKET_DATA","status":"PUBLIC_DELAYED","capabilities":["CURRENT_SOURCE","CONTRACT_MASTER_SOURCE"]},
+        {"url":"https://www.hkex.com.hk/Products/Listed-Derivatives/Equity-Index","sourceType":"OFFICIAL_PRODUCT_PAGES","status":"PUBLIC_OFFICIAL","capabilities":["SPECIFICATION_SOURCE","LIFECYCLE_SOURCE"]}
+      ]
+    },
+    {"venue":"KRX","batch":2,"candidates":[],"status":"SOURCE_PENDING"},
+    {"venue":"SGX","batch":2,"candidates":[],"status":"SOURCE_PENDING"},
+    {"venue":"ICE","batch":2,"candidates":[],"status":"SOURCE_PENDING"},
+    {"venue":"ASX","batch":2,"candidates":[],"status":"SOURCE_PENDING"},
+    {"venue":"NSE","batch":2,"candidates":[],"status":"SOURCE_PENDING"},
+    {"venue":"BSE","batch":2,"candidates":[],"status":"SOURCE_PENDING"},
+    {"venue":"B3","batch":2,"candidates":[],"status":"SOURCE_PENDING"},
+    {"venue":"MEXDER","batch":2,"candidates":[],"status":"SOURCE_PENDING"}
+  ]
+}

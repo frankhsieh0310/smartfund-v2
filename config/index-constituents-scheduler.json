@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "asset": "GLOBAL_INDEX_CONSTITUENTS",
+  "latestIntervalMinutes": 360,
+  "retryIntervalMinutes": 30,
+  "historicalStartDate": "1990-01-01",
+  "requestTimeoutMs": 30000,
+  "maxRetries": 5,
+  "jitterSeconds": 45
+}

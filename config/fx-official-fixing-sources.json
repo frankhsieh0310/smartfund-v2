@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "sources": [
+    {"id":"ECB","url":"https://www.ecb.europa.eu/stats/eurofxref/eurofxref-hist-90d.xml","format":"XML","quotation":"CURRENCY_UNITS_PER_EUR","frequency":"BUSINESS_DAILY","status":"PRODUCTION_READY","publication":"AROUND_16_00_CET","adapter":"ecb-eurofxref"},
+    {"id":"FEDERAL_RESERVE_H10_FRED","url":"https://fred.stlouisfed.org/graph/fredgraph.csv","format":"CSV","quotation":"SERIES_SPECIFIC","frequency":"BUSINESS_DAILY_WEEKLY_RELEASE","status":"PRODUCTION_READY","publication":"H10_MONDAY_16_15_ET","adapter":"fed-h10-fred"},
+    {"id":"BANK_OF_CANADA","url":"https://www.bankofcanada.ca/valet/observations/group/FX_RATES_DAILY/json","format":"JSON","quotation":"CAD_PER_FOREIGN_CURRENCY","frequency":"BUSINESS_DAILY","status":"PRODUCTION_READY","publication":"DATE_ONLY","adapter":"boc-valet"},
+    {"id":"TAIWAN_CBC","url":"https://www.cbc.gov.tw/tw/np-520-1.html","format":"XLS/PDF","quotation":"CURRENCY_PER_USD_INTERBANK_CLOSE","frequency":"DAILY","status":"HISTORY_PUBLIC","adapter":null,"reason":"SOURCE_SPECIFIC_XLS_ARTIFACT_MAPPING_REQUIRED"},
+    {"id":"BOJ","url":"https://www.stat-search.boj.or.jp/","format":"CSV/JSON_API","quotation":"SERIES_SPECIFIC","frequency":"OTHER","status":"PARTIAL_PUBLIC","adapter":null,"reason":"EXACT_REFERENCE_RATE_SERIES_CODES_NOT_VERIFIED"},
+    {"id":"HKMA","url":"https://api.hkma.gov.hk/public/","format":"JSON_API","quotation":"SERIES_SPECIFIC","frequency":"DAILY","status":"PARTIAL_PUBLIC","adapter":null,"reason":"EXACT_OFFICIAL_REFERENCE_SERIES_MAPPING_REQUIRED"},
+    {"id":"MAS","url":"https://eservices.mas.gov.sg/statistics/","format":"TABLE/API","quotation":"SERIES_SPECIFIC","frequency":"OTHER","status":"SOURCE_REQUIRED","adapter":null,"reason":"STABLE_PUBLIC_STRUCTURED_ROUTE_NOT_VERIFIED"},
+    {"id":"PBOC_CFETS","url":"http://www.pbc.gov.cn/en/","format":"PUBLICATION","quotation":"CNY_CENTRAL_PARITY","frequency":"BUSINESS_DAILY","status":"SOURCE_LIMITED","adapter":null,"reason":"STABLE_PUBLIC_STRUCTURED_ENDPOINT_NOT_VERIFIED; CNH_NOT_PBOC_FIXING"},
+    {"id":"BOE","url":"https://www.bankofengland.co.uk/boeapps/database/","format":"IADB","quotation":"SERIES_SPECIFIC","frequency":"DAILY","status":"SOURCE_REQUIRED","adapter":null,"reason":"REFERENCE_RATE_SERIES_MAPPING_NOT_CONFIGURED"},
+    {"id":"RBA","url":"https://www.rba.gov.au/statistics/tables/","format":"CSV/XLS","quotation":"SERIES_SPECIFIC","frequency":"DAILY","status":"SOURCE_REQUIRED","adapter":null,"reason":"EXACT_REFERENCE_SERIES_MAPPING_NOT_CONFIGURED"},
+    {"id":"SNB","url":"https://data.snb.ch/","format":"API/CSV","quotation":"SERIES_SPECIFIC","frequency":"DAILY","status":"SOURCE_REQUIRED","adapter":null,"reason":"EXACT_REFERENCE_SERIES_MAPPING_NOT_CONFIGURED"},
+    {"id":"RBNZ","url":"https://www.rbnz.govt.nz/statistics/series/exchange-and-interest-rates","format":"CSV/XLS","quotation":"SERIES_SPECIFIC","frequency":"DAILY","status":"SOURCE_REQUIRED","adapter":null,"reason":"EXACT_REFERENCE_SERIES_MAPPING_NOT_CONFIGURED"},
+    {"id":"LSEG_WMR","url":"https://www.lseg.com/en/data-analytics/financial-data/benchmarks/spot-rates","format":"COMMERCIAL","quotation":"WMR","frequency":"DAILY","status":"LICENSE_CONSTRAINED","adapter":null,"reason":"COMMERCIAL_LICENSE_REQUIRED"}
+  ]
+}

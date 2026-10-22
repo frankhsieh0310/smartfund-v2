@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "asset": "GLOBAL_MACRO_ALFRED_TRUE_VINTAGE",
+  "provider": "FRED_ALFRED_OFFICIAL",
+  "baseUrl": "https://api.stlouisfed.org/fred",
+  "seriesBatchSize": 1,
+  "vintageBatchSize": 1,
+  "observationBatchSize": 100,
+  "maxDbConcurrency": 1,
+  "pollIntervalMs": 60000,
+  "eligibleProvider": "FRED",
+  "source": "TRUE_SOURCE_VINTAGE:FRED_ALFRED",
+  "checkpoint": "runtime/macro-alfred-true-vintage/checkpoint.json",
+  "qualityGrains": ["TRUE_SOURCE_VINTAGE", "FIRST_OBSERVED_BY_SMARTFUND", "EVENT_AS_OF_TIMESTAMP"],
+  "commercialConsensus": "DO_NOT_TOUCH_LICENSE_CONSTRAINED"
+}

@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "detail": ["productIdentity", "underlyingRate", "exchange", "currentSettlement", "contractMonth", "expiration", "history", "volume", "openInterest", "continuousHistory", "rollHistory", "freshness", "source"],
+  "search": ["exchange", "rootSymbol", "officialProductName", "underlyingRate", "currency"],
+  "screener": ["exchange", "currency", "underlyingRate", "expiration", "volume", "openInterest", "change1M", "volatilityWhenAvailable"],
+  "compare": ["settlement", "change", "volume", "openInterest", "volatility", "expiration"],
+  "ranking": { "grain": "SPECIFIC_CONTRACT", "advancedRanking": "DEFERRED_P1" },
+  "curve": ["contractMonth", "expirationDate", "settlementPrice", "daysToExpiry"]
+  ,"readiness": { "OSE_TONA_3M": "PROFESSIONAL_READY", "otherEntities": "EXPLICIT_CONSTRAINED_READY", "readyEquivalent": "9/9" }
+}

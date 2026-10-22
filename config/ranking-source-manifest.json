@@ -1,0 +1,12 @@
+{
+  "version": "CANONICAL_INPUT_MANIFEST_V1",
+  "manifestType": "CANONICAL_INPUT_MANIFEST",
+  "externalFetchAllowed": false,
+  "inputs": [
+    { "assetType":"STOCK", "canonicalService":"lib/data-platform/web/stockService.ts", "canonicalRelation":"stock_history", "metricContract":"VOLUME_1D", "coverageRequirement":0.01 },
+    { "assetType":"ETF", "canonicalService":"lib/data-platform/web/etfService.ts", "canonicalRelation":"etf_history", "metricContract":"PRICE_RETURN_1Y", "coverageRequirement":0.01 },
+    { "assetType":"CRYPTO", "canonicalService":"lib/prisma.ts", "canonicalRelation":"crypto_market_cap_supply", "metricContract":"MARKET_CAP_USD", "coverageRequirement":0.01 },
+    { "assetType":"FX", "canonicalService":"lib/data-platform/web/fxService.ts", "canonicalRelation":"fx_candles", "metricContract":"PAIR_PRICE_RETURN_1D", "coverageRequirement":0.01 },
+    { "assetType":"INDEX", "canonicalService":"lib/data-platform/web/indexService.ts", "canonicalRelation":"global_index_daily_observations", "metricContract":"INDEX_RETURN_1D", "coverageRequirement":0.01 }
+  ]
+}

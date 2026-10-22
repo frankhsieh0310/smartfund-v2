@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "asset": "GLOBAL_ETF_FLOWS",
+  "policy": { "officialIssuerOnly": true, "aggregatorsAllowed": false, "endpointRule": "issuer-authorized JSON endpoint supplied by environment" },
+  "sources": [
+    { "id": "blackrock", "issuer": "BlackRock / iShares", "officialUrl": "https://www.ishares.com/us/products/etf-investments", "endpointEnv": "ETF_FLOWS_BLACKROCK_URL", "timezone": "America/New_York", "enabled": true },
+    { "id": "vanguard", "issuer": "Vanguard", "officialUrl": "https://investor.vanguard.com/investment-products/list/etfs", "endpointEnv": "ETF_FLOWS_VANGUARD_URL", "timezone": "America/New_York", "enabled": true },
+    { "id": "state-street", "issuer": "State Street / SPDR", "officialUrl": "https://www.ssga.com/us/en/intermediary/etfs", "endpointEnv": "ETF_FLOWS_STATE_STREET_URL", "timezone": "America/New_York", "enabled": true },
+    { "id": "invesco", "issuer": "Invesco", "officialUrl": "https://www.invesco.com/us/financial-products/etfs", "endpointEnv": "ETF_FLOWS_INVESCO_URL", "timezone": "America/New_York", "enabled": true },
+    { "id": "schwab", "issuer": "Schwab Asset Management", "officialUrl": "https://www.schwabassetmanagement.com/products/etfs", "endpointEnv": "ETF_FLOWS_SCHWAB_URL", "timezone": "America/New_York", "enabled": true },
+    { "id": "fidelity", "issuer": "Fidelity", "officialUrl": "https://www.fidelity.com/etfs/overview", "endpointEnv": "ETF_FLOWS_FIDELITY_URL", "timezone": "America/New_York", "enabled": true },
+    { "id": "ark", "issuer": "ARK Invest", "officialUrl": "https://www.ark-funds.com/", "endpointEnv": "ETF_FLOWS_ARK_URL", "timezone": "America/New_York", "enabled": true },
+    { "id": "vaneck", "issuer": "VanEck", "officialUrl": "https://www.vaneck.com/us/en/investments/etfs/", "endpointEnv": "ETF_FLOWS_VANECK_URL", "timezone": "America/New_York", "enabled": true },
+    { "id": "global-x", "issuer": "Global X", "officialUrl": "https://www.globalxetfs.com/funds", "endpointEnv": "ETF_FLOWS_GLOBAL_X_URL", "timezone": "America/New_York", "enabled": true }
+  ]
+}

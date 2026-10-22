@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "canonicalDeduplication": {
+    "marketGrain": ["asset", "quoteCurrency", "exchange", "marketType", "pair", "timestamp", "metric"],
+    "aggregateGrain": ["asset", "quoteCurrency", "methodology", "timestamp", "metric"],
+    "onchainGrain": ["chain", "blockHeight", "timestamp", "metric"],
+    "sourceLineagePreserved": true,
+    "providerDuplicationCreatesCanonicalMetric": false
+  },
+  "boundedBatchSize": 1,
+  "sources": [
+    { "id": "BINANCE", "family": "CRYPTO_EXCHANGE_COMMON_ADAPTER", "role": "OFFICIAL_EXCHANGE", "status": "AUTO_CONTINUING", "baseUrl": "https://api.binance.com" },
+    { "id": "COINBASE", "family": "CRYPTO_EXCHANGE_COMMON_ADAPTER", "role": "OFFICIAL_EXCHANGE", "status": "AUTO_CONTINUING", "baseUrl": "https://api.exchange.coinbase.com" },
+    { "id": "KRAKEN", "family": "CRYPTO_EXCHANGE_COMMON_ADAPTER", "role": "OFFICIAL_EXCHANGE", "status": "AUTO_CONTINUING", "baseUrl": "https://api.kraken.com" },
+    { "id": "OKX", "family": "CRYPTO_EXCHANGE_COMMON_ADAPTER", "role": "OFFICIAL_EXCHANGE", "status": "INPUT_GATED_AUTO_CONTINUING", "baseUrl": "https://www.okx.com", "dependency": "COMMON_ADAPTER_ROUTE" },
+    { "id": "BYBIT", "family": "CRYPTO_EXCHANGE_COMMON_ADAPTER", "role": "OFFICIAL_EXCHANGE", "status": "INPUT_GATED_AUTO_CONTINUING", "baseUrl": "https://api.bybit.com", "dependency": "COMMON_ADAPTER_ROUTE" },
+    { "id": "BITGET", "family": "CRYPTO_EXCHANGE_COMMON_ADAPTER", "role": "OFFICIAL_EXCHANGE", "status": "INPUT_GATED_AUTO_CONTINUING", "baseUrl": "https://api.bitget.com", "dependency": "COMMON_ADAPTER_ROUTE" },
+    { "id": "MAX", "family": "CRYPTO_EXCHANGE_COMMON_ADAPTER", "role": "OFFICIAL_EXCHANGE", "status": "INPUT_GATED_AUTO_CONTINUING", "baseUrl": "https://max-api.maicoin.com", "dependency": "COMMON_ADAPTER_ROUTE" },
+    { "id": "BITOPRO", "family": "CRYPTO_EXCHANGE_COMMON_ADAPTER", "role": "OFFICIAL_EXCHANGE", "status": "INPUT_GATED_AUTO_CONTINUING", "baseUrl": "https://api.bitopro.com", "dependency": "COMMON_ADAPTER_ROUTE" },
+    { "id": "ACE", "family": "CRYPTO_EXCHANGE_COMMON_ADAPTER", "role": "OFFICIAL_EXCHANGE", "status": "WAITING_DEPENDENCY", "dependency": "OFFICIAL_PUBLIC_ENDPOINT_VALIDATION" },
+    { "id": "COINGECKO", "family": "PUBLIC_AGGREGATOR_ADAPTER", "role": "PUBLIC_AGGREGATOR", "status": "AUTO_CONTINUING", "baseUrl": "https://api.coingecko.com/api/v3" },
+    { "id": "COINMARKETCAP", "family": "PUBLIC_AGGREGATOR_ADAPTER", "role": "PUBLIC_AGGREGATOR", "status": "WAITING_DEPENDENCY", "dependency": "API_KEY" },
+    { "id": "MEMPOOL_SPACE", "family": "BITCOIN_FAMILY_ADAPTER", "role": "CHAIN_NATIVE", "status": "AUTO_CONTINUING", "baseUrl": "https://mempool.space/api" },
+    { "id": "EVM_PUBLIC_RPC", "family": "EVM_RPC_ADAPTER", "role": "CHAIN_NATIVE", "status": "AUTO_CONTINUING", "provider": "PUBLICNODE", "executionRpcEnv": "ETHEREUM_EXECUTION_RPC_URL", "consensusApiEnv": "ETHEREUM_CONSENSUS_API_URL" },
+    { "id": "SOLANA_PUBLIC_RPC", "family": "SOLANA_RPC_ADAPTER", "role": "CHAIN_NATIVE", "status": "INPUT_GATED_AUTO_CONTINUING", "dependency": "PUBLIC_RPC_RATE_LIMIT" },
+    { "id": "OTHER_CHAIN_NATIVE", "family": "OTHER_CHAIN_FAMILY_ADAPTERS", "role": "CHAIN_NATIVE", "status": "INPUT_GATED_AUTO_CONTINUING", "dependency": "VERIFIED_NATIVE_ENDPOINT_AND_METRIC_MAPPING" },
+    { "id": "PUBLIC_EXPLORERS", "family": "PUBLIC_EXPLORER_ADAPTER", "role": "RAW_CHAIN_VALIDATION", "status": "WAITING_DEPENDENCY", "dependency": "PER_PROVIDER_API_KEY_OR_PUBLIC_ENDPOINT" },
+    { "id": "DUNE", "family": "PUBLIC_ANALYTICS_ADAPTER", "role": "PUBLIC_ANALYTICS", "status": "WAITING_DEPENDENCY", "dependency": "REPRODUCIBLE_QUERY_ID_AND_ACCESS" },
+    { "id": "DEFILLAMA", "family": "PUBLIC_ANALYTICS_ADAPTER", "role": "PUBLIC_ANALYTICS", "status": "INPUT_GATED_AUTO_CONTINUING", "baseUrl": "https://api.llama.fi", "dependency": "PROTOCOL_IDENTITY_MAPPING" },
+    { "id": "CME_CF", "family": "BENCHMARK_REFERENCE_ADAPTER", "role": "REGULATED_BENCHMARK", "status": "WAITING_DEPENDENCY", "dependency": "STRUCTURED_PUBLIC_HISTORY_ENDPOINT" },
+    { "id": "SP_DJI_DIGITAL", "family": "BENCHMARK_REFERENCE_ADAPTER", "role": "REGULATED_BENCHMARK", "status": "EXTERNALLY_BLOCKED", "dependency": "LICENSED_HISTORY_OR_COMPONENTS" },
+    { "id": "COINDESK_INDICES", "family": "BENCHMARK_REFERENCE_ADAPTER", "role": "REGULATED_BENCHMARK", "status": "EXTERNALLY_BLOCKED", "dependency": "LICENSED_HISTORY_OR_COMPONENTS" },
+    { "id": "SHARED_ETF_SEC_FUTURES", "family": "SHARED_LAYER_REFERENCE", "role": "OFFICIAL_REGULATOR", "status": "AUTO_CONTINUING" },
+    { "id": "CRYPTO_REGULATORY_PUBLIC", "family": "SHARED_OFFICIAL_SOURCE_REGISTRY", "role": "OFFICIAL_REGULATOR", "status": "INPUT_GATED_AUTO_CONTINUING", "dependency": "STRUCTURED_OFFICIAL_EVENT_ROUTE" },
+    { "id": "PAID_ANALYTICS", "family": "OPTIONAL_PAID_FUTURE_SOURCE", "role": "PUBLIC_ANALYTICS", "status": "SOURCE_NOT_PUBLIC" }
+  ],
+  "canary": { "sourceId": "KRAKEN", "exchangeId": "kraken", "assetId": "btc", "quoteAssetId": "usdc", "providerSymbol": "XBTUSD", "marketId": "kraken-btc-usd-spot" }
+}

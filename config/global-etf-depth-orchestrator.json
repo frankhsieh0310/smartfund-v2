@@ -1,0 +1,48 @@
+{
+  "version": 2,
+  "asset": "GLOBAL_ETF",
+  "pollIntervalMs": 60000,
+  "databaseBackoffMs": [30000, 60000, 120000, 300000],
+  "sharedMarketDataInfrastructure": {
+    "schedulerPattern": "GLOBAL_STOCK_DEPTH_ORCHESTRATOR",
+    "marketQuoteRelation": null,
+    "intradayBarRelation": null,
+    "status": "SCHEMA_BLOCKED"
+  },
+  "intraday": {
+    "grain": "5m",
+    "targetDelayMinutes": 5,
+    "latestQuoteDistinctFromBars": true,
+    "allowedStates": ["REALTIME", "DELAYED", "SOURCE_DELAYED", "EOD_ONLY", "SOURCE_CONSTRAINED", "ACCESS_CONSTRAINED", "LICENSE_CONSTRAINED"],
+    "readyMarkets": [],
+    "constrainedMarkets": ["AQSE", "CBOE_US", "HKSE", "IOB", "LSE", "NASDAQ", "NYSE", "NYSE_AMERICAN", "NYSE_ARCA", "OTC", "SES", "TSE", "TWSE", "TPEX"]
+  },
+  "domains": [
+    { "id": "CURRENT_QUOTE", "priority": "P0A", "status": "CURRENT_AND_AUTO_UPDATING", "runtime": "global-etf" },
+    { "id": "INTRADAY_5M", "priority": "P0A", "status": "SCHEMA_BLOCKED" },
+    { "id": "IDENTITY", "priority": "P0A", "status": "CURRENT_AND_AUTO_UPDATING" },
+    { "id": "PRICE_HISTORY", "priority": "P0A", "status": "CURRENT_AND_AUTO_UPDATING", "runtime": "global-etf" },
+    { "id": "NAV", "priority": "P0A", "status": "TIME_DEPTH_CONSTRAINED" },
+    { "id": "AUM", "priority": "P0A", "status": "TIME_DEPTH_CONSTRAINED" },
+    { "id": "SHARES_OUTSTANDING", "priority": "P0A", "status": "TIME_DEPTH_CONSTRAINED" },
+    { "id": "HOLDINGS", "priority": "P0A", "status": "CURRENT_AND_AUTO_UPDATING", "runtime": "etf-holdings" },
+    { "id": "PIT", "priority": "P0A", "status": "TIME_DEPTH_CONSTRAINED", "runtime": "etf-holdings" },
+    { "id": "SECURITY_LINKAGE", "priority": "P0A", "status": "MAPPING_CONSTRAINED", "runtime": "etf-holdings" },
+    { "id": "PROVENANCE", "priority": "P0A", "status": "CURRENT_AND_AUTO_UPDATING" },
+    { "id": "ALLOCATION", "priority": "P0B", "status": "CONFIGURATION_CONSTRAINED" },
+    { "id": "CONCENTRATION", "priority": "P0B", "status": "CONFIGURATION_CONSTRAINED" },
+    { "id": "HOLDING_CHANGE", "priority": "P0B", "status": "TIME_DEPTH_CONSTRAINED" },
+    { "id": "TURNOVER", "priority": "P0B", "status": "TIME_DEPTH_CONSTRAINED" },
+    { "id": "FLOWS", "priority": "P0B", "status": "CURRENT_AND_AUTO_UPDATING", "runtime": "etf-flows" },
+    { "id": "DISTRIBUTIONS", "priority": "P0B", "status": "CURRENT_AND_AUTO_UPDATING", "runtime": "etf-distribution-v3" },
+    { "id": "ISSUER", "priority": "P0B", "status": "SOURCE_CONSTRAINED" },
+    { "id": "CLASSIFICATION", "priority": "P0B", "status": "CURRENT_AND_AUTO_UPDATING" },
+    { "id": "BENCHMARK", "priority": "P0B", "status": "SOURCE_CONSTRAINED" },
+    { "id": "OVERLAP", "priority": "P1", "status": "CONFIGURATION_CONSTRAINED" },
+    { "id": "CREATION_REDEMPTION", "priority": "P1", "status": "SOURCE_CONSTRAINED" },
+    { "id": "FIXED_INCOME_ETF", "priority": "P1", "status": "CONFIGURATION_CONSTRAINED" },
+    { "id": "COMMODITY_ETF", "priority": "P1", "status": "CONFIGURATION_CONSTRAINED" },
+    { "id": "LEVERAGED_INVERSE", "priority": "P1", "status": "CONFIGURATION_CONSTRAINED" },
+    { "id": "ANALYTICS", "priority": "P1", "status": "CONFIGURATION_CONSTRAINED" }
+  ]
+}

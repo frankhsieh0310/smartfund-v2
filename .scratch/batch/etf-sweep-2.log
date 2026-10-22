@@ -1,0 +1,62 @@
+resuming from cursor=174df4e0-2c9e-4c92-bf67-52951c06a111  processed-so-far=1500
+  …50/2000  hist 50  enrich 50  failed 0
+  …100/2000  hist 100  enrich 100  failed 0
+  …150/2000  hist 150  enrich 150  failed 0
+  …200/2000  hist 200  enrich 200  failed 0
+  …250/2000  hist 250  enrich 250  failed 0
+  …300/2000  hist 300  enrich 300  failed 0
+  …350/2000  hist 350  enrich 350  failed 0
+  …400/2000  hist 400  enrich 400  failed 0
+  …450/2000  hist 450  enrich 450  failed 0
+  …500/2000  hist 500  enrich 500  failed 0
+  …550/2000  hist 550  enrich 550  failed 0
+  …600/2000  hist 600  enrich 600  failed 0
+  …650/2000  hist 650  enrich 650  failed 0
+  …700/2000  hist 700  enrich 700  failed 0
+  …750/2000  hist 750  enrich 750  failed 0
+  …800/2000  hist 800  enrich 800  failed 0
+  …850/2000  hist 850  enrich 850  failed 0
+  …900/2000  hist 900  enrich 900  failed 0
+  …950/2000  hist 950  enrich 950  failed 0
+  …1000/2000  hist 1000  enrich 1000  failed 0
+  …1050/2000  hist 1050  enrich 1050  failed 0
+  …1100/2000  hist 1100  enrich 1100  failed 0
+  …1150/2000  hist 1150  enrich 1150  failed 0
+  …1200/2000  hist 1200  enrich 1200  failed 0
+  …1250/2000  hist 1250  enrich 1250  failed 0
+  …1300/2000  hist 1300  enrich 1300  failed 0
+  …1350/2000  hist 1350  enrich 1350  failed 0
+  …1400/2000  hist 1400  enrich 1400  failed 0
+  …1450/2000  hist 1450  enrich 1450  failed 0
+  …1500/2000  hist 1500  enrich 1500  failed 0
+  …1550/2000  hist 1550  enrich 1550  failed 0
+  …1600/2000  hist 1600  enrich 1600  failed 0
+  …1650/2000  hist 1650  enrich 1650  failed 0
+  …1700/2000  hist 1700  enrich 1700  failed 0
+  …1750/2000  hist 1750  enrich 1750  failed 0
+  …1800/2000  hist 1800  enrich 1800  failed 0
+  …1850/2000  hist 1850  enrich 1850  failed 0
+  …1900/2000  hist 1900  enrich 1900  failed 0
+  …1950/2000  hist 1950  enrich 1950  failed 0
+  …2000/2000  hist 2000  enrich 2000  failed 0
+{
+  "SWEEP_CHUNK_ATTEMPTED": 2000,
+  "SWEEP_HISTORY_OK": 2000,
+  "SWEEP_ENRICH_OK": 2000,
+  "SWEEP_HISTORY_ROWS": 691689,
+  "SWEEP_HOLDINGS_ROWS": 8637,
+  "SWEEP_PERF_ROWS": 1544,
+  "SWEEP_DISTRIBUTION_EVENTS": 5975,
+  "SWEEP_FAILED": 0,
+  "SWEEP_NO_SYMBOL": 0,
+  "WRAPPED_FULL_LAP": false,
+  "CUMULATIVE_PROCESSED": 3500,
+  "CUMULATIVE_SUCCEEDED": 3484,
+  "CUMULATIVE_FAILED": 31,
+  "runtime_s": 6392,
+  "stats": {
+    "calls": 0,
+    "rateLimited": 0,
+    "crumbRefresh": 0
+  }
+}

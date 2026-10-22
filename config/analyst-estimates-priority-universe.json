@@ -1,0 +1,16 @@
+{
+  "asset":"GLOBAL_ANALYST_ESTIMATES","selection":"DETERMINISTIC_BOUNDED_V1","eligibleUniverse":"VERIFIED_GLOBAL_STOCK_UNIVERSE",
+  "issuers":[
+    {"yahooSymbol":"NVDA","market":"US","guidanceSource":"SEC_EDGAR","status":"GUIDANCE_READY"},
+    {"yahooSymbol":"LEVI","market":"US","guidanceSource":"SEC_EDGAR","status":"GUIDANCE_READY"},
+    {"yahooSymbol":"MSFT","market":"US","guidanceSource":"SEC_EDGAR_AND_IR_CALL","status":"SOURCE_CONSTRAINED"},
+    {"yahooSymbol":"BDX","market":"US","guidanceSource":"SEC_EDGAR","status":"GUIDANCE_READY"},
+    {"yahooSymbol":"FDS","market":"US","guidanceSource":"SEC_EDGAR","status":"GUIDANCE_READY"},
+    {"yahooSymbol":"VRT","market":"US","guidanceSource":"SEC_EDGAR","status":"GUIDANCE_READY"},
+    {"yahooSymbol":"2330.TW","market":"Taiwan","guidanceSource":"TWSE_MOPS_AND_IR","status":"SOURCE_PENDING"},
+    {"yahooSymbol":"7203.T","market":"Japan","guidanceSource":"TDNET_EDINET_AND_IR","status":"SOURCE_PENDING"},
+    {"yahooSymbol":"0700.HK","market":"Hong_Kong","guidanceSource":"HKEX_AND_IR","status":"SOURCE_PENDING"},
+    {"yahooSymbol":"SHEL.L","market":"UK","guidanceSource":"RNS_AND_IR","status":"SOURCE_PENDING"},
+    {"yahooSymbol":"BHP.AX","market":"Australia","guidanceSource":"ASX_AND_IR","status":"SOURCE_PENDING"}
+  ]
+}

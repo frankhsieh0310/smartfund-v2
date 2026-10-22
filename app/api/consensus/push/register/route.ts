@@ -6,16 +6,33 @@
 //       preferences?: {flip?:bool, warming?:bool, watchlist_only?:bool}, symbols?: string[] }
 
 import { prisma } from "@/lib/prisma";
+import { getAccountForRequest } from "@/lib/auth/userService";
+import { personDisplayZh } from "@/lib/consensus/displayLocalization";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "POST, OPTIONS", "Access-Control-Allow-Headers": "Content-Type" };
+const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET, POST, OPTIONS", "Access-Control-Allow-Headers": "Content-Type" };
 export function OPTIONS() {
   return new Response(null, { status: 204, headers: cors });
 }
 
 const q = <T = Record<string, unknown>>(sql: string, ...p: unknown[]) => prisma.$queryRawUnsafe<T[]>(sql, ...p);
 const normSym = (s: string) => s.trim().toUpperCase().replace(/[^A-Z0-9.]/g, "");
+
+export async function GET(request: Request) {
+  const id=new URL(request.url).searchParams.get('installation_id')??'';
+  if(!/^[A-Za-z0-9_-]{8,128}$/.test(id))return Response.json({ok:false,error:'invalid installation_id'},{status:400,headers:cors});
+  const [installations,symbols,people]=await Promise.all([
+    q<{notifications_enabled:boolean;preferences:Record<string,unknown>}>('select notifications_enabled,preferences from consensus_push_installations where installation_id=$1',id),
+    q<{symbol:string}>('select symbol from consensus_push_symbol_subscriptions where installation_id=$1 and is_active',id),
+    q<{id:string;display_name:string}>('select id,display_name from consensus_people order by display_name'),
+  ]);
+  const preferences=installations[0]?.preferences??{};
+  return Response.json({ok:true,enabled:installations[0]?.notifications_enabled??false,
+    preferences:{flip:preferences.flip!==false,watchlist_only:preferences.watchlist_only!==false,people:Array.isArray(preferences.people)?preferences.people:[]},
+    symbols:symbols.map(x=>x.symbol),people:people.map(x=>{const localized=personDisplayZh(x.display_name);return{id:x.id,name:localized==='公開人物'?x.display_name:localized};})},
+    {headers:{...cors,'Cache-Control':'no-store'}});
+}
 
 export async function POST(request: Request) {
   let b: Record<string, unknown>;
@@ -29,12 +46,18 @@ export async function POST(request: Request) {
   const platform = ["ios", "android", "web"].includes(String(b.platform)) ? String(b.platform) : "unknown";
   const pushToken = b.push_token ? String(b.push_token).slice(0, 512) : null;
   const enabled = b.notifications_enabled == null ? Boolean(pushToken) : Boolean(b.notifications_enabled);
-  const ownerUserId = b.owner_user_id ? String(b.owner_user_id) : null;
+  // Linking account alerts must use authenticated identity, never a caller-supplied user id.
+  const account = await getAccountForRequest(request);
+  const ownerUserId = account?.id ?? null;
   const prefsIn = (b.preferences ?? {}) as Record<string, unknown>;
+  const peopleInput=Array.isArray(prefsIn.people)?[...new Set(prefsIn.people.map(String))].slice(0,100):null;
+  const people=peopleInput ? (await q<{id:string}>('select id from consensus_people where id=any($1::text[])',peopleInput)).map(x=>x.id):null;
   const preferences = {
     flip: prefsIn.flip == null ? true : Boolean(prefsIn.flip),
     warming: Boolean(prefsIn.warming),
     watchlist_only: prefsIn.watchlist_only == null ? true : Boolean(prefsIn.watchlist_only),
+    ...(people ? {people}:{}),
+    ...(ownerUserId ? {verified_owner_user_id:ownerUserId}:{}),
   };
   const symbols = Array.isArray(b.symbols) ? [...new Set((b.symbols as unknown[]).map((s) => normSym(String(s))).filter(Boolean))].slice(0, 100) : null;
 
@@ -49,7 +72,7 @@ export async function POST(request: Request) {
        notifications_enabled = excluded.notifications_enabled,
        invalid_token = case when excluded.push_token is not null and excluded.push_token <> coalesce(consensus_push_installations.push_token,'')
                             then false else consensus_push_installations.invalid_token end,
-       preferences = excluded.preferences,
+       preferences = consensus_push_installations.preferences || excluded.preferences,
        updated_at = now(), last_seen_at = now()`,
     installationId, ownerUserId, platform, pushToken, enabled, JSON.stringify(preferences),
   );

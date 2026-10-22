@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "source": "SEC_EDGAR_NPORT_P",
+  "funds": [
+    { "fundId": "5e117518-e03c-4666-835e-5c51fc2007c8", "shareClassId": "6f6ec77e-ff8f-4a6f-a4a4-26e191518ffd", "cik": "0000036405", "seriesId": "S000002839", "classId": "C000007774" },
+    { "fundId": "d16b934d-c936-4ae5-8b59-3bcee04f20da", "shareClassId": "7952b3d3-52c5-4b27-a013-5636745ef08a", "cik": "0000038721", "seriesId": "S000006758", "classId": "C000018340" },
+    { "fundId": "279924b4-0dce-40a7-a5ac-5d50321caf99", "shareClassId": "8663dca0-aeb8-4157-a1ce-b515614dd90a", "cik": "0000038721", "seriesId": "S000006758", "classId": "C000199721" }
+  ]
+}

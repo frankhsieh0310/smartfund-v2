@@ -1,0 +1,99 @@
+{
+  "asset": "GLOBAL_EARNINGS_CALENDAR",
+  "version": 1,
+  "migrationApproved": false,
+  "databaseWriteEnabled": false,
+  "schemaState": "REVIEW_ONLY_MIGRATION_PENDING_APPROVAL",
+  "eventSemantics": {
+    "announcementDateTypes": ["CONFIRMED_OFFICIAL", "ESTIMATED_COMPANY", "ESTIMATED_EXCHANGE", "ESTIMATED_DERIVED", "HISTORICAL_CONFIRMED", "UNKNOWN"],
+    "confirmedStatuses": ["CONFIRMED", "ESTIMATED", "TENTATIVE", "REPORTED", "CANCELLED", "POSTPONED", "UNKNOWN"],
+    "releaseTimings": ["BMO", "BEFORE_MARKET_OPEN", "AMC", "AFTER_MARKET_CLOSE", "DURING_MARKET", "DURING_MARKET_HOURS", "TIME_SPECIFIC", "UNKNOWN"],
+    "missingReasons": ["NO_EVENT_FOUND", "SOURCE_PENDING", "LICENSE_PENDING", "NOT_REPORTING_YET", "DELISTED", "SOURCE_DELAYED", "IDENTITY_UNRESOLVED", "UNKNOWN"],
+    "freshnessStatuses": ["CONFIRMED_CURRENT", "ESTIMATE_CURRENT", "AWAITING_CONFIRMATION", "SOURCE_DELAYED", "STALE_ESTIMATE", "REPORTED", "UNKNOWN"],
+    "epsTypes": ["GAAP_BASIC", "GAAP_DILUTED", "ADJUSTED", "NON_GAAP", "OTHER"]
+  },
+  "productReadContract": {
+    "detail": ["companyIdentity", "nextEarningsDate", "confirmedStatus", "releaseTiming", "fiscalPeriod", "historicalEarningsDates", "actualEps", "actualRevenue", "filingUrl", "pressReleaseUrl", "guidance", "revisions", "freshness", "provenance", "missingReason"],
+    "search": ["companyName", "ticker", "market", "announcementDate", "confirmedStatus", "fiscalPeriod"],
+    "screener": ["dateRange", "market", "country", "confirmedOrEstimated", "releaseTiming", "reportedOrUpcoming"],
+    "compare": ["announcementDate", "fiscalPeriod", "actualEps", "actualRevenue", "confirmedStatus"],
+    "ranking": ["upcomingCount", "reportingCadence"],
+    "licensedOnly": ["consensusEstimate", "epsSurprise", "revenueSurprise", "surpriseRanking"]
+  },
+  "batchSize": 25,
+  "canaryBatchSize": 3,
+  "pollIntervalMinutes": 360,
+  "heartbeatSeconds": 30,
+  "databaseBackoffSeconds": [30, 120, 600, 1800],
+  "maxAttempts": 4,
+  "secUserAgent": "SmartFund earnings calendar data operator admin@smartfund.local",
+  "registry": [
+    {
+      "id": "sec-edgar-submissions",
+      "priority": 10,
+      "sourceType": "REGULATOR_OFFICIAL",
+      "official": true,
+      "countries": ["US"],
+      "capabilities": ["HISTORICAL_CALENDAR", "ACTUAL_RESULTS", "FILING_LINK", "REVISION_LINEAGE"],
+      "tickerMapUrl": "https://www.sec.gov/files/company_tickers.json",
+      "submissionsUrlTemplate": "https://data.sec.gov/submissions/CIK{cik}.json"
+    },
+    {
+      "id": "company-investor-relations",
+      "priority": 20,
+      "sourceType": "COMPANY_IR_OFFICIAL",
+      "official": true,
+      "countries": ["GLOBAL"],
+      "capabilities": ["UPCOMING_CALENDAR", "CONFIRMED_DATE", "RELEASE_TIMING", "EARNINGS_RELEASE_LINK"],
+      "status": "ADAPTER_REQUIRED_PER_COMPANY",
+      "missingReason": "No canonical IR URL exists on Stock identity"
+    },
+    {
+      "id": "official-exchange-calendars",
+      "priority": 30,
+      "sourceType": "EXCHANGE_OFFICIAL",
+      "official": true,
+      "countries": ["GLOBAL"],
+      "capabilities": ["UPCOMING_CALENDAR", "CONFIRMED_DATE"],
+      "status": "ADAPTER_REQUIRED_PER_EXCHANGE",
+      "missingReason": "Exchange endpoints require individual legal and schema review"
+    },
+    {
+      "id": "apple-newsroom-results",
+      "priority": 15,
+      "sourceType": "COMPANY_IR_OFFICIAL",
+      "official": true,
+      "countries": ["US"],
+      "capabilities": ["HISTORICAL_CALENDAR", "ACTUAL_RESULTS", "RELEASE_TIMING", "EARNINGS_RELEASE_LINK", "EARNINGS_CALL_LINK"],
+      "url": "https://www.apple.com/newsroom/2026/07/apple-reports-third-quarter-results/",
+      "status": "CANARY_VERIFIED"
+    }
+  ],
+  "marketSourceStatus": {
+    "US": "SOURCE_READY_SEC_PLUS_COMPANY_IR_CANARY",
+    "TAIWAN": "SOURCE_PENDING_TWSE_MOPS_SEMANTIC_REVIEW",
+    "JAPAN": "SOURCE_PENDING_JPX_TDNET_SEMANTIC_REVIEW",
+    "HONG_KONG": "SOURCE_PENDING_HKEX_SEMANTIC_REVIEW",
+    "UK_EUROPE": "SOURCE_PENDING_REGULATOR_EXCHANGE_FAMILY_REVIEW",
+    "AUSTRALIA": "SOURCE_PENDING_ASX_SEMANTIC_REVIEW",
+    "CANADA": "SOURCE_PENDING_SEDAR_PLUS_SEMANTIC_REVIEW",
+    "CHINA_SINGAPORE_OTHER": "SOURCE_PENDING"
+  },
+  "coverageMatrix": [
+    { "layer": "Historical Calendar", "status": "READY", "source": "SEC EDGAR" },
+    { "layer": "Upcoming Calendar", "status": "PARTIAL", "missingReason": "IR/exchange adapters pending; estimates are never promoted to confirmed" },
+    { "layer": "Confirmed Date", "status": "PARTIAL", "missingReason": "Only explicit official announcements qualify" },
+    { "layer": "Estimated Date", "status": "READY", "rule": "Must carry ESTIMATED status and provenance" },
+    { "layer": "Release Timing", "status": "PARTIAL", "missingReason": "Saved only when the official source states timing" },
+    { "layer": "Actual Results", "status": "PARTIAL", "missingReason": "SEC filing facts adapter is bounded to legally available facts" },
+    { "layer": "Estimate Comparison", "status": "STAGED", "missingReason": "No approved official estimate source" },
+    { "layer": "Surprise", "status": "STAGED", "missingReason": "Requires same-period, same-currency estimate source" },
+    { "layer": "Filing Link", "status": "READY", "source": "SEC EDGAR" },
+    { "layer": "Freshness", "status": "READY" },
+    { "layer": "Archive", "status": "READY" },
+    { "layer": "Retry", "status": "READY" },
+    { "layer": "Checkpoint", "status": "READY" },
+    { "layer": "Scheduler", "status": "READY" },
+    { "layer": "Missing Reason", "status": "READY" }
+  ]
+}

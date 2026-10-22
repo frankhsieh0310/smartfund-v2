@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "activationPolicy": "Source history and enrichment must reach their verified boundaries before the final staged recomputation.",
+  "movingAnalytics": {
+    "state": "STAGED_AFTER_DEEP_BACKFILL",
+    "metrics": ["ADVANCE_RATIO_MA_5", "ADVANCE_RATIO_MA_10", "ADVANCE_RATIO_MA_20", "ADVANCE_RATIO_MA_60", "NET_ADVANCES_MA_5", "NET_ADVANCES_MA_20", "NET_ADVANCES_MA_60", "BREADTH_RATIO_MA_5", "BREADTH_RATIO_MA_20", "BREADTH_RATIO_MA_60"],
+    "minimumSamplePolicy": "No value before the complete requested window"
+  },
+  "momentum": {
+    "state": "STAGED_AFTER_DEEP_BACKFILL",
+    "metrics": ["NET_ADVANCES_5D_SUM", "NET_ADVANCES_10D_SUM", "NET_ADVANCES_20D_SUM", "ADVANCE_RATIO_CHANGE_5D", "ADVANCE_RATIO_CHANGE_20D", "AD_LINE_CHANGE_5D", "AD_LINE_CHANGE_20D", "AD_LINE_CHANGE_60D", "MCCLELLAN_CHANGE_5D", "MCCLELLAN_CHANGE_20D"],
+    "semantics": "Trading-session windows; AD-line percent change is prohibited"
+  },
+  "percentilesAndZScores": {
+    "state": "STAGED_AFTER_DEEP_BACKFILL",
+    "windows": [20, 60, 252, 756, 1260],
+    "pointInTimePolicy": "Only observations available at each as-of session; no full-history look-ahead"
+  },
+  "extremeState": {
+    "state": "STAGED_AFTER_DEEP_BACKFILL",
+    "codes": { "-2": "EXTREME_NEGATIVE", "-1": "WEAK", "0": "NEUTRAL", "1": "STRONG", "2": "EXTREME_POSITIVE" },
+    "method": "Rolling percentile thresholds; version TWSE_EXTREME_V1"
+  },
+  "regime": {
+    "state": "STAGED_AFTER_DEEP_BACKFILL",
+    "codes": { "-2": "DETERIORATING", "-1": "NARROW_PARTICIPATION", "0": "NEUTRAL", "1": "IMPROVING", "2": "BROAD_PARTICIPATION" },
+    "inputs": ["ADVANCE_RATIO", "AD_LINE slope", "MCCLELLAN_OSCILLATOR", "MCCLELLAN_SUMMATION", "breadth momentum"],
+    "method": "Deterministic formula only; version TWSE_REGIME_V1"
+  },
+  "breadthThrust": { "state": "STAGED_RESEARCH", "namePolicy": "Generic BREADTH_THRUST_SCORE only; do not label Zweig without exact canonical formula" },
+  "indexLink": { "state": "MAPPING_CONSTRAINED", "reason": "Index is outside this conversation asset scope; no fuzzy matching or duplicate index data" },
+  "highLow": { "state": "INPUT_CONSTRAINED" },
+  "directionalVolume": { "state": "INPUT_CONSTRAINED" },
+  "trin": { "state": "INPUT_CONSTRAINED" }
+}

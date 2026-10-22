@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "asset": "GLOBAL_ETF_HOLDINGS",
+  "canonicalEtf": { "table": "etfs", "id": "id", "ticker": "code", "isin": "isin", "exchange": "exchange", "issuer": "provider", "fundName": "name", "currency": "currency", "active": "is_active", "mappingQueue": "runtime/etf-holdings/mapping-queue.json" },
+  "runner": { "batchSize": 4, "requestTimeoutMs": 20000, "maxAttempts": 4, "baseBackoffMs": 30000, "cycleIntervalMs": 21600000, "lockStaleMs": 900000, "databaseBackoffMs": 300000 },
+  "storage": { "mode": "LOCAL_STAGING_UNTIL_MIGRATION_APPROVED", "archive": "runtime/etf-holdings/archive", "staging": "runtime/etf-holdings/staging" },
+  "schedulerHandoff": { "service": "smartfund-v2", "newService": false, "frequency": "issuer-update-frequency", "command": ["node","--experimental-strip-types","scripts/data/etf-holdings/run-global-etf-holdings.ts","--once","--incremental"], "singleDatabaseWriter": true, "status": "READY_AFTER_MIGRATION_APPROVAL" },
+  "quality": { "weightWarningBelow": 90, "weightWarningAbove": 110, "preserveNonNull": true, "sameDateRevisionLineage": true },
+  "calculation": { "allocationVersion": "1.0.0", "changeVersion": "1.0.0", "overlapVersion": "1.0.0", "sameSnapshotDateRequired": true }
+}

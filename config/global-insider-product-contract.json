@@ -1,0 +1,9 @@
+{
+  "asset": "GLOBAL_INSIDER_TRADING",
+  "version": 1,
+  "search": ["issuerTicker", "issuerName", "insiderName", "role", "transactionCode", "economicCategory", "dateRange"],
+  "screener": ["market", "issuer", "role", "transactionCode", "economicCategory", "dateRange", "transactionValue", "formType"],
+  "compare": ["issuerActivity", "openMarketBuyTotals", "openMarketSellTotals", "insiderCount", "transactionCount", "roleMix", "dateRange"],
+  "rankingGate": "COVERAGE_SUFFICIENT_ONLY",
+  "detail": ["recentFilings", "insiderName", "role", "formType", "transactionCode", "economicCategory", "shares", "price", "ownershipAfter", "ownershipNature", "footnotes", "sourceFreshness"]
+}

@@ -1,0 +1,48 @@
+{
+  "version": 2,
+  "asset": "GLOBAL_FUTURES",
+  "pollIntervalMs": 60000,
+  "databaseBackoffMs": [30000, 60000, 120000, 300000],
+  "boundedBatchSize": 4,
+  "sharedMarketDataInfrastructure": {
+    "reuse": ["MARKET_QUOTE", "INTRADAY_BAR", "MARKET_SESSION", "FRESHNESS", "PROVENANCE"],
+    "mode": "LOGICAL_CONTRACT_REUSE",
+    "newGenericQuoteWriterCreated": false
+  },
+  "counts": {
+    "declaredRootsBeforeCrosswalk": 69,
+    "evidencedContracts": 33,
+    "intradayContractsReady": 0,
+    "intradayContractsConstrained": 33
+  },
+  "domains": [
+    { "id": "EQUITY_INDEX", "runtime": "equity-index-futures", "priority": "P0A", "status": "CURRENT_AND_AUTO_UPDATING" },
+    { "id": "COMMODITY", "runtime": "commodity-futures", "priority": "P0A", "status": "CURRENT_AND_AUTO_UPDATING" },
+    { "id": "INTEREST_RATE", "runtime": "interest-futures", "priority": "P0A", "status": "TIME_DEPTH_CONSTRAINED" },
+    { "id": "POSITIONING", "runtime": "futures-positioning", "priority": "P0B", "status": "CURRENT_AND_AUTO_UPDATING" }
+  ],
+  "capabilities": [
+    { "id": "ROOT_IDENTITY", "priority": "P0A", "status": "MAPPING_CONSTRAINED" },
+    { "id": "CONTRACT_IDENTITY", "priority": "P0A", "status": "CURRENT_AND_AUTO_UPDATING" },
+    { "id": "CONTRACT_SPECIFICATIONS", "priority": "P0A", "status": "SOURCE_CONSTRAINED" },
+    { "id": "CURRENT_QUOTE", "priority": "P0A", "status": "CURRENT_AND_AUTO_UPDATING" },
+    { "id": "INTRADAY_5M", "priority": "P0A", "status": "SOURCE_CONSTRAINED" },
+    { "id": "CONTRACT_HISTORY", "priority": "P0A", "status": "TIME_DEPTH_CONSTRAINED" },
+    { "id": "EXPIRATION", "priority": "P0A", "status": "SOURCE_CONSTRAINED" },
+    { "id": "LIFECYCLE", "priority": "P0A", "status": "SOURCE_CONSTRAINED" },
+    { "id": "VOLUME", "priority": "P0A", "status": "SOURCE_CONSTRAINED" },
+    { "id": "OPEN_INTEREST", "priority": "P0A", "status": "SOURCE_CONSTRAINED" },
+    { "id": "PROVENANCE", "priority": "P0A", "status": "CURRENT_AND_AUTO_UPDATING" },
+    { "id": "FRONT_NEXT_THIRD", "priority": "P0B", "status": "INPUT_CONSTRAINED" },
+    { "id": "CONTRACT_STRIP", "priority": "P0B", "status": "TIME_DEPTH_CONSTRAINED" },
+    { "id": "TERM_STRUCTURE", "priority": "P0B", "status": "TIME_DEPTH_CONSTRAINED" },
+    { "id": "CALENDAR_SPREADS", "priority": "P0B", "status": "TIME_DEPTH_CONSTRAINED" },
+    { "id": "POSITIONING_HISTORY", "priority": "P0B", "status": "CURRENT_AND_AUTO_UPDATING" },
+    { "id": "POSITIONING_ANALYTICS", "priority": "P0B", "status": "CONFIGURATION_CONSTRAINED" },
+    { "id": "CONTINUOUS_SERIES", "priority": "P1", "status": "INPUT_CONSTRAINED" },
+    { "id": "ROLL_AUDIT", "priority": "P1", "status": "INPUT_CONSTRAINED" },
+    { "id": "PERFORMANCE", "priority": "P1", "status": "INPUT_CONSTRAINED" },
+    { "id": "RISK", "priority": "P1", "status": "INPUT_CONSTRAINED" },
+    { "id": "UNDERLYING_MAPPING", "priority": "P0A", "status": "MAPPING_CONSTRAINED" }
+  ]
+}

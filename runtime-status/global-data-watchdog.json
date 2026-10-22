@@ -1,0 +1,103 @@
+{
+  "WATCHDOG_PID": 29840,
+  "STATE": "COMPLETE",
+  "HEARTBEAT_AT": "2026-08-17T06:35:40.017Z",
+  "LAST_CYCLE_AT": "2026-08-17T06:34:56.456Z",
+  "LAST_SUCCESS_AT": "2026-08-17T06:35:39.045Z",
+  "NEXT_RUN_AT": null,
+  "LAST_ERROR": null,
+  "CYCLE_COUNT": 47,
+  "AUTO_RESTART_ENABLED": false,
+  "SELF_HEALING_ENABLED": false,
+  "STARTED_AT": "2026-08-16T06:57:28.758Z",
+  "BASELINE": {
+    "registered": "39",
+    "alerts": "25",
+    "open_alerts": "24",
+    "resolved_alerts": "1",
+    "health": [
+      {
+        "health_state": "DEGRADED",
+        "count": "12"
+      },
+      {
+        "health_state": "FALSE_HEALTHY",
+        "count": "15"
+      },
+      {
+        "health_state": "HEALTHY",
+        "count": "1"
+      },
+      {
+        "health_state": "NEW_ASSETS_NOT_AUTO_ENROLLED",
+        "count": "3"
+      },
+      {
+        "health_state": "NOT_CONFIGURED",
+        "count": "1"
+      },
+      {
+        "health_state": "RETRY_WAIT",
+        "count": "1"
+      },
+      {
+        "health_state": "STALE",
+        "count": "3"
+      },
+      {
+        "health_state": "STATIC_SCOPE_TOO_NARROW",
+        "count": "2"
+      },
+      {
+        "health_state": "STOPPED_WITH_PENDING",
+        "count": "1"
+      }
+    ],
+    "failedToEvaluate": "0"
+  },
+  "LAST_READBACK": {
+    "registered": "44",
+    "alerts": "52",
+    "open_alerts": "26",
+    "resolved_alerts": "26",
+    "health": [
+      {
+        "health_state": "DEGRADED",
+        "count": "10"
+      },
+      {
+        "health_state": "FALSE_HEALTHY",
+        "count": "21"
+      },
+      {
+        "health_state": "NEW_ASSETS_NOT_AUTO_ENROLLED",
+        "count": "3"
+      },
+      {
+        "health_state": "NOT_CONFIGURED",
+        "count": "1"
+      },
+      {
+        "health_state": "STALE",
+        "count": "1"
+      },
+      {
+        "health_state": "STATIC_SCOPE_TOO_NARROW",
+        "count": "1"
+      },
+      {
+        "health_state": "UNKNOWN",
+        "count": "7"
+      }
+    ],
+    "failedToEvaluate": "2"
+  },
+  "INVOCATION_ID": "56baa421-638c-47ef-bc7a-4961c0e1c764",
+  "CADENCE_MS": 1800000,
+  "TARGET_SOAK_HOURS": 24,
+  "SOAK_TARGET_END_AT": "2026-08-17T06:57:27.811Z",
+  "SOAK_STARTED_AT": "2026-08-16T06:57:28.758Z",
+  "LAST_CYCLE_DURATION_MS": 43561,
+  "DATASETS_EVALUATED": 44,
+  "EVALUATION_FAILURES": 2
+}

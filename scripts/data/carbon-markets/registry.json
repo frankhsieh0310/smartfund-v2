@@ -1,0 +1,12 @@
+{
+  "asset": "GLOBAL_CARBON_MARKETS",
+  "schemaVersion": 1,
+  "fields": ["market", "jurisdiction", "instrument", "assetType", "vintage", "currency", "unit", "venue", "price", "settlement", "volume", "openInterest", "auctionPrice", "auctionVolume", "allowanceSupply", "verifiedEmissions"],
+  "sources": [
+    {"id":"eu-ets-union-registry","market":"EU ETS","jurisdiction":"European Union","authority":"European Commission","url":"https://climate.ec.europa.eu/eu-action/carbon-markets/eu-emissions-trading-system-eu-ets/union-registry_en","frequency":"annual","scope":["allowance_supply","verified_emissions"],"priceIdentity":"commodity-futures:EUA","priceMode":"metadata_only"},
+    {"id":"uk-ets-registry","market":"UK ETS","jurisdiction":"United Kingdom","authority":"UK ETS Authority","url":"https://reports.view-emissions-trading-registry.service.gov.uk/ets-reports.html","frequency":"annual","scope":["allowance_supply","verified_emissions"],"priceIdentity":"commodity-futures:UKA","priceMode":"metadata_only","sourceState":"SOURCE_PENDING"},
+    {"id":"california-carb-auctions","market":"California Cap-and-Trade","jurisdiction":"California and Quebec","authority":"California Air Resources Board","url":"https://ww2.arb.ca.gov/our-work/programs/cap-and-trade-program/auction-information","frequency":"auction_event","scope":["auction_price","auction_volume","allowance_supply"],"sourceState":"SOURCE_READY_ADAPTER_PENDING"},
+    {"id":"rggi-auctions","market":"RGGI","jurisdiction":"RGGI participating states","authority":"Regional Greenhouse Gas Initiative, Inc.","url":"https://www.rggi.org/auctions/auction-results","frequency":"auction_event","scope":["auction_price","auction_volume","allowance_supply"],"sourceState":"SOURCE_READY_ADAPTER_PENDING"},
+    {"id":"china-national-ets","market":"China National ETS","jurisdiction":"China","authority":"Ministry of Ecology and Environment of the PRC","url":"https://www.mee.gov.cn/ywgz/ydqhbh/wsqtkz/","frequency":"monthly_or_annual","scope":["allowance_supply","verified_emissions"],"priceMode":"unknown_unless_official_publication","sourceState":"SOURCE_DISCOVERY_PENDING"}
+  ]
+}

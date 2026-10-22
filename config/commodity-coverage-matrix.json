@@ -1,0 +1,3052 @@
+{
+  "version": 1,
+  "asset": "GLOBAL_COMMODITY",
+  "layer": "L3",
+  "generatedAt": "2026-08-04",
+  "dimensions": [
+    "spot",
+    "historical",
+    "latest",
+    "futures",
+    "continuous",
+    "inventory",
+    "production",
+    "consumption",
+    "exports",
+    "imports",
+    "seasonality",
+    "termStructure",
+    "roll",
+    "technical",
+    "chart",
+    "scheduler",
+    "maintenance"
+  ],
+  "semantics": {
+    "AVAILABLE": "captured and validated",
+    "PLANNED": "official source registered; ingestion not started",
+    "PARTIAL": "some official coverage exists",
+    "BLOCKED": "no authorized official input registered",
+    "NOT_APPLICABLE": "dimension does not apply"
+  },
+  "rows": [
+    {
+      "commodityId": "WTI",
+      "category": "ENERGY",
+      "coverage": {
+        "spot": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "EIA_PETROLEUM_PRICES",
+            "EIA_WEEKLY_PETROLEUM"
+          ]
+        },
+        "historical": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "EIA_PETROLEUM_PRICES",
+            "EIA_WEEKLY_PETROLEUM"
+          ]
+        },
+        "latest": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "EIA_PETROLEUM_PRICES",
+            "EIA_WEEKLY_PETROLEUM"
+          ]
+        },
+        "futures": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "continuous": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "inventory": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "EIA_PETROLEUM_PRICES",
+            "EIA_WEEKLY_PETROLEUM"
+          ]
+        },
+        "production": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "EIA_PETROLEUM_PRICES",
+            "EIA_WEEKLY_PETROLEUM"
+          ]
+        },
+        "consumption": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "EIA_PETROLEUM_PRICES",
+            "EIA_WEEKLY_PETROLEUM"
+          ]
+        },
+        "exports": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "EIA_PETROLEUM_PRICES",
+            "EIA_WEEKLY_PETROLEUM"
+          ]
+        },
+        "imports": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "EIA_PETROLEUM_PRICES",
+            "EIA_WEEKLY_PETROLEUM"
+          ]
+        },
+        "seasonality": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "termStructure": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "roll": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "technical": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "chart": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "scheduler": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "maintenance": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        }
+      }
+    },
+    {
+      "commodityId": "BRENT",
+      "category": "ENERGY",
+      "coverage": {
+        "spot": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "EIA_PETROLEUM_PRICES"
+          ]
+        },
+        "historical": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "EIA_PETROLEUM_PRICES"
+          ]
+        },
+        "latest": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "EIA_PETROLEUM_PRICES"
+          ]
+        },
+        "futures": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "continuous": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "inventory": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "production": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "consumption": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "exports": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "imports": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "seasonality": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "termStructure": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "roll": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "technical": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "chart": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "scheduler": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "maintenance": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        }
+      }
+    },
+    {
+      "commodityId": "NATURAL_GAS",
+      "category": "ENERGY",
+      "coverage": {
+        "spot": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "EIA_NATURAL_GAS"
+          ]
+        },
+        "historical": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "EIA_NATURAL_GAS"
+          ]
+        },
+        "latest": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "EIA_NATURAL_GAS"
+          ]
+        },
+        "futures": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "continuous": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "inventory": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "EIA_NATURAL_GAS"
+          ]
+        },
+        "production": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "EIA_NATURAL_GAS"
+          ]
+        },
+        "consumption": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "EIA_NATURAL_GAS"
+          ]
+        },
+        "exports": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "EIA_NATURAL_GAS"
+          ]
+        },
+        "imports": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "EIA_NATURAL_GAS"
+          ]
+        },
+        "seasonality": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "termStructure": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "roll": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "technical": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "chart": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "scheduler": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "maintenance": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        }
+      }
+    },
+    {
+      "commodityId": "GASOLINE",
+      "category": "ENERGY",
+      "coverage": {
+        "spot": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "EIA_PETROLEUM_PRICES",
+            "EIA_WEEKLY_PETROLEUM"
+          ]
+        },
+        "historical": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "EIA_PETROLEUM_PRICES",
+            "EIA_WEEKLY_PETROLEUM"
+          ]
+        },
+        "latest": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "EIA_PETROLEUM_PRICES",
+            "EIA_WEEKLY_PETROLEUM"
+          ]
+        },
+        "futures": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "continuous": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "inventory": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "EIA_PETROLEUM_PRICES",
+            "EIA_WEEKLY_PETROLEUM"
+          ]
+        },
+        "production": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "EIA_PETROLEUM_PRICES",
+            "EIA_WEEKLY_PETROLEUM"
+          ]
+        },
+        "consumption": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "EIA_PETROLEUM_PRICES",
+            "EIA_WEEKLY_PETROLEUM"
+          ]
+        },
+        "exports": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "EIA_PETROLEUM_PRICES",
+            "EIA_WEEKLY_PETROLEUM"
+          ]
+        },
+        "imports": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "EIA_PETROLEUM_PRICES",
+            "EIA_WEEKLY_PETROLEUM"
+          ]
+        },
+        "seasonality": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "termStructure": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "roll": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "technical": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "chart": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "scheduler": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "maintenance": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        }
+      }
+    },
+    {
+      "commodityId": "GOLD",
+      "category": "PRECIOUS_METALS",
+      "coverage": {
+        "spot": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "LBMA_PRICES"
+          ]
+        },
+        "historical": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "LBMA_PRICES"
+          ]
+        },
+        "latest": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "LBMA_PRICES"
+          ]
+        },
+        "futures": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "continuous": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "inventory": {
+          "status": "NOT_APPLICABLE",
+          "reasonCode": "NOT_APPLICABLE",
+          "evidenceDatasetIds": []
+        },
+        "production": {
+          "status": "NOT_APPLICABLE",
+          "reasonCode": "NOT_APPLICABLE",
+          "evidenceDatasetIds": []
+        },
+        "consumption": {
+          "status": "NOT_APPLICABLE",
+          "reasonCode": "NOT_APPLICABLE",
+          "evidenceDatasetIds": []
+        },
+        "exports": {
+          "status": "NOT_APPLICABLE",
+          "reasonCode": "NOT_APPLICABLE",
+          "evidenceDatasetIds": []
+        },
+        "imports": {
+          "status": "NOT_APPLICABLE",
+          "reasonCode": "NOT_APPLICABLE",
+          "evidenceDatasetIds": []
+        },
+        "seasonality": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "termStructure": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "roll": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "technical": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "chart": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "scheduler": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "maintenance": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        }
+      }
+    },
+    {
+      "commodityId": "SILVER",
+      "category": "PRECIOUS_METALS",
+      "coverage": {
+        "spot": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "LBMA_PRICES"
+          ]
+        },
+        "historical": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "LBMA_PRICES"
+          ]
+        },
+        "latest": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "LBMA_PRICES"
+          ]
+        },
+        "futures": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "continuous": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "inventory": {
+          "status": "NOT_APPLICABLE",
+          "reasonCode": "NOT_APPLICABLE",
+          "evidenceDatasetIds": []
+        },
+        "production": {
+          "status": "NOT_APPLICABLE",
+          "reasonCode": "NOT_APPLICABLE",
+          "evidenceDatasetIds": []
+        },
+        "consumption": {
+          "status": "NOT_APPLICABLE",
+          "reasonCode": "NOT_APPLICABLE",
+          "evidenceDatasetIds": []
+        },
+        "exports": {
+          "status": "NOT_APPLICABLE",
+          "reasonCode": "NOT_APPLICABLE",
+          "evidenceDatasetIds": []
+        },
+        "imports": {
+          "status": "NOT_APPLICABLE",
+          "reasonCode": "NOT_APPLICABLE",
+          "evidenceDatasetIds": []
+        },
+        "seasonality": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "termStructure": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "roll": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "technical": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "chart": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "scheduler": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "maintenance": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        }
+      }
+    },
+    {
+      "commodityId": "PLATINUM",
+      "category": "PRECIOUS_METALS",
+      "coverage": {
+        "spot": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "LBMA_PRICES"
+          ]
+        },
+        "historical": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "LBMA_PRICES"
+          ]
+        },
+        "latest": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "LBMA_PRICES"
+          ]
+        },
+        "futures": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "continuous": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "inventory": {
+          "status": "NOT_APPLICABLE",
+          "reasonCode": "NOT_APPLICABLE",
+          "evidenceDatasetIds": []
+        },
+        "production": {
+          "status": "NOT_APPLICABLE",
+          "reasonCode": "NOT_APPLICABLE",
+          "evidenceDatasetIds": []
+        },
+        "consumption": {
+          "status": "NOT_APPLICABLE",
+          "reasonCode": "NOT_APPLICABLE",
+          "evidenceDatasetIds": []
+        },
+        "exports": {
+          "status": "NOT_APPLICABLE",
+          "reasonCode": "NOT_APPLICABLE",
+          "evidenceDatasetIds": []
+        },
+        "imports": {
+          "status": "NOT_APPLICABLE",
+          "reasonCode": "NOT_APPLICABLE",
+          "evidenceDatasetIds": []
+        },
+        "seasonality": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "termStructure": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "roll": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "technical": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "chart": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "scheduler": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "maintenance": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        }
+      }
+    },
+    {
+      "commodityId": "PALLADIUM",
+      "category": "PRECIOUS_METALS",
+      "coverage": {
+        "spot": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "LBMA_PRICES"
+          ]
+        },
+        "historical": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "LBMA_PRICES"
+          ]
+        },
+        "latest": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "LBMA_PRICES"
+          ]
+        },
+        "futures": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "continuous": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "inventory": {
+          "status": "NOT_APPLICABLE",
+          "reasonCode": "NOT_APPLICABLE",
+          "evidenceDatasetIds": []
+        },
+        "production": {
+          "status": "NOT_APPLICABLE",
+          "reasonCode": "NOT_APPLICABLE",
+          "evidenceDatasetIds": []
+        },
+        "consumption": {
+          "status": "NOT_APPLICABLE",
+          "reasonCode": "NOT_APPLICABLE",
+          "evidenceDatasetIds": []
+        },
+        "exports": {
+          "status": "NOT_APPLICABLE",
+          "reasonCode": "NOT_APPLICABLE",
+          "evidenceDatasetIds": []
+        },
+        "imports": {
+          "status": "NOT_APPLICABLE",
+          "reasonCode": "NOT_APPLICABLE",
+          "evidenceDatasetIds": []
+        },
+        "seasonality": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "termStructure": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "roll": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "technical": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "chart": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "scheduler": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "maintenance": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        }
+      }
+    },
+    {
+      "commodityId": "COPPER",
+      "category": "INDUSTRIAL_METALS",
+      "coverage": {
+        "spot": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "LME_MARKET_WAREHOUSE",
+            "USGS_MINERAL_STATS"
+          ]
+        },
+        "historical": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "LME_MARKET_WAREHOUSE",
+            "USGS_MINERAL_STATS"
+          ]
+        },
+        "latest": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "LME_MARKET_WAREHOUSE",
+            "USGS_MINERAL_STATS"
+          ]
+        },
+        "futures": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "LME_MARKET_WAREHOUSE",
+            "USGS_MINERAL_STATS"
+          ]
+        },
+        "continuous": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "inventory": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "LME_MARKET_WAREHOUSE",
+            "USGS_MINERAL_STATS"
+          ]
+        },
+        "production": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "LME_MARKET_WAREHOUSE",
+            "USGS_MINERAL_STATS"
+          ]
+        },
+        "consumption": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "LME_MARKET_WAREHOUSE",
+            "USGS_MINERAL_STATS"
+          ]
+        },
+        "exports": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "LME_MARKET_WAREHOUSE",
+            "USGS_MINERAL_STATS"
+          ]
+        },
+        "imports": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "LME_MARKET_WAREHOUSE",
+            "USGS_MINERAL_STATS"
+          ]
+        },
+        "seasonality": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "termStructure": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "LME_MARKET_WAREHOUSE",
+            "USGS_MINERAL_STATS"
+          ]
+        },
+        "roll": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "technical": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "chart": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "scheduler": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "maintenance": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        }
+      }
+    },
+    {
+      "commodityId": "ALUMINUM",
+      "category": "INDUSTRIAL_METALS",
+      "coverage": {
+        "spot": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "LME_MARKET_WAREHOUSE",
+            "USGS_MINERAL_STATS"
+          ]
+        },
+        "historical": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "LME_MARKET_WAREHOUSE",
+            "USGS_MINERAL_STATS"
+          ]
+        },
+        "latest": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "LME_MARKET_WAREHOUSE",
+            "USGS_MINERAL_STATS"
+          ]
+        },
+        "futures": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "LME_MARKET_WAREHOUSE",
+            "USGS_MINERAL_STATS"
+          ]
+        },
+        "continuous": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "inventory": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "LME_MARKET_WAREHOUSE",
+            "USGS_MINERAL_STATS"
+          ]
+        },
+        "production": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "LME_MARKET_WAREHOUSE",
+            "USGS_MINERAL_STATS"
+          ]
+        },
+        "consumption": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "LME_MARKET_WAREHOUSE",
+            "USGS_MINERAL_STATS"
+          ]
+        },
+        "exports": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "LME_MARKET_WAREHOUSE",
+            "USGS_MINERAL_STATS"
+          ]
+        },
+        "imports": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "LME_MARKET_WAREHOUSE",
+            "USGS_MINERAL_STATS"
+          ]
+        },
+        "seasonality": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "termStructure": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "LME_MARKET_WAREHOUSE",
+            "USGS_MINERAL_STATS"
+          ]
+        },
+        "roll": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "technical": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "chart": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "scheduler": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "maintenance": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        }
+      }
+    },
+    {
+      "commodityId": "NICKEL",
+      "category": "INDUSTRIAL_METALS",
+      "coverage": {
+        "spot": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "LME_MARKET_WAREHOUSE",
+            "USGS_MINERAL_STATS"
+          ]
+        },
+        "historical": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "LME_MARKET_WAREHOUSE",
+            "USGS_MINERAL_STATS"
+          ]
+        },
+        "latest": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "LME_MARKET_WAREHOUSE",
+            "USGS_MINERAL_STATS"
+          ]
+        },
+        "futures": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "LME_MARKET_WAREHOUSE",
+            "USGS_MINERAL_STATS"
+          ]
+        },
+        "continuous": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "inventory": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "LME_MARKET_WAREHOUSE",
+            "USGS_MINERAL_STATS"
+          ]
+        },
+        "production": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "LME_MARKET_WAREHOUSE",
+            "USGS_MINERAL_STATS"
+          ]
+        },
+        "consumption": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "LME_MARKET_WAREHOUSE",
+            "USGS_MINERAL_STATS"
+          ]
+        },
+        "exports": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "LME_MARKET_WAREHOUSE",
+            "USGS_MINERAL_STATS"
+          ]
+        },
+        "imports": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "LME_MARKET_WAREHOUSE",
+            "USGS_MINERAL_STATS"
+          ]
+        },
+        "seasonality": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "termStructure": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "LME_MARKET_WAREHOUSE",
+            "USGS_MINERAL_STATS"
+          ]
+        },
+        "roll": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "technical": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "chart": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "scheduler": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "maintenance": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        }
+      }
+    },
+    {
+      "commodityId": "ZINC",
+      "category": "INDUSTRIAL_METALS",
+      "coverage": {
+        "spot": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "LME_MARKET_WAREHOUSE",
+            "USGS_MINERAL_STATS"
+          ]
+        },
+        "historical": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "LME_MARKET_WAREHOUSE",
+            "USGS_MINERAL_STATS"
+          ]
+        },
+        "latest": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "LME_MARKET_WAREHOUSE",
+            "USGS_MINERAL_STATS"
+          ]
+        },
+        "futures": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "LME_MARKET_WAREHOUSE",
+            "USGS_MINERAL_STATS"
+          ]
+        },
+        "continuous": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "inventory": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "LME_MARKET_WAREHOUSE",
+            "USGS_MINERAL_STATS"
+          ]
+        },
+        "production": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "LME_MARKET_WAREHOUSE",
+            "USGS_MINERAL_STATS"
+          ]
+        },
+        "consumption": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "LME_MARKET_WAREHOUSE",
+            "USGS_MINERAL_STATS"
+          ]
+        },
+        "exports": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "LME_MARKET_WAREHOUSE",
+            "USGS_MINERAL_STATS"
+          ]
+        },
+        "imports": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "LME_MARKET_WAREHOUSE",
+            "USGS_MINERAL_STATS"
+          ]
+        },
+        "seasonality": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "termStructure": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "LME_MARKET_WAREHOUSE",
+            "USGS_MINERAL_STATS"
+          ]
+        },
+        "roll": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "technical": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "chart": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "scheduler": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "maintenance": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        }
+      }
+    },
+    {
+      "commodityId": "CORN",
+      "category": "AGRICULTURE",
+      "coverage": {
+        "spot": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "historical": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "latest": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "futures": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "continuous": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "inventory": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USDA_QUICK_STATS",
+            "USDA_PSD"
+          ]
+        },
+        "production": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USDA_QUICK_STATS",
+            "USDA_PSD"
+          ]
+        },
+        "consumption": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USDA_QUICK_STATS",
+            "USDA_PSD"
+          ]
+        },
+        "exports": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USDA_QUICK_STATS",
+            "USDA_PSD"
+          ]
+        },
+        "imports": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USDA_QUICK_STATS",
+            "USDA_PSD"
+          ]
+        },
+        "seasonality": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "termStructure": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "roll": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "technical": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "chart": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "scheduler": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "maintenance": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        }
+      }
+    },
+    {
+      "commodityId": "WHEAT",
+      "category": "AGRICULTURE",
+      "coverage": {
+        "spot": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "historical": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "latest": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "futures": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "continuous": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "inventory": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USDA_QUICK_STATS",
+            "USDA_PSD"
+          ]
+        },
+        "production": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USDA_QUICK_STATS",
+            "USDA_PSD"
+          ]
+        },
+        "consumption": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USDA_QUICK_STATS",
+            "USDA_PSD"
+          ]
+        },
+        "exports": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USDA_QUICK_STATS",
+            "USDA_PSD"
+          ]
+        },
+        "imports": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USDA_QUICK_STATS",
+            "USDA_PSD"
+          ]
+        },
+        "seasonality": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "termStructure": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "roll": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "technical": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "chart": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "scheduler": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "maintenance": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        }
+      }
+    },
+    {
+      "commodityId": "SOYBEANS",
+      "category": "AGRICULTURE",
+      "coverage": {
+        "spot": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "historical": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "latest": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "futures": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "continuous": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "inventory": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USDA_QUICK_STATS",
+            "USDA_PSD"
+          ]
+        },
+        "production": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USDA_QUICK_STATS",
+            "USDA_PSD"
+          ]
+        },
+        "consumption": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USDA_QUICK_STATS",
+            "USDA_PSD"
+          ]
+        },
+        "exports": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USDA_QUICK_STATS",
+            "USDA_PSD"
+          ]
+        },
+        "imports": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USDA_QUICK_STATS",
+            "USDA_PSD"
+          ]
+        },
+        "seasonality": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "termStructure": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "roll": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "technical": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "chart": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "scheduler": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "maintenance": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        }
+      }
+    },
+    {
+      "commodityId": "RICE",
+      "category": "AGRICULTURE",
+      "coverage": {
+        "spot": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "historical": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "latest": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "futures": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "continuous": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "inventory": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USDA_PSD",
+            "FAOSTAT_CROPS_LIVESTOCK"
+          ]
+        },
+        "production": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USDA_PSD",
+            "FAOSTAT_CROPS_LIVESTOCK"
+          ]
+        },
+        "consumption": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USDA_PSD",
+            "FAOSTAT_CROPS_LIVESTOCK"
+          ]
+        },
+        "exports": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USDA_PSD",
+            "FAOSTAT_CROPS_LIVESTOCK"
+          ]
+        },
+        "imports": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USDA_PSD",
+            "FAOSTAT_CROPS_LIVESTOCK"
+          ]
+        },
+        "seasonality": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "termStructure": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "roll": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "technical": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "chart": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "scheduler": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "maintenance": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        }
+      }
+    },
+    {
+      "commodityId": "LIVE_CATTLE",
+      "category": "LIVESTOCK",
+      "coverage": {
+        "spot": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "historical": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USDA_QUICK_STATS",
+            "CME_SETTLEMENTS"
+          ]
+        },
+        "latest": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USDA_QUICK_STATS",
+            "CME_SETTLEMENTS"
+          ]
+        },
+        "futures": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USDA_QUICK_STATS",
+            "CME_SETTLEMENTS"
+          ]
+        },
+        "continuous": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "inventory": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USDA_QUICK_STATS",
+            "CME_SETTLEMENTS"
+          ]
+        },
+        "production": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USDA_QUICK_STATS",
+            "CME_SETTLEMENTS"
+          ]
+        },
+        "consumption": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USDA_QUICK_STATS",
+            "CME_SETTLEMENTS"
+          ]
+        },
+        "exports": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "imports": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "seasonality": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "termStructure": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USDA_QUICK_STATS",
+            "CME_SETTLEMENTS"
+          ]
+        },
+        "roll": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "technical": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "chart": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "scheduler": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "maintenance": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        }
+      }
+    },
+    {
+      "commodityId": "LEAN_HOGS",
+      "category": "LIVESTOCK",
+      "coverage": {
+        "spot": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "historical": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USDA_QUICK_STATS",
+            "CME_SETTLEMENTS"
+          ]
+        },
+        "latest": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USDA_QUICK_STATS",
+            "CME_SETTLEMENTS"
+          ]
+        },
+        "futures": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USDA_QUICK_STATS",
+            "CME_SETTLEMENTS"
+          ]
+        },
+        "continuous": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "inventory": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USDA_QUICK_STATS",
+            "CME_SETTLEMENTS"
+          ]
+        },
+        "production": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USDA_QUICK_STATS",
+            "CME_SETTLEMENTS"
+          ]
+        },
+        "consumption": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USDA_QUICK_STATS",
+            "CME_SETTLEMENTS"
+          ]
+        },
+        "exports": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "imports": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "seasonality": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "termStructure": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USDA_QUICK_STATS",
+            "CME_SETTLEMENTS"
+          ]
+        },
+        "roll": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "technical": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "chart": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "scheduler": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "maintenance": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        }
+      }
+    },
+    {
+      "commodityId": "COFFEE",
+      "category": "SOFT_COMMODITIES",
+      "coverage": {
+        "spot": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "historical": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "FAOSTAT_CROPS_LIVESTOCK",
+            "CME_SETTLEMENTS"
+          ]
+        },
+        "latest": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "FAOSTAT_CROPS_LIVESTOCK",
+            "CME_SETTLEMENTS"
+          ]
+        },
+        "futures": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "FAOSTAT_CROPS_LIVESTOCK",
+            "CME_SETTLEMENTS"
+          ]
+        },
+        "continuous": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "inventory": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "production": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "FAOSTAT_CROPS_LIVESTOCK",
+            "CME_SETTLEMENTS"
+          ]
+        },
+        "consumption": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "exports": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "FAOSTAT_CROPS_LIVESTOCK",
+            "CME_SETTLEMENTS"
+          ]
+        },
+        "imports": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "FAOSTAT_CROPS_LIVESTOCK",
+            "CME_SETTLEMENTS"
+          ]
+        },
+        "seasonality": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "termStructure": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "FAOSTAT_CROPS_LIVESTOCK",
+            "CME_SETTLEMENTS"
+          ]
+        },
+        "roll": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "technical": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "chart": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "scheduler": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "maintenance": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        }
+      }
+    },
+    {
+      "commodityId": "COCOA",
+      "category": "SOFT_COMMODITIES",
+      "coverage": {
+        "spot": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "historical": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "FAOSTAT_CROPS_LIVESTOCK",
+            "CME_SETTLEMENTS"
+          ]
+        },
+        "latest": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "FAOSTAT_CROPS_LIVESTOCK",
+            "CME_SETTLEMENTS"
+          ]
+        },
+        "futures": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "FAOSTAT_CROPS_LIVESTOCK",
+            "CME_SETTLEMENTS"
+          ]
+        },
+        "continuous": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "inventory": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "production": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "FAOSTAT_CROPS_LIVESTOCK",
+            "CME_SETTLEMENTS"
+          ]
+        },
+        "consumption": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "exports": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "FAOSTAT_CROPS_LIVESTOCK",
+            "CME_SETTLEMENTS"
+          ]
+        },
+        "imports": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "FAOSTAT_CROPS_LIVESTOCK",
+            "CME_SETTLEMENTS"
+          ]
+        },
+        "seasonality": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "termStructure": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "FAOSTAT_CROPS_LIVESTOCK",
+            "CME_SETTLEMENTS"
+          ]
+        },
+        "roll": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "technical": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "chart": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "scheduler": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "maintenance": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        }
+      }
+    },
+    {
+      "commodityId": "SUGAR",
+      "category": "SOFT_COMMODITIES",
+      "coverage": {
+        "spot": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "historical": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USDA_PSD",
+            "CME_SETTLEMENTS"
+          ]
+        },
+        "latest": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USDA_PSD",
+            "CME_SETTLEMENTS"
+          ]
+        },
+        "futures": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USDA_PSD",
+            "CME_SETTLEMENTS"
+          ]
+        },
+        "continuous": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "inventory": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USDA_PSD",
+            "CME_SETTLEMENTS"
+          ]
+        },
+        "production": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USDA_PSD",
+            "CME_SETTLEMENTS"
+          ]
+        },
+        "consumption": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USDA_PSD",
+            "CME_SETTLEMENTS"
+          ]
+        },
+        "exports": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USDA_PSD",
+            "CME_SETTLEMENTS"
+          ]
+        },
+        "imports": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USDA_PSD",
+            "CME_SETTLEMENTS"
+          ]
+        },
+        "seasonality": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "termStructure": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USDA_PSD",
+            "CME_SETTLEMENTS"
+          ]
+        },
+        "roll": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "technical": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "chart": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "scheduler": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "maintenance": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        }
+      }
+    },
+    {
+      "commodityId": "COTTON",
+      "category": "SOFT_COMMODITIES",
+      "coverage": {
+        "spot": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "historical": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "latest": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "futures": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "continuous": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "inventory": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USDA_QUICK_STATS",
+            "USDA_PSD"
+          ]
+        },
+        "production": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USDA_QUICK_STATS",
+            "USDA_PSD"
+          ]
+        },
+        "consumption": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USDA_QUICK_STATS",
+            "USDA_PSD"
+          ]
+        },
+        "exports": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USDA_QUICK_STATS",
+            "USDA_PSD"
+          ]
+        },
+        "imports": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USDA_QUICK_STATS",
+            "USDA_PSD"
+          ]
+        },
+        "seasonality": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "termStructure": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "roll": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "technical": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "chart": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "scheduler": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "maintenance": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        }
+      }
+    },
+    {
+      "commodityId": "DRY_BULK_SHIPPING",
+      "category": "SHIPPING",
+      "coverage": {
+        "spot": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "BALTIC_INDICES"
+          ]
+        },
+        "historical": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "BALTIC_INDICES"
+          ]
+        },
+        "latest": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "BALTIC_INDICES"
+          ]
+        },
+        "futures": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "continuous": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "inventory": {
+          "status": "NOT_APPLICABLE",
+          "reasonCode": "NOT_APPLICABLE",
+          "evidenceDatasetIds": []
+        },
+        "production": {
+          "status": "NOT_APPLICABLE",
+          "reasonCode": "NOT_APPLICABLE",
+          "evidenceDatasetIds": []
+        },
+        "consumption": {
+          "status": "NOT_APPLICABLE",
+          "reasonCode": "NOT_APPLICABLE",
+          "evidenceDatasetIds": []
+        },
+        "exports": {
+          "status": "NOT_APPLICABLE",
+          "reasonCode": "NOT_APPLICABLE",
+          "evidenceDatasetIds": []
+        },
+        "imports": {
+          "status": "NOT_APPLICABLE",
+          "reasonCode": "NOT_APPLICABLE",
+          "evidenceDatasetIds": []
+        },
+        "seasonality": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "termStructure": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "roll": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "technical": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "chart": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "scheduler": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "maintenance": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        }
+      }
+    },
+    {
+      "commodityId": "EU_ALLOWANCE",
+      "category": "CARBON",
+      "coverage": {
+        "spot": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "EU_ETS_REGISTRY",
+            "EEX_MARKET"
+          ]
+        },
+        "historical": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "EU_ETS_REGISTRY",
+            "EEX_MARKET"
+          ]
+        },
+        "latest": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "EU_ETS_REGISTRY",
+            "EEX_MARKET"
+          ]
+        },
+        "futures": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "EU_ETS_REGISTRY",
+            "EEX_MARKET"
+          ]
+        },
+        "continuous": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "inventory": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "EU_ETS_REGISTRY",
+            "EEX_MARKET"
+          ]
+        },
+        "production": {
+          "status": "NOT_APPLICABLE",
+          "reasonCode": "NOT_APPLICABLE",
+          "evidenceDatasetIds": []
+        },
+        "consumption": {
+          "status": "NOT_APPLICABLE",
+          "reasonCode": "NOT_APPLICABLE",
+          "evidenceDatasetIds": []
+        },
+        "exports": {
+          "status": "NOT_APPLICABLE",
+          "reasonCode": "NOT_APPLICABLE",
+          "evidenceDatasetIds": []
+        },
+        "imports": {
+          "status": "NOT_APPLICABLE",
+          "reasonCode": "NOT_APPLICABLE",
+          "evidenceDatasetIds": []
+        },
+        "seasonality": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "termStructure": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "EU_ETS_REGISTRY",
+            "EEX_MARKET"
+          ]
+        },
+        "roll": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "technical": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "chart": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "scheduler": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "maintenance": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        }
+      }
+    },
+    {
+      "commodityId": "EU_ELECTRICITY",
+      "category": "ELECTRICITY",
+      "coverage": {
+        "spot": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "ENTSOE_MARKET"
+          ]
+        },
+        "historical": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "ENTSOE_MARKET"
+          ]
+        },
+        "latest": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "ENTSOE_MARKET"
+          ]
+        },
+        "futures": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "continuous": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "inventory": {
+          "status": "NOT_APPLICABLE",
+          "reasonCode": "NOT_APPLICABLE",
+          "evidenceDatasetIds": []
+        },
+        "production": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "ENTSOE_MARKET"
+          ]
+        },
+        "consumption": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "ENTSOE_MARKET"
+          ]
+        },
+        "exports": {
+          "status": "NOT_APPLICABLE",
+          "reasonCode": "NOT_APPLICABLE",
+          "evidenceDatasetIds": []
+        },
+        "imports": {
+          "status": "NOT_APPLICABLE",
+          "reasonCode": "NOT_APPLICABLE",
+          "evidenceDatasetIds": []
+        },
+        "seasonality": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "termStructure": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "roll": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "technical": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "chart": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "scheduler": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "maintenance": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        }
+      }
+    },
+    {
+      "commodityId": "POTASH",
+      "category": "FERTILIZER",
+      "coverage": {
+        "spot": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "historical": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USGS_MINERAL_STATS"
+          ]
+        },
+        "latest": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "futures": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "continuous": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "inventory": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USGS_MINERAL_STATS"
+          ]
+        },
+        "production": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USGS_MINERAL_STATS"
+          ]
+        },
+        "consumption": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USGS_MINERAL_STATS"
+          ]
+        },
+        "exports": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USGS_MINERAL_STATS"
+          ]
+        },
+        "imports": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USGS_MINERAL_STATS"
+          ]
+        },
+        "seasonality": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "termStructure": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "roll": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "technical": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "chart": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "scheduler": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "maintenance": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        }
+      }
+    },
+    {
+      "commodityId": "PHOSPHATE_ROCK",
+      "category": "FERTILIZER",
+      "coverage": {
+        "spot": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "historical": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USGS_MINERAL_STATS"
+          ]
+        },
+        "latest": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "futures": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "continuous": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "inventory": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USGS_MINERAL_STATS"
+          ]
+        },
+        "production": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USGS_MINERAL_STATS"
+          ]
+        },
+        "consumption": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USGS_MINERAL_STATS"
+          ]
+        },
+        "exports": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USGS_MINERAL_STATS"
+          ]
+        },
+        "imports": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USGS_MINERAL_STATS"
+          ]
+        },
+        "seasonality": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "termStructure": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "roll": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "technical": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "chart": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "scheduler": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "maintenance": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        }
+      }
+    },
+    {
+      "commodityId": "RARE_EARTHS",
+      "category": "RARE_EARTH",
+      "coverage": {
+        "spot": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "historical": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USGS_MINERAL_STATS"
+          ]
+        },
+        "latest": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "futures": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "continuous": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "inventory": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USGS_MINERAL_STATS"
+          ]
+        },
+        "production": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USGS_MINERAL_STATS"
+          ]
+        },
+        "consumption": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USGS_MINERAL_STATS"
+          ]
+        },
+        "exports": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USGS_MINERAL_STATS"
+          ]
+        },
+        "imports": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": [
+            "USGS_MINERAL_STATS"
+          ]
+        },
+        "seasonality": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "termStructure": {
+          "status": "BLOCKED",
+          "reasonCode": "SOURCE_NOT_PROVIDED",
+          "evidenceDatasetIds": []
+        },
+        "roll": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "technical": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "chart": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "scheduler": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        },
+        "maintenance": {
+          "status": "PLANNED",
+          "reasonCode": null,
+          "evidenceDatasetIds": []
+        }
+      }
+    }
+  ]
+}

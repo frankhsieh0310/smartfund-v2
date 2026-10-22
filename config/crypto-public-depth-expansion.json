@@ -1,0 +1,74 @@
+{
+  "version": 1,
+  "logicalPriority": 9,
+  "databasePriority": 90,
+  "maxDbConcurrency": 1,
+  "idleOnly": true,
+  "layers": [
+    {
+      "id": "DEFILLAMA",
+      "layer": "DEFI_PUBLIC_DATA_SHARED_LAYER",
+      "status": "AUTO_CONTINUING",
+      "claimable": true,
+      "sourceRole": "PUBLIC_AGGREGATOR",
+      "adapter": "DEFILLAMA_PUBLIC_ADAPTER",
+      "baseUrl": "https://api.llama.fi",
+      "checkpoint": "CHAIN_TVL_CURRENT",
+      "semantics": "DEFILLAMA_TVL_NOT_CHAIN_NATIVE_TVS"
+    },
+    {
+      "id": "STABLECOIN_ISSUER_TRANSPARENCY",
+      "layer": "STABLECOIN_ISSUER_TRANSPARENCY_LAYER",
+      "status": "INPUT_GATED_AUTO_CONTINUING",
+      "claimable": false,
+      "sourceRole": "ISSUER_TRANSPARENCY_REPORT",
+      "adapter": "OFFICIAL_DOCUMENT_DISCLOSURE_ADAPTER",
+      "sources": [
+        { "issuer": "CIRCLE", "assetIds": ["usdc"], "url": "https://www.circle.com/transparency", "historyUrl": "https://www.circleclaim.com/usdc/attestations/" },
+        { "issuer": "TETHER", "assetIds": ["usdt"], "url": "https://tether.to/transparency/?tab=reports" }
+      ],
+      "dependency": "BOUNDED_OFFICIAL_DOCUMENT_INDEX_AND_PDF_EXTRACTION",
+      "semantics": "ISSUER_REPORT_NOT_INDEPENDENT_SMARTFUND_VERIFICATION"
+    },
+    {
+      "id": "EXCHANGE_PROOF_OF_RESERVES",
+      "layer": "CRYPTO_EXCHANGE_PROOF_OF_RESERVES_LAYER",
+      "status": "INPUT_GATED_AUTO_CONTINUING",
+      "claimable": false,
+      "sourceRole": "OFFICIAL_EXCHANGE_DISCLOSURE",
+      "adapter": "OFFICIAL_DOCUMENT_DISCLOSURE_ADAPTER",
+      "canonicalExchangeIds": ["binance", "kraken"],
+      "dependency": "BOUNDED_OFFICIAL_POR_REPORT_INDEX",
+      "semantics": "PROOF_OF_RESERVES_NOT_AUDITED_SOLVENCY"
+    },
+    {
+      "id": "L2BEAT",
+      "layer": "ETHEREUM_L2_PUBLIC_DATA_LAYER",
+      "status": "WAITING_DEPENDENCY",
+      "claimable": false,
+      "sourceRole": "PUBLIC_ANALYTICS",
+      "adapter": "L2BEAT_PUBLIC_ADAPTER",
+      "baseUrl": "https://l2beat.com",
+      "dependency": "STABLE_SUPPORTED_STRUCTURED_PUBLIC_ENDPOINT",
+      "semantics": "PROVIDER_CLASSIFICATION_NOT_SMARTFUND_SAFETY_RATING"
+    },
+    {
+      "id": "OFFICIAL_COMPLIANCE_REFERENCE",
+      "layer": "DIGITAL_ASSET_OFFICIAL_COMPLIANCE_REFERENCE_LAYER",
+      "status": "INPUT_GATED_AUTO_CONTINUING",
+      "claimable": false,
+      "sourceRole": "OFFICIAL_REGULATOR",
+      "adapter": "OFFICIAL_SANCTIONS_DATA_ADAPTER",
+      "baseUrl": "https://sanctionslist.ofac.treas.gov",
+      "dependency": "BOUNDED_OFFICIAL_DOWNLOAD_PARSER",
+      "semantics": "OFFICIAL_LISTED_IDENTIFIER_NOT_INFERRED_REAL_WORLD_IDENTITY"
+    }
+  ],
+  "sharedOwners": {
+    "ETF": "GLOBAL_ETF",
+    "FUTURES": "GLOBAL_FUTURES",
+    "INDEX_BENCHMARK": "GLOBAL_INDEX",
+    "MACRO": "GLOBAL_MACRO",
+    "FX": "GLOBAL_FX"
+  }
+}

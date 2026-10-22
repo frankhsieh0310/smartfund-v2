@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "asset": "GLOBAL_WATCHLIST_ALERT_ENGINE",
+  "enabled": false,
+  "legacyFilesystemRunner": "DISABLED_EMPTY_CYCLE_OWNER",
+  "supportedAssets": ["STOCK", "ETF", "FUND", "BOND", "COMMODITY", "FX", "CRYPTO", "INDEX", "REIT"],
+  "dispatchMode": "UPSTREAM_WATERMARK",
+  "completionStates": ["ENGINE_HEALTHY_IDLE", "ENGINE_ACTIVE", "ENGINE_DEGRADED", "ENGINE_FAILED"],
+  "emptyCycleCompletionAllowed": false,
+  "pollIntervalMs": 300000,
+  "maxAttempts": 5,
+  "retryBaseDelayMs": 30000,
+  "input": {
+    "mode": "CANONICAL_DATABASE_ONLY",
+    "feedDirectory": "runtime/watchlist/feeds",
+    "networkAccess": false,
+    "filesystemFeedProductionTruth": false
+  },
+  "storage": {
+    "registry": "runtime/watchlist/registry.json",
+    "checkpoint": "runtime/watchlist/checkpoint.json",
+    "queue": "runtime/watchlist/alert-queue.jsonl",
+    "retry": "runtime/watchlist/retry.jsonl",
+    "archive": "runtime/watchlist/archive",
+    "completionManifest": "runtime/watchlist/completion-manifest.json",
+    "log": "runtime/watchlist/watchlist-engine.log"
+  }
+}

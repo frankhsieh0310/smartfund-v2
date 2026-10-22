@@ -1,0 +1,11 @@
+{
+  "assetClass": "GLOBAL CREDIT SPREAD",
+  "sources": [
+    {"id":"FRED","name":"Federal Reserve Economic Data","official":true,"baseUrl":"https://fred.stlouisfed.org","roles":["historical","latest"]},
+    {"id":"FEDERAL_RESERVE","name":"Board of Governors of the Federal Reserve System","official":true,"baseUrl":"https://www.federalreserve.gov","roles":["benchmark","quality"]},
+    {"id":"ICE_BOFA","name":"ICE Data Indices / ICE BofA","official":true,"baseUrl":"https://www.ice.com/market-data/indices","roles":["index_methodology","spread_series"]},
+    {"id":"ECB","name":"European Central Bank Data Portal","official":true,"baseUrl":"https://data-api.ecb.europa.eu","roles":["euro","benchmark"]},
+    {"id":"BIS","name":"Bank for International Settlements","official":true,"baseUrl":"https://data-api.bis.org","roles":["international","benchmark"]},
+    {"id":"IMF","name":"International Monetary Fund","official":true,"baseUrl":"https://www.imf.org","roles":["emerging_markets","quality"]}
+  ]
+}

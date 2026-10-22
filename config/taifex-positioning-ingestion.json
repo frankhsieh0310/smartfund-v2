@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "source": "TAIFEX",
+  "url": "https://www.taifex.com.tw/cht/3/futContractsDate",
+  "officialProductCode": "TXF",
+  "officialProductName": "臺股期貨",
+  "canonicalExchange": "TAIFEX",
+  "canonicalRoot": "TX",
+  "verifiedHistoryStart": "2025-08-14",
+  "maxDbConcurrency": 1,
+  "boundedDatesPerCycle": 1,
+  "activeIntervalMs": 30000,
+  "incrementalIntervalMs": 21600000
+}

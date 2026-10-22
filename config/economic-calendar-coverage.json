@@ -1,0 +1,8 @@
+{
+  "asset":"GLOBAL_ECONOMIC_CALENDAR",
+  "layers":{"L0":"official-registry","L1":"indicator-universe","L2":"calendar-schema","L3":["historical","upcoming","forecast","actual","revision","surprise","archive","retry","checkpoint","scheduler"]},
+  "stages":["historical","upcoming","incremental","retry","archive"],
+  "historical":{"startDate":"1990-01-01","completeWhen":"all provider cursors exhausted"},
+  "upcoming":{"windows":["today","week","month","future"]},
+  "incremental":{"fields":["forecast","actual","revised","surprise"]}
+}

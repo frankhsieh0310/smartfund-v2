@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "asset": "GLOBAL_STOCK",
+  "pollIntervalMs": 60000,
+  "databaseBackoffMs": [30000, 60000, 120000, 300000],
+  "domains": [
+    { "id": "CURRENT_QUOTE", "priority": "P0A", "status": "CURRENT_AND_AUTO_UPDATING", "runtime": "production" },
+    { "id": "INTRADAY_5M", "priority": "P0A", "status": "SCHEMA_BLOCKED" },
+    { "id": "IDENTITY_SECURITY_BRIDGE", "priority": "P0A", "status": "MAPPING_CONSTRAINED" },
+    { "id": "HISTORY_GAPS", "priority": "P0A", "status": "MAX_SOURCE_DEPTH_REACHED", "runtime": "automation/global-stock-p0-depth" },
+    { "id": "FINANCIAL_STATEMENTS", "priority": "P0A", "status": "CONFIGURATION_CONSTRAINED" },
+    { "id": "CORPORATE_ACTION_SEMANTICS", "priority": "P0A", "status": "CURRENT_AND_AUTO_UPDATING", "runtime": "corporate-actions", "start": "scripts/data/corporate-actions/start-corporate-actions.ps1" },
+    { "id": "CAPITAL_STRUCTURE", "priority": "P0B", "status": "SCHEMA_BLOCKED" },
+    { "id": "EARNINGS", "priority": "P0B", "status": "CURRENT_AND_AUTO_UPDATING", "runtime": "earnings-calendar", "start": "scripts/data/earnings-calendar/start-earnings-calendar-standalone.ps1" },
+    { "id": "DIVIDENDS", "priority": "P0B", "status": "CURRENT_AND_AUTO_UPDATING", "runtime": "corporate-actions", "delegate": "CORPORATE_ACTION_SEMANTICS" },
+    { "id": "BUYBACK", "priority": "P0B", "status": "CURRENT_AND_AUTO_UPDATING", "runtime": "share-buyback", "start": "scripts/data/share-buyback/start-share-buyback.ps1" },
+    { "id": "OWNERSHIP_INSIDER", "priority": "P0B", "status": "SOURCE_CONSTRAINED", "runtime": "insider-ownership", "start": "scripts/data/insider/start-insider.ps1" },
+    { "id": "OWNERSHIP_INSTITUTIONAL", "priority": "P0B", "status": "CURRENT_AND_AUTO_UPDATING", "runtime": "institutional-holdings", "start": "scripts/data/institutional-holdings/start-institutional-holdings-standalone.ps1" },
+    { "id": "IPO_DEPTH", "priority": "P1", "status": "CURRENT_AND_AUTO_UPDATING", "runtime": "ipo-calendar", "start": "scripts/data/ipo-calendar/start-ipo-calendar-standalone.ps1" },
+    { "id": "SHORT_LENDING", "priority": "P1", "status": "SOURCE_CONSTRAINED", "runtime": "securities-lending", "start": "scripts/data/securities-lending/start-securities-lending.ps1" },
+    { "id": "SEGMENTS", "priority": "P1", "status": "SCHEMA_BLOCKED" },
+    { "id": "VALUATION_QUALITY_GROWTH", "priority": "P1", "status": "CONFIGURATION_CONSTRAINED" },
+    { "id": "ADVANCED_ANALYTICS", "priority": "P1", "status": "CONFIGURATION_CONSTRAINED" },
+    { "id": "REIT_SUBTYPE", "priority": "P1", "status": "CURRENT_AND_AUTO_UPDATING", "runtime": "reit", "start": "scripts/data/reit/start-global-reit.ps1" }
+  ]
+}

@@ -1,0 +1,616 @@
+{
+  "critical_web_routes": [
+    {
+      "file": "app/page.tsx",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/movement-radar/page.tsx",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/search/page.tsx",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/stocks/[symbol]/page.tsx",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/etf/page.tsx",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/etf/[code]/page.tsx",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/fund/page.tsx",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/funds/page.tsx",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/funds/[id]/page.tsx",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/indices/[symbol]/page.tsx",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/industry-chain/[industry]/page.tsx",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/portfolio/page.tsx",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/screener/page.tsx",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/rankings/page.tsx",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/compare/page.tsx",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/markets/page.tsx",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/pricing/page.tsx",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/quiz/page.tsx",
+      "ok": true,
+      "mode": "fs"
+    }
+  ],
+  "critical_api_routes": [
+    {
+      "file": "app/api/consensus/rankings/route.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/api/consensus/flips/route.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/api/consensus/accuracy/route.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/api/consensus/health/route.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/api/consensus/personalized/route.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/api/consensus/push/register/route.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/api/consensus/push/unregister/route.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/api/consensus/notifications/route.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/api/consensus/notifications/read/route.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/api/mobile/congress-trades/route.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/api/mobile/insider-trades/route.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/api/mobile/institutional-holdings/route.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/api/mobile/reverse-holdings/route.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/api/mobile/current-holdings/route.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/api/mobile/current-fund-holdings/route.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/api/mobile/current-institutional/route.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/api/mobile/current-market-data/route.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/api/mobile/data-health/route.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/api/mobile/etf-distribution-goal/route.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/api/mobile/fundamentals-health/route.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/api/mobile/assets/[assetId]/route.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/api/search/route.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/api/stocks/[symbol]/route.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/api/etfs/route.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/api/funds/[id]/route.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/api/watchlists/route.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/api/portfolios/route.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/api/me/route.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/api/home-rankings/route.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/api/home-market-overview/route.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/api/government-yields/route.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/api/industry-chain/[industry]/route.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/auth/login/route.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/auth/callback/route.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/auth/logout/route.ts",
+      "ok": true,
+      "mode": "fs"
+    }
+  ],
+  "critical_cron_routes": [
+    {
+      "file": "app/api/cron/consensus-ingest/route.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/api/cron/consensus-reprocess/route.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/api/cron/consensus-flips/route.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/api/cron/consensus-push/route.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/api/cron/consensus-backfill/route.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/api/cron/consensus-aggregate/route.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/api/cron/consensus-performance/route.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/api/cron/yahoo-etf/route.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/api/cron/yahoo-etf-full-sweep/route.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/api/cron/yahoo-etf-enrich-repair/route.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/api/cron/yahoo-etf-distribution-backfill/route.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/api/cron/yahoo-fund/route.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/api/cron/yahoo-fund-full-sweep/route.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/api/cron/yahoo-fund-enrich-repair/route.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/api/cron/yahoo-fx/route.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/api/cron/cloud-etf-price/route.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/api/cron/cloud-fund-holdings/route.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/api/cron/cloud-fund-nav/route.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/api/cron/cloud-global-etf-holdings/route.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/api/cron/cloud-global-pe-recompute/route.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/api/cron/cloud-moneydj-etf/route.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/api/cron/cloud-moneydj-fund/route.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/api/cron/cloud-mops-financial-incremental/route.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/api/cron/cloud-sec-financial-incremental/route.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/api/cron/cloud-tw-fundamentals-refresh/route.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/api/cron/final-update/route.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/api/cron/institutional-update/route.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/api/cron/price-update/route.ts",
+      "ok": true,
+      "mode": "fs"
+    }
+  ],
+  "critical_workflows": [
+    {
+      "file": "app/api/workflows/bootstrap/route.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/workflows/consensus-cycle.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/workflows/ingestion-cycle.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/workflows/ingestion-steps.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/workflows/etf-full-sweep-cycle.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/workflows/etf-enrich-repair-cycle.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/workflows/etf-distribution-backfill-cycle.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/workflows/fund-full-sweep-cycle.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/workflows/fund-enrich-repair-cycle.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "app/workflows/retry-probe.ts",
+      "ok": true,
+      "mode": "fs"
+    }
+  ],
+  "critical_shared_libs": [
+    {
+      "file": "lib/consensus/attribution.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "lib/consensus/persistEvent.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "lib/consensus/sourceFetch.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "lib/consensus/extractionContract.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "lib/consensus/stockMapping.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "lib/consensus/canonicalKey.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "lib/cron/authorize.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "lib/cron/fxUpdate.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "lib/cron/fxDerivedUpdate.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "lib/cron/institutionalUpdate.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "lib/cron/priceUpdate.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "lib/cloud-ingestion/runContext.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "lib/cloud-ingestion/fundHoldings.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "lib/cloud-ingestion/fundNav.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "lib/cloud-ingestion/fxUniverse.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "lib/cloud-ingestion/globalEtfHoldings.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "lib/cloud-ingestion/moneydjEtfHoldings.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "lib/cloud-ingestion/moneydjFundDisclosure.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "lib/prisma.ts",
+      "ok": true,
+      "mode": "fs"
+    }
+  ],
+  "critical_config_files": [
+    {
+      "file": "vercel.json",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "config/consensus/people.json",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "config/consensus/sources.json",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "config/consensus/sec-ciks.json",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "package.json",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "next.config.ts",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "tsconfig.json",
+      "ok": true,
+      "mode": "fs"
+    }
+  ],
+  "critical_ui_components": [
+    {
+      "file": "app/movement-radar/page.tsx",
+      "ok": true,
+      "mode": "fs"
+    },
+    {
+      "file": "components/movement-radar/MovementRadar.tsx",
+      "ok": true,
+      "mode": "fs"
+    }
+  ],
+  "cron_schedule": {
+    "ok": true,
+    "missing": []
+  }
+}
+MANIFEST_CHECK: PASS

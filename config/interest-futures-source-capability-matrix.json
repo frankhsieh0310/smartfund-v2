@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "evidenceAsOf": "2026-08-10",
+  "allowedStates": ["PUBLIC_OFFICIAL", "PUBLIC_DELAYED", "SOURCE_PENDING", "ACCESS_CONSTRAINED", "TERMS_REVIEW", "LICENSE_REQUIRED", "SOURCE_NOT_AVAILABLE"],
+  "venues": {
+    "OSE": { "identity": "PUBLIC_OFFICIAL", "contractList": "PUBLIC_OFFICIAL", "expiration": "PUBLIC_OFFICIAL", "settlement": "PUBLIC_DELAYED", "ohlc": "SOURCE_NOT_AVAILABLE", "volume": "SOURCE_NOT_AVAILABLE", "openInterest": "SOURCE_NOT_AVAILABLE", "history": "SOURCE_NOT_AVAILABLE", "historyReason": "Official path retains latest file only; bounded older-date probes returned 404" },
+    "CME": { "identity": "ACCESS_CONSTRAINED", "contractList": "ACCESS_CONSTRAINED", "expiration": "ACCESS_CONSTRAINED", "settlement": "ACCESS_CONSTRAINED", "ohlc": "ACCESS_CONSTRAINED", "volume": "ACCESS_CONSTRAINED", "openInterest": "ACCESS_CONSTRAINED", "history": "ACCESS_CONSTRAINED" },
+    "ICE": { "identity": "PUBLIC_OFFICIAL", "contractList": "SOURCE_PENDING", "expiration": "SOURCE_PENDING", "settlement": "SOURCE_PENDING", "ohlc": "SOURCE_PENDING", "volume": "SOURCE_PENDING", "openInterest": "SOURCE_PENDING", "history": "SOURCE_PENDING", "mappingState": "MAPPING_CONSTRAINED" },
+    "EUREX": { "identity": "ACCESS_CONSTRAINED", "contractList": "ACCESS_CONSTRAINED", "expiration": "ACCESS_CONSTRAINED", "settlement": "ACCESS_CONSTRAINED", "ohlc": "ACCESS_CONSTRAINED", "volume": "ACCESS_CONSTRAINED", "openInterest": "ACCESS_CONSTRAINED", "history": "ACCESS_CONSTRAINED" },
+    "SGX": { "identity": "ACCESS_CONSTRAINED", "contractList": "ACCESS_CONSTRAINED", "expiration": "ACCESS_CONSTRAINED", "settlement": "ACCESS_CONSTRAINED", "ohlc": "ACCESS_CONSTRAINED", "volume": "ACCESS_CONSTRAINED", "openInterest": "ACCESS_CONSTRAINED", "history": "ACCESS_CONSTRAINED" }
+  }
+}

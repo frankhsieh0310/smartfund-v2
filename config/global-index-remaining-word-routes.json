@@ -1,0 +1,27 @@
+{
+  "version": "GLOBAL_INDEX_REMAINING_WORD_ROUTES_V1",
+  "asset": "GLOBAL_INDEX",
+  "execution": {"mode":"ORDINARY_NODE_LIFECYCLE_ONLY","fullEligibleUniverse":true,"fullReliableHistory":true,"incremental":true,"scheduledRefresh":true,"dbPool":"SUPABASE_TRANSACTION_POOLING_6543_PGBOUNCER","maxDbConcurrency":1,"boundedBatches":true,"idempotentWrites":true},
+  "safety": {"depthAuditRerun":false,"historicalRestart":false,"constituentHistoryRestart":false,"universeRebuild":false,"duplicateBreadthWorker":false,"duplicateDerivedWorker":false,"currentWeightsForHistory":false,"originalIndexPriority":true},
+  "routes": [
+    {"domain":"IDENTITY_FAMILY","status":"AUTO_CONTINUING","owner":"GLOBAL_INDEX","route":"canonical registry + family capability + official return variants; preserve provider identity","requirement":"OFFICIAL_VARIANT_METADATA_WHERE_DISTINGUISHABLE"},
+    {"domain":"CONSTITUENTS_PIT_WEIGHTS_EVENTS","status":"AUTO_CONTINUING","owner":"GLOBAL_INDEX_CONSTITUENTS","route":"verified immutable snapshots, dated weights, entry/removal/weight-change events"},
+    {"domain":"REBALANCE_RECONSTITUTION","status":"INPUT_GATED_AUTO_CONTINUING","owner":"GLOBAL_INDEX_CONSTITUENTS","route":"official dated compatible snapshot/event lifecycle","requirement":"VERIFIED_PROVIDER_EVENT_OR_COMPATIBLE_PIT_SNAPSHOT_PAIR"},
+    {"domain":"CONTRIBUTION_ANALYSIS","status":"INPUT_GATED_AUTO_CONTINUING","owner":"INDEX_DERIVED_DEPTH","route":"compatible PIT membership + historical weights + mapped constituent returns only","requirement":"DATED_WEIGHT_MEMBERSHIP_RETURN_ALIGNMENT"},
+    {"domain":"CONCENTRATION","status":"AUTO_CONTINUING","owner":"INDEX_DERIVED_DEPTH","route":"TOP_1/TOP_5/TOP_10/TOP_20/HHI/effective count from verified PIT weights; history/percentile follows ordinary queue"},
+    {"domain":"MARKET_BREADTH","status":"INPUT_GATED_AUTO_CONTINUING","owner":"GLOBAL_MARKET_BREADTH","route":"existing official breadth lifecycle; PIT-member MA/high-low extensions gated","requirement":"VERIFIED_PIT_SECURITY_UNIVERSE_AND_PRICE_INPUTS"},
+    {"domain":"EQUAL_WEIGHT_CAP_WEIGHT","status":"INPUT_GATED_AUTO_CONTINUING","owner":"INDEX_DERIVED_DEPTH","route":"compatible PIT membership, weights and constituent returns only","requirement":"COMPLETE_DATED_CONSTITUENT_RETURN_SET"},
+    {"domain":"PERFORMANCE_RISK_TECHNICAL","status":"AUTO_CONTINUING","owner":"GLOBAL_INDEX + INDEX_DERIVED_DEPTH","route":"existing canonical price history and technical/quant lifecycle; benchmark metrics gated by verified link"},
+    {"domain":"VALUATION_FUNDAMENTAL","status":"INPUT_GATED_AUTO_CONTINUING","owner":"INDEX_DERIVED_DEPTH + OFFICIAL_FINANCIAL_SUPERVISOR","route":"PIT weighted aggregation with compatible reporting periods","requirement":"VERIFIED_PIT_FUNDAMENTALS_AND_SECURITY_MAPPING"},
+    {"domain":"SECTOR_COUNTRY_STYLE_EXPOSURE","status":"INPUT_GATED_AUTO_CONTINUING","owner":"GLOBAL_INDEX_CONSTITUENTS + INDEX_DERIVED_DEPTH","route":"verified classifications aggregated by PIT weights","requirement":"CANONICAL_SECURITY_MAPPING_AND_DATED_CLASSIFICATION"},
+    {"domain":"FACTOR_EXPOSURE","status":"WAITING_DEPENDENCY","owner":"INDEX_DERIVED_DEPTH + VERIFIED_STOCK_FACTOR_LAYER","route":"aggregate versioned verified stock factors only","requirement":"VERIFIED_STOCK_FACTOR_INPUTS"},
+    {"domain":"THEME_TOPIC_EXPOSURE","status":"NEEDS_SOURCE","owner":"SHARED_SOURCE_REGISTRY","route":"verified security-theme mappings only; no generated themes","requirement":"VERIFIED_SECURITY_THEME_MAPPING_WITH_PROVENANCE"},
+    {"domain":"METHODOLOGY_RULES","status":"INPUT_GATED_AUTO_CONTINUING","owner":"GLOBAL_INDEX","route":"registered official provider metadata/document links; no bulk semantic parsing","requirement":"PUBLIC_OFFICIAL_METHODOLOGY_METADATA"},
+    {"domain":"INDEX_LIFECYCLE","status":"INPUT_GATED_AUTO_CONTINUING","owner":"GLOBAL_INDEX","route":"dated official launch/name/provider/methodology/base/currency/termination events","requirement":"OFFICIAL_DATED_EVENT_EVIDENCE"},
+    {"domain":"ETF_FUND_LINKAGE","status":"WAITING_DEPENDENCY","owner":"GLOBAL_ETF + GLOBAL_FUND + GLOBAL_INDEX","route":"reuse exact verified benchmark mappings and AUM only","requirement":"VERIFIED_CANONICAL_BENCHMARK_MAPPING"},
+    {"domain":"FUTURES_OPTIONS_LINKAGE","status":"AUTO_CONTINUING","owner":"GLOBAL_EQUITY_INDEX_FUTURES + OPTIONS","route":"official exchange/root/underlying relationships only; no symbol guessing"},
+    {"domain":"CROSS_ASSET_ANALYTICS","status":"WAITING_DEPENDENCY","owner":"INDEX_DERIVED_DEPTH + SHARED_PARENT_ASSETS","route":"aligned verified index/rates/FX/commodity/macro/credit series","requirement":"VERIFIED_CANONICAL_RELATIONSHIP_AND_ALIGNED_HISTORY"},
+    {"domain":"DATA_TRUST_PIT","status":"AUTO_CONTINUING","owner":"ALL_EXISTING_INDEX_WORKERS","route":"source/provider/as-of/retrieved/effective/announcement/currency/unit/frequency/methodology semantics"},
+    {"domain":"MULTILINGUAL","status":"INPUT_GATED_AUTO_CONTINUING","owner":"ACTIVE_SHARED_LOCALE_MODEL","route":"official localized names through shared locale lifecycle; symbols unchanged","requirement":"OFFICIAL_LOCALIZED_NAME_INPUT"}
+  ]
+}

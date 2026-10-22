@@ -1,0 +1,3321 @@
+{
+  "directList": [
+    "CHFNOK",
+    "CHFDKK",
+    "CHFPLN",
+    "CHFCZK",
+    "CHFHUF",
+    "CHFTHB",
+    "CHFMYR",
+    "CHFIDR",
+    "CHFPHP",
+    "CHFVND",
+    "CHFQAR",
+    "JPYCNY",
+    "JPYCNH",
+    "JPYHKD",
+    "JPYSGD",
+    "JPYKRW",
+    "JPYTWD",
+    "JPYINR",
+    "JPYBRL",
+    "JPYMXN",
+    "JPYZAR",
+    "JPYTRY",
+    "JPYSEK",
+    "JPYNOK",
+    "JPYDKK",
+    "JPYPLN",
+    "JPYCZK",
+    "JPYHUF",
+    "CHFKRW",
+    "CHFINR",
+    "CHFMXN",
+    "JPYMYR",
+    "JPYIDR",
+    "JPYPHP",
+    "JPYVND",
+    "JPYAED",
+    "JPYSAR",
+    "CNYCNH",
+    "CNYHKD",
+    "CNYSGD",
+    "CNYKRW",
+    "CNYTWD",
+    "CNYINR",
+    "CNYBRL",
+    "CNYMXN",
+    "CNYZAR",
+    "CNYTRY",
+    "CNYSEK",
+    "CNYNOK",
+    "CNYDKK",
+    "CNYPLN",
+    "CNYCZK",
+    "CADCNH",
+    "CNYHUF",
+    "CNYTHB",
+    "CNYMYR",
+    "CNYIDR",
+    "CNYPHP",
+    "CNYVND",
+    "CNYAED",
+    "CNYSAR",
+    "CNYQAR",
+    "CNHHKD",
+    "CNHSGD",
+    "CNHKRW",
+    "CNHTWD",
+    "CNHINR",
+    "CNHDKK",
+    "CNHPLN",
+    "CNHCZK",
+    "CNHHUF",
+    "CNHTHB",
+    "CNHMYR",
+    "CNHIDR",
+    "CNHPHP",
+    "CNHVND",
+    "CNHAED",
+    "CNHSAR",
+    "EURHKD",
+    "EURSGD",
+    "CNHQAR",
+    "HKDSGD",
+    "HKDKRW",
+    "HKDTWD",
+    "HKDINR",
+    "HKDBRL",
+    "HKDMXN",
+    "HKDZAR",
+    "HKDTRY",
+    "HKDSEK",
+    "HKDNOK",
+    "HKDDKK",
+    "HKDPLN",
+    "HKDCZK",
+    "HKDHUF",
+    "HKDTHB",
+    "HKDMYR",
+    "HKDIDR",
+    "HKDPHP",
+    "HKDVND",
+    "HKDAED",
+    "HKDSAR",
+    "HKDQAR",
+    "SGDKRW",
+    "EURINR",
+    "SGDTWD",
+    "SGDINR",
+    "SGDBRL",
+    "SGDMXN",
+    "SGDZAR",
+    "SGDTRY",
+    "SGDSEK",
+    "SGDNOK",
+    "SGDDKK",
+    "SGDPLN",
+    "SGDCZK",
+    "SGDHUF",
+    "SGDTHB",
+    "SGDMYR",
+    "SGDIDR",
+    "SGDPHP",
+    "SGDVND",
+    "SGDAED",
+    "SGDSAR",
+    "SGDQAR",
+    "KRWTWD",
+    "KRWINR",
+    "KRWBRL",
+    "KRWMXN",
+    "KRWZAR",
+    "KRWTRY",
+    "EURBRL",
+    "KRWSEK",
+    "KRWNOK",
+    "KRWDKK",
+    "KRWPLN",
+    "KRWCZK",
+    "KRWHUF",
+    "KRWTHB",
+    "KRWMYR",
+    "KRWIDR",
+    "KRWPHP",
+    "KRWVND",
+    "KRWAED",
+    "KRWSAR",
+    "KRWQAR",
+    "TWDINR",
+    "TWDBRL",
+    "TWDMXN",
+    "TWDZAR",
+    "TWDTRY",
+    "TWDSEK",
+    "TWDNOK",
+    "TWDDKK",
+    "TWDPLN",
+    "TWDCZK",
+    "TWDHUF",
+    "TWDTHB",
+    "EURMXN",
+    "EURZAR",
+    "EURTRY",
+    "EURSEK",
+    "TWDMYR",
+    "TWDIDR",
+    "TWDPHP",
+    "TWDVND",
+    "TWDAED",
+    "TWDSAR",
+    "TWDQAR",
+    "INRBRL",
+    "INRMXN",
+    "INRZAR",
+    "INRTRY",
+    "INRSEK",
+    "INRNOK",
+    "INRDKK",
+    "INRPLN",
+    "INRCZK",
+    "INRHUF",
+    "INRTHB",
+    "INRMYR",
+    "INRIDR",
+    "EURNOK",
+    "EURDKK",
+    "INRPHP",
+    "INRVND",
+    "INRAED",
+    "INRSAR",
+    "INRQAR",
+    "BRLHUF",
+    "BRLTHB",
+    "BRLMYR",
+    "BRLIDR",
+    "BRLPHP",
+    "BRLVND",
+    "BRLAED",
+    "BRLSAR",
+    "BRLQAR",
+    "MXNZAR",
+    "MXNTRY",
+    "MXNSEK",
+    "MXNDKK",
+    "MXNPLN",
+    "MXNTHB",
+    "MXNMYR",
+    "MXNVND",
+    "MXNAED",
+    "ZARTRY",
+    "EURPLN",
+    "EURCZK",
+    "EURHUF",
+    "EURTHB",
+    "CHFSGD",
+    "CHFTWD",
+    "CHFBRL",
+    "CHFZAR",
+    "CHFTRY",
+    "CHFSEK",
+    "ZARNOK",
+    "ZARQAR",
+    "TRYNOK",
+    "TRYAED",
+    "SEKCZK",
+    "SEKSAR",
+    "DKKQAR",
+    "EURMYR",
+    "EURIDR",
+    "EURQAR",
+    "GBPAUD",
+    "CADCZK",
+    "CADPHP",
+    "CADVND",
+    "CADAED",
+    "CADSAR",
+    "CADQAR",
+    "CHFJPY",
+    "CHFCNY",
+    "CHFCNH",
+    "CHFHKD",
+    "CADZAR",
+    "CADTRY",
+    "GBPNZD",
+    "GBPUSD",
+    "GBPCAD",
+    "GBPCHF",
+    "GBPJPY",
+    "GBPCNY",
+    "CADBRL",
+    "CADMXN",
+    "CADSEK",
+    "CADNOK",
+    "CADDKK",
+    "CADPLN",
+    "GBPSGD",
+    "GBPKRW",
+    "GBPTWD",
+    "GBPINR",
+    "GBPZAR",
+    "GBPTRY",
+    "CADCHF",
+    "CADJPY",
+    "CADCNY",
+    "CADHKD",
+    "CADSGD",
+    "CADKRW",
+    "CADTWD",
+    "CADINR",
+    "GBPSEK",
+    "GBPNOK",
+    "GBPDKK",
+    "GBPPLN",
+    "USDCZK",
+    "USDHUF",
+    "USDTHB",
+    "USDMYR",
+    "USDIDR",
+    "USDPHP",
+    "USDVND",
+    "USDAED",
+    "USDSAR",
+    "USDQAR",
+    "GBPCZK",
+    "GBPHUF",
+    "NZDHKD",
+    "NZDSGD",
+    "NZDKRW",
+    "NZDTWD",
+    "NZDINR",
+    "NZDBRL",
+    "NZDMXN",
+    "NZDZAR",
+    "NZDTRY",
+    "NZDSEK",
+    "NZDNOK",
+    "GBPTHB",
+    "GBPMYR",
+    "NZDCNH",
+    "GBPCNH",
+    "GBPHKD",
+    "GBPBRL",
+    "GBPMXN",
+    "EURPHP",
+    "EURVND",
+    "EURAED",
+    "EURSAR",
+    "JPYTHB",
+    "GBPQAR",
+    "GBPIDR",
+    "GBPPHP",
+    "GBPVND",
+    "GBPAED",
+    "GBPSAR",
+    "AUDNZD",
+    "AUDUSD",
+    "JPYQAR",
+    "AUDCAD",
+    "AUDCHF",
+    "AUDJPY",
+    "AUDKRW",
+    "AUDTWD",
+    "AUDINR",
+    "AUDBRL",
+    "AUDMXN",
+    "AUDZAR",
+    "AUDTRY",
+    "AUDSEK",
+    "AUDNOK",
+    "AUDDKK",
+    "AUDPLN",
+    "AUDCZK",
+    "AUDHUF",
+    "NZDCAD",
+    "NZDCHF",
+    "NZDJPY",
+    "NZDCNY",
+    "NZDDKK",
+    "NZDPLN",
+    "NZDCZK",
+    "NZDHUF",
+    "NZDTHB",
+    "NZDMYR",
+    "NZDIDR",
+    "NZDPHP",
+    "NZDVND",
+    "NZDAED",
+    "NZDSAR",
+    "NZDQAR",
+    "USDCAD",
+    "USDCHF",
+    "USDJPY",
+    "USDCNY",
+    "MXNIDR",
+    "MXNPHP",
+    "MXNSAR",
+    "MXNQAR",
+    "USDCNH",
+    "USDHKD",
+    "MXNNOK",
+    "MXNCZK",
+    "MXNHUF",
+    "ZARSEK",
+    "ZARAED",
+    "ZARVND",
+    "ZARSAR",
+    "TRYSEK",
+    "TRYVND",
+    "TRYQAR",
+    "SEKIDR",
+    "USDSGD",
+    "USDKRW",
+    "USDTWD",
+    "USDINR",
+    "USDBRL",
+    "USDMXN",
+    "NOKPLN",
+    "CZKVND",
+    "USDZAR",
+    "USDTRY",
+    "USDSEK",
+    "USDNOK",
+    "USDDKK",
+    "USDPLN",
+    "TRYSAR",
+    "SEKDKK",
+    "SEKTHB",
+    "SEKVND",
+    "NOKDKK",
+    "DKKPHP",
+    "PLNMYR",
+    "HUFAED",
+    "SEKNOK",
+    "SEKPLN",
+    "SEKHUF",
+    "SEKMYR",
+    "SEKPHP",
+    "SEKAED",
+    "SEKQAR",
+    "NOKCZK",
+    "NOKHUF",
+    "DKKVND",
+    "PLNCZK",
+    "PLNIDR",
+    "CZKAED",
+    "HUFSAR",
+    "CADHUF",
+    "CADTHB",
+    "CADMYR",
+    "NOKTHB",
+    "DKKIDR",
+    "DKKAED",
+    "DKKSAR",
+    "PLNHUF",
+    "PLNTHB",
+    "PLNPHP",
+    "CZKPHP",
+    "CZKSAR",
+    "CZKQAR",
+    "AUDCNY",
+    "AUDCNH",
+    "AUDHKD",
+    "AUDSGD",
+    "PLNVND",
+    "PLNAED",
+    "CZKMYR",
+    "CZKIDR",
+    "HUFTHB",
+    "HUFMYR",
+    "HUFIDR",
+    "HUFPHP",
+    "HUFVND",
+    "EURCNY",
+    "EURCNH",
+    "AUDTHB",
+    "AUDMYR",
+    "AUDIDR",
+    "AUDPHP",
+    "AUDVND",
+    "AUDAED",
+    "AUDSAR",
+    "AUDQAR",
+    "NZDUSD",
+    "CADIDR",
+    "EURKRW",
+    "EURTWD",
+    "CHFAED",
+    "CHFSAR",
+    "CNHBRL",
+    "CNHMXN",
+    "CNHZAR",
+    "CNHTRY",
+    "CNHSEK",
+    "CNHNOK",
+    "BRLMXN",
+    "BRLZAR",
+    "BRLTRY",
+    "BRLSEK",
+    "BRLNOK",
+    "BRLDKK",
+    "BRLPLN",
+    "BRLCZK",
+    "ZARDKK",
+    "ZARPLN",
+    "ZARCZK",
+    "ZARHUF",
+    "ZARTHB",
+    "ZARMYR",
+    "ZARIDR",
+    "ZARPHP",
+    "NOKMYR",
+    "NOKIDR",
+    "NOKPHP",
+    "NOKVND",
+    "NOKAED",
+    "NOKSAR",
+    "NOKQAR",
+    "DKKPLN",
+    "DKKCZK",
+    "DKKHUF",
+    "DKKTHB",
+    "DKKMYR",
+    "PLNSAR",
+    "PLNQAR",
+    "CZKHUF",
+    "CZKTHB",
+    "IDRVND",
+    "IDRAED",
+    "IDRSAR",
+    "IDRQAR",
+    "PHPVND",
+    "PHPAED",
+    "EURAUD",
+    "EURNZD",
+    "PHPSAR",
+    "PHPQAR",
+    "VNDAED",
+    "VNDSAR",
+    "EURUSD",
+    "EURCAD",
+    "EURCHF",
+    "EURJPY",
+    "EURGBP",
+    "TRYDKK",
+    "TRYPLN",
+    "TRYCZK",
+    "TRYHUF",
+    "TRYTHB",
+    "TRYMYR",
+    "TRYIDR",
+    "TRYPHP",
+    "THBPHP",
+    "THBVND",
+    "THBAED",
+    "THBSAR",
+    "THBQAR",
+    "MYRIDR",
+    "MYRPHP",
+    "MYRVND",
+    "MYRAED",
+    "MYRSAR",
+    "MYRQAR",
+    "IDRPHP",
+    "HUFQAR",
+    "THBMYR",
+    "THBIDR",
+    "VNDQAR",
+    "AEDSAR",
+    "AEDQAR",
+    "SARQAR"
+  ],
+  "derivedList": [],
+  "unknownList": [],
+  "yahooAliases": [
+    {
+      "pairSymbol": "USDTWD",
+      "provider": "YAHOO",
+      "providerSymbol": "USDTWD=X"
+    },
+    {
+      "pairSymbol": "EURCNY",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "EURCNY=X"
+    },
+    {
+      "pairSymbol": "EURCNH",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "EURCNH=X"
+    },
+    {
+      "pairSymbol": "EURTWD",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "EURTWD=X"
+    },
+    {
+      "pairSymbol": "AUDPHP",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "AUDPHP=X"
+    },
+    {
+      "pairSymbol": "AUDVND",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "AUDVND=X"
+    },
+    {
+      "pairSymbol": "AUDAED",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "AUDAED=X"
+    },
+    {
+      "pairSymbol": "NZDSEK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "NZDSEK=X"
+    },
+    {
+      "pairSymbol": "NZDCZK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "NZDCZK=X"
+    },
+    {
+      "pairSymbol": "CNHBRL",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CNHBRL=X"
+    },
+    {
+      "pairSymbol": "CNHMXN",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CNHMXN=X"
+    },
+    {
+      "pairSymbol": "CNHZAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CNHZAR=X"
+    },
+    {
+      "pairSymbol": "CNHIDR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CNHIDR=X"
+    },
+    {
+      "pairSymbol": "CNHPHP",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CNHPHP=X"
+    },
+    {
+      "pairSymbol": "CNHVND",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CNHVND=X"
+    },
+    {
+      "pairSymbol": "CNHAED",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CNHAED=X"
+    },
+    {
+      "pairSymbol": "CNHSAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CNHSAR=X"
+    },
+    {
+      "pairSymbol": "CNHQAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CNHQAR=X"
+    },
+    {
+      "pairSymbol": "HKDSGD",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "HKDSGD=X"
+    },
+    {
+      "pairSymbol": "HKDKRW",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "HKDKRW=X"
+    },
+    {
+      "pairSymbol": "HKDTWD",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "HKDTWD=X"
+    },
+    {
+      "pairSymbol": "HKDINR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "HKDINR=X"
+    },
+    {
+      "pairSymbol": "HKDBRL",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "HKDBRL=X"
+    },
+    {
+      "pairSymbol": "HKDMXN",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "HKDMXN=X"
+    },
+    {
+      "pairSymbol": "HKDZAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "HKDZAR=X"
+    },
+    {
+      "pairSymbol": "HKDTRY",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "HKDTRY=X"
+    },
+    {
+      "pairSymbol": "HKDSEK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "HKDSEK=X"
+    },
+    {
+      "pairSymbol": "HKDNOK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "HKDNOK=X"
+    },
+    {
+      "pairSymbol": "HKDDKK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "HKDDKK=X"
+    },
+    {
+      "pairSymbol": "HKDPLN",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "HKDPLN=X"
+    },
+    {
+      "pairSymbol": "HKDCZK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "HKDCZK=X"
+    },
+    {
+      "pairSymbol": "HKDHUF",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "HKDHUF=X"
+    },
+    {
+      "pairSymbol": "HKDTHB",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "HKDTHB=X"
+    },
+    {
+      "pairSymbol": "HKDMYR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "HKDMYR=X"
+    },
+    {
+      "pairSymbol": "HKDIDR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "HKDIDR=X"
+    },
+    {
+      "pairSymbol": "EURUSD",
+      "provider": "YAHOO",
+      "providerSymbol": "EURUSD=X"
+    },
+    {
+      "pairSymbol": "AUDUSD",
+      "provider": "YAHOO",
+      "providerSymbol": "AUDUSD=X"
+    },
+    {
+      "pairSymbol": "NZDUSD",
+      "provider": "YAHOO",
+      "providerSymbol": "NZDUSD=X"
+    },
+    {
+      "pairSymbol": "USDCAD",
+      "provider": "YAHOO",
+      "providerSymbol": "USDCAD=X"
+    },
+    {
+      "pairSymbol": "USDCNY",
+      "provider": "YAHOO",
+      "providerSymbol": "USDCNY=X"
+    },
+    {
+      "pairSymbol": "EURAUD",
+      "provider": "YAHOO",
+      "providerSymbol": "EURAUD=X"
+    },
+    {
+      "pairSymbol": "GBPJPY",
+      "provider": "YAHOO",
+      "providerSymbol": "GBPJPY=X"
+    },
+    {
+      "pairSymbol": "AUDJPY",
+      "provider": "YAHOO",
+      "providerSymbol": "AUDJPY=X"
+    },
+    {
+      "pairSymbol": "HKDPHP",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "HKDPHP=X"
+    },
+    {
+      "pairSymbol": "HKDVND",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "HKDVND=X"
+    },
+    {
+      "pairSymbol": "HKDAED",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "HKDAED=X"
+    },
+    {
+      "pairSymbol": "HKDSAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "HKDSAR=X"
+    },
+    {
+      "pairSymbol": "HKDQAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "HKDQAR=X"
+    },
+    {
+      "pairSymbol": "SGDKRW",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "SGDKRW=X"
+    },
+    {
+      "pairSymbol": "SGDTWD",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "SGDTWD=X"
+    },
+    {
+      "pairSymbol": "SGDINR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "SGDINR=X"
+    },
+    {
+      "pairSymbol": "SGDBRL",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "SGDBRL=X"
+    },
+    {
+      "pairSymbol": "SGDMXN",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "SGDMXN=X"
+    },
+    {
+      "pairSymbol": "SGDZAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "SGDZAR=X"
+    },
+    {
+      "pairSymbol": "SGDTRY",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "SGDTRY=X"
+    },
+    {
+      "pairSymbol": "SGDSEK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "SGDSEK=X"
+    },
+    {
+      "pairSymbol": "SGDNOK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "SGDNOK=X"
+    },
+    {
+      "pairSymbol": "SGDDKK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "SGDDKK=X"
+    },
+    {
+      "pairSymbol": "SGDPLN",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "SGDPLN=X"
+    },
+    {
+      "pairSymbol": "SGDCZK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "SGDCZK=X"
+    },
+    {
+      "pairSymbol": "SGDHUF",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "SGDHUF=X"
+    },
+    {
+      "pairSymbol": "SGDTHB",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "SGDTHB=X"
+    },
+    {
+      "pairSymbol": "SGDMYR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "SGDMYR=X"
+    },
+    {
+      "pairSymbol": "SGDIDR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "SGDIDR=X"
+    },
+    {
+      "pairSymbol": "SGDPHP",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "SGDPHP=X"
+    },
+    {
+      "pairSymbol": "SGDVND",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "SGDVND=X"
+    },
+    {
+      "pairSymbol": "SGDAED",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "SGDAED=X"
+    },
+    {
+      "pairSymbol": "SGDSAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "SGDSAR=X"
+    },
+    {
+      "pairSymbol": "SGDQAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "SGDQAR=X"
+    },
+    {
+      "pairSymbol": "KRWTWD",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "KRWTWD=X"
+    },
+    {
+      "pairSymbol": "KRWINR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "KRWINR=X"
+    },
+    {
+      "pairSymbol": "KRWBRL",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "KRWBRL=X"
+    },
+    {
+      "pairSymbol": "KRWMXN",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "KRWMXN=X"
+    },
+    {
+      "pairSymbol": "KRWZAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "KRWZAR=X"
+    },
+    {
+      "pairSymbol": "KRWTRY",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "KRWTRY=X"
+    },
+    {
+      "pairSymbol": "KRWSEK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "KRWSEK=X"
+    },
+    {
+      "pairSymbol": "KRWNOK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "KRWNOK=X"
+    },
+    {
+      "pairSymbol": "KRWDKK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "KRWDKK=X"
+    },
+    {
+      "pairSymbol": "USDJPY",
+      "provider": "YAHOO",
+      "providerSymbol": "USDJPY=X"
+    },
+    {
+      "pairSymbol": "GBPUSD",
+      "provider": "YAHOO",
+      "providerSymbol": "GBPUSD=X"
+    },
+    {
+      "pairSymbol": "USDCHF",
+      "provider": "YAHOO",
+      "providerSymbol": "USDCHF=X"
+    },
+    {
+      "pairSymbol": "USDHKD",
+      "provider": "YAHOO",
+      "providerSymbol": "USDHKD=X"
+    },
+    {
+      "pairSymbol": "USDSGD",
+      "provider": "YAHOO",
+      "providerSymbol": "USDSGD=X"
+    },
+    {
+      "pairSymbol": "EURJPY",
+      "provider": "YAHOO",
+      "providerSymbol": "EURJPY=X"
+    },
+    {
+      "pairSymbol": "EURGBP",
+      "provider": "YAHOO",
+      "providerSymbol": "EURGBP=X"
+    },
+    {
+      "pairSymbol": "EURCHF",
+      "provider": "YAHOO",
+      "providerSymbol": "EURCHF=X"
+    },
+    {
+      "pairSymbol": "EURINR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "EURINR=X"
+    },
+    {
+      "pairSymbol": "KRWPLN",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "KRWPLN=X"
+    },
+    {
+      "pairSymbol": "KRWCZK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "KRWCZK=X"
+    },
+    {
+      "pairSymbol": "KRWHUF",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "KRWHUF=X"
+    },
+    {
+      "pairSymbol": "KRWTHB",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "KRWTHB=X"
+    },
+    {
+      "pairSymbol": "KRWMYR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "KRWMYR=X"
+    },
+    {
+      "pairSymbol": "KRWIDR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "KRWIDR=X"
+    },
+    {
+      "pairSymbol": "KRWPHP",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "KRWPHP=X"
+    },
+    {
+      "pairSymbol": "KRWVND",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "KRWVND=X"
+    },
+    {
+      "pairSymbol": "KRWAED",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "KRWAED=X"
+    },
+    {
+      "pairSymbol": "KRWSAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "KRWSAR=X"
+    },
+    {
+      "pairSymbol": "KRWQAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "KRWQAR=X"
+    },
+    {
+      "pairSymbol": "TWDINR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "TWDINR=X"
+    },
+    {
+      "pairSymbol": "TWDBRL",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "TWDBRL=X"
+    },
+    {
+      "pairSymbol": "TWDMXN",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "TWDMXN=X"
+    },
+    {
+      "pairSymbol": "TWDZAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "TWDZAR=X"
+    },
+    {
+      "pairSymbol": "TWDTRY",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "TWDTRY=X"
+    },
+    {
+      "pairSymbol": "TWDSEK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "TWDSEK=X"
+    },
+    {
+      "pairSymbol": "TWDNOK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "TWDNOK=X"
+    },
+    {
+      "pairSymbol": "TWDDKK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "TWDDKK=X"
+    },
+    {
+      "pairSymbol": "TWDPLN",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "TWDPLN=X"
+    },
+    {
+      "pairSymbol": "TWDCZK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "TWDCZK=X"
+    },
+    {
+      "pairSymbol": "TWDHUF",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "TWDHUF=X"
+    },
+    {
+      "pairSymbol": "TWDTHB",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "TWDTHB=X"
+    },
+    {
+      "pairSymbol": "TWDMYR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "TWDMYR=X"
+    },
+    {
+      "pairSymbol": "TWDIDR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "TWDIDR=X"
+    },
+    {
+      "pairSymbol": "TWDPHP",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "TWDPHP=X"
+    },
+    {
+      "pairSymbol": "TWDVND",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "TWDVND=X"
+    },
+    {
+      "pairSymbol": "TWDAED",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "TWDAED=X"
+    },
+    {
+      "pairSymbol": "TWDSAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "TWDSAR=X"
+    },
+    {
+      "pairSymbol": "TWDQAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "TWDQAR=X"
+    },
+    {
+      "pairSymbol": "INRBRL",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "INRBRL=X"
+    },
+    {
+      "pairSymbol": "INRMXN",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "INRMXN=X"
+    },
+    {
+      "pairSymbol": "INRZAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "INRZAR=X"
+    },
+    {
+      "pairSymbol": "USDCNH",
+      "provider": "YAHOO",
+      "providerSymbol": "USDCNH=X"
+    },
+    {
+      "pairSymbol": "USDKRW",
+      "provider": "YAHOO",
+      "providerSymbol": "USDKRW=X"
+    },
+    {
+      "pairSymbol": "EURBRL",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "EURBRL=X"
+    },
+    {
+      "pairSymbol": "EURMXN",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "EURMXN=X"
+    },
+    {
+      "pairSymbol": "EURZAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "EURZAR=X"
+    },
+    {
+      "pairSymbol": "INRTRY",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "INRTRY=X"
+    },
+    {
+      "pairSymbol": "INRSEK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "INRSEK=X"
+    },
+    {
+      "pairSymbol": "INRNOK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "INRNOK=X"
+    },
+    {
+      "pairSymbol": "INRDKK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "INRDKK=X"
+    },
+    {
+      "pairSymbol": "INRPLN",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "INRPLN=X"
+    },
+    {
+      "pairSymbol": "INRCZK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "INRCZK=X"
+    },
+    {
+      "pairSymbol": "INRHUF",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "INRHUF=X"
+    },
+    {
+      "pairSymbol": "INRTHB",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "INRTHB=X"
+    },
+    {
+      "pairSymbol": "INRMYR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "INRMYR=X"
+    },
+    {
+      "pairSymbol": "INRIDR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "INRIDR=X"
+    },
+    {
+      "pairSymbol": "INRPHP",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "INRPHP=X"
+    },
+    {
+      "pairSymbol": "INRVND",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "INRVND=X"
+    },
+    {
+      "pairSymbol": "INRAED",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "INRAED=X"
+    },
+    {
+      "pairSymbol": "INRSAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "INRSAR=X"
+    },
+    {
+      "pairSymbol": "INRQAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "INRQAR=X"
+    },
+    {
+      "pairSymbol": "BRLMXN",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "BRLMXN=X"
+    },
+    {
+      "pairSymbol": "BRLZAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "BRLZAR=X"
+    },
+    {
+      "pairSymbol": "BRLTRY",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "BRLTRY=X"
+    },
+    {
+      "pairSymbol": "BRLSEK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "BRLSEK=X"
+    },
+    {
+      "pairSymbol": "BRLNOK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "BRLNOK=X"
+    },
+    {
+      "pairSymbol": "BRLDKK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "BRLDKK=X"
+    },
+    {
+      "pairSymbol": "BRLPLN",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "BRLPLN=X"
+    },
+    {
+      "pairSymbol": "BRLCZK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "BRLCZK=X"
+    },
+    {
+      "pairSymbol": "BRLHUF",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "BRLHUF=X"
+    },
+    {
+      "pairSymbol": "BRLTHB",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "BRLTHB=X"
+    },
+    {
+      "pairSymbol": "BRLMYR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "BRLMYR=X"
+    },
+    {
+      "pairSymbol": "BRLQAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "BRLQAR=X"
+    },
+    {
+      "pairSymbol": "MXNZAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "MXNZAR=X"
+    },
+    {
+      "pairSymbol": "MXNTRY",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "MXNTRY=X"
+    },
+    {
+      "pairSymbol": "MXNSEK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "MXNSEK=X"
+    },
+    {
+      "pairSymbol": "MXNNOK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "MXNNOK=X"
+    },
+    {
+      "pairSymbol": "MXNDKK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "MXNDKK=X"
+    },
+    {
+      "pairSymbol": "MXNPLN",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "MXNPLN=X"
+    },
+    {
+      "pairSymbol": "MXNCZK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "MXNCZK=X"
+    },
+    {
+      "pairSymbol": "MXNHUF",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "MXNHUF=X"
+    },
+    {
+      "pairSymbol": "EURTRY",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "EURTRY=X"
+    },
+    {
+      "pairSymbol": "GBPBRL",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "GBPBRL=X"
+    },
+    {
+      "pairSymbol": "GBPMXN",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "GBPMXN=X"
+    },
+    {
+      "pairSymbol": "MXNTHB",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "MXNTHB=X"
+    },
+    {
+      "pairSymbol": "MXNMYR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "MXNMYR=X"
+    },
+    {
+      "pairSymbol": "MXNIDR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "MXNIDR=X"
+    },
+    {
+      "pairSymbol": "MXNPHP",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "MXNPHP=X"
+    },
+    {
+      "pairSymbol": "MXNVND",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "MXNVND=X"
+    },
+    {
+      "pairSymbol": "MXNAED",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "MXNAED=X"
+    },
+    {
+      "pairSymbol": "MXNSAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "MXNSAR=X"
+    },
+    {
+      "pairSymbol": "MXNQAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "MXNQAR=X"
+    },
+    {
+      "pairSymbol": "ZARTRY",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "ZARTRY=X"
+    },
+    {
+      "pairSymbol": "ZARSEK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "ZARSEK=X"
+    },
+    {
+      "pairSymbol": "ZARNOK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "ZARNOK=X"
+    },
+    {
+      "pairSymbol": "ZARDKK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "ZARDKK=X"
+    },
+    {
+      "pairSymbol": "ZARPLN",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "ZARPLN=X"
+    },
+    {
+      "pairSymbol": "ZARCZK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "ZARCZK=X"
+    },
+    {
+      "pairSymbol": "ZARHUF",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "ZARHUF=X"
+    },
+    {
+      "pairSymbol": "ZARTHB",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "ZARTHB=X"
+    },
+    {
+      "pairSymbol": "ZARMYR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "ZARMYR=X"
+    },
+    {
+      "pairSymbol": "ZARIDR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "ZARIDR=X"
+    },
+    {
+      "pairSymbol": "ZARPHP",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "ZARPHP=X"
+    },
+    {
+      "pairSymbol": "ZARVND",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "ZARVND=X"
+    },
+    {
+      "pairSymbol": "ZARAED",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "ZARAED=X"
+    },
+    {
+      "pairSymbol": "ZARSAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "ZARSAR=X"
+    },
+    {
+      "pairSymbol": "ZARQAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "ZARQAR=X"
+    },
+    {
+      "pairSymbol": "TRYSEK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "TRYSEK=X"
+    },
+    {
+      "pairSymbol": "TRYNOK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "TRYNOK=X"
+    },
+    {
+      "pairSymbol": "TRYDKK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "TRYDKK=X"
+    },
+    {
+      "pairSymbol": "TRYPLN",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "TRYPLN=X"
+    },
+    {
+      "pairSymbol": "TRYCZK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "TRYCZK=X"
+    },
+    {
+      "pairSymbol": "TRYHUF",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "TRYHUF=X"
+    },
+    {
+      "pairSymbol": "TRYTHB",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "TRYTHB=X"
+    },
+    {
+      "pairSymbol": "TRYMYR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "TRYMYR=X"
+    },
+    {
+      "pairSymbol": "TRYIDR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "TRYIDR=X"
+    },
+    {
+      "pairSymbol": "TRYPHP",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "TRYPHP=X"
+    },
+    {
+      "pairSymbol": "TRYVND",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "TRYVND=X"
+    },
+    {
+      "pairSymbol": "SEKMYR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "SEKMYR=X"
+    },
+    {
+      "pairSymbol": "SEKIDR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "SEKIDR=X"
+    },
+    {
+      "pairSymbol": "SEKPHP",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "SEKPHP=X"
+    },
+    {
+      "pairSymbol": "GBPZAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "GBPZAR=X"
+    },
+    {
+      "pairSymbol": "GBPSEK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "GBPSEK=X"
+    },
+    {
+      "pairSymbol": "GBPNOK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "GBPNOK=X"
+    },
+    {
+      "pairSymbol": "JPYIDR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "JPYIDR=X"
+    },
+    {
+      "pairSymbol": "CNYPHP",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CNYPHP=X"
+    },
+    {
+      "pairSymbol": "CNYVND",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CNYVND=X"
+    },
+    {
+      "pairSymbol": "CNYAED",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CNYAED=X"
+    },
+    {
+      "pairSymbol": "CNYSAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CNYSAR=X"
+    },
+    {
+      "pairSymbol": "CNYQAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CNYQAR=X"
+    },
+    {
+      "pairSymbol": "CNHHKD",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CNHHKD=X"
+    },
+    {
+      "pairSymbol": "CNHSGD",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CNHSGD=X"
+    },
+    {
+      "pairSymbol": "CNHKRW",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CNHKRW=X"
+    },
+    {
+      "pairSymbol": "CNHTWD",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CNHTWD=X"
+    },
+    {
+      "pairSymbol": "SEKVND",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "SEKVND=X"
+    },
+    {
+      "pairSymbol": "SEKAED",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "SEKAED=X"
+    },
+    {
+      "pairSymbol": "SEKSAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "SEKSAR=X"
+    },
+    {
+      "pairSymbol": "SEKQAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "SEKQAR=X"
+    },
+    {
+      "pairSymbol": "NOKDKK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "NOKDKK=X"
+    },
+    {
+      "pairSymbol": "NOKPLN",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "NOKPLN=X"
+    },
+    {
+      "pairSymbol": "NOKCZK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "NOKCZK=X"
+    },
+    {
+      "pairSymbol": "NOKHUF",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "NOKHUF=X"
+    },
+    {
+      "pairSymbol": "NOKTHB",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "NOKTHB=X"
+    },
+    {
+      "pairSymbol": "NOKMYR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "NOKMYR=X"
+    },
+    {
+      "pairSymbol": "NOKIDR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "NOKIDR=X"
+    },
+    {
+      "pairSymbol": "NOKPHP",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "NOKPHP=X"
+    },
+    {
+      "pairSymbol": "NOKVND",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "NOKVND=X"
+    },
+    {
+      "pairSymbol": "DKKPLN",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "DKKPLN=X"
+    },
+    {
+      "pairSymbol": "DKKTHB",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "DKKTHB=X"
+    },
+    {
+      "pairSymbol": "DKKMYR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "DKKMYR=X"
+    },
+    {
+      "pairSymbol": "DKKPHP",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "DKKPHP=X"
+    },
+    {
+      "pairSymbol": "GBPDKK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "GBPDKK=X"
+    },
+    {
+      "pairSymbol": "GBPPLN",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "GBPPLN=X"
+    },
+    {
+      "pairSymbol": "GBPCZK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "GBPCZK=X"
+    },
+    {
+      "pairSymbol": "GBPHUF",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "GBPHUF=X"
+    },
+    {
+      "pairSymbol": "GBPTHB",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "GBPTHB=X"
+    },
+    {
+      "pairSymbol": "NZDHUF",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "NZDHUF=X"
+    },
+    {
+      "pairSymbol": "NZDTHB",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "NZDTHB=X"
+    },
+    {
+      "pairSymbol": "JPYVND",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "JPYVND=X"
+    },
+    {
+      "pairSymbol": "NZDQAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "NZDQAR=X"
+    },
+    {
+      "pairSymbol": "USDCNH",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "USDCNH=X"
+    },
+    {
+      "pairSymbol": "USDBRL",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "USDBRL=X"
+    },
+    {
+      "pairSymbol": "USDMXN",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "USDMXN=X"
+    },
+    {
+      "pairSymbol": "USDSEK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "USDSEK=X"
+    },
+    {
+      "pairSymbol": "USDNOK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "USDNOK=X"
+    },
+    {
+      "pairSymbol": "CADCNY",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CADCNY=X"
+    },
+    {
+      "pairSymbol": "JPYPHP",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "JPYPHP=X"
+    },
+    {
+      "pairSymbol": "JPYAED",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "JPYAED=X"
+    },
+    {
+      "pairSymbol": "CNYMYR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CNYMYR=X"
+    },
+    {
+      "pairSymbol": "CNYIDR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CNYIDR=X"
+    },
+    {
+      "pairSymbol": "CNHINR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CNHINR=X"
+    },
+    {
+      "pairSymbol": "GBPMYR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "GBPMYR=X"
+    },
+    {
+      "pairSymbol": "GBPIDR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "GBPIDR=X"
+    },
+    {
+      "pairSymbol": "GBPPHP",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "GBPPHP=X"
+    },
+    {
+      "pairSymbol": "GBPVND",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "GBPVND=X"
+    },
+    {
+      "pairSymbol": "GBPSAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "GBPSAR=X"
+    },
+    {
+      "pairSymbol": "GBPQAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "GBPQAR=X"
+    },
+    {
+      "pairSymbol": "AUDNZD",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "AUDNZD=X"
+    },
+    {
+      "pairSymbol": "AUDSAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "AUDSAR=X"
+    },
+    {
+      "pairSymbol": "AUDQAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "AUDQAR=X"
+    },
+    {
+      "pairSymbol": "NZDCAD",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "NZDCAD=X"
+    },
+    {
+      "pairSymbol": "NZDCHF",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "NZDCHF=X"
+    },
+    {
+      "pairSymbol": "NZDJPY",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "NZDJPY=X"
+    },
+    {
+      "pairSymbol": "NZDNOK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "NZDNOK=X"
+    },
+    {
+      "pairSymbol": "NZDDKK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "NZDDKK=X"
+    },
+    {
+      "pairSymbol": "NZDPLN",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "NZDPLN=X"
+    },
+    {
+      "pairSymbol": "AUDCHF",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "AUDCHF=X"
+    },
+    {
+      "pairSymbol": "AUDCAD",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "AUDCAD=X"
+    },
+    {
+      "pairSymbol": "AUDJPY",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "AUDJPY=X"
+    },
+    {
+      "pairSymbol": "NZDMXN",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "NZDMXN=X"
+    },
+    {
+      "pairSymbol": "NZDZAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "NZDZAR=X"
+    },
+    {
+      "pairSymbol": "NZDTRY",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "NZDTRY=X"
+    },
+    {
+      "pairSymbol": "GBPTRY",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "GBPTRY=X"
+    },
+    {
+      "pairSymbol": "GBPINR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "GBPINR=X"
+    },
+    {
+      "pairSymbol": "AUDCNY",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "AUDCNY=X"
+    },
+    {
+      "pairSymbol": "AUDCNH",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "AUDCNH=X"
+    },
+    {
+      "pairSymbol": "AUDHKD",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "AUDHKD=X"
+    },
+    {
+      "pairSymbol": "AUDKRW",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "AUDKRW=X"
+    },
+    {
+      "pairSymbol": "AUDTWD",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "AUDTWD=X"
+    },
+    {
+      "pairSymbol": "AUDINR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "AUDINR=X"
+    },
+    {
+      "pairSymbol": "AUDBRL",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "AUDBRL=X"
+    },
+    {
+      "pairSymbol": "AUDMXN",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "AUDMXN=X"
+    },
+    {
+      "pairSymbol": "AUDIDR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "AUDIDR=X"
+    },
+    {
+      "pairSymbol": "CADCNH",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CADCNH=X"
+    },
+    {
+      "pairSymbol": "CADHKD",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CADHKD=X"
+    },
+    {
+      "pairSymbol": "CADSGD",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CADSGD=X"
+    },
+    {
+      "pairSymbol": "CADKRW",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CADKRW=X"
+    },
+    {
+      "pairSymbol": "CADTWD",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CADTWD=X"
+    },
+    {
+      "pairSymbol": "CADINR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CADINR=X"
+    },
+    {
+      "pairSymbol": "CADBRL",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CADBRL=X"
+    },
+    {
+      "pairSymbol": "CADMXN",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CADMXN=X"
+    },
+    {
+      "pairSymbol": "CADZAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CADZAR=X"
+    },
+    {
+      "pairSymbol": "CADTRY",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CADTRY=X"
+    },
+    {
+      "pairSymbol": "CADSEK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CADSEK=X"
+    },
+    {
+      "pairSymbol": "CADNOK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CADNOK=X"
+    },
+    {
+      "pairSymbol": "CADDKK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CADDKK=X"
+    },
+    {
+      "pairSymbol": "CADPLN",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CADPLN=X"
+    },
+    {
+      "pairSymbol": "CADCZK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CADCZK=X"
+    },
+    {
+      "pairSymbol": "CADHUF",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CADHUF=X"
+    },
+    {
+      "pairSymbol": "CADTHB",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CADTHB=X"
+    },
+    {
+      "pairSymbol": "CADMYR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CADMYR=X"
+    },
+    {
+      "pairSymbol": "CADIDR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CADIDR=X"
+    },
+    {
+      "pairSymbol": "CADPHP",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CADPHP=X"
+    },
+    {
+      "pairSymbol": "CADAED",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CADAED=X"
+    },
+    {
+      "pairSymbol": "CADSAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CADSAR=X"
+    },
+    {
+      "pairSymbol": "CADQAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CADQAR=X"
+    },
+    {
+      "pairSymbol": "CHFJPY",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CHFJPY=X"
+    },
+    {
+      "pairSymbol": "CHFCNY",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CHFCNY=X"
+    },
+    {
+      "pairSymbol": "CHFCNH",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CHFCNH=X"
+    },
+    {
+      "pairSymbol": "CHFHKD",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CHFHKD=X"
+    },
+    {
+      "pairSymbol": "USDJPY",
+      "provider": "YAHOO-FINANCE2",
+      "providerSymbol": "USDJPY"
+    },
+    {
+      "pairSymbol": "CHFSGD",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CHFSGD=X"
+    },
+    {
+      "pairSymbol": "CHFKRW",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CHFKRW=X"
+    },
+    {
+      "pairSymbol": "CHFSEK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CHFSEK=X"
+    },
+    {
+      "pairSymbol": "CHFNOK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CHFNOK=X"
+    },
+    {
+      "pairSymbol": "NOKAED",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "NOKAED=X"
+    },
+    {
+      "pairSymbol": "NOKQAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "NOKQAR=X"
+    },
+    {
+      "pairSymbol": "DKKCZK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "DKKCZK=X"
+    },
+    {
+      "pairSymbol": "DKKHUF",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "DKKHUF=X"
+    },
+    {
+      "pairSymbol": "DKKIDR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "DKKIDR=X"
+    },
+    {
+      "pairSymbol": "DKKVND",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "DKKVND=X"
+    },
+    {
+      "pairSymbol": "DKKAED",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "DKKAED=X"
+    },
+    {
+      "pairSymbol": "DKKSAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "DKKSAR=X"
+    },
+    {
+      "pairSymbol": "DKKQAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "DKKQAR=X"
+    },
+    {
+      "pairSymbol": "USDTWD",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "USDTWD=X"
+    },
+    {
+      "pairSymbol": "CHFDKK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CHFDKK=X"
+    },
+    {
+      "pairSymbol": "CHFPLN",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CHFPLN=X"
+    },
+    {
+      "pairSymbol": "CHFCZK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CHFCZK=X"
+    },
+    {
+      "pairSymbol": "CHFHUF",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CHFHUF=X"
+    },
+    {
+      "pairSymbol": "CHFTHB",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CHFTHB=X"
+    },
+    {
+      "pairSymbol": "CHFMYR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CHFMYR=X"
+    },
+    {
+      "pairSymbol": "CHFIDR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CHFIDR=X"
+    },
+    {
+      "pairSymbol": "CHFPHP",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CHFPHP=X"
+    },
+    {
+      "pairSymbol": "JPYCNY",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "JPYCNY=X"
+    },
+    {
+      "pairSymbol": "PLNCZK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "PLNCZK=X"
+    },
+    {
+      "pairSymbol": "PLNHUF",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "PLNHUF=X"
+    },
+    {
+      "pairSymbol": "PLNTHB",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "PLNTHB=X"
+    },
+    {
+      "pairSymbol": "PLNMYR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "PLNMYR=X"
+    },
+    {
+      "pairSymbol": "PLNIDR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "PLNIDR=X"
+    },
+    {
+      "pairSymbol": "PLNPHP",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "PLNPHP=X"
+    },
+    {
+      "pairSymbol": "PLNVND",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "PLNVND=X"
+    },
+    {
+      "pairSymbol": "PLNAED",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "PLNAED=X"
+    },
+    {
+      "pairSymbol": "PLNSAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "PLNSAR=X"
+    },
+    {
+      "pairSymbol": "PLNQAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "PLNQAR=X"
+    },
+    {
+      "pairSymbol": "CZKHUF",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CZKHUF=X"
+    },
+    {
+      "pairSymbol": "CADVND",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CADVND=X"
+    },
+    {
+      "pairSymbol": "JPYCNH",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "JPYCNH=X"
+    },
+    {
+      "pairSymbol": "JPYHKD",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "JPYHKD=X"
+    },
+    {
+      "pairSymbol": "JPYSGD",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "JPYSGD=X"
+    },
+    {
+      "pairSymbol": "JPYKRW",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "JPYKRW=X"
+    },
+    {
+      "pairSymbol": "JPYTWD",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "JPYTWD=X"
+    },
+    {
+      "pairSymbol": "JPYINR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "JPYINR=X"
+    },
+    {
+      "pairSymbol": "JPYBRL",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "JPYBRL=X"
+    },
+    {
+      "pairSymbol": "JPYMXN",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "JPYMXN=X"
+    },
+    {
+      "pairSymbol": "JPYZAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "JPYZAR=X"
+    },
+    {
+      "pairSymbol": "JPYTRY",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "JPYTRY=X"
+    },
+    {
+      "pairSymbol": "JPYSEK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "JPYSEK=X"
+    },
+    {
+      "pairSymbol": "JPYNOK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "JPYNOK=X"
+    },
+    {
+      "pairSymbol": "JPYDKK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "JPYDKK=X"
+    },
+    {
+      "pairSymbol": "JPYPLN",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "JPYPLN=X"
+    },
+    {
+      "pairSymbol": "JPYCZK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "JPYCZK=X"
+    },
+    {
+      "pairSymbol": "JPYHUF",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "JPYHUF=X"
+    },
+    {
+      "pairSymbol": "JPYTHB",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "JPYTHB=X"
+    },
+    {
+      "pairSymbol": "JPYMYR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "JPYMYR=X"
+    },
+    {
+      "pairSymbol": "CZKTHB",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CZKTHB=X"
+    },
+    {
+      "pairSymbol": "CZKMYR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CZKMYR=X"
+    },
+    {
+      "pairSymbol": "CZKIDR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CZKIDR=X"
+    },
+    {
+      "pairSymbol": "USDJPY",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "USDJPY=X"
+    },
+    {
+      "pairSymbol": "HUFIDR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "HUFIDR=X"
+    },
+    {
+      "pairSymbol": "USDINR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "USDINR=X"
+    },
+    {
+      "pairSymbol": "USDDKK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "USDDKK=X"
+    },
+    {
+      "pairSymbol": "USDPLN",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "USDPLN=X"
+    },
+    {
+      "pairSymbol": "USDCZK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "USDCZK=X"
+    },
+    {
+      "pairSymbol": "JPYSAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "JPYSAR=X"
+    },
+    {
+      "pairSymbol": "JPYQAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "JPYQAR=X"
+    },
+    {
+      "pairSymbol": "CNYCNH",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CNYCNH=X"
+    },
+    {
+      "pairSymbol": "CNYHKD",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CNYHKD=X"
+    },
+    {
+      "pairSymbol": "CNYSGD",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CNYSGD=X"
+    },
+    {
+      "pairSymbol": "CZKPHP",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CZKPHP=X"
+    },
+    {
+      "pairSymbol": "CZKVND",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CZKVND=X"
+    },
+    {
+      "pairSymbol": "CZKAED",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CZKAED=X"
+    },
+    {
+      "pairSymbol": "CZKSAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CZKSAR=X"
+    },
+    {
+      "pairSymbol": "CZKQAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CZKQAR=X"
+    },
+    {
+      "pairSymbol": "HUFTHB",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "HUFTHB=X"
+    },
+    {
+      "pairSymbol": "HUFMYR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "HUFMYR=X"
+    },
+    {
+      "pairSymbol": "HUFPHP",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "HUFPHP=X"
+    },
+    {
+      "pairSymbol": "HUFVND",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "HUFVND=X"
+    },
+    {
+      "pairSymbol": "HUFAED",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "HUFAED=X"
+    },
+    {
+      "pairSymbol": "NZDUSD",
+      "provider": "YAHOO-FINANCE2",
+      "providerSymbol": "NZDUSD"
+    },
+    {
+      "pairSymbol": "USDCHF",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "USDCHF=X"
+    },
+    {
+      "pairSymbol": "USDCNH",
+      "provider": "YAHOO-FINANCE2",
+      "providerSymbol": "USDCNH"
+    },
+    {
+      "pairSymbol": "USDCNY",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "USDCNY=X"
+    },
+    {
+      "pairSymbol": "USDHKD",
+      "provider": "YAHOO-FINANCE2",
+      "providerSymbol": "USDHKD"
+    },
+    {
+      "pairSymbol": "USDHKD",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "USDHKD=X"
+    },
+    {
+      "pairSymbol": "USDTWD",
+      "provider": "YAHOO-FINANCE2",
+      "providerSymbol": "USDTWD"
+    },
+    {
+      "pairSymbol": "SARQAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "SARQAR=X"
+    },
+    {
+      "pairSymbol": "USDHUF",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "USDHUF=X"
+    },
+    {
+      "pairSymbol": "USDTHB",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "USDTHB=X"
+    },
+    {
+      "pairSymbol": "USDMYR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "USDMYR=X"
+    },
+    {
+      "pairSymbol": "USDIDR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "USDIDR=X"
+    },
+    {
+      "pairSymbol": "USDPHP",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "USDPHP=X"
+    },
+    {
+      "pairSymbol": "USDVND",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "USDVND=X"
+    },
+    {
+      "pairSymbol": "USDAED",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "USDAED=X"
+    },
+    {
+      "pairSymbol": "USDSAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "USDSAR=X"
+    },
+    {
+      "pairSymbol": "USDQAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "USDQAR=X"
+    },
+    {
+      "pairSymbol": "CADCHF",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CADCHF=X"
+    },
+    {
+      "pairSymbol": "CADJPY",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CADJPY=X"
+    },
+    {
+      "pairSymbol": "HUFSAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "HUFSAR=X"
+    },
+    {
+      "pairSymbol": "HUFQAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "HUFQAR=X"
+    },
+    {
+      "pairSymbol": "THBMYR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "THBMYR=X"
+    },
+    {
+      "pairSymbol": "THBIDR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "THBIDR=X"
+    },
+    {
+      "pairSymbol": "IDRPHP",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "IDRPHP=X"
+    },
+    {
+      "pairSymbol": "IDRVND",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "IDRVND=X"
+    },
+    {
+      "pairSymbol": "IDRAED",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "IDRAED=X"
+    },
+    {
+      "pairSymbol": "EURCAD",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "EURCAD=X"
+    },
+    {
+      "pairSymbol": "EURCHF",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "EURCHF=X"
+    },
+    {
+      "pairSymbol": "EURJPY",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "EURJPY=X"
+    },
+    {
+      "pairSymbol": "IDRSAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "IDRSAR=X"
+    },
+    {
+      "pairSymbol": "IDRQAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "IDRQAR=X"
+    },
+    {
+      "pairSymbol": "PHPVND",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "PHPVND=X"
+    },
+    {
+      "pairSymbol": "PHPAED",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "PHPAED=X"
+    },
+    {
+      "pairSymbol": "PHPSAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "PHPSAR=X"
+    },
+    {
+      "pairSymbol": "PHPQAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "PHPQAR=X"
+    },
+    {
+      "pairSymbol": "VNDAED",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "VNDAED=X"
+    },
+    {
+      "pairSymbol": "VNDSAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "VNDSAR=X"
+    },
+    {
+      "pairSymbol": "VNDQAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "VNDQAR=X"
+    },
+    {
+      "pairSymbol": "AEDSAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "AEDSAR=X"
+    },
+    {
+      "pairSymbol": "AEDQAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "AEDQAR=X"
+    },
+    {
+      "pairSymbol": "EURHKD",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "EURHKD=X"
+    },
+    {
+      "pairSymbol": "EURSGD",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "EURSGD=X"
+    },
+    {
+      "pairSymbol": "EURKRW",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "EURKRW=X"
+    },
+    {
+      "pairSymbol": "EURSEK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "EURSEK=X"
+    },
+    {
+      "pairSymbol": "EURNOK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "EURNOK=X"
+    },
+    {
+      "pairSymbol": "EURDKK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "EURDKK=X"
+    },
+    {
+      "pairSymbol": "AUDCZK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "AUDCZK=X"
+    },
+    {
+      "pairSymbol": "AUDHUF",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "AUDHUF=X"
+    },
+    {
+      "pairSymbol": "AUDTHB",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "AUDTHB=X"
+    },
+    {
+      "pairSymbol": "AUDMYR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "AUDMYR=X"
+    },
+    {
+      "pairSymbol": "CHFTWD",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CHFTWD=X"
+    },
+    {
+      "pairSymbol": "CHFINR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CHFINR=X"
+    },
+    {
+      "pairSymbol": "CHFBRL",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CHFBRL=X"
+    },
+    {
+      "pairSymbol": "CHFMXN",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CHFMXN=X"
+    },
+    {
+      "pairSymbol": "CHFZAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CHFZAR=X"
+    },
+    {
+      "pairSymbol": "CHFTRY",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CHFTRY=X"
+    },
+    {
+      "pairSymbol": "CNYKRW",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CNYKRW=X"
+    },
+    {
+      "pairSymbol": "CNYTWD",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CNYTWD=X"
+    },
+    {
+      "pairSymbol": "CNYINR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CNYINR=X"
+    },
+    {
+      "pairSymbol": "CNYBRL",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CNYBRL=X"
+    },
+    {
+      "pairSymbol": "CNYMXN",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CNYMXN=X"
+    },
+    {
+      "pairSymbol": "CNYZAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CNYZAR=X"
+    },
+    {
+      "pairSymbol": "CNYTRY",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CNYTRY=X"
+    },
+    {
+      "pairSymbol": "CNYSEK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CNYSEK=X"
+    },
+    {
+      "pairSymbol": "CNYNOK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CNYNOK=X"
+    },
+    {
+      "pairSymbol": "CNYDKK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CNYDKK=X"
+    },
+    {
+      "pairSymbol": "CNYPLN",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CNYPLN=X"
+    },
+    {
+      "pairSymbol": "CNYCZK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CNYCZK=X"
+    },
+    {
+      "pairSymbol": "CNYHUF",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CNYHUF=X"
+    },
+    {
+      "pairSymbol": "CNYTHB",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CNYTHB=X"
+    },
+    {
+      "pairSymbol": "AUDTRY",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "AUDTRY=X"
+    },
+    {
+      "pairSymbol": "AUDSEK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "AUDSEK=X"
+    },
+    {
+      "pairSymbol": "AUDNOK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "AUDNOK=X"
+    },
+    {
+      "pairSymbol": "AUDDKK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "AUDDKK=X"
+    },
+    {
+      "pairSymbol": "AUDPLN",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "AUDPLN=X"
+    },
+    {
+      "pairSymbol": "NZDCNY",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "NZDCNY=X"
+    },
+    {
+      "pairSymbol": "NZDCNH",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "NZDCNH=X"
+    },
+    {
+      "pairSymbol": "NZDHKD",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "NZDHKD=X"
+    },
+    {
+      "pairSymbol": "NZDSGD",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "NZDSGD=X"
+    },
+    {
+      "pairSymbol": "NZDKRW",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "NZDKRW=X"
+    },
+    {
+      "pairSymbol": "NZDTWD",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "NZDTWD=X"
+    },
+    {
+      "pairSymbol": "NZDINR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "NZDINR=X"
+    },
+    {
+      "pairSymbol": "NZDBRL",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "NZDBRL=X"
+    },
+    {
+      "pairSymbol": "USDSGD",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "USDSGD=X"
+    },
+    {
+      "pairSymbol": "USDKRW",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "USDKRW=X"
+    },
+    {
+      "pairSymbol": "USDZAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "USDZAR=X"
+    },
+    {
+      "pairSymbol": "USDTRY",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "USDTRY=X"
+    },
+    {
+      "pairSymbol": "CHFVND",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CHFVND=X"
+    },
+    {
+      "pairSymbol": "CHFAED",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CHFAED=X"
+    },
+    {
+      "pairSymbol": "CHFSAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CHFSAR=X"
+    },
+    {
+      "pairSymbol": "CHFQAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CHFQAR=X"
+    },
+    {
+      "pairSymbol": "CNHTRY",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CNHTRY=X"
+    },
+    {
+      "pairSymbol": "CNHSEK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CNHSEK=X"
+    },
+    {
+      "pairSymbol": "CNHNOK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CNHNOK=X"
+    },
+    {
+      "pairSymbol": "NOKSAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "NOKSAR=X"
+    },
+    {
+      "pairSymbol": "CNHDKK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CNHDKK=X"
+    },
+    {
+      "pairSymbol": "CNHPLN",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CNHPLN=X"
+    },
+    {
+      "pairSymbol": "CNHCZK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CNHCZK=X"
+    },
+    {
+      "pairSymbol": "CNHHUF",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CNHHUF=X"
+    },
+    {
+      "pairSymbol": "CNHTHB",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CNHTHB=X"
+    },
+    {
+      "pairSymbol": "CNHMYR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "CNHMYR=X"
+    },
+    {
+      "pairSymbol": "BRLIDR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "BRLIDR=X"
+    },
+    {
+      "pairSymbol": "BRLPHP",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "BRLPHP=X"
+    },
+    {
+      "pairSymbol": "BRLVND",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "BRLVND=X"
+    },
+    {
+      "pairSymbol": "BRLAED",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "BRLAED=X"
+    },
+    {
+      "pairSymbol": "BRLSAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "BRLSAR=X"
+    },
+    {
+      "pairSymbol": "TRYAED",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "TRYAED=X"
+    },
+    {
+      "pairSymbol": "TRYSAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "TRYSAR=X"
+    },
+    {
+      "pairSymbol": "TRYQAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "TRYQAR=X"
+    },
+    {
+      "pairSymbol": "SEKNOK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "SEKNOK=X"
+    },
+    {
+      "pairSymbol": "SEKDKK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "SEKDKK=X"
+    },
+    {
+      "pairSymbol": "SEKPLN",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "SEKPLN=X"
+    },
+    {
+      "pairSymbol": "SEKCZK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "SEKCZK=X"
+    },
+    {
+      "pairSymbol": "SEKHUF",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "SEKHUF=X"
+    },
+    {
+      "pairSymbol": "SEKTHB",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "SEKTHB=X"
+    },
+    {
+      "pairSymbol": "EURGBP",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "EURGBP=X"
+    },
+    {
+      "pairSymbol": "EURAUD",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "EURAUD=X"
+    },
+    {
+      "pairSymbol": "EURNZD",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "EURNZD=X"
+    },
+    {
+      "pairSymbol": "NZDUSD",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "NZDUSD=X"
+    },
+    {
+      "pairSymbol": "USDCAD",
+      "provider": "YAHOO-FINANCE2",
+      "providerSymbol": "USDCAD"
+    },
+    {
+      "pairSymbol": "USDCAD",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "USDCAD=X"
+    },
+    {
+      "pairSymbol": "USDCHF",
+      "provider": "YAHOO-FINANCE2",
+      "providerSymbol": "USDCHF"
+    },
+    {
+      "pairSymbol": "EURPLN",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "EURPLN=X"
+    },
+    {
+      "pairSymbol": "EURMYR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "EURMYR=X"
+    },
+    {
+      "pairSymbol": "EURIDR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "EURIDR=X"
+    },
+    {
+      "pairSymbol": "EURPHP",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "EURPHP=X"
+    },
+    {
+      "pairSymbol": "EURVND",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "EURVND=X"
+    },
+    {
+      "pairSymbol": "EURAED",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "EURAED=X"
+    },
+    {
+      "pairSymbol": "EURSAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "EURSAR=X"
+    },
+    {
+      "pairSymbol": "EURQAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "EURQAR=X"
+    },
+    {
+      "pairSymbol": "GBPCAD",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "GBPCAD=X"
+    },
+    {
+      "pairSymbol": "GBPCHF",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "GBPCHF=X"
+    },
+    {
+      "pairSymbol": "GBPJPY",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "GBPJPY=X"
+    },
+    {
+      "pairSymbol": "GBPCNY",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "GBPCNY=X"
+    },
+    {
+      "pairSymbol": "GBPCNH",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "GBPCNH=X"
+    },
+    {
+      "pairSymbol": "GBPHKD",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "GBPHKD=X"
+    },
+    {
+      "pairSymbol": "GBPSGD",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "GBPSGD=X"
+    },
+    {
+      "pairSymbol": "GBPKRW",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "GBPKRW=X"
+    },
+    {
+      "pairSymbol": "GBPTWD",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "GBPTWD=X"
+    },
+    {
+      "pairSymbol": "AUDSGD",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "AUDSGD=X"
+    },
+    {
+      "pairSymbol": "NZDMYR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "NZDMYR=X"
+    },
+    {
+      "pairSymbol": "NZDIDR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "NZDIDR=X"
+    },
+    {
+      "pairSymbol": "NZDPHP",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "NZDPHP=X"
+    },
+    {
+      "pairSymbol": "NZDVND",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "NZDVND=X"
+    },
+    {
+      "pairSymbol": "NZDAED",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "NZDAED=X"
+    },
+    {
+      "pairSymbol": "NZDSAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "NZDSAR=X"
+    },
+    {
+      "pairSymbol": "GBPAUD",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "GBPAUD=X"
+    },
+    {
+      "pairSymbol": "GBPNZD",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "GBPNZD=X"
+    },
+    {
+      "pairSymbol": "THBPHP",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "THBPHP=X"
+    },
+    {
+      "pairSymbol": "THBVND",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "THBVND=X"
+    },
+    {
+      "pairSymbol": "THBAED",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "THBAED=X"
+    },
+    {
+      "pairSymbol": "THBSAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "THBSAR=X"
+    },
+    {
+      "pairSymbol": "THBQAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "THBQAR=X"
+    },
+    {
+      "pairSymbol": "MYRIDR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "MYRIDR=X"
+    },
+    {
+      "pairSymbol": "MYRPHP",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "MYRPHP=X"
+    },
+    {
+      "pairSymbol": "MYRVND",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "MYRVND=X"
+    },
+    {
+      "pairSymbol": "MYRAED",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "MYRAED=X"
+    },
+    {
+      "pairSymbol": "MYRSAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "MYRSAR=X"
+    },
+    {
+      "pairSymbol": "MYRQAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "MYRQAR=X"
+    },
+    {
+      "pairSymbol": "EURCZK",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "EURCZK=X"
+    },
+    {
+      "pairSymbol": "EURHUF",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "EURHUF=X"
+    },
+    {
+      "pairSymbol": "EURTHB",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "EURTHB=X"
+    },
+    {
+      "pairSymbol": "AUDZAR",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "AUDZAR=X"
+    },
+    {
+      "pairSymbol": "AUDUSD",
+      "provider": "YAHOO-FINANCE2",
+      "providerSymbol": "AUDUSD"
+    },
+    {
+      "pairSymbol": "AUDUSD",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "AUDUSD=X"
+    },
+    {
+      "pairSymbol": "EURUSD",
+      "provider": "YAHOO-FINANCE2",
+      "providerSymbol": "EURUSD"
+    },
+    {
+      "pairSymbol": "EURUSD",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "EURUSD=X"
+    },
+    {
+      "pairSymbol": "GBPUSD",
+      "provider": "YAHOO-FINANCE2",
+      "providerSymbol": "GBPUSD"
+    },
+    {
+      "pairSymbol": "GBPUSD",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "GBPUSD=X"
+    },
+    {
+      "pairSymbol": "GBPAED",
+      "provider": "YAHOO_CHART",
+      "providerSymbol": "GBPAED=X"
+    }
+  ]
+}

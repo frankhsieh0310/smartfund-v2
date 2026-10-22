@@ -1,0 +1,11 @@
+{
+  "assetClass":"GLOBAL CREDIT SPREAD",
+  "boundedCandidatesPerEntity":2,
+  "checkedAt":"2026-08-09T00:00:00.000Z",
+  "entities":{
+    "EURO_IG":{"status":"SOURCE_PENDING","candidates":[{"provider":"FRED / ICE BofA","description":"Euro-denominated corporate OAS family","verification":"SEMANTIC_MAPPING_NOT_CONFIRMED","licenseStatus":"RESTRICTED_USE"},{"provider":"ECB Data Portal","description":"Euro area corporate yield/spread datasets","verification":"EXACT_PUBLIC_SERIES_NOT_CONFIRMED","licenseStatus":"PENDING"}]},
+    "EURO_HY":{"status":"SOURCE_PENDING","candidates":[{"provider":"FRED / ICE BofA","externalSeriesId":"BAMLHE00EHYIOAS","description":"ICE BofA Euro High Yield Index OAS","verification":"FETCH_CANDIDATE_CONFIRMED","licenseStatus":"RESTRICTED_USE"},{"provider":"ECB Data Portal","description":"Euro area high-yield spread candidate","verification":"EXACT_PUBLIC_SERIES_NOT_CONFIRMED","licenseStatus":"PENDING"}]},
+    "ASIA_CREDIT":{"status":"SOURCE_PENDING","candidates":[{"provider":"FRED / ICE BofA","externalSeriesId":"BAMLEMRACRPIASIAOAS","description":"Asia Emerging Markets Corporate Plus Index OAS","verification":"FETCH_CANDIDATE_CONFIRMED","licenseStatus":"RESTRICTED_USE"},{"provider":"FRED / ICE BofA","externalSeriesId":"BAMLEMALLCRPIASIAUSOAS","description":"Asia US Emerging Markets Liquid Corporate Plus Index OAS","verification":"FETCH_CANDIDATE_CONFIRMED","licenseStatus":"RESTRICTED_USE"}]},
+    "CHINA_CREDIT":{"status":"SOURCE_PENDING","candidates":[{"provider":"IMF","description":"China corporate bond spread research series","verification":"NOT_MACHINE_READABLE_CONTINUOUS_SERIES","licenseStatus":"PUBLIC_RESEARCH"},{"provider":"BIS","description":"China corporate bond statistics candidate","verification":"EXACT_SPREAD_SERIES_NOT_CONFIRMED","licenseStatus":"PENDING"}]}
+  }
+}

@@ -106,26 +106,40 @@ export async function fetchSitcaNavRecords(): Promise<SitcaFundNavRecord[]> {
 }
 
 /**
- * Newer-only NAV write. Upserts `fund_history` on (fund_id, date); moves funds.latest_nav* forward
- * ONLY when navDate is strictly after funds.latest_nav_date (or it is NULL). A same-date value from a
- * different source is NOT overwritten (deterministic: the incumbent stays until a strictly newer date
- * arrives). Returns { historyWritten, navMoved }.
+ * Latest NAV write. Upserts `fund_history` on (fund_id, date); moves funds.latest_nav* forward
+ * when the source date is newer, or the same source corrects the same date.
+ * Equal-date values from another source retain the incumbent source precedence.
+ * Identical values are a no-op. Returns { historyWritten, navMoved }.
  */
 export async function persistFundNav(
   prisma: PrismaClient,
   input: { fundId: string; nav: number; navDate: string; currency: string | null; source: string },
 ): Promise<{ historyWritten: boolean; navMoved: boolean }> {
   const { fundId, nav, navDate, currency, source } = input;
-  await prisma.$executeRawUnsafe(
+  return prisma.$transaction(async (tx) => {
+    // Serialize a latest update with other writers and apply the same source/date
+    // guard to both history and the latest pointer. Never partially publish a NAV.
+    const rows = await tx.$queryRawUnsafe<Array<{ latest_date: string | null; last_nav_source: string | null }>>(
+      `SELECT latest_nav_date::text AS latest_date, last_nav_source
+         FROM funds WHERE id = $1 FOR UPDATE`, fundId,
+    );
+    const current = rows[0];
+    if (!current) throw new Error("FUND_NAV_FUND_NOT_FOUND");
+    if (current.latest_date && (current.latest_date > navDate
+      || (current.latest_date === navDate && current.last_nav_source !== source))) {
+      return { historyWritten: false, navMoved: false };
+    }
+  const historyWritten = await tx.$executeRawUnsafe(
     `INSERT INTO fund_history (id, fund_id, date, nav, created_at)
      VALUES ($1, $2, $3::date, $4, NOW())
-     ON CONFLICT (fund_id, date) DO UPDATE SET nav = EXCLUDED.nav`,
+     ON CONFLICT (fund_id, date) DO UPDATE SET nav = EXCLUDED.nav
+     WHERE fund_history.nav IS DISTINCT FROM EXCLUDED.nav`,
     randomUUID(),
     fundId,
     navDate,
     nav,
   );
-  const moved = await prisma.$executeRawUnsafe(
+  const moved = await tx.$executeRawUnsafe(
     `UPDATE funds
         SET latest_nav = $2,
             latest_nav_date = $3::date,
@@ -134,12 +148,15 @@ export async function persistFundNav(
             currency = COALESCE(currency, $5),
             updated_at = NOW()
       WHERE id = $1
-        AND (latest_nav_date IS NULL OR latest_nav_date < $3::date)`,
+        AND (latest_nav_date IS NULL OR latest_nav_date < $3::date
+          OR (latest_nav_date = $3::date AND last_nav_source = $4
+            AND latest_nav IS DISTINCT FROM $2::numeric(14,4)))`,
     fundId,
     nav,
     navDate,
     source,
     currency,
   );
-  return { historyWritten: true, navMoved: Number(moved) > 0 };
+  return { historyWritten: Number(historyWritten) > 0, navMoved: Number(moved) > 0 };
+  });
 }

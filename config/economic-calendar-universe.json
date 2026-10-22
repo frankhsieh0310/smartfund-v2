@@ -1,0 +1,5 @@
+{
+  "asset":"GLOBAL_ECONOMIC_CALENDAR",
+  "indicators":["GDP","GDP QoQ","GDP YoY","CPI","Core CPI","PPI","PCE","Retail Sales","Industrial Production","PMI","ISM","Services PMI","Manufacturing PMI","Housing Starts","Building Permits","Existing Home Sales","New Home Sales","Trade Balance","Current Account","Employment","NFP","Unemployment","Average Hourly Earnings","JOLTS","Initial Claims","Central Bank Decision","Rate Statement","Minutes","Speech","Auction","Consumer Confidence","Business Confidence"],
+  "schema":["country","indicator","event","importance","forecast","previous","actual","revised","releaseDate","releaseTime","timezone","source","officialUrl","surprise"]
+}

@@ -3,6 +3,7 @@
 import { Suspense } from "react";
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
+import { AuthButton } from "@/components/auth/AuthButton";
 
 type Answer = {
   text: string;
@@ -330,7 +331,7 @@ function Navbar() {
           <a href="/pricing" className="hover:text-[#F5B700] transition-colors">方案</a>
         </div>
         <div className="flex items-center gap-3">
-          <a href="#" className="text-[14px] font-semibold text-slate-300 border border-white/30 px-4 py-2 rounded-lg hover:bg-white/10 transition-colors">登入</a>
+          <AuthButton className="text-[14px] font-semibold text-slate-300 border border-white/30 px-4 py-2 rounded-lg hover:bg-white/10 transition-colors" />
           <a href="/quiz" className="bg-[#F5B700] hover:bg-[#e0a800] text-white px-5 py-2 rounded-lg font-bold text-[14px] transition-colors">免費註冊</a>
         </div>
       </div>

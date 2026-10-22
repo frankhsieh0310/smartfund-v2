@@ -1,0 +1,17 @@
+{
+  "asset": "GLOBAL_SHARE_BUYBACK",
+  "markets": [
+    {"jurisdiction":"US","state":"PUBLIC_OFFICIAL","sources":["SEC EDGAR XBRL","SEC issuer filings"],"authorization":"FILING_TEXT_REQUIRED","execution":"XBRL_AND_FILING"},
+    {"jurisdiction":"TAIWAN","state":"SOURCE_PENDING","sources":["TWSE MOPS","TWSE","TPEx"],"authorization":"SEMANTIC_VALIDATION_REQUIRED","execution":"SEMANTIC_VALIDATION_REQUIRED"},
+    {"jurisdiction":"JAPAN","state":"SOURCE_PENDING","sources":["JPX TDnet"],"authorization":"SEMANTIC_VALIDATION_REQUIRED","execution":"SEMANTIC_VALIDATION_REQUIRED"},
+    {"jurisdiction":"HONG_KONG","state":"SOURCE_PENDING","sources":["HKEXnews"],"authorization":"SEMANTIC_VALIDATION_REQUIRED","execution":"SEMANTIC_VALIDATION_REQUIRED"},
+    {"jurisdiction":"SINGAPORE","state":"SOURCE_PENDING","sources":["SGXNet"],"authorization":"SEMANTIC_VALIDATION_REQUIRED","execution":"SEMANTIC_VALIDATION_REQUIRED"},
+    {"jurisdiction":"AUSTRALIA","state":"SOURCE_PENDING","sources":["ASX announcements"],"authorization":"SEMANTIC_VALIDATION_REQUIRED","execution":"SEMANTIC_VALIDATION_REQUIRED"},
+    {"jurisdiction":"KOREA","state":"SOURCE_PENDING","sources":["KRX KIND"],"authorization":"SEMANTIC_VALIDATION_REQUIRED","execution":"SEMANTIC_VALIDATION_REQUIRED"},
+    {"jurisdiction":"UK","state":"SOURCE_PENDING","sources":["LSE RNS"],"authorization":"SEMANTIC_VALIDATION_REQUIRED","execution":"SEMANTIC_VALIDATION_REQUIRED"},
+    {"jurisdiction":"EUROPE","state":"SOURCE_PENDING","sources":[],"authorization":"UNKNOWN","execution":"UNKNOWN"},
+    {"jurisdiction":"CANADA","state":"SOURCE_PENDING","sources":[],"authorization":"UNKNOWN","execution":"UNKNOWN"},
+    {"jurisdiction":"CHINA","state":"SOURCE_PENDING","sources":[],"authorization":"UNKNOWN","execution":"UNKNOWN"},
+    {"jurisdiction":"OTHER","state":"SOURCE_PENDING","sources":[],"authorization":"UNKNOWN","execution":"UNKNOWN"}
+  ]
+}

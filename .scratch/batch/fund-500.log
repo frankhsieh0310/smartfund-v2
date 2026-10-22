@@ -1,0 +1,43 @@
+discovered 750 US MF symbols across 11 categories; ingesting 500
+per_category_totals: {"Large Blend":1091,"Large Growth":956,"Large Value":991,"Intermediate Core Bond":406,"Multisector Bond":337,"High Yield Bond":548,"Allocation--50% to 70% Equity":0,"Moderate Allocation":494,"Foreign Large Blend":598,"Diversified Emerging Mkts":630,"Technology":170}
+  …25/500  SC+22/~3  master+6/link19  nav125212
+  …50/500  SC+47/~3  master+10/link40  nav255444
+  …75/500  SC+72/~3  master+24/link51  nav369415
+  …100/500  SC+97/~3  master+29/link71  nav508102
+  …125/500  SC+122/~3  master+35/link90  nav627479
+  …150/500  SC+147/~3  master+41/link109  nav742700
+  …175/500  SC+172/~3  master+48/link127  nav880179
+  …200/500  SC+197/~3  master+53/link147  nav1021635
+  …225/500  SC+222/~3  master+59/link166  nav1160034
+  …250/500  SC+247/~3  master+64/link186  nav1290734
+  …275/500  SC+272/~3  master+76/link199  nav1410392
+  …300/500  SC+297/~3  master+87/link213  nav1549049
+  …325/500  SC+322/~3  master+93/link232  nav1650137
+  …350/500  SC+347/~3  master+96/link254  nav1740651
+  …375/500  SC+372/~3  master+106/link269  nav1848506
+  …400/500  SC+397/~3  master+109/link291  nav1980100
+  …425/500  SC+422/~3  master+118/link307  nav2085607
+  …450/500  SC+447/~3  master+125/link325  nav2223700
+  …475/500  SC+472/~3  master+129/link346  nav2363709
+  …500/500  SC+497/~3  master+138/link362  nav2497663
+{
+  "FUND_SHARE_CLASS_FIRST_BATCH_ATTEMPTED": 500,
+  "FUND_SHARE_CLASS_INSERTED": 497,
+  "FUND_SHARE_CLASS_UPDATED": 3,
+  "FUND_INGEST_FAILED": 0,
+  "FUND_MASTER_CREATED": 138,
+  "FUND_MASTER_LINKED_CLASSES": 500,
+  "FUND_HISTORY_ROWS_WRITTEN": 2497663,
+  "FUND_DISTRIBUTION_ROWS": 69914,
+  "FUND_MASTER_HOLDINGS_WRITTEN": 748,
+  "MORNINGSTAR_RATING_POPULATED": 500,
+  "MORNINGSTAR_RISK_POPULATED": 500,
+  "MORNINGSTAR_CATEGORY_POPULATED": 500,
+  "MORNINGSTAR_RANK_POPULATED": 500,
+  "runtime_s": 3768,
+  "stats": {
+    "calls": 31,
+    "rateLimited": 0,
+    "crumbRefresh": 0
+  }
+}

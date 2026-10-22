@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "testedAt": "2026-08-10",
+  "candidateLimitPerExchange": 2,
+  "sources": {
+    "CME": { "candidatesTested": 2, "status": "SOURCE_ACCESS_BLOCKED_CONFIRMED", "blocker": "NETWORK_OR_EDGE_ACCESS", "missingReason": "Official settlement endpoint access blocked after bounded retries", "lastVerifiedAt": "2026-08-10T00:00:00Z", "retryPolicy": "MANUAL_NETWORK_RECHECK", "retryable": false },
+    "ICE": { "candidatesTested": 2, "status": "SOURCE_SEMANTICS_PENDING", "fetch": "PASS", "parse": "HTML_PRODUCT_PAGE_ONLY", "semantics": "NO_MACHINE_READABLE_SETTLEMENT_MAPPING_PROVEN", "missingReason": "Official HTML page does not prove field-level settlement payload semantics", "lastVerifiedAt": "2026-08-10T00:00:00Z", "retryPolicy": "SOURCE_RECOVERY_REQUIRED", "retryable": false },
+    "EUREX": { "candidatesTested": 2, "status": "SOURCE_ACCESS_BLOCKED_CONFIRMED", "blocker": "NETWORK_OR_EDGE_ACCESS", "missingReason": "Official endpoint access blocked after bounded retries", "lastVerifiedAt": "2026-08-10T00:00:00Z", "retryPolicy": "MANUAL_NETWORK_RECHECK", "retryable": false },
+    "SGX": { "candidatesTested": 2, "status": "SOURCE_ACCESS_BLOCKED_CONFIRMED", "blocker": "NETWORK_OR_EDGE_ACCESS", "missingReason": "Official endpoint access blocked after bounded retries", "lastVerifiedAt": "2026-08-10T00:00:00Z", "retryPolicy": "MANUAL_NETWORK_RECHECK", "retryable": false },
+    "OSE": { "candidatesTested": 1, "status": "SOURCE_READY", "fetch": "PASS", "parse": "PASS", "semantics": "OFFICIAL_DAILY_SETTLEMENT", "missingReason": null, "lastVerifiedAt": "2026-08-10T00:00:00Z", "retryPolicy": "PERIODIC_ACCESS_RECHECK", "retryable": true }
+  }
+}

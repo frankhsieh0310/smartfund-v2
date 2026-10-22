@@ -1,0 +1,218 @@
+[
+  {
+    "requestedSymbol": "USDILS=X",
+    "canonicalSymbol": null,
+    "currency": null,
+    "regularMarketPrice": null,
+    "previousClose": null,
+    "regularMarketTime": null,
+    "ok": false
+  },
+  {
+    "requestedSymbol": "USDRUB=X",
+    "canonicalSymbol": null,
+    "currency": null,
+    "regularMarketPrice": null,
+    "previousClose": null,
+    "regularMarketTime": null,
+    "ok": false
+  },
+  {
+    "requestedSymbol": "USDARS=X",
+    "canonicalSymbol": null,
+    "currency": null,
+    "regularMarketPrice": null,
+    "previousClose": null,
+    "regularMarketTime": null,
+    "ok": false
+  },
+  {
+    "requestedSymbol": "USDCLP=X",
+    "canonicalSymbol": null,
+    "currency": null,
+    "regularMarketPrice": null,
+    "previousClose": null,
+    "regularMarketTime": null,
+    "ok": false
+  },
+  {
+    "requestedSymbol": "USDCOP=X",
+    "canonicalSymbol": null,
+    "currency": null,
+    "regularMarketPrice": null,
+    "previousClose": null,
+    "regularMarketTime": null,
+    "ok": false
+  },
+  {
+    "requestedSymbol": "USDPEN=X",
+    "canonicalSymbol": null,
+    "currency": null,
+    "regularMarketPrice": null,
+    "previousClose": null,
+    "regularMarketTime": null,
+    "ok": false
+  },
+  {
+    "requestedSymbol": "USDPKR=X",
+    "canonicalSymbol": null,
+    "currency": null,
+    "regularMarketPrice": null,
+    "previousClose": null,
+    "regularMarketTime": null,
+    "ok": false
+  },
+  {
+    "requestedSymbol": "USDBDT=X",
+    "canonicalSymbol": null,
+    "currency": null,
+    "regularMarketPrice": null,
+    "previousClose": null,
+    "regularMarketTime": null,
+    "ok": false
+  },
+  {
+    "requestedSymbol": "USDLKR=X",
+    "canonicalSymbol": null,
+    "currency": null,
+    "regularMarketPrice": null,
+    "previousClose": null,
+    "regularMarketTime": null,
+    "ok": false
+  },
+  {
+    "requestedSymbol": "USDEGP=X",
+    "canonicalSymbol": null,
+    "currency": null,
+    "regularMarketPrice": null,
+    "previousClose": null,
+    "regularMarketTime": null,
+    "ok": false
+  },
+  {
+    "requestedSymbol": "USDKWD=X",
+    "canonicalSymbol": null,
+    "currency": null,
+    "regularMarketPrice": null,
+    "previousClose": null,
+    "regularMarketTime": null,
+    "ok": false
+  },
+  {
+    "requestedSymbol": "USDBHD=X",
+    "canonicalSymbol": null,
+    "currency": null,
+    "regularMarketPrice": null,
+    "previousClose": null,
+    "regularMarketTime": null,
+    "ok": false
+  },
+  {
+    "requestedSymbol": "USDOMR=X",
+    "canonicalSymbol": null,
+    "currency": null,
+    "regularMarketPrice": null,
+    "previousClose": null,
+    "regularMarketTime": null,
+    "ok": false
+  },
+  {
+    "requestedSymbol": "USDJOD=X",
+    "canonicalSymbol": null,
+    "currency": null,
+    "regularMarketPrice": null,
+    "previousClose": null,
+    "regularMarketTime": null,
+    "ok": false
+  },
+  {
+    "requestedSymbol": "USDMAD=X",
+    "canonicalSymbol": null,
+    "currency": null,
+    "regularMarketPrice": null,
+    "previousClose": null,
+    "regularMarketTime": null,
+    "ok": false
+  },
+  {
+    "requestedSymbol": "USDNGN=X",
+    "canonicalSymbol": null,
+    "currency": null,
+    "regularMarketPrice": null,
+    "previousClose": null,
+    "regularMarketTime": null,
+    "ok": false
+  },
+  {
+    "requestedSymbol": "USDKES=X",
+    "canonicalSymbol": null,
+    "currency": null,
+    "regularMarketPrice": null,
+    "previousClose": null,
+    "regularMarketTime": null,
+    "ok": false
+  },
+  {
+    "requestedSymbol": "USDRON=X",
+    "canonicalSymbol": null,
+    "currency": null,
+    "regularMarketPrice": null,
+    "previousClose": null,
+    "regularMarketTime": null,
+    "ok": false
+  },
+  {
+    "requestedSymbol": "USDBGN=X",
+    "canonicalSymbol": null,
+    "currency": null,
+    "regularMarketPrice": null,
+    "previousClose": null,
+    "regularMarketTime": null,
+    "ok": false
+  },
+  {
+    "requestedSymbol": "USDISK=X",
+    "canonicalSymbol": null,
+    "currency": null,
+    "regularMarketPrice": null,
+    "previousClose": null,
+    "regularMarketTime": null,
+    "ok": false
+  },
+  {
+    "requestedSymbol": "USDUAH=X",
+    "canonicalSymbol": null,
+    "currency": null,
+    "regularMarketPrice": null,
+    "previousClose": null,
+    "regularMarketTime": null,
+    "ok": false
+  },
+  {
+    "requestedSymbol": "USDDOP=X",
+    "canonicalSymbol": null,
+    "currency": null,
+    "regularMarketPrice": null,
+    "previousClose": null,
+    "regularMarketTime": null,
+    "ok": false
+  },
+  {
+    "requestedSymbol": "USDCRC=X",
+    "canonicalSymbol": null,
+    "currency": null,
+    "regularMarketPrice": null,
+    "previousClose": null,
+    "regularMarketTime": null,
+    "ok": false
+  },
+  {
+    "requestedSymbol": "USDVES=X",
+    "canonicalSymbol": null,
+    "currency": null,
+    "regularMarketPrice": null,
+    "previousClose": null,
+    "regularMarketTime": null,
+    "ok": false
+  }
+]

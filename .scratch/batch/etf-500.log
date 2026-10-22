@@ -1,0 +1,36 @@
+  …25/500 hist, 25 enrich, 59 rows, 0 fail
+  …50/500 hist, 50 enrich, 118 rows, 0 fail
+  …75/500 hist, 75 enrich, 185 rows, 2 fail
+  …100/500 hist, 100 enrich, 256 rows, 2 fail
+  …125/500 hist, 125 enrich, 323 rows, 2 fail
+  …150/500 hist, 150 enrich, 384 rows, 4 fail
+  …175/500 hist, 175 enrich, 444 rows, 4 fail
+  …200/500 hist, 200 enrich, 507 rows, 4 fail
+  …225/500 hist, 225 enrich, 579 rows, 4 fail
+  …250/500 hist, 250 enrich, 644 rows, 4 fail
+  …275/500 hist, 275 enrich, 706 rows, 4 fail
+  …300/500 hist, 300 enrich, 785 rows, 4 fail
+  …325/500 hist, 325 enrich, 848 rows, 8 fail
+  …350/500 hist, 350 enrich, 915 rows, 8 fail
+  …375/500 hist, 375 enrich, 988 rows, 8 fail
+  …400/500 hist, 400 enrich, 1049 rows, 8 fail
+  …425/500 hist, 425 enrich, 1116 rows, 8 fail
+  …450/500 hist, 450 enrich, 1186 rows, 8 fail
+  …475/500 hist, 475 enrich, 1251 rows, 8 fail
+{
+  "ETF_FIRST_BATCH_ATTEMPTED": 500,
+  "ETF_HISTORY_OK": 496,
+  "ETF_ENRICH_OK": 496,
+  "ETF_HISTORY_ROWS_WRITTEN": 1306,
+  "ETF_HOLDINGS_WRITTEN": 2000,
+  "ETF_PERF_WRITTEN": 382,
+  "ETF_DISTRIBUTION_EVENTS": 16,
+  "ETF_FAILED": 8,
+  "NO_SYMBOL": 0,
+  "runtime_s": 1406,
+  "stats": {
+    "calls": 0,
+    "rateLimited": 0,
+    "crumbRefresh": 0
+  }
+}

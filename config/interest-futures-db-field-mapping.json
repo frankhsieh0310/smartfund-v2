@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "relationMapping": {
+    "contract": "futures_contracts",
+    "observation": "futures_observations"
+  },
+  "semanticMapping": {
+    "observationType": { "logicalValue": "SETTLEMENT", "physicalEvidence": "settlement column is non-null; OHLC fields remain null" },
+    "ingestedAt": { "physicalColumn": "retrieved_at" },
+    "contractStatus": { "physicalColumn": "status" },
+    "deterministicUniqueKey": { "physicalColumn": "source_key", "components": ["source", "contractSymbol", "observedAt"], "metricSemantics": "SETTLEMENT-only source adapter" }
+  },
+  "compatibilityStatus": "SCHEMA_REUSED_SEMANTIC_MAPPING"
+}

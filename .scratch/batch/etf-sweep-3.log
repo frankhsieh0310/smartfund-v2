@@ -1,0 +1,82 @@
+resuming from cursor=35e864a6-0173-4b83-baba-c55a63971581  processed-so-far=3500
+  …50/3000  hist 50  enrich 50  failed 0
+  …100/3000  hist 100  enrich 100  failed 0
+  …150/3000  hist 150  enrich 150  failed 0
+  …200/3000  hist 200  enrich 200  failed 0
+  …250/3000  hist 250  enrich 250  failed 0
+  …300/3000  hist 300  enrich 300  failed 0
+  …350/3000  hist 350  enrich 350  failed 0
+  …400/3000  hist 400  enrich 400  failed 0
+  …450/3000  hist 450  enrich 450  failed 0
+  …500/3000  hist 500  enrich 500  failed 0
+  …550/3000  hist 550  enrich 550  failed 0
+  …600/3000  hist 600  enrich 600  failed 0
+  …650/3000  hist 650  enrich 650  failed 0
+  …700/3000  hist 700  enrich 700  failed 0
+  …750/3000  hist 750  enrich 750  failed 0
+  …800/3000  hist 800  enrich 800  failed 0
+  …850/3000  hist 850  enrich 850  failed 0
+  …900/3000  hist 900  enrich 900  failed 0
+  …950/3000  hist 950  enrich 950  failed 0
+  …1000/3000  hist 1000  enrich 1000  failed 0
+  …1050/3000  hist 1050  enrich 1050  failed 0
+  …1100/3000  hist 1100  enrich 1100  failed 0
+  …1150/3000  hist 1150  enrich 1150  failed 0
+  …1200/3000  hist 1200  enrich 1200  failed 0
+  …1250/3000  hist 1250  enrich 1250  failed 0
+  …1300/3000  hist 1300  enrich 1300  failed 0
+  …1350/3000  hist 1350  enrich 1350  failed 0
+  …1400/3000  hist 1400  enrich 1400  failed 0
+  …1450/3000  hist 1450  enrich 1450  failed 0
+  …1500/3000  hist 1500  enrich 1500  failed 0
+  …1550/3000  hist 1550  enrich 1550  failed 0
+  …1600/3000  hist 1600  enrich 1600  failed 0
+  …1650/3000  hist 1650  enrich 1650  failed 0
+  …1700/3000  hist 1700  enrich 1700  failed 0
+  …1750/3000  hist 1750  enrich 1750  failed 0
+  …1800/3000  hist 1800  enrich 1800  failed 0
+  …1850/3000  hist 1850  enrich 1850  failed 0
+  …1900/3000  hist 1900  enrich 1900  failed 0
+  …1950/3000  hist 1950  enrich 1950  failed 0
+  …2000/3000  hist 2000  enrich 2000  failed 0
+  …2050/3000  hist 2050  enrich 2050  failed 0
+  …2100/3000  hist 2100  enrich 2100  failed 0
+  …2150/3000  hist 2150  enrich 2150  failed 0
+  …2200/3000  hist 2200  enrich 2200  failed 0
+  …2250/3000  hist 2249  enrich 2249  failed 2
+  …2300/3000  hist 2298  enrich 2299  failed 3
+  …2350/3000  hist 2348  enrich 2349  failed 3
+  …2400/3000  hist 2398  enrich 2399  failed 3
+  …2450/3000  hist 2448  enrich 2449  failed 3
+  …2500/3000  hist 2498  enrich 2499  failed 3
+  …2550/3000  hist 2548  enrich 2549  failed 3
+  …2600/3000  hist 2598  enrich 2599  failed 3
+  …2650/3000  hist 2648  enrich 2649  failed 3
+  …2700/3000  hist 2698  enrich 2699  failed 3
+  …2750/3000  hist 2748  enrich 2749  failed 3
+  …2800/3000  hist 2798  enrich 2799  failed 3
+  …2850/3000  hist 2848  enrich 2849  failed 3
+  …2900/3000  hist 2898  enrich 2899  failed 3
+  …2950/3000  hist 2948  enrich 2949  failed 3
+  …3000/3000  hist 2998  enrich 2999  failed 3
+{
+  "SWEEP_CHUNK_ATTEMPTED": 3000,
+  "SWEEP_HISTORY_OK": 2998,
+  "SWEEP_ENRICH_OK": 2999,
+  "SWEEP_HISTORY_ROWS": 1096461,
+  "SWEEP_HOLDINGS_ROWS": 12423,
+  "SWEEP_PERF_ROWS": 2261,
+  "SWEEP_DISTRIBUTION_EVENTS": 9357,
+  "SWEEP_FAILED": 3,
+  "SWEEP_NO_SYMBOL": 0,
+  "WRAPPED_FULL_LAP": false,
+  "CUMULATIVE_PROCESSED": 6500,
+  "CUMULATIVE_SUCCEEDED": 6482,
+  "CUMULATIVE_FAILED": 34,
+  "runtime_s": 8912,
+  "stats": {
+    "calls": 0,
+    "rateLimited": 0,
+    "crumbRefresh": 0
+  }
+}

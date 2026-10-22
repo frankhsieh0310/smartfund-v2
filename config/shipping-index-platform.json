@@ -1,0 +1,43 @@
+{
+  "asset": "GLOBAL_BALTIC_SHIPPING_INDEX",
+  "version": 1,
+  "persistence": {
+    "mode": "LOCAL_ARCHIVE_STAGING",
+    "productionMigrationApproved": false,
+    "databaseWriter": "EXISTING_SINGLE_WRITER_ONLY"
+  },
+  "runner": {
+    "batchSize": 4,
+    "maxRetries": 3,
+    "baseRetryMs": 30000,
+    "cycleIntervalMs": 21600000,
+    "heartbeatMs": 60000
+  },
+  "officialSources": [
+    { "id": "BALTIC_EXCHANGE", "name": "Baltic Exchange", "url": "https://www.balticexchange.com/", "sourceType": "OFFICIAL_PROVIDER", "licensingStatus": "LICENSE_OR_PUBLICATION_TERMS_REQUIRED", "automatedFetch": false },
+    { "id": "UNCTAD", "name": "UN Trade and Development", "url": "https://unctad.org/topic/transport-and-trade-logistics", "sourceType": "INTERGOVERNMENTAL", "licensingStatus": "PUBLIC_WITH_SOURCE_TERMS", "automatedFetch": false },
+    { "id": "IMF", "name": "International Monetary Fund", "url": "https://data.imf.org/", "sourceType": "INTERGOVERNMENTAL", "licensingStatus": "PUBLIC_WITH_SOURCE_TERMS", "automatedFetch": false },
+    { "id": "WORLD_BANK", "name": "World Bank", "url": "https://data.worldbank.org/", "sourceType": "INTERGOVERNMENTAL", "licensingStatus": "CC_BY_4_0_OR_DATASET_SPECIFIC", "automatedFetch": false },
+    { "id": "OECD", "name": "OECD", "url": "https://data-explorer.oecd.org/", "sourceType": "INTERGOVERNMENTAL", "licensingStatus": "PUBLIC_WITH_SOURCE_TERMS", "automatedFetch": false },
+    { "id": "SSE", "name": "Shanghai Shipping Exchange", "url": "https://en.sse.net.cn/indices/scfinew.jsp", "sourceType": "OFFICIAL_EXCHANGE", "licensingStatus": "PUBLICATION_TERMS_REQUIRED", "automatedFetch": false },
+    { "id": "FREIGHTOS", "name": "Freightos", "url": "https://fbx.freightos.com/", "sourceType": "COMMERCIAL_PROVIDER", "licensingStatus": "LICENSE_REQUIRED", "automatedFetch": false },
+    { "id": "DREWRY", "name": "Drewry", "url": "https://www.drewry.co.uk/supply-chain-advisors/supply-chain-expertise/world-container-index-assessed-by-drewry", "sourceType": "COMMERCIAL_PROVIDER", "licensingStatus": "LICENSE_REQUIRED", "automatedFetch": false },
+    { "id": "HARPEX", "name": "Harper Petersen", "url": "https://www.harperpetersen.com/container", "sourceType": "COMMERCIAL_PROVIDER", "licensingStatus": "PUBLICATION_TERMS_REQUIRED", "automatedFetch": false }
+  ],
+  "indices": [
+    { "id": "BDI", "name": "Baltic Dry Index", "symbol": "BDI", "provider": "BALTIC_EXCHANGE", "segment": "DRY_BULK", "vesselClass": "COMPOSITE", "routeScope": "GLOBAL", "unit": "INDEX_POINTS", "currency": null, "frequency": "DAILY", "timezone": "Europe/London", "launchDate": "1985-01-04", "methodology": "PROVIDER_METHODOLOGY", "licensingStatus": "LICENSE_OR_PUBLICATION_TERMS_REQUIRED", "active": true },
+    { "id": "BCI", "name": "Baltic Capesize Index", "symbol": "BCI", "provider": "BALTIC_EXCHANGE", "segment": "DRY_BULK", "vesselClass": "CAPESIZE", "routeScope": "GLOBAL_ROUTES", "unit": "INDEX_POINTS", "currency": null, "frequency": "DAILY", "timezone": "Europe/London", "launchDate": null, "methodology": "PROVIDER_METHODOLOGY", "licensingStatus": "LICENSE_REQUIRED", "active": true },
+    { "id": "BPI", "name": "Baltic Panamax Index", "symbol": "BPI", "provider": "BALTIC_EXCHANGE", "segment": "DRY_BULK", "vesselClass": "PANAMAX", "routeScope": "GLOBAL_ROUTES", "unit": "INDEX_POINTS", "currency": null, "frequency": "DAILY", "timezone": "Europe/London", "launchDate": null, "methodology": "PROVIDER_METHODOLOGY", "licensingStatus": "LICENSE_REQUIRED", "active": true },
+    { "id": "BSI", "name": "Baltic Supramax Index", "symbol": "BSI", "provider": "BALTIC_EXCHANGE", "segment": "DRY_BULK", "vesselClass": "SUPRAMAX", "routeScope": "GLOBAL_ROUTES", "unit": "INDEX_POINTS", "currency": null, "frequency": "DAILY", "timezone": "Europe/London", "launchDate": null, "methodology": "PROVIDER_METHODOLOGY", "licensingStatus": "LICENSE_REQUIRED", "active": true },
+    { "id": "BHSI", "name": "Baltic Handysize Index", "symbol": "BHSI", "provider": "BALTIC_EXCHANGE", "segment": "DRY_BULK", "vesselClass": "HANDYSIZE", "routeScope": "GLOBAL_ROUTES", "unit": "INDEX_POINTS", "currency": null, "frequency": "DAILY", "timezone": "Europe/London", "launchDate": null, "methodology": "PROVIDER_METHODOLOGY", "licensingStatus": "LICENSE_REQUIRED", "active": true },
+    { "id": "BCTI", "name": "Baltic Clean Tanker Index", "symbol": "BCTI", "provider": "BALTIC_EXCHANGE", "segment": "TANKER", "vesselClass": "CLEAN_TANKER", "routeScope": "GLOBAL_ROUTES", "unit": "INDEX_POINTS", "currency": null, "frequency": "DAILY", "timezone": "Europe/London", "launchDate": null, "methodology": "PROVIDER_METHODOLOGY", "licensingStatus": "LICENSE_REQUIRED", "active": true },
+    { "id": "BDTI", "name": "Baltic Dirty Tanker Index", "symbol": "BDTI", "provider": "BALTIC_EXCHANGE", "segment": "TANKER", "vesselClass": "DIRTY_TANKER", "routeScope": "GLOBAL_ROUTES", "unit": "INDEX_POINTS", "currency": null, "frequency": "DAILY", "timezone": "Europe/London", "launchDate": null, "methodology": "PROVIDER_METHODOLOGY", "licensingStatus": "LICENSE_REQUIRED", "active": true },
+    { "id": "BLNG", "name": "Baltic Exchange LNG Index", "symbol": "BLNG", "provider": "BALTIC_EXCHANGE", "segment": "LNG", "vesselClass": "LNG_CARRIER", "routeScope": "GLOBAL_ROUTES", "unit": "PROVIDER_DEFINED", "currency": "USD", "frequency": "DAILY", "timezone": "Europe/London", "launchDate": null, "methodology": "PROVIDER_METHODOLOGY", "licensingStatus": "LICENSE_REQUIRED", "active": true },
+    { "id": "BLPG", "name": "Baltic Exchange LPG Index", "symbol": "BLPG", "provider": "BALTIC_EXCHANGE", "segment": "LPG", "vesselClass": "LPG_CARRIER", "routeScope": "GLOBAL_ROUTES", "unit": "PROVIDER_DEFINED", "currency": "USD", "frequency": "DAILY", "timezone": "Europe/London", "launchDate": null, "methodology": "PROVIDER_METHODOLOGY", "licensingStatus": "LICENSE_REQUIRED", "active": true },
+    { "id": "FBX", "name": "Freightos Baltic Global Container Index", "symbol": "FBX", "provider": "FREIGHTOS", "segment": "CONTAINER", "vesselClass": "CONTAINER", "routeScope": "GLOBAL", "unit": "USD_PER_FEU", "currency": "USD", "frequency": "WEEKLY", "timezone": "UTC", "launchDate": null, "methodology": "PROVIDER_METHODOLOGY", "licensingStatus": "LICENSE_REQUIRED", "active": true },
+    { "id": "SCFI", "name": "Shanghai Containerized Freight Index", "symbol": "SCFI", "provider": "SSE", "segment": "CONTAINER", "vesselClass": "CONTAINER", "routeScope": "SHANGHAI_EXPORT", "unit": "INDEX_POINTS", "currency": null, "frequency": "WEEKLY", "timezone": "Asia/Shanghai", "launchDate": "2009-10-16", "methodology": "PROVIDER_METHODOLOGY", "officialSource": "https://www.sse.net.cn/index/singleIndex?indexType=scfi", "licensingStatus": "TERMS_REVIEW_REQUIRED", "active": true },
+    { "id": "CCFI", "name": "China Containerized Freight Index", "symbol": "CCFI", "provider": "SSE", "segment": "CONTAINER", "vesselClass": "CONTAINER", "routeScope": "CHINA_EXPORT", "unit": "INDEX_POINTS", "currency": null, "frequency": "WEEKLY", "timezone": "Asia/Shanghai", "launchDate": null, "methodology": "PROVIDER_METHODOLOGY", "officialSource": "https://www.sse.net.cn/index/singleIndex?indexType=ccfi", "licensingStatus": "TERMS_REVIEW_REQUIRED", "active": true },
+    { "id": "WCI", "name": "Drewry World Container Index", "symbol": "WCI", "provider": "DREWRY", "segment": "CONTAINER", "vesselClass": "CONTAINER", "routeScope": "GLOBAL", "unit": "USD_PER_40FT_CONTAINER", "currency": "USD", "frequency": "WEEKLY", "timezone": "Europe/London", "launchDate": null, "methodology": "PROVIDER_METHODOLOGY", "licensingStatus": "LICENSE_REQUIRED", "active": true },
+    { "id": "HARPEX", "name": "Harpex Index", "symbol": "HARPEX", "provider": "HARPEX", "segment": "CONTAINER_CHARTER", "vesselClass": "CONTAINER", "routeScope": "GLOBAL", "unit": "INDEX_POINTS", "currency": null, "frequency": "WEEKLY", "timezone": "Europe/Berlin", "launchDate": null, "methodology": "PROVIDER_METHODOLOGY", "licensingStatus": "PUBLICATION_TERMS_REQUIRED", "active": true }
+  ]
+}

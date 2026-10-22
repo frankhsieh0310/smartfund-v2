@@ -1,0 +1,51 @@
+{
+  "asset": "GLOBAL_ETF",
+  "priority": 9,
+  "existingEtfPriority": 0,
+  "claimPolicy": "EXISTING_ETF_QUEUE_IDLE_ONLY",
+  "maxDbConcurrency": 1,
+  "database": "SUPABASE_TRANSACTION_POOLING_6543_PGBOUNCER",
+  "command": ["scripts/data/etf-expansion/run-public-source-expansion.ts", "--once"],
+  "scope": "FULL_ELIGIBLE_ETF_UNIVERSE",
+  "history": "DEEPEST_RELIABLE_FREE_PUBLIC_HISTORY",
+  "sources": [
+    {"id":"TWSE_ETF_PUBLIC_DISCLOSURE","market":"TWSE","authority":"OFFICIAL_EXCHANGE","baseUrl":"https://www.twse.com.tw/","adapter":"TAIWAN_OFFICIAL_ETF_DISCLOSURE_COMMON","status":"AUTO_CONTINUING_IDLE_ONLY","locales":["zh-TW","en"]},
+    {"id":"TPEX_ETF_PUBLIC_DISCLOSURE","market":"TPEx","authority":"OFFICIAL_EXCHANGE","baseUrl":"https://www.tpex.org.tw/","adapter":"TAIWAN_OFFICIAL_ETF_DISCLOSURE_COMMON","status":"AUTO_CONTINUING_IDLE_ONLY","locales":["zh-TW","en"]},
+    {"id":"JPX_ETF_PUBLIC_DISCLOSURE","market":"JPX","authority":"OFFICIAL_EXCHANGE","baseUrl":"https://www.jpx.co.jp/english/equities/products/etfs/","adapter":"JPX_OFFICIAL_ETF_DISCLOSURE_COMMON","status":"AUTO_CONTINUING_IDLE_ONLY","locales":["ja","en"]},
+    {"id":"HKEX_ETF_PUBLIC_DISCLOSURE","market":"HKEX","authority":"OFFICIAL_EXCHANGE","baseUrl":"https://www.hkex.com.hk/Products/Securities/Exchange-Traded-Products","adapter":"HKEX_OFFICIAL_ETF_DISCLOSURE_COMMON","status":"AUTO_CONTINUING_IDLE_ONLY_PUBLIC_PORTION","locales":["zh-HK","en"],"licensedRealtimeOrBulk":"EXTERNALLY_BLOCKED_LICENSE"},
+    {"id":"OTHER_REGISTERED_EXCHANGE_ETF_DISCLOSURE","market":"OTHER","authority":"OFFICIAL_EXCHANGE_OR_REGULATOR","adapter":"REGISTERED_OFFICIAL_COMMON_ADAPTER_ONLY","status":"INPUT_GATED_REGISTERED_ROUTES_ONLY"}
+  ],
+  "basketLifecycle": {
+    "semantics": ["PUBLISHED_BASKET", "ACTUAL_FLOW"],
+    "neverConflate": true,
+    "pitKey": ["etf_product_id", "share_class_id", "listing_id", "basket_date", "basket_type", "source_record_id"],
+    "componentKey": ["basket_snapshot_id", "component_security_id", "source_row_id"],
+    "fields": ["component_quantity", "component_weight", "cash_component", "cash_substitution", "cash_in_lieu", "creation_unit_size", "creation_basket", "redemption_basket", "nav", "estimated_nav", "aum", "shares_outstanding"],
+    "derived": ["BASKET_TURNOVER", "BASKET_CHANGE_RATE", "NEW_BASKET_COMPONENT", "EXITED_BASKET_COMPONENT", "IN_KIND_CREATION_STATUS", "CASH_CREATION_STATUS", "IN_KIND_REDEMPTION_STATUS", "CASH_REDEMPTION_STATUS", "CASH_COMPONENT_PERCENT", "CREATION_REDEMPTION_STRUCTURE_HISTORY"]
+  },
+  "themeEvidence": {
+    "reuse": "VERIFIED_THEME_EVIDENCE_LAYER",
+    "providers": [
+      {"id":"SOLACTIVE","evidence":"PUBLIC_OFFICIAL_METHODOLOGY_ONLY","constituents":"LICENSE_GATED_UNLESS_PUBLIC"},
+      {"id":"INDXX","evidence":"PUBLIC_OFFICIAL_METHODOLOGY_ONLY","constituents":"LICENSE_GATED_UNLESS_PUBLIC"},
+      {"id":"MSCI_THEMATIC","evidence":"FREE_PUBLIC_METHODOLOGY_PORTION_ONLY","constituents":"LICENSE_GATED"},
+      {"id":"SP_KENSHO_THEMATIC","evidence":"FREE_PUBLIC_METHODOLOGY_PORTION_ONLY","constituents":"LICENSE_GATED"}
+    ],
+    "chain": ["ETF", "TRACKING_INDEX", "INDEX_PROVIDER", "OFFICIAL_METHODOLOGY", "THEME", "SECURITY_EVIDENCE"],
+    "dedupCanonicalThemes": true
+  },
+  "identity": {
+    "grains": ["FUND", "ETF_PRODUCT", "SHARE_CLASS", "LISTING"],
+    "canonicalKey": ["ISIN", "regulatory_identifier", "fund_product_id", "share_class_id", "exchange", "listing", "ticker", "trading_currency", "base_currency", "fund_currency", "currency_hedged", "distribution_status"],
+    "yahooSymbolAloneForbidden": true,
+    "hedgedUnhedgedNeverMerge": true
+  },
+  "currencyHedgeAnalytics": {"status":"INPUT_GATED_AUTO_CONTINUING","metrics":["HEDGED_RETURN","UNHEDGED_RETURN","HEDGE_EFFECT","HEDGE_COST","HEDGED_VS_UNHEDGED_DIFFERENCE","FX_CONTRIBUTION"],"gate":"VERIFIED_SHARE_CLASS_IDENTITY_AND_FX_FORWARD_INPUTS"},
+  "leveragedInverse": {"status":"AUTO_CONTINUING_FROM_VERIFIED_OFFICIAL_METADATA","identityFields":["LEVERAGED","INVERSE","LEVERAGED_INVERSE","TARGET_MULTIPLE","RESET_FREQUENCY","TRACKING_OBJECTIVE","UNDERLYING_INDEX","DERIVATIVE_USAGE"],"analytics":["DAILY_TARGET_TRACKING_DIFFERENCE","DAILY_TARGET_TRACKING_ERROR","COMPOUNDING_EFFECT","VOLATILITY_DECAY_COMPONENT","PATH_DEPENDENCY","REALIZED_MULTIPLE","TARGET_MULTIPLE_DEVIATION"],"standardLongHorizonTrackingForbidden":true,"methodologyVersion":"ETF_DAILY_RESET_V1"},
+  "securitiesLending": {"source":"SEC_NPORT_SHARED_LAYER","grain":"SOURCE_DISCLOSED_ONLY","counterpartyDetailWhenAbsent":"SOURCE_NOT_PUBLIC"},
+  "verifiedBidAsk": {"status":"NEEDS_SOURCE","forbidOhlcProxy":true,"optionalProxyMetric":"ESTIMATED_SPREAD_PROXY","neverPopulate":["BID","ASK","VERIFIED_BID_ASK_SPREAD"]},
+  "us": {"primary":"SEC_NPORT_NCEN","issuerCrawler":"FORBIDDEN_DUPLICATION","issuerSupplement":"UNIQUE_FIELDS_ONLY_DEDUPED"},
+  "euUcits": {"route":"REGISTER_EXISTING_COMMON_ISSUER_ADAPTERS_ONLY","issuers":["ISHARES","XTRACKERS","AMUNDI","UBS_ETF"],"esap":"FUTURE_OFFICIAL_SOURCE"},
+  "dedup": {"entities":["ETF","FUND","SHARE_CLASS","LISTING","HOLDING","PCF_COMPONENT","NAV","AUM","FLOW","BENCHMARK","THEME","DISTRIBUTION"],"sourcePriority":["REGULATOR_OFFICIAL_EXCHANGE","INDEX_PROVIDER_METHODOLOGY","ISSUER","SUPPLEMENTAL","SMARTFUND_DERIVED"],"reconciliationRequired":true},
+  "multilingual": {"owner":"ACTIVE_SHARED_LOCALE_MODEL","locales":["zh-TW","ja","en","source-local"],"machineTranslateUniverse":false}
+}

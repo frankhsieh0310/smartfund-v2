@@ -1,0 +1,14 @@
+{
+  "governmentLevels": ["CENTRAL_GOVERNMENT", "FEDERAL_GOVERNMENT", "GENERAL_GOVERNMENT", "PUBLIC_SECTOR"],
+  "metricTaxonomy": ["TOTAL_PUBLIC_DEBT", "DEBT_HELD_BY_PUBLIC", "INTRAGOVERNMENTAL_HOLDINGS", "GENERAL_GOVERNMENT_GROSS_DEBT", "CENTRAL_GOVERNMENT_DEBT", "GENERAL_GOVERNMENT_GROSS_DEBT_TO_GDP", "FEDERAL_GOVERNMENT_TOTAL_PUBLIC_DEBT_TO_GDP"],
+  "comparabilityStatuses": ["COMPARABLE", "PARTIALLY_COMPARABLE", "NOT_COMPARABLE", "UNKNOWN"],
+  "freshnessStatuses": ["CURRENT", "EXPECTED", "DELAYED", "STALE", "SOURCE_DELAYED", "SOURCE_BLOCKED", "UNKNOWN"],
+  "compositionTypes": ["DOMESTIC_EXTERNAL", "CURRENCY", "MATURITY", "RATE_TYPE", "HOLDER"],
+  "eventTypes": ["PUBLICATION", "REVISION", "METHODOLOGY_CHANGE", "SERIES_DISCONTINUED"],
+  "qualityRejects": ["UNKNOWN_COUNTRY", "UNKNOWN_UNIT", "UNKNOWN_GOVERNMENT_LEVEL", "MISSING_DEBT_DEFINITION", "DUPLICATE_VINTAGE", "INVALID_DATE", "FUTURE_PUBLICATION_ANOMALY", "DEFINITION_MISMATCH", "SEMANTIC_RECONCILIATION_FAILED"],
+  "search": ["country", "region", "metric", "governmentLevel", "debtDefinition", "frequency"],
+  "screener": { "status": "CONTRACT_ONLY", "requires": ["MULTI_COUNTRY_HARMONIZED_COVERAGE"] },
+  "compare": { "status": "CONTRACT_ONLY", "modes": ["SAME_METRIC_ACROSS_COUNTRIES", "SAME_COUNTRY_ACROSS_METRICS"], "enforce": "comparabilityStatus" },
+  "ranking": { "status": "DEFERRED", "fields": ["rankMetric", "eligibleUniverse", "definitionFilter", "asOfDate"] },
+  "detail": ["identity", "country", "metric", "definition", "governmentLevel", "latest", "history", "unit", "currency", "publicationDate", "source", "freshness", "revision", "derivedChanges", "debtToGDP", "composition", "missingReasons"]
+}

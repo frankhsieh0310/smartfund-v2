@@ -1,0 +1,8 @@
+{
+  "policy": "CONTENT_HASH_CHANGE_ONLY",
+  "latestRawSnapshots": 1,
+  "historicalSourceSnapshots": 12,
+  "duplicateFullHistoryArchive": false,
+  "existingArchiveDisposition": "PRESERVE_NO_REBUILD_NO_DELETE",
+  "effectiveRunner": "scripts/data/volatility/run-global-volatility.ts"
+}

@@ -1,0 +1,1079 @@
+{
+  "PID": 30652,
+  "INVOCATION_ID": "47989b75-3f98-4971-bf0b-8eeee5d8fda7",
+  "STATE": "SCHEDULED_WAIT",
+  "HEARTBEAT_AT": "2026-08-29T13:00:52.465Z",
+  "LAST_CYCLE_AT": "2026-08-29T12:43:51.301Z",
+  "LAST_SUCCESS_AT": "2026-08-29T12:43:52.124Z",
+  "LAST_ERROR": null,
+  "NEXT_RUN_AT": "2026-08-29T13:13:52.133Z",
+  "CYCLE_COUNT": 4,
+  "SELF_HEALING_ENABLED": true,
+  "CONTRACT_CONFIG_VERSION": "1.0.0",
+  "CONTRACT_CONFIG_CHECKSUM": "eed8c1da010c1d1f5cd43820e56c2ea011cc99213b2a3effedc4e3850966346a",
+  "CONTRACTS_LOADED": 19,
+  "CONTRACTS_LOADED_AT": "2026-08-29T12:43:52.124Z",
+  "MAX_ATTEMPTS": 3,
+  "COOLDOWN_MINUTES": 30,
+  "ACTIONS_EVALUATED": 26,
+  "ACTIONS_ATTEMPTED": 2,
+  "ACTIONS_SUCCEEDED": 2,
+  "ACTIONS_FAILED": 0,
+  "ESCALATIONS": 0,
+  "INCIDENTS": {
+    "d3934fe9-235f-4c09-828a-148e235f822e": {
+      "attempts": 2,
+      "completedAt": "2026-08-29T12:13:51.271Z",
+      "result": "VERIFIED",
+      "verification": {
+        "startedAt": "2026-08-29T12:13:10.768Z",
+        "completedAt": "2026-08-29T12:13:51.271Z",
+        "pidAfter": 44156,
+        "exitCode": 0,
+        "checkpointPreserved": true,
+        "processVerification": "PASS",
+        "dataVerification": "CHECKPOINT_FORWARD",
+        "fileForward": true,
+        "databaseForward": false
+      }
+    }
+  },
+  "LAST_RESULT": {
+    "startedAt": "2026-08-29T12:43:51.301Z",
+    "completedAt": "2026-08-29T12:43:52.124Z",
+    "mode": "LIVE_ENABLED",
+    "openAlertsEvaluated": 26,
+    "eligible": 0,
+    "notEligible": 26,
+    "decisions": [
+      {
+        "datasetKey": "CRYPTO_FUNDING",
+        "incidentId": "86896c4d-cdc3-40c4-93f6-c2a585b9683b",
+        "condition": "FALSE_HEALTHY",
+        "confidence": "MEDIUM",
+        "contractId": null,
+        "contractVersion": null,
+        "contractStatus": "NOT_CONFIGURED",
+        "contractConfidence": "UNKNOWN",
+        "contractEnabled": false,
+        "policyMatch": false,
+        "rejectionReason": [
+          "FAILURE_CLASS_NOT_AUTHORIZED",
+          "DATASET_ACTION_CONTRACT_NOT_CONFIGURED"
+        ],
+        "eligible": false,
+        "failureClass": null,
+        "reasons": [
+          "FAILURE_CLASS_NOT_AUTHORIZED",
+          "DATASET_ACTION_CONTRACT_NOT_CONFIGURED"
+        ],
+        "evidence": {
+          "condition": "FALSE_HEALTHY",
+          "healthState": "FALSE_HEALTHY",
+          "confidence": "MEDIUM",
+          "pending": 0,
+          "pidConfirmedDead": true,
+          "heartbeatStale": true,
+          "nextRunOverdue": false,
+          "checkpointExists": false,
+          "liveDuplicateOwner": false,
+          "actionContractKnown": false,
+          "transientFailure": false,
+          "retryCount": 0,
+          "exactWritableAlternate": false,
+          "cooldownActive": false,
+          "attempts": 0
+        }
+      },
+      {
+        "datasetKey": "CRYPTO_OI",
+        "incidentId": "91c486c6-4e98-4437-8481-32232a9f3c4a",
+        "condition": "FALSE_HEALTHY",
+        "confidence": "MEDIUM",
+        "contractId": null,
+        "contractVersion": null,
+        "contractStatus": "NOT_CONFIGURED",
+        "contractConfidence": "UNKNOWN",
+        "contractEnabled": false,
+        "policyMatch": false,
+        "rejectionReason": [
+          "FAILURE_CLASS_NOT_AUTHORIZED",
+          "DATASET_ACTION_CONTRACT_NOT_CONFIGURED"
+        ],
+        "eligible": false,
+        "failureClass": null,
+        "reasons": [
+          "FAILURE_CLASS_NOT_AUTHORIZED",
+          "DATASET_ACTION_CONTRACT_NOT_CONFIGURED"
+        ],
+        "evidence": {
+          "condition": "FALSE_HEALTHY",
+          "healthState": "FALSE_HEALTHY",
+          "confidence": "MEDIUM",
+          "pending": 0,
+          "pidConfirmedDead": true,
+          "heartbeatStale": true,
+          "nextRunOverdue": false,
+          "checkpointExists": false,
+          "liveDuplicateOwner": false,
+          "actionContractKnown": false,
+          "transientFailure": false,
+          "retryCount": 0,
+          "exactWritableAlternate": false,
+          "cooldownActive": false,
+          "attempts": 0
+        }
+      },
+      {
+        "datasetKey": "CRYPTO_ONCHAIN",
+        "incidentId": "e78f8e3e-3e69-45a1-ac92-aac1210a358a",
+        "condition": "FALSE_HEALTHY",
+        "confidence": "HIGH",
+        "contractId": null,
+        "contractVersion": null,
+        "contractStatus": "NOT_CONFIGURED",
+        "contractConfidence": "UNKNOWN",
+        "contractEnabled": false,
+        "policyMatch": false,
+        "rejectionReason": [
+          "FAILURE_CLASS_NOT_AUTHORIZED",
+          "DATASET_ACTION_CONTRACT_NOT_CONFIGURED"
+        ],
+        "eligible": false,
+        "failureClass": null,
+        "reasons": [
+          "FAILURE_CLASS_NOT_AUTHORIZED",
+          "DATASET_ACTION_CONTRACT_NOT_CONFIGURED"
+        ],
+        "evidence": {
+          "condition": "FALSE_HEALTHY",
+          "healthState": "FALSE_HEALTHY",
+          "confidence": "HIGH",
+          "pending": 0,
+          "pidConfirmedDead": true,
+          "heartbeatStale": true,
+          "nextRunOverdue": false,
+          "checkpointExists": false,
+          "liveDuplicateOwner": false,
+          "actionContractKnown": false,
+          "transientFailure": false,
+          "retryCount": 0,
+          "exactWritableAlternate": false,
+          "cooldownActive": false,
+          "attempts": 0
+        }
+      },
+      {
+        "datasetKey": "CRYPTO_PRICE",
+        "incidentId": "29bffe30-ff98-4aa1-980d-a4ed14a0a7f3",
+        "condition": "FALSE_HEALTHY",
+        "confidence": "UNKNOWN",
+        "contractId": "CRYPTO_PRIMARY_V1",
+        "contractVersion": "1.0.0",
+        "contractStatus": "EXECUTABLE",
+        "contractConfidence": "HIGH",
+        "contractEnabled": true,
+        "policyMatch": false,
+        "rejectionReason": [
+          "FAILURE_CLASS_NOT_AUTHORIZED",
+          "EVIDENCE_CONFIDENCE_BELOW_MEDIUM"
+        ],
+        "eligible": false,
+        "failureClass": null,
+        "reasons": [
+          "FAILURE_CLASS_NOT_AUTHORIZED",
+          "EVIDENCE_CONFIDENCE_BELOW_MEDIUM"
+        ],
+        "evidence": {
+          "condition": "FALSE_HEALTHY",
+          "healthState": "FALSE_HEALTHY",
+          "confidence": "UNKNOWN",
+          "pending": 273,
+          "pidConfirmedDead": true,
+          "heartbeatStale": true,
+          "nextRunOverdue": false,
+          "checkpointExists": true,
+          "liveDuplicateOwner": false,
+          "actionContractKnown": true,
+          "transientFailure": false,
+          "retryCount": 22557,
+          "exactWritableAlternate": false,
+          "cooldownActive": false,
+          "attempts": 0
+        }
+      },
+      {
+        "datasetKey": "ETF_AUM",
+        "incidentId": "d3934fe9-235f-4c09-828a-148e235f822e",
+        "condition": "WORKER_DEAD_WITH_PENDING",
+        "confidence": "HIGH",
+        "contractId": "ETF_PRODUCT_DATA_V1",
+        "contractVersion": "1.0.0",
+        "contractStatus": "EXECUTABLE",
+        "contractConfidence": "HIGH",
+        "contractEnabled": true,
+        "policyMatch": false,
+        "rejectionReason": [
+          "REMEDIATION_COOLDOWN_ACTIVE"
+        ],
+        "eligible": false,
+        "failureClass": "WORKER_DEAD_WITH_PENDING",
+        "reasons": [
+          "REMEDIATION_COOLDOWN_ACTIVE"
+        ],
+        "evidence": {
+          "condition": "WORKER_DEAD_WITH_PENDING",
+          "healthState": "STOPPED_WITH_PENDING",
+          "confidence": "HIGH",
+          "pending": 630,
+          "pidConfirmedDead": true,
+          "heartbeatStale": true,
+          "nextRunOverdue": true,
+          "checkpointExists": true,
+          "liveDuplicateOwner": false,
+          "actionContractKnown": true,
+          "transientFailure": false,
+          "retryCount": 0,
+          "exactWritableAlternate": false,
+          "cooldownActive": true,
+          "attempts": 2
+        }
+      },
+      {
+        "datasetKey": "ETF_DAILY_HISTORY",
+        "incidentId": "eed5b218-88fd-4ab9-aeb8-4a2871f58bd3",
+        "condition": "FALSE_HEALTHY",
+        "confidence": "LOW",
+        "contractId": "ETF_DAILY_HISTORY_V1",
+        "contractVersion": "1.0.0",
+        "contractStatus": "PARTIAL",
+        "contractConfidence": "MEDIUM",
+        "contractEnabled": false,
+        "policyMatch": false,
+        "rejectionReason": [
+          "FAILURE_CLASS_NOT_AUTHORIZED",
+          "EVIDENCE_CONFIDENCE_BELOW_MEDIUM",
+          "DATASET_ACTION_CONTRACT_NOT_CONFIGURED"
+        ],
+        "eligible": false,
+        "failureClass": null,
+        "reasons": [
+          "FAILURE_CLASS_NOT_AUTHORIZED",
+          "EVIDENCE_CONFIDENCE_BELOW_MEDIUM",
+          "DATASET_ACTION_CONTRACT_NOT_CONFIGURED"
+        ],
+        "evidence": {
+          "condition": "FALSE_HEALTHY",
+          "healthState": "FALSE_HEALTHY",
+          "confidence": "LOW",
+          "pending": 0,
+          "pidConfirmedDead": true,
+          "heartbeatStale": true,
+          "nextRunOverdue": false,
+          "checkpointExists": false,
+          "liveDuplicateOwner": false,
+          "actionContractKnown": false,
+          "transientFailure": false,
+          "retryCount": 0,
+          "exactWritableAlternate": false,
+          "cooldownActive": false,
+          "attempts": 0
+        }
+      },
+      {
+        "datasetKey": "ETF_DISTRIBUTIONS",
+        "incidentId": "3980e769-05f3-4d25-9f65-c79ccd7d3f35",
+        "condition": "FALSE_HEALTHY",
+        "confidence": "MEDIUM",
+        "contractId": null,
+        "contractVersion": null,
+        "contractStatus": "NOT_CONFIGURED",
+        "contractConfidence": "UNKNOWN",
+        "contractEnabled": false,
+        "policyMatch": false,
+        "rejectionReason": [
+          "FAILURE_CLASS_NOT_AUTHORIZED",
+          "DATASET_ACTION_CONTRACT_NOT_CONFIGURED"
+        ],
+        "eligible": false,
+        "failureClass": null,
+        "reasons": [
+          "FAILURE_CLASS_NOT_AUTHORIZED",
+          "DATASET_ACTION_CONTRACT_NOT_CONFIGURED"
+        ],
+        "evidence": {
+          "condition": "FALSE_HEALTHY",
+          "healthState": "FALSE_HEALTHY",
+          "confidence": "MEDIUM",
+          "pending": 0,
+          "pidConfirmedDead": true,
+          "heartbeatStale": true,
+          "nextRunOverdue": false,
+          "checkpointExists": false,
+          "liveDuplicateOwner": false,
+          "actionContractKnown": false,
+          "transientFailure": false,
+          "retryCount": 0,
+          "exactWritableAlternate": false,
+          "cooldownActive": false,
+          "attempts": 0
+        }
+      },
+      {
+        "datasetKey": "ETF_FEES",
+        "incidentId": "17a3fc1a-9ab0-42be-bc7c-39ea0d7ec7d0",
+        "condition": "FALSE_HEALTHY",
+        "confidence": "HIGH",
+        "contractId": null,
+        "contractVersion": null,
+        "contractStatus": "NOT_CONFIGURED",
+        "contractConfidence": "UNKNOWN",
+        "contractEnabled": false,
+        "policyMatch": false,
+        "rejectionReason": [
+          "FAILURE_CLASS_NOT_AUTHORIZED",
+          "DATASET_ACTION_CONTRACT_NOT_CONFIGURED"
+        ],
+        "eligible": false,
+        "failureClass": null,
+        "reasons": [
+          "FAILURE_CLASS_NOT_AUTHORIZED",
+          "DATASET_ACTION_CONTRACT_NOT_CONFIGURED"
+        ],
+        "evidence": {
+          "condition": "FALSE_HEALTHY",
+          "healthState": "FALSE_HEALTHY",
+          "confidence": "HIGH",
+          "pending": 0,
+          "pidConfirmedDead": true,
+          "heartbeatStale": true,
+          "nextRunOverdue": false,
+          "checkpointExists": false,
+          "liveDuplicateOwner": false,
+          "actionContractKnown": false,
+          "transientFailure": false,
+          "retryCount": 0,
+          "exactWritableAlternate": false,
+          "cooldownActive": false,
+          "attempts": 0
+        }
+      },
+      {
+        "datasetKey": "ETF_FLOWS",
+        "incidentId": "85a886e6-dcae-46b1-a41e-b1b084432f17",
+        "condition": "FALSE_HEALTHY",
+        "confidence": "HIGH",
+        "contractId": null,
+        "contractVersion": null,
+        "contractStatus": "NOT_CONFIGURED",
+        "contractConfidence": "UNKNOWN",
+        "contractEnabled": false,
+        "policyMatch": false,
+        "rejectionReason": [
+          "FAILURE_CLASS_NOT_AUTHORIZED",
+          "DATASET_ACTION_CONTRACT_NOT_CONFIGURED"
+        ],
+        "eligible": false,
+        "failureClass": null,
+        "reasons": [
+          "FAILURE_CLASS_NOT_AUTHORIZED",
+          "DATASET_ACTION_CONTRACT_NOT_CONFIGURED"
+        ],
+        "evidence": {
+          "condition": "FALSE_HEALTHY",
+          "healthState": "FALSE_HEALTHY",
+          "confidence": "HIGH",
+          "pending": 0,
+          "pidConfirmedDead": true,
+          "heartbeatStale": true,
+          "nextRunOverdue": false,
+          "checkpointExists": false,
+          "liveDuplicateOwner": false,
+          "actionContractKnown": false,
+          "transientFailure": false,
+          "retryCount": 0,
+          "exactWritableAlternate": false,
+          "cooldownActive": false,
+          "attempts": 0
+        }
+      },
+      {
+        "datasetKey": "ETF_NAV",
+        "incidentId": "ab1ae3e6-b3bf-4ea7-a59d-5e0dfea5a851",
+        "condition": "FALSE_HEALTHY",
+        "confidence": "LOW",
+        "contractId": null,
+        "contractVersion": null,
+        "contractStatus": "NOT_CONFIGURED",
+        "contractConfidence": "UNKNOWN",
+        "contractEnabled": false,
+        "policyMatch": false,
+        "rejectionReason": [
+          "FAILURE_CLASS_NOT_AUTHORIZED",
+          "EVIDENCE_CONFIDENCE_BELOW_MEDIUM",
+          "DATASET_ACTION_CONTRACT_NOT_CONFIGURED"
+        ],
+        "eligible": false,
+        "failureClass": null,
+        "reasons": [
+          "FAILURE_CLASS_NOT_AUTHORIZED",
+          "EVIDENCE_CONFIDENCE_BELOW_MEDIUM",
+          "DATASET_ACTION_CONTRACT_NOT_CONFIGURED"
+        ],
+        "evidence": {
+          "condition": "FALSE_HEALTHY",
+          "healthState": "FALSE_HEALTHY",
+          "confidence": "LOW",
+          "pending": 0,
+          "pidConfirmedDead": true,
+          "heartbeatStale": true,
+          "nextRunOverdue": false,
+          "checkpointExists": false,
+          "liveDuplicateOwner": false,
+          "actionContractKnown": false,
+          "transientFailure": false,
+          "retryCount": 0,
+          "exactWritableAlternate": false,
+          "cooldownActive": false,
+          "attempts": 0
+        }
+      },
+      {
+        "datasetKey": "FIXED_INCOME_CURVES",
+        "incidentId": "c7729b40-3fd2-4858-bf62-ed50873a9130",
+        "condition": "FALSE_HEALTHY",
+        "confidence": "HIGH",
+        "contractId": "FIXED_INCOME_CURVES_V1",
+        "contractVersion": "1.0.0",
+        "contractStatus": "EXECUTABLE",
+        "contractConfidence": "HIGH",
+        "contractEnabled": true,
+        "policyMatch": false,
+        "rejectionReason": [
+          "FAILURE_CLASS_NOT_AUTHORIZED"
+        ],
+        "eligible": false,
+        "failureClass": null,
+        "reasons": [
+          "FAILURE_CLASS_NOT_AUTHORIZED"
+        ],
+        "evidence": {
+          "condition": "FALSE_HEALTHY",
+          "healthState": "FALSE_HEALTHY",
+          "confidence": "HIGH",
+          "pending": 0,
+          "pidConfirmedDead": true,
+          "heartbeatStale": true,
+          "nextRunOverdue": true,
+          "checkpointExists": true,
+          "liveDuplicateOwner": false,
+          "actionContractKnown": true,
+          "transientFailure": false,
+          "retryCount": 0,
+          "exactWritableAlternate": false,
+          "cooldownActive": false,
+          "attempts": 0
+        }
+      },
+      {
+        "datasetKey": "FIXED_INCOME_PRICE",
+        "incidentId": "1cd5ecf4-89d7-44fb-8df5-c8d42c23af12",
+        "condition": "FALSE_HEALTHY",
+        "confidence": "HIGH",
+        "contractId": null,
+        "contractVersion": null,
+        "contractStatus": "NOT_CONFIGURED",
+        "contractConfidence": "UNKNOWN",
+        "contractEnabled": false,
+        "policyMatch": false,
+        "rejectionReason": [
+          "FAILURE_CLASS_NOT_AUTHORIZED",
+          "DATASET_ACTION_CONTRACT_NOT_CONFIGURED"
+        ],
+        "eligible": false,
+        "failureClass": null,
+        "reasons": [
+          "FAILURE_CLASS_NOT_AUTHORIZED",
+          "DATASET_ACTION_CONTRACT_NOT_CONFIGURED"
+        ],
+        "evidence": {
+          "condition": "FALSE_HEALTHY",
+          "healthState": "FALSE_HEALTHY",
+          "confidence": "HIGH",
+          "pending": 0,
+          "pidConfirmedDead": true,
+          "heartbeatStale": true,
+          "nextRunOverdue": true,
+          "checkpointExists": false,
+          "liveDuplicateOwner": false,
+          "actionContractKnown": false,
+          "transientFailure": false,
+          "retryCount": 0,
+          "exactWritableAlternate": false,
+          "cooldownActive": false,
+          "attempts": 0
+        }
+      },
+      {
+        "datasetKey": "FIXED_INCOME_YIELD",
+        "incidentId": "0ea78033-29fa-4945-8a61-29ebb5776c2a",
+        "condition": "STATIC_SCOPE_TOO_NARROW",
+        "confidence": "UNKNOWN",
+        "contractId": null,
+        "contractVersion": null,
+        "contractStatus": "NOT_CONFIGURED",
+        "contractConfidence": "UNKNOWN",
+        "contractEnabled": false,
+        "policyMatch": false,
+        "rejectionReason": [
+          "FAILURE_CLASS_NOT_AUTHORIZED",
+          "EVIDENCE_CONFIDENCE_BELOW_MEDIUM",
+          "DATASET_ACTION_CONTRACT_NOT_CONFIGURED"
+        ],
+        "eligible": false,
+        "failureClass": null,
+        "reasons": [
+          "FAILURE_CLASS_NOT_AUTHORIZED",
+          "EVIDENCE_CONFIDENCE_BELOW_MEDIUM",
+          "DATASET_ACTION_CONTRACT_NOT_CONFIGURED"
+        ],
+        "evidence": {
+          "condition": "STATIC_SCOPE_TOO_NARROW",
+          "healthState": "STATIC_SCOPE_TOO_NARROW",
+          "confidence": "UNKNOWN",
+          "pending": 0,
+          "pidConfirmedDead": true,
+          "heartbeatStale": true,
+          "nextRunOverdue": true,
+          "checkpointExists": false,
+          "liveDuplicateOwner": false,
+          "actionContractKnown": false,
+          "transientFailure": false,
+          "retryCount": 0,
+          "exactWritableAlternate": false,
+          "cooldownActive": false,
+          "attempts": 0
+        }
+      },
+      {
+        "datasetKey": "FUND_HOLDINGS",
+        "incidentId": "d1a35a14-4c48-4679-a1c8-21456c69748d",
+        "condition": "FALSE_HEALTHY",
+        "confidence": "HIGH",
+        "contractId": null,
+        "contractVersion": null,
+        "contractStatus": "NOT_CONFIGURED",
+        "contractConfidence": "UNKNOWN",
+        "contractEnabled": false,
+        "policyMatch": false,
+        "rejectionReason": [
+          "FAILURE_CLASS_NOT_AUTHORIZED",
+          "DATASET_ACTION_CONTRACT_NOT_CONFIGURED"
+        ],
+        "eligible": false,
+        "failureClass": null,
+        "reasons": [
+          "FAILURE_CLASS_NOT_AUTHORIZED",
+          "DATASET_ACTION_CONTRACT_NOT_CONFIGURED"
+        ],
+        "evidence": {
+          "condition": "FALSE_HEALTHY",
+          "healthState": "FALSE_HEALTHY",
+          "confidence": "HIGH",
+          "pending": 0,
+          "pidConfirmedDead": true,
+          "heartbeatStale": true,
+          "nextRunOverdue": true,
+          "checkpointExists": false,
+          "liveDuplicateOwner": false,
+          "actionContractKnown": false,
+          "transientFailure": false,
+          "retryCount": 0,
+          "exactWritableAlternate": false,
+          "cooldownActive": false,
+          "attempts": 0
+        }
+      },
+      {
+        "datasetKey": "FUND_NAV",
+        "incidentId": "2d88f3f8-c0b3-4edf-9757-ecd010bc2058",
+        "condition": "FALSE_HEALTHY",
+        "confidence": "UNKNOWN",
+        "contractId": "FUND_NAV_V1",
+        "contractVersion": "1.0.0",
+        "contractStatus": "PARTIAL",
+        "contractConfidence": "MEDIUM",
+        "contractEnabled": false,
+        "policyMatch": false,
+        "rejectionReason": [
+          "FAILURE_CLASS_NOT_AUTHORIZED",
+          "EVIDENCE_CONFIDENCE_BELOW_MEDIUM",
+          "DATASET_ACTION_CONTRACT_NOT_CONFIGURED"
+        ],
+        "eligible": false,
+        "failureClass": null,
+        "reasons": [
+          "FAILURE_CLASS_NOT_AUTHORIZED",
+          "EVIDENCE_CONFIDENCE_BELOW_MEDIUM",
+          "DATASET_ACTION_CONTRACT_NOT_CONFIGURED"
+        ],
+        "evidence": {
+          "condition": "FALSE_HEALTHY",
+          "healthState": "FALSE_HEALTHY",
+          "confidence": "UNKNOWN",
+          "pending": 0,
+          "pidConfirmedDead": true,
+          "heartbeatStale": true,
+          "nextRunOverdue": true,
+          "checkpointExists": false,
+          "liveDuplicateOwner": false,
+          "actionContractKnown": false,
+          "transientFailure": false,
+          "retryCount": 0,
+          "exactWritableAlternate": false,
+          "cooldownActive": false,
+          "attempts": 0
+        }
+      },
+      {
+        "datasetKey": "FUND_NPORT",
+        "incidentId": "74f56fc9-8f67-42eb-ade9-5963770d5ba6",
+        "condition": "FALSE_HEALTHY",
+        "confidence": "MEDIUM",
+        "contractId": null,
+        "contractVersion": null,
+        "contractStatus": "NOT_CONFIGURED",
+        "contractConfidence": "UNKNOWN",
+        "contractEnabled": false,
+        "policyMatch": false,
+        "rejectionReason": [
+          "FAILURE_CLASS_NOT_AUTHORIZED",
+          "DATASET_ACTION_CONTRACT_NOT_CONFIGURED"
+        ],
+        "eligible": false,
+        "failureClass": null,
+        "reasons": [
+          "FAILURE_CLASS_NOT_AUTHORIZED",
+          "DATASET_ACTION_CONTRACT_NOT_CONFIGURED"
+        ],
+        "evidence": {
+          "condition": "FALSE_HEALTHY",
+          "healthState": "FALSE_HEALTHY",
+          "confidence": "MEDIUM",
+          "pending": 0,
+          "pidConfirmedDead": true,
+          "heartbeatStale": true,
+          "nextRunOverdue": true,
+          "checkpointExists": false,
+          "liveDuplicateOwner": false,
+          "actionContractKnown": false,
+          "transientFailure": false,
+          "retryCount": 0,
+          "exactWritableAlternate": false,
+          "cooldownActive": false,
+          "attempts": 0
+        }
+      },
+      {
+        "datasetKey": "FUND_PERFORMANCE",
+        "incidentId": "8a545910-291c-4067-b73d-61352de6c6fc",
+        "condition": "FALSE_HEALTHY",
+        "confidence": "HIGH",
+        "contractId": null,
+        "contractVersion": null,
+        "contractStatus": "NOT_CONFIGURED",
+        "contractConfidence": "UNKNOWN",
+        "contractEnabled": false,
+        "policyMatch": false,
+        "rejectionReason": [
+          "FAILURE_CLASS_NOT_AUTHORIZED",
+          "DATASET_ACTION_CONTRACT_NOT_CONFIGURED"
+        ],
+        "eligible": false,
+        "failureClass": null,
+        "reasons": [
+          "FAILURE_CLASS_NOT_AUTHORIZED",
+          "DATASET_ACTION_CONTRACT_NOT_CONFIGURED"
+        ],
+        "evidence": {
+          "condition": "FALSE_HEALTHY",
+          "healthState": "FALSE_HEALTHY",
+          "confidence": "HIGH",
+          "pending": 0,
+          "pidConfirmedDead": true,
+          "heartbeatStale": true,
+          "nextRunOverdue": true,
+          "checkpointExists": false,
+          "liveDuplicateOwner": false,
+          "actionContractKnown": false,
+          "transientFailure": false,
+          "retryCount": 0,
+          "exactWritableAlternate": false,
+          "cooldownActive": false,
+          "attempts": 0
+        }
+      },
+      {
+        "datasetKey": "FUND_RISK",
+        "incidentId": "0c6391de-bc1a-4999-9c44-490fd546e30f",
+        "condition": "FALSE_HEALTHY",
+        "confidence": "HIGH",
+        "contractId": null,
+        "contractVersion": null,
+        "contractStatus": "NOT_CONFIGURED",
+        "contractConfidence": "UNKNOWN",
+        "contractEnabled": false,
+        "policyMatch": false,
+        "rejectionReason": [
+          "FAILURE_CLASS_NOT_AUTHORIZED",
+          "DATASET_ACTION_CONTRACT_NOT_CONFIGURED"
+        ],
+        "eligible": false,
+        "failureClass": null,
+        "reasons": [
+          "FAILURE_CLASS_NOT_AUTHORIZED",
+          "DATASET_ACTION_CONTRACT_NOT_CONFIGURED"
+        ],
+        "evidence": {
+          "condition": "FALSE_HEALTHY",
+          "healthState": "FALSE_HEALTHY",
+          "confidence": "HIGH",
+          "pending": 0,
+          "pidConfirmedDead": true,
+          "heartbeatStale": true,
+          "nextRunOverdue": true,
+          "checkpointExists": false,
+          "liveDuplicateOwner": false,
+          "actionContractKnown": false,
+          "transientFailure": false,
+          "retryCount": 0,
+          "exactWritableAlternate": false,
+          "cooldownActive": false,
+          "attempts": 0
+        }
+      },
+      {
+        "datasetKey": "FUTURES_COT",
+        "incidentId": "0a3fc699-587c-439d-b33c-3bac9e8701fc",
+        "condition": "NEW_ASSET_NOT_ENROLLED",
+        "confidence": "HIGH",
+        "contractId": null,
+        "contractVersion": null,
+        "contractStatus": "NOT_CONFIGURED",
+        "contractConfidence": "UNKNOWN",
+        "contractEnabled": false,
+        "policyMatch": false,
+        "rejectionReason": [
+          "FAILURE_CLASS_NOT_AUTHORIZED",
+          "DATASET_ACTION_CONTRACT_NOT_CONFIGURED"
+        ],
+        "eligible": false,
+        "failureClass": null,
+        "reasons": [
+          "FAILURE_CLASS_NOT_AUTHORIZED",
+          "DATASET_ACTION_CONTRACT_NOT_CONFIGURED"
+        ],
+        "evidence": {
+          "condition": "NEW_ASSET_NOT_ENROLLED",
+          "healthState": "NEW_ASSETS_NOT_AUTO_ENROLLED",
+          "confidence": "HIGH",
+          "pending": 0,
+          "pidConfirmedDead": true,
+          "heartbeatStale": true,
+          "nextRunOverdue": true,
+          "checkpointExists": false,
+          "liveDuplicateOwner": false,
+          "actionContractKnown": false,
+          "transientFailure": false,
+          "retryCount": 0,
+          "exactWritableAlternate": false,
+          "cooldownActive": false,
+          "attempts": 0
+        }
+      },
+      {
+        "datasetKey": "FUTURES_OI",
+        "incidentId": "c135ad62-f5cc-4c1b-96b1-d9de6f5a1240",
+        "condition": "NEW_ASSET_NOT_ENROLLED",
+        "confidence": "HIGH",
+        "contractId": null,
+        "contractVersion": null,
+        "contractStatus": "NOT_CONFIGURED",
+        "contractConfidence": "UNKNOWN",
+        "contractEnabled": false,
+        "policyMatch": false,
+        "rejectionReason": [
+          "FAILURE_CLASS_NOT_AUTHORIZED",
+          "DATASET_ACTION_CONTRACT_NOT_CONFIGURED"
+        ],
+        "eligible": false,
+        "failureClass": null,
+        "reasons": [
+          "FAILURE_CLASS_NOT_AUTHORIZED",
+          "DATASET_ACTION_CONTRACT_NOT_CONFIGURED"
+        ],
+        "evidence": {
+          "condition": "NEW_ASSET_NOT_ENROLLED",
+          "healthState": "NEW_ASSETS_NOT_AUTO_ENROLLED",
+          "confidence": "HIGH",
+          "pending": 0,
+          "pidConfirmedDead": true,
+          "heartbeatStale": true,
+          "nextRunOverdue": true,
+          "checkpointExists": false,
+          "liveDuplicateOwner": false,
+          "actionContractKnown": false,
+          "transientFailure": false,
+          "retryCount": 0,
+          "exactWritableAlternate": false,
+          "cooldownActive": false,
+          "attempts": 0
+        }
+      },
+      {
+        "datasetKey": "FUTURES_SETTLEMENT",
+        "incidentId": "ecfd5274-2c58-4120-814f-5fbf338f03d7",
+        "condition": "NEW_ASSET_NOT_ENROLLED",
+        "confidence": "HIGH",
+        "contractId": null,
+        "contractVersion": null,
+        "contractStatus": "NOT_CONFIGURED",
+        "contractConfidence": "UNKNOWN",
+        "contractEnabled": false,
+        "policyMatch": false,
+        "rejectionReason": [
+          "FAILURE_CLASS_NOT_AUTHORIZED",
+          "DATASET_ACTION_CONTRACT_NOT_CONFIGURED"
+        ],
+        "eligible": false,
+        "failureClass": null,
+        "reasons": [
+          "FAILURE_CLASS_NOT_AUTHORIZED",
+          "DATASET_ACTION_CONTRACT_NOT_CONFIGURED"
+        ],
+        "evidence": {
+          "condition": "NEW_ASSET_NOT_ENROLLED",
+          "healthState": "NEW_ASSETS_NOT_AUTO_ENROLLED",
+          "confidence": "HIGH",
+          "pending": 0,
+          "pidConfirmedDead": true,
+          "heartbeatStale": true,
+          "nextRunOverdue": true,
+          "checkpointExists": false,
+          "liveDuplicateOwner": false,
+          "actionContractKnown": false,
+          "transientFailure": false,
+          "retryCount": 0,
+          "exactWritableAlternate": false,
+          "cooldownActive": false,
+          "attempts": 0
+        }
+      },
+      {
+        "datasetKey": "FX_FORWARD",
+        "incidentId": "c2f262fb-f154-4836-83ed-95d429fc8074",
+        "condition": "FALSE_HEALTHY",
+        "confidence": "HIGH",
+        "contractId": null,
+        "contractVersion": null,
+        "contractStatus": "NOT_CONFIGURED",
+        "contractConfidence": "UNKNOWN",
+        "contractEnabled": false,
+        "policyMatch": false,
+        "rejectionReason": [
+          "FAILURE_CLASS_NOT_AUTHORIZED",
+          "DATASET_ACTION_CONTRACT_NOT_CONFIGURED"
+        ],
+        "eligible": false,
+        "failureClass": null,
+        "reasons": [
+          "FAILURE_CLASS_NOT_AUTHORIZED",
+          "DATASET_ACTION_CONTRACT_NOT_CONFIGURED"
+        ],
+        "evidence": {
+          "condition": "FALSE_HEALTHY",
+          "healthState": "FALSE_HEALTHY",
+          "confidence": "HIGH",
+          "pending": 0,
+          "pidConfirmedDead": true,
+          "heartbeatStale": true,
+          "nextRunOverdue": true,
+          "checkpointExists": false,
+          "liveDuplicateOwner": false,
+          "actionContractKnown": false,
+          "transientFailure": false,
+          "retryCount": 0,
+          "exactWritableAlternate": false,
+          "cooldownActive": false,
+          "attempts": 0
+        }
+      },
+      {
+        "datasetKey": "MACRO_CALENDAR",
+        "incidentId": "54302127-6519-4c40-9707-55ead63205d3",
+        "condition": "FALSE_HEALTHY",
+        "confidence": "HIGH",
+        "contractId": null,
+        "contractVersion": null,
+        "contractStatus": "NOT_CONFIGURED",
+        "contractConfidence": "UNKNOWN",
+        "contractEnabled": false,
+        "policyMatch": false,
+        "rejectionReason": [
+          "FAILURE_CLASS_NOT_AUTHORIZED",
+          "DATASET_ACTION_CONTRACT_NOT_CONFIGURED"
+        ],
+        "eligible": false,
+        "failureClass": null,
+        "reasons": [
+          "FAILURE_CLASS_NOT_AUTHORIZED",
+          "DATASET_ACTION_CONTRACT_NOT_CONFIGURED"
+        ],
+        "evidence": {
+          "condition": "FALSE_HEALTHY",
+          "healthState": "FALSE_HEALTHY",
+          "confidence": "HIGH",
+          "pending": 0,
+          "pidConfirmedDead": true,
+          "heartbeatStale": true,
+          "nextRunOverdue": true,
+          "checkpointExists": false,
+          "liveDuplicateOwner": false,
+          "actionContractKnown": false,
+          "transientFailure": false,
+          "retryCount": 0,
+          "exactWritableAlternate": false,
+          "cooldownActive": false,
+          "attempts": 0
+        }
+      },
+      {
+        "datasetKey": "MACRO_VALUES",
+        "incidentId": "8786e9ad-d4fc-4e1a-b7df-3f8036022e37",
+        "condition": "FALSE_HEALTHY",
+        "confidence": "UNKNOWN",
+        "contractId": "MACRO_CORE_V1",
+        "contractVersion": "2.0.0",
+        "contractStatus": "PARTIAL",
+        "contractConfidence": "MEDIUM",
+        "contractEnabled": false,
+        "policyMatch": false,
+        "rejectionReason": [
+          "FAILURE_CLASS_NOT_AUTHORIZED",
+          "EVIDENCE_CONFIDENCE_BELOW_MEDIUM",
+          "DATASET_ACTION_CONTRACT_NOT_CONFIGURED"
+        ],
+        "eligible": false,
+        "failureClass": null,
+        "reasons": [
+          "FAILURE_CLASS_NOT_AUTHORIZED",
+          "EVIDENCE_CONFIDENCE_BELOW_MEDIUM",
+          "DATASET_ACTION_CONTRACT_NOT_CONFIGURED"
+        ],
+        "evidence": {
+          "condition": "FALSE_HEALTHY",
+          "healthState": "FALSE_HEALTHY",
+          "confidence": "UNKNOWN",
+          "pending": 0,
+          "pidConfirmedDead": true,
+          "heartbeatStale": true,
+          "nextRunOverdue": true,
+          "checkpointExists": false,
+          "liveDuplicateOwner": false,
+          "actionContractKnown": false,
+          "transientFailure": false,
+          "retryCount": 0,
+          "exactWritableAlternate": false,
+          "cooldownActive": false,
+          "attempts": 0
+        }
+      },
+      {
+        "datasetKey": "MOPS_COMPANY_DATA",
+        "incidentId": "f4d7c111-fc91-42ab-8804-6f44c55ad30a",
+        "condition": "DATASET_STALE",
+        "confidence": "LOW",
+        "contractId": null,
+        "contractVersion": null,
+        "contractStatus": "NOT_CONFIGURED",
+        "contractConfidence": "UNKNOWN",
+        "contractEnabled": false,
+        "policyMatch": false,
+        "rejectionReason": [
+          "FAILURE_CLASS_NOT_AUTHORIZED",
+          "EVIDENCE_CONFIDENCE_BELOW_MEDIUM",
+          "DATASET_ACTION_CONTRACT_NOT_CONFIGURED"
+        ],
+        "eligible": false,
+        "failureClass": null,
+        "reasons": [
+          "FAILURE_CLASS_NOT_AUTHORIZED",
+          "EVIDENCE_CONFIDENCE_BELOW_MEDIUM",
+          "DATASET_ACTION_CONTRACT_NOT_CONFIGURED"
+        ],
+        "evidence": {
+          "condition": "DATASET_STALE",
+          "healthState": "STALE",
+          "confidence": "LOW",
+          "pending": 0,
+          "pidConfirmedDead": false,
+          "heartbeatStale": true,
+          "nextRunOverdue": false,
+          "checkpointExists": false,
+          "liveDuplicateOwner": false,
+          "actionContractKnown": false,
+          "transientFailure": false,
+          "retryCount": 0,
+          "exactWritableAlternate": false,
+          "cooldownActive": false,
+          "attempts": 0
+        }
+      },
+      {
+        "datasetKey": "STOCK_FINANCIAL_FACTS",
+        "incidentId": "7004de89-af25-4a49-b108-154455b438c4",
+        "condition": "FALSE_HEALTHY",
+        "confidence": "LOW",
+        "contractId": null,
+        "contractVersion": null,
+        "contractStatus": "NOT_CONFIGURED",
+        "contractConfidence": "UNKNOWN",
+        "contractEnabled": false,
+        "policyMatch": false,
+        "rejectionReason": [
+          "FAILURE_CLASS_NOT_AUTHORIZED",
+          "EVIDENCE_CONFIDENCE_BELOW_MEDIUM",
+          "DATASET_ACTION_CONTRACT_NOT_CONFIGURED"
+        ],
+        "eligible": false,
+        "failureClass": null,
+        "reasons": [
+          "FAILURE_CLASS_NOT_AUTHORIZED",
+          "EVIDENCE_CONFIDENCE_BELOW_MEDIUM",
+          "DATASET_ACTION_CONTRACT_NOT_CONFIGURED"
+        ],
+        "evidence": {
+          "condition": "FALSE_HEALTHY",
+          "healthState": "FALSE_HEALTHY",
+          "confidence": "LOW",
+          "pending": 0,
+          "pidConfirmedDead": true,
+          "heartbeatStale": true,
+          "nextRunOverdue": true,
+          "checkpointExists": false,
+          "liveDuplicateOwner": false,
+          "actionContractKnown": false,
+          "transientFailure": false,
+          "retryCount": 0,
+          "exactWritableAlternate": false,
+          "cooldownActive": false,
+          "attempts": 0
+        }
+      }
+    ],
+    "actionsAttempted": 0,
+    "actionsSucceeded": 0,
+    "actionsFailed": 0,
+    "escalations": 0
+  }
+}

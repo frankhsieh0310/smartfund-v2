@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "asset": "GLOBAL_SECURITIES_LENDING",
+  "registries": [
+    { "id": "TWSE", "country": "TW", "mode": "PUBLIC_API", "url": "https://www.twse.com.tw/rwd/en/marginTrading/TWT93U?response=json", "scope": ["loanBalance", "shortAvailability"] },
+    { "id": "NYSE", "country": "US", "mode": "OFFICIAL_REFERENCE", "url": "https://www.nyse.com/markets/nyse/market-info", "scope": [] },
+    { "id": "NASDAQ", "country": "US", "mode": "OFFICIAL_REFERENCE", "url": "https://www.nasdaqtrader.com/Trader.aspx?id=RegSHO", "scope": ["shortAvailability"] },
+    { "id": "FINRA", "country": "US", "mode": "PUBLIC_DOWNLOAD", "url": "https://www.finra.org/finra-data/browse-catalog/short-sale-volume-data", "scope": ["shortAvailability"] },
+    { "id": "LSE", "country": "GB", "mode": "OFFICIAL_REFERENCE", "url": "https://www.londonstockexchange.com/", "scope": [] },
+    { "id": "HKEX", "country": "HK", "mode": "PUBLIC_DOWNLOAD", "url": "https://www.hkex.com.hk/Market-Data/Securities-Prices/Short-Selling/Short-Selling-Turnover-and-Stock-Lending?sc_lang=en", "scope": ["loanBalance", "shortAvailability"] },
+    { "id": "JPX", "country": "JP", "mode": "PUBLIC_DOWNLOAD", "url": "https://www.jpx.co.jp/english/markets/statistics-equities/margin/index.html", "scope": ["loanBalance", "shortAvailability"] },
+    { "id": "KRX", "country": "KR", "mode": "OFFICIAL_REFERENCE", "url": "https://global.krx.co.kr/", "scope": ["loanBalance"] },
+    { "id": "SGX", "country": "SG", "mode": "OFFICIAL_REFERENCE", "url": "https://www.sgx.com/securities/securities-lending", "scope": ["borrowFee", "sharesAvailable"] },
+    { "id": "ASX", "country": "AU", "mode": "PUBLIC_DOWNLOAD", "url": "https://www.asx.com.au/markets/trade-our-cash-market/short-selling", "scope": ["shortAvailability"] }
+  ],
+  "notice": "Official exchanges generally do not publish complete security-level borrow fee, utilization, recall, or availability feeds. Empty scope means registry/discovery only; licensed feeds can be added without changing the runner contract."
+}

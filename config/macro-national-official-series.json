@@ -1,0 +1,25 @@
+{
+  "version": "MACRO_GLOBAL_NATIONAL_OFFICIAL_COMPLETION_07",
+  "source": "Eurostat",
+  "baseUrl": "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data",
+  "countries": [
+    {"geo":"EA20","iso3":"EMU","name":"Euro Area"},
+    {"geo":"DE","iso3":"DEU","name":"Germany"},
+    {"geo":"FR","iso3":"FRA","name":"France"},
+    {"geo":"IT","iso3":"ITA","name":"Italy"},
+    {"geo":"ES","iso3":"ESP","name":"Spain"},
+    {"geo":"CH","iso3":"CHE","name":"Switzerland"},
+    {"geo":"TR","iso3":"TUR","name":"Turkey"},
+    {"geo":"UK","iso3":"GBR","name":"United Kingdom"}
+  ],
+  "series": [
+    {"dataset":"bop_iip6_q","metric":"IIP_ASSETS","domain":"EXTERNAL","unit":"MILLION_EUR","frequency":"QUARTERLY","filters":{"freq":"Q","currency":"MIO_EUR","bop_item":"FA","sector10":"S1","sectpart":"S1","stk_flow":"A_LE","partner":"WRL_REST"}},
+    {"dataset":"bop_iip6_q","metric":"IIP_LIABILITIES","domain":"EXTERNAL","unit":"MILLION_EUR","frequency":"QUARTERLY","filters":{"freq":"Q","currency":"MIO_EUR","bop_item":"FA","sector10":"S1","sectpart":"S1","stk_flow":"L_LE","partner":"WRL_REST"}},
+    {"dataset":"bop_iip6_q","metric":"NIIP","domain":"EXTERNAL","unit":"MILLION_EUR","frequency":"QUARTERLY","filters":{"freq":"Q","currency":"MIO_EUR","bop_item":"FA","sector10":"S1","sectpart":"S1","stk_flow":"N_LE","partner":"WRL_REST"}},
+    {"dataset":"bop_c6_q","metric":"GOODS_TRADE_BALANCE","domain":"EXTERNAL","unit":"MILLION_EUR","frequency":"QUARTERLY","filters":{"freq":"Q","currency":"MIO_EUR","bop_item":"G","sector10":"S1","sectpart":"S1","stk_flow":"BAL","partner":"WRL_REST"}},
+    {"dataset":"gov_10a_main","metric":"GENERAL_GOVERNMENT_BALANCE","domain":"FISCAL","unit":"PERCENT_OF_GDP","frequency":"ANNUAL","filters":{"freq":"A","unit":"PC_GDP","sector":"S13","na_item":"B9"}},
+    {"dataset":"gov_10a_main","metric":"REVENUE","domain":"FISCAL","unit":"PERCENT_OF_GDP","frequency":"ANNUAL","filters":{"freq":"A","unit":"PC_GDP","sector":"S13","na_item":"TR"}},
+    {"dataset":"gov_10a_main","metric":"EXPENDITURE","domain":"FISCAL","unit":"PERCENT_OF_GDP","frequency":"ANNUAL","filters":{"freq":"A","unit":"PC_GDP","sector":"S13","na_item":"TE"}},
+    {"dataset":"gov_10a_main","metric":"INTEREST_EXPENSE","domain":"FISCAL","unit":"PERCENT_OF_GDP","frequency":"ANNUAL","filters":{"freq":"A","unit":"PC_GDP","sector":"S13","na_item":"D41PAY"}}
+  ]
+}

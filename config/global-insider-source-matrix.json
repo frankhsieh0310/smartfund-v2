@@ -1,0 +1,16 @@
+{
+  "asset": "GLOBAL_INSIDER_TRADING",
+  "version": 1,
+  "jurisdictions": [
+    { "jurisdiction": "US", "status": "PUBLIC_OFFICIAL", "regime": "US_SECTION16", "source": "SEC_EDGAR", "production": true },
+    { "jurisdiction": "Taiwan", "status": "SOURCE_PENDING", "regime": "TAIWAN_INSIDER_DISCLOSURE", "source": "TWSE_MOPS", "production": false },
+    { "jurisdiction": "Hong Kong", "status": "PUBLIC_PARTIAL", "regime": "HKEX_DI", "source": "HKEX_DI", "production": false },
+    { "jurisdiction": "Japan", "status": "SOURCE_PENDING", "regime": "OTHER", "source": "JPX_EDINET_REVIEW_REQUIRED", "production": false },
+    { "jurisdiction": "Korea", "status": "SOURCE_PENDING", "regime": "OTHER", "source": "KRX_KIND", "production": false },
+    { "jurisdiction": "Singapore", "status": "SOURCE_PENDING", "regime": "OTHER", "source": "SGX", "production": false },
+    { "jurisdiction": "Australia", "status": "SOURCE_PENDING", "regime": "OTHER", "source": "ASX", "production": false },
+    { "jurisdiction": "UK/Europe", "status": "SOURCE_PENDING", "regime": "OTHER", "production": false },
+    { "jurisdiction": "Canada", "status": "LICENSE_PENDING", "regime": "OTHER", "production": false },
+    { "jurisdiction": "Other", "status": "SOURCE_PENDING", "regime": "OTHER", "production": false }
+  ]
+}

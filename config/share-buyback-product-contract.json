@@ -1,0 +1,11 @@
+{
+  "asset": "GLOBAL_SHARE_BUYBACK",
+  "canonicalEventRelation": "corporate_actions",
+  "writerBoundary": { "canonicalOwner": "GLOBAL_CORPORATE_ACTIONS", "shareBuybackRole": "PROGRAM_EXECUTION_ENRICHMENT", "singleWriterPerScope": true },
+  "detail": ["issuerIdentity", "activeProgram", "authorization", "executionHistory", "remainingAuthorization", "status", "revisions", "freshness", "provenance"],
+  "search": ["ticker", "company", "market", "programStatus", "authorizationType", "dateRange"],
+  "screener": ["market", "status", "authorizationAmount", "executedValue", "utilization", "announcementDate"],
+  "compare": ["authorizationAmount", "executedValue", "sharesRepurchased", "remainingAuthorization", "utilization", "status", "currency"],
+  "ranking": ["ttmActualRepurchaseValue", "buybackYield", "authorizationUtilization"],
+  "metricRules": { "buybackYieldNumerator": "TTM_ACTUAL_REPURCHASE_VALUE", "authorizationIsNotExecution": true, "doNotInferSharesFromPrice": true }
+}

@@ -1,0 +1,5 @@
+{
+  "assetClass":"GLOBAL CREDIT SPREAD",
+  "layers":{"L0":"official-registry","L1":"universe","L2":["historical","latest","comparison","chart","archive","retry","checkpoint","scheduler"],"L3":["daily","weekly","monthly"],"L4":"latest","L5":"freshness","L6":"technical","L7":"comparison","L8":"incremental","L9":"archive","L10":"retry","L11":"checkpoint","L12":"standalone-runner"},
+  "status":"READY"
+}

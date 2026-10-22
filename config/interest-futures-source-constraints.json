@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "lastVerifiedAt": "2026-08-10T00:00:00Z",
+  "entities": {
+    "CME_SOFR_3M": { "sourceState": "SOURCE_ACCESS_BLOCKED", "missingReason": "CME official settlement endpoint access blocked", "retryPolicy": "MANUAL_NETWORK_RECHECK" },
+    "CME_SOFR_1M": { "sourceState": "SOURCE_ACCESS_BLOCKED", "missingReason": "CME official settlement endpoint access blocked", "retryPolicy": "MANUAL_NETWORK_RECHECK" },
+    "CME_FED_FUNDS_30D": { "sourceState": "SOURCE_ACCESS_BLOCKED", "missingReason": "CME official settlement endpoint access blocked", "retryPolicy": "MANUAL_NETWORK_RECHECK" },
+    "CME_EURODOLLAR": { "sourceState": "SOURCE_ACCESS_BLOCKED", "missingReason": "CME historical official endpoint access blocked", "retryPolicy": "MANUAL_NETWORK_RECHECK" },
+    "ICE_EURIBOR_3M": { "sourceState": "SOURCE_SEMANTICS_PENDING", "missingReason": "ICE HTML page does not prove machine-readable settlement mapping", "retryPolicy": "SOURCE_RECOVERY_REQUIRED" },
+    "ICE_SONIA_3M": { "sourceState": "SOURCE_SEMANTICS_PENDING", "missingReason": "ICE HTML page does not prove machine-readable settlement mapping", "retryPolicy": "SOURCE_RECOVERY_REQUIRED" },
+    "EUREX_SARON_3M": { "sourceState": "SOURCE_ACCESS_BLOCKED", "missingReason": "Eurex official endpoint access blocked", "retryPolicy": "MANUAL_NETWORK_RECHECK" },
+    "SGX_TONA_3M": { "sourceState": "SOURCE_ACCESS_BLOCKED", "missingReason": "SGX official endpoint access blocked", "retryPolicy": "MANUAL_NETWORK_RECHECK" },
+    "OSE_TONA_3M": { "sourceState": "SOURCE_READY", "missingReason": null, "retryPolicy": "PERIODIC_ACCESS_RECHECK" }
+  }
+}

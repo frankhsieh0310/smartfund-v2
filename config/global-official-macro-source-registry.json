@@ -1,0 +1,30 @@
+{
+  "version": "GLOBAL_OFFICIAL_MACRO_SOURCE_REGISTRY_V1",
+  "asset": "GLOBAL_MACRO",
+  "discoveryMasters": [
+    {"id":"SMARTFUND_COUNTRY_REGISTRY","status":"CONNECTED","role":"CANONICAL_COUNTRY_IDENTITY"},
+    {"id":"IMF_DSBB_SDDS_EGDDS_NSDP","status":"AUTO_CONTINUING","role":"COUNTRY_OFFICIAL_SOURCE_DISCOVERY","owner":"GLOBAL_MACRO_PUBLIC_MESH"},
+    {"id":"BIS_CENTRAL_BANK_DIRECTORY","status":"AUTO_CONTINUING","role":"CENTRAL_BANK_DISCOVERY","owner":"GLOBAL_MACRO_PUBLIC_MESH"},
+    {"id":"ACTIVE_SHARED_LOCALE_MODEL","status":"AUTO_CONTINUING","role":"OFFICIAL_MULTILINGUAL_IDENTITY","inputGate":"OFFICIAL_LOCALIZED_METADATA"}
+  ],
+  "sourcePriority": ["DIRECT_NATIONAL_OFFICIAL","DIRECT_INTERNATIONAL_OFFICIAL","PUBLIC_RESEARCH_INSTITUTION","OFFICIAL_AGGREGATOR_BACKUP","SUPPLEMENTAL_PUBLIC"],
+  "internationalSources": [
+    {"id":"IMF","status":"CONNECTED","owner":"MACRO_PRODUCTION_DAILY","adapter":"ImfProviderAdapter","datasets":["IFS","WEO","BOP","IIP","GFS","RESERVES","EXTERNAL_DEBT","FINANCIAL_STATISTICS"],"expansion":"INPUT_GATED_AUTO_CONTINUING"},
+    {"id":"WORLD_BANK","status":"CONNECTED","owner":"MACRO_PRODUCTION_DAILY","adapter":"WorldBankProviderAdapter","datasets":["WDI","GEM","IDS","ICP_PPP","STRUCTURAL_DEVELOPMENT"],"expansion":"AUTO_CONTINUING"},
+    {"id":"OECD","status":"CONNECTED","owner":"MACRO_PRODUCTION_DAILY","adapter":"OecdProviderAdapter","datasets":["MEI","NATIONAL_ACCOUNTS","PRICES","LABOUR","SURVEYS","CLI","PPP","PRODUCTIVITY","TRADE"],"expansion":"INPUT_GATED_AUTO_CONTINUING"},
+    {"id":"BIS","status":"AUTO_CONTINUING","owner":"SHARED_BIS_OFFICIAL_NODE_WORKER","adapter":"BIS_SDMX","registry":"config/bis-shared-official-registry.json"},
+    {"id":"UN_STATS","status":"WAITING_DEPENDENCY","owner":"GLOBAL_MACRO_PUBLIC_MESH","adapterFamily":"SDMX_OR_REST_JSON","requirement":"PUBLIC_MACHINE_READABLE_DATASET_ROUTE"},
+    {"id":"UNCTAD","status":"WAITING_DEPENDENCY","owner":"GLOBAL_MACRO_PUBLIC_MESH","adapterFamily":"SDMX_OR_REST_JSON","requirement":"PUBLIC_MACHINE_READABLE_DATASET_ROUTE"},
+    {"id":"UN_COMTRADE","status":"WAITING_DEPENDENCY","owner":"GLOBAL_MACRO_PUBLIC_MESH","adapterFamily":"REST_JSON","requirement":"PUBLIC_API_RATE_LIMIT_CONTRACT"},
+    {"id":"FAOSTAT","status":"WAITING_DEPENDENCY","owner":"GLOBAL_MACRO_PUBLIC_MESH","adapterFamily":"CSV_BULK","requirement":"MATERIAL_MACRO_DATASET_SELECTION"},
+    {"id":"WTO","status":"WAITING_DEPENDENCY","owner":"GLOBAL_MACRO_PUBLIC_MESH","adapterFamily":"SDMX_OR_CSV_BULK","requirement":"PUBLIC_MACHINE_READABLE_DATASET_ROUTE"},
+    {"id":"DBNOMICS","status":"CONNECTED_MAPPING_GATED","owner":"MACRO_PRODUCTION_DAILY","adapter":"DbnomicsProviderAdapter","role":"COVERAGE_EXPANSION_DISCOVERY_BACKUP","primaryAllowed":false},
+    {"id":"FRED","status":"CONNECTED","owner":"MACRO_PRODUCTION_DAILY","role":"US_PRIMARY_AND_INTERNATIONAL_BACKUP"},
+    {"id":"OWID","status":"WAITING_DEPENDENCY","owner":"GLOBAL_MACRO_PUBLIC_MESH","role":"SUPPLEMENTAL_PUBLIC","requirement":"NO_HIGHER_PRIORITY_CANONICAL_SOURCE"}
+  ],
+  "nationalDiscoveryRoles": ["CENTRAL_BANK_OR_MONETARY_AUTHORITY","NATIONAL_STATISTICAL_OFFICE","MINISTRY_OF_FINANCE_OR_TREASURY","CUSTOMS_OR_TRADE_AUTHORITY","LABOUR_STATISTICS_AUTHORITY","ECONOMIC_OR_PLANNING_MINISTRY","OFFICIAL_NATIONAL_DATA_PORTAL","NSDP"],
+  "researchSources": [{"id":"TIER_TIE","country":"TW","class":"RESEARCH_SURVEY_FORECAST","status":"WAITING_DEPENDENCY","requirement":"PUBLIC_STRUCTURED_LEGAL_SOURCE_AND_VINTAGE_CONTRACT","mayOverwriteOfficialActuals":false}],
+  "canonicalIdentity": {"oneSeriesPerEconomicGrain":true,"keyFields":["country","concept","frequency","unit","price_basis","seasonal_adjustment","transformation","currency","population_scope","industry_scope","maturity","counterparty"],"multipleSourceLineages":true,"blindMerge":false},
+  "reconciliation": {"statuses":["EXACT_DUPLICATE","REVISION_DIFFERENCE","FREQUENCY_MISMATCH","UNIT_MISMATCH","SEASONAL_ADJUSTMENT_MISMATCH","METHODOLOGY_MISMATCH"],"canonicalWriteRequiresVerifiedMapping":true},
+  "database": {"pool":"SUPABASE_TRANSACTION_POOLING_6543_PGBOUNCER","maxConcurrency":1,"boundedBatches":true,"checkpoint":true,"retryResume":true,"idempotentWrites":true}
+}

@@ -1,0 +1,52 @@
+{
+  "asset": "GLOBAL_INSTITUTIONAL_HOLDINGS",
+  "version": 2,
+  "migrationApproved": true,
+  "databaseWriteEnabled": true,
+  "batchSize": 25,
+  "canaryBatchSize": 1,
+  "pollIntervalMinutes": 360,
+  "heartbeatSeconds": 30,
+  "maxAttempts": 5,
+  "recovery": {
+    "parserName": "sec-13f-information-table",
+    "parserVersion": "2.0.0",
+    "canaryPeriods": 1,
+    "backgroundPeriodsPerInstitution": 4,
+    "usInstitutionTarget": 10,
+    "maxNonUsJurisdictions": 5,
+    "exactSecurityMappingOnly": true
+  },
+  "databaseBackoffSeconds": [30, 60, 300, 900],
+  "secUserAgent": "SmartFund Institutional Holdings Builder admin@smartfund.local",
+  "identityPolicy": {
+    "institutionPriority": ["REGULATOR_ID_OR_CIK", "LEI", "OFFICIAL_FILING_IDENTIFIER", "LEGAL_NAME_PLUS_JURISDICTION"],
+    "securityCanonicalModel": "Stock",
+    "securityCanonicalKey": "stocks.id",
+    "securityNaturalKey": ["ticker", "exchange"],
+    "neverMerge": ["shareClass", "putCall", "reportingPeriod", "amendment"]
+  },
+  "officialSourceRegistry": [
+    {"id":"sec-edgar-13f","jurisdiction":"US","regulator":"SEC","filingTypes":["13F-HR","13F-HR/A"],"sourceUrl":"https://data.sec.gov/submissions/CIK{cik}.json","publicationFrequency":"quarterly","reportingDelay":"45 days after quarter end","amendmentRules":"/A preserved as a new amendment sequence; original never overwritten","licensingStatus":"official public filing; SEC fair-access policy applies","parserVersion":"1.0.0","sourceLineage":"SEC EDGAR submissions and Archives information tables"},
+    {"id":"sec-edgar-nport","jurisdiction":"US","regulator":"SEC","filingTypes":["NPORT-P","NPORT-P/A"],"sourceUrl":"https://www.sec.gov/edgar/search/","publicationFrequency":"monthly filing; public availability subject to SEC rules","reportingDelay":"regulatory schedule","amendmentRules":"amendments versioned","licensingStatus":"official public scope only","parserVersion":"registry-only-1.0.0","sourceLineage":"SEC EDGAR"},
+    {"id":"sec-edgar-beneficial","jurisdiction":"US","regulator":"SEC","filingTypes":["SC 13D","SC 13D/A","SC 13G","SC 13G/A"],"sourceUrl":"https://data.sec.gov/submissions/CIK{cik}.json","publicationFrequency":"event driven","reportingDelay":"statutory filing deadline","amendmentRules":"amendments versioned","licensingStatus":"official public filing","parserVersion":"registry-only-1.0.0","sourceLineage":"SEC EDGAR"},
+    {"id":"fca-major-shareholdings","jurisdiction":"GB","regulator":"FCA","filingTypes":["TR-1"],"sourceUrl":"https://data.fca.org.uk/artefacts/NSM/Portal/NI-000005.html","publicationFrequency":"event driven","reportingDelay":"regulatory deadline","amendmentRules":"corrections preserved","licensingStatus":"official public notices","parserVersion":"registry-only-1.0.0","sourceLineage":"FCA National Storage Mechanism"},
+    {"id":"eu-national-major-holdings","jurisdiction":"EU/EEA","regulator":"National competent authorities and regulated markets","filingTypes":["MAJOR_HOLDING_NOTIFICATION"],"sourceUrl":"https://www.esma.europa.eu/about-esma/esma-in-the-eu/member-states-and-national-competent-authorities","publicationFrequency":"event driven","reportingDelay":"national rules","amendmentRules":"jurisdiction specific; preserve revisions","licensingStatus":"SOURCE_NOT_PROVIDED until per-country adapter review","parserVersion":"registry-only-1.0.0","sourceLineage":"official NCA, exchange, and issuer notices"},
+    {"id":"edinet-jpx-large-shareholding","jurisdiction":"JP","regulator":"FSA/EDINET and JPX","filingTypes":["LARGE_SHAREHOLDING_REPORT","AMENDMENT"],"sourceUrl":"https://disclosure2.edinet-fsa.go.jp/","publicationFrequency":"event driven","reportingDelay":"statutory deadline","amendmentRules":"amendments preserved","licensingStatus":"official; API terms apply","parserVersion":"registry-only-1.0.0","sourceLineage":"EDINET/JPX"},
+    {"id":"hkex-di","jurisdiction":"HK","regulator":"HKEX/SFC","filingTypes":["DISCLOSURE_OF_INTERESTS"],"sourceUrl":"https://di.hkex.com.hk/di/NSAllFormList.aspx","publicationFrequency":"event driven","reportingDelay":"statutory deadline","amendmentRules":"subsequent filings preserved","licensingStatus":"official public search; automation terms require review","parserVersion":"registry-only-1.0.0","sourceLineage":"HKEX Disclosure of Interests"},
+    {"id":"twse-mops-major-shareholders","jurisdiction":"TW","regulator":"FSC/TWSE","filingTypes":["MAJOR_SHAREHOLDER_DISCLOSURE"],"sourceUrl":"https://mops.twse.com.tw/mops/web/index","publicationFrequency":"event/periodic","reportingDelay":"local rules","amendmentRules":"corrections preserved","licensingStatus":"official public portal; adapter review required","parserVersion":"registry-only-1.0.0","sourceLineage":"MOPS/TWSE"},
+    {"id":"sgx-substantial-shareholders","jurisdiction":"SG","regulator":"SGX/MAS","filingTypes":["SUBSTANTIAL_SHAREHOLDER_NOTICE"],"sourceUrl":"https://www.sgx.com/securities/company-announcements","publicationFrequency":"event driven","reportingDelay":"local rules","amendmentRules":"notices preserved","licensingStatus":"official public announcements","parserVersion":"registry-only-1.0.0","sourceLineage":"SGXNet"},
+    {"id":"asx-substantial-holders","jurisdiction":"AU","regulator":"ASX/ASIC","filingTypes":["SUBSTANTIAL_HOLDER_NOTICE"],"sourceUrl":"https://www.asx.com.au/markets/trade-our-cash-market/announcements","publicationFrequency":"event driven","reportingDelay":"local rules","amendmentRules":"notices preserved","licensingStatus":"official public announcements","parserVersion":"registry-only-1.0.0","sourceLineage":"ASX announcements"},
+    {"id":"krx-major-shareholdings","jurisdiction":"KR","regulator":"FSS/KRX","filingTypes":["MAJOR_SHAREHOLDING_REPORT"],"sourceUrl":"https://dart.fss.or.kr/","publicationFrequency":"event driven","reportingDelay":"local rules","amendmentRules":"corrections preserved","licensingStatus":"official; OpenDART key may be required","parserVersion":"registry-only-1.0.0","sourceLineage":"DART/KRX"}
+  ],
+  "institutionUniverse": [
+    {"canonicalInstitutionId":"US-SEC-CIK-0001067983","legalName":"BERKSHIRE HATHAWAY INC","formerNames":[],"regulatorId":"0001067983","cik":"0001067983","lei":null,"country":"US","institutionType":"investment adviser / insurer conglomerate","filingStatus":"13F filer","activeStatus":"ACTIVE","sourceLineage":"SEC EDGAR","mappingStatus":"COMPLETE"}
+  ],
+  "filingUniverse": [
+    {"institutionId":"US-SEC-CIK-0001067983","sourceId":"sec-edgar-13f","filingTypes":["13F-HR","13F-HR/A"],"periodFrom":"1999-01-01","historical":"LEGAL_PUBLIC_SCOPE","latest":true}
+  ],
+  "coverageMatrix": [
+    {"market":"US","institutionScope":"SEC 13F filer canary","HistoricalFilings":"PARTIAL","LatestFiling":"PARTIAL","Holdings":"PARTIAL","FilingAmendments":"PARTIAL","NewPositions":"SOURCE_NOT_PROVIDED","ClosedPositions":"SOURCE_NOT_PROVIDED","IncreasedPositions":"SOURCE_NOT_PROVIDED","ReducedPositions":"SOURCE_NOT_PROVIDED","TopHoldings":"SOURCE_NOT_PROVIDED","PortfolioValue":"SOURCE_NOT_PROVIDED","SectorAllocation":"MAPPING_REQUIRED","CountryAllocation":"MAPPING_REQUIRED","Concentration":"SOURCE_NOT_PROVIDED","OwnershipPercentage":"PARTIAL","FilingLink":"COMPLETE","Archive":"COMPLETE","Retry":"COMPLETE","Checkpoint":"COMPLETE","Scheduler":"COMPLETE","MissingReason":"Information-table parser staged after filing discovery"},
+    {"market":"GB/EU/JP/HK/TW/SG/AU/KR","institutionScope":"official registry","HistoricalFilings":"SOURCE_NOT_PROVIDED","LatestFiling":"SOURCE_NOT_PROVIDED","Holdings":"SOURCE_NOT_PROVIDED","FilingAmendments":"SOURCE_NOT_PROVIDED","NewPositions":"SOURCE_NOT_PROVIDED","ClosedPositions":"SOURCE_NOT_PROVIDED","IncreasedPositions":"SOURCE_NOT_PROVIDED","ReducedPositions":"SOURCE_NOT_PROVIDED","TopHoldings":"SOURCE_NOT_PROVIDED","PortfolioValue":"SOURCE_NOT_PROVIDED","SectorAllocation":"MAPPING_REQUIRED","CountryAllocation":"MAPPING_REQUIRED","Concentration":"SOURCE_NOT_PROVIDED","OwnershipPercentage":"SOURCE_NOT_PROVIDED","FilingLink":"PARTIAL","Archive":"COMPLETE","Retry":"COMPLETE","Checkpoint":"COMPLETE","Scheduler":"COMPLETE","MissingReason":"Per-jurisdiction licensing and parser adapters pending"}
+  ]
+}

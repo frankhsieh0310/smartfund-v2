@@ -1,0 +1,289 @@
+{
+  "FINAL_TARGET": 331,
+  "FINAL_PASS": 292,
+  "FINAL_FAIL": 39,
+  "BY_ISSUER": {
+    "Cathay": {
+      "target": 41,
+      "pass": 41,
+      "fail": 0
+    },
+    "JPMorgan": {
+      "target": 2,
+      "pass": 2,
+      "fail": 0
+    },
+    "Allianz": {
+      "target": 3,
+      "pass": 3,
+      "fail": 0
+    },
+    "UPAMC": {
+      "target": 11,
+      "pass": 11,
+      "fail": 0
+    },
+    "AB": {
+      "target": 3,
+      "pass": 3,
+      "fail": 0
+    },
+    "Fubon": {
+      "target": 51,
+      "pass": 51,
+      "fail": 0
+    },
+    "CTBC": {
+      "target": 36,
+      "pass": 0,
+      "fail": 36
+    },
+    "KGI": {
+      "target": 18,
+      "pass": 18,
+      "fail": 0
+    },
+    "First": {
+      "target": 6,
+      "pass": 6,
+      "fail": 0
+    },
+    "FHT": {
+      "target": 21,
+      "pass": 21,
+      "fail": 0
+    },
+    "SinoPac": {
+      "target": 13,
+      "pass": 13,
+      "fail": 0
+    },
+    "Yuanta": {
+      "target": 54,
+      "pass": 54,
+      "fail": 0
+    },
+    "Capital": {
+      "target": 27,
+      "pass": 24,
+      "fail": 3
+    },
+    "Mega": {
+      "target": 9,
+      "pass": 9,
+      "fail": 0
+    },
+    "Taishin": {
+      "target": 21,
+      "pass": 21,
+      "fail": 0
+    },
+    "Nomura": {
+      "target": 11,
+      "pass": 11,
+      "fail": 0
+    },
+    "BlackRock": {
+      "target": 4,
+      "pass": 4,
+      "fail": 0
+    }
+  },
+  "FAILED": [
+    {
+      "issuer": "CTBC",
+      "ticker": "00406A",
+      "error": "CTBC_DATE_REQUIRED_00406A — this adapter does not default to today; caller must pass an explicit official data date"
+    },
+    {
+      "issuer": "CTBC",
+      "ticker": "00752",
+      "error": "CTBC_DATE_REQUIRED_00752 — this adapter does not default to today; caller must pass an explicit official data date"
+    },
+    {
+      "issuer": "CTBC",
+      "ticker": "00753L",
+      "error": "CTBC_DATE_REQUIRED_00753L — this adapter does not default to today; caller must pass an explicit official data date"
+    },
+    {
+      "issuer": "CTBC",
+      "ticker": "00882",
+      "error": "CTBC_DATE_REQUIRED_00882 — this adapter does not default to today; caller must pass an explicit official data date"
+    },
+    {
+      "issuer": "CTBC",
+      "ticker": "00891",
+      "error": "CTBC_DATE_REQUIRED_00891 — this adapter does not default to today; caller must pass an explicit official data date"
+    },
+    {
+      "issuer": "CTBC",
+      "ticker": "00894",
+      "error": "CTBC_DATE_REQUIRED_00894 — this adapter does not default to today; caller must pass an explicit official data date"
+    },
+    {
+      "issuer": "CTBC",
+      "ticker": "00896",
+      "error": "CTBC_DATE_REQUIRED_00896 — this adapter does not default to today; caller must pass an explicit official data date"
+    },
+    {
+      "issuer": "CTBC",
+      "ticker": "00902",
+      "error": "CTBC_DATE_REQUIRED_00902 — this adapter does not default to today; caller must pass an explicit official data date"
+    },
+    {
+      "issuer": "CTBC",
+      "ticker": "00912",
+      "error": "CTBC_DATE_REQUIRED_00912 — this adapter does not default to today; caller must pass an explicit official data date"
+    },
+    {
+      "issuer": "CTBC",
+      "ticker": "00917",
+      "error": "CTBC_DATE_REQUIRED_00917 — this adapter does not default to today; caller must pass an explicit official data date"
+    },
+    {
+      "issuer": "CTBC",
+      "ticker": "00934",
+      "error": "CTBC_DATE_REQUIRED_00934 — this adapter does not default to today; caller must pass an explicit official data date"
+    },
+    {
+      "issuer": "CTBC",
+      "ticker": "00941",
+      "error": "CTBC_DATE_REQUIRED_00941 — this adapter does not default to today; caller must pass an explicit official data date"
+    },
+    {
+      "issuer": "CTBC",
+      "ticker": "00954",
+      "error": "CTBC_DATE_REQUIRED_00954 — this adapter does not default to today; caller must pass an explicit official data date"
+    },
+    {
+      "issuer": "CTBC",
+      "ticker": "00956",
+      "error": "CTBC_DATE_REQUIRED_00956 — this adapter does not default to today; caller must pass an explicit official data date"
+    },
+    {
+      "issuer": "CTBC",
+      "ticker": "00963",
+      "error": "CTBC_DATE_REQUIRED_00963 — this adapter does not default to today; caller must pass an explicit official data date"
+    },
+    {
+      "issuer": "CTBC",
+      "ticker": "00964",
+      "error": "CTBC_DATE_REQUIRED_00964 — this adapter does not default to today; caller must pass an explicit official data date"
+    },
+    {
+      "issuer": "CTBC",
+      "ticker": "009800",
+      "error": "CTBC_DATE_REQUIRED_009800 — this adapter does not default to today; caller must pass an explicit official data date"
+    },
+    {
+      "issuer": "CTBC",
+      "ticker": "009801",
+      "error": "CTBC_DATE_REQUIRED_009801 — this adapter does not default to today; caller must pass an explicit official data date"
+    },
+    {
+      "issuer": "CTBC",
+      "ticker": "009819",
+      "error": "CTBC_DATE_REQUIRED_009819 — this adapter does not default to today; caller must pass an explicit official data date"
+    },
+    {
+      "issuer": "CTBC",
+      "ticker": "009828",
+      "error": "CTBC_DATE_REQUIRED_009828 — this adapter does not default to today; caller must pass an explicit official data date"
+    },
+    {
+      "issuer": "CTBC",
+      "ticker": "00983A",
+      "error": "CTBC_DATE_REQUIRED_00983A — this adapter does not default to today; caller must pass an explicit official data date"
+    },
+    {
+      "issuer": "CTBC",
+      "ticker": "00995A",
+      "error": "CTBC_DATE_REQUIRED_00995A — this adapter does not default to today; caller must pass an explicit official data date"
+    },
+    {
+      "issuer": "CTBC",
+      "ticker": "00772B",
+      "error": "CTBC_DATE_REQUIRED_00772B — this adapter does not default to today; caller must pass an explicit official data date"
+    },
+    {
+      "issuer": "CTBC",
+      "ticker": "00773B",
+      "error": "CTBC_DATE_REQUIRED_00773B — this adapter does not default to today; caller must pass an explicit official data date"
+    },
+    {
+      "issuer": "CTBC",
+      "ticker": "00795B",
+      "error": "CTBC_DATE_REQUIRED_00795B — this adapter does not default to today; caller must pass an explicit official data date"
+    },
+    {
+      "issuer": "CTBC",
+      "ticker": "00847B",
+      "error": "CTBC_DATE_REQUIRED_00847B — this adapter does not default to today; caller must pass an explicit official data date"
+    },
+    {
+      "issuer": "CTBC",
+      "ticker": "00848B",
+      "error": "CTBC_DATE_REQUIRED_00848B — this adapter does not default to today; caller must pass an explicit official data date"
+    },
+    {
+      "issuer": "CTBC",
+      "ticker": "00849B",
+      "error": "CTBC_DATE_REQUIRED_00849B — this adapter does not default to today; caller must pass an explicit official data date"
+    },
+    {
+      "issuer": "CTBC",
+      "ticker": "00862B",
+      "error": "CTBC_DATE_REQUIRED_00862B — this adapter does not default to today; caller must pass an explicit official data date"
+    },
+    {
+      "issuer": "CTBC",
+      "ticker": "00863B",
+      "error": "CTBC_DATE_REQUIRED_00863B — this adapter does not default to today; caller must pass an explicit official data date"
+    },
+    {
+      "issuer": "CTBC",
+      "ticker": "00864B",
+      "error": "CTBC_DATE_REQUIRED_00864B — this adapter does not default to today; caller must pass an explicit official data date"
+    },
+    {
+      "issuer": "CTBC",
+      "ticker": "00884B",
+      "error": "CTBC_DATE_REQUIRED_00884B — this adapter does not default to today; caller must pass an explicit official data date"
+    },
+    {
+      "issuer": "CTBC",
+      "ticker": "00928",
+      "error": "CTBC_DATE_REQUIRED_00928 — this adapter does not default to today; caller must pass an explicit official data date"
+    },
+    {
+      "issuer": "CTBC",
+      "ticker": "00948B",
+      "error": "CTBC_DATE_REQUIRED_00948B — this adapter does not default to today; caller must pass an explicit official data date"
+    },
+    {
+      "issuer": "CTBC",
+      "ticker": "00955",
+      "error": "CTBC_DATE_REQUIRED_00955 — this adapter does not default to today; caller must pass an explicit official data date"
+    },
+    {
+      "issuer": "CTBC",
+      "ticker": "00981D",
+      "error": "CTBC_DATE_REQUIRED_00981D — this adapter does not default to today; caller must pass an explicit official data date"
+    },
+    {
+      "issuer": "Capital",
+      "ticker": "00685L",
+      "error": "fetch failed"
+    },
+    {
+      "issuer": "Capital",
+      "ticker": "00860B",
+      "error": "fetch failed"
+    },
+    {
+      "issuer": "Capital",
+      "ticker": "009823",
+      "error": "fetch failed"
+    }
+  ]
+}

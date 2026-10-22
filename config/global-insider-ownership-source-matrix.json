@@ -1,0 +1,17 @@
+{
+  "asset": "GLOBAL_INSIDER_OWNERSHIP",
+  "jurisdictions": [
+    {"jurisdiction":"US","sourceStatus":"PUBLIC_OFFICIAL","sources":["SEC EDGAR Section 16","SEC Schedule 13D/13G","SEC DEF 14A"],"semantics":"Separate transaction, beneficial ownership, and proxy grains","comparableDisclosure":true,"licenseStatus":"PUBLIC_OFFICIAL"},
+    {"jurisdiction":"TAIWAN","sourceStatus":"PUBLIC_PARTIAL","sources":["MOPS","TWSE","TPEx"],"semantics":"Director, supervisor, officer and major-holder ownership; excludes institutional flow","comparableDisclosure":true,"licenseStatus":"PUBLIC_OFFICIAL"},
+    {"jurisdiction":"HONG_KONG","sourceStatus":"PUBLIC_OFFICIAL","sources":["HKEX Disclosure of Interests"],"semantics":"Substantial shareholder and director/chief executive long/short positions by share class","comparableDisclosure":true,"licenseStatus":"PUBLIC_OFFICIAL"},
+    {"jurisdiction":"JAPAN","sourceStatus":"SOURCE_PENDING","sources":["EDINET","JPX"],"semantics":"Large-shareholding and governance disclosures require source-specific parsing","comparableDisclosure":null,"licenseStatus":"PUBLIC_OFFICIAL"},
+    {"jurisdiction":"KOREA","sourceStatus":"SOURCE_PENDING","sources":["DART","KRX KIND"],"semantics":"Major-shareholder and executive disclosures require source-specific parsing","comparableDisclosure":null,"licenseStatus":"PUBLIC_OFFICIAL"},
+    {"jurisdiction":"SINGAPORE","sourceStatus":"SOURCE_PENDING","sources":["SGXNet"],"semantics":"Substantial shareholder and director interest disclosures","comparableDisclosure":null,"licenseStatus":"PUBLIC_OFFICIAL"},
+    {"jurisdiction":"AUSTRALIA","sourceStatus":"SOURCE_PENDING","sources":["ASX"],"semantics":"Substantial-holder and director-interest notices","comparableDisclosure":null,"licenseStatus":"PUBLIC_OFFICIAL"},
+    {"jurisdiction":"UK","sourceStatus":"SOURCE_PENDING","sources":["FCA NSM","Companies House"],"semantics":"Major holdings and persons with significant control","comparableDisclosure":null,"licenseStatus":"PUBLIC_OFFICIAL"},
+    {"jurisdiction":"EUROPE","sourceStatus":"SOURCE_PENDING","sources":[],"semantics":"Jurisdiction-specific major holdings regimes","comparableDisclosure":null,"licenseStatus":"UNKNOWN"},
+    {"jurisdiction":"CHINA","sourceStatus":"SOURCE_PENDING","sources":["SSE","SZSE"],"semantics":"Exchange and annual-report ownership disclosures","comparableDisclosure":null,"licenseStatus":"PUBLIC_OFFICIAL"},
+    {"jurisdiction":"CANADA","sourceStatus":"SOURCE_PENDING","sources":["SEDAR+","SEDI"],"semantics":"Insider and early-warning ownership disclosures","comparableDisclosure":null,"licenseStatus":"PUBLIC_PARTIAL"},
+    {"jurisdiction":"OTHER","sourceStatus":"LICENSE_PENDING","sources":[],"semantics":"Normalized cross-market feed may require license","comparableDisclosure":null,"licenseStatus":"LICENSE_PENDING"}
+  ]
+}

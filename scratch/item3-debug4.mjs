@@ -1,0 +1,10 @@
+import { PrismaClient } from '@prisma/client';
+const prisma = new PrismaClient();
+await prisma.$executeRawUnsafe(`SET statement_timeout = 15000`);
+const r = await prisma.$queryRawUnsafe(`
+  SELECT count(*)::int n FROM fund_distribution_observations fd
+  JOIN funds f ON f.id = fd.fund_id
+  WHERE f.data_provider = 'tdcc-offshore'
+`);
+console.log('tdcc-offshore distribution rows:', JSON.stringify(r));
+await prisma.$disconnect();

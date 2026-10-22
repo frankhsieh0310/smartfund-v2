@@ -1,0 +1,109 @@
+{
+  "version": 1,
+  "asset": "FIXED_INCOME",
+  "mode": "EXISTING_INPUTS_AND_WORKERS_ONLY",
+  "fullUniverseTarget": "FULL_ELIGIBLE_FIXED_INCOME_UNIVERSE",
+  "fullHistoryTarget": "FULL_RELIABLE_AVAILABLE_HISTORY",
+  "database": {
+    "poolMode": "SUPABASE_TRANSACTION_POOLING_6543_PGBOUNCER",
+    "maxConcurrency": 1,
+    "boundedBatching": true,
+    "checkpointRetryResume": true,
+    "idempotentWrites": true
+  },
+  "ownership": {
+    "originalWorkersPriority": true,
+    "railwayOwnershipPreserved": true,
+    "usTreasuryWriter": "RAILWAY_ONLY",
+    "desktopTreasuryMode": "READ_SHARED_OUTPUTS_ONLY"
+  },
+  "routes": [
+    {
+      "domain": "YIELD_CURVE_DEPTH",
+      "owner": "EXISTING_GOVERNMENT_YIELD_WORKERS",
+      "checkpoint": "runtime/government-yield/health.json",
+      "autoContinuing": ["SOVEREIGN_YIELD_CURVE", "CURVE_SLOPE", "2Y10Y", "CURVE_HISTORY", "CURVE_PERCENTILE", "CURVE_REGIME", "REAL_YIELD", "BREAKEVEN_INFLATION"],
+      "inputGatedAutoContinuing": ["PAR_CURVE", "ZERO_CURVE", "FORWARD_CURVE", "3M10Y", "5Y30Y", "CURVE_CURVATURE", "CURVE_BUTTERFLY", "TERM_PREMIUM"],
+      "gate": "REQUIRED_TENORS_OR_OFFICIAL_MODEL_SERIES_MUST_EXIST"
+    },
+    {
+      "domain": "CREDIT_SPREAD_DEPTH",
+      "owner": "EXISTING_CREDIT_SPREAD_WORKER",
+      "checkpoint": "runtime/credit-spread/checkpoint.json",
+      "autoContinuing": ["INVESTMENT_GRADE_SPREAD", "HIGH_YIELD_SPREAD", "CORPORATE_SPREAD", "OPTION_ADJUSTED_SPREAD_SUPPORTED_SERIES", "SPREAD_HISTORY", "SPREAD_PERCENTILE", "SPREAD_ZSCORE", "SPREAD_MOMENTUM", "SPREAD_CHANGE"],
+      "inputGatedAutoContinuing": ["CREDIT_RISK_PREMIUM"],
+      "needsSource": ["SOVEREIGN_SPREAD_BROAD", "EM_SPREAD_BROAD"],
+      "gate": "TRANSPARENT_BENCHMARK_AND_CASH_CREDIT_INPUTS_REQUIRED"
+    },
+    {
+      "domain": "DURATION_RATE_RISK",
+      "owner": "EXISTING_BOND_INCREMENTAL",
+      "checkpoint": "runtime/bond/global-individual-bond-queue/checkpoint.json",
+      "inputGatedAutoContinuing": ["DURATION", "MODIFIED_DURATION", "EFFECTIVE_DURATION", "CONVEXITY", "DV01", "PV01", "KEY_RATE_DURATION", "YIELD_BETA", "RATE_SENSITIVITY"],
+      "gate": "VERIFIED_PRICE_YIELD_COUPON_MATURITY_CASHFLOWS_AND_CURVE_REQUIRED"
+    },
+    {
+      "domain": "ISSUER_SECURITY_IDENTITY",
+      "owner": "EXISTING_BOND_INCREMENTAL_PLUS_SHARED_GLEIF",
+      "checkpoint": "runtime/fixed-income/depth-gap-work-queue.json",
+      "autoContinuing": ["ISIN", "LOCAL_SECURITY_ID", "CURRENCY", "COUNTRY", "SENIORITY", "SECURITY_TYPE"],
+      "inputGatedAutoContinuing": ["ISSUER_TO_LEI", "ISSUER_TO_SECURITY", "PARENT_RELATIONSHIP", "ULTIMATE_PARENT_RELATIONSHIP"],
+      "sourceNotPublic": ["CUSIP_WITHOUT_AUTHORIZED_PUBLIC_RECORD"],
+      "policy": "NEVER_OVERWRITE_STRONGER_CANONICAL_MAPPING"
+    },
+    {
+      "domain": "BOND_TERMS",
+      "owner": "EXISTING_BOND_INCREMENTAL",
+      "checkpoint": "runtime/fixed-income/depth-gap-work-queue.json#FIXED-INCOME-GAP-005",
+      "waitingDependency": ["ISSUE_DATE", "MATURITY_DATE", "COUPON", "COUPON_TYPE", "PAYMENT_FREQUENCY", "FACE_VALUE", "CURRENCY", "SENIORITY", "SECURED_UNSECURED", "CALLABLE", "PUTABLE", "CONVERTIBLE", "PERPETUAL", "FLOATING_FIXED", "REFERENCE_RATE", "SPREAD_OVER_REFERENCE", "CALL_SCHEDULE", "SINKING_FUND"],
+      "gate": "PUBLIC_OFFICIAL_OR_ISSUER_TERMS_INPUT_REQUIRED"
+    },
+    {
+      "domain": "TREASURY_RATES_MARKET_STRUCTURE",
+      "owner": "EXISTING_MONEY_MARKET_FED_AND_RAILWAY_TREASURY_WORKERS",
+      "checkpoint": "runtime/bond/ownership-health-projection.json",
+      "autoContinuing": ["SOFR", "REPO_RATES", "REVERSE_REPO", "FED_FUNDS", "TREASURY_AUCTION_RAILWAY_SCOPE"],
+      "needsSource": ["PRIMARY_DEALER_POSITIONS", "PRIMARY_DEALER_TRANSACTIONS", "PRIMARY_DEALER_FINANCING", "FAILS", "SOMA_HOLDINGS"],
+      "policy": "NO_DESKTOP_TREASURY_WRITER"
+    },
+    {
+      "domain": "BIS_FIXED_INCOME",
+      "owner": "SHARED_BIS_OFFICIAL_NODE_WORKER",
+      "checkpoint": "runtime/bis/checkpoint.json",
+      "autoContinuing": ["DEBT_SECURITIES", "INTERNATIONAL_BANKING", "CREDIT", "CREDIT_TO_GDP_GAP", "DEBT_SERVICE_RATIO", "GLOBAL_LIQUIDITY", "OTC_DERIVATIVES", "EXCHANGE_TRADED_DERIVATIVES"]
+    },
+    {
+      "domain": "TRANSACTION_LIQUIDITY",
+      "owner": "UNASSIGNED_UNTIL_AUTHORIZED_SOURCE",
+      "needsSource": ["TRACE_PUBLIC_AGGREGATES", "TURNOVER", "TRADE_FREQUENCY", "LIQUIDITY_COMPONENTS"],
+      "sourceNotPublic": ["TRACE_BOND_LEVEL_FULL_HISTORY", "TRACE_LICENSED_ENHANCED_TRANSACTIONS"],
+      "gatedFields": ["TRADE_PRICE", "TRADE_YIELD", "TRADE_VOLUME", "TRADE_COUNT", "TRADE_TIME", "LIQUIDITY_ACTIVITY"]
+    },
+    {
+      "domain": "CREDIT_QUALITY_DEFAULT",
+      "owner": "UNASSIGNED_UNTIL_AUTHORIZED_SOURCE",
+      "externallyBlocked": ["PROPRIETARY_CREDIT_RATING", "PROPRIETARY_RATING_HISTORY", "PROPRIETARY_UPGRADE_DOWNGRADE_EVENTS"],
+      "needsSource": ["PUBLIC_DEFAULT_HISTORY", "PUBLIC_RECOVERY_RATE", "DISTRESS_INDICATORS"],
+      "policy": "NO_UNAUTHORIZED_RATING_AGENCY_SCRAPING"
+    },
+    {
+      "domain": "FIXED_INCOME_ANALYTICS",
+      "owner": "EXISTING_YIELD_SPREAD_AND_BOND_ANALYTICS_LIFECYCLES",
+      "inputGatedAutoContinuing": ["ROLLING_RETURN", "VOLATILITY", "MAX_DRAWDOWN", "SHARPE", "SORTINO", "YIELD_TO_VOLATILITY", "SPREAD_TO_VOLATILITY", "DURATION_ADJUSTED_RETURN", "RATE_SHOCK_SCENARIOS", "CURVE_STEEPENING_SCENARIO", "CURVE_FLATTENING_SCENARIO", "PARALLEL_SHIFT_SCENARIO", "CREDIT_SPREAD_WIDENING_SCENARIO"],
+      "gate": "VERIFIED_PRICE_RETURN_DURATION_CURVE_OR_SPREAD_INPUTS_BY_METRIC"
+    },
+    {
+      "domain": "CROSS_ASSET_MACRO_LINKAGE",
+      "owner": "EXISTING_SHARED_BIS_MACRO_FX_ANALYTICS",
+      "inputGatedAutoContinuing": ["YIELD_VS_POLICY_RATE", "YIELD_VS_INFLATION", "REAL_YIELD_VS_GOLD", "CREDIT_SPREAD_VS_EQUITY", "GLOBAL_LIQUIDITY_VS_CREDIT", "FX_HEDGING_COST"],
+      "gate": "COMMON_DATE_VERIFIED_INPUTS_AND_FX_FORWARD_POINTS_WHERE_REQUIRED"
+    },
+    {
+      "domain": "MULTILINGUAL_IDENTITY",
+      "owner": "ACTIVE_SHARED_LOCALE_MODEL",
+      "waitingDependency": ["ISSUER_OFFICIAL_LOCALIZED_NAMES", "SECURITY_OFFICIAL_LOCALIZED_NAMES", "BOND_TYPE_OFFICIAL_LABELS", "COUNTRY_OFFICIAL_LABELS", "CURRENCY_OFFICIAL_LABELS", "MARKET_OFFICIAL_LABELS", "SENIORITY_TYPE_OFFICIAL_LABELS"],
+      "fields": ["canonical_name", "name_en", "name_zh_tw", "local_name", "official_name", "aliases", "language", "locale"],
+      "policy": "OFFICIAL_NAMES_ONLY_NO_CODE_TRANSLATION_NO_AI_TRANSLATION"
+    }
+  ]
+}

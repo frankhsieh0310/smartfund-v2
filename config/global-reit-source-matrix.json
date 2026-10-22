@@ -1,0 +1,14 @@
+{
+  "asset":"GLOBAL_REIT","version":1,
+  "markets":{
+    "US":{"identity":"PUBLIC_OFFICIAL","price":"PUBLIC_OFFICIAL","fundamentals":"PUBLIC_ISSUER","distributions":"PUBLIC_ISSUER","propertyExposure":"PUBLIC_ISSUER"},
+    "JP":{"identity":"PUBLIC_OFFICIAL","price":"PUBLIC_OFFICIAL","fundamentals":"PUBLIC_ISSUER","distributions":"PUBLIC_ISSUER","propertyExposure":"PUBLIC_ISSUER"},
+    "HK":{"identity":"PUBLIC_OFFICIAL","price":"PUBLIC_OFFICIAL","fundamentals":"PUBLIC_ISSUER","distributions":"PUBLIC_OFFICIAL","propertyExposure":"PUBLIC_ISSUER"},
+    "SG":{"identity":"PUBLIC_PARTIAL","price":"PUBLIC_OFFICIAL","fundamentals":"PUBLIC_ISSUER","distributions":"PUBLIC_OFFICIAL","propertyExposure":"PUBLIC_ISSUER"},
+    "AU":{"identity":"PUBLIC_PARTIAL","price":"PUBLIC_OFFICIAL","fundamentals":"PUBLIC_ISSUER","distributions":"PUBLIC_ISSUER","propertyExposure":"PUBLIC_ISSUER"},
+    "GB":{"identity":"PUBLIC_OFFICIAL","price":"PUBLIC_OFFICIAL","fundamentals":"PUBLIC_ISSUER","distributions":"PUBLIC_ISSUER","propertyExposure":"PUBLIC_ISSUER"}
+  },
+  "fieldPolicy":{"ffo":"PUBLIC_ISSUER","affo":"PUBLIC_ISSUER_OR_SOURCE_NOT_AVAILABLE","nav":"PUBLIC_ISSUER","occupancy":"PUBLIC_ISSUER","leverage":"PUBLIC_ISSUER"},
+  "licensed":{"FTSE_EPRA_NAREIT":"LICENSE_PENDING"},
+  "unknownStateAllowed":false
+}

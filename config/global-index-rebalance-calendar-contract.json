@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "asset": "GLOBAL_INDEX",
+  "dataType": "INDEX_REBALANCE_CALENDAR",
+  "separateFrom": "PIT_CONSTITUENTS",
+  "fields": ["index_id", "provider", "review_type", "announcement_date", "review_date", "reference_date", "effective_date", "expected_rebalance_date", "event_status", "source", "retrieved_at"],
+  "eventStatuses": ["SCHEDULED", "ANNOUNCED", "EFFECTIVE", "REVISED", "CANCELLED"],
+  "announcementChanges": ["ADDITION", "DELETION", "WEIGHT_CHANGE", "METHODOLOGY_CHANGE"],
+  "inferencePolicy": "NO_UNANNOUNCED_CHANGE_INFERENCE",
+  "owner": "GLOBAL_INDEX_CONSTITUENTS"
+}

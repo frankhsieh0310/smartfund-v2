@@ -1,0 +1,9 @@
+{
+  "asset": "GLOBAL_ANALYST_ESTIMATES",
+  "reviewedAt": "2026-08-10",
+  "providers": [
+    {"providerId":"FACTSET_ESTIMATES","providerName":"FactSet Estimates","providerType":"CONSENSUS_VENDOR","sourceUrl":"https://developer.factset.com/api-catalog/factset-estimates-api","domainsAvailable":["EPS","Revenue","EBITDA","Net Income","Ratings","Analyst-level","Historical revisions"],"accessStatus":"NOT_CONNECTED","redistributionStatus":"LICENSE_REVIEW_REQUIRED","licenseStatus":"LICENSE_PENDING","apiStatus":"AVAILABLE","verificationStatus":"OFFICIAL_PRODUCT_VERIFIED"},
+    {"providerId":"LSEG_IBES","providerName":"LSEG I/B/E/S","providerType":"CONSENSUS_VENDOR","sourceUrl":"https://developers.lseg.com/en/use-cases-catalog/company-screening-valuations-estimates","domainsAvailable":["EPS","Revenue","EBITDA","Net Income","Target Price","Ratings","Analyst-level","Historical revisions"],"accessStatus":"NOT_CONNECTED","redistributionStatus":"REDISTRIBUTION_LICENSE_REQUIRED","licenseStatus":"LICENSE_PENDING","apiStatus":"AVAILABLE_WITH_ENTITLEMENT","verificationStatus":"OFFICIAL_PRODUCT_VERIFIED"},
+    {"providerId":"VISIBLE_ALPHA","providerName":"Visible Alpha","providerType":"CONSENSUS_VENDOR","sourceUrl":"https://visiblealpha.com/brokers/","domainsAvailable":["EPS","Revenue","EBITDA","Net Income","Granular KPIs","Historical revisions"],"accessStatus":"NOT_CONNECTED","redistributionStatus":"SCRAPING_NOT_ALLOWED","licenseStatus":"LICENSE_PENDING","apiStatus":"CONTACT_PROVIDER","verificationStatus":"OFFICIAL_PRODUCT_VERIFIED"}
+  ]
+}

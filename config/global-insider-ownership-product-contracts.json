@@ -1,0 +1,8 @@
+{
+  "detail": ["issuerIdentity","latestAsOfDate","owners","roles","sharesHeld","ownershipPercent","votingPowerPercent","directIndirect","shareClass","ownershipHistory","ownershipChanges","managementAggregate","boardAggregate","majorOwnerAggregate","filingSource","freshness","provenance","coverageState","licenseState"],
+  "ownerDetail": ["ownerIdentity","issuerRelationships","roles","currentOwnership","historicalOwnership","changes","sourceFilings"],
+  "search": ["issuerTicker","issuerName","ownerName","role","market","ownershipRange"],
+  "screener": ["insiderOwnershipPercent","managementOwnershipPercent","boardOwnershipPercent","largestInsiderOwnerPercent","ownerCount","recentOwnershipChange"],
+  "compare": ["insiderOwnershipPercent","managementOwnershipPercent","boardOwnershipPercent","votingPowerPercent","ownerCount","ownershipConcentration","asOfDate","coveragePercent","disclosureRegime"],
+  "ranking": ["highestInsiderOwnership","highestManagementOwnership","largestOwnershipIncrease","largestVotingControl","disclosureRegimeWarning"]
+}

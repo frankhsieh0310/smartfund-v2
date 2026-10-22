@@ -1,0 +1,23 @@
+{
+  "asset": "GLOBAL_OPTIONS",
+  "version": 1,
+  "batchSize": 5000,
+  "incrementalIntervalMs": 900000,
+  "sources": [{
+    "id": "cboe-delayed-options",
+    "authority": "Cboe Global Markets",
+    "official": true,
+    "automatable": true,
+    "baseUrl": "https://cdn.cboe.com/api/global/delayed_quotes/options",
+    "frequency": "delayed/intraday",
+    "termsUrl": "https://www.cboe.com/terms/"
+  }],
+  "canary": [
+    { "symbol": "SPY", "optionType": "ETF", "exchange": "CBOE", "multiplier": 100, "currency": "USD", "canonicalIdentity": { "model": "Etf", "id": "02a13db6-2f62-4e1f-a10a-5038321dfb4f", "exactKey": { "code": "SPY" } } }
+  ],
+  "universe": [
+    { "symbol": "SPX", "sourceSymbol": "_SPX", "optionType": "INDEX", "exchange": "CBOE", "multiplier": 100, "currency": "USD", "canonicalIdentity": { "model": "GlobalIndexRegistry", "id": "sp-500", "exactKey": { "symbol": "^GSPC" } } },
+    { "symbol": "SPY", "optionType": "ETF", "exchange": "CBOE", "multiplier": 100, "currency": "USD", "canonicalIdentity": { "model": "Etf", "id": "02a13db6-2f62-4e1f-a10a-5038321dfb4f", "exactKey": { "code": "SPY" } } },
+    { "symbol": "AAPL", "optionType": "STOCK", "exchange": "CBOE", "multiplier": 100, "currency": "USD", "canonicalIdentity": { "model": "Stock", "id": "1475520f-f8c3-4616-83de-a5984003d498", "exactKey": { "ticker": "AAPL", "exchange": "NASDAQ" } } }
+  ]
+}

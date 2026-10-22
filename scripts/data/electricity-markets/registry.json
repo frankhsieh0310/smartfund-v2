@@ -1,0 +1,22 @@
+{
+  "asset": "GLOBAL_ELECTRICITY_MARKETS",
+  "policy": {
+    "physicalSpotOnly": true,
+    "excludeCommodityFutures": true,
+    "partition": ["market", "deliveryDate"],
+    "boundedBatchHours": 24
+  },
+  "markets": [
+    { "id": "caiso", "market": "CAISO", "officialName": "California Independent System Operator", "operator": "CAISO", "operatorType": "ISO", "country": "US", "jurisdiction": "United States", "region": "California", "timezone": "America/Los_Angeles", "currency": "USD", "unit": "USD/MWh", "marketType": "DAY_AHEAD", "priceType": "NODAL_LMP", "officialUrl": "https://www.caiso.com/", "verificationStatus": "VERIFIED_OFFICIAL", "coverageStatus": "PARSER_PENDING", "adapter": "caiso-oasis", "canary": true },
+    { "id": "gb-elexon", "market": "GB", "officialName": "Great Britain Balancing Mechanism", "operator": "Elexon", "operatorType": "MARKET_OPERATOR", "country": "GB", "jurisdiction": "Great Britain", "region": "Great Britain", "timezone": "Europe/London", "currency": "GBP", "unit": "GBP/MWh", "marketType": "BALANCING", "priceType": "SYSTEM_PRICE", "officialUrl": "https://data.elexon.co.uk/", "verificationStatus": "VERIFIED_OFFICIAL", "coverageStatus": "SOURCE_READY", "adapter": "elexon-bmrs", "canary": true },
+    { "id": "aemo-nem", "market": "NEM", "officialName": "National Electricity Market", "operator": "AEMO", "operatorType": "MARKET_OPERATOR", "country": "AU", "jurisdiction": "Australia", "region": "National Electricity Market", "timezone": "Australia/Sydney", "currency": "AUD", "unit": "AUD/MWh", "marketType": "REAL_TIME", "priceType": "ZONAL_PRICE", "officialUrl": "https://www.aemo.com.au/", "verificationStatus": "VERIFIED_OFFICIAL", "coverageStatus": "PARSER_PENDING", "adapter": "aemo-nemweb", "canary": true },
+    { "id": "pjm", "market": "PJM", "country": "US", "region": "PJM", "timezone": "America/New_York", "adapter": "pending-official" },
+    { "id": "ercot", "market": "ERCOT", "country": "US", "region": "Texas", "timezone": "America/Chicago", "adapter": "pending-official" },
+    { "id": "nyiso", "market": "NYISO", "country": "US", "region": "New York", "timezone": "America/New_York", "adapter": "pending-official" },
+    { "id": "miso", "market": "MISO", "country": "US", "region": "Midcontinent", "timezone": "America/Chicago", "adapter": "pending-official" },
+    { "id": "iso-ne", "market": "ISO-NE", "country": "US", "region": "New England", "timezone": "America/New_York", "adapter": "pending-official" },
+    { "id": "spp", "market": "SPP", "country": "US", "region": "Southwest Power Pool", "timezone": "America/Chicago", "adapter": "pending-official" },
+    { "id": "entso-e", "market": "ENTSO-E", "country": "EU", "region": "Europe", "timezone": "UTC", "adapter": "pending-token" },
+    { "id": "jepx", "market": "JEPX", "country": "JP", "region": "Japan", "timezone": "Asia/Tokyo", "adapter": "pending-official" }
+  ]
+}

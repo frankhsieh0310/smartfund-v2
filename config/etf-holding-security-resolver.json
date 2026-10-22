@@ -1,0 +1,10 @@
+{
+  "asset":"GLOBAL_ETF",
+  "batchSize":500,
+  "maxDbConcurrency":1,
+  "mappingPriority":["EXACT_ISIN","EXACT_CUSIP"],
+  "allowNameMatch":false,
+  "allowTickerOnly":false,
+  "createMissingSecurity":false,
+  "incrementalCadenceMs":21600000
+}

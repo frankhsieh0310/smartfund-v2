@@ -1,0 +1,39 @@
+{
+  "asset": "GLOBAL_STOCK_GUIDANCE",
+  "version": 1,
+  "owner": "GLOBAL_STOCK_GUIDANCE",
+  "launchPolicy": "READY_TO_START_EXPLICIT_LIFECYCLE_TICKET_REQUIRED",
+  "pit": {
+    "reportedAt": "official disclosure or filing publication date/time",
+    "knownAt": "first official public availability; never synthesized from a date-only source",
+    "effectiveAsOf": "research-visible observation time; never earlier than knownAt",
+    "dateOnlyPrecision": "DATE_ONLY",
+    "missingEvidence": "PIT_EVIDENCE_INCOMPLETE"
+  },
+  "sources": {
+    "SEC_EDGAR": {
+      "status": "FOUNDATION_READY",
+      "identityRegistry": "https://www.sec.gov/files/company_tickers_exchange.json",
+      "submissions": "https://data.sec.gov/submissions/CIK{cik10}.json",
+      "archive": "https://www.sec.gov/Archives/edgar/data/{cik}/{accessionCompact}/{document}",
+      "forms": ["8-K", "10-Q", "10-K", "6-K", "20-F", "40-F"],
+      "identityRule": "EXACT_TICKER_AND_EXCHANGE_ONLY",
+      "cursor": ["stockId", "cik", "accessionNumber", "form", "filingDate", "acceptanceDateTime", "primaryDocument", "parserStatus"]
+    },
+    "TWSE_MOPS": {
+      "status": "CHILD_PARSER_FOUNDATION_READY",
+      "artifactRoot": "runtime/mops-by-stock",
+      "identityRule": "EXACT_OFFICIAL_COMPANY_CODE_ONLY",
+      "promotionGate": ["DETERMINISTIC_COMPANY", "EXPLICIT_FORWARD_LANGUAGE", "DETERMINISTIC_METRIC", "DETERMINISTIC_PERIOD", "DETERMINISTIC_NUMERIC_VALUE"]
+    },
+    "COMPANY_IR": {
+      "status": "REGISTRY_READY_NO_VERIFIED_ROUTES",
+      "blindCrawl": false,
+      "required": ["issuerId", "officialDomain", "documentRoute", "verificationStatus", "lastCheckedAt", "checkpoint", "sourceStatus"]
+    }
+  },
+  "eligibilityStates": ["ELIGIBLE", "NO_GUIDANCE_DISCLOSED", "SOURCE_REQUIRED", "SOURCE_LIMITED", "LICENSE_CONSTRAINED", "IDENTITY_PENDING", "NOT_APPLICABLE", "INACTIVE"],
+  "metrics": ["REVENUE", "EPS", "OPERATING_INCOME", "GROSS_MARGIN", "OPERATING_MARGIN", "CAPEX", "FCF", "SHIPMENTS", "PRODUCTION", "BOOKINGS", "ORDERS", "OTHER"],
+  "periods": ["CURRENT_QUARTER", "NEXT_QUARTER", "CURRENT_FY", "NEXT_FY", "MULTI_YEAR", "CUSTOM_PERIOD"],
+  "launchPrerequisites": ["PIT_SCHEMA_READY", "MIGRATION_SAFE", "SEC_IDENTITY_READY", "SEC_DOCUMENT_CURSOR_READY", "MOPS_CANARY_PASS", "SINGLE_OWNER_READY"]
+}

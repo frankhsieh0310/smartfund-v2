@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "asset": "GLOBAL_FUND",
+  "priority": 9,
+  "existingFundPriority": 0,
+  "claimOnlyWhenExistingFundQueueIdle": true,
+  "uncertainMeansWait": true,
+  "backoffMs": 3600000,
+  "maxDbConcurrency": 1,
+  "fullUniverseAssigned": true,
+  "fullHistoryAssigned": true,
+  "incremental": true,
+  "scheduledRefresh": true,
+  "productTypes": ["OPEN_END_MUTUAL_FUND","ETF","CLOSED_END_FUND","INVESTMENT_TRUST","PUBLIC_PENSION","INSTITUTIONAL_ASSET_POOL"],
+  "routes": [
+    {"id":"MANAGER_PROSPECTUS_HISTORY","adapter":"PUBLIC_DOCUMENT_ADAPTER","inputs":["PROSPECTUS","FACTSHEET","MONTHLY_REPORT","ANNUAL_REPORT","REGULATORY_DOCUMENT"],"owner":"FUND_DATED_DISCLOSURE_LAYER","checkpoint":"runtime/global-fund/background-expansion/manager-history/checkpoint.json","status":"IDLE_GATED_AUTO_CONTINUING"},
+    {"id":"EU_SFDR_CLASSIFICATION_HISTORY","adapter":"EU_FUND_REGULATORY_CLASSIFICATION_LAYER","inputs":["REGULATOR_REGISTER","OFFICIAL_PROSPECTUS","OFFICIAL_PRIIPS_KID","OFFICIAL_ISSUER_DISCLOSURE"],"owner":"FUND_CLASSIFICATION_PLUS_DATED_DISCLOSURE","checkpoint":"runtime/global-fund/background-expansion/sfdr/checkpoint.json","status":"IDLE_GATED_AUTO_CONTINUING"},
+    {"id":"MERGER_LIQUIDATION_SUCCESSOR","adapter":"PUBLIC_DOCUMENT_ADAPTER","inputs":["REGULATORY_DOCUMENT","ISSUER_DOCUMENT","SEC","TDCC","MONEYDJ_SUPPLEMENTAL"],"owner":"FUND_LIFECYCLE_MANAGER","checkpoint":"runtime/global-fund/background-expansion/lifecycle/checkpoint.json","status":"IDLE_GATED_AUTO_CONTINUING"},
+    {"id":"TAIWAN_PUBLIC_PENSION","adapter":"GOV_OPEN_DATA_ADAPTER","productTypes":["PUBLIC_PENSION","INSTITUTIONAL_ASSET_POOL"],"inputs":["BUREAU_OF_LABOR_FUNDS_OFFICIAL","PUBLIC_SERVICE_PENSION_FUND_OFFICIAL"],"owner":"BACKGROUND_PUBLIC_EXPANSION_WORKER","checkpoint":"runtime/global-fund/background-expansion/taiwan-pension/checkpoint.json","status":"IDLE_GATED_AUTO_CONTINUING"},
+    {"id":"UK_INVESTMENT_TRUST","adapter":"PUBLIC_DOCUMENT_ADAPTER","productTypes":["CLOSED_END_FUND","INVESTMENT_TRUST"],"inputs":["AIC_PUBLIC","COMPANIES_HOUSE","ISSUER_OFFICIAL","LSE_PUBLIC_DISCLOSURE"],"owner":"BACKGROUND_PUBLIC_EXPANSION_WORKER","checkpoint":"runtime/global-fund/background-expansion/uk-investment-trust/checkpoint.json","status":"IDLE_GATED_AUTO_CONTINUING"}
+  ],
+  "dedup": {"identityOrder":["ISIN","REGULATORY_ID","OFFICIAL_FUND_ID","SHARE_CLASS_ID","LEI","EXCHANGE_LISTING_ID"],"neverCrossProductTypeMerge":true,"neverDeletePredecessor":true,"preserveSourceLineage":true,"preserveObservationReconciliation":true},
+  "multilingualOwner": "ACTIVE_SHARED_LOCALE_MODEL"
+}

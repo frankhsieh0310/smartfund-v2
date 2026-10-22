@@ -1,0 +1,32 @@
+{
+  "version": "FUTURES_INVESTING_PUBLIC_CATALOG_V1",
+  "asset": "FUTURES",
+  "source": "INVESTING_PUBLIC",
+  "discoveryOnly": true,
+  "canonicalPromotionRequiresOfficialExchangeEvidence": true,
+  "marketDataObservationIngestionEnabled": false,
+  "maxDbConcurrency": 1,
+  "catalogBatchSize": 100,
+  "detailBatchSize": 10,
+  "retryDelayMs": 21600000,
+  "routes": [
+    { "id": "SPECIFICATIONS", "url": "https://www.investing.com/commodities/futures-specifications", "categories": ["METALS", "ENERGY", "SOFTS", "GRAINS", "MEATS", "INDICES", "FINANCIALS"] },
+    { "id": "CURRENCY_FUTURES", "url": "https://www.investing.com/currencies/fx-futures", "categories": ["FX"] },
+    { "id": "FINANCIAL_FUTURES", "url": "https://www.investing.com/rates-bonds/financial-futures", "categories": ["RATE", "BOND"] },
+    { "id": "INDEX_FUTURES", "url": "https://www.investing.com/indices/indices-futures", "categories": ["INDEX"] },
+    { "id": "EXPIRY_CALENDAR", "url": "https://www.investing.com/futures-expiration-calendar", "categories": ["EXPIRY"] }
+  ],
+  "rightsPolicy": {
+    "fieldPubliclyVisible": "DISCOVERY_EVIDENCE_ONLY",
+    "fieldMachineRetrievable": "REQUIRES_SUCCESSFUL_PUBLIC_HTTP_ROUTE",
+    "storageAllowed": "TERMS_REVIEW_REQUIRED",
+    "commercialServingAllowed": "TERMS_REVIEW_REQUIRED"
+  },
+  "protectedOwners": [
+    "FUTURES_SPEC_MARGIN_UNDERLYING_FOUNDATION",
+    "FUTURES_CONTRACT_MASTER",
+    "GLOBAL_FUTURES_CURRENT_CURVE",
+    "GLOBAL_FUTURES_POSITIONING",
+    "FUTURES_OPTIONS_ON_FUTURES"
+  ]
+}

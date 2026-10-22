@@ -135,6 +135,7 @@ const valueArg = (name: string) => process.argv.slice(2).find((arg) => arg.start
 const apply = args.has("--apply");
 const resume = args.has("--resume");
 const incremental = args.has("--incremental");
+const canary = args.has("--canary");
 const currentRocYear = new Date().getUTCFullYear() - 1911;
 const fromRocYear = Number(valueArg("--from-year") ?? (incremental ? currentRocYear - 1 : DEFAULT_FROM_ROC_YEAR));
 const toRocYear = Number(valueArg("--to-year") ?? currentRocYear);
@@ -543,7 +544,7 @@ function restoreSummary(checkpoint: FileCheckpoint | null): RunSummary {
 
 async function runMarket(market: Market): Promise<RunReport> {
   const startedAt = new Date().toISOString();
-  const jobId = `official-financial-${market.toLowerCase()}-${incremental ? "incremental" : "historical"}`;
+  const jobId = `official-financial-${market.toLowerCase()}-${canary ? "canary" : incremental ? "incremental" : "historical"}`;
   const runType = incremental ? "OFFICIAL_FINANCIAL_INCREMENTAL" : "OFFICIAL_FINANCIAL_HISTORICAL";
   const owner = `${process.env.RAILWAY_REPLICA_ID ?? "local"}:${process.pid}`;
   const prisma = apply ? new PrismaClient() : null;
@@ -607,9 +608,11 @@ async function runMarket(market: Market): Promise<RunReport> {
 
     const allTasks = createTasks(market);
     const resumeIndex = checkpoint?.lastSourceKey ? allTasks.findIndex((task) => task.sourceKey === checkpoint.lastSourceKey) : -1;
-    const tasks = apply
-      ? (resumeIndex >= 0 ? allTasks.slice(resumeIndex + 1) : allTasks)
-      : allTasks;
+    const tasks = canary
+      ? allTasks.slice(-1)
+      : apply
+        ? (resumeIndex >= 0 ? allTasks.slice(resumeIndex + 1) : allTasks)
+        : allTasks;
     if (checkpoint?.lastSourceKey && resumeIndex < 0) throw new Error(`CHECKPOINT_SOURCE_KEY_NOT_FOUND:${checkpoint.lastSourceKey}`);
 
     for (const task of tasks) {

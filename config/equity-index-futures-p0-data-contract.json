@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "assetClass": "EQUITY_INDEX_FUTURES",
+  "canonicalGrain": [
+    "FUTURES_PRODUCT_ROOT",
+    "LISTED_CONTRACT",
+    "CONTRACT_OBSERVATION",
+    "CONTINUOUS_SERIES",
+    "ROLL_EVENT"
+  ],
+  "relations": {
+    "productRoots": {
+      "required": ["rootId", "officialProductName", "rootSymbol", "exchange", "underlyingIndexName", "currency", "country", "region", "timezone", "provider", "status", "verificationStatus", "licenseStatus"],
+      "nullable": ["mic", "underlyingIndexId", "launchDate", "terminationDate"]
+    },
+    "listedContracts": {
+      "required": ["contractId", "rootId", "exchangeContractCode", "contractMonth", "contractYear", "expirationDate", "status", "source", "verificationStatus"],
+      "nullable": ["firstTradeDate", "lastTradeDate", "finalSettlementDate"]
+    },
+    "contractSpecifications": {
+      "required": ["rootId", "currency", "contractMultiplier", "priceQuotation", "minimumTick", "settlementType", "expirationRule", "deliveryType", "source", "verificationStatus"],
+      "nullable": ["contractSize", "tickValue", "settlementMethod", "tradingHours", "lastTradeRule"]
+    },
+    "contractObservations": {
+      "required": ["contractId", "observationTimestamp", "source", "verificationStatus", "licenseStatus", "ingestedAt"],
+      "nullable": ["open", "high", "low", "close", "last", "settlementPrice", "volume", "openInterest", "sourceRecordId", "sourceUrl"],
+      "canonicalMetricGrain": ["contractId", "observationDateOrTimestamp", "metricType", "value", "unitOrCurrency", "source", "sourceRecordReference", "retrievedAt", "verificationState", "qualityState"],
+      "deterministicUniqueKey": ["venue", "productCode", "contractMonth", "observationDateOrTimestamp", "metricType", "source"]
+    },
+    "contractEvents": {
+      "required": ["contractId", "eventType", "eventDate", "source", "verificationStatus"],
+      "eventTypes": ["LISTING", "FIRST_TRADE", "LAST_TRADE", "EXPIRY", "FINAL_SETTLEMENT"]
+    },
+    "continuousSeries": {
+      "required": ["continuousSeriesId", "rootId", "rollRule", "adjustmentMethod", "frequency", "sourceType", "calculationMethod", "status"],
+      "allowedRollRules": ["EXPIRY_BASED", "FIXED_DAYS_BEFORE_EXPIRY", "VOLUME_BASED", "OPEN_INTEREST_BASED"],
+      "allowedAdjustments": ["UNADJUSTED_CONTINUOUS", "BACK_ADJUSTED", "RATIO_ADJUSTED"],
+      "sourceType": "DERIVED"
+    },
+    "rollEvents": {
+      "required": ["continuousSeriesId", "fromContractId", "toContractId", "rollDate", "rollRule", "reason", "calculationMethod"],
+      "nullable": ["fromPrice", "toPrice", "adjustment"]
+    }
+  },
+  "semanticGates": {
+    "rootSnapshotIsContractObservation": false,
+    "settlementMayPopulateClose": false,
+    "historyRequiresVerifiedListedContract": true,
+    "volumeRollRequiresVolume": true,
+    "openInterestRollRequiresOpenInterest": true,
+    "continuousRequiresMultipleContractsAndRealRoll": true,
+    "underlyingLinkRequiresExactVerifiedMapping": true
+  },
+  "freshnessStates": ["CURRENT", "WAITING_FOR_MARKET_CLOSE", "WAITING_FOR_SETTLEMENT", "WAITING_FOR_SOURCE_PUBLICATION", "SOURCE_DELAYED", "STALE", "LICENSE_PENDING", "UNKNOWN"]
+}

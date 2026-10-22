@@ -1,0 +1,17 @@
+-- Canonical shipping-index schema package.
+-- Production deployment is gated because the repository migration history and
+-- Production _prisma_migrations ledger diverge. Do not execute this file directly.
+-- The authoritative additive DDL is:
+-- prisma/migrations/20260810120000_add_shipping_index_canonical_depth/migration.sql
+--
+-- Canonical target relations:
+--   shipping_indices
+--   shipping_index_observations
+--   shipping_index_derived
+--   shipping_index_methodologies
+--   shipping_index_routes
+--   shipping_index_events
+--   shipping_index_coverage
+--
+-- shipping_market_observations remains a separate SHIPPING_CONTEXT_INDICATOR
+-- relation and is excluded from the 14-index coverage denominator.

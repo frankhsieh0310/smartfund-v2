@@ -180,10 +180,8 @@ export async function GET(request: Request) {
           staleSkip++;
           continue;
         }
-        if (r.navDate === r.dbDate) {
-          noChange++;
-          continue;
-        }
+        // Equal source dates may contain a revision. The canonical writer checks
+        // source precedence and value equality; only identical values are NOOP.
       }
       const res = await persistFundNav(prisma, {
         fundId: r.fundId,

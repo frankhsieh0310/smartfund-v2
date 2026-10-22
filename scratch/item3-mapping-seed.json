@@ -1,0 +1,4382 @@
+[
+ {
+  "fundId": "a7158341-e064-4163-802e-4c08b54f9d42",
+  "code": "0150",
+  "yahooFundId": "F000001X70:FO"
+ },
+ {
+  "fundId": "a79c8eb7-c95a-4625-a2ed-4fe2d4f5dd70",
+  "code": "0280",
+  "yahooFundId": "FOGBR05JGL:FO"
+ },
+ {
+  "fundId": "c9330d40-25ae-4f17-8d28-2d0fcf90c6ed",
+  "code": "0352",
+  "yahooFundId": "F0GBR06Q3E:FO"
+ },
+ {
+  "fundId": "b478d2d2-b1eb-4883-9749-b5ecd5c34e56",
+  "code": "0355",
+  "yahooFundId": "F0GBR06IGV:FO"
+ },
+ {
+  "fundId": "2904a99b-a000-4d82-9c19-48cccddb7225",
+  "code": "0361",
+  "yahooFundId": "F0GBR06IG5:FO"
+ },
+ {
+  "fundId": "a3a97477-d646-4d25-b8d6-0d939a09156a",
+  "code": "0366",
+  "yahooFundId": "F0GBR06IGA:FO"
+ },
+ {
+  "fundId": "dd97ccf9-140a-453e-8a22-4b3d3cad8d44",
+  "code": "0417",
+  "yahooFundId": "F0000000Y8:FO"
+ },
+ {
+  "fundId": "d2759193-81e3-48c2-a846-f484f5e515b2",
+  "code": "0616",
+  "yahooFundId": "F0GBR0552Q:FO"
+ },
+ {
+  "fundId": "7c00e15e-db9a-44bb-9c82-4be4ebe83ee3",
+  "code": "0694",
+  "yahooFundId": "F0GBR06844:FO"
+ },
+ {
+  "fundId": "ab9649ad-e89a-4128-8cae-140bad1cb97f",
+  "code": "0700",
+  "yahooFundId": "F0GBR05534:FO"
+ },
+ {
+  "fundId": "cd32976b-da77-4ff0-b4dc-39323903e4a1",
+  "code": "0708",
+  "yahooFundId": "F0GBR05WPS:FO"
+ },
+ {
+  "fundId": "e04ed90a-448e-4c19-a7dd-805cd64386b2",
+  "code": "0750",
+  "yahooFundId": "F0GBR04ARR:FO"
+ },
+ {
+  "fundId": "db3a5aa6-4c59-4d18-ac6e-8ef64bd4c149",
+  "code": "0791",
+  "yahooFundId": "F0GBR04MBA:FO"
+ },
+ {
+  "fundId": "4d22bd08-83ec-4fa0-8980-02b9c017d001",
+  "code": "0799",
+  "yahooFundId": "F0GBR04BEM:FO"
+ },
+ {
+  "fundId": "e5f779cd-9f25-4c94-a191-80b81ad05f12",
+  "code": "0812",
+  "yahooFundId": "F0GBR04ARP:FO"
+ },
+ {
+  "fundId": "45f0db55-f5ce-4a4b-9ac6-3b08e97cee9a",
+  "code": "0825",
+  "yahooFundId": "F0GBR04N7P:FO"
+ },
+ {
+  "fundId": "2708e0ad-1d6d-48ad-814f-9be824e45e87",
+  "code": "0839",
+  "yahooFundId": "F0GBR04ARS:FO"
+ },
+ {
+  "fundId": "e4dc6241-86bf-4639-94fe-6ffd617b9838",
+  "code": "1079",
+  "yahooFundId": "F00000GVYM:FO"
+ },
+ {
+  "fundId": "2f026df4-9dd9-4f03-b470-64bdc8ea01e2",
+  "code": "1086",
+  "yahooFundId": "F00000GVYU:FO"
+ },
+ {
+  "fundId": "78f9a9d1-a73c-436a-8cb7-19cf85b02db0",
+  "code": "1090",
+  "yahooFundId": "F00000GVYY:FO"
+ },
+ {
+  "fundId": "8203967c-ed76-4f79-9f50-fe6bb38c0875",
+  "code": "1174",
+  "yahooFundId": "F00000JTUR:FO"
+ },
+ {
+  "fundId": "a3df355a-6d3f-4301-b2e1-b417a48c2a51",
+  "code": "1229",
+  "yahooFundId": "F00000M9M0:FO"
+ },
+ {
+  "fundId": "dd3bf31c-382f-4eb9-b665-59c35fdc71ce",
+  "code": "1339",
+  "yahooFundId": "F00000NO6Z:FO"
+ },
+ {
+  "fundId": "4c44eb43-69b6-4846-9ccc-988306cbe576",
+  "code": "1433",
+  "yahooFundId": "F00000PLJ6:FO"
+ },
+ {
+  "fundId": "31b030f2-0851-4b43-ac35-ac6c3bdde065",
+  "code": "1715",
+  "yahooFundId": "F00000V915:FO"
+ },
+ {
+  "fundId": "1b68db50-c805-45f5-800c-9054d65df562",
+  "code": "1716",
+  "yahooFundId": "F00000V8JC:FO"
+ },
+ {
+  "fundId": "b15d650b-7f51-496f-8641-93db4aee99a2",
+  "code": "1805",
+  "yahooFundId": "F00000WL3K:FO"
+ },
+ {
+  "fundId": "69006256-91e2-4f22-82e6-5c4c3b1c0528",
+  "code": "1930124",
+  "yahooFundId": "F0GBR055TF:FO"
+ },
+ {
+  "fundId": "8258b844-2771-4c07-a1db-7dd9d8ecc5c0",
+  "code": "1961",
+  "yahooFundId": "F00000YXI2:FO"
+ },
+ {
+  "fundId": "b615581f-dbea-44c1-b5c6-89e067459785",
+  "code": "1966",
+  "yahooFundId": "F00000YXHX:FO"
+ },
+ {
+  "fundId": "73df40b0-7b5d-46de-b33d-a17409d5fd83",
+  "code": "20026252",
+  "yahooFundId": "F00000PC05:FO"
+ },
+ {
+  "fundId": "1d5b06c0-1804-4f1a-bb51-11b8809a6ed0",
+  "code": "20240339",
+  "yahooFundId": "F00000PKSP:FO"
+ },
+ {
+  "fundId": "1706af88-732b-4335-adab-8eea574237d4",
+  "code": "2026",
+  "yahooFundId": "F00000Z6B0:FO"
+ },
+ {
+  "fundId": "2d3568d4-2cd2-40a9-8da3-71d4f3d64fff",
+  "code": "21529267",
+  "yahooFundId": "F00000Q3JZ:FO"
+ },
+ {
+  "fundId": "6680bbfe-2010-4fef-a909-cdec9ffa05ba",
+  "code": "2173",
+  "yahooFundId": "F000014FHA:FO"
+ },
+ {
+  "fundId": "63d9a0d4-11a4-40b4-8c36-3c340bb5d2bd",
+  "code": "2176",
+  "yahooFundId": "F000014FHB:FO"
+ },
+ {
+  "fundId": "1e5b8371-79e5-475d-956d-486fc62e2222",
+  "code": "2197",
+  "yahooFundId": "F000014BZV:FO"
+ },
+ {
+  "fundId": "c7ecc583-85d7-49c1-9d13-12f4a87d7347",
+  "code": "2370",
+  "yahooFundId": "F00001DHHQ:FO"
+ },
+ {
+  "fundId": "a592372e-9bc1-4c6d-bac7-1611f31845e1",
+  "code": "2429",
+  "yahooFundId": "F00001GLUE:FO"
+ },
+ {
+  "fundId": "3185c6d6-5858-4f9d-ba12-086e87687003",
+  "code": "2454",
+  "yahooFundId": "F00001KNS5:FO"
+ },
+ {
+  "fundId": "34e2d73d-0dfd-426e-b7b7-f48d170b984e",
+  "code": "2468721",
+  "yahooFundId": "F0GBR06TZN:FO"
+ },
+ {
+  "fundId": "e755604c-ac37-4622-8909-1f2aa523dd79",
+  "code": "2472",
+  "yahooFundId": "F00001LKS4:FO"
+ },
+ {
+  "fundId": "bc4de2bd-8842-4399-9461-ab0950a2cab9",
+  "code": "2487",
+  "yahooFundId": "F00001M67L:FO"
+ },
+ {
+  "fundId": "e6bffb24-9a6f-4403-bf36-563eb84bbbd3",
+  "code": "2492",
+  "yahooFundId": "F00001MGT4:FO"
+ },
+ {
+  "fundId": "507e782e-5ffc-4c98-bcba-d9d111c18d7f",
+  "code": "2497",
+  "yahooFundId": "F00001MOVA:FO"
+ },
+ {
+  "fundId": "dd47e74f-8021-4750-83cf-610ad3bad710",
+  "code": "2498",
+  "yahooFundId": "F00001MOVB:FO"
+ },
+ {
+  "fundId": "7db51a1b-dea4-4bdf-b53b-dddc2a13db6c",
+  "code": "2515",
+  "yahooFundId": "F00001P9OI:FO"
+ },
+ {
+  "fundId": "42007ee1-573d-461a-ba5d-bcdd9a4352d5",
+  "code": "29702571",
+  "yahooFundId": "F00000WE6B:FO"
+ },
+ {
+  "fundId": "44c425f0-c245-4c47-b48d-022412a08a84",
+  "code": "4732789",
+  "yahooFundId": "F000005OTJ:FO"
+ },
+ {
+  "fundId": "fd7cb126-b0f9-4f4a-80a5-ce75f33d6f20",
+  "code": "512728",
+  "yahooFundId": "F0GBR04AOT:FO"
+ },
+ {
+  "fundId": "e675f39c-b655-4218-8404-00994ce9dca1",
+  "code": "828785",
+  "yahooFundId": "F0GBR04AOE:FO"
+ },
+ {
+  "fundId": "f73d5c91-6a45-4d36-81bd-db834ccf85ae",
+  "code": "A164A",
+  "yahooFundId": "F00000WABV:FO"
+ },
+ {
+  "fundId": "b5b456f4-08b1-41b6-965c-a40dd89eb4b3",
+  "code": "A164I",
+  "yahooFundId": "F00000WABZ:FO"
+ },
+ {
+  "fundId": "ffde3e46-1c30-4fc1-82a4-e057e3a0afed",
+  "code": "A164X",
+  "yahooFundId": "F00000WAC0:FO"
+ },
+ {
+  "fundId": "bf174b91-e78d-4cee-a36f-12678b4a5f5e",
+  "code": "AAETA",
+  "yahooFundId": "F0GBR05X5N:FO"
+ },
+ {
+  "fundId": "39d5b892-63a6-416c-ad51-7486a648db01",
+  "code": "AAETY",
+  "yahooFundId": "F0GBR04SGC:FO"
+ },
+ {
+  "fundId": "b788c9ae-1621-4c27-8a13-50db4234aa80",
+  "code": "AB06X",
+  "yahooFundId": "F00000PAQ1:FO"
+ },
+ {
+  "fundId": "34fbed2a-675e-4648-b7e4-7feefdfc93aa",
+  "code": "ABAGPADAUDH",
+  "yahooFundId": "F00000T0K3:FO"
+ },
+ {
+  "fundId": "bccda392-93cc-41f4-b534-420a60735b20",
+  "code": "ABAGPADUSD",
+  "yahooFundId": "F00000T0K2:FO"
+ },
+ {
+  "fundId": "8b580dc2-1a26-4123-8f37-eba9be8277e3",
+  "code": "ABAGPADZARH",
+  "yahooFundId": "F00000T0K4:FO"
+ },
+ {
+  "fundId": "d6d4a63e-7d16-4529-8686-fb9191f48b4e",
+  "code": "ABAGPAEUR",
+  "yahooFundId": "F00001ECZK:FO"
+ },
+ {
+  "fundId": "a95e0161-cb7e-4382-b408-2504044bb321",
+  "code": "ABAGPAHEDGE",
+  "yahooFundId": "F00000JNAW:FO"
+ },
+ {
+  "fundId": "cf9235a5-293b-484b-9bd8-8a7695f75749",
+  "code": "ABAGPAPAUDH",
+  "yahooFundId": "F00001M697:FO"
+ },
+ {
+  "fundId": "148658ca-873a-4286-a616-9974b65bf11a",
+  "code": "ABAGPAPJPYH",
+  "yahooFundId": "F00001PPTO:FO"
+ },
+ {
+  "fundId": "61d93df2-5904-4b7e-91a2-0b863f43696d",
+  "code": "ABAGPAPUSD",
+  "yahooFundId": "F00001M698:FO"
+ },
+ {
+  "fundId": "7f39e462-8e73-4cb7-9a3e-4cc73e8d8776",
+  "code": "ABAGPAUSD",
+  "yahooFundId": "F0GBR04MRF:FO"
+ },
+ {
+  "fundId": "444efa85-9b15-4724-9e36-5d8f6cb436f2",
+  "code": "ABAGPEDAUDH",
+  "yahooFundId": "F000010N5F:FO"
+ },
+ {
+  "fundId": "f2cea02c-02e1-46b3-b9a2-3df65f693634",
+  "code": "ABAGPEDUSD",
+  "yahooFundId": "F000010N5G:FO"
+ },
+ {
+  "fundId": "e7b8c5fe-07e0-4cce-b00f-604eceac5bb9",
+  "code": "ABAGPEPAUDH",
+  "yahooFundId": "F00001M695:FO"
+ },
+ {
+  "fundId": "d2a5731e-6742-461e-9c1e-d45509490b68",
+  "code": "ABAGPEPJPYH",
+  "yahooFundId": "F00001PPTP:FO"
+ },
+ {
+  "fundId": "8749aac1-ed84-4ba9-911d-7af3ba030708",
+  "code": "ABAGPEPUSD",
+  "yahooFundId": "F00001M696:FO"
+ },
+ {
+  "fundId": "6de433e0-ac5f-4905-97a1-3ee5f6b68543",
+  "code": "ABAGPIHEDGE",
+  "yahooFundId": "F00000JNAZ:FO"
+ },
+ {
+  "fundId": "3b16bb0c-3296-4752-ac4d-f3e6414669be",
+  "code": "ABAGPIUSD",
+  "yahooFundId": "F0GBR05XJA:FO"
+ },
+ {
+  "fundId": "d333503e-e2e4-4864-9754-cb8fecf22fe5",
+  "code": "ABAGPS1AUDH",
+  "yahooFundId": "F00001DQJ0:FO"
+ },
+ {
+  "fundId": "4662d6fe-fc55-4ba9-b9dc-a66df688d705",
+  "code": "ABAGPS1USD",
+  "yahooFundId": "F0GBR05XKO:FO"
+ },
+ {
+  "fundId": "189a5e0b-18d0-45f2-a1eb-7d8a8b4b4ffe",
+  "code": "ABAGPSPUSD",
+  "yahooFundId": "F00001M694:FO"
+ },
+ {
+  "fundId": "38dcda0e-0d01-42be-8e58-58b2f2e0c8f0",
+  "code": "ABCUSEAUSD",
+  "yahooFundId": "F00000SE95:FO"
+ },
+ {
+  "fundId": "92d4f408-38ac-4218-8f15-5c6ca875b191",
+  "code": "ABCUSEIAUDH",
+  "yahooFundId": "F00000SJ2W:FO"
+ },
+ {
+  "fundId": "9e5d6af2-1ba4-4351-b7e6-0b8dae53f8db",
+  "code": "ABCUSEIUSD",
+  "yahooFundId": "F00000SE98:FO"
+ },
+ {
+  "fundId": "8f487c8e-35da-4116-88a0-027a34997d2a",
+  "code": "ABCUSES1USD",
+  "yahooFundId": "F00000SE9B:FO"
+ },
+ {
+  "fundId": "137693a3-4b53-42ba-8e1e-7c281713a413",
+  "code": "ABCUSESUSD",
+  "yahooFundId": "F00000SE9A:FO"
+ },
+ {
+  "fundId": "ca4a33c2-4ad8-47df-9627-952538cd6906",
+  "code": "ABIGFAEUR",
+  "yahooFundId": "F00001DIYL:FO"
+ },
+ {
+  "fundId": "025b7023-323f-427e-8427-8d264d97501a",
+  "code": "ABIGFAUSD",
+  "yahooFundId": "F000003SVG:FO"
+ },
+ {
+  "fundId": "35295af8-b945-4e96-b883-87c21eb63eb0",
+  "code": "ABIGFIUSD",
+  "yahooFundId": "F0GBR05XF2:FO"
+ },
+ {
+  "fundId": "78ff5272-d12a-41ee-a6f1-f6e48c62e2f5",
+  "code": "ABIGFS1USD",
+  "yahooFundId": "F00000V6YI:FO"
+ },
+ {
+  "fundId": "e5576160-0efc-46b1-b0a0-6d72aeb673cc",
+  "code": "ABIGFSUSD",
+  "yahooFundId": "F00000VEE3:FO"
+ },
+ {
+  "fundId": "e4f5ebff-7648-4251-a951-b69b32609f3c",
+  "code": "ABILFAEUR",
+  "yahooFundId": "F00001DIYI:FO"
+ },
+ {
+  "fundId": "f115867e-f403-4842-8221-3257f8f38531",
+  "code": "ABILFAUSD",
+  "yahooFundId": "F0GBR04NAB:FO"
+ },
+ {
+  "fundId": "4eab622d-5cfe-4494-ab00-43f61630c988",
+  "code": "ABMOPA2USD",
+  "yahooFundId": "F00000SVC0:FO"
+ },
+ {
+  "fundId": "44e48d5a-88bd-463c-80af-0b3c16bc4953",
+  "code": "ABMOPAAAUDH",
+  "yahooFundId": "F00000SVC6:FO"
+ },
+ {
+  "fundId": "ed0a5880-3b42-4b79-b07c-ffa5ec9d830d",
+  "code": "ABMOPAAUSD",
+  "yahooFundId": "F00000SVBY:FO"
+ },
+ {
+  "fundId": "38754468-74b3-4c25-80d3-4922d45fff9f",
+  "code": "ABMOPAAZARH",
+  "yahooFundId": "F00000T1C7:FO"
+ },
+ {
+  "fundId": "2205f0f4-fcec-46b5-b32b-f9b51c6f0165",
+  "code": "ABMOPATAUDH",
+  "yahooFundId": "F00000T1C8:FO"
+ },
+ {
+  "fundId": "04813f33-9227-494c-9e81-7493a5ae7605",
+  "code": "ABMOPATUSD",
+  "yahooFundId": "F00000SVBX:FO"
+ },
+ {
+  "fundId": "165e6bb3-8867-4aab-9d81-39867d08c8da",
+  "code": "ABMOPI2USD",
+  "yahooFundId": "F00000SVC4:FO"
+ },
+ {
+  "fundId": "5127e950-9b93-466b-ae0a-e64fca9bd8f7",
+  "code": "ABMOPS1AUDH",
+  "yahooFundId": "F00001DZF2:FO"
+ },
+ {
+  "fundId": "a053ba5b-2437-45a0-8f4f-8555754d1cce",
+  "code": "ABMOPS1USD",
+  "yahooFundId": "F00000SVBS:FO"
+ },
+ {
+  "fundId": "b7fd25df-4143-4edf-a162-d514ac4374a5",
+  "code": "ABMOPSAUSD",
+  "yahooFundId": "F00000TNYL:FO"
+ },
+ {
+  "fundId": "d28ae3ac-28b2-4519-b80f-e0ee562b2af1",
+  "code": "ABSMDA2EUR",
+  "yahooFundId": "F00001ED3Y:FO"
+ },
+ {
+  "fundId": "e22d5c93-4f73-4347-83b0-a2af9630f2df",
+  "code": "ABSMDA2USD",
+  "yahooFundId": "F0GBR04MS9:FO"
+ },
+ {
+  "fundId": "02e8afa7-cf60-4431-94fc-58aab5ea14a1",
+  "code": "ABSMDAUSD",
+  "yahooFundId": "F0GBR04I6I:FO"
+ },
+ {
+  "fundId": "cacb29a8-39c1-4689-b8e7-8174f1a65036",
+  "code": "ABSUEAAUDH",
+  "yahooFundId": "F00000YQT5:FO"
+ },
+ {
+  "fundId": "ffd1adfc-e2f0-4748-9edb-ec746a7cfb0d",
+  "code": "ABSUEAEUR",
+  "yahooFundId": "F00001ED45:FO"
+ },
+ {
+  "fundId": "14bf53de-f8e4-490e-9c12-e322c8c33b43",
+  "code": "ABSUEAUSD",
+  "yahooFundId": "F00000NDFL:FO"
+ },
+ {
+  "fundId": "0574f881-e604-495c-925b-b915d1239705",
+  "code": "ABSUEIAUDH",
+  "yahooFundId": "F00001DXG1:FO"
+ },
+ {
+  "fundId": "7fca8206-fa0c-4285-977b-c608f3c786be",
+  "code": "ABSUEIUSD",
+  "yahooFundId": "F00000NDFB:FO"
+ },
+ {
+  "fundId": "287fe0b6-5f4f-4a0d-8e82-4f5ee7c8abae",
+  "code": "ABSUES1USD",
+  "yahooFundId": "F00000NDFF:FO"
+ },
+ {
+  "fundId": "84bff44d-6ffe-4ade-80f3-a2f97d9e0f0b",
+  "code": "ABSUESUSD",
+  "yahooFundId": "F00000NDFD:FO"
+ },
+ {
+  "fundId": "c4a41028-6d88-483e-b1c4-6ae9dc2ab55b",
+  "code": "ABUSHYPA2USD",
+  "yahooFundId": "F00000O4XA:FO"
+ },
+ {
+  "fundId": "26289644-5ac5-4fd9-9f2e-016248527edb",
+  "code": "ABUSHYPAAAUDH",
+  "yahooFundId": "F000016RQ2:FO"
+ },
+ {
+  "fundId": "e4c65e61-3c67-43ba-8fb1-d0e9467ccba7",
+  "code": "ABUSHYPAAUSD",
+  "yahooFundId": "F000016RQ1:FO"
+ },
+ {
+  "fundId": "f6571e1c-0f2d-4387-9eec-7e23f14db15b",
+  "code": "ABUSHYPAIAUDH",
+  "yahooFundId": "F00001D8UD:FO"
+ },
+ {
+  "fundId": "cdbaaf72-74cf-46e1-b10c-e0ce9e7ff92b",
+  "code": "ABUSHYPAIUSD",
+  "yahooFundId": "F00001D8UE:FO"
+ },
+ {
+  "fundId": "8aec2471-fb84-4e8d-8f0b-c633eabca801",
+  "code": "ABUSHYPEAIUSD",
+  "yahooFundId": "F00001T85I:FO"
+ },
+ {
+  "fundId": "36728070-fbec-4729-8faa-28d727718c19",
+  "code": "ABUSHYPEIAUDH",
+  "yahooFundId": "F00001D8UF:FO"
+ },
+ {
+  "fundId": "289e4cb7-c4a8-4ccc-9cf0-63bcc6833838",
+  "code": "ABUSHYPEIUSD",
+  "yahooFundId": "F00001D8UG:FO"
+ },
+ {
+  "fundId": "f4c70eef-9e26-4637-850b-2efdb0c37a9a",
+  "code": "ABUSHYPS1USD",
+  "yahooFundId": "F00000O4X8:FO"
+ },
+ {
+  "fundId": "ce2210fd-e224-4474-9988-4badc81be874",
+  "code": "ABUSHYPSUSD",
+  "yahooFundId": "F00000O4X7:FO"
+ },
+ {
+  "fundId": "c0935fe5-e7e1-4240-bd6d-234d6fd4e844",
+  "code": "ABUSMCAAUDH",
+  "yahooFundId": "F000014ZAG:FO"
+ },
+ {
+  "fundId": "1c65a4ab-3ec7-4534-ae91-83117140fca9",
+  "code": "ABUSMCAUSD",
+  "yahooFundId": "F00000H3UP:FO"
+ },
+ {
+  "fundId": "212d6e4b-2c4d-4c17-8e88-08a50ec9db98",
+  "code": "ABUSMCS1USD",
+  "yahooFundId": "F00000H3UU:FO"
+ },
+ {
+  "fundId": "8a72ee86-4b81-443b-8f13-73312b338981",
+  "code": "ABUSMCSUSD",
+  "yahooFundId": "F00000H3UT:FO"
+ },
+ {
+  "fundId": "c153e0a9-12c1-49fc-a38d-4a4dbc89ada8",
+  "code": "ABUSTRAAUDH",
+  "yahooFundId": "F00000NB4O:FO"
+ },
+ {
+  "fundId": "ad71fa22-21d6-49db-8a9d-1a80ba8e1b52",
+  "code": "ABUSTRACADH",
+  "yahooFundId": "F00000NB4P:FO"
+ },
+ {
+  "fundId": "fc9cf9d2-a1f8-45ff-ac82-2354e43df07f",
+  "code": "ABUSTRAEUR",
+  "yahooFundId": "F00001DII0:FO"
+ },
+ {
+  "fundId": "5901d133-27e0-42dd-8c46-ff2b8f9e7731",
+  "code": "ABUSTRAUSD",
+  "yahooFundId": "F0GBR04UHL:FO"
+ },
+ {
+  "fundId": "0ce84f0e-8dea-46cb-b3f2-45deb222ee65",
+  "code": "ABUSTREAUDH",
+  "yahooFundId": "F000016KKC:FO"
+ },
+ {
+  "fundId": "1b28acd5-9044-4042-ab6b-bfd8f8424c7e",
+  "code": "ABUSTREUSD",
+  "yahooFundId": "F000016KKD:FO"
+ },
+ {
+  "fundId": "ef9160f1-e58a-4075-9e88-9de98de8dfe9",
+  "code": "ABUSTRIUSD",
+  "yahooFundId": "F0GBR052U7:FO"
+ },
+ {
+  "fundId": "50d07a2f-94db-4ea3-bd9d-a2c7083d1a1d",
+  "code": "ABUSTRS1USD",
+  "yahooFundId": "F0GBR06GSI:FO"
+ },
+ {
+  "fundId": "4a7711c8-7ccb-4752-93c5-a3bd8010ae54",
+  "code": "ABUSTRSUSD",
+  "yahooFundId": "F00000MF2G:FO"
+ },
+ {
+  "fundId": "bdd3e707-1851-43c3-9e09-f7eecb1eb21d",
+  "code": "ABUSVAUSD",
+  "yahooFundId": "F00001KJ8J:FO"
+ },
+ {
+  "fundId": "2d91bba0-4a60-4096-8d02-6e1fa85e97f2",
+  "code": "ABUSVS1USD",
+  "yahooFundId": "F00001KP4L:FO"
+ },
+ {
+  "fundId": "ee974261-2830-4b56-952d-40e2e7d1bcce",
+  "code": "ABUSVSUSD",
+  "yahooFundId": "F00001KP4K:FO"
+ },
+ {
+  "fundId": "5e8be714-1a10-4577-b15f-0456bed211a0",
+  "code": "AEINDIA",
+  "yahooFundId": "F0GBR06X0N:FO"
+ },
+ {
+  "fundId": "f7b8ab91-f461-4ce7-af95-0c4be882cbe7",
+  "code": "AEINDIAI",
+  "yahooFundId": "F0GBR06X0M:FO"
+ },
+ {
+  "fundId": "89f5ce6c-f35b-4dcc-9b55-67e9a2b538b8",
+  "code": "AEJEPH",
+  "yahooFundId": "F00000PYOU:FO"
+ },
+ {
+  "fundId": "06ce899f-4d5f-4da5-90f5-c087d9c110ad",
+  "code": "AEJEPI",
+  "yahooFundId": "F00000HH4A:FO"
+ },
+ {
+  "fundId": "2751ceaf-df96-4517-8ad4-3ed345ee83ce",
+  "code": "AEJEPSM",
+  "yahooFundId": "F000000OUH:FO"
+ },
+ {
+  "fundId": "4e075c2e-e8d7-4cd8-922f-48feb1344dec",
+  "code": "AEJEPSMH",
+  "yahooFundId": "F00000Q4VK:FO"
+ },
+ {
+  "fundId": "b8aeed37-1cce-49a7-886a-64839d81b11c",
+  "code": "AEJEPSMI",
+  "yahooFundId": "F000000OUG:FO"
+ },
+ {
+  "fundId": "56d58d9f-9aeb-4787-9efb-0c2bac8951ff",
+  "code": "AEJEPSMIH",
+  "yahooFundId": "F00000W54H:FO"
+ },
+ {
+  "fundId": "1b5deff5-165c-45cf-b4f9-afe718649517",
+  "code": "AF24X",
+  "yahooFundId": "F00000PAQ5:FO"
+ },
+ {
+  "fundId": "354970a4-83df-4d71-9fa4-c3e04dbed44f",
+  "code": "AF24XU",
+  "yahooFundId": "F00000YN54:FO"
+ },
+ {
+  "fundId": "6447a774-baff-423e-886c-662f6a2f8a4c",
+  "code": "AF46X",
+  "yahooFundId": "F00000PAQ8:FO"
+ },
+ {
+  "fundId": "be9edb59-8ea4-4848-a558-fcb0815a62d1",
+  "code": "AF46XU",
+  "yahooFundId": "F00000YGHX:FO"
+ },
+ {
+  "fundId": "0205ef30-57b0-49a4-b282-6f8561fa3bd1",
+  "code": "AGIF-FF1",
+  "yahooFundId": "F00001L3MH:FO"
+ },
+ {
+  "fundId": "712b4266-24a0-4219-9409-bd206cede23e",
+  "code": "AGIF-FFFM",
+  "yahooFundId": "F00001SLPE:FO"
+ },
+ {
+  "fundId": "4af31078-3f6b-4316-84fd-b166da2c8f46",
+  "code": "AGIF-FFI",
+  "yahooFundId": "F00001SLPF:FO"
+ },
+ {
+  "fundId": "b4220993-20e9-47b3-bf34-610999bc4ac2",
+  "code": "AGIF-FV1",
+  "yahooFundId": "F00000NDK5:FO"
+ },
+ {
+  "fundId": "f0ee2dc5-5a05-4f9c-9e84-18ae04f4e9c6",
+  "code": "AGIF-FV5",
+  "yahooFundId": "F00000QED3:FO"
+ },
+ {
+  "fundId": "f51628c6-5886-4d63-8f56-5f57650ad9fe",
+  "code": "AGIF-FVB1",
+  "yahooFundId": "F000015PWU:FO"
+ },
+ {
+  "fundId": "04ce3441-629f-4ffc-a3cf-bde5e69bf4b5",
+  "code": "AGIF-FVB91",
+  "yahooFundId": "F00001KJ8S:FO"
+ },
+ {
+  "fundId": "f89b0b8d-117a-4d80-b7e7-72575150c186",
+  "code": "AGIF-FVB9M",
+  "yahooFundId": "F00001KJ8T:FO"
+ },
+ {
+  "fundId": "85f76481-3b4d-420e-9c45-8cc30525fb98",
+  "code": "AGIF-FVBG9M",
+  "yahooFundId": "F00001KJ8U:FO"
+ },
+ {
+  "fundId": "dbb97be9-7e8e-4da8-bf8b-5ce93df8f8ed",
+  "code": "AGIF-FVBGM",
+  "yahooFundId": "F000015PWT:FO"
+ },
+ {
+  "fundId": "ba2659f8-56bb-46ef-b3d9-b5eb71fce69b",
+  "code": "AGIF-FVBM",
+  "yahooFundId": "F000015PWS:FO"
+ },
+ {
+  "fundId": "b9778fc5-c2d2-4155-a5a1-125fb8396f01",
+  "code": "AGIF-FVF",
+  "yahooFundId": "F00000TEQQ:FO"
+ },
+ {
+  "fundId": "e44c4181-6eb4-46fb-aae3-831d645fa974",
+  "code": "AGIF-FVGIJ",
+  "yahooFundId": "F00001K8VU:FO"
+ },
+ {
+  "fundId": "e01ffad3-e537-493c-bdff-6e7b08f82050",
+  "code": "AGIF-FVGM",
+  "yahooFundId": "F000014R7W:FO"
+ },
+ {
+  "fundId": "05ea3ec5-db72-41b1-bc0c-d805987273fe",
+  "code": "AGIF-FVGP",
+  "yahooFundId": "F000014R7X:FO"
+ },
+ {
+  "fundId": "bba46c88-6648-4db5-815c-438f2f75cbbc",
+  "code": "AGIF-FVHM",
+  "yahooFundId": "F00000YJYR:FO"
+ },
+ {
+  "fundId": "6b79b226-a0fa-460b-aa7d-e318ab1ad8d6",
+  "code": "AGIF-FVHP",
+  "yahooFundId": "F00000YZKG:FO"
+ },
+ {
+  "fundId": "93d9a23e-e2fa-4f41-8e3d-948b26312402",
+  "code": "AGIF-FVIJ",
+  "yahooFundId": "F00001JNEP:FO"
+ },
+ {
+  "fundId": "5c6af1f0-d3c8-42e3-8576-d42e34edca04",
+  "code": "AGIF-FVM",
+  "yahooFundId": "F00000OXXD:FO"
+ },
+ {
+  "fundId": "21a6597a-86f1-490e-ad06-ee290e730616",
+  "code": "AGIF-FVM5",
+  "yahooFundId": "F00001JPLC:FO"
+ },
+ {
+  "fundId": "ff6f2bc6-6022-4a77-9adc-b1c6ad2f3ed2",
+  "code": "AGIF-FVN",
+  "yahooFundId": "F00000PLQE:FO"
+ },
+ {
+  "fundId": "905ca5fc-1fba-42de-94fa-b759bc064858",
+  "code": "AGIF-FVP",
+  "yahooFundId": "F00000OXXC:FO"
+ },
+ {
+  "fundId": "c929a81d-d7fc-4fe5-9a46-96abac313960",
+  "code": "AGIF-FVR",
+  "yahooFundId": "F00000PWRN:FO"
+ },
+ {
+  "fundId": "2d60cca2-4604-42e9-9391-570619601a4d",
+  "code": "AGIF-FVT",
+  "yahooFundId": "F00000S3E5:FO"
+ },
+ {
+  "fundId": "363b9660-f7fd-4d59-b2f3-d0fbc888cff9",
+  "code": "AGIF-FVZ",
+  "yahooFundId": "F00000VHRD:FO"
+ },
+ {
+  "fundId": "af9e26a8-22f5-4090-a310-c30031ba576f",
+  "code": "AGIF-JAP",
+  "yahooFundId": "F000000F7R:FO"
+ },
+ {
+  "fundId": "36107f7f-4be9-417a-882d-4505679b384c",
+  "code": "AGIF-JP9",
+  "yahooFundId": "F00001MZOS:FO"
+ },
+ {
+  "fundId": "61d46cf7-195e-4459-b342-3b7366bc0238",
+  "code": "AGIF-JPFJ",
+  "yahooFundId": "F00001QAT2:FO"
+ },
+ {
+  "fundId": "b812c26e-57f7-4c81-bae5-274d5478715f",
+  "code": "AGIF-JPI",
+  "yahooFundId": "F000000DAC:FO"
+ },
+ {
+  "fundId": "41594bfa-5c6e-4b5b-8d21-f2bc9b36570a",
+  "code": "AGIF-JPU",
+  "yahooFundId": "F00000WZU2:FO"
+ },
+ {
+  "fundId": "49e80d7a-56a5-404f-b700-a8abd2c84c39",
+  "code": "AGIF-NB1",
+  "yahooFundId": "F00000XE8C:FO"
+ },
+ {
+  "fundId": "bb7006d0-02ff-4bfc-b4ed-3934f2211160",
+  "code": "AGIF-NB3",
+  "yahooFundId": "F00000Q11Y:FO"
+ },
+ {
+  "fundId": "564ed3db-d29d-4671-b675-a59c1c5cd147",
+  "code": "AGIF-NB5",
+  "yahooFundId": "F00001O5CT:FO"
+ },
+ {
+  "fundId": "b718c9e5-a997-43fd-9683-bdf7d9925197",
+  "code": "AGIF-NB6",
+  "yahooFundId": "F00000S6DT:FO"
+ },
+ {
+  "fundId": "794bdb69-f216-4605-b683-d23f3f594a00",
+  "code": "AGIF-NBB9M",
+  "yahooFundId": "F00001SXAS:FO"
+ },
+ {
+  "fundId": "22dabf8a-192d-46dd-9e67-5b91a058beb8",
+  "code": "AGIF-NBFM",
+  "yahooFundId": "F00001SXAP:FO"
+ },
+ {
+  "fundId": "f78b0b8d-5c09-42ee-84c5-aaa2c115140f",
+  "code": "AGIF-NBI",
+  "yahooFundId": "F00000WJ2K:FO"
+ },
+ {
+  "fundId": "4ac519b9-76dc-4814-8545-3f340991051c",
+  "code": "AGIF-NS1",
+  "yahooFundId": "F00000WYKW:FO"
+ },
+ {
+  "fundId": "cce2435a-2c21-4898-912a-6d40dc86120d",
+  "code": "AGIF-NS3",
+  "yahooFundId": "F00000WYKR:FO"
+ },
+ {
+  "fundId": "695ffb15-99d1-4bdb-b34f-d11676943fcb",
+  "code": "AGIF-NS5",
+  "yahooFundId": "F00000WYKX:FO"
+ },
+ {
+  "fundId": "48c8d5a2-9bc7-47b0-a20d-3119530ad6c0",
+  "code": "AGIF-NS8M",
+  "yahooFundId": "F00000ZXQC:FO"
+ },
+ {
+  "fundId": "05691ef0-1b55-4692-ba02-727e8c3a6139",
+  "code": "AGIF-NSB1",
+  "yahooFundId": "F000015PWO:FO"
+ },
+ {
+  "fundId": "7fdfd682-7dc3-4529-a0a2-ac5a002ede15",
+  "code": "AGIF-NSBGM",
+  "yahooFundId": "F000015PWN:FO"
+ },
+ {
+  "fundId": "c85b2412-9472-4c46-afc3-0f6236acdc85",
+  "code": "AGIF-NSGM",
+  "yahooFundId": "F000014UTW:FO"
+ },
+ {
+  "fundId": "fce84a74-faa1-4de6-bb9f-93580d02f3b0",
+  "code": "AGIF-NSGP",
+  "yahooFundId": "F000014FN6:FO"
+ },
+ {
+  "fundId": "0d5fbd43-39ee-4cda-970f-fb945c1d4f9c",
+  "code": "AGIF-NSGZ",
+  "yahooFundId": "F000014HX9:FO"
+ },
+ {
+  "fundId": "a4e02959-2de3-4b1a-aac9-73161593c38e",
+  "code": "AGIF-NSM",
+  "yahooFundId": "F00000WNDU:FO"
+ },
+ {
+  "fundId": "9d88ff1d-4bfd-4d44-82d5-139d5447cd62",
+  "code": "AGIF-PA1",
+  "yahooFundId": "F0000152BI:FO"
+ },
+ {
+  "fundId": "b7b7f543-de02-498b-9ec2-bb7cce5ee976",
+  "code": "AGIF-PA5",
+  "yahooFundId": "F0000152BJ:FO"
+ },
+ {
+  "fundId": "016e165f-090e-47c7-9223-aba1bde5d498",
+  "code": "AGIF-PAB1",
+  "yahooFundId": "F000015PWQ:FO"
+ },
+ {
+  "fundId": "18fdae4c-ac1e-4843-b6fe-af46e52ec2d8",
+  "code": "AGIF-PABFM",
+  "yahooFundId": "F000016OGC:FO"
+ },
+ {
+  "fundId": "33dbf509-10a0-423e-b827-fb80039586c5",
+  "code": "AGIF-PABGM",
+  "yahooFundId": "F000015PWP:FO"
+ },
+ {
+  "fundId": "280f8347-a08c-47bc-b188-5075a2c9314b",
+  "code": "AGIF-PAFM",
+  "yahooFundId": "F000016OGE:FO"
+ },
+ {
+  "fundId": "9cdfe7d0-8597-44e5-9f93-d4907177a23b",
+  "code": "AGIF-PAGM",
+  "yahooFundId": "F0000152BG:FO"
+ },
+ {
+  "fundId": "054e0795-e2a5-45c4-b962-4624728e9bb1",
+  "code": "AGIF-PAGP",
+  "yahooFundId": "F0000152BH:FO"
+ },
+ {
+  "fundId": "7056415a-6718-4abf-93da-a6c9166073fb",
+  "code": "AGIF-PAIJ",
+  "yahooFundId": "F00001JNFZ:FO"
+ },
+ {
+  "fundId": "e6d03aa6-701c-4298-8f7d-034903b52186",
+  "code": "AGIF-PAM",
+  "yahooFundId": "F00000YN5V:FO"
+ },
+ {
+  "fundId": "5ae7d1eb-af6e-4ef0-bf32-df26a7e52072",
+  "code": "AIEQA",
+  "yahooFundId": "F0GBR067HA:FO"
+ },
+ {
+  "fundId": "89fdc55d-95a6-4eb0-89a2-1f65d9fda935",
+  "code": "AIEQY",
+  "yahooFundId": "F0GBR069ID:FO"
+ },
+ {
+  "fundId": "44d8671a-8b2a-4cc9-be80-8af624213da3",
+  "code": "AJSCA3",
+  "yahooFundId": "F0GBR0570Y:FO"
+ },
+ {
+  "fundId": "6a959ba0-b88e-41fb-a107-af5bf23880b9",
+  "code": "AJSCY",
+  "yahooFundId": "F0GBR04SGH:FO"
+ },
+ {
+  "fundId": "b7964dc9-5ced-45be-9e7f-17d51708b838",
+  "code": "AJSCY3",
+  "yahooFundId": "F0GBR05X5O:FO"
+ },
+ {
+  "fundId": "62c4fb55-cd2e-4e20-8ee9-d960e4bbeb83",
+  "code": "AJSPA",
+  "yahooFundId": "F0GBR06MTR:FO"
+ },
+ {
+  "fundId": "b5b75902-1694-4b8d-bc62-3f46a368b003",
+  "code": "AJSPY",
+  "yahooFundId": "F0GBR06MTS:FO"
+ },
+ {
+  "fundId": "1930f63b-784c-48e0-9de5-ea28ee848b04",
+  "code": "AJSPY3",
+  "yahooFundId": "F0000002GJ:FO"
+ },
+ {
+  "fundId": "f7bda087-31cc-46c5-8310-0ccc7939af29",
+  "code": "ALCRA",
+  "yahooFundId": "F000000G4V:FO"
+ },
+ {
+  "fundId": "e41d70f9-6063-40b8-a150-d2979c00dbf5",
+  "code": "ALCRY",
+  "yahooFundId": "F0GBR067HC:FO"
+ },
+ {
+  "fundId": "bd72968b-393b-47a8-a87b-85843f2de003",
+  "code": "AMFAAA",
+  "yahooFundId": "F00000Q6YV:FO"
+ },
+ {
+  "fundId": "6f05aa5f-28c7-4ac5-abbc-321bd51704a2",
+  "code": "AMFAAU",
+  "yahooFundId": "F0GBR05VWS:FO"
+ },
+ {
+  "fundId": "a5914f3a-4c2f-4be1-9a31-bbeb3770be1b",
+  "code": "AMFADU",
+  "yahooFundId": "F0GBR04SN3:FO"
+ },
+ {
+  "fundId": "8cd0a079-7d9b-40c1-8113-d553c8b24ea4",
+  "code": "AMFCAU",
+  "yahooFundId": "F0GBR06A2C:FO"
+ },
+ {
+  "fundId": "53adbcc8-eeb3-4c36-9f6f-967f49bdfa80",
+  "code": "AMFFAU",
+  "yahooFundId": "F00001K668:FO"
+ },
+ {
+  "fundId": "0e0b9a7f-1b97-4b8a-99a1-fe9bd3dc31d2",
+  "code": "AMFHAA",
+  "yahooFundId": "F00000QO77:FO"
+ },
+ {
+  "fundId": "bdf87e6b-853a-49d4-a93a-47a43f9034d3",
+  "code": "AMFIAA",
+  "yahooFundId": "F00001SKXI:FO"
+ },
+ {
+  "fundId": "8dcbd0e5-3cda-41b6-9f23-a71e427653da",
+  "code": "AXARJPEB",
+  "yahooFundId": "F0GBR04BX1:FO"
+ },
+ {
+  "fundId": "09e8fe25-c522-4da1-a99e-9bb4752e2255",
+  "code": "AXARJPSCB",
+  "yahooFundId": "F0GBR04BX4:FO"
+ },
+ {
+  "fundId": "4365ed51-cdce-44b8-9f4d-082eb6d93d84",
+  "code": "AXARUSEB",
+  "yahooFundId": "F0GBR04BXH:FO"
+ },
+ {
+  "fundId": "3ba1405e-69fd-4901-ab04-90ca038a057a",
+  "code": "AXAWUHYB",
+  "yahooFundId": "F00000H0VX:FO"
+ },
+ {
+  "fundId": "b63af6e1-df78-4f8e-8832-8f097273f99f",
+  "code": "AXAWUHYBAH",
+  "yahooFundId": "F000000GMI:FO"
+ },
+ {
+  "fundId": "6b37e1be-f253-4c0e-8d35-af5599761773",
+  "code": "AXAWUHYBAS",
+  "yahooFundId": "F00000V961:FO"
+ },
+ {
+  "fundId": "b0109377-8a53-47ff-a781-9b4b5952446c",
+  "code": "AXAWUHYBDH",
+  "yahooFundId": "F00000YX0I:FO"
+ },
+ {
+  "fundId": "ca430a9e-3d83-47fd-87a5-41522db12734",
+  "code": "AXAWUHYBID",
+  "yahooFundId": "F00000XOBQ:FO"
+ },
+ {
+  "fundId": "52000daa-7817-4351-bacf-cef0570e5a39",
+  "code": "AXAWUHYBT",
+  "yahooFundId": "F00000PG4O:FO"
+ },
+ {
+  "fundId": "28dc6679-e284-4574-833e-c1ef9a70c183",
+  "code": "AXAWUYBB",
+  "yahooFundId": "F00001DMCD:FO"
+ },
+ {
+  "fundId": "7c50c455-eb25-4e7e-aec0-5ecaf40bddd1",
+  "code": "BLKBIDUT",
+  "yahooFundId": "F00000NJP4:FO"
+ },
+ {
+  "fundId": "d4fcafb8-54eb-4cfc-83f3-afb7d5cab0e5",
+  "code": "BLKJSCOA",
+  "yahooFundId": "F00000PYFK:FO"
+ },
+ {
+  "fundId": "2cf7d38e-211f-4df7-a09d-c466d952fd77",
+  "code": "BLKJVDUT",
+  "yahooFundId": "F000014PEG:FO"
+ },
+ {
+  "fundId": "dccb60c6-726d-44bc-b6a0-35083d2ce3e2",
+  "code": "BLKJVEIJ",
+  "yahooFundId": "F00000XVRM:FO"
+ },
+ {
+  "fundId": "891f7d6e-b41a-4b54-885a-277233f1e379",
+  "code": "BLKMDHAA",
+  "yahooFundId": "F00000024B:FO"
+ },
+ {
+  "fundId": "7635783f-2606-47af-ae75-3c5b5bf52445",
+  "code": "BLKMIAUA",
+  "yahooFundId": "F000014PE4:FO"
+ },
+ {
+  "fundId": "b6cc8653-84db-45d6-b426-17eb22f07f06",
+  "code": "BLKMJHAU",
+  "yahooFundId": "F00001J02I:FO"
+ },
+ {
+  "fundId": "bbbd116b-aa9b-48b3-a839-e3955efeeba3",
+  "code": "BLKMJHUB",
+  "yahooFundId": "F00001S5Q6:FO"
+ },
+ {
+  "fundId": "af41011b-b51c-4cb7-b563-4a8af47bec4f",
+  "code": "BLKMJVAH",
+  "yahooFundId": "F00000Q4HH:FO"
+ },
+ {
+  "fundId": "dca09467-a1dc-4c7a-a53a-844068b015ef",
+  "code": "BLKMJVBJ",
+  "yahooFundId": "F00001S5Q7:FO"
+ },
+ {
+  "fundId": "4aad7120-a00f-473c-93ae-cfc6e0bf9d8f",
+  "code": "BLKMJVBU",
+  "yahooFundId": "F00001S5Q8:FO"
+ },
+ {
+  "fundId": "5896c159-6db5-4d91-b045-2761bae64107",
+  "code": "BLKMLAOA",
+  "yahooFundId": "F000014PEJ:FO"
+ },
+ {
+  "fundId": "7c7ccb16-ea08-4321-bf61-1ffbbd084a3c",
+  "code": "BLKMLJVA",
+  "yahooFundId": "F000014PEC:FO"
+ },
+ {
+  "fundId": "ecbada9b-fdd4-4d6b-90ea-327563fb844f",
+  "code": "BLKMUPAA",
+  "yahooFundId": "F000014PEW:FO"
+ },
+ {
+  "fundId": "94b89f74-60c1-482b-827b-465365a18959",
+  "code": "D164A",
+  "yahooFundId": "F00000WABU:FO"
+ },
+ {
+  "fundId": "bd81d9da-5c6d-4dd8-90b0-408215534066",
+  "code": "D164I",
+  "yahooFundId": "F00000WABY:FO"
+ },
+ {
+  "fundId": "b775ff6d-3704-4e3d-8fde-85f48b84a24a",
+  "code": "D164X",
+  "yahooFundId": "F00000YY42:FO"
+ },
+ {
+  "fundId": "b63c492c-c5f6-46ae-b266-68cfa014825a",
+  "code": "DIT-ENC",
+  "yahooFundId": "F0GBR04CHG:FO"
+ },
+ {
+  "fundId": "09c491c5-d04b-4e0a-a3f8-b19805c9018b",
+  "code": "DUA",
+  "yahooFundId": "F00000S7N6:FO"
+ },
+ {
+  "fundId": "24b94f5e-7fb6-4c53-88c0-f1af90998403",
+  "code": "DUN",
+  "yahooFundId": "F00000S7N8:FO"
+ },
+ {
+  "fundId": "8c17249e-991f-4e67-a093-3cddbfb461a3",
+  "code": "DUU",
+  "yahooFundId": "F00000S7N5:FO"
+ },
+ {
+  "fundId": "c84c68a7-02a5-414b-8cec-3b30be512ddd",
+  "code": "DUZ",
+  "yahooFundId": "F00000S7N7:FO"
+ },
+ {
+  "fundId": "86b7d142-d27b-47ec-b643-c7f2415b3c78",
+  "code": "FSIFIS1",
+  "yahooFundId": "F0GBR04C5X:FO"
+ },
+ {
+  "fundId": "070a20c2-b4d4-40e1-b76a-f893ef7a7f78",
+  "code": "FSIFIS3",
+  "yahooFundId": "F00000OB10:FO"
+ },
+ {
+  "fundId": "5e180964-93c5-4d6f-a910-769c33bb3315",
+  "code": "GAB489",
+  "yahooFundId": "F000000IMD:FO"
+ },
+ {
+  "fundId": "2b14899f-3ff0-4684-877c-9e4d0e1b248e",
+  "code": "GABC",
+  "yahooFundId": "F0GBR050BF:FO"
+ },
+ {
+  "fundId": "00797de7-3f61-4856-8eaa-5ede0e5cfb71",
+  "code": "GUK820",
+  "yahooFundId": "F00000MLW3:FO"
+ },
+ {
+  "fundId": "9c55e82f-1550-4722-8dfa-f8692d478a45",
+  "code": "GUKC",
+  "yahooFundId": "F0GBR066BS:FO"
+ },
+ {
+  "fundId": "6355b45b-ddf9-4197-a835-bfc617cc285b",
+  "code": "HEN01",
+  "yahooFundId": "F0GBR04DDC:FO"
+ },
+ {
+  "fundId": "1946983c-f62f-492a-a576-c27445714c36",
+  "code": "HEN02",
+  "yahooFundId": "F0GBR04DDE:FO"
+ },
+ {
+  "fundId": "e31c1e35-fdd0-44f2-8ea5-a763a567c79d",
+  "code": "HEN17",
+  "yahooFundId": "F00000UQKF:FO"
+ },
+ {
+  "fundId": "d1e8cd29-ac25-494d-9f64-7dd64ea24ae4",
+  "code": "HEN25",
+  "yahooFundId": "F0GBR063H9:FO"
+ },
+ {
+  "fundId": "6775f77c-ae5b-4900-91eb-fc573fb0b4ac",
+  "code": "HEN36",
+  "yahooFundId": "F00000NAGD:FO"
+ },
+ {
+  "fundId": "355e15d3-89e0-4eff-97c8-2ef5004a74c3",
+  "code": "HEN37",
+  "yahooFundId": "F00000XJIW:FO"
+ },
+ {
+  "fundId": "56dfcf96-122e-42fb-9e07-37ca6575376f",
+  "code": "HEN38",
+  "yahooFundId": "F00000X30N:FO"
+ },
+ {
+  "fundId": "7053a526-a91d-49ce-a3b1-cda0a41fa0b5",
+  "code": "HEN39",
+  "yahooFundId": "F000002311:FO"
+ },
+ {
+  "fundId": "ba0a8ca1-dd11-480e-ac34-b7635a1794ee",
+  "code": "IE0000829451",
+  "yahooFundId": "F0GBR04SEV:FO"
+ },
+ {
+  "fundId": "3c46a272-aa0d-4630-adc8-e591cb88f769",
+  "code": "IE0000838189",
+  "yahooFundId": "F0GBR04SEZ:FO"
+ },
+ {
+  "fundId": "1aaa7a2b-6f81-4a17-bebf-5a7830f64525",
+  "code": "IE0002270589",
+  "yahooFundId": "F0GBR04OAF:FO"
+ },
+ {
+  "fundId": "58ac9984-f497-45dd-b771-88ca2be557de",
+  "code": "IE0004347849",
+  "yahooFundId": "F0GBR06FVM:FO"
+ },
+ {
+  "fundId": "99190862-3f03-4535-b5b6-d463e7b0bab3",
+  "code": "IE00064ZAHD2",
+  "yahooFundId": "F00001LGRJ:FO"
+ },
+ {
+  "fundId": "82b1cb75-de63-4ee6-a9e6-064eba6f0004",
+  "code": "IE000CQJT7J0",
+  "yahooFundId": "F00001DOLR:FO"
+ },
+ {
+  "fundId": "a31baf96-a1d6-4066-9d32-307b2ac3dfc6",
+  "code": "IE000JRHSGW1",
+  "yahooFundId": "F00001LGRK:FO"
+ },
+ {
+  "fundId": "6c53affd-6c86-435e-9520-37d30ec5a5a5",
+  "code": "IE000N1ORAL2",
+  "yahooFundId": "F00001DR3M:FO"
+ },
+ {
+  "fundId": "6815346b-5a3f-4390-82b1-d8ef4ec5a7ca",
+  "code": "IE000NMB49P1",
+  "yahooFundId": "F00001OSX0:FO"
+ },
+ {
+  "fundId": "94a2d199-052d-4139-ba85-8a188eafe064",
+  "code": "IE000OPIT9E5",
+  "yahooFundId": "F00001N0R2:FO"
+ },
+ {
+  "fundId": "94ffa1e8-1807-467d-94a0-983fb0b43109",
+  "code": "IE000OQ6NC69",
+  "yahooFundId": "F00001S88W:FO"
+ },
+ {
+  "fundId": "d1bbbcbd-b3e3-4152-9958-787dc9703d47",
+  "code": "IE000RYI7TU3",
+  "yahooFundId": "F00001S88V:FO"
+ },
+ {
+  "fundId": "dc226bae-7f8d-4c16-8d01-949ea6b7a2bb",
+  "code": "IE000U1QD5B1",
+  "yahooFundId": "F00001QOLP:FO"
+ },
+ {
+  "fundId": "abb82518-e69c-44d5-b936-44dddc9137d4",
+  "code": "IE000VOOKJG3",
+  "yahooFundId": "F00001JHAQ:FO"
+ },
+ {
+  "fundId": "a5c20f8f-d581-4d7c-8681-d72ff1bec26c",
+  "code": "IE000XNMWXA4",
+  "yahooFundId": "F00001DR3L:FO"
+ },
+ {
+  "fundId": "27ac4b48-9ab6-4610-85d4-0f94e2a7d3b9",
+  "code": "IE000YV45HN9",
+  "yahooFundId": "F00001P1A9:FO"
+ },
+ {
+  "fundId": "05e5e24e-f899-4715-afdc-373e73318662",
+  "code": "IE0031619046",
+  "yahooFundId": "F0GBR04OAJ:FO"
+ },
+ {
+  "fundId": "8013e095-49ba-4917-b66e-1c6ff246ca85",
+  "code": "IE0032313573",
+  "yahooFundId": "F0GBR055R5:FO"
+ },
+ {
+  "fundId": "7e033ace-0733-4a42-ae5e-fb95ff588c3b",
+  "code": "IE0033033972",
+  "yahooFundId": "F0GBR05LN7:FO"
+ },
+ {
+  "fundId": "0d35586e-4456-4c26-8626-47c74aa10443",
+  "code": "IE0033150131",
+  "yahooFundId": "F0GBR0653J:FO"
+ },
+ {
+  "fundId": "5ea19e26-e3e5-4d47-9b46-2c4b957d962e",
+  "code": "IE0034390439",
+  "yahooFundId": "F0GBR0545M:FO"
+ },
+ {
+  "fundId": "f1e39501-09d5-48ca-81da-6de07c7d1bb9",
+  "code": "IE00B02SDH94",
+  "yahooFundId": "F0GBR055RJ:FO"
+ },
+ {
+  "fundId": "84837935-a87c-42fa-8495-c0a1b05e9559",
+  "code": "IE00B0T0GP78",
+  "yahooFundId": "F0GBR06Q9D:FO"
+ },
+ {
+  "fundId": "1a568ac3-88ae-403a-9680-4e43a4c0ba4c",
+  "code": "IE00B0T0GS00",
+  "yahooFundId": "F0GBR06Q9G:FO"
+ },
+ {
+  "fundId": "08751ab1-04d6-4701-babb-6bd762c6c637",
+  "code": "IE00B11XZ871",
+  "yahooFundId": "F0GBR06T6K:FO"
+ },
+ {
+  "fundId": "1499aa3c-0fb6-411c-a1b1-9e388085a243",
+  "code": "IE00B12VW565",
+  "yahooFundId": "F0GBR06TK3:FO"
+ },
+ {
+  "fundId": "d0725a64-d544-4700-9c67-05c173c12e6e",
+  "code": "IE00B12VW904",
+  "yahooFundId": "F0GBR06TK8:FO"
+ },
+ {
+  "fundId": "24973b83-15f4-4108-bf2b-7be4b722cd06",
+  "code": "IE00B193MN38",
+  "yahooFundId": "FOGBR05KI5:FO"
+ },
+ {
+  "fundId": "7b9807ef-0bc8-4d72-8993-9af3b65ea53e",
+  "code": "IE00B19Z1F40",
+  "yahooFundId": "F000000C18:FO"
+ },
+ {
+  "fundId": "306e5e87-644f-4fb1-bc54-af3d174d826b",
+  "code": "IE00B19Z3581",
+  "yahooFundId": "F000000C2N:FO"
+ },
+ {
+  "fundId": "ccc9cd20-6ae1-463e-a15b-6500a666d10b",
+  "code": "IE00B19Z3920",
+  "yahooFundId": "F000000C2O:FO"
+ },
+ {
+  "fundId": "d8c78c33-8d96-44d8-bc98-9cac0c17b4bc",
+  "code": "IE00B19Z4B17",
+  "yahooFundId": "F000000F5W:FO"
+ },
+ {
+  "fundId": "cf5986cb-61c8-4823-8569-cd415db024c0",
+  "code": "IE00B19Z4V13",
+  "yahooFundId": "F0000020QM:FO"
+ },
+ {
+  "fundId": "d10ffd36-b5e0-4c06-897f-20232fc8ae75",
+  "code": "IE00B19Z6F94",
+  "yahooFundId": "F000000C17:FO"
+ },
+ {
+  "fundId": "dedbce65-bf0b-481b-9c74-eab7ce1a4386",
+  "code": "IE00B19Z6G02",
+  "yahooFundId": "F000000C19:FO"
+ },
+ {
+  "fundId": "9b0974a3-ac77-4420-b26b-71f153f0ac53",
+  "code": "IE00B19Z6R17",
+  "yahooFundId": "F000000ASQ:FO"
+ },
+ {
+  "fundId": "2b14b701-f898-426e-96dd-5fbf3eca388b",
+  "code": "IE00B19Z7J08",
+  "yahooFundId": "F000000G2Q:FO"
+ },
+ {
+  "fundId": "55fdd7e9-5c1f-41c8-8067-b51e2c2a8f8e",
+  "code": "IE00B19Z7Y58",
+  "yahooFundId": "F000000G2X:FO"
+ },
+ {
+  "fundId": "f3d8a401-cf7e-45b1-94a7-b9ce81f383c4",
+  "code": "IE00B19Z8W00",
+  "yahooFundId": "F000000F4V:FO"
+ },
+ {
+  "fundId": "30927a10-161a-4423-9f7a-678191b79b5a",
+  "code": "IE00B19Z8X17",
+  "yahooFundId": "F000000C0N:FO"
+ },
+ {
+  "fundId": "09e4eea9-d549-4a77-bc5d-284ebfc9b5b6",
+  "code": "IE00B19Z9505",
+  "yahooFundId": "F000000F66:FO"
+ },
+ {
+  "fundId": "bc2bce0e-b667-460b-93f1-7669dd7b537a",
+  "code": "IE00B19Z9612",
+  "yahooFundId": "F000000F87:FO"
+ },
+ {
+  "fundId": "d15f5213-4379-4505-b04d-a90e1b96d409",
+  "code": "IE00B1BXHZ80",
+  "yahooFundId": "F0000020P7:FO"
+ },
+ {
+  "fundId": "ddfbc993-ca92-4fab-b3ff-9137fe8b39cc",
+  "code": "IE00B1BXJ072",
+  "yahooFundId": "F000001XL4:FO"
+ },
+ {
+  "fundId": "53a4bd33-f656-4c03-a096-74aeafe6ebf2",
+  "code": "IE00B1D7YP71",
+  "yahooFundId": "FOGBR05KI6:FO"
+ },
+ {
+  "fundId": "cf1113c2-3fda-4c4a-ada5-3cbdd5eaac10",
+  "code": "IE00B23Z6414",
+  "yahooFundId": "F0000020NH:FO"
+ },
+ {
+  "fundId": "a3d97322-0a3e-4f6c-9450-5c0959ef7762",
+  "code": "IE00B23Z8S99",
+  "yahooFundId": "F00000HH2T:FO"
+ },
+ {
+  "fundId": "d3a51f90-947b-4139-b466-10c28961d723",
+  "code": "IE00B23Z9G43",
+  "yahooFundId": "F00000H62O:FO"
+ },
+ {
+  "fundId": "cd69d3bc-cfc1-4b9f-821f-a84817aabfe9",
+  "code": "IE00B23Z9K88",
+  "yahooFundId": "F00000LIFE:FO"
+ },
+ {
+  "fundId": "35f16c55-f717-404c-b2dc-fe5a53156206",
+  "code": "IE00B23ZBZ74",
+  "yahooFundId": "F000002IQO:FO"
+ },
+ {
+  "fundId": "c0ecc7aa-3d0a-4cf5-b744-8f8bbc5e1dcc",
+  "code": "IE00B241B875",
+  "yahooFundId": "F00000JT36:FO"
+ },
+ {
+  "fundId": "0501b8d7-dce4-48d0-86b4-97e41e73ed2a",
+  "code": "IE00B241B982",
+  "yahooFundId": "F00000NCKH:FO"
+ },
+ {
+  "fundId": "b29e91f9-5485-4261-8b7b-9b830b18a83c",
+  "code": "IE00B241CP14",
+  "yahooFundId": "F000002IQK:FO"
+ },
+ {
+  "fundId": "b4c1f163-8310-496d-8bad-b9eba0341f01",
+  "code": "IE00B241FP29",
+  "yahooFundId": "F000002MLW:FO"
+ },
+ {
+  "fundId": "f810d79a-8ee9-4914-837f-32432183b026",
+  "code": "IE00B2478W85",
+  "yahooFundId": "F000000JS6:FO"
+ },
+ {
+  "fundId": "ffc90382-8f64-4395-86a8-d4e6c2920692",
+  "code": "IE00B3PY8J28",
+  "yahooFundId": "F00000MMMC:FO"
+ },
+ {
+  "fundId": "8c442667-fff2-42b6-b4c6-4d9506da7a81",
+  "code": "IE00B3SHFF36",
+  "yahooFundId": "F00000XHFM:FO"
+ },
+ {
+  "fundId": "a5010a3f-ac35-4d48-9cf6-d7702d3d8e4a",
+  "code": "IE00B3VTL690",
+  "yahooFundId": "F000004669:FO"
+ },
+ {
+  "fundId": "597a2038-f407-4f68-92ca-8c4364e248c8",
+  "code": "IE00B3YQ9180",
+  "yahooFundId": "F00000412Q:FO"
+ },
+ {
+  "fundId": "0d04a3c0-93a2-453b-9cb4-e10c39a2bc65",
+  "code": "IE00B3YZ8K73",
+  "yahooFundId": "F00000SGII:FO"
+ },
+ {
+  "fundId": "3c85ebde-7e89-4de9-ad69-eeff09d24a4e",
+  "code": "IE00B45XQ142",
+  "yahooFundId": "F00000412R:FO"
+ },
+ {
+  "fundId": "1bfc5d61-9889-4b31-90f9-d3079fcaa6fa",
+  "code": "IE00B4MX2G40",
+  "yahooFundId": "F00000NLXB:FO"
+ },
+ {
+  "fundId": "34a0a601-41d7-4f5a-991a-9d898935bf41",
+  "code": "IE00B4S5JV84",
+  "yahooFundId": "F00000PYN9:FO"
+ },
+ {
+  "fundId": "77fba847-b3e3-46a7-9560-844cffe60e61",
+  "code": "IE00B66ZT477",
+  "yahooFundId": "F00000MMME:FO"
+ },
+ {
+  "fundId": "64c71af2-c73a-4bc8-b2c0-27f866920080",
+  "code": "IE00B6VF0729",
+  "yahooFundId": "F00000OV7V:FO"
+ },
+ {
+  "fundId": "995ac9b7-c5e4-4b6f-b9d0-b643b7ea279f",
+  "code": "IE00B7T2MC11",
+  "yahooFundId": "F00000PC7V:FO"
+ },
+ {
+  "fundId": "6bfd3dcf-71f3-4cd6-bb06-35ee6a01737a",
+  "code": "IE00B7XCGB41",
+  "yahooFundId": "F00000OQYM:FO"
+ },
+ {
+  "fundId": "5127dde3-74f0-454e-88dc-a5d921475615",
+  "code": "IE00B819XJ19",
+  "yahooFundId": "F00000PH9A:FO"
+ },
+ {
+  "fundId": "6d6598fc-d1b0-4c65-a262-6752e5d44b23",
+  "code": "IE00B831S232",
+  "yahooFundId": "F00000PAIW:FO"
+ },
+ {
+  "fundId": "2bcb26ed-433b-4767-8bd3-edfaaaaaa8ea",
+  "code": "IE00B8420077",
+  "yahooFundId": "F000011E3V:FO"
+ },
+ {
+  "fundId": "a4d51a5e-8fa4-4d09-af6d-0c7d87f0242d",
+  "code": "IE00B84LT637",
+  "yahooFundId": "F00000OXRQ:FO"
+ },
+ {
+  "fundId": "82112642-381d-4097-96dd-41c3ce0918f0",
+  "code": "IE00B86L5Z25",
+  "yahooFundId": "F00000ZXTA:FO"
+ },
+ {
+  "fundId": "792bdbb5-a0a5-425c-9f32-c2d1b7f779fa",
+  "code": "IE00B8B5Y742",
+  "yahooFundId": "F00000Q0UP:FO"
+ },
+ {
+  "fundId": "a7eab367-8688-49ca-8248-00a531c093be",
+  "code": "IE00B8HXFL36",
+  "yahooFundId": "F00000Q3PD:FO"
+ },
+ {
+  "fundId": "314bc333-bd64-468c-8fa3-17009c679f2a",
+  "code": "IE00B8HXFR97",
+  "yahooFundId": "F00000Q3PF:FO"
+ },
+ {
+  "fundId": "c267e717-8a1e-4e8d-83e4-6ffd58a19428",
+  "code": "IE00B8HXG989",
+  "yahooFundId": "F00000Q3PM:FO"
+ },
+ {
+  "fundId": "c5602467-ae97-4a2d-a81b-33914591fa60",
+  "code": "IE00B8HXGG57",
+  "yahooFundId": "F00000Q3PI:FO"
+ },
+ {
+  "fundId": "87a04eb2-270e-469a-8f67-fe9f99d6ee44",
+  "code": "IE00B8HXHJ53",
+  "yahooFundId": "F00000Q3PJ:FO"
+ },
+ {
+  "fundId": "19875f73-260b-40cd-8e57-dcc04829ca0e",
+  "code": "IE00B8HXHL75",
+  "yahooFundId": "F00000Q3PG:FO"
+ },
+ {
+  "fundId": "f663a9a9-351c-4e5f-8ee8-832e20aef64d",
+  "code": "IE00B8HXHQ21",
+  "yahooFundId": "F00000Q3PV:FO"
+ },
+ {
+  "fundId": "168ee421-278a-4d42-a517-b92eb04c4842",
+  "code": "IE00B8HXJ447",
+  "yahooFundId": "F00000Q3PQ:FO"
+ },
+ {
+  "fundId": "a57633b0-2fb1-47cb-b3c0-9dbd915a4916",
+  "code": "IE00B8HXJT91",
+  "yahooFundId": "F00000Q3PR:FO"
+ },
+ {
+  "fundId": "c4cfaf4a-f065-4c60-b072-f141653bbf02",
+  "code": "IE00B8HXK965",
+  "yahooFundId": "F00000Q3PO:FO"
+ },
+ {
+  "fundId": "353b8e98-7314-4876-bde4-d103da7104bc",
+  "code": "IE00B9276L46",
+  "yahooFundId": "F00000P94N:FO"
+ },
+ {
+  "fundId": "a00d900c-ffa5-4475-b8e6-d9bda794db06",
+  "code": "IE00B9276M52",
+  "yahooFundId": "F00000P94K:FO"
+ },
+ {
+  "fundId": "1055ed39-b3f0-4497-b1c8-3b00506e7e0d",
+  "code": "IE00B9276P83",
+  "yahooFundId": "F00000PVOP:FO"
+ },
+ {
+  "fundId": "9f3d468e-26c1-4b80-ac2d-2d98b45c7a51",
+  "code": "IE00B9276R08",
+  "yahooFundId": "F00000PVOR:FO"
+ },
+ {
+  "fundId": "a118aa10-7b50-4f74-8efd-497ad9b333d5",
+  "code": "IE00B9276S15",
+  "yahooFundId": "F00000P94L:FO"
+ },
+ {
+  "fundId": "e3684fc4-120b-4e42-941a-91f01d38c1b8",
+  "code": "IE00B9276V44",
+  "yahooFundId": "F00000P94O:FO"
+ },
+ {
+  "fundId": "5ed46287-7d30-45fa-bd91-259771591197",
+  "code": "IE00B95QHL52",
+  "yahooFundId": "F00000Q0UM:FO"
+ },
+ {
+  "fundId": "a0028e19-9db8-4e4b-a457-1970309913dd",
+  "code": "IE00B95SNQ81",
+  "yahooFundId": "F00000PVOV:FO"
+ },
+ {
+  "fundId": "944f4b43-eebd-4ce9-8c0a-047e21aa6df2",
+  "code": "IE00B95Z2Z11",
+  "yahooFundId": "F00000PVOY:FO"
+ },
+ {
+  "fundId": "e29e9f3b-02a9-45eb-8f6a-ad908492b4bc",
+  "code": "IE00B961PR15",
+  "yahooFundId": "F00000PVOZ:FO"
+ },
+ {
+  "fundId": "a228288a-c397-4a24-ab45-d400928e6cbf",
+  "code": "IE00BB0QYY64",
+  "yahooFundId": "F00000Q4QS:FO"
+ },
+ {
+  "fundId": "8d1b1155-1854-43c6-81fb-bb2c761e7649",
+  "code": "IE00BBGB0S16",
+  "yahooFundId": "F00000Q3QD:FO"
+ },
+ {
+  "fundId": "6710a0df-703e-4586-a5a5-85cce9ccc07f",
+  "code": "IE00BBGB0V45",
+  "yahooFundId": "F00000Q3QF:FO"
+ },
+ {
+  "fundId": "7f348604-b765-416f-9f6c-5c4e42586728",
+  "code": "IE00BBGB0Y75",
+  "yahooFundId": "F00000Q3QI:FO"
+ },
+ {
+  "fundId": "7f6ffcb4-caee-4ffc-9031-d1ede4e26028",
+  "code": "IE00BBT38469",
+  "yahooFundId": "F00000VTVL:FO"
+ },
+ {
+  "fundId": "99c5f57e-93cb-4ad9-9647-3d6916c67417",
+  "code": "IE00BCBHXZ96",
+  "yahooFundId": "F00000WXG2:FO"
+ },
+ {
+  "fundId": "814b0d99-3cd1-413b-ba88-42a716bad39f",
+  "code": "IE00BCDYXM56",
+  "yahooFundId": "F00000YGM6:FO"
+ },
+ {
+  "fundId": "d1659d4a-1a57-4315-84c0-6900b1503d8c",
+  "code": "IE00BCDYZB81",
+  "yahooFundId": "F00000VHTW:FO"
+ },
+ {
+  "fundId": "72f696e4-aa4d-4b78-8738-788faccacbbd",
+  "code": "IE00BCDYZG37",
+  "yahooFundId": "F00000QA2I:FO"
+ },
+ {
+  "fundId": "887c080c-fd5e-4c56-91a8-01515db4d148",
+  "code": "IE00BCDZ0167",
+  "yahooFundId": "F00000YGM7:FO"
+ },
+ {
+  "fundId": "2215ea33-6be7-4e7e-a685-b0ad1c20db04",
+  "code": "IE00BCDZ0381",
+  "yahooFundId": "F00000SPUB:FO"
+ },
+ {
+  "fundId": "faf69098-d21d-47ff-a310-15c75afb67f6",
+  "code": "IE00BCDZ0720",
+  "yahooFundId": "F00000SPU9:FO"
+ },
+ {
+  "fundId": "ba2b0206-a725-42d5-8ed4-36b58ffb6ef1",
+  "code": "IE00BD1DGZ57",
+  "yahooFundId": "F00000XLCW:FO"
+ },
+ {
+  "fundId": "d939110a-c4ee-4596-af96-bcc3749a10b0",
+  "code": "IE00BD2ML341",
+  "yahooFundId": "F00000YRBN:FO"
+ },
+ {
+  "fundId": "5d16c4d0-8fa1-49be-abd9-ad12ba28f0be",
+  "code": "IE00BD89KB03",
+  "yahooFundId": "F00000Q3QG:FO"
+ },
+ {
+  "fundId": "f8eaa9c9-d254-41f1-bd11-1c4ad99223be",
+  "code": "IE00BDB5PG57",
+  "yahooFundId": "F00000WXD2:FO"
+ },
+ {
+  "fundId": "7b0b8f60-45ec-4f96-895a-5031a5196eab",
+  "code": "IE00BDB7J701",
+  "yahooFundId": "F000015EPY:FO"
+ },
+ {
+  "fundId": "4f43b4ce-6172-441c-bf60-4aaedd181771",
+  "code": "IE00BDD1NC38",
+  "yahooFundId": "F00000PVOX:FO"
+ },
+ {
+  "fundId": "25ed69fc-70f6-4507-b35f-0488c3878ab3",
+  "code": "IE00BDZVHR40",
+  "yahooFundId": "F0000104CS:FO"
+ },
+ {
+  "fundId": "c80ba765-2bb9-4ab7-8dd0-e760122947f9",
+  "code": "IE00BDZVHS56",
+  "yahooFundId": "F000011VNY:FO"
+ },
+ {
+  "fundId": "bb99e955-ec1c-4234-8de3-76b3a46cd671",
+  "code": "IE00BF4KRV02",
+  "yahooFundId": "F00000ZXTB:FO"
+ },
+ {
+  "fundId": "ef766331-fc43-4080-b195-30ccab8a408d",
+  "code": "IE00BF4KRW19",
+  "yahooFundId": "F00000ZXTC:FO"
+ },
+ {
+  "fundId": "81bd49b4-fb1b-4e67-b80e-0361d88a2f2b",
+  "code": "IE00BFLR1L27",
+  "yahooFundId": "F00000VGZJ:FO"
+ },
+ {
+  "fundId": "d7b8418d-a36b-4367-99d2-4519f62915eb",
+  "code": "IE00BH2RDW08",
+  "yahooFundId": "F00000SVRU:FO"
+ },
+ {
+  "fundId": "6b870ed8-45f1-48d4-9404-345f3e0b0429",
+  "code": "IE00BH2RDY22",
+  "yahooFundId": "F00000SVRW:FO"
+ },
+ {
+  "fundId": "fcf84a2e-fb70-481d-9fd8-d74db9b5213b",
+  "code": "IE00BH2RF918",
+  "yahooFundId": "F00000YGME:FO"
+ },
+ {
+  "fundId": "16c17c39-a86a-4c4f-a6e2-83680b0bc83c",
+  "code": "IE00BK9CWZ55",
+  "yahooFundId": "F000013RKN:FO"
+ },
+ {
+  "fundId": "b9b6ce10-4022-4c5d-a2f6-cca39590363e",
+  "code": "IE00BKVL7J92",
+  "yahooFundId": "F000014YZW:FO"
+ },
+ {
+  "fundId": "24af8244-4d1d-44a4-8f14-58f156707e88",
+  "code": "IE00BL3SV378",
+  "yahooFundId": "F000014M53:FO"
+ },
+ {
+  "fundId": "712c1a00-ee58-44f6-aa17-906988e22b07",
+  "code": "IE00BLDYHX78",
+  "yahooFundId": "F00000TW30:FO"
+ },
+ {
+  "fundId": "ea5315b4-b0f2-496b-ba91-637cbb1bfd4d",
+  "code": "IE00BLDYHZ92",
+  "yahooFundId": "F00000TW31:FO"
+ },
+ {
+  "fundId": "8cb03ff0-f34a-4646-a303-7e75b0482cec",
+  "code": "IE00BLLXGR37",
+  "yahooFundId": "F0000157MU:FO"
+ },
+ {
+  "fundId": "316127b9-e17c-403e-a614-410681cebd12",
+  "code": "IE00BN47NJ76",
+  "yahooFundId": "F0000169JW:FO"
+ },
+ {
+  "fundId": "cda2f55e-9781-4183-a5be-cc03b861a1e2",
+  "code": "IE00BN47NK81",
+  "yahooFundId": "F0000169JV:FO"
+ },
+ {
+  "fundId": "08e92c56-348f-4aef-a3ad-352dc37e5d3e",
+  "code": "IE00BNJZT213",
+  "yahooFundId": "F00000TW32:FO"
+ },
+ {
+  "fundId": "4efe538d-75ae-48b3-8851-2519f1768042",
+  "code": "IE00BNJZT320",
+  "yahooFundId": "F00000TW33:FO"
+ },
+ {
+  "fundId": "2384d05d-b678-459e-8613-f1b804ca982a",
+  "code": "IE00BNJZT544",
+  "yahooFundId": "F00000TW35:FO"
+ },
+ {
+  "fundId": "95803423-01cd-4b2f-9f66-df9ac0c86cae",
+  "code": "IE00BNJZWJ94",
+  "yahooFundId": "F00000TW34:FO"
+ },
+ {
+  "fundId": "5b9fefa2-0377-4a5a-b68d-6ab4449c9d3f",
+  "code": "IE00BNK02L52",
+  "yahooFundId": "F00000TW4Z:FO"
+ },
+ {
+  "fundId": "bb8b4db0-94f1-49f2-bc86-37d88ef47440",
+  "code": "IE00BNK02M69",
+  "yahooFundId": "F00000TW50:FO"
+ },
+ {
+  "fundId": "3863d9e2-0983-4f37-abc2-82f400fc9185",
+  "code": "IE00BNK02N76",
+  "yahooFundId": "F00000TW4Y:FO"
+ },
+ {
+  "fundId": "bbbd3e05-cc45-44c5-bea1-fe868bb6b10d",
+  "code": "IE00BNK02P90",
+  "yahooFundId": "F00000TW54:FO"
+ },
+ {
+  "fundId": "1a4c7e6d-cc3e-4a09-b636-f4449ab77937",
+  "code": "IE00BNK02Q08",
+  "yahooFundId": "F00000TW55:FO"
+ },
+ {
+  "fundId": "be16489f-4e57-4a4c-9f68-46feb7787743",
+  "code": "IE00BNK02R15",
+  "yahooFundId": "F00000TW56:FO"
+ },
+ {
+  "fundId": "279f22c3-d873-48a1-ab63-ee238a8900c6",
+  "code": "IE00BNK02S22",
+  "yahooFundId": "F00000TW5A:FO"
+ },
+ {
+  "fundId": "4d1a7c73-2510-4764-b4e3-317d0da6a863",
+  "code": "IE00BNK02T39",
+  "yahooFundId": "F00000TW5B:FO"
+ },
+ {
+  "fundId": "138ffe30-216c-4e88-8250-31145ba0f68c",
+  "code": "IE00BNK02V50",
+  "yahooFundId": "F00000TW5C:FO"
+ },
+ {
+  "fundId": "7fd47d88-389e-410f-a268-aa2eb330a884",
+  "code": "IE00BYN4NT64",
+  "yahooFundId": "F00000XY14:FO"
+ },
+ {
+  "fundId": "46c31e4b-428e-4baa-9bae-4d410f5bcdc6",
+  "code": "IE00BYN4NV86",
+  "yahooFundId": "F00000XY13:FO"
+ },
+ {
+  "fundId": "58118b15-141f-4d50-8c4a-00924d59b404",
+  "code": "IE00BYN4NX01",
+  "yahooFundId": "F00000XY15:FO"
+ },
+ {
+  "fundId": "4c3f6fdd-9fbb-4556-9e68-668022f02d47",
+  "code": "IE00BYWYQR69",
+  "yahooFundId": "F00000XXVW:FO"
+ },
+ {
+  "fundId": "98395354-1c04-4077-adb0-6bf8c2c69c08",
+  "code": "IE00BYWYQY37",
+  "yahooFundId": "F00000ZYEP:FO"
+ },
+ {
+  "fundId": "2ed591ce-1d7b-461c-ad9d-ab2b56d8b3ae",
+  "code": "IOIEUA",
+  "yahooFundId": "F000000NXG:FO"
+ },
+ {
+  "fundId": "aa94bf38-3e21-4e19-aecc-841239a71ba3",
+  "code": "IOINUA",
+  "yahooFundId": "F000000NXM:FO"
+ },
+ {
+  "fundId": "87c42fea-6498-459c-95ed-f4a6da3356ec",
+  "code": "IUCBA1",
+  "yahooFundId": "F00000PFCC:FO"
+ },
+ {
+  "fundId": "4e009e53-8e72-40c0-acad-a0005df67962",
+  "code": "IUCBAA",
+  "yahooFundId": "F00000OEI5:FO"
+ },
+ {
+  "fundId": "960236c0-7668-4ff2-9dbe-b6595dff0a94",
+  "code": "IUCBUA",
+  "yahooFundId": "F00000M7SY:FO"
+ },
+ {
+  "fundId": "1ec0ea81-4a21-434d-97d8-e1f7e0eadc85",
+  "code": "IUCBUM",
+  "yahooFundId": "F00000M7T1:FO"
+ },
+ {
+  "fundId": "14572166-31b2-4dcf-ac61-53f005d075e2",
+  "code": "J1H",
+  "yahooFundId": "F00001FDGY:FO"
+ },
+ {
+  "fundId": "cdd1f8a2-15a8-4ff4-b2f4-1002fde4f47c",
+  "code": "JABAA1E",
+  "yahooFundId": "F0GBR04IWV:FO"
+ },
+ {
+  "fundId": "833ba97b-e8ef-4477-9ae0-1eca4ee6b449",
+  "code": "JABICAH",
+  "yahooFundId": "F00000WVFX:FO"
+ },
+ {
+  "fundId": "4cd93eb2-c085-403a-9b85-f32954e5d0be",
+  "code": "JAEAAJ",
+  "yahooFundId": "F0GBR06G8U:FO"
+ },
+ {
+  "fundId": "5a8222dd-5032-4269-a06c-9534cb042c11",
+  "code": "JAEAAU",
+  "yahooFundId": "F00000S762:FO"
+ },
+ {
+  "fundId": "d99fda63-2f48-4d6d-a4a8-afc8d8789a5b",
+  "code": "JAEFAJ",
+  "yahooFundId": "F00001MC9D:FO"
+ },
+ {
+  "fundId": "e7506e59-749b-46cc-b80c-ebdf6be321bf",
+  "code": "JAEHAA",
+  "yahooFundId": "F00000ZB25:FO"
+ },
+ {
+  "fundId": "3c782498-c87c-44e9-9e79-3243edcbea94",
+  "code": "JAEHAU",
+  "yahooFundId": "F00000SSRX:FO"
+ },
+ {
+  "fundId": "5b923aa9-4025-4c7f-8786-f1d30f6138f7",
+  "code": "JAEIAA",
+  "yahooFundId": "F00001SLMW:FO"
+ },
+ {
+  "fundId": "a1ef88fc-b01a-4413-8911-9e1936d17123",
+  "code": "JAFAAUI",
+  "yahooFundId": "F00000PQVV:FO"
+ },
+ {
+  "fundId": "0413f261-8bf6-4450-8133-0cabbaf01348",
+  "code": "JAFIA2E",
+  "yahooFundId": "F0GBR04IQP:FO"
+ },
+ {
+  "fundId": "43e6db88-d2a0-45ff-b1e1-1e58ef253b17",
+  "code": "JAFIIIE",
+  "yahooFundId": "F0GBR04CUJ:FO"
+ },
+ {
+  "fundId": "b7441192-65c1-4516-83e3-6fd37374f9d5",
+  "code": "JAFLXT6",
+  "yahooFundId": "F00001KP4O:FO"
+ },
+ {
+  "fundId": "23517416-4c67-4d69-874c-0bdb994785f1",
+  "code": "JAHFITU",
+  "yahooFundId": "F00001DPW2:FO"
+ },
+ {
+  "fundId": "4d226426-058b-44d8-bd5f-a681b5af8cee",
+  "code": "JAHHYTU",
+  "yahooFundId": "F00001DPW9:FO"
+ },
+ {
+  "fundId": "9aad9076-cade-4240-bc2e-e0fda74e1447",
+  "code": "JAHYA2E",
+  "yahooFundId": "F0GBR04J0M:FO"
+ },
+ {
+  "fundId": "08fa8686-2799-4b50-8abb-9452b945a7b3",
+  "code": "JAHYB1E",
+  "yahooFundId": "F0GBR04J0W:FO"
+ },
+ {
+  "fundId": "03055bbd-4bdb-472f-961b-a50df9baff62",
+  "code": "JAHYIIE",
+  "yahooFundId": "F0GBR04G4Y:FO"
+ },
+ {
+  "fundId": "3d7e45bb-5570-4e7b-8332-b2ac713f3f8c",
+  "code": "JAJHBTU",
+  "yahooFundId": "F00001DPW1:FO"
+ },
+ {
+  "fundId": "e0b8f15c-5e13-4e1d-9bd9-356533e6bd1f",
+  "code": "JANBAA1",
+  "yahooFundId": "F0GBR04SG1:FO"
+ },
+ {
+  "fundId": "88a4adc7-1d1d-4494-b382-0fb9d78fdf91",
+  "code": "JANBAB1",
+  "yahooFundId": "F0GBR04IYS:FO"
+ },
+ {
+  "fundId": "5ad1b331-40ab-46d4-9991-5fcb457f1577",
+  "code": "JANBAII",
+  "yahooFundId": "F0GBR04IZ0:FO"
+ },
+ {
+  "fundId": "9c0cf7a3-5ad1-49da-a01c-255c9c0cda5b",
+  "code": "JANBLT6",
+  "yahooFundId": "F00001KP4P:FO"
+ },
+ {
+  "fundId": "f5cd51df-697a-4623-a6b6-60a105dae281",
+  "code": "JANFIA1",
+  "yahooFundId": "F0GBR04SG2:FO"
+ },
+ {
+  "fundId": "4c9c731c-6e19-4fdc-8475-67316149e97a",
+  "code": "JANFIA2",
+  "yahooFundId": "F0GBR04IQN:FO"
+ },
+ {
+  "fundId": "321deead-4cc1-4928-9875-c5eee23d8fc6",
+  "code": "JANFIAU",
+  "yahooFundId": "F00000OAIH:FO"
+ },
+ {
+  "fundId": "87db4147-fb1b-46e5-9c91-811c35566a3d",
+  "code": "JANFIB1",
+  "yahooFundId": "F0GBR04IQQ:FO"
+ },
+ {
+  "fundId": "e2411ad5-e431-41b5-b9bd-23c5aae03e18",
+  "code": "JANFIB2",
+  "yahooFundId": "F0GBR04IR0:FO"
+ },
+ {
+  "fundId": "75f0b7ec-2ae7-437d-9b26-ee947e4e9d87",
+  "code": "JANFIII",
+  "yahooFundId": "F0GBR04IR8:FO"
+ },
+ {
+  "fundId": "e66aaf70-dd29-4173-85f0-bd139af5f56d",
+  "code": "JANHFAU",
+  "yahooFundId": "F00001JS0J:FO"
+ },
+ {
+  "fundId": "a6f30f30-7964-4984-8d10-5eaafd606af5",
+  "code": "JANHIAU",
+  "yahooFundId": "F00001JS0I:FO"
+ },
+ {
+  "fundId": "10580c34-4427-4ce4-94ae-a3f008b339a0",
+  "code": "JANHNDR",
+  "yahooFundId": "F00001F7IJ:FO"
+ },
+ {
+  "fundId": "eb8a155a-1167-4498-9aca-39e63e6643f1",
+  "code": "JANHYA1",
+  "yahooFundId": "F0GBR04SG5:FO"
+ },
+ {
+  "fundId": "748b0e33-7194-4f3d-9c6c-13f8e5677f28",
+  "code": "JANHYA2",
+  "yahooFundId": "F0GBR04J0K:FO"
+ },
+ {
+  "fundId": "e345e978-53e7-4f9b-a1f7-8f378027decc",
+  "code": "JANHYAA",
+  "yahooFundId": "F00000NDUF:FO"
+ },
+ {
+  "fundId": "30d0603b-a6b1-4338-9092-0cf571bc4be9",
+  "code": "JANHYB1",
+  "yahooFundId": "F0GBR04J0O:FO"
+ },
+ {
+  "fundId": "b0faca7d-0d2b-44f0-b26e-724e775cfad6",
+  "code": "JANHYB2",
+  "yahooFundId": "F0GBR04J0Q:FO"
+ },
+ {
+  "fundId": "f3dd8332-99bc-4909-b8b0-c947b631f63e",
+  "code": "JANHYII",
+  "yahooFundId": "F0GBR04J0U:FO"
+ },
+ {
+  "fundId": "5e65ff0c-bb74-4aeb-9a4b-300bc2d6e23b",
+  "code": "JANHYIU",
+  "yahooFundId": "F000005Q70:FO"
+ },
+ {
+  "fundId": "ec056455-6117-447c-8f28-e597bf1c394f",
+  "code": "JANIRAC",
+  "yahooFundId": "F000000S5I:FO"
+ },
+ {
+  "fundId": "abb77cb1-6c8c-4045-b70c-59dd5cf7bdb1",
+  "code": "JANSTA1",
+  "yahooFundId": "F0GBR04SG6:FO"
+ },
+ {
+  "fundId": "7deead9c-adfd-48a1-8173-7af9a3caefde",
+  "code": "JANSTA2",
+  "yahooFundId": "F0GBR04E8G:FO"
+ },
+ {
+  "fundId": "b7aee06d-1b2c-40ce-b1f6-cd6eb76c2d99",
+  "code": "JANSTB1",
+  "yahooFundId": "F0GBR04J18:FO"
+ },
+ {
+  "fundId": "c2c49e73-e8ee-40a2-b290-e2cfd6c87812",
+  "code": "JANSTB2",
+  "yahooFundId": "F0GBR04J1A:FO"
+ },
+ {
+  "fundId": "838d0442-d429-4969-85af-0f4cb507a4ef",
+  "code": "JANSTII",
+  "yahooFundId": "F0GBR04J1E:FO"
+ },
+ {
+  "fundId": "c96978e8-4ed9-4441-9a4c-5f9d4b365ba0",
+  "code": "JANSVAA",
+  "yahooFundId": "F0GBR04CLS:FO"
+ },
+ {
+  "fundId": "e0fb5950-169b-4e63-9b5d-21d4e3d727e3",
+  "code": "JANSVAI",
+  "yahooFundId": "F0GBR04CLQ:FO"
+ },
+ {
+  "fundId": "055a93eb-de6f-4e70-89f9-c55e80bdc722",
+  "code": "JANSVBI",
+  "yahooFundId": "F0GBR04CLU:FO"
+ },
+ {
+  "fundId": "f27dcfe5-1d10-49d9-acf4-96542d058193",
+  "code": "JANSVII",
+  "yahooFundId": "F0GBR04CM0:FO"
+ },
+ {
+  "fundId": "f12251d7-e911-4579-b5d8-4e94d2016d1d",
+  "code": "JANTWA1",
+  "yahooFundId": "F0GBR04SG7:FO"
+ },
+ {
+  "fundId": "61f29944-b2fe-46f2-ab9b-a2baf13aa090",
+  "code": "JANTWB1",
+  "yahooFundId": "F0GBR04IY8:FO"
+ },
+ {
+  "fundId": "d79c87b9-34e3-4b94-a9f6-94962529cb3d",
+  "code": "JANTWII",
+  "yahooFundId": "F0GBR04IYC:FO"
+ },
+ {
+  "fundId": "616288b4-6503-4650-8284-fc516b7136df",
+  "code": "JANUST2",
+  "yahooFundId": "F00001KP4M:FO"
+ },
+ {
+  "fundId": "bec3c99d-b140-4853-af1d-2a755690f227",
+  "code": "JANVTA1",
+  "yahooFundId": "F0GBR04SG9:FO"
+ },
+ {
+  "fundId": "cbdafa7e-f7c2-43d3-bdc8-c196b7696dcd",
+  "code": "JANVTB1",
+  "yahooFundId": "F0GBR04J1I:FO"
+ },
+ {
+  "fundId": "9697400f-a757-4f35-8ef5-8d7653d25c43",
+  "code": "JANVTII",
+  "yahooFundId": "F0GBR04J1M:FO"
+ },
+ {
+  "fundId": "6f9a7a24-8b20-4b0a-8342-626fe3f0bcd2",
+  "code": "JASTA2E",
+  "yahooFundId": "F0GBR04E8H:FO"
+ },
+ {
+  "fundId": "cce9ba7e-59d8-41c0-903d-8c466495d1aa",
+  "code": "JASTBAC",
+  "yahooFundId": "F000000S5O:FO"
+ },
+ {
+  "fundId": "eb7f946b-1302-4977-bb81-0138f967321c",
+  "code": "JATWA1E",
+  "yahooFundId": "F0GBR04IY6:FO"
+ },
+ {
+  "fundId": "095cf8ca-aef9-4adf-b281-e0aef3f7484d",
+  "code": "JATWIIE",
+  "yahooFundId": "F0GBR04G52:FO"
+ },
+ {
+  "fundId": "89aceb7f-9380-4b2d-b9ca-4ee155b2f387",
+  "code": "JAUSBEU",
+  "yahooFundId": "F000000S53:FO"
+ },
+ {
+  "fundId": "073699f6-c4ab-4317-8591-22eb7a92f56d",
+  "code": "JAUSEUR",
+  "yahooFundId": "F0000019Q5:FO"
+ },
+ {
+  "fundId": "58cae708-2122-463c-8070-a544736c5e3f",
+  "code": "JAVTA1E",
+  "yahooFundId": "F0GBR04J1G:FO"
+ },
+ {
+  "fundId": "ab2d8096-9d1d-4af8-ae0b-77fdf8bb3f66",
+  "code": "JBALAAA",
+  "yahooFundId": "F00000QHP7:FO"
+ },
+ {
+  "fundId": "80fb8af5-14f0-4d8a-805f-ca9febe49ed6",
+  "code": "JBALAAI",
+  "yahooFundId": "F00000QHP6:FO"
+ },
+ {
+  "fundId": "f75cbf6a-87d1-4a69-aeb2-c18095b0f493",
+  "code": "JBALAEI",
+  "yahooFundId": "F00000QHP3:FO"
+ },
+ {
+  "fundId": "66b6b982-4586-45eb-a3b8-28c2bb7e4d37",
+  "code": "JBALAUI",
+  "yahooFundId": "F00000QHP1:FO"
+ },
+ {
+  "fundId": "3a05c75c-20f1-498d-8468-331d2cc35ca2",
+  "code": "JD9",
+  "yahooFundId": "F00000VP2C:FO"
+ },
+ {
+  "fundId": "ab9df610-d0f0-4ee5-8f15-d20b64b23661",
+  "code": "JDA",
+  "yahooFundId": "F00000M7SZ:FO"
+ },
+ {
+  "fundId": "ba70954e-7265-4b9c-8cdd-1f4842d0e7d6",
+  "code": "JDC",
+  "yahooFundId": "F00000OLE9:FO"
+ },
+ {
+  "fundId": "b7f6fc14-8a75-4a69-8619-83c6f7d64cce",
+  "code": "JDF",
+  "yahooFundId": "F00000QF7E:FO"
+ },
+ {
+  "fundId": "11674241-8c3c-4619-bb71-eae445e65134",
+  "code": "JDU",
+  "yahooFundId": "F00000VUJP:FO"
+ },
+ {
+  "fundId": "7ca1cd04-06ed-4f2e-b06d-d018bbeb4a6e",
+  "code": "JFIPT",
+  "yahooFundId": "F0GBR060HM:FO"
+ },
+ {
+  "fundId": "76c12964-72ca-4309-b82b-dc8dc43ffd4a",
+  "code": "JFJT",
+  "yahooFundId": "F0GBR064C0:FO"
+ },
+ {
+  "fundId": "2c7a8d1c-655c-4d1e-835d-9cc340ee79ba",
+  "code": "JFKOR",
+  "yahooFundId": "F0GBR055WV:FO"
+ },
+ {
+  "fundId": "0c8ce4e8-c861-4ea4-9b58-d2d85342b73c",
+  "code": "JFTHAI",
+  "yahooFundId": "F0GBR060I5:FO"
+ },
+ {
+  "fundId": "fa2e09ba-b6c3-4d76-9d4b-5e9ca7dab0f2",
+  "code": "JGFJ",
+  "yahooFundId": "F00000T4I5:FO"
+ },
+ {
+  "fundId": "2011536b-efcd-46e0-a844-42d64e18c3d7",
+  "code": "JGHS",
+  "yahooFundId": "F00000T4I6:FO"
+ },
+ {
+  "fundId": "f653e8c4-01e0-4fdf-87c8-dcb6fbb59093",
+  "code": "JGHU",
+  "yahooFundId": "F00000T4I7:FO"
+ },
+ {
+  "fundId": "1f4a2e29-64af-4c24-ae7b-b3941fb64155",
+  "code": "JHHTLD1",
+  "yahooFundId": "F00001KP4N:FO"
+ },
+ {
+  "fundId": "b875e621-66e3-4022-9068-c57d9dc610db",
+  "code": "JHSMVT2",
+  "yahooFundId": "F00001Q7WS:FO"
+ },
+ {
+  "fundId": "c66adbd8-818d-4239-af08-a1d5f15b6969",
+  "code": "JHUSDT2",
+  "yahooFundId": "F00001Q7WR:FO"
+ },
+ {
+  "fundId": "64d09afe-ad42-46f5-9feb-c416237fd61d",
+  "code": "JHUVET2",
+  "yahooFundId": "F00001Q7WQ:FO"
+ },
+ {
+  "fundId": "66e65830-081d-4d6f-9dc4-ab7fe3228637",
+  "code": "JYDAJ",
+  "yahooFundId": "F00001M1FF:FO"
+ },
+ {
+  "fundId": "49b1e3f9-b87b-42dc-a6f2-71c0eceecfe7",
+  "code": "JYHAU",
+  "yahooFundId": "F00000Q8BN:FO"
+ },
+ {
+  "fundId": "9c16e97d-22d6-4288-8ddc-7fb32d0aab06",
+  "code": "KE7",
+  "yahooFundId": "F000013KUV:FO"
+ },
+ {
+  "fundId": "ff2198e5-26e7-4981-91b7-9b4d9fa9340c",
+  "code": "KJFS",
+  "yahooFundId": "F0HKG062PX:FO"
+ },
+ {
+  "fundId": "e905020e-0880-4ba1-b7c6-81c31a3027ac",
+  "code": "KJFU",
+  "yahooFundId": "F0HKG062PY:FO"
+ },
+ {
+  "fundId": "a55f4525-5cf6-4fc4-8592-95705ea3982c",
+  "code": "KORDAU",
+  "yahooFundId": "F00001MJTH:FO"
+ },
+ {
+  "fundId": "98a2474a-c65a-4fda-adf0-a48e7060dea8",
+  "code": "LGVF2",
+  "yahooFundId": "F0HKG070BV:FO"
+ },
+ {
+  "fundId": "bc4baca9-55d6-49f4-9898-70e125bf2ec4",
+  "code": "LGVI",
+  "yahooFundId": "F00001KKSI:FO"
+ },
+ {
+  "fundId": "db90feef-b5ba-4a2e-b67c-bd95ba4b0d3b",
+  "code": "LGVU2",
+  "yahooFundId": "F0HKG070C5:FO"
+ },
+ {
+  "fundId": "ac8f2a06-7536-4d99-8f73-30044b70ac2e",
+  "code": "LU0012181748",
+  "yahooFundId": "F0GBR04BP7:FO"
+ },
+ {
+  "fundId": "811524c3-51af-480d-b9b8-25290b37a8b7",
+  "code": "LU0028119526",
+  "yahooFundId": "F0GBR04AEN:FO"
+ },
+ {
+  "fundId": "a40044b2-fed8-40a6-9dcb-0c2ae7a0b646",
+  "code": "LU0048573561",
+  "yahooFundId": "F0GBR04D0H:FO"
+ },
+ {
+  "fundId": "d387beeb-f3f9-4537-b575-2e3d006940d3",
+  "code": "LU0048574536",
+  "yahooFundId": "F0GBR04D0L:FO"
+ },
+ {
+  "fundId": "1608ffc8-b1c9-4e9d-92c0-3c3df4286b72",
+  "code": "LU0048580004",
+  "yahooFundId": "F0GBR04D0X:FO"
+ },
+ {
+  "fundId": "bb81b423-b9b8-4f2b-a95a-57028dcdfb7e",
+  "code": "LU0048584766",
+  "yahooFundId": "F0GBR04D18:FO"
+ },
+ {
+  "fundId": "71a2a5bf-24dd-45f7-8c02-9c53837799f5",
+  "code": "LU0048585144",
+  "yahooFundId": "F0GBR04RZS:FO"
+ },
+ {
+  "fundId": "0f4c8b57-2e6b-4afa-9f2c-973413e68271",
+  "code": "LU0048621477",
+  "yahooFundId": "F0GBR04D1W:FO"
+ },
+ {
+  "fundId": "0d0bb7fb-0c29-4699-b19b-d99124ab6e46",
+  "code": "LU0054754816",
+  "yahooFundId": "F0GBR04D1S:FO"
+ },
+ {
+  "fundId": "46395e39-d042-4c75-b849-d63b21998bd9",
+  "code": "LU0055114457",
+  "yahooFundId": "F0GBR04D14:FO"
+ },
+ {
+  "fundId": "16cda030-9760-4d63-8335-bb6a025a98fc",
+  "code": "LU0069450822",
+  "yahooFundId": "F0GBR04MAD:FO"
+ },
+ {
+  "fundId": "42d9535d-f81d-4297-9fbf-53dda2a8f0e7",
+  "code": "LU0069970746",
+  "yahooFundId": "F0GBR04BPA:FO"
+ },
+ {
+  "fundId": "42417768-022a-422b-a6d7-f64e48b10764",
+  "code": "LU0077335932",
+  "yahooFundId": "F0GBR04AWP:FO"
+ },
+ {
+  "fundId": "2f63901a-6cd7-44ed-a9c3-1afa8986775f",
+  "code": "LU0080998981",
+  "yahooFundId": "F0GBR04MF4:FO"
+ },
+ {
+  "fundId": "9cc4cace-5b20-4119-94ec-cf01ee8e5ea3",
+  "code": "LU0090978643",
+  "yahooFundId": "F0GBR04V6I:FO"
+ },
+ {
+  "fundId": "493a03da-0737-485d-be1e-3f01c5b69b9e",
+  "code": "LU0100600799",
+  "yahooFundId": "F0GBR04AES:FO"
+ },
+ {
+  "fundId": "335d84b1-d76c-434d-8f68-a183a99ab99e",
+  "code": "LU0101987716",
+  "yahooFundId": "F0GBR04N3B:FO"
+ },
+ {
+  "fundId": "d0b6392c-98b6-45fd-b646-f6c1565de0ab",
+  "code": "LU0102000758",
+  "yahooFundId": "F0GBR04N3D:FO"
+ },
+ {
+  "fundId": "8c096543-9e3c-4bf9-ad15-b83e20609d6b",
+  "code": "LU0106238719",
+  "yahooFundId": "F0GBR04ACG:FO"
+ },
+ {
+  "fundId": "088f2251-162d-4293-9686-a8cf4b13796e",
+  "code": "LU0106239527",
+  "yahooFundId": "F0GBR04ACS:FO"
+ },
+ {
+  "fundId": "5aa03eb3-2525-4c29-a771-997709b825d7",
+  "code": "LU0106239873",
+  "yahooFundId": "F0GBR04ADA:FO"
+ },
+ {
+  "fundId": "6c705c3a-ddb1-4a8d-a7bd-cf29e8b3cdcb",
+  "code": "LU0106240533",
+  "yahooFundId": "F0GBR04ADD:FO"
+ },
+ {
+  "fundId": "f6d8d8e1-8ab5-4a22-93ff-78b2bf64c234",
+  "code": "LU0106242315",
+  "yahooFundId": "F0GBR04SQN:FO"
+ },
+ {
+  "fundId": "491eaae5-d578-4206-840a-24e19a0552f3",
+  "code": "LU0106243982",
+  "yahooFundId": "F0GBR04SQR:FO"
+ },
+ {
+  "fundId": "aebaa6bd-c551-44f2-a09c-892ddf72febe",
+  "code": "LU0106244287",
+  "yahooFundId": "F0GBR04AFC:FO"
+ },
+ {
+  "fundId": "1be712fe-4f7d-4093-b96f-bb98e2036e3c",
+  "code": "LU0106244444",
+  "yahooFundId": "F0GBR04AFE:FO"
+ },
+ {
+  "fundId": "c4e757b8-e1e9-4a4b-b03c-6f4f4eeaae1b",
+  "code": "LU0106244527",
+  "yahooFundId": "F0GBR04AFJ:FO"
+ },
+ {
+  "fundId": "3a2e48f9-9e20-482f-a6f4-960864944655",
+  "code": "LU0106246225",
+  "yahooFundId": "F0GBR04AFL:FO"
+ },
+ {
+  "fundId": "39b78878-171c-41b1-b824-c085995395e0",
+  "code": "LU0106261372",
+  "yahooFundId": "F0GBR04AGE:FO"
+ },
+ {
+  "fundId": "92aec924-9635-4bf7-9482-e54253e2f19f",
+  "code": "LU0106261539",
+  "yahooFundId": "F0GBR04AGG:FO"
+ },
+ {
+  "fundId": "abf367dc-427f-4c20-9030-a3e71df9fed2",
+  "code": "LU0106261612",
+  "yahooFundId": "F0GBR04AGP:FO"
+ },
+ {
+  "fundId": "44d03387-9cf1-4896-a3cf-9d02ae76e11a",
+  "code": "LU0106262180",
+  "yahooFundId": "F0GBR04AGR:FO"
+ },
+ {
+  "fundId": "989081df-60d8-4873-bdd0-9b95fed09e5a",
+  "code": "LU0107058785",
+  "yahooFundId": "F0GBR04BPB:FO"
+ },
+ {
+  "fundId": "1ae96631-c4b5-4730-9351-883d9f4c0664",
+  "code": "LU0111549308",
+  "yahooFundId": "F0GBR04IAR:FO"
+ },
+ {
+  "fundId": "59c13c14-b2dc-4b87-b69d-c517aa806703",
+  "code": "LU0111549480",
+  "yahooFundId": "F0GBR04TLV:FO"
+ },
+ {
+  "fundId": "59c60a66-715c-4c67-a371-f3db048d09e4",
+  "code": "LU0111550496",
+  "yahooFundId": "F0GBR04N9Q:FO"
+ },
+ {
+  "fundId": "5c171a9f-1e1a-4117-93ab-bcc19c2b8ae9",
+  "code": "LU0114033284",
+  "yahooFundId": "F0GBR04V78:FO"
+ },
+ {
+  "fundId": "f9dcb665-0751-4fda-82d0-83dabdff3c65",
+  "code": "LU0130102774",
+  "yahooFundId": "F0GBR04K4T:FO"
+ },
+ {
+  "fundId": "a9753738-b9e1-43f7-8d48-bd9bf6ec7d6c",
+  "code": "LU0130102931",
+  "yahooFundId": "F0GBR04K4V:FO"
+ },
+ {
+  "fundId": "24f9d7f3-327b-4325-8fd4-0ddb4be6e747",
+  "code": "LU0130323438",
+  "yahooFundId": "F0GBR04OR3:FO"
+ },
+ {
+  "fundId": "5c78e6f2-e8dc-4379-9cd6-c531e69ffaf7",
+  "code": "LU0130517989",
+  "yahooFundId": "F0GBR06DQW:FO"
+ },
+ {
+  "fundId": "7b8835dd-9946-414a-adb2-4cbdf3c45c3b",
+  "code": "LU0130709628",
+  "yahooFundId": "F0GBR06BUL:FO"
+ },
+ {
+  "fundId": "07f4bff8-78a2-4557-a837-84cd04ec7f5f",
+  "code": "LU0132282301",
+  "yahooFundId": "F0GBR04KQW:FO"
+ },
+ {
+  "fundId": "56eb35b4-e534-440c-bf5d-4204ff8126ee",
+  "code": "LU0133712025",
+  "yahooFundId": "F0GBR04F0B:FO"
+ },
+ {
+  "fundId": "baef5f42-3276-455c-a1bd-d79a6337efcb",
+  "code": "LU0133712371",
+  "yahooFundId": "F0GBR04F0D:FO"
+ },
+ {
+  "fundId": "e235f4c2-02fc-496c-8d5c-ac49c3819c80",
+  "code": "LU0133712611",
+  "yahooFundId": "F0GBR04T6Z:FO"
+ },
+ {
+  "fundId": "d4a61a6c-5a5f-4ce9-8e46-e53338d3d5b8",
+  "code": "LU0133713858",
+  "yahooFundId": "F0GBR04F0N:FO"
+ },
+ {
+  "fundId": "0eadf5a0-b4a2-4d02-b3e5-650fc038b5b3",
+  "code": "LU0133714401",
+  "yahooFundId": "F0GBR04F0R:FO"
+ },
+ {
+  "fundId": "3e9e3e48-c888-4db8-a0af-98b88877a057",
+  "code": "LU0133715804",
+  "yahooFundId": "F0GBR04F0J:FO"
+ },
+ {
+  "fundId": "edc5df2b-c9c0-4cc2-a9c4-f1d057ded2a9",
+  "code": "LU0133716109",
+  "yahooFundId": "F0GBR05512:FO"
+ },
+ {
+  "fundId": "b14d5cce-334a-4b30-808d-933b4be2306e",
+  "code": "LU0134340420",
+  "yahooFundId": "F0GBR054AJ:FO"
+ },
+ {
+  "fundId": "16c422a5-5a00-46d6-ba34-e286b8059731",
+  "code": "LU0134341154",
+  "yahooFundId": "F0GBR054AH:FO"
+ },
+ {
+  "fundId": "6c036d7f-955c-44cb-af3c-d07703c43bf8",
+  "code": "LU0134343796",
+  "yahooFundId": "F0GBR052KF:FO"
+ },
+ {
+  "fundId": "99dff424-0de1-43c6-bcb6-3bcb8f3f42c0",
+  "code": "LU0134344257",
+  "yahooFundId": "F0GBR054A6:FO"
+ },
+ {
+  "fundId": "3a953a31-1508-4d38-b44b-e085151f7dfc",
+  "code": "LU0137005913",
+  "yahooFundId": "F000000GP1:FO"
+ },
+ {
+  "fundId": "2ce91821-dbf2-4558-8236-f8891223406f",
+  "code": "LU0146923718",
+  "yahooFundId": "F0GBR04ONA:FO"
+ },
+ {
+  "fundId": "3b0c9011-5816-4ad3-a7c1-d6fd2849dd18",
+  "code": "LU0146924799",
+  "yahooFundId": "F0GBR053YT:FO"
+ },
+ {
+  "fundId": "9400e957-cba2-43b3-adc8-19bae0fdc4b6",
+  "code": "LU0146925176",
+  "yahooFundId": "F0GBR06AKQ:FO"
+ },
+ {
+  "fundId": "a354cc48-0c92-4152-a323-0c6c01b3e554",
+  "code": "LU0146926141",
+  "yahooFundId": "F0GBR04JPF:FO"
+ },
+ {
+  "fundId": "b5315b19-fa6b-4c39-9a84-22bb9c9c9ce9",
+  "code": "LU0147943442",
+  "yahooFundId": "F0GBR06EDU:FO"
+ },
+ {
+  "fundId": "5b8b7936-377c-4f07-916c-e87b2ee38981",
+  "code": "LU0149524034",
+  "yahooFundId": "F0GBR04LWW:FO"
+ },
+ {
+  "fundId": "a9aa9afc-eb74-48fb-856e-dc60df0a0f68",
+  "code": "LU0149534421",
+  "yahooFundId": "F0GBR04MQ2:FO"
+ },
+ {
+  "fundId": "6ce515b9-42c6-4908-915d-2a1ed8352bc8",
+  "code": "LU0149536715",
+  "yahooFundId": "F0GBR05A9P:FO"
+ },
+ {
+  "fundId": "27537882-f95b-4ad4-bdee-5f2b74736b3a",
+  "code": "LU0149537283",
+  "yahooFundId": "F0GBR05A9M:FO"
+ },
+ {
+  "fundId": "f6bdced9-29ac-4185-ba6b-06122f1b059e",
+  "code": "LU0149538414",
+  "yahooFundId": "F0GBR0551C:FO"
+ },
+ {
+  "fundId": "fb89c4f1-6139-4e36-9174-f41feb81fe2f",
+  "code": "LU0154245673",
+  "yahooFundId": "F0GBR06DJI:FO"
+ },
+ {
+  "fundId": "d61c5a49-1e94-4dc3-9886-64ace9dc13fa",
+  "code": "LU0154245756",
+  "yahooFundId": "F0GBR06DJG:FO"
+ },
+ {
+  "fundId": "592c8588-c928-4d78-8248-d361a4968801",
+  "code": "LU0154245913",
+  "yahooFundId": "F0GBR06DJL:FO"
+ },
+ {
+  "fundId": "5ea6e756-d236-4f27-bc7e-0260569feed5",
+  "code": "LU0168057262",
+  "yahooFundId": "F0GBR064CU:FO"
+ },
+ {
+  "fundId": "f4c67d4e-15bd-4ebd-b3f1-ca0cfbf247bb",
+  "code": "LU0176901758",
+  "yahooFundId": "F0GBR04I1F:FO"
+ },
+ {
+  "fundId": "b443073f-e219-4927-b7dc-fac68730d893",
+  "code": "LU0197229882",
+  "yahooFundId": "F0GBR055WO:FO"
+ },
+ {
+  "fundId": "7801ddf3-e199-4b2a-91ea-b1ff3442ff16",
+  "code": "LU0197230542",
+  "yahooFundId": "F0GBR055WP:FO"
+ },
+ {
+  "fundId": "c09ba7a1-9531-4433-afc9-d2103e1b29fc",
+  "code": "LU0205193047",
+  "yahooFundId": "F0GBR05TRH:FO"
+ },
+ {
+  "fundId": "d58d5586-a9f7-4603-92d3-e8e0ba45b553",
+  "code": "LU0205193807",
+  "yahooFundId": "F0GBR05TTN:FO"
+ },
+ {
+  "fundId": "9998fcc1-40be-4131-90bc-52573dc38276",
+  "code": "LU0205193989",
+  "yahooFundId": "F0GBR05TTO:FO"
+ },
+ {
+  "fundId": "23bd3b44-8dd3-4ce4-a3ad-d376a524414b",
+  "code": "LU0226953718",
+  "yahooFundId": "F0GBR06ETO:FO"
+ },
+ {
+  "fundId": "4caabe1f-c9d6-473d-a0ae-286332ff06f6",
+  "code": "LU0236737465",
+  "yahooFundId": "F0GBR06503:FO"
+ },
+ {
+  "fundId": "a42bc208-9368-4c19-bc4c-d2eb1e4ecae1",
+  "code": "LU0236738604",
+  "yahooFundId": "F0GBR06500:FO"
+ },
+ {
+  "fundId": "572ec3fe-b4d7-4857-9f4f-b84f634f29e5",
+  "code": "LU0248177338",
+  "yahooFundId": "F0GBR06O0X:FO"
+ },
+ {
+  "fundId": "d1e6e5ae-b374-4d68-b8dd-8fd9331e041b",
+  "code": "LU0248177502",
+  "yahooFundId": "F0GBR06O0Z:FO"
+ },
+ {
+  "fundId": "369adc74-fdbe-4e27-8ff7-751f2b35b8ab",
+  "code": "LU0248178732",
+  "yahooFundId": "F0GBR06O0W:FO"
+ },
+ {
+  "fundId": "afb6dfa4-8465-439b-a857-51a887eb5579",
+  "code": "LU0248185604",
+  "yahooFundId": "F0GBR06OA4:FO"
+ },
+ {
+  "fundId": "39d02ff2-b500-4165-8020-862e26b5b931",
+  "code": "LU0248320581",
+  "yahooFundId": "F0GBR06PTX:FO"
+ },
+ {
+  "fundId": "2a5644ee-43b6-4e41-b49f-975585d00e48",
+  "code": "LU0251570791",
+  "yahooFundId": "F0GBR06PXM:FO"
+ },
+ {
+  "fundId": "d6a84c5f-b064-40fc-a8e0-e625c791bf20",
+  "code": "LU0251572730",
+  "yahooFundId": "F0GBR06PXK:FO"
+ },
+ {
+  "fundId": "b01114bf-b6a5-4ab6-8447-cd61ad026ea6",
+  "code": "LU0255975913",
+  "yahooFundId": "F00000039L:FO"
+ },
+ {
+  "fundId": "1e92b58f-4d67-49a3-b777-d3686f7bf74d",
+  "code": "LU0261953904",
+  "yahooFundId": "FOGBR05KMC:FO"
+ },
+ {
+  "fundId": "9126f478-d5d3-427b-8dd3-4dd4a024bfff",
+  "code": "LU0264410563",
+  "yahooFundId": "F0000000VA:FO"
+ },
+ {
+  "fundId": "c9468c92-5263-4222-9283-315731a4b33f",
+  "code": "LU0264410993",
+  "yahooFundId": "F0000000VO:FO"
+ },
+ {
+  "fundId": "2dd1bd03-fa42-444f-a2f2-c1350188b431",
+  "code": "LU0264411371",
+  "yahooFundId": "F0000000VP:FO"
+ },
+ {
+  "fundId": "cd2183ca-7ac2-4249-a3fe-3aae87ecfe33",
+  "code": "LU0265266980",
+  "yahooFundId": "F0000003CA:FO"
+ },
+ {
+  "fundId": "6ad2208e-bf6e-4f73-8575-0cfa0e15b416",
+  "code": "LU0265267285",
+  "yahooFundId": "F0000003DD:FO"
+ },
+ {
+  "fundId": "469ba914-28e7-47b2-b6e4-97ec87915882",
+  "code": "LU0267983889",
+  "yahooFundId": "F0000001NO:FO"
+ },
+ {
+  "fundId": "a5b109ae-f7a4-42d2-ac7e-1f85fb5cb827",
+  "code": "LU0267984267",
+  "yahooFundId": "F0000001NQ:FO"
+ },
+ {
+  "fundId": "bff42bd6-8475-4a77-a36a-897bb6904dc1",
+  "code": "LU0270818197",
+  "yahooFundId": "F0000005RK:FO"
+ },
+ {
+  "fundId": "67017637-fd78-4fc8-bb9e-addaf088e8f9",
+  "code": "LU0270819245",
+  "yahooFundId": "F000001X4E:FO"
+ },
+ {
+  "fundId": "d74a7efa-cbe2-472d-ad91-f7644285c516",
+  "code": "LU0270819674",
+  "yahooFundId": "F00000067F:FO"
+ },
+ {
+  "fundId": "581f766e-b2a2-448a-8252-1dcf9045a217",
+  "code": "LU0270819914",
+  "yahooFundId": "F000001X4D:FO"
+ },
+ {
+  "fundId": "5e8d5098-ccd6-4d4f-88d0-25876ccca41a",
+  "code": "LU0271484684",
+  "yahooFundId": "F0000000IR:FO"
+ },
+ {
+  "fundId": "32b5bad8-8b9c-48bb-a0b8-d7739aa453a2",
+  "code": "LU0283519337",
+  "yahooFundId": "F00000VSRB:FO"
+ },
+ {
+  "fundId": "0939c21f-62ab-4af9-bc8d-d23ed57dbe17",
+  "code": "LU0299357342",
+  "yahooFundId": "F000000L2D:FO"
+ },
+ {
+  "fundId": "f02c1e5a-2d1c-4274-8924-e17b2a52a088",
+  "code": "LU0315560408",
+  "yahooFundId": "F000000I4Q:FO"
+ },
+ {
+  "fundId": "336f38b3-8fae-4065-8865-0ce7e2b8e15d",
+  "code": "LU0315561471",
+  "yahooFundId": "F000000I5D:FO"
+ },
+ {
+  "fundId": "340877b8-69eb-4588-a9e1-ee294dec9784",
+  "code": "LU0318939179",
+  "yahooFundId": "F000000KD8:FO"
+ },
+ {
+  "fundId": "3f6f90ca-6429-4e12-952a-87eb296e8315",
+  "code": "LU0318939252",
+  "yahooFundId": "F000000KD7:FO"
+ },
+ {
+  "fundId": "0a19878f-26df-4df7-8f49-f9d3dd7b8637",
+  "code": "LU0318940771",
+  "yahooFundId": "F000000KDF:FO"
+ },
+ {
+  "fundId": "f4272bfe-7bbd-466e-8161-6756e2feb2aa",
+  "code": "LU0334663159",
+  "yahooFundId": "F000001GDH:FO"
+ },
+ {
+  "fundId": "3fa9b54a-4c4d-4a0a-bf3b-73a4f4f3bca7",
+  "code": "LU0334663407",
+  "yahooFundId": "F000001GDE:FO"
+ },
+ {
+  "fundId": "b95d5bf4-2956-4e8e-986b-64d333767bbc",
+  "code": "LU0338482002",
+  "yahooFundId": "F000000R5N:FO"
+ },
+ {
+  "fundId": "32832b0e-02f8-47eb-b94e-0e3f1f36becc",
+  "code": "LU0338482770",
+  "yahooFundId": "F000000RD0:FO"
+ },
+ {
+  "fundId": "130ca081-6395-4d5c-a08f-ec26e6a53536",
+  "code": "LU0338483158",
+  "yahooFundId": "F000000RCY:FO"
+ },
+ {
+  "fundId": "f84c06a2-50fe-484c-94d7-e2e6bd6a5cff",
+  "code": "LU0346388530",
+  "yahooFundId": "F000001AU7:FO"
+ },
+ {
+  "fundId": "96a2f22d-3892-4fe4-a3f1-29e812351807",
+  "code": "LU0346391245",
+  "yahooFundId": "F000001ATE:FO"
+ },
+ {
+  "fundId": "bd4d03c1-7523-4be8-bc6c-6eb24112c1ea",
+  "code": "LU0346392649",
+  "yahooFundId": "F000001ATW:FO"
+ },
+ {
+  "fundId": "2490d739-7e75-4bfe-a5ef-36c3c3839666",
+  "code": "LU0355496760",
+  "yahooFundId": "F000001K2F:FO"
+ },
+ {
+  "fundId": "77842768-d895-4bdd-94fa-5d880ba635aa",
+  "code": "LU0370788753",
+  "yahooFundId": "F00000210Q:FO"
+ },
+ {
+  "fundId": "75fe5a80-d0b0-4f12-aa36-f79039b5b64c",
+  "code": "LU0370789561",
+  "yahooFundId": "F000002110:FO"
+ },
+ {
+  "fundId": "bb4d995f-a0b1-48b4-bdef-b0c1da0bf620",
+  "code": "LU0532245122",
+  "yahooFundId": "F00000JND5:FO"
+ },
+ {
+  "fundId": "9f87034f-aa64-4569-88c6-5b76cf747653",
+  "code": "LU0555809101",
+  "yahooFundId": "F00000LKHS:FO"
+ },
+ {
+  "fundId": "e29611fd-8c04-4bc9-b6b8-3816087b68ce",
+  "code": "LU0605520377",
+  "yahooFundId": "F00000MAO6:FO"
+ },
+ {
+  "fundId": "b92cca55-83e5-44d5-a373-93af0817f49f",
+  "code": "LU0607220059",
+  "yahooFundId": "F00000MAEK:FO"
+ },
+ {
+  "fundId": "6851e0e8-6325-4aad-ab4b-5863d9a56489",
+  "code": "LU0607513826",
+  "yahooFundId": "F00000MWI4:FO"
+ },
+ {
+  "fundId": "ced9b36d-f0b0-4f34-aba8-343b8796f53f",
+  "code": "LU0607514121",
+  "yahooFundId": "F00000MWI5:FO"
+ },
+ {
+  "fundId": "b140d93c-7e7d-41f5-8b6b-a395084ff67b",
+  "code": "LU0607514717",
+  "yahooFundId": "F00000MWIK:FO"
+ },
+ {
+  "fundId": "0edcde4e-612a-4635-a67e-073bc7255811",
+  "code": "LU0607514808",
+  "yahooFundId": "F00000MWIL:FO"
+ },
+ {
+  "fundId": "347237b0-7f32-4127-9288-7bcf3cce3d32",
+  "code": "LU0607522496",
+  "yahooFundId": "F00000MMKT:FO"
+ },
+ {
+  "fundId": "5e545fd7-6783-45e0-86f5-13b85ec048c5",
+  "code": "LU0607522579",
+  "yahooFundId": "F00000MMKU:FO"
+ },
+ {
+  "fundId": "119bf262-d50a-4d95-a2e1-e0881d1a266a",
+  "code": "LU0650148744",
+  "yahooFundId": "F0000165LD:FO"
+ },
+ {
+  "fundId": "15a2f042-b4a9-4db6-a6cf-52852f856414",
+  "code": "LU0823045413",
+  "yahooFundId": "F00000PHKV:FO"
+ },
+ {
+  "fundId": "06f6e1e6-b579-4582-a671-b6a214997489",
+  "code": "LU0823410997",
+  "yahooFundId": "F00000PXGT:FO"
+ },
+ {
+  "fundId": "06139c58-b501-4dfc-82f2-29729d029fce",
+  "code": "LU0823411292",
+  "yahooFundId": "F00000PXGV:FO"
+ },
+ {
+  "fundId": "16a77187-4b69-4fc9-8246-047a363800d9",
+  "code": "LU0823428932",
+  "yahooFundId": "F00000PXIH:FO"
+ },
+ {
+  "fundId": "59220442-10bf-4bf0-b64f-246019832f97",
+  "code": "LU0823429237",
+  "yahooFundId": "F00000PXIJ:FO"
+ },
+ {
+  "fundId": "acf00b09-f117-4eff-b553-ae201accd1d0",
+  "code": "LU0895858214",
+  "yahooFundId": "F00000PTZM:FO"
+ },
+ {
+  "fundId": "3618b4a2-2d0e-480a-809e-6557038f2d97",
+  "code": "LU0903425923",
+  "yahooFundId": "F00000PSSQ:FO"
+ },
+ {
+  "fundId": "9bfd8521-180b-4f53-894a-08e9cb50b812",
+  "code": "LU0903426061",
+  "yahooFundId": "F00000PSSP:FO"
+ },
+ {
+  "fundId": "4d4908e2-53bd-4d25-b5d3-dd741230eb5a",
+  "code": "LU0903426145",
+  "yahooFundId": "F00000PSSO:FO"
+ },
+ {
+  "fundId": "10c51407-83a3-4233-9e7c-b0ec6a3af2d2",
+  "code": "LU0911023827",
+  "yahooFundId": "F00000PRI6:FO"
+ },
+ {
+  "fundId": "b1f09ab2-cd60-40b0-9402-29e2863e9baa",
+  "code": "LU0936582211",
+  "yahooFundId": "F00000QILT:FO"
+ },
+ {
+  "fundId": "c2d5a984-38d5-4593-b146-3ee44eb6acb5",
+  "code": "LU0937948932",
+  "yahooFundId": "F00000PZRK:FO"
+ },
+ {
+  "fundId": "1bb1b97d-2aec-498e-864c-56bd7c2d924c",
+  "code": "LU0943300680",
+  "yahooFundId": "F00000Q3ZU:FO"
+ },
+ {
+  "fundId": "6a4cef8b-14c5-4dc3-b030-8c86e7875c5c",
+  "code": "LU0943300847",
+  "yahooFundId": "F00000Q3ZR:FO"
+ },
+ {
+  "fundId": "9f8d3b6a-ce39-4cd0-96e5-2f9779f322d8",
+  "code": "LU0943301068",
+  "yahooFundId": "F00000Q3ZV:FO"
+ },
+ {
+  "fundId": "3ca4e673-277c-472a-bdd4-6a6da10c4122",
+  "code": "LU0943301225",
+  "yahooFundId": "F00000Q3ZT:FO"
+ },
+ {
+  "fundId": "f3b1fe3f-1b48-4e68-86a0-c86419bacaa0",
+  "code": "LU0943301571",
+  "yahooFundId": "F00000Q3ZW:FO"
+ },
+ {
+  "fundId": "ebb37e3c-d8d6-4538-9c5d-baac0bc40f32",
+  "code": "LU0943301902",
+  "yahooFundId": "F00000Q3ZS:FO"
+ },
+ {
+  "fundId": "c6e088f8-a72d-4435-9ffa-b156e98fe937",
+  "code": "LU0950366780",
+  "yahooFundId": "F00000S61W:FO"
+ },
+ {
+  "fundId": "539f4c37-54c6-48ac-8efe-36fc1bc823b3",
+  "code": "LU0950372671",
+  "yahooFundId": "F00000QT7N:FO"
+ },
+ {
+  "fundId": "a68f27c6-1340-4b9a-b952-198529e56055",
+  "code": "LU0955866438",
+  "yahooFundId": "F00000QDTE:FO"
+ },
+ {
+  "fundId": "ebd4a349-3e26-4ca3-81cd-42630b823644",
+  "code": "LU0959626531",
+  "yahooFundId": "F00000QG06:FO"
+ },
+ {
+  "fundId": "d2ad16fb-b3bf-46de-87b4-d20c6f7f9d4a",
+  "code": "LU0959626887",
+  "yahooFundId": "F00000QG05:FO"
+ },
+ {
+  "fundId": "ecfe8d7b-c269-4164-869b-507273f96707",
+  "code": "LU0960981545",
+  "yahooFundId": "F00000SA4F:FO"
+ },
+ {
+  "fundId": "22671466-6448-4d06-9dfd-965fe341f604",
+  "code": "LU0963029086",
+  "yahooFundId": "F00000QCY0:FO"
+ },
+ {
+  "fundId": "98f79a56-3e76-45af-bc36-e90410a7221a",
+  "code": "LU0963542310",
+  "yahooFundId": "F00000QF82:FO"
+ },
+ {
+  "fundId": "54564947-7c72-4fce-8112-6e987d60c784",
+  "code": "LU0995404943",
+  "yahooFundId": "F00000SF8Y:FO"
+ },
+ {
+  "fundId": "55d0e1d3-bb34-415a-8a51-b91b6cfe3b2f",
+  "code": "LU0997586945",
+  "yahooFundId": "F00000S8ME:FO"
+ },
+ {
+  "fundId": "dec201f6-0617-45c9-9aae-fade410046d3",
+  "code": "LU0997587083",
+  "yahooFundId": "F00000S8MD:FO"
+ },
+ {
+  "fundId": "aaecaa03-2c7b-491a-9cc1-2dbf6169906c",
+  "code": "LU1015430645",
+  "yahooFundId": "F00000SJNR:FO"
+ },
+ {
+  "fundId": "a1e7af0e-b820-4e06-a544-d4c955084203",
+  "code": "LU1046421878",
+  "yahooFundId": "F00000T2AF:FO"
+ },
+ {
+  "fundId": "a991295a-1ba6-4818-92d3-aba698effabc",
+  "code": "LU1075211273",
+  "yahooFundId": "F00000TW24:FO"
+ },
+ {
+  "fundId": "94081d48-34f8-4424-862e-aeee820df88b",
+  "code": "LU1235295703",
+  "yahooFundId": "F00000VTAJ:FO"
+ },
+ {
+  "fundId": "f2bbc175-7380-48e3-bc8e-30cbeb0b5cc5",
+  "code": "LU1261431503",
+  "yahooFundId": "F00000W41Z:FO"
+ },
+ {
+  "fundId": "34fbc008-9b06-4725-bae0-6abdd2c5d985",
+  "code": "LU1273508256",
+  "yahooFundId": "F00000W7D6:FO"
+ },
+ {
+  "fundId": "70829b6f-a7cb-41ba-95bf-251430dbd3a6",
+  "code": "LU1284733786",
+  "yahooFundId": "F00000WAXJ:FO"
+ },
+ {
+  "fundId": "515ae2f6-6918-414a-8ab4-bedc6e863b87",
+  "code": "LU1378994856",
+  "yahooFundId": "F00000XDA1:FO"
+ },
+ {
+  "fundId": "376f2ca4-fa82-4721-a7a3-b085b5bac978",
+  "code": "LU1379001149",
+  "yahooFundId": "F00000XDA0:FO"
+ },
+ {
+  "fundId": "050ce528-7cb0-4043-8614-b40258e78fea",
+  "code": "LU1429558064",
+  "yahooFundId": "F00000XCR6:FO"
+ },
+ {
+  "fundId": "63dd6abc-b91a-4d35-8494-ebc088d35ea6",
+  "code": "LU1429558221",
+  "yahooFundId": "F00000XCQZ:FO"
+ },
+ {
+  "fundId": "fbfc90ff-d067-424c-b8f4-024d5dc0e77b",
+  "code": "LU1496799013",
+  "yahooFundId": "F00000XXDT:FO"
+ },
+ {
+  "fundId": "4c930644-bebb-4162-b988-e8f590ea982b",
+  "code": "LU1496799104",
+  "yahooFundId": "F00000XXC9:FO"
+ },
+ {
+  "fundId": "b4b86f99-75e1-4386-9c62-cd178583be98",
+  "code": "LU1664184709",
+  "yahooFundId": "F000010T4N:FO"
+ },
+ {
+  "fundId": "a0fc736e-ddd3-4b06-a938-d0149bc3bdb9",
+  "code": "LU1725195041",
+  "yahooFundId": "F00000ZVQ4:FO"
+ },
+ {
+  "fundId": "39e796e7-33f1-471c-abb8-23719a9b8840",
+  "code": "LU1775979708",
+  "yahooFundId": "F000010P2R:FO"
+ },
+ {
+  "fundId": "81a1ce57-8cd0-45a7-b11f-8624203c39f4",
+  "code": "LU1775980037",
+  "yahooFundId": "F000010P2S:FO"
+ },
+ {
+  "fundId": "e588809b-2260-4c61-907a-a8c6cf4f52d9",
+  "code": "LU1808853821",
+  "yahooFundId": "F000010EFM:FO"
+ },
+ {
+  "fundId": "ce5979a1-6483-4b32-808e-34dee9bedc0b",
+  "code": "LU1839537880",
+  "yahooFundId": "F000010OM0:FO"
+ },
+ {
+  "fundId": "a7b051fc-4efe-4295-84f3-15c1d5869f9b",
+  "code": "LU1883855675",
+  "yahooFundId": "F000013QZF:FO"
+ },
+ {
+  "fundId": "8040d73d-df41-4be4-9eb0-6c37fa941e81",
+  "code": "LU1883859230",
+  "yahooFundId": "F0GBR04HYU:FO"
+ },
+ {
+  "fundId": "957d6509-0bb7-49b3-be00-1082e113112d",
+  "code": "LU1883859404",
+  "yahooFundId": "F0GBR04TNF:FO"
+ },
+ {
+  "fundId": "9b235317-22a6-46ec-a584-02ca9e45d648",
+  "code": "LU1883860246",
+  "yahooFundId": "F0GBR04MTY:FO"
+ },
+ {
+  "fundId": "55e5d93b-0974-460c-a25c-e443a2445faa",
+  "code": "LU1883860329",
+  "yahooFundId": "F0GBR06PS6:FO"
+ },
+ {
+  "fundId": "b9b1ab12-f670-4a2a-8c65-6da025caff2d",
+  "code": "LU1883861053",
+  "yahooFundId": "F00000UITM:FO"
+ },
+ {
+  "fundId": "ccd4668d-d75f-4ae2-b261-c53c4051c01f",
+  "code": "LU1883861137",
+  "yahooFundId": "F0GBR04TH5:FO"
+ },
+ {
+  "fundId": "7b5fb3d4-8769-41d6-8ff0-2961da913086",
+  "code": "LU1883861640",
+  "yahooFundId": "F00000Z3NY:FO"
+ },
+ {
+  "fundId": "9e5c406e-7f00-4ea5-96fd-d9be9a7d088f",
+  "code": "LU1883861723",
+  "yahooFundId": "F0GBR05VKI:FO"
+ },
+ {
+  "fundId": "370d3084-7b33-4a23-844b-3aa765b65909",
+  "code": "LU1883861996",
+  "yahooFundId": "F00000UITN:FO"
+ },
+ {
+  "fundId": "4dd13ecf-10ae-42ff-9e18-0ee570e101af",
+  "code": "LU1883862028",
+  "yahooFundId": "F00000UITO:FO"
+ },
+ {
+  "fundId": "f98c47e2-80a9-474e-98e6-a29ca5da9bd6",
+  "code": "LU1883862531",
+  "yahooFundId": "F0000102NV:FO"
+ },
+ {
+  "fundId": "bacdf28f-d8b3-4d10-87de-219a3769ac15",
+  "code": "LU1883862614",
+  "yahooFundId": "F0GBR05VKG:FO"
+ },
+ {
+  "fundId": "8bb91c00-4ce8-425a-ae35-092411e9e7c8",
+  "code": "LU1883862705",
+  "yahooFundId": "F00000UITP:FO"
+ },
+ {
+  "fundId": "4aa722a6-4af1-48b6-b024-bbc1536f3ec4",
+  "code": "LU1883863695",
+  "yahooFundId": "F0GBR04UFH:FO"
+ },
+ {
+  "fundId": "4447fc40-c6d3-423c-b604-53eef0802e8f",
+  "code": "LU1883863851",
+  "yahooFundId": "F0GBR04UNX:FO"
+ },
+ {
+  "fundId": "e389dec1-287c-492c-8517-71fc5a0fe7fb",
+  "code": "LU1883865476",
+  "yahooFundId": "F00000VT6I:FO"
+ },
+ {
+  "fundId": "f9788354-5016-4073-a35b-4243173b4a16",
+  "code": "LU1883865559",
+  "yahooFundId": "F00000VRTE:FO"
+ },
+ {
+  "fundId": "30755f46-7c12-4bb3-9fa2-89a463781dac",
+  "code": "LU1883865716",
+  "yahooFundId": "F00000Z3O0:FO"
+ },
+ {
+  "fundId": "06cd23d2-d84c-4622-9c4b-7928a675a2ce",
+  "code": "LU1883865807",
+  "yahooFundId": "F00000VRMG:FO"
+ },
+ {
+  "fundId": "ef07589a-9869-4f73-9fae-ae29e2778178",
+  "code": "LU1883865989",
+  "yahooFundId": "F00000VRTD:FO"
+ },
+ {
+  "fundId": "aac40669-6dbf-459d-9e63-a4116ffff39c",
+  "code": "LU1883872332",
+  "yahooFundId": "F0GBR04UEJ:FO"
+ },
+ {
+  "fundId": "be2b09bd-4eaa-416c-9de0-7e11a13c0191",
+  "code": "LU1883872415",
+  "yahooFundId": "F0GBR04MBL:FO"
+ },
+ {
+  "fundId": "2491de82-2a18-470d-8904-a777116960b4",
+  "code": "LU1883872506",
+  "yahooFundId": "F0GBR04U6T:FO"
+ },
+ {
+  "fundId": "c2b8b287-06e3-48b9-9882-dfc6cea4bbaa",
+  "code": "LU1883873496",
+  "yahooFundId": "F0GBR04MR7:FO"
+ },
+ {
+  "fundId": "4b392dc9-d409-4cc5-a234-7cc8f9a5f707",
+  "code": "LU1883873652",
+  "yahooFundId": "F0GBR04UNN:FO"
+ },
+ {
+  "fundId": "2136f609-ef7e-44fa-8ec6-a53aebaab08d",
+  "code": "LU1883874205",
+  "yahooFundId": "F00000W2NU:FO"
+ },
+ {
+  "fundId": "22abd838-0c4c-483d-9904-b3e1fb268c5f",
+  "code": "LU1883874387",
+  "yahooFundId": "F00000W4LA:FO"
+ },
+ {
+  "fundId": "4ff88d95-2397-4768-aa67-9ba7747c56b3",
+  "code": "LU1934327195",
+  "yahooFundId": "F000011VMM:FO"
+ },
+ {
+  "fundId": "a8b044b2-408e-47af-a100-2a9344a69531",
+  "code": "LU1934327278",
+  "yahooFundId": "F000011VMN:FO"
+ },
+ {
+  "fundId": "92c1af01-5b08-44e2-ae76-4fca592bcdfe",
+  "code": "LU2098885994",
+  "yahooFundId": "F00001CTD6:FO"
+ },
+ {
+  "fundId": "85a75eef-13cd-49f6-97b5-bfa24239e35b",
+  "code": "LU2099030673",
+  "yahooFundId": "F000014P1T:FO"
+ },
+ {
+  "fundId": "7f96cf9c-5f6d-44e7-98a0-0c54ca65ebd4",
+  "code": "LU2200551914",
+  "yahooFundId": "F00001CK9I:FO"
+ },
+ {
+  "fundId": "74ec2206-41c4-4caa-9f35-61a39f87f43b",
+  "code": "LU2200552052",
+  "yahooFundId": "F00001CK9J:FO"
+ },
+ {
+  "fundId": "732efdd1-78f4-4a1a-9f20-ad73cfeb88fa",
+  "code": "LU2445164598",
+  "yahooFundId": "F00001DLDI:FO"
+ },
+ {
+  "fundId": "d455ad17-a445-4806-a0d5-8660cb160744",
+  "code": "LU2511382819",
+  "yahooFundId": "F00001NED7:FO"
+ },
+ {
+  "fundId": "087e2cad-7a5b-4a6c-8e0d-f930274c060a",
+  "code": "LU2511384518",
+  "yahooFundId": "F00001GLVL:FO"
+ },
+ {
+  "fundId": "f0136992-345b-4ff0-8ca1-51e50a826acd",
+  "code": "LU2513851738",
+  "yahooFundId": "F00001ERHE:FO"
+ },
+ {
+  "fundId": "4399599e-9095-4d5b-ad71-63c0f6514394",
+  "code": "LU2513851811",
+  "yahooFundId": "F00001ERHF:FO"
+ },
+ {
+  "fundId": "f92cce43-0f6c-4279-89b3-bf3d78bd4ed3",
+  "code": "LU2532881328",
+  "yahooFundId": "F00001OHTU:FO"
+ },
+ {
+  "fundId": "33f0dfc1-c4df-4a81-90d7-e42829cb389b",
+  "code": "LU2702842647",
+  "yahooFundId": "F00001I09N:FO"
+ },
+ {
+  "fundId": "c9fe5d18-0db8-459d-bfa8-f7c0fcf831f6",
+  "code": "LU2702842720",
+  "yahooFundId": "F00001I09O:FO"
+ },
+ {
+  "fundId": "1053a9c3-9ff5-49a7-be68-1b849b504d63",
+  "code": "LU2778878863",
+  "yahooFundId": "F00001KA85:FO"
+ },
+ {
+  "fundId": "a71d42c7-b383-44d2-ac7a-a57efcc1bb73",
+  "code": "LU2819204210",
+  "yahooFundId": "F00001LJHG:FO"
+ },
+ {
+  "fundId": "47009ecb-5336-4f0b-bc1a-f8024d8f8feb",
+  "code": "LU2829150650",
+  "yahooFundId": "F00001MCMP:FO"
+ },
+ {
+  "fundId": "177f4fdb-eef8-4a9d-a0af-3cb7832634d8",
+  "code": "LU2868952396",
+  "yahooFundId": "F00001MVFK:FO"
+ },
+ {
+  "fundId": "eeaff48b-727e-4f39-8e44-f2483f59d9da",
+  "code": "LU2908689552",
+  "yahooFundId": "F00001PY7L:FO"
+ },
+ {
+  "fundId": "e70dff16-5de5-4b8b-958d-30df358b2174",
+  "code": "LU3185648766",
+  "yahooFundId": "F00001SP2H:FO"
+ },
+ {
+  "fundId": "35f7802f-f67a-4bb1-ad9b-71730a45ad64",
+  "code": "LU3185648840",
+  "yahooFundId": "F00001SP2I:FO"
+ },
+ {
+  "fundId": "fc16f216-f49b-4aa7-83c6-f66f13309d43",
+  "code": "MFMUGA1",
+  "yahooFundId": "F0GBR05AFF:FO"
+ },
+ {
+  "fundId": "c6ad9c29-71d7-46fd-8fa1-839469d9b93d",
+  "code": "MFMUGAA",
+  "yahooFundId": "F0GBR04Z2D:FO"
+ },
+ {
+  "fundId": "c0915764-7b35-4362-9936-04fc61ec15c9",
+  "code": "MFMUGC1",
+  "yahooFundId": "F0GBR0535X:FO"
+ },
+ {
+  "fundId": "88c241d3-df3b-4828-b683-ddc8ba32d862",
+  "code": "MFMUGCR",
+  "yahooFundId": "F0GBR0535Y:FO"
+ },
+ {
+  "fundId": "4ccc8111-b572-43ce-a614-81c1ea57873b",
+  "code": "MFSVAC1",
+  "yahooFundId": "F0GBR04FKQ:FO"
+ },
+ {
+  "fundId": "dec253b6-bb4a-4fe3-aa16-c553d6b6045b",
+  "code": "MFSVAH1",
+  "yahooFundId": "F00000M0TZ:FO"
+ },
+ {
+  "fundId": "4452295a-c956-4cce-98e9-27ea2b29b8a4",
+  "code": "MFSVAL1",
+  "yahooFundId": "F0GBR04N6R:FO"
+ },
+ {
+  "fundId": "529e7545-fdb1-4583-9780-ca218aa215b3",
+  "code": "MGF06",
+  "yahooFundId": "F000000LGC:FO"
+ },
+ {
+  "fundId": "499dbd9e-9599-4511-9fed-c2e38b664146",
+  "code": "MGF14",
+  "yahooFundId": "F000000ES9:FO"
+ },
+ {
+  "fundId": "dd549ea5-549d-47ec-ac29-78e6dcc03010",
+  "code": "MGF18",
+  "yahooFundId": "F000000ESG:FO"
+ },
+ {
+  "fundId": "4f12cf70-0f6e-4304-bfad-e21403bb226a",
+  "code": "MGF19",
+  "yahooFundId": "F000000ESH:FO"
+ },
+ {
+  "fundId": "f77722fe-22d9-49c1-97cb-d089d19141b9",
+  "code": "MGF21",
+  "yahooFundId": "F000000LGE:FO"
+ },
+ {
+  "fundId": "f4978f83-cf01-43eb-a438-c70747f6b10c",
+  "code": "MGF23",
+  "yahooFundId": "F00000U1SP:FO"
+ },
+ {
+  "fundId": "bc35b40f-94d2-429b-8a88-8c19aff75070",
+  "code": "MGF24",
+  "yahooFundId": "F00000U538:FO"
+ },
+ {
+  "fundId": "39b9c2a3-59ab-404b-9051-7504e050c535",
+  "code": "MGF26",
+  "yahooFundId": "F00000WO5K:FO"
+ },
+ {
+  "fundId": "44273fc4-9b28-4723-bdc1-ad95649282d1",
+  "code": "MGF31",
+  "yahooFundId": "F000015I99:FO"
+ },
+ {
+  "fundId": "7671ee60-c4fe-4e8b-9679-4a22ea9b2ca7",
+  "code": "MGF39",
+  "yahooFundId": "F00001476E:FO"
+ },
+ {
+  "fundId": "af190422-779e-4797-a29e-a40cbb350e06",
+  "code": "MIA",
+  "yahooFundId": "F00000YW3D:FO"
+ },
+ {
+  "fundId": "8197b593-f0eb-4b34-8a45-68744d246aa8",
+  "code": "MIB",
+  "yahooFundId": "F00000YW3C:FO"
+ },
+ {
+  "fundId": "0eacd369-040b-4e90-8ae4-c99343e100ca",
+  "code": "MIP",
+  "yahooFundId": "F00000YW3A:FO"
+ },
+ {
+  "fundId": "c7f22137-90b5-4be9-8b94-b44cb23b6418",
+  "code": "MIY",
+  "yahooFundId": "F000014VD3:FO"
+ },
+ {
+  "fundId": "e2781016-9030-41d4-8c39-285d12d4f6b3",
+  "code": "MIZ",
+  "yahooFundId": "F000019EJ0:FO"
+ },
+ {
+  "fundId": "a765e19b-8ed6-4b67-939a-1a8e07af6db4",
+  "code": "MJA",
+  "yahooFundId": "F000010L8M:FO"
+ },
+ {
+  "fundId": "f0e6b105-d55d-4500-827c-efd7116a6d76",
+  "code": "MJS",
+  "yahooFundId": "F000010L58:FO"
+ },
+ {
+  "fundId": "6b3daa3d-5449-4554-b09c-11b3f6659533",
+  "code": "MSIMAFA11",
+  "yahooFundId": "F0GBR0645X:FO"
+ },
+ {
+  "fundId": "583db206-93f7-44f0-9686-9f68c7a4aaae",
+  "code": "MSIMAFI11",
+  "yahooFundId": "F0GBR064ED:FO"
+ },
+ {
+  "fundId": "017e2f2a-dac0-4765-b13d-ae33b5cfa998",
+  "code": "MSIMIEA85",
+  "yahooFundId": "F0000000DG:FO"
+ },
+ {
+  "fundId": "e0e994eb-af41-4868-b327-e60476b6dd6a",
+  "code": "MSIMIEI85",
+  "yahooFundId": "F0000000DN:FO"
+ },
+ {
+  "fundId": "be9ddd86-f69b-49ef-b8cf-3be72d785525",
+  "code": "MSIMUSC1A7",
+  "yahooFundId": "F00000XGNU:FO"
+ },
+ {
+  "fundId": "faefed3b-c1f5-4680-9f41-43fd1a8d481e",
+  "code": "MSIMUSC1D7",
+  "yahooFundId": "F00001SLMS:FO"
+ },
+ {
+  "fundId": "78b8bb4a-9822-435f-be11-7cb149d6d618",
+  "code": "MSIMUSC1H7",
+  "yahooFundId": "F00001SLMT:FO"
+ },
+ {
+  "fundId": "7391a469-bd84-4725-9b25-28359d47a1dc",
+  "code": "MSIMUSC1I7",
+  "yahooFundId": "F00000XGO0:FO"
+ },
+ {
+  "fundId": "53761490-74fd-4e79-94f9-20441cb02e86",
+  "code": "MSIMUSGA13",
+  "yahooFundId": "F0GBR04BG3:FO"
+ },
+ {
+  "fundId": "ae936414-683c-4459-a8a0-8c4f7c297ed5",
+  "code": "MSIMUSGI13",
+  "yahooFundId": "F0GBR04SY5:FO"
+ },
+ {
+  "fundId": "5a35e106-9168-4adc-940b-c008d53f6e40",
+  "code": "MUSGIU1",
+  "yahooFundId": "F0GBR05ZWN:FO"
+ },
+ {
+  "fundId": "9f5c41b4-672c-4e03-9f55-f188b23d91ae",
+  "code": "MUSVIU1",
+  "yahooFundId": "F0GBR05ZX6:FO"
+ },
+ {
+  "fundId": "aa6c4b6e-819f-4541-a27c-2b8cc109cbf1",
+  "code": "RUSAAU",
+  "yahooFundId": "F0GBR064TZ:FO"
+ },
+ {
+  "fundId": "ec5a9e19-f9bd-4cdd-a44a-d5dd7cf8a8f2",
+  "code": "RUSFAU",
+  "yahooFundId": "F00001D9EW:FO"
+ },
+ {
+  "fundId": "036d7f6e-64f1-4762-8ae7-899ad057eaa1",
+  "code": "RUSSAU",
+  "yahooFundId": "F0GBR064TY:FO"
+ },
+ {
+  "fundId": "ad0bea8f-8d07-417e-8f99-8dff8b9ecc35",
+  "code": "SIFS",
+  "yahooFundId": "F0HKG062PJ:FO"
+ },
+ {
+  "fundId": "fbb9ecee-0d5d-4e70-9469-0a59fefa7c24",
+  "code": "SIFU",
+  "yahooFundId": "F0HKG062PK:FO"
+ },
+ {
+  "fundId": "b9e43978-c280-4f05-8737-928481bad847",
+  "code": "SJPF",
+  "yahooFundId": "F0HKG062PL:FO"
+ },
+ {
+  "fundId": "b5b1020e-9e10-4ed2-9ef1-053034d4a782",
+  "code": "SJPU",
+  "yahooFundId": "F0HKG062PM:FO"
+ },
+ {
+  "fundId": "d92bdfb6-4edd-4ffb-b0e4-cf4a2bbd8e85",
+  "code": "SKANA16",
+  "yahooFundId": "F0GBR04N67:FO"
+ },
+ {
+  "fundId": "5d49356c-2d04-4fc7-9d17-8acf7da9192e",
+  "code": "SKANA266",
+  "yahooFundId": "F00000W0DD:FO"
+ },
+ {
+  "fundId": "f1256681-c910-414d-baa2-b97660ffa99d",
+  "code": "SKANA40",
+  "yahooFundId": "F0GBR06GET:FO"
+ },
+ {
+  "fundId": "75cc3e10-0b37-4605-9436-7c842a975bc2",
+  "code": "SKANB16",
+  "yahooFundId": "F0GBR05AFT:FO"
+ },
+ {
+  "fundId": "131e0eae-7cef-49e2-934a-c29dcbe6dd79",
+  "code": "SKANC16",
+  "yahooFundId": "F0GBR04V95:FO"
+ },
+ {
+  "fundId": "61fdbc94-c909-4183-85f1-2049f0972aab",
+  "code": "SKANC218",
+  "yahooFundId": "F00000Y975:FO"
+ },
+ {
+  "fundId": "85fa4f67-c665-4a60-a71c-b6ec218ad732",
+  "code": "SKFS",
+  "yahooFundId": "F0HKG062PN:FO"
+ },
+ {
+  "fundId": "2e7eb270-83a4-4937-8d1d-0ffd5b37ffee",
+  "code": "SKFU",
+  "yahooFundId": "F0HKG062PO:FO"
+ },
+ {
+  "fundId": "0b1c2cae-a1a5-4750-8bcd-58164f11339a",
+  "code": "SMFS",
+  "yahooFundId": "F0HKG062PP:FO"
+ },
+ {
+  "fundId": "1222bb86-662e-4422-9fac-f2d56c2ab58f",
+  "code": "SMFU",
+  "yahooFundId": "F0HKG062PQ:FO"
+ },
+ {
+  "fundId": "65fc960d-5d25-4699-88f5-c613fae77ead",
+  "code": "SST8",
+  "yahooFundId": "F00001TK7Y:FO"
+ },
+ {
+  "fundId": "d225ae64-db46-4d6e-80be-4b473e7b6187",
+  "code": "SSTF",
+  "yahooFundId": "F0HKG062QJ:FO"
+ },
+ {
+  "fundId": "48b29b92-efbe-467e-b74e-85200fc2329a",
+  "code": "SSTU",
+  "yahooFundId": "F0HKG062QK:FO"
+ },
+ {
+  "fundId": "6d6f4077-0b05-4160-8354-c2044e7ecb06",
+  "code": "STLF",
+  "yahooFundId": "F0HKG062PT:FO"
+ },
+ {
+  "fundId": "ec2d77ae-1891-4d83-9a0d-7e9ead5ca3b0",
+  "code": "STLU",
+  "yahooFundId": "F0HKG062PU:FO"
+ },
+ {
+  "fundId": "e9cdad98-f513-4c5b-88a5-ac535eb9fbf0",
+  "code": "T05",
+  "yahooFundId": "F00000W0VQ:FO"
+ },
+ {
+  "fundId": "4c10e9e3-6f30-4cbe-8942-e9b8b8dd0512",
+  "code": "T07",
+  "yahooFundId": "F00000W0VS:FO"
+ },
+ {
+  "fundId": "6b8720ef-989e-48e4-a72b-6ec9b0f454bb",
+  "code": "T16407",
+  "yahooFundId": "F0000143IN:FO"
+ },
+ {
+  "fundId": "756e3f9b-1495-442c-89c6-8b7e881de8ed",
+  "code": "T16409",
+  "yahooFundId": "F000014ORC:FO"
+ },
+ {
+  "fundId": "061aee2f-97aa-40f9-8ae0-4ad9fccbb371",
+  "code": "T164A",
+  "yahooFundId": "F00000ZC6H:FO"
+ },
+ {
+  "fundId": "cb830b39-fdcf-4a03-8fa2-fff6e7e7f47c",
+  "code": "TBEAC",
+  "yahooFundId": "F0GBR05V29:FO"
+ },
+ {
+  "fundId": "042ca99d-c744-4c23-b20b-fceb4141d5a7",
+  "code": "TBEAD",
+  "yahooFundId": "F0GBR05TLY:FO"
+ },
+ {
+  "fundId": "32efb0ce-0cff-47f4-bc5f-c6ba2d55e7b3",
+  "code": "TBEIC",
+  "yahooFundId": "F0GBR063JJ:FO"
+ },
+ {
+  "fundId": "43ca6a36-b669-4efa-a216-1f5a03551bed",
+  "code": "TBEID",
+  "yahooFundId": "F0GBR063JG:FO"
+ },
+ {
+  "fundId": "d2028e13-9b49-4aa1-9cfc-ba0aab46546c",
+  "code": "TGTEA",
+  "yahooFundId": "F0GBR05WS6:FO"
+ },
+ {
+  "fundId": "0382c5a9-60a7-427b-8eb2-6b51cf9867c7",
+  "code": "TGTEC",
+  "yahooFundId": "F0GBR06NO5:FO"
+ },
+ {
+  "fundId": "11e4ea45-ab98-4d6c-b8b9-221808a5333f",
+  "code": "TIFAA",
+  "yahooFundId": "F000010MCB:FO"
+ },
+ {
+  "fundId": "f6e74a64-bea3-4e11-83a6-f4a4670e7313",
+  "code": "TIFAC",
+  "yahooFundId": "F00000OR5I:FO"
+ },
+ {
+  "fundId": "8f4597fa-da18-4922-9cb2-9083fc86e582",
+  "code": "TIFAD",
+  "yahooFundId": "F00000OR5L:FO"
+ },
+ {
+  "fundId": "c2d98f9f-f9aa-4b3c-b74a-2533589c1ca1",
+  "code": "TIFAE",
+  "yahooFundId": "F00000OR5J:FO"
+ },
+ {
+  "fundId": "4578b0ae-30d9-40e0-aa6b-e596e05e9f3d",
+  "code": "TIFAM",
+  "yahooFundId": "F00000YP0U:FO"
+ },
+ {
+  "fundId": "89462d17-b721-4fa3-909f-44fd3a2f7c5b",
+  "code": "TIFIC",
+  "yahooFundId": "F00000OR5Q:FO"
+ },
+ {
+  "fundId": "279a7b37-80f7-4842-8a8c-1aa0983c551c",
+  "code": "TIFID",
+  "yahooFundId": "F00000OR5T:FO"
+ },
+ {
+  "fundId": "f006d6a9-268a-4e1c-99cc-9048a6d1214d",
+  "code": "TIFIM",
+  "yahooFundId": "F00000ZOAF:FO"
+ },
+ {
+  "fundId": "2cc0b2cf-8dc2-4e96-8cce-43ab565af6e4",
+  "code": "TIFOE",
+  "yahooFundId": "F000010MCC:FO"
+ },
+ {
+  "fundId": "a0fc91d2-b249-4b7c-b16e-2776763bfa1d",
+  "code": "TINCU",
+  "yahooFundId": "F00001QUJZ:FO"
+ },
+ {
+  "fundId": "76b3122e-070e-4a7e-ae66-cf27e67546f7",
+  "code": "TINDA",
+  "yahooFundId": "F0GBR04EPU:FO"
+ },
+ {
+  "fundId": "3ce9379c-632e-4379-b10a-f4a2021401c0",
+  "code": "TINDI",
+  "yahooFundId": "F0GBR06GQK:FO"
+ },
+ {
+  "fundId": "d65c3668-6df2-4903-b343-f008a5eec471",
+  "code": "TINIC",
+  "yahooFundId": "F0GBR053NL:FO"
+ },
+ {
+  "fundId": "a19333f0-a3ea-4b4f-abee-9047c05c3f61",
+  "code": "TINWU",
+  "yahooFundId": "F00001SC8U:FO"
+ },
+ {
+  "fundId": "2f6adfef-ced6-49ea-838e-e6dadb267452",
+  "code": "U1A",
+  "yahooFundId": "F00000VS55:FO"
+ },
+ {
+  "fundId": "2de1943c-eab8-444a-95f2-e0df5c2be1be",
+  "code": "UABAAU",
+  "yahooFundId": "F0GBR05VW3:FO"
+ },
+ {
+  "fundId": "efac570f-f49c-4290-9865-f2d693151ff1",
+  "code": "UABAMU",
+  "yahooFundId": "F00000H3GA:FO"
+ },
+ {
+  "fundId": "65acc37c-b797-489c-9f08-2fd4291ebdba",
+  "code": "UABFMU",
+  "yahooFundId": "F000011JR5:FO"
+ },
+ {
+  "fundId": "0b58cf7f-c71d-4b73-b766-7eac96168a61",
+  "code": "UABHAA",
+  "yahooFundId": "F00000ZC6M:FO"
+ },
+ {
+  "fundId": "b679895f-184b-4517-9997-54d60eee6e01",
+  "code": "UABIAU",
+  "yahooFundId": "F00000MMA8:FO"
+ },
+ {
+  "fundId": "4102cbcb-fa72-45fe-a749-96468dfa5cb9",
+  "code": "UC6",
+  "yahooFundId": "F00000OLIG:FO"
+ },
+ {
+  "fundId": "0d1051f2-97b9-44e6-9528-0fdadd6558b3",
+  "code": "UCG",
+  "yahooFundId": "F00000PA3H:FO"
+ },
+ {
+  "fundId": "ad048ece-f246-4109-95b3-ff036e840827",
+  "code": "UCT",
+  "yahooFundId": "F00001E7UO:FO"
+ },
+ {
+  "fundId": "76aae2f4-a389-4ea8-8532-e983f336414c",
+  "code": "UCZ",
+  "yahooFundId": "F00000PS6C:FO"
+ },
+ {
+  "fundId": "59f431de-9419-4cab-a912-4563f907b647",
+  "code": "UDMAAU",
+  "yahooFundId": "F00000TNU3:FO"
+ },
+ {
+  "fundId": "d61b1901-8218-48dc-a73e-471b338cff61",
+  "code": "UEAAAU",
+  "yahooFundId": "F00000SY0L:FO"
+ },
+ {
+  "fundId": "7570516d-e71f-4147-9a72-70250f7f6fea",
+  "code": "UEACAU",
+  "yahooFundId": "F00000SY0O:FO"
+ },
+ {
+  "fundId": "c1cb07bf-f429-4da0-b963-d5ea1bd4f513",
+  "code": "UEAIAA",
+  "yahooFundId": "F00001SLMX:FO"
+ },
+ {
+  "fundId": "83c12576-ef3a-4046-b419-84aadcc65ad8",
+  "code": "UGZ",
+  "yahooFundId": "F00000PS69:FO"
+ },
+ {
+  "fundId": "c2c240ef-73d9-46dc-82eb-d87ccf4937d8",
+  "code": "UHC",
+  "yahooFundId": "F0GBR06ERQ:FO"
+ },
+ {
+  "fundId": "ef3be050-f7fc-48f0-860f-b02bd7500b84",
+  "code": "UHGBUA",
+  "yahooFundId": "F0GBR06ERO:FO"
+ },
+ {
+  "fundId": "73fe1744-acce-475d-a126-76d8a564a5e7",
+  "code": "UHGBUM",
+  "yahooFundId": "F000002XSO:FO"
+ },
+ {
+  "fundId": "225bddc4-c758-42d4-9546-bb75883c975e",
+  "code": "UHT",
+  "yahooFundId": "F00001DZ9B:FO"
+ },
+ {
+  "fundId": "a5adffb7-7a81-40b6-a85d-701a34bc7c29",
+  "code": "UHYBAA",
+  "yahooFundId": "F00000OEHD:FO"
+ },
+ {
+  "fundId": "51d27a69-a268-4ce3-be79-f0a356ef898c",
+  "code": "UHYBUA",
+  "yahooFundId": "F0GBR06AK0:FO"
+ },
+ {
+  "fundId": "61affb5d-dacb-4a36-91f2-3be91820ab88",
+  "code": "UHYBUM",
+  "yahooFundId": "F000002XSP:FO"
+ },
+ {
+  "fundId": "1181222d-82b8-4361-8a27-5dd070ffea90",
+  "code": "UHZ",
+  "yahooFundId": "F00000PS6D:FO"
+ },
+ {
+  "fundId": "34a1fa61-f309-4455-85bb-cebcdb4a5f4a",
+  "code": "UIGBAA",
+  "yahooFundId": "F00000OEHU:FO"
+ },
+ {
+  "fundId": "48909c4b-bef8-41fe-8018-85ed39436289",
+  "code": "UIGBUA",
+  "yahooFundId": "F0GBR06ESX:FO"
+ },
+ {
+  "fundId": "a9c352c9-907f-4c13-84d8-0d4ac39dbf2f",
+  "code": "UIGBUM",
+  "yahooFundId": "F000002XSQ:FO"
+ },
+ {
+  "fundId": "a939e7b7-c930-4616-95d8-4b846311a66a",
+  "code": "UII",
+  "yahooFundId": "F00001INDN:FO"
+ },
+ {
+  "fundId": "ced5b1ae-5992-4269-9f0c-49e548e8da5f",
+  "code": "UIT",
+  "yahooFundId": "F00001DZ9C:FO"
+ },
+ {
+  "fundId": "62ddf3ec-7cd2-4b5c-b7d2-b5764041f3d5",
+  "code": "UP1",
+  "yahooFundId": "F00000PUCZ:FO"
+ },
+ {
+  "fundId": "06a1e959-a608-49ae-8186-5ff1adc006ba",
+  "code": "UPB",
+  "yahooFundId": "F00000PA3G:FO"
+ },
+ {
+  "fundId": "0d72e56a-da49-49b6-b41e-5b9205df2afa",
+  "code": "USCAAU",
+  "yahooFundId": "F0GBR05VWO:FO"
+ },
+ {
+  "fundId": "988e25a3-50d3-46fb-b6f3-5f26a2a62ebd",
+  "code": "USCADU",
+  "yahooFundId": "F0GBR04BXN:FO"
+ },
+ {
+  "fundId": "9b7690b4-f299-4410-a368-27c7a2035ff0",
+  "code": "USCFAU",
+  "yahooFundId": "F00001S4BT:FO"
+ },
+ {
+  "fundId": "18cd2067-92e0-4928-97c6-fcdddbbace4a",
+  "code": "USCIAU",
+  "yahooFundId": "F00000T6C8:FO"
+ },
+ {
+  "fundId": "50525d17-e856-4d38-840d-be331a56dedf",
+  "code": "USGFAU",
+  "yahooFundId": "F00001S4BR:FO"
+ },
+ {
+  "fundId": "05848c62-3631-4180-8076-a6a217750db4",
+  "code": "USGFSG",
+  "yahooFundId": "F0HKG062HT:FO"
+ },
+ {
+  "fundId": "33b836a3-6c75-4914-aa05-94a641550116",
+  "code": "USGIAU",
+  "yahooFundId": "F00000QITG:FO"
+ },
+ {
+  "fundId": "1091b06d-e65a-49bb-a264-da6905309e33",
+  "code": "USPAAU",
+  "yahooFundId": "F000000HL0:FO"
+ },
+ {
+  "fundId": "035b0591-0109-47c3-8a00-703577026a72",
+  "code": "USPFAU",
+  "yahooFundId": "F00001S4BS:FO"
+ },
+ {
+  "fundId": "83439f8c-c266-4543-8812-b3ea54db3d23",
+  "code": "USPIAU",
+  "yahooFundId": "F00000JV3E:FO"
+ },
+ {
+  "fundId": "4fa635a9-2728-4f7c-a3ba-45e898206a9f",
+  "code": "USQAAU",
+  "yahooFundId": "F0GBR04DQA:FO"
+ },
+ {
+  "fundId": "1f6c5ae3-d85f-4c26-b91a-06e2d3979c3e",
+  "code": "USQHAA",
+  "yahooFundId": "F00000ZBF3:FO"
+ },
+ {
+  "fundId": "f8884b61-a7f4-4d7e-806b-76cbaa4de53e",
+  "code": "USQIAA",
+  "yahooFundId": "F00001SLMY:FO"
+ },
+ {
+  "fundId": "7d13b593-11a6-4b2c-91b3-c76e9726bc3b",
+  "code": "USQIAU",
+  "yahooFundId": "F000000FQ7:FO"
+ },
+ {
+  "fundId": "e65bd06e-d3ce-465c-ae0f-6b59d9ef27f8",
+  "code": "USSG",
+  "yahooFundId": "F0GBR04BXT:FO"
+ },
+ {
+  "fundId": "6f247d18-5b8b-4ed5-b755-a8482a68083c",
+  "code": "USTAAU",
+  "yahooFundId": "F0GBR05VVS:FO"
+ },
+ {
+  "fundId": "30c71047-7b75-4483-a66f-f0ad10731fb7",
+  "code": "USTADU",
+  "yahooFundId": "F0GBR04T21:FO"
+ },
+ {
+  "fundId": "d98f25dc-8057-4896-863c-fac99916f7f9",
+  "code": "USTFAJ",
+  "yahooFundId": "F00001T4JR:FO"
+ },
+ {
+  "fundId": "fd94377a-5cd1-4c2f-ac82-9f8fc92e232b",
+  "code": "USTFAU",
+  "yahooFundId": "F0000163U2:FO"
+ },
+ {
+  "fundId": "1477f872-3ea8-4ca6-b74f-cb78b5450370",
+  "code": "USTHAJ",
+  "yahooFundId": "F00001T6VN:FO"
+ },
+ {
+  "fundId": "010f1039-d999-42ce-8c20-2eed7b464724",
+  "code": "USTIAU",
+  "yahooFundId": "F000000JS3:FO"
+ },
+ {
+  "fundId": "bbd7d685-3887-4a38-8141-eaeee98e7336",
+  "code": "USVAAU",
+  "yahooFundId": "F0GBR05VUI:FO"
+ },
+ {
+  "fundId": "cc2221d2-c50d-4b20-a61a-f1fa3f572588",
+  "code": "USVADU",
+  "yahooFundId": "F0GBR04BY1:FO"
+ },
+ {
+  "fundId": "53caebe5-7362-4551-bc6e-a305f59e61b4",
+  "code": "USVIAU",
+  "yahooFundId": "F00000MFMF:FO"
+ },
+ {
+  "fundId": "35969d4d-ff26-47e3-b16b-80bbbfdfa74b",
+  "code": "USY",
+  "yahooFundId": "F00000QF7H:FO"
+ },
+ {
+  "fundId": "d8dc6a21-fe3a-4878-a030-ea8b5b84e4df",
+  "code": "UTC",
+  "yahooFundId": "F0GBR06AV8:FO"
+ },
+ {
+  "fundId": "a0e527a6-839b-4871-b712-f86d9749891b",
+  "code": "UYC",
+  "yahooFundId": "F0GBR06EKL:FO"
+ },
+ {
+  "fundId": "47216ced-2319-444b-8ea9-850544f4a7c0",
+  "code": "VOCAU",
+  "yahooFundId": "F000011G2I:FO"
+ },
+ {
+  "fundId": "28a450d4-4201-4b6f-91d7-50a739ae0424",
+  "code": "VPFA",
+  "yahooFundId": "F00000027I:FO"
+ }
+]

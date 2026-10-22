@@ -1,0 +1,11 @@
+import { PrismaClient } from '@prisma/client';
+const prisma = new PrismaClient();
+const total = await prisma.$queryRawUnsafe(`SELECT count(*)::int n FROM funds WHERE data_provider='tdcc-offshore'`);
+console.log('total tdcc-offshore:', JSON.stringify(total));
+const isinFmt = await prisma.$queryRawUnsafe(`SELECT count(*)::int n FROM funds WHERE data_provider='tdcc-offshore' AND code ~ '^[A-Z]{2}[A-Z0-9]{10}$'`);
+console.log('ISIN-format code count:', JSON.stringify(isinFmt));
+const numFmt = await prisma.$queryRawUnsafe(`SELECT count(*)::int n FROM funds WHERE data_provider='tdcc-offshore' AND code ~ '^[0-9]{4}$'`);
+console.log('4-digit numeric code count:', JSON.stringify(numFmt));
+const sample20 = await prisma.$queryRawUnsafe(`SELECT code, isin, name FROM funds WHERE data_provider='tdcc-offshore' ORDER BY random() LIMIT 20`);
+console.log('random 20 sample:', JSON.stringify(sample20, null, 1));
+await prisma.$disconnect();

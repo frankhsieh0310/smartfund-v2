@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "asset": "COMMODITY",
+  "configuredUniversePath": "config/global-commodity-universe.json",
+  "historyRelation": "MarketData",
+  "identityRelation": "MarketMaster",
+  "policies": {
+    "semanticSeparationRequired": true,
+    "existingHistoryReused": true,
+    "yahooSourceType": "PUBLIC_PROVIDER_PROXY",
+    "worldBankSourceType": "OFFICIAL_REFERENCE",
+    "worldBankSeriesType": "MONTHLY_REFERENCE",
+    "unknownSemanticsAreLegal": true,
+    "officialSpotMustNotBeInferred": true,
+    "continuousFuturesRequiresRollAudit": true
+  },
+  "supplementalCommodities": [
+    { "id": "HEATING_OIL", "officialName": "Heating Oil", "commodityGroup": "ENERGY", "commoditySubgroup": "REFINED_PRODUCTS", "canonicalUnit": "USD/GALLON", "referenceCurrency": "USD", "physicalMarketType": "ENERGY_PRODUCT", "status": "ACTIVE", "sourceVerificationStatus": "MAPPED_FROM_EXISTING_SERIES", "configuredUniverse": false }
+  ],
+  "priceSeries": [
+    { "seriesId": "YF_BRENT", "commodityId": "BRENT", "seriesType": "FUTURES_PROXY", "symbol": "BRENT", "provider": "yahoo-finance2", "exchange": "ICE", "jurisdiction": "UK", "currency": "USD", "unit": "USD/BBL", "frequency": "DAILY", "priceBasis": "FRONT_MONTH_PROXY", "status": "ACTIVE", "sourceVerificationStatus": "PUBLIC_PROVIDER_PROXY" },
+    { "seriesId": "YF_BZ_F", "commodityId": "BRENT", "seriesType": "FUTURES_PROXY", "symbol": "BZ=F", "provider": "YAHOO_CHART", "exchange": "ICE", "jurisdiction": "UK", "currency": "USD", "unit": "USD/BBL", "frequency": "DAILY", "priceBasis": "FRONT_MONTH_PROXY", "status": "ACTIVE", "sourceVerificationStatus": "PUBLIC_PROVIDER_PROXY" },
+    { "seriesId": "YF_WTI", "commodityId": "WTI", "seriesType": "FUTURES_PROXY", "symbol": "WTI", "provider": "yahoo-finance2", "exchange": "NYMEX", "jurisdiction": "US", "currency": "USD", "unit": "USD/BBL", "frequency": "DAILY", "priceBasis": "FRONT_MONTH_PROXY", "status": "ACTIVE", "sourceVerificationStatus": "PUBLIC_PROVIDER_PROXY" },
+    { "seriesId": "YF_CL_F", "commodityId": "WTI", "seriesType": "FUTURES_PROXY", "symbol": "CL=F", "provider": "YAHOO_CHART", "exchange": "NYMEX", "jurisdiction": "US", "currency": "USD", "unit": "USD/BBL", "frequency": "DAILY", "priceBasis": "FRONT_MONTH_PROXY", "status": "ACTIVE", "sourceVerificationStatus": "PUBLIC_PROVIDER_PROXY" },
+    { "seriesId": "YF_GOLD", "commodityId": "GOLD", "seriesType": "FUTURES_PROXY", "symbol": "GOLD", "provider": "yahoo-finance2", "exchange": "COMEX", "jurisdiction": "US", "currency": "USD", "unit": "USD/TROY_OZ", "frequency": "DAILY", "priceBasis": "FRONT_MONTH_PROXY", "status": "ACTIVE", "sourceVerificationStatus": "PUBLIC_PROVIDER_PROXY" },
+    { "seriesId": "YF_GC_F", "commodityId": "GOLD", "seriesType": "FUTURES_PROXY", "symbol": "GC=F", "provider": "YAHOO_CHART", "exchange": "COMEX", "jurisdiction": "US", "currency": "USD", "unit": "USD/TROY_OZ", "frequency": "DAILY", "priceBasis": "FRONT_MONTH_PROXY", "status": "ACTIVE", "sourceVerificationStatus": "PUBLIC_PROVIDER_PROXY" },
+    { "seriesId": "YF_SILVER", "commodityId": "SILVER", "seriesType": "FUTURES_PROXY", "symbol": "SILVER", "provider": "yahoo-finance2", "exchange": "COMEX", "jurisdiction": "US", "currency": "USD", "unit": "USD/TROY_OZ", "frequency": "DAILY", "priceBasis": "FRONT_MONTH_PROXY", "status": "ACTIVE", "sourceVerificationStatus": "PUBLIC_PROVIDER_PROXY" },
+    { "seriesId": "YF_SI_F", "commodityId": "SILVER", "seriesType": "FUTURES_PROXY", "symbol": "SI=F", "provider": "YAHOO_CHART", "exchange": "COMEX", "jurisdiction": "US", "currency": "USD", "unit": "USD/TROY_OZ", "frequency": "DAILY", "priceBasis": "FRONT_MONTH_PROXY", "status": "ACTIVE", "sourceVerificationStatus": "PUBLIC_PROVIDER_PROXY" },
+    { "seriesId": "YF_PLATINUM", "commodityId": "PLATINUM", "seriesType": "FUTURES_PROXY", "symbol": "PLATINUM", "provider": "yahoo-finance2", "exchange": "NYMEX", "jurisdiction": "US", "currency": "USD", "unit": "USD/TROY_OZ", "frequency": "DAILY", "priceBasis": "FRONT_MONTH_PROXY", "status": "ACTIVE", "sourceVerificationStatus": "PUBLIC_PROVIDER_PROXY" },
+    { "seriesId": "YF_PL_F", "commodityId": "PLATINUM", "seriesType": "FUTURES_PROXY", "symbol": "PL=F", "provider": "YAHOO_CHART", "exchange": "NYMEX", "jurisdiction": "US", "currency": "USD", "unit": "USD/TROY_OZ", "frequency": "DAILY", "priceBasis": "FRONT_MONTH_PROXY", "status": "ACTIVE", "sourceVerificationStatus": "PUBLIC_PROVIDER_PROXY" },
+    { "seriesId": "YF_PALLADIUM", "commodityId": "PALLADIUM", "seriesType": "FUTURES_PROXY", "symbol": "PALLADIUM", "provider": "yahoo-finance2", "exchange": "NYMEX", "jurisdiction": "US", "currency": "USD", "unit": "USD/TROY_OZ", "frequency": "DAILY", "priceBasis": "FRONT_MONTH_PROXY", "status": "ACTIVE", "sourceVerificationStatus": "PUBLIC_PROVIDER_PROXY" },
+    { "seriesId": "YF_PA_F", "commodityId": "PALLADIUM", "seriesType": "FUTURES_PROXY", "symbol": "PA=F", "provider": "YAHOO_CHART", "exchange": "NYMEX", "jurisdiction": "US", "currency": "USD", "unit": "USD/TROY_OZ", "frequency": "DAILY", "priceBasis": "FRONT_MONTH_PROXY", "status": "ACTIVE", "sourceVerificationStatus": "PUBLIC_PROVIDER_PROXY" },
+    { "seriesId": "YF_COPPER", "commodityId": "COPPER", "seriesType": "FUTURES_PROXY", "symbol": "COPPER", "provider": "yahoo-finance2", "exchange": "COMEX", "jurisdiction": "US", "currency": "USD", "unit": "USD/LB", "frequency": "DAILY", "priceBasis": "FRONT_MONTH_PROXY", "status": "ACTIVE", "sourceVerificationStatus": "PUBLIC_PROVIDER_PROXY" },
+    { "seriesId": "YF_HG_F", "commodityId": "COPPER", "seriesType": "FUTURES_PROXY", "symbol": "HG=F", "provider": "YAHOO_CHART", "exchange": "COMEX", "jurisdiction": "US", "currency": "USD", "unit": "USD/LB", "frequency": "DAILY", "priceBasis": "FRONT_MONTH_PROXY", "status": "ACTIVE", "sourceVerificationStatus": "PUBLIC_PROVIDER_PROXY" },
+    { "seriesId": "YF_NATGAS", "commodityId": "NATURAL_GAS", "seriesType": "FUTURES_PROXY", "symbol": "NATGAS", "provider": "yahoo-finance2", "exchange": "NYMEX", "jurisdiction": "US", "currency": "USD", "unit": "USD/MMBTU", "frequency": "DAILY", "priceBasis": "FRONT_MONTH_PROXY", "status": "ACTIVE", "sourceVerificationStatus": "PUBLIC_PROVIDER_PROXY" },
+    { "seriesId": "YF_NG_F", "commodityId": "NATURAL_GAS", "seriesType": "FUTURES_PROXY", "symbol": "NG=F", "provider": "YAHOO_CHART", "exchange": "NYMEX", "jurisdiction": "US", "currency": "USD", "unit": "USD/MMBTU", "frequency": "DAILY", "priceBasis": "FRONT_MONTH_PROXY", "status": "ACTIVE", "sourceVerificationStatus": "PUBLIC_PROVIDER_PROXY" },
+    { "seriesId": "YF_GASOLINE", "commodityId": "GASOLINE", "seriesType": "FUTURES_PROXY", "symbol": "GASOLINE", "provider": "yahoo-finance2", "exchange": "NYMEX", "jurisdiction": "US", "currency": "USD", "unit": "USD/GALLON", "frequency": "DAILY", "priceBasis": "FRONT_MONTH_PROXY", "status": "ACTIVE", "sourceVerificationStatus": "PUBLIC_PROVIDER_PROXY" },
+    { "seriesId": "YF_HEATOIL", "commodityId": "HEATING_OIL", "seriesType": "FUTURES_PROXY", "symbol": "HEATOIL", "provider": "yahoo-finance2", "exchange": "NYMEX", "jurisdiction": "US", "currency": "USD", "unit": "USD/GALLON", "frequency": "DAILY", "priceBasis": "FRONT_MONTH_PROXY", "status": "ACTIVE", "sourceVerificationStatus": "PUBLIC_PROVIDER_PROXY" },
+    { "seriesId": "YF_CORN", "commodityId": "CORN", "seriesType": "FUTURES_PROXY", "symbol": "CORN", "provider": "yahoo-finance2", "exchange": "CBOT", "jurisdiction": "US", "currency": "USD", "unit": "USX/BUSHEL", "frequency": "DAILY", "priceBasis": "FRONT_MONTH_PROXY", "status": "ACTIVE", "sourceVerificationStatus": "PUBLIC_PROVIDER_PROXY" },
+    { "seriesId": "YF_ZC_F", "commodityId": "CORN", "seriesType": "FUTURES_PROXY", "symbol": "ZC=F", "provider": "YAHOO_CHART", "exchange": "CBOT", "jurisdiction": "US", "currency": "USX", "unit": "USX/BUSHEL", "frequency": "DAILY", "priceBasis": "FRONT_MONTH_PROXY", "status": "ACTIVE", "sourceVerificationStatus": "PUBLIC_PROVIDER_PROXY" },
+    { "seriesId": "YF_WHEAT", "commodityId": "WHEAT", "seriesType": "FUTURES_PROXY", "symbol": "WHEAT", "provider": "yahoo-finance2", "exchange": "CBOT", "jurisdiction": "US", "currency": "USD", "unit": "USX/BUSHEL", "frequency": "DAILY", "priceBasis": "FRONT_MONTH_PROXY", "status": "ACTIVE", "sourceVerificationStatus": "PUBLIC_PROVIDER_PROXY" },
+    { "seriesId": "YF_ZW_F", "commodityId": "WHEAT", "seriesType": "FUTURES_PROXY", "symbol": "ZW=F", "provider": "YAHOO_CHART", "exchange": "CBOT", "jurisdiction": "US", "currency": "USX", "unit": "USX/BUSHEL", "frequency": "DAILY", "priceBasis": "FRONT_MONTH_PROXY", "status": "ACTIVE", "sourceVerificationStatus": "PUBLIC_PROVIDER_PROXY" },
+    { "seriesId": "YF_SOYBEAN", "commodityId": "SOYBEANS", "seriesType": "FUTURES_PROXY", "symbol": "SOYBEAN", "provider": "yahoo-finance2", "exchange": "CBOT", "jurisdiction": "US", "currency": "USD", "unit": "USX/BUSHEL", "frequency": "DAILY", "priceBasis": "FRONT_MONTH_PROXY", "status": "ACTIVE", "sourceVerificationStatus": "PUBLIC_PROVIDER_PROXY" },
+    { "seriesId": "YF_ZS_F", "commodityId": "SOYBEANS", "seriesType": "FUTURES_PROXY", "symbol": "ZS=F", "provider": "YAHOO_CHART", "exchange": "CBOT", "jurisdiction": "US", "currency": "USX", "unit": "USX/BUSHEL", "frequency": "DAILY", "priceBasis": "FRONT_MONTH_PROXY", "status": "ACTIVE", "sourceVerificationStatus": "PUBLIC_PROVIDER_PROXY" },
+    { "seriesId": "YF_COFFEE", "commodityId": "COFFEE", "seriesType": "FUTURES_PROXY", "symbol": "COFFEE", "provider": "yahoo-finance2", "exchange": "ICE", "jurisdiction": "US", "currency": "USD", "unit": "USX/LB", "frequency": "DAILY", "priceBasis": "FRONT_MONTH_PROXY", "status": "ACTIVE", "sourceVerificationStatus": "PUBLIC_PROVIDER_PROXY" },
+    { "seriesId": "YF_COCOA", "commodityId": "COCOA", "seriesType": "FUTURES_PROXY", "symbol": "COCOA", "provider": "yahoo-finance2", "exchange": "ICE", "jurisdiction": "US", "currency": "USD", "unit": "USD/TONNE", "frequency": "DAILY", "priceBasis": "FRONT_MONTH_PROXY", "status": "ACTIVE", "sourceVerificationStatus": "PUBLIC_PROVIDER_PROXY" },
+    { "seriesId": "YF_SUGAR", "commodityId": "SUGAR", "seriesType": "FUTURES_PROXY", "symbol": "SUGAR", "provider": "yahoo-finance2", "exchange": "ICE", "jurisdiction": "US", "currency": "USD", "unit": "USX/LB", "frequency": "DAILY", "priceBasis": "FRONT_MONTH_PROXY", "status": "ACTIVE", "sourceVerificationStatus": "PUBLIC_PROVIDER_PROXY" },
+    { "seriesId": "YF_COTTON", "commodityId": "COTTON", "seriesType": "FUTURES_PROXY", "symbol": "COTTON", "provider": "yahoo-finance2", "exchange": "ICE", "jurisdiction": "US", "currency": "USD", "unit": "USX/LB", "frequency": "DAILY", "priceBasis": "FRONT_MONTH_PROXY", "status": "ACTIVE", "sourceVerificationStatus": "PUBLIC_PROVIDER_PROXY" },
+    { "seriesId": "WB_BRENT_MONTHLY", "commodityId": "BRENT", "seriesType": "MONTHLY_REFERENCE", "symbol": "WB_BRENT_SPOT", "provider": "WORLD_BANK_PINK_SHEET", "exchange": null, "jurisdiction": "GLOBAL", "currency": "USD", "unit": "USD/BBL", "frequency": "MONTHLY", "priceBasis": "OFFICIAL_MONTHLY_REFERENCE", "status": "ACTIVE", "sourceVerificationStatus": "OFFICIAL_REFERENCE" }
+  ],
+  "worldBankCanary": [
+    { "commodityId": "BRENT", "symbol": "WB_BRENT_SPOT", "sourceColumn": "Crude oil, Brent", "unit": "USD/BBL" },
+    { "commodityId": "NATURAL_GAS", "symbol": "WB_NATURAL_GAS_MONTHLY", "sourceColumn": "Natural gas, US", "unit": "USD/MMBTU" },
+    { "commodityId": "GOLD", "symbol": "WB_GOLD_MONTHLY", "sourceColumn": "Gold", "unit": "USD/TROY_OZ" },
+    { "commodityId": "COPPER", "symbol": "WB_COPPER_MONTHLY", "sourceColumn": "Copper", "unit": "USD/TONNE" },
+    { "commodityId": "CORN", "symbol": "WB_CORN_MONTHLY", "sourceColumn": "Maize", "unit": "USD/TONNE" }
+  ],
+  "productContracts": {
+    "detail": ["commodity", "taxonomy", "primaryReferenceSeries", "latest", "history", "seriesType", "unit", "currency", "source", "freshness", "performance", "riskAnalytics", "futuresAvailability", "physicalDataAvailability", "missingReasons"],
+    "search": ["commodityName", "commodityGroup", "commoditySubgroup", "symbol", "seriesType", "exchange"],
+    "screener": ["latestValue", "performance1D", "performance1M", "performanceYtd", "performance1Y", "volatility30D", "commodityGroup", "seriesType", "freshness"],
+    "compare": ["commodityId", "seriesType", "latestValue", "unit", "currency", "performance", "riskAnalytics", "freshness"]
+  }
+}

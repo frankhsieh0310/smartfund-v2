@@ -1,0 +1,108 @@
+=== SEED ===
+{ currencies: 14, pairs: 19, aliases: 19 }
+=== QUOTE (run 1) ===
+{
+  requestedPairs: 19,
+  resolvedPairs: 19,
+  updatedPairs: 10,
+  staleSkipped: 0,
+  noNewData: 9,
+  failedPairs: []
+}
+=== HISTORY (run 1) ===
+{
+  requestedPairs: 19,
+  updatedPairs: 19,
+  rowsWritten: 51,
+  failedPairs: []
+}
+fx_candles rowcount after run 1: 12944068
+=== QUOTE (run 2, idempotency check) ===
+{
+  requestedPairs: 19,
+  updatedPairs: 0,
+  staleSkipped: 0,
+  noNewData: 19,
+  failedPairs: []
+}
+=== HISTORY (run 2, idempotency check) ===
+{
+  requestedPairs: 19,
+  updatedPairs: 19,
+  rowsWritten: 51,
+  failedPairs: []
+}
+fx_candles rowcount after run 2 (should be unchanged if idempotent): 12944068
+=== SPOT CHECK: targeted pairs ===
+USDTWD {
+  pairExists: true,
+  providerSymbol: 'USDTWD=X',
+  latestQuoteMid: '31.627',
+  latestQuoteAt: '2026-09-12T03:35:24.000Z',
+  candleCount: 44089,
+  latestCandleDate: '2026-09-12'
+}
+EURUSD {
+  pairExists: true,
+  providerSymbol: 'EURUSD=X',
+  latestQuoteMid: '1.160227417946',
+  latestQuoteAt: '2026-09-11T21:29:34.000Z',
+  candleCount: 48771,
+  latestCandleDate: '2026-09-11'
+}
+USDJPY {
+  pairExists: true,
+  providerSymbol: 'USDJPY=X',
+  latestQuoteMid: '153.554',
+  latestQuoteAt: '2026-09-11T20:59:44.000Z',
+  candleCount: 50542,
+  latestCandleDate: '2026-09-11'
+}
+GBPUSD {
+  pairExists: true,
+  providerSymbol: 'GBPUSD=X',
+  latestQuoteMid: '1.352887034416',
+  latestQuoteAt: '2026-09-11T21:29:34.000Z',
+  candleCount: 48749,
+  latestCandleDate: '2026-09-11'
+}
+AUDUSD {
+  pairExists: true,
+  providerSymbol: 'AUDUSD=X',
+  latestQuoteMid: '0.717257201672',
+  latestQuoteAt: '2026-09-12T07:28:34.000Z',
+  candleCount: 50809,
+  latestCandleDate: '2026-09-12'
+}
+USDCNY {
+  pairExists: true,
+  providerSymbol: 'USDCNY=X',
+  latestQuoteMid: '6.7075',
+  latestQuoteAt: '2026-09-12T03:35:24.000Z',
+  candleCount: 32292,
+  latestCandleDate: '2026-09-12'
+}
+USDHKD {
+  pairExists: true,
+  providerSymbol: 'USDHKD=X',
+  latestQuoteMid: '7.8422',
+  latestQuoteAt: '2026-09-12T07:00:08.000Z',
+  candleCount: 49084,
+  latestCandleDate: '2026-09-12'
+}
+USDSGD {
+  pairExists: true,
+  providerSymbol: 'USDSGD=X',
+  latestQuoteMid: '1.2671',
+  latestQuoteAt: '2026-09-12T06:59:39.000Z',
+  candleCount: 48497,
+  latestCandleDate: '2026-09-12'
+}
+USDKRW {
+  pairExists: true,
+  providerSymbol: 'USDKRW=X',
+  latestQuoteMid: '1341.05',
+  latestQuoteAt: '2026-09-12T03:35:24.000Z',
+  candleCount: 45262,
+  latestCandleDate: '2026-09-12'
+}

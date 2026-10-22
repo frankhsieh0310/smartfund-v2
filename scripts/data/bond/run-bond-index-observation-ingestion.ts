@@ -1,0 +1,30 @@
+import {mkdir,readFile,rename,writeFile} from "node:fs/promises";
+import path from "node:path";
+import {PrismaClient} from "@prisma/client";
+
+const ROOT=path.resolve("runtime","fixed-income","bond-index-observation-ingestion");
+const CATALOG=path.resolve("config","fixed-income-bond-index-material-catalog.json");
+const METRICS=["INDEX_LEVEL","PRICE_RETURN","TOTAL_RETURN","GROSS_TOTAL_RETURN","NET_TOTAL_RETURN","YIELD","YTW","YTM","OAS","SPREAD","DURATION","EFFECTIVE_DURATION","MODIFIED_DURATION","AVERAGE_MATURITY","COUPON","CONSTITUENT_COUNT","RATING_COMPOSITION","COUNTRY_COMPOSITION","SECTOR_COMPOSITION"];
+const now=()=>new Date().toISOString();
+async function atomic(file:string,value:unknown){await mkdir(path.dirname(file),{recursive:true});const tmp=`${file}.${process.pid}.tmp`;await writeFile(tmp,`${JSON.stringify(value,null,2)}\n`);await rename(tmp,file)}
+function dbUrl(){const raw=process.env.DATABASE_URL;if(!raw)throw new Error("DATABASE_URL_REQUIRED");const url=new URL(raw);url.searchParams.set("connection_limit","1");url.searchParams.set("pgbouncer","true");return url.toString()}
+function disposition(index:any,metric:string){
+  if(index.publicRoute==="FRED")return {state:"TERMINAL_LICENSE",rights:"REDISTRIBUTION_RESTRICTED",route:"FRED",reason:"ICE_BOFA_TOP_LEVEL_DATA_RESTRICTED"};
+  if(index.publicRoute==="OFFICIAL_INDEX_PAGE")return {state:"TERMINAL_VIEW_ONLY",rights:"PUBLIC_VIEW_ONLY",route:"OFFICIAL_INDEX_PAGE",reason:"SPDJI_TERMS_PROHIBIT_DATABASE_STORAGE_WITHOUT_PERMISSION"};
+  return {state:"TERMINAL_LICENSE",rights:"LICENSE_REQUIRED",route:index.publicRoute??"PROVIDER_LICENSED_DELIVERY",reason:"NO_PUBLIC_STORAGE_AUTHORIZATION"};
+}
+async function main(){
+  const catalog=JSON.parse(await readFile(CATALOG,"utf8"));
+  const started=now();await atomic(path.join(ROOT,"checkpoint.json"),{owner:"GLOBAL_BOND_INDEX_OBSERVATION_INGESTION_OWNER",pid:process.pid,state:"RUNNING",heartbeat:started,checkpoint:"RIGHTS_FIRST_ROUTE_RESOLUTION",maxDbConcurrency:1});
+  const queue=catalog.indexes.flatMap((index:any)=>METRICS.map(metric=>({id:`${index.id}:${metric}`,indexId:index.id,provider:index.provider,metric,...disposition(index,metric),attempts:1,checkpoint:"RIGHTS_EVALUATED_BEFORE_FETCH",startedAt:started,updatedAt:started,completedAt:started,lastError:null,nextRunAt:null})));
+  const prisma=new PrismaClient({datasources:{db:{url:dbUrl()}}});
+  try{
+    let coverageWritten=0;
+    for(const index of catalog.indexes){const routeItems=queue.filter((item:any)=>item.indexId===index.id);coverageWritten+=await prisma.$executeRawUnsafe(`INSERT INTO global_index_coverage(index_id,capability,interval,status,provider,licensing_status,earliest_at,latest_at,row_count,quality_status,details,checked_at) VALUES($1,'BOND_INDEX_OBSERVATION_ROUTE','',$2,$3,$4,NULL,NULL,0,'RIGHTS_VERIFIED',$5::jsonb,NOW()) ON CONFLICT(index_id,capability,interval) DO UPDATE SET status=EXCLUDED.status,provider=EXCLUDED.provider,licensing_status=EXCLUDED.licensing_status,row_count=0,quality_status='RIGHTS_VERIFIED',details=EXCLUDED.details,checked_at=NOW()`,index.id,routeItems.some((x:any)=>x.state==="TERMINAL_VIEW_ONLY")?"PUBLIC_VIEW_ONLY":"LICENSE_BLOCKED",index.provider,routeItems[0].rights,JSON.stringify({metrics:Object.fromEntries(routeItems.map((x:any)=>[x.metric,{route:x.route,rights:x.rights,state:x.state,reason:x.reason}])),observationRowsWritten:0,servingAllowed:false,synthetic:false,etfSubstitute:false}));}
+    const counts=queue.reduce((a:any,x:any)=>{a[x.state]=(a[x.state]??0)+1;a.rights[x.rights]=(a.rights[x.rights]??0)+1;return a},{rights:{}});
+    const byMetric=Object.fromEntries(METRICS.map(metric=>[metric,{target:catalog.indexes.length,publicStorageAllowed:0,viewOnly:queue.filter((x:any)=>x.metric===metric&&x.state==="TERMINAL_VIEW_ONLY").length,licenseBlocked:queue.filter((x:any)=>x.metric===metric&&x.state==="TERMINAL_LICENSE").length,rows:0}]));
+    const report={status:"ACTIVE_RIGHTS_DRAINED_NO_AUTHORIZED_OBSERVATION_ROUTE",bondIndexTotal:catalog.indexes.length,owner:"GLOBAL_BOND_INDEX_OBSERVATION_INGESTION_OWNER",queue:{target:queue.length,processed:queue.length,pending:0,retry:0,failed:0,executablePending:0,terminalLicense:counts.TERMINAL_LICENSE??0,terminalViewOnly:counts.TERMINAL_VIEW_ONLY??0},rights:{publicStorageAllowed:0,publicViewOnly:counts.rights.PUBLIC_VIEW_ONLY??0,internalResearchOnly:0,licenseRequired:counts.rights.LICENSE_REQUIRED??0,redistributionRestricted:counts.rights.REDISTRIBUTION_RESTRICTED??0},metrics:byMetric,history:{indexLevel:{indexes:0,rows:0},totalReturn:{indexes:0,rows:0},yield:{indexes:0,rows:0},spread:{indexes:0,rows:0},duration:{indexes:0,rows:0},composition:{indexes:0,rows:0}},database:{coverageRowsUpserted:coverageWritten,observationRowsWritten:0,schemaChanged:false,prismaChanged:false,migrationRun:false,maxDbConcurrency:1,poolMode:"SUPABASE_TRANSACTION_POOLING_6543_PGBOUNCER"},quality:{duplicateIndex:0,wrongProvider:0,wrongVariant:0,wrongCurrency:0,etfAsIndex:0,fundAsIndex:0,syntheticData:0,lookaheadConflict:0,restrictedObservationsWritten:0},autoContinuing:true,nextOwner:"GLOBAL_INDEX_PUBLIC_EXPANSION/FIXED_INCOME_INDEX_MESH",updatedAt:now()};
+    await atomic(path.join(ROOT,"work-queue.json"),{owner:"GLOBAL_BOND_INDEX_OBSERVATION_INGESTION_OWNER",items:queue,updatedAt:now()});await atomic(path.join(ROOT,"report.json"),report);await atomic(path.join(ROOT,"checkpoint.json"),{owner:"GLOBAL_BOND_INDEX_OBSERVATION_INGESTION_OWNER",pid:null,state:"SCHEDULED_WAIT",heartbeat:now(),checkpoint:`${queue.length}/${queue.length} RIGHTS_RESOLVED; 0 AUTHORIZED_STORAGE_ROUTES`,pending:0,retry:0,nextRunAt:null,nextOwner:report.nextOwner,autoContinuing:true,maxDbConcurrency:1});console.log(JSON.stringify(report,null,2));
+  }finally{await prisma.$disconnect()}
+}
+main().catch(async(error)=>{await atomic(path.join(ROOT,"checkpoint.json"),{owner:"GLOBAL_BOND_INDEX_OBSERVATION_INGESTION_OWNER",pid:process.pid,state:"BLOCKED",heartbeat:now(),lastError:error instanceof Error?error.message:String(error),autoContinuing:false,maxDbConcurrency:1});console.error(error);process.exitCode=1});

@@ -1,0 +1,13 @@
+{
+  "asset": "GLOBAL_INSIDER_OWNERSHIP",
+  "version": 1,
+  "sources": [
+    { "id": "SEC_EDGAR", "market": "US", "name": "SEC EDGAR", "baseUrl": "https://www.sec.gov", "discoveryUrl": "https://www.sec.gov/files/company_tickers_exchange.json", "submissionsTemplate": "https://data.sec.gov/submissions/CIK{cik10}.json", "archiveDocumentTemplate": "https://www.sec.gov/Archives/edgar/data/{issuerCik}/{accessionCompact}/{primaryDocument}", "forms": ["3", "3/A", "4", "4/A", "5", "5/A"], "disclosureRegime": "US_SECTION16", "licenseStatus": "PUBLIC_OFFICIAL", "status": "active" },
+    { "id": "TWSE_MOPS", "market": "TW", "name": "TWSE MOPS", "baseUrl": "https://mops.twse.com.tw", "discoveryUrl": "https://mops.twse.com.tw/mops/web/t93sc01_1", "status": "active" },
+    { "id": "HKEX_DI", "market": "HK", "name": "HKEX Disclosure of Interests", "baseUrl": "https://di.hkex.com.hk", "discoveryUrl": "https://di.hkex.com.hk/di/NSAllFormList.aspx", "status": "active" },
+    { "id": "JPX", "market": "JP", "name": "Japan Exchange Group", "baseUrl": "https://www.jpx.co.jp", "discoveryUrl": "https://www.jpx.co.jp/english/listing/co-search/index.html", "status": "active" },
+    { "id": "KRX_KIND", "market": "KR", "name": "KRX KIND", "baseUrl": "https://kind.krx.co.kr", "discoveryUrl": "https://kind.krx.co.kr/disclosure/todaydisclosure.do", "status": "active" },
+    { "id": "SGX", "market": "SG", "name": "Singapore Exchange", "baseUrl": "https://www.sgx.com", "discoveryUrl": "https://www.sgx.com/securities/company-announcements", "status": "active" },
+    { "id": "ASX", "market": "AU", "name": "Australian Securities Exchange", "baseUrl": "https://www.asx.com.au", "discoveryUrl": "https://www.asx.com.au/markets/trade-our-cash-market/announcements", "status": "active" }
+  ]
+}

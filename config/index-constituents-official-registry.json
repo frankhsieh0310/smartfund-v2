@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "asset": "GLOBAL_INDEX_CONSTITUENTS",
+  "policy": {
+    "officialPublisherFirst": true,
+    "officialExchangeSecond": true,
+    "aggregatorsForbidden": true,
+    "archiveEveryRetrieval": true
+  },
+  "sources": [
+    {"id":"sp-global","name":"S&P Dow Jones Indices","url":"https://www.spglobal.com/spdji/en/indices/equity/","formats":["csv","xls","html","pdf"],"timezone":"America/New_York"},
+    {"id":"nasdaq","name":"Nasdaq Global Index Watch","url":"https://indexes.nasdaqomx.com/","formats":["csv","html"],"timezone":"America/New_York"},
+    {"id":"lseg-ftse-russell","name":"FTSE Russell / LSEG","url":"https://www.lseg.com/en/ftse-russell/indices","formats":["csv","xls","html","pdf"],"timezone":"Europe/London"},
+    {"id":"msci","name":"MSCI","url":"https://www.msci.com/indexes","formats":["csv","xls","html","pdf"],"timezone":"America/New_York"},
+    {"id":"stoxx","name":"STOXX / ISS","url":"https://www.stoxx.com/index-details","formats":["csv","xls","html"],"timezone":"Europe/Berlin"},
+    {"id":"jpx","name":"Japan Exchange Group","url":"https://www.jpx.co.jp/english/markets/indices/","formats":["csv","xls","html"],"timezone":"Asia/Tokyo"},
+    {"id":"nikkei","name":"Nikkei Indexes","url":"https://indexes.nikkei.co.jp/en/nkave","formats":["csv","html"],"timezone":"Asia/Tokyo"},
+    {"id":"hkex","name":"Hang Seng Indexes / HKEX","url":"https://www.hsi.com.hk/eng/indexes/all-indexes","formats":["xls","html","pdf"],"timezone":"Asia/Hong_Kong"},
+    {"id":"csindex","name":"China Securities Index","url":"https://www.csindex.com.cn/#/indices/family/list","formats":["csv","xls","html"],"timezone":"Asia/Shanghai"},
+    {"id":"twse","name":"Taiwan Stock Exchange / TIP","url":"https://taiwanindex.com.tw/indexes","formats":["csv","xls","html"],"timezone":"Asia/Taipei"},
+    {"id":"krx","name":"Korea Exchange","url":"https://global.krx.co.kr/contents/GLB/05/0502/0502010100/GLB0502010100.jsp","formats":["csv","xls","html"],"timezone":"Asia/Seoul"},
+    {"id":"euronext","name":"Euronext Indices","url":"https://live.euronext.com/en/products/indices","formats":["csv","xls","html"],"timezone":"Europe/Paris"},
+    {"id":"deutsche-boerse","name":"Deutsche Boerse","url":"https://www.deutsche-boerse.com/dbg-en/our-company/know-how/glossary/glossary-article/DAX-242866","formats":["csv","xls","html"],"timezone":"Europe/Berlin"},
+    {"id":"bolsa-madrid","name":"BME Indices","url":"https://www.bolsasymercados.es/bme-exchange/en/Indices","formats":["csv","xls","html"],"timezone":"Europe/Madrid"}
+  ],
+  "lineage": ["sourceUrl", "retrievedAt", "effectiveDate", "checksum", "parserVersion"],
+  "licensingPolicy": "Store and redistribute only fields permitted by publisher terms; record blocked-license coverage explicitly."
+}

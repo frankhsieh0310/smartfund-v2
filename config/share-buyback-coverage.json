@@ -1,0 +1,8 @@
+{
+  "asset": "GLOBAL_SHARE_BUYBACK",
+  "stages": ["HISTORICAL", "LATEST", "INCREMENTAL", "RETRY", "ARCHIVE"],
+  "markets": ["US", "GB", "JP", "HK", "TW", "SG", "AU", "KR"],
+  "checkpointed": true,
+  "archiveEnabled": true,
+  "retryEnabled": true
+}

@@ -1,0 +1,12 @@
+import { PrismaClient } from '@prisma/client';
+const prisma = new PrismaClient();
+const oldSet = await prisma.$queryRawUnsafe(`SELECT id FROM funds WHERE is_active=true AND currency='TWD'`);
+const newSet = await prisma.$queryRawUnsafe(`SELECT id FROM funds WHERE is_active=true AND COALESCE(data_provider,'') NOT IN ('yahoo','SEC')`);
+const oldIds = new Set(oldSet.map(r=>r.id));
+const newIds = new Set(newSet.map(r=>r.id));
+const missing = [...oldIds].filter(id => !newIds.has(id));
+const added = [...newIds].filter(id => !oldIds.has(id));
+console.log(`old=${oldIds.size} new=${newIds.size}`);
+console.log(`old\new (missing from new, should be 0): ${missing.length}`);
+console.log(`new\old (added, should be exactly 43): ${added.length}`);
+await prisma.$disconnect();

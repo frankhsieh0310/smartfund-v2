@@ -1,0 +1,4226 @@
+{
+  "ZARVND": {
+    "requestedSymbol": "ZARVND=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "ZARTRY": {
+    "requestedSymbol": "ZARTRY=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "ZARTHB": {
+    "requestedSymbol": "ZARTHB=X",
+    "ok": true,
+    "canonicalSymbol": "ZARTHB=X",
+    "currency": "THB",
+    "price": 2.0521,
+    "time": "2026-09-12T04:03:30.000Z"
+  },
+  "ZARSEK": {
+    "requestedSymbol": "ZARSEK=X",
+    "ok": true,
+    "canonicalSymbol": "ZARSEK=X",
+    "currency": "SEK",
+    "price": 0.5965,
+    "time": "2026-09-12T07:27:33.000Z"
+  },
+  "ZARSAR": {
+    "requestedSymbol": "ZARSAR=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "ZARQAR": {
+    "requestedSymbol": "ZARQAR=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "ZARPLN": {
+    "requestedSymbol": "ZARPLN=X",
+    "ok": true,
+    "canonicalSymbol": "ZARPLN=X",
+    "currency": "PLN",
+    "price": 0.2308,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "ZARPHP": {
+    "requestedSymbol": "ZARPHP=X",
+    "ok": true,
+    "canonicalSymbol": "ZARPHP=X",
+    "currency": "PHP",
+    "price": 3.89,
+    "time": "2026-09-12T03:57:30.000Z"
+  },
+  "ZARNOK": {
+    "requestedSymbol": "ZARNOK=X",
+    "ok": true,
+    "canonicalSymbol": "ZARNOK=X",
+    "currency": "NOK",
+    "price": 0.576,
+    "time": "2026-09-12T07:27:33.000Z"
+  },
+  "ZARMYR": {
+    "requestedSymbol": "ZARMYR=X",
+    "ok": true,
+    "canonicalSymbol": "ZARMYR=X",
+    "currency": "MYR",
+    "price": 0.2522,
+    "time": "2026-09-12T04:03:30.000Z"
+  },
+  "ZARIDR": {
+    "requestedSymbol": "ZARIDR=X",
+    "ok": true,
+    "canonicalSymbol": "ZARIDR=X",
+    "currency": "IDR",
+    "price": 1092.77,
+    "time": "2026-09-12T04:03:30.000Z"
+  },
+  "ZARHUF": {
+    "requestedSymbol": "ZARHUF=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "ZARDKK": {
+    "requestedSymbol": "ZARDKK=X",
+    "ok": true,
+    "canonicalSymbol": "ZARDKK=X",
+    "currency": "DKK",
+    "price": 0.3996,
+    "time": "2026-09-12T07:27:33.000Z"
+  },
+  "ZARCZK": {
+    "requestedSymbol": "ZARCZK=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "ZARAED": {
+    "requestedSymbol": "ZARAED=X",
+    "ok": true,
+    "canonicalSymbol": "ZARAED=X",
+    "currency": "AED",
+    "price": 0.2275,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "VNDSAR": {
+    "requestedSymbol": "VNDSAR=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "VNDQAR": {
+    "requestedSymbol": "VNDQAR=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "VNDAED": {
+    "requestedSymbol": "VNDAED=X",
+    "ok": true,
+    "canonicalSymbol": "VNDAED=X",
+    "currency": "AED",
+    "price": 0.0001,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "USDZAR": {
+    "requestedSymbol": "USDZAR=X",
+    "ok": true,
+    "canonicalSymbol": "USDZAR=X",
+    "currency": "ZAR",
+    "price": 16.1038,
+    "time": "2026-09-12T06:59:39.000Z"
+  },
+  "USDVND": {
+    "requestedSymbol": "USDVND=X",
+    "ok": true,
+    "canonicalSymbol": "USDVND=X",
+    "currency": "VND",
+    "price": 25920,
+    "time": "2026-09-12T03:35:24.000Z"
+  },
+  "USDTWD": {
+    "requestedSymbol": "USDTWD=X",
+    "ok": true,
+    "canonicalSymbol": "USDTWD=X",
+    "currency": "TWD",
+    "price": 31.627,
+    "time": "2026-09-12T03:35:24.000Z"
+  },
+  "USDTRY": {
+    "requestedSymbol": "USDTRY=X",
+    "ok": true,
+    "canonicalSymbol": "USDTRY=X",
+    "currency": "TRY",
+    "price": 48.5546,
+    "time": "2026-09-12T03:35:24.000Z"
+  },
+  "USDTHB": {
+    "requestedSymbol": "USDTHB=X",
+    "ok": true,
+    "canonicalSymbol": "USDTHB=X",
+    "currency": "THB",
+    "price": 33.04,
+    "time": "2026-09-12T03:35:24.000Z"
+  },
+  "USDSGD": {
+    "requestedSymbol": "USDSGD=X",
+    "ok": true,
+    "canonicalSymbol": "USDSGD=X",
+    "currency": "SGD",
+    "price": 1.2671,
+    "time": "2026-09-12T06:59:39.000Z"
+  },
+  "USDSEK": {
+    "requestedSymbol": "USDSEK=X",
+    "ok": true,
+    "canonicalSymbol": "USDSEK=X",
+    "currency": "SEK",
+    "price": 9.6845,
+    "time": "2026-09-12T07:00:09.000Z"
+  },
+  "USDSAR": {
+    "requestedSymbol": "USDSAR=X",
+    "ok": true,
+    "canonicalSymbol": "USDSAR=X",
+    "currency": "SAR",
+    "price": 3.7555,
+    "time": "2026-09-12T03:35:24.000Z"
+  },
+  "USDQAR": {
+    "requestedSymbol": "USDQAR=X",
+    "ok": true,
+    "canonicalSymbol": "USDQAR=X",
+    "currency": "QAR",
+    "price": 3.64,
+    "time": "2026-09-12T03:35:24.000Z"
+  },
+  "USDPLN": {
+    "requestedSymbol": "USDPLN=X",
+    "ok": true,
+    "canonicalSymbol": "USDPLN=X",
+    "currency": "PLN",
+    "price": 3.7234,
+    "time": "2026-09-12T03:35:24.000Z"
+  },
+  "USDPHP": {
+    "requestedSymbol": "USDPHP=X",
+    "ok": true,
+    "canonicalSymbol": "PHP=X",
+    "currency": "PHP",
+    "price": 62.69,
+    "time": "2026-09-12T03:30:51.000Z"
+  },
+  "USDNOK": {
+    "requestedSymbol": "USDNOK=X",
+    "ok": true,
+    "canonicalSymbol": "USDNOK=X",
+    "currency": "NOK",
+    "price": 9.2767,
+    "time": "2026-09-12T07:00:09.000Z"
+  },
+  "USDMYR": {
+    "requestedSymbol": "USDMYR=X",
+    "ok": true,
+    "canonicalSymbol": "USDMYR=X",
+    "currency": "MYR",
+    "price": 4.068,
+    "time": "2026-09-12T03:35:24.000Z"
+  },
+  "USDMXN": {
+    "requestedSymbol": "USDMXN=X",
+    "ok": true,
+    "canonicalSymbol": "USDMXN=X",
+    "currency": "MXN",
+    "price": 16.964,
+    "time": "2026-09-12T03:35:24.000Z"
+  },
+  "USDKRW": {
+    "requestedSymbol": "USDKRW=X",
+    "ok": true,
+    "canonicalSymbol": "USDKRW=X",
+    "currency": "KRW",
+    "price": 1341.05,
+    "time": "2026-09-12T03:35:24.000Z"
+  },
+  "USDJPY": {
+    "requestedSymbol": "USDJPY=X",
+    "ok": true,
+    "canonicalSymbol": "JPY=X",
+    "currency": "JPY",
+    "price": 153.554,
+    "time": "2026-09-11T20:59:44.000Z"
+  },
+  "USDINR": {
+    "requestedSymbol": "USDINR=X",
+    "ok": true,
+    "canonicalSymbol": "USDINR=X",
+    "currency": "INR",
+    "price": 95.54,
+    "time": "2026-09-12T03:35:24.000Z"
+  },
+  "USDIDR": {
+    "requestedSymbol": "USDIDR=X",
+    "ok": true,
+    "canonicalSymbol": "USDIDR=X",
+    "currency": "IDR",
+    "price": 17606,
+    "time": "2026-09-12T03:35:24.000Z"
+  },
+  "USDHUF": {
+    "requestedSymbol": "USDHUF=X",
+    "ok": true,
+    "canonicalSymbol": "USDHUF=X",
+    "currency": "HUF",
+    "price": 313.25,
+    "time": "2026-09-12T03:35:24.000Z"
+  },
+  "USDHKD": {
+    "requestedSymbol": "USDHKD=X",
+    "ok": true,
+    "canonicalSymbol": "USDHKD=X",
+    "currency": "HKD",
+    "price": 7.8422,
+    "time": "2026-09-12T07:00:08.000Z"
+  },
+  "USDDKK": {
+    "requestedSymbol": "USDDKK=X",
+    "ok": true,
+    "canonicalSymbol": "USDDKK=X",
+    "currency": "DKK",
+    "price": 6.4442,
+    "time": "2026-09-12T07:00:09.000Z"
+  },
+  "USDCZK": {
+    "requestedSymbol": "USDCZK=X",
+    "ok": true,
+    "canonicalSymbol": "USDCZK=X",
+    "currency": "CZK",
+    "price": 20.866,
+    "time": "2026-09-12T03:35:24.000Z"
+  },
+  "USDCNY": {
+    "requestedSymbol": "USDCNY=X",
+    "ok": true,
+    "canonicalSymbol": "USDCNY=X",
+    "currency": "CNY",
+    "price": 6.7075,
+    "time": "2026-09-12T03:35:24.000Z"
+  },
+  "USDCNH": {
+    "requestedSymbol": "USDCNH=X",
+    "ok": true,
+    "canonicalSymbol": "USDCNH=X",
+    "currency": "CNH",
+    "price": 6.707,
+    "time": "2026-09-11T20:59:42.000Z"
+  },
+  "USDCHF": {
+    "requestedSymbol": "USDCHF=X",
+    "ok": true,
+    "canonicalSymbol": "USDCHF=X",
+    "currency": "CHF",
+    "price": 0.8161,
+    "time": "2026-09-12T07:00:08.000Z"
+  },
+  "USDCAD": {
+    "requestedSymbol": "USDCAD=X",
+    "ok": true,
+    "canonicalSymbol": "USDCAD=X",
+    "currency": "CAD",
+    "price": 1.3869,
+    "time": "2026-09-12T07:00:08.000Z"
+  },
+  "USDBRL": {
+    "requestedSymbol": "USDBRL=X",
+    "ok": true,
+    "canonicalSymbol": "USDBRL=X",
+    "currency": "BRL",
+    "price": 5.1262,
+    "time": "2026-09-12T03:35:24.000Z"
+  },
+  "USDAED": {
+    "requestedSymbol": "USDAED=X",
+    "ok": true,
+    "canonicalSymbol": "USDAED=X",
+    "currency": "AED",
+    "price": 3.6726,
+    "time": "2026-09-12T03:35:24.000Z"
+  },
+  "TWDZAR": {
+    "requestedSymbol": "TWDZAR=X",
+    "ok": true,
+    "canonicalSymbol": "TWDZAR=X",
+    "currency": "ZAR",
+    "price": 0.508,
+    "time": "2026-09-12T04:04:30.000Z"
+  },
+  "TWDVND": {
+    "requestedSymbol": "TWDVND=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "TWDTRY": {
+    "requestedSymbol": "TWDTRY=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "TWDTHB": {
+    "requestedSymbol": "TWDTHB=X",
+    "ok": true,
+    "canonicalSymbol": "TWDTHB=X",
+    "currency": "THB",
+    "price": 1.0433,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "TWDSEK": {
+    "requestedSymbol": "TWDSEK=X",
+    "ok": true,
+    "canonicalSymbol": "TWDSEK=X",
+    "currency": "SEK",
+    "price": 0.3056,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "TWDSAR": {
+    "requestedSymbol": "TWDSAR=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "TWDQAR": {
+    "requestedSymbol": "TWDQAR=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "TWDPLN": {
+    "requestedSymbol": "TWDPLN=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "TWDPHP": {
+    "requestedSymbol": "TWDPHP=X",
+    "ok": true,
+    "canonicalSymbol": "TWDPHP=X",
+    "currency": "PHP",
+    "price": 1.9789,
+    "time": "2026-09-12T03:57:30.000Z"
+  },
+  "TWDNOK": {
+    "requestedSymbol": "TWDNOK=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "TWDMYR": {
+    "requestedSymbol": "TWDMYR=X",
+    "ok": true,
+    "canonicalSymbol": "TWDMYR=X",
+    "currency": "MYR",
+    "price": 0.128,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "TWDMXN": {
+    "requestedSymbol": "TWDMXN=X",
+    "ok": true,
+    "canonicalSymbol": "TWDMXN=X",
+    "currency": null,
+    "price": 0.5355,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "TWDINR": {
+    "requestedSymbol": "TWDINR=X",
+    "ok": true,
+    "canonicalSymbol": "TWDINR=X",
+    "currency": "INR",
+    "price": 3.0164,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "TWDIDR": {
+    "requestedSymbol": "TWDIDR=X",
+    "ok": true,
+    "canonicalSymbol": "TWDIDR=X",
+    "currency": "IDR",
+    "price": 555.91,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "TWDHUF": {
+    "requestedSymbol": "TWDHUF=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "TWDDKK": {
+    "requestedSymbol": "TWDDKK=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "TWDCZK": {
+    "requestedSymbol": "TWDCZK=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "TWDBRL": {
+    "requestedSymbol": "TWDBRL=X",
+    "ok": true,
+    "canonicalSymbol": "TWDBRL=X",
+    "currency": null,
+    "price": 0.1618,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "TWDAED": {
+    "requestedSymbol": "TWDAED=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "TRYVND": {
+    "requestedSymbol": "TRYVND=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "TRYTHB": {
+    "requestedSymbol": "TRYTHB=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "TRYSEK": {
+    "requestedSymbol": "TRYSEK=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "TRYSAR": {
+    "requestedSymbol": "TRYSAR=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "TRYQAR": {
+    "requestedSymbol": "TRYQAR=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "TRYPLN": {
+    "requestedSymbol": "TRYPLN=X",
+    "ok": true,
+    "canonicalSymbol": "TRYPLN=X",
+    "currency": "PLN",
+    "price": 0.0742,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "TRYPHP": {
+    "requestedSymbol": "TRYPHP=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "TRYNOK": {
+    "requestedSymbol": "TRYNOK=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "TRYMYR": {
+    "requestedSymbol": "TRYMYR=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "TRYIDR": {
+    "requestedSymbol": "TRYIDR=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "TRYHUF": {
+    "requestedSymbol": "TRYHUF=X",
+    "ok": true,
+    "canonicalSymbol": "TRYHUF=X",
+    "currency": "HUF",
+    "price": 6.2,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "TRYDKK": {
+    "requestedSymbol": "TRYDKK=X",
+    "ok": true,
+    "canonicalSymbol": "TRYDKK=X",
+    "currency": "DKK",
+    "price": 0.1302,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "TRYCZK": {
+    "requestedSymbol": "TRYCZK=X",
+    "ok": true,
+    "canonicalSymbol": "TRYCZK=X",
+    "currency": "CZK",
+    "price": 0.405,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "TRYAED": {
+    "requestedSymbol": "TRYAED=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "THBVND": {
+    "requestedSymbol": "THBVND=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "THBSAR": {
+    "requestedSymbol": "THBSAR=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "THBQAR": {
+    "requestedSymbol": "THBQAR=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "THBPHP": {
+    "requestedSymbol": "THBPHP=X",
+    "ok": true,
+    "canonicalSymbol": "THBPHP=X",
+    "currency": "PHP",
+    "price": 1.8958,
+    "time": "2026-09-12T03:57:30.000Z"
+  },
+  "THBMYR": {
+    "requestedSymbol": "THBMYR=X",
+    "ok": true,
+    "canonicalSymbol": "THBMYR=X",
+    "currency": "MYR",
+    "price": 0.1231,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "THBIDR": {
+    "requestedSymbol": "THBIDR=X",
+    "ok": true,
+    "canonicalSymbol": "THBIDR=X",
+    "currency": "IDR",
+    "price": 532.57,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "THBAED": {
+    "requestedSymbol": "THBAED=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "SGDZAR": {
+    "requestedSymbol": "SGDZAR=X",
+    "ok": true,
+    "canonicalSymbol": "SGDZAR=X",
+    "currency": "ZAR",
+    "price": 12.7121,
+    "time": "2026-09-12T07:28:34.000Z"
+  },
+  "SGDVND": {
+    "requestedSymbol": "SGDVND=X",
+    "ok": true,
+    "canonicalSymbol": "SGDVND=X",
+    "currency": "VND",
+    "price": 20432.8,
+    "time": "2026-09-11T18:22:30.000Z"
+  },
+  "SGDTWD": {
+    "requestedSymbol": "SGDTWD=X",
+    "ok": true,
+    "canonicalSymbol": "SGDTWD=X",
+    "currency": "TWD",
+    "price": 24.994,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "SGDTRY": {
+    "requestedSymbol": "SGDTRY=X",
+    "ok": true,
+    "canonicalSymbol": "SGDTRY=X",
+    "currency": "TRY",
+    "price": 38.3179,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "SGDTHB": {
+    "requestedSymbol": "SGDTHB=X",
+    "ok": true,
+    "canonicalSymbol": "SGDTHB=X",
+    "currency": "THB",
+    "price": 26.0753,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "SGDSEK": {
+    "requestedSymbol": "SGDSEK=X",
+    "ok": true,
+    "canonicalSymbol": "SGDSEK=X",
+    "currency": "SEK",
+    "price": 7.6411,
+    "time": "2026-09-12T07:27:33.000Z"
+  },
+  "SGDSAR": {
+    "requestedSymbol": "SGDSAR=X",
+    "ok": true,
+    "canonicalSymbol": "SGDSAR=X",
+    "currency": "SAR",
+    "price": 2.9614,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "SGDQAR": {
+    "requestedSymbol": "SGDQAR=X",
+    "ok": true,
+    "canonicalSymbol": "SGDQAR=X",
+    "currency": "QAR",
+    "price": 2.8703,
+    "time": "2026-09-11T18:22:30.000Z"
+  },
+  "SGDPLN": {
+    "requestedSymbol": "SGDPLN=X",
+    "ok": true,
+    "canonicalSymbol": "SGDPLN=X",
+    "currency": "PLN",
+    "price": 2.9359,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "SGDPHP": {
+    "requestedSymbol": "SGDPHP=X",
+    "ok": true,
+    "canonicalSymbol": "SGDPHP=X",
+    "currency": "PHP",
+    "price": 49.461,
+    "time": "2026-09-11T20:27:33.000Z"
+  },
+  "SGDNOK": {
+    "requestedSymbol": "SGDNOK=X",
+    "ok": true,
+    "canonicalSymbol": "SGDNOK=X",
+    "currency": "NOK",
+    "price": 7.32,
+    "time": "2026-09-12T07:27:33.000Z"
+  },
+  "SGDMYR": {
+    "requestedSymbol": "SGDMYR=X",
+    "ok": true,
+    "canonicalSymbol": "SGDMYR=X",
+    "currency": "MYR",
+    "price": 3.2116,
+    "time": "2026-09-11T18:22:30.000Z"
+  },
+  "SGDMXN": {
+    "requestedSymbol": "SGDMXN=X",
+    "ok": true,
+    "canonicalSymbol": "SGDMXN=X",
+    "currency": "MXN",
+    "price": 13.3973,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "SGDKRW": {
+    "requestedSymbol": "SGDKRW=X",
+    "ok": true,
+    "canonicalSymbol": "SGDKRW=X",
+    "currency": "KRW",
+    "price": 1058.21,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "SGDINR": {
+    "requestedSymbol": "SGDINR=X",
+    "ok": true,
+    "canonicalSymbol": "SGDINR=X",
+    "currency": "INR",
+    "price": 75.407,
+    "time": "2026-09-11T18:22:30.000Z"
+  },
+  "SGDIDR": {
+    "requestedSymbol": "SGDIDR=X",
+    "ok": true,
+    "canonicalSymbol": "SGDIDR=X",
+    "currency": "IDR",
+    "price": 13897.026,
+    "time": "2026-09-11T18:22:30.000Z"
+  },
+  "SGDHUF": {
+    "requestedSymbol": "SGDHUF=X",
+    "ok": true,
+    "canonicalSymbol": "SGDHUF=X",
+    "currency": "HUF",
+    "price": 247.262,
+    "time": "2026-09-11T23:37:31.000Z"
+  },
+  "SGDDKK": {
+    "requestedSymbol": "SGDDKK=X",
+    "ok": true,
+    "canonicalSymbol": "SGDDKK=X",
+    "currency": "DKK",
+    "price": 5.0835,
+    "time": "2026-09-12T07:27:33.000Z"
+  },
+  "SGDCZK": {
+    "requestedSymbol": "SGDCZK=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "SGDBRL": {
+    "requestedSymbol": "SGDBRL=X",
+    "ok": true,
+    "canonicalSymbol": "SGDBRL=X",
+    "currency": "BRL",
+    "price": 4.0413,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "SGDAED": {
+    "requestedSymbol": "SGDAED=X",
+    "ok": true,
+    "canonicalSymbol": "SGDAED=X",
+    "currency": "AED",
+    "price": 2.8937,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "SEKVND": {
+    "requestedSymbol": "SEKVND=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "SEKTHB": {
+    "requestedSymbol": "SEKTHB=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "SEKSAR": {
+    "requestedSymbol": "SEKSAR=X",
+    "ok": true,
+    "canonicalSymbol": "SEKSAR=X",
+    "currency": "SAR",
+    "price": 0.3826,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "SEKQAR": {
+    "requestedSymbol": "SEKQAR=X",
+    "ok": true,
+    "canonicalSymbol": "SEKQAR=X",
+    "currency": "QAR",
+    "price": 0.3702,
+    "time": "2026-09-11T18:22:30.000Z"
+  },
+  "SEKPLN": {
+    "requestedSymbol": "SEKPLN=X",
+    "ok": true,
+    "canonicalSymbol": "SEKPLN=X",
+    "currency": "PLN",
+    "price": 0.3796,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "SEKPHP": {
+    "requestedSymbol": "SEKPHP=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "SEKNOK": {
+    "requestedSymbol": "SEKNOK=X",
+    "ok": true,
+    "canonicalSymbol": "SEKNOK=X",
+    "currency": "NOK",
+    "price": 0.9572,
+    "time": "2026-09-12T07:27:33.000Z"
+  },
+  "SEKMYR": {
+    "requestedSymbol": "SEKMYR=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "SEKIDR": {
+    "requestedSymbol": "SEKIDR=X",
+    "ok": true,
+    "canonicalSymbol": "SEKIDR=X",
+    "currency": "IDR",
+    "price": 1812.4,
+    "time": "2026-09-11T18:22:30.000Z"
+  },
+  "SEKHUF": {
+    "requestedSymbol": "SEKHUF=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "SEKDKK": {
+    "requestedSymbol": "SEKDKK=X",
+    "ok": true,
+    "canonicalSymbol": "SEKDKK=X",
+    "currency": "DKK",
+    "price": 0.6649,
+    "time": "2026-09-12T07:27:33.000Z"
+  },
+  "SEKCZK": {
+    "requestedSymbol": "SEKCZK=X",
+    "ok": true,
+    "canonicalSymbol": "SEKCZK=X",
+    "currency": "CZK",
+    "price": 2.1527,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "SEKAED": {
+    "requestedSymbol": "SEKAED=X",
+    "ok": true,
+    "canonicalSymbol": "SEKAED=X",
+    "currency": "AED",
+    "price": 0.3786,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "SARQAR": {
+    "requestedSymbol": "SARQAR=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "PLNVND": {
+    "requestedSymbol": "PLNVND=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "PLNTHB": {
+    "requestedSymbol": "PLNTHB=X",
+    "ok": true,
+    "canonicalSymbol": "PLNTHB=X",
+    "currency": "THB",
+    "price": 8.8706,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "PLNSAR": {
+    "requestedSymbol": "PLNSAR=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "PLNQAR": {
+    "requestedSymbol": "PLNQAR=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "PLNPHP": {
+    "requestedSymbol": "PLNPHP=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "PLNMYR": {
+    "requestedSymbol": "PLNMYR=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "PLNIDR": {
+    "requestedSymbol": "PLNIDR=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "PLNHUF": {
+    "requestedSymbol": "PLNHUF=X",
+    "ok": true,
+    "canonicalSymbol": "PLNHUF=X",
+    "currency": "HUF",
+    "price": 92.608,
+    "time": "2025-08-15T20:48:43.000Z"
+  },
+  "PLNCZK": {
+    "requestedSymbol": "PLNCZK=X",
+    "ok": true,
+    "canonicalSymbol": "PLNCZK=X",
+    "currency": "CZK",
+    "price": 5.6025,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "PLNAED": {
+    "requestedSymbol": "PLNAED=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "PHPVND": {
+    "requestedSymbol": "PHPVND=X",
+    "ok": true,
+    "canonicalSymbol": "PHPVND=X",
+    "currency": "VND",
+    "price": 412.96,
+    "time": "2026-09-12T03:57:30.000Z"
+  },
+  "PHPSAR": {
+    "requestedSymbol": "PHPSAR=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "PHPQAR": {
+    "requestedSymbol": "PHPQAR=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "PHPAED": {
+    "requestedSymbol": "PHPAED=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "NZDZAR": {
+    "requestedSymbol": "NZDZAR=X",
+    "ok": true,
+    "canonicalSymbol": "NZDZAR=X",
+    "currency": "ZAR",
+    "price": 9.3615,
+    "time": "2026-09-12T07:27:33.000Z"
+  },
+  "NZDVND": {
+    "requestedSymbol": "NZDVND=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "NZDUSD": {
+    "requestedSymbol": "NZDUSD=X",
+    "ok": true,
+    "canonicalSymbol": "NZDUSD=X",
+    "currency": "USD",
+    "price": 0.5816,
+    "time": "2026-09-12T07:28:34.000Z"
+  },
+  "NZDTWD": {
+    "requestedSymbol": "NZDTWD=X",
+    "ok": true,
+    "canonicalSymbol": "NZDTWD=X",
+    "currency": "TWD",
+    "price": 18.414,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "NZDTRY": {
+    "requestedSymbol": "NZDTRY=X",
+    "ok": true,
+    "canonicalSymbol": "NZDTRY=X",
+    "currency": "TRY",
+    "price": 28.2309,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "NZDTHB": {
+    "requestedSymbol": "NZDTHB=X",
+    "ok": true,
+    "canonicalSymbol": "NZDTHB=X",
+    "currency": "THB",
+    "price": 19.174,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "NZDSGD": {
+    "requestedSymbol": "NZDSGD=X",
+    "ok": true,
+    "canonicalSymbol": "NZDSGD=X",
+    "currency": "SGD",
+    "price": 0.7358,
+    "time": "2026-09-12T07:27:33.000Z"
+  },
+  "NZDSEK": {
+    "requestedSymbol": "NZDSEK=X",
+    "ok": true,
+    "canonicalSymbol": "NZDSEK=X",
+    "currency": "SEK",
+    "price": 5.6492,
+    "time": "2025-08-15T20:59:14.000Z"
+  },
+  "NZDSAR": {
+    "requestedSymbol": "NZDSAR=X",
+    "ok": true,
+    "canonicalSymbol": "NZDSAR=X",
+    "currency": "SAR",
+    "price": 2.1788,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "NZDQAR": {
+    "requestedSymbol": "NZDQAR=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "NZDPLN": {
+    "requestedSymbol": "NZDPLN=X",
+    "ok": true,
+    "canonicalSymbol": "NZDPLN=X",
+    "currency": "PLN",
+    "price": 2.1653,
+    "time": "2026-09-11T21:28:34.000Z"
+  },
+  "NZDPHP": {
+    "requestedSymbol": "NZDPHP=X",
+    "ok": true,
+    "canonicalSymbol": "NZDPHP=X",
+    "currency": "PHP",
+    "price": 36.436,
+    "time": "2026-09-11T20:27:33.000Z"
+  },
+  "NZDNOK": {
+    "requestedSymbol": "NZDNOK=X",
+    "ok": true,
+    "canonicalSymbol": "NZDNOK=X",
+    "currency": "NOK",
+    "price": 5.3926,
+    "time": "2026-09-12T07:27:33.000Z"
+  },
+  "NZDMYR": {
+    "requestedSymbol": "NZDMYR=X",
+    "ok": true,
+    "canonicalSymbol": "NZDMYR=X",
+    "currency": "MYR",
+    "price": 2.3663,
+    "time": "2026-09-11T18:22:30.000Z"
+  },
+  "NZDMXN": {
+    "requestedSymbol": "NZDMXN=X",
+    "ok": true,
+    "canonicalSymbol": "NZDMXN=X",
+    "currency": "MXN",
+    "price": 9.868,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "NZDKRW": {
+    "requestedSymbol": "NZDKRW=X",
+    "ok": true,
+    "canonicalSymbol": "NZDKRW=X",
+    "currency": "KRW",
+    "price": 779.5,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "NZDJPY": {
+    "requestedSymbol": "NZDJPY=X",
+    "ok": true,
+    "canonicalSymbol": "NZDJPY=X",
+    "currency": "JPY",
+    "price": 89.298,
+    "time": "2026-09-11T21:28:34.000Z"
+  },
+  "NZDINR": {
+    "requestedSymbol": "NZDINR=X",
+    "ok": true,
+    "canonicalSymbol": "NZDINR=X",
+    "currency": "INR",
+    "price": 55.561,
+    "time": "2026-09-11T18:22:30.000Z"
+  },
+  "NZDIDR": {
+    "requestedSymbol": "NZDIDR=X",
+    "ok": true,
+    "canonicalSymbol": "NZDIDR=X",
+    "currency": "IDR",
+    "price": 10235,
+    "time": "2026-09-11T18:22:30.000Z"
+  },
+  "NZDHUF": {
+    "requestedSymbol": "NZDHUF=X",
+    "ok": true,
+    "canonicalSymbol": "NZDHUF=X",
+    "currency": "HUF",
+    "price": 182.07,
+    "time": "2026-09-11T23:27:31.000Z"
+  },
+  "NZDHKD": {
+    "requestedSymbol": "NZDHKD=X",
+    "ok": true,
+    "canonicalSymbol": "NZDHKD=X",
+    "currency": "HKD",
+    "price": 4.5586,
+    "time": "2026-09-12T07:27:33.000Z"
+  },
+  "NZDDKK": {
+    "requestedSymbol": "NZDDKK=X",
+    "ok": true,
+    "canonicalSymbol": "NZDDKK=X",
+    "currency": "DKK",
+    "price": 3.7448,
+    "time": "2026-09-12T07:27:33.000Z"
+  },
+  "NZDCZK": {
+    "requestedSymbol": "NZDCZK=X",
+    "ok": true,
+    "canonicalSymbol": "NZDCZK=X",
+    "currency": "CZK",
+    "price": 12.1263,
+    "time": "2026-09-11T23:27:31.000Z"
+  },
+  "NZDCNY": {
+    "requestedSymbol": "NZDCNY=X",
+    "ok": true,
+    "canonicalSymbol": "NZDCNY=X",
+    "currency": "CNY",
+    "price": 3.8866,
+    "time": "2026-09-12T02:32:54.000Z"
+  },
+  "NZDCNH": {
+    "requestedSymbol": "NZDCNH=X",
+    "ok": true,
+    "canonicalSymbol": "NZDCNH=X",
+    "currency": "",
+    "price": 3.8954,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "NZDCHF": {
+    "requestedSymbol": "NZDCHF=X",
+    "ok": true,
+    "canonicalSymbol": "NZDCHF=X",
+    "currency": "CHF",
+    "price": 0.4746,
+    "time": "2026-09-12T07:27:33.000Z"
+  },
+  "NZDCAD": {
+    "requestedSymbol": "NZDCAD=X",
+    "ok": true,
+    "canonicalSymbol": "NZDCAD=X",
+    "currency": "CAD",
+    "price": 0.8063,
+    "time": "2026-09-12T07:27:33.000Z"
+  },
+  "NZDBRL": {
+    "requestedSymbol": "NZDBRL=X",
+    "ok": true,
+    "canonicalSymbol": "NZDBRL=X",
+    "currency": "BRL",
+    "price": 2.9769,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "NZDAED": {
+    "requestedSymbol": "NZDAED=X",
+    "ok": true,
+    "canonicalSymbol": "NZDAED=X",
+    "currency": "AED",
+    "price": 2.1332,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "NOKVND": {
+    "requestedSymbol": "NOKVND=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "NOKTHB": {
+    "requestedSymbol": "NOKTHB=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "NOKSAR": {
+    "requestedSymbol": "NOKSAR=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "NOKQAR": {
+    "requestedSymbol": "NOKQAR=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "NOKPLN": {
+    "requestedSymbol": "NOKPLN=X",
+    "ok": true,
+    "canonicalSymbol": "NOKPLN=X",
+    "currency": "PLN",
+    "price": 0.4007,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "NOKPHP": {
+    "requestedSymbol": "NOKPHP=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "NOKMYR": {
+    "requestedSymbol": "NOKMYR=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "NOKIDR": {
+    "requestedSymbol": "NOKIDR=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "NOKHUF": {
+    "requestedSymbol": "NOKHUF=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "NOKDKK": {
+    "requestedSymbol": "NOKDKK=X",
+    "ok": true,
+    "canonicalSymbol": "NOKDKK=X",
+    "currency": "DKK",
+    "price": 0.6934,
+    "time": "2026-09-12T07:27:33.000Z"
+  },
+  "NOKCZK": {
+    "requestedSymbol": "NOKCZK=X",
+    "ok": true,
+    "canonicalSymbol": "NOKCZK=X",
+    "currency": "CZK",
+    "price": 2.2479,
+    "time": "2026-09-11T23:27:31.000Z"
+  },
+  "NOKAED": {
+    "requestedSymbol": "NOKAED=X",
+    "ok": true,
+    "canonicalSymbol": "NOKAED=X",
+    "currency": "AED",
+    "price": 0.395,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "MYRVND": {
+    "requestedSymbol": "MYRVND=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "MYRSAR": {
+    "requestedSymbol": "MYRSAR=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "MYRQAR": {
+    "requestedSymbol": "MYRQAR=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "MYRPHP": {
+    "requestedSymbol": "MYRPHP=X",
+    "ok": true,
+    "canonicalSymbol": "MYRPHP=X",
+    "currency": "PHP",
+    "price": 15.399,
+    "time": "2026-09-12T03:57:30.000Z"
+  },
+  "MYRIDR": {
+    "requestedSymbol": "MYRIDR=X",
+    "ok": true,
+    "canonicalSymbol": "MYRIDR=X",
+    "currency": "IDR",
+    "price": 4326,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "MYRAED": {
+    "requestedSymbol": "MYRAED=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "MXNZAR": {
+    "requestedSymbol": "MXNZAR=X",
+    "ok": true,
+    "canonicalSymbol": "MXNZAR=X",
+    "currency": "ZAR",
+    "price": 0.9482,
+    "time": "2026-09-12T04:04:30.000Z"
+  },
+  "MXNVND": {
+    "requestedSymbol": "MXNVND=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "MXNTRY": {
+    "requestedSymbol": "MXNTRY=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "MXNTHB": {
+    "requestedSymbol": "MXNTHB=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "MXNSEK": {
+    "requestedSymbol": "MXNSEK=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "MXNSAR": {
+    "requestedSymbol": "MXNSAR=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "MXNQAR": {
+    "requestedSymbol": "MXNQAR=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "MXNPLN": {
+    "requestedSymbol": "MXNPLN=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "MXNPHP": {
+    "requestedSymbol": "MXNPHP=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "MXNNOK": {
+    "requestedSymbol": "MXNNOK=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "MXNMYR": {
+    "requestedSymbol": "MXNMYR=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "MXNIDR": {
+    "requestedSymbol": "MXNIDR=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "MXNHUF": {
+    "requestedSymbol": "MXNHUF=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "MXNDKK": {
+    "requestedSymbol": "MXNDKK=X",
+    "ok": true,
+    "canonicalSymbol": "MXNDKK=X",
+    "currency": "DKK",
+    "price": 0.3791,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "MXNCZK": {
+    "requestedSymbol": "MXNCZK=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "MXNAED": {
+    "requestedSymbol": "MXNAED=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "KRWZAR": {
+    "requestedSymbol": "KRWZAR=X",
+    "ok": true,
+    "canonicalSymbol": "KRWZAR=X",
+    "currency": "ZAR",
+    "price": 0.012,
+    "time": "2026-09-12T04:04:30.000Z"
+  },
+  "KRWVND": {
+    "requestedSymbol": "KRWVND=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "KRWTWD": {
+    "requestedSymbol": "KRWTWD=X",
+    "ok": true,
+    "canonicalSymbol": "KRWTWD=X",
+    "currency": "TWD",
+    "price": 0.0236,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "KRWTRY": {
+    "requestedSymbol": "KRWTRY=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "KRWTHB": {
+    "requestedSymbol": "KRWTHB=X",
+    "ok": true,
+    "canonicalSymbol": "KRWTHB=X",
+    "currency": "THB",
+    "price": 0.0246,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "KRWSEK": {
+    "requestedSymbol": "KRWSEK=X",
+    "ok": true,
+    "canonicalSymbol": "KRWSEK=X",
+    "currency": "SEK",
+    "price": 0.0072,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "KRWSAR": {
+    "requestedSymbol": "KRWSAR=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "KRWQAR": {
+    "requestedSymbol": "KRWQAR=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "KRWPLN": {
+    "requestedSymbol": "KRWPLN=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "KRWPHP": {
+    "requestedSymbol": "KRWPHP=X",
+    "ok": true,
+    "canonicalSymbol": "KRWPHP=X",
+    "currency": "PHP",
+    "price": 0.0467,
+    "time": "2026-09-12T03:57:30.000Z"
+  },
+  "KRWNOK": {
+    "requestedSymbol": "KRWNOK=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "KRWMYR": {
+    "requestedSymbol": "KRWMYR=X",
+    "ok": true,
+    "canonicalSymbol": "KRWMYR=X",
+    "currency": "MYR",
+    "price": 0.003,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "KRWMXN": {
+    "requestedSymbol": "KRWMXN=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "KRWINR": {
+    "requestedSymbol": "KRWINR=X",
+    "ok": true,
+    "canonicalSymbol": "KRWINR=X",
+    "currency": "INR",
+    "price": 0.0712,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "KRWIDR": {
+    "requestedSymbol": "KRWIDR=X",
+    "ok": true,
+    "canonicalSymbol": "KRWIDR=X",
+    "currency": "IDR",
+    "price": 13.122,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "KRWHUF": {
+    "requestedSymbol": "KRWHUF=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "KRWDKK": {
+    "requestedSymbol": "KRWDKK=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "KRWCZK": {
+    "requestedSymbol": "KRWCZK=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "KRWBRL": {
+    "requestedSymbol": "KRWBRL=X",
+    "ok": true,
+    "canonicalSymbol": "KRWBRL=X",
+    "currency": null,
+    "price": 0.0038,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "KRWAED": {
+    "requestedSymbol": "KRWAED=X",
+    "ok": true,
+    "canonicalSymbol": "KRWAED=X",
+    "currency": "AED",
+    "price": 0.0027,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "JPYZAR": {
+    "requestedSymbol": "JPYZAR=X",
+    "ok": true,
+    "canonicalSymbol": "JPYZAR=X",
+    "currency": "ZAR",
+    "price": 0.1048,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "JPYVND": {
+    "requestedSymbol": "JPYVND=X",
+    "ok": true,
+    "canonicalSymbol": "JPYVND=X",
+    "currency": "VND",
+    "price": 168.14,
+    "time": "2026-09-11T18:22:30.000Z"
+  },
+  "JPYTWD": {
+    "requestedSymbol": "JPYTWD=X",
+    "ok": true,
+    "canonicalSymbol": "JPYTWD=X",
+    "currency": "TWD",
+    "price": 0.2037,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "JPYTRY": {
+    "requestedSymbol": "JPYTRY=X",
+    "ok": true,
+    "canonicalSymbol": "JPYTRY=X",
+    "currency": "TRY",
+    "price": 0.3161,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "JPYTHB": {
+    "requestedSymbol": "JPYTHB=X",
+    "ok": true,
+    "canonicalSymbol": "JPYTHB=X",
+    "currency": "THB",
+    "price": 0.2127,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "JPYSGD": {
+    "requestedSymbol": "JPYSGD=X",
+    "ok": true,
+    "canonicalSymbol": "JPYSGD=X",
+    "currency": "SGD",
+    "price": 0.0082,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "JPYSEK": {
+    "requestedSymbol": "JPYSEK=X",
+    "ok": true,
+    "canonicalSymbol": "JPYSEK=X",
+    "currency": "SEK",
+    "price": 0.0626,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "JPYSAR": {
+    "requestedSymbol": "JPYSAR=X",
+    "ok": true,
+    "canonicalSymbol": "JPYSAR=X",
+    "currency": "SAR",
+    "price": 0.0239,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "JPYQAR": {
+    "requestedSymbol": "JPYQAR=X",
+    "ok": true,
+    "canonicalSymbol": "JPYQAR=X",
+    "currency": "QAR",
+    "price": 0.0232,
+    "time": "2026-09-11T18:22:30.000Z"
+  },
+  "JPYPLN": {
+    "requestedSymbol": "JPYPLN=X",
+    "ok": true,
+    "canonicalSymbol": "JPYPLN=X",
+    "currency": "PLN",
+    "price": 0.0242,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "JPYPHP": {
+    "requestedSymbol": "JPYPHP=X",
+    "ok": true,
+    "canonicalSymbol": "JPYPHP=X",
+    "currency": "PHP",
+    "price": 0.4054,
+    "time": "2026-09-11T20:27:33.000Z"
+  },
+  "JPYNOK": {
+    "requestedSymbol": "JPYNOK=X",
+    "ok": true,
+    "canonicalSymbol": "JPYNOK=X",
+    "currency": "NOK",
+    "price": 0.0604,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "JPYMYR": {
+    "requestedSymbol": "JPYMYR=X",
+    "ok": true,
+    "canonicalSymbol": "JPYMYR=X",
+    "currency": "MYR",
+    "price": 0.0264,
+    "time": "2026-09-11T18:22:30.000Z"
+  },
+  "JPYMXN": {
+    "requestedSymbol": "JPYMXN=X",
+    "ok": true,
+    "canonicalSymbol": "JPYMXN=X",
+    "currency": "MXN",
+    "price": 0.1105,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "JPYKRW": {
+    "requestedSymbol": "JPYKRW=X",
+    "ok": true,
+    "canonicalSymbol": "JPYKRW=X",
+    "currency": "KRW",
+    "price": 8.71,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "JPYINR": {
+    "requestedSymbol": "JPYINR=X",
+    "ok": true,
+    "canonicalSymbol": "JPYINR=X",
+    "currency": "INR",
+    "price": 0.6214,
+    "time": "2026-09-11T18:22:30.000Z"
+  },
+  "JPYIDR": {
+    "requestedSymbol": "JPYIDR=X",
+    "ok": true,
+    "canonicalSymbol": "JPYIDR=X",
+    "currency": "IDR",
+    "price": 114.51,
+    "time": "2026-09-11T18:22:30.000Z"
+  },
+  "JPYHUF": {
+    "requestedSymbol": "JPYHUF=X",
+    "ok": true,
+    "canonicalSymbol": "JPYHUF=X",
+    "currency": "HUF",
+    "price": 2.0397,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "JPYHKD": {
+    "requestedSymbol": "JPYHKD=X",
+    "ok": true,
+    "canonicalSymbol": "JPYHKD=X",
+    "currency": "HKD",
+    "price": 0.0508,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "JPYDKK": {
+    "requestedSymbol": "JPYDKK=X",
+    "ok": true,
+    "canonicalSymbol": "JPYDKK=X",
+    "currency": "DKK",
+    "price": 0.0419,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "JPYCZK": {
+    "requestedSymbol": "JPYCZK=X",
+    "ok": true,
+    "canonicalSymbol": "JPYCZK=X",
+    "currency": "CZK",
+    "price": 0.1357,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "JPYCNY": {
+    "requestedSymbol": "JPYCNY=X",
+    "ok": true,
+    "canonicalSymbol": "JPYCNY=X",
+    "currency": "CNY",
+    "price": 0.0435,
+    "time": "2026-09-12T02:32:54.000Z"
+  },
+  "JPYCNH": {
+    "requestedSymbol": "JPYCNH=X",
+    "ok": true,
+    "canonicalSymbol": "JPYCNH=X",
+    "currency": "",
+    "price": 0.0436,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "JPYBRL": {
+    "requestedSymbol": "JPYBRL=X",
+    "ok": true,
+    "canonicalSymbol": "JPYBRL=X",
+    "currency": "BRL",
+    "price": 0.0332,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "JPYAED": {
+    "requestedSymbol": "JPYAED=X",
+    "ok": true,
+    "canonicalSymbol": "JPYAED=X",
+    "currency": "AED",
+    "price": 0.0234,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "INRZAR": {
+    "requestedSymbol": "INRZAR=X",
+    "ok": true,
+    "canonicalSymbol": "INRZAR=X",
+    "currency": "ZAR",
+    "price": 0.1683,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "INRVND": {
+    "requestedSymbol": "INRVND=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "INRTRY": {
+    "requestedSymbol": "INRTRY=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "INRTHB": {
+    "requestedSymbol": "INRTHB=X",
+    "ok": true,
+    "canonicalSymbol": "INRTHB=X",
+    "currency": "THB",
+    "price": 0.3455,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "INRSEK": {
+    "requestedSymbol": "INRSEK=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "INRSAR": {
+    "requestedSymbol": "INRSAR=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "INRQAR": {
+    "requestedSymbol": "INRQAR=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "INRPLN": {
+    "requestedSymbol": "INRPLN=X",
+    "ok": true,
+    "canonicalSymbol": "INRPLN=X",
+    "currency": "PLN",
+    "price": 0.0389,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "INRPHP": {
+    "requestedSymbol": "INRPHP=X",
+    "ok": true,
+    "canonicalSymbol": "INRPHP=X",
+    "currency": "PHP",
+    "price": 0.6556,
+    "time": "2026-09-12T03:57:30.000Z"
+  },
+  "INRNOK": {
+    "requestedSymbol": "INRNOK=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "INRMYR": {
+    "requestedSymbol": "INRMYR=X",
+    "ok": true,
+    "canonicalSymbol": "INRMYR=X",
+    "currency": "MYR",
+    "price": 0.0421,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "INRMXN": {
+    "requestedSymbol": "INRMXN=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "INRIDR": {
+    "requestedSymbol": "INRIDR=X",
+    "ok": true,
+    "canonicalSymbol": "INRIDR=X",
+    "currency": "IDR",
+    "price": 183.8,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "INRHUF": {
+    "requestedSymbol": "INRHUF=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "INRDKK": {
+    "requestedSymbol": "INRDKK=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "INRCZK": {
+    "requestedSymbol": "INRCZK=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "INRBRL": {
+    "requestedSymbol": "INRBRL=X",
+    "ok": true,
+    "canonicalSymbol": "INRBRL=X",
+    "currency": "BRL",
+    "price": 0.0536,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "INRAED": {
+    "requestedSymbol": "INRAED=X",
+    "ok": true,
+    "canonicalSymbol": "INRAED=X",
+    "currency": "AED",
+    "price": 0.0384,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "IDRVND": {
+    "requestedSymbol": "IDRVND=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "IDRSAR": {
+    "requestedSymbol": "IDRSAR=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "IDRQAR": {
+    "requestedSymbol": "IDRQAR=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "IDRPHP": {
+    "requestedSymbol": "IDRPHP=X",
+    "ok": true,
+    "canonicalSymbol": "IDRPHP=X",
+    "currency": "PHP",
+    "price": 0.0036,
+    "time": "2026-09-12T03:57:30.000Z"
+  },
+  "IDRAED": {
+    "requestedSymbol": "IDRAED=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "HUFVND": {
+    "requestedSymbol": "HUFVND=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "HUFTHB": {
+    "requestedSymbol": "HUFTHB=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "HUFSAR": {
+    "requestedSymbol": "HUFSAR=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "HUFQAR": {
+    "requestedSymbol": "HUFQAR=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "HUFPHP": {
+    "requestedSymbol": "HUFPHP=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "HUFMYR": {
+    "requestedSymbol": "HUFMYR=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "HUFIDR": {
+    "requestedSymbol": "HUFIDR=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "HUFAED": {
+    "requestedSymbol": "HUFAED=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "HKDZAR": {
+    "requestedSymbol": "HKDZAR=X",
+    "ok": true,
+    "canonicalSymbol": "HKDZAR=X",
+    "currency": "ZAR",
+    "price": 2.0535,
+    "time": "2026-09-12T07:28:33.000Z"
+  },
+  "HKDVND": {
+    "requestedSymbol": "HKDVND=X",
+    "ok": true,
+    "canonicalSymbol": "HKDVND=X",
+    "currency": "VND",
+    "price": 3303.2,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "HKDTWD": {
+    "requestedSymbol": "HKDTWD=X",
+    "ok": true,
+    "canonicalSymbol": "HKDTWD=X",
+    "currency": "TWD",
+    "price": 4.0387,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "HKDTRY": {
+    "requestedSymbol": "HKDTRY=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "HKDTHB": {
+    "requestedSymbol": "HKDTHB=X",
+    "ok": true,
+    "canonicalSymbol": "HKDTHB=X",
+    "currency": "THB",
+    "price": 4.2147,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "HKDSGD": {
+    "requestedSymbol": "HKDSGD=X",
+    "ok": true,
+    "canonicalSymbol": "HKDSGD=X",
+    "currency": "SGD",
+    "price": 0.1615,
+    "time": "2026-09-12T07:27:33.000Z"
+  },
+  "HKDSEK": {
+    "requestedSymbol": "HKDSEK=X",
+    "ok": true,
+    "canonicalSymbol": "HKDSEK=X",
+    "currency": "SEK",
+    "price": 1.2339,
+    "time": "2026-09-12T07:27:33.000Z"
+  },
+  "HKDSAR": {
+    "requestedSymbol": "HKDSAR=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "HKDQAR": {
+    "requestedSymbol": "HKDQAR=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "HKDPLN": {
+    "requestedSymbol": "HKDPLN=X",
+    "ok": true,
+    "canonicalSymbol": "HKDPLN=X",
+    "currency": "PLN",
+    "price": 0.4748,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "HKDPHP": {
+    "requestedSymbol": "HKDPHP=X",
+    "ok": true,
+    "canonicalSymbol": "HKDPHP=X",
+    "currency": "PHP",
+    "price": 7.9948,
+    "time": "2026-09-12T03:57:30.000Z"
+  },
+  "HKDNOK": {
+    "requestedSymbol": "HKDNOK=X",
+    "ok": true,
+    "canonicalSymbol": "HKDNOK=X",
+    "currency": "NOK",
+    "price": 1.1781,
+    "time": "2026-09-12T07:27:33.000Z"
+  },
+  "HKDMYR": {
+    "requestedSymbol": "HKDMYR=X",
+    "ok": true,
+    "canonicalSymbol": "HKDMYR=X",
+    "currency": "MYR",
+    "price": 0.519,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "HKDMXN": {
+    "requestedSymbol": "HKDMXN=X",
+    "ok": true,
+    "canonicalSymbol": "HKDMXN=X",
+    "currency": "MXN",
+    "price": 2.16,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "HKDKRW": {
+    "requestedSymbol": "HKDKRW=X",
+    "ok": true,
+    "canonicalSymbol": "HKDKRW=X",
+    "currency": "KRW",
+    "price": 170.56,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "HKDINR": {
+    "requestedSymbol": "HKDINR=X",
+    "ok": true,
+    "canonicalSymbol": "HKDINR=X",
+    "currency": "INR",
+    "price": 12.1852,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "HKDIDR": {
+    "requestedSymbol": "HKDIDR=X",
+    "ok": true,
+    "canonicalSymbol": "HKDIDR=X",
+    "currency": "IDR",
+    "price": 2243.1,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "HKDHUF": {
+    "requestedSymbol": "HKDHUF=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "HKDDKK": {
+    "requestedSymbol": "HKDDKK=X",
+    "ok": true,
+    "canonicalSymbol": "HKDDKK=X",
+    "currency": "DKK",
+    "price": 0.8215,
+    "time": "2026-09-12T07:27:33.000Z"
+  },
+  "HKDCZK": {
+    "requestedSymbol": "HKDCZK=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "HKDBRL": {
+    "requestedSymbol": "HKDBRL=X",
+    "ok": true,
+    "canonicalSymbol": "HKDBRL=X",
+    "currency": "BRL",
+    "price": 0.6534,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "HKDAED": {
+    "requestedSymbol": "HKDAED=X",
+    "ok": true,
+    "canonicalSymbol": "HKDAED=X",
+    "currency": "AED",
+    "price": 0.4679,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "GBPZAR": {
+    "requestedSymbol": "GBPZAR=X",
+    "ok": true,
+    "canonicalSymbol": "GBPZAR=X",
+    "currency": "ZAR",
+    "price": 21.7408,
+    "time": "2026-09-12T07:27:33.000Z"
+  },
+  "GBPVND": {
+    "requestedSymbol": "GBPVND=X",
+    "ok": true,
+    "canonicalSymbol": "GBPVND=X",
+    "currency": "VND",
+    "price": 35048.86,
+    "time": "2026-09-11T18:22:30.000Z"
+  },
+  "GBPUSD": {
+    "requestedSymbol": "GBPUSD=X",
+    "ok": true,
+    "canonicalSymbol": "GBPUSD=X",
+    "currency": "USD",
+    "price": 1.3529,
+    "time": "2026-09-11T21:29:34.000Z"
+  },
+  "GBPTWD": {
+    "requestedSymbol": "GBPTWD=X",
+    "ok": true,
+    "canonicalSymbol": "GBPTWD=X",
+    "currency": "TWD",
+    "price": 42.841,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "GBPTRY": {
+    "requestedSymbol": "GBPTRY=X",
+    "ok": true,
+    "canonicalSymbol": "GBPTRY=X",
+    "currency": "TRY",
+    "price": 65.6891,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "GBPTHB": {
+    "requestedSymbol": "GBPTHB=X",
+    "ok": true,
+    "canonicalSymbol": "GBPTHB=X",
+    "currency": "THB",
+    "price": 44.691,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "GBPSGD": {
+    "requestedSymbol": "GBPSGD=X",
+    "ok": true,
+    "canonicalSymbol": "GBPSGD=X",
+    "currency": "SGD",
+    "price": 1.7116,
+    "time": "2026-09-12T07:27:33.000Z"
+  },
+  "GBPSEK": {
+    "requestedSymbol": "GBPSEK=X",
+    "ok": true,
+    "canonicalSymbol": "GBPSEK=X",
+    "currency": "SEK",
+    "price": 13.1183,
+    "time": "2026-09-11T21:00:33.000Z"
+  },
+  "GBPSAR": {
+    "requestedSymbol": "GBPSAR=X",
+    "ok": true,
+    "canonicalSymbol": "GBPSAR=X",
+    "currency": "SAR",
+    "price": 5.0759,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "GBPQAR": {
+    "requestedSymbol": "GBPQAR=X",
+    "ok": true,
+    "canonicalSymbol": "GBPQAR=X",
+    "currency": "QAR",
+    "price": 4.9222,
+    "time": "2026-09-11T18:22:30.000Z"
+  },
+  "GBPPLN": {
+    "requestedSymbol": "GBPPLN=X",
+    "ok": true,
+    "canonicalSymbol": "GBPPLN=X",
+    "currency": "PLN",
+    "price": 5.0402,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "GBPPHP": {
+    "requestedSymbol": "GBPPHP=X",
+    "ok": true,
+    "canonicalSymbol": "GBPPHP=X",
+    "currency": "PHP",
+    "price": 84.788,
+    "time": "2026-09-11T20:27:33.000Z"
+  },
+  "GBPNZD": {
+    "requestedSymbol": "GBPNZD=X",
+    "ok": true,
+    "canonicalSymbol": "GBPNZD=X",
+    "currency": "NZD",
+    "price": 2.3246,
+    "time": "2026-09-12T07:28:33.000Z"
+  },
+  "GBPNOK": {
+    "requestedSymbol": "GBPNOK=X",
+    "ok": true,
+    "canonicalSymbol": "GBPNOK=X",
+    "currency": "NOK",
+    "price": 12.5431,
+    "time": "2026-09-12T07:27:33.000Z"
+  },
+  "GBPMYR": {
+    "requestedSymbol": "GBPMYR=X",
+    "ok": true,
+    "canonicalSymbol": "GBPMYR=X",
+    "currency": "MYR",
+    "price": 5.5038,
+    "time": "2026-09-11T18:22:30.000Z"
+  },
+  "GBPMXN": {
+    "requestedSymbol": "GBPMXN=X",
+    "ok": true,
+    "canonicalSymbol": "GBPMXN=X",
+    "currency": "MXN",
+    "price": 22.9691,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "GBPKRW": {
+    "requestedSymbol": "GBPKRW=X",
+    "ok": true,
+    "canonicalSymbol": "GBPKRW=X",
+    "currency": "KRW",
+    "price": 1812.39,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "GBPJPY": {
+    "requestedSymbol": "GBPJPY=X",
+    "ok": true,
+    "canonicalSymbol": "GBPJPY=X",
+    "currency": "JPY",
+    "price": 207.771,
+    "time": "2026-09-11T21:29:04.000Z"
+  },
+  "GBPINR": {
+    "requestedSymbol": "GBPINR=X",
+    "ok": true,
+    "canonicalSymbol": "GBPINR=X",
+    "currency": "INR",
+    "price": 129.1836,
+    "time": "2026-09-12T03:30:16.000Z"
+  },
+  "GBPIDR": {
+    "requestedSymbol": "GBPIDR=X",
+    "ok": true,
+    "canonicalSymbol": "GBPIDR=X",
+    "currency": "IDR",
+    "price": 23792.38,
+    "time": "2026-09-11T18:22:30.000Z"
+  },
+  "GBPHUF": {
+    "requestedSymbol": "GBPHUF=X",
+    "ok": true,
+    "canonicalSymbol": "GBPHUF=X",
+    "currency": "HUF",
+    "price": 423.51,
+    "time": "2026-09-11T23:37:31.000Z"
+  },
+  "GBPHKD": {
+    "requestedSymbol": "GBPHKD=X",
+    "ok": true,
+    "canonicalSymbol": "GBPHKD=X",
+    "currency": "HKD",
+    "price": 10.6,
+    "time": "2026-09-12T07:27:33.000Z"
+  },
+  "GBPDKK": {
+    "requestedSymbol": "GBPDKK=X",
+    "ok": true,
+    "canonicalSymbol": "GBPDKK=X",
+    "currency": "DKK",
+    "price": 8.7127,
+    "time": "2026-09-12T07:27:33.000Z"
+  },
+  "GBPCZK": {
+    "requestedSymbol": "GBPCZK=X",
+    "ok": true,
+    "canonicalSymbol": "GBPCZK=X",
+    "currency": "CZK",
+    "price": 28.218,
+    "time": "2026-09-11T23:37:31.000Z"
+  },
+  "GBPCNY": {
+    "requestedSymbol": "GBPCNY=X",
+    "ok": true,
+    "canonicalSymbol": "GBPCNY=X",
+    "currency": "CNY",
+    "price": 9.045,
+    "time": "2026-09-12T02:32:54.000Z"
+  },
+  "GBPCNH": {
+    "requestedSymbol": "GBPCNH=X",
+    "ok": true,
+    "canonicalSymbol": "GBPCNH=X",
+    "currency": "",
+    "price": 9.0698,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "GBPCHF": {
+    "requestedSymbol": "GBPCHF=X",
+    "ok": true,
+    "canonicalSymbol": "GBPCHF=X",
+    "currency": "CHF",
+    "price": 1.1036,
+    "time": "2026-09-12T07:28:33.000Z"
+  },
+  "GBPCAD": {
+    "requestedSymbol": "GBPCAD=X",
+    "ok": true,
+    "canonicalSymbol": "GBPCAD=X",
+    "currency": "CAD",
+    "price": 1.8751,
+    "time": "2026-09-12T07:28:33.000Z"
+  },
+  "GBPBRL": {
+    "requestedSymbol": "GBPBRL=X",
+    "ok": true,
+    "canonicalSymbol": "GBPBRL=X",
+    "currency": "BRL",
+    "price": 6.9309,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "GBPAUD": {
+    "requestedSymbol": "GBPAUD=X",
+    "ok": true,
+    "canonicalSymbol": "GBPAUD=X",
+    "currency": "AUD",
+    "price": 1.8855,
+    "time": "2026-09-12T07:28:33.000Z"
+  },
+  "GBPAED": {
+    "requestedSymbol": "GBPAED=X",
+    "ok": true,
+    "canonicalSymbol": "GBPAED=X",
+    "currency": "AED",
+    "price": 4.9645,
+    "time": "2026-09-12T07:27:33.000Z"
+  },
+  "EURZAR": {
+    "requestedSymbol": "EURZAR=X",
+    "ok": true,
+    "canonicalSymbol": "EURZAR=X",
+    "currency": "ZAR",
+    "price": 18.6796,
+    "time": "2026-09-12T07:28:33.000Z"
+  },
+  "EURVND": {
+    "requestedSymbol": "EURVND=X",
+    "ok": true,
+    "canonicalSymbol": "EURVND=X",
+    "currency": "VND",
+    "price": 30051,
+    "time": "2026-09-11T18:22:30.000Z"
+  },
+  "EURUSD": {
+    "requestedSymbol": "EURUSD=X",
+    "ok": true,
+    "canonicalSymbol": "EURUSD=X",
+    "currency": "USD",
+    "price": 1.1602,
+    "time": "2026-09-11T21:29:34.000Z"
+  },
+  "EURTWD": {
+    "requestedSymbol": "EURTWD=X",
+    "ok": true,
+    "canonicalSymbol": "EURTWD=X",
+    "currency": "TWD",
+    "price": 36.73,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "EURTRY": {
+    "requestedSymbol": "EURTRY=X",
+    "ok": true,
+    "canonicalSymbol": "EURTRY=X",
+    "currency": "TRY",
+    "price": 56.3209,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "EURTHB": {
+    "requestedSymbol": "EURTHB=X",
+    "ok": true,
+    "canonicalSymbol": "EURTHB=X",
+    "currency": "THB",
+    "price": 38.278,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "EURSGD": {
+    "requestedSymbol": "EURSGD=X",
+    "ok": true,
+    "canonicalSymbol": "EURSGD=X",
+    "currency": "SGD",
+    "price": 1.4693,
+    "time": "2026-09-12T07:28:33.000Z"
+  },
+  "EURSEK": {
+    "requestedSymbol": "EURSEK=X",
+    "ok": true,
+    "canonicalSymbol": "EURSEK=X",
+    "currency": "SEK",
+    "price": 11.2355,
+    "time": "2026-09-12T07:28:33.000Z"
+  },
+  "EURSAR": {
+    "requestedSymbol": "EURSAR=X",
+    "ok": true,
+    "canonicalSymbol": "EURSAR=X",
+    "currency": "SAR",
+    "price": 4.3556,
+    "time": "2026-09-12T03:40:14.000Z"
+  },
+  "EURQAR": {
+    "requestedSymbol": "EURQAR=X",
+    "ok": true,
+    "canonicalSymbol": "EURQAR=X",
+    "currency": "QAR",
+    "price": 4.2204,
+    "time": "2026-09-11T18:22:30.000Z"
+  },
+  "EURPLN": {
+    "requestedSymbol": "EURPLN=X",
+    "ok": true,
+    "canonicalSymbol": "EURPLN=X",
+    "currency": "PLN",
+    "price": 4.3212,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "EURPHP": {
+    "requestedSymbol": "EURPHP=X",
+    "ok": true,
+    "canonicalSymbol": "EURPHP=X",
+    "currency": "PHP",
+    "price": 72.671,
+    "time": "2026-09-11T20:27:33.000Z"
+  },
+  "EURNZD": {
+    "requestedSymbol": "EURNZD=X",
+    "ok": true,
+    "canonicalSymbol": "EURNZD=X",
+    "currency": "NZD",
+    "price": 1.9943,
+    "time": "2026-09-12T07:28:33.000Z"
+  },
+  "EURNOK": {
+    "requestedSymbol": "EURNOK=X",
+    "ok": true,
+    "canonicalSymbol": "EURNOK=X",
+    "currency": "NOK",
+    "price": 10.7599,
+    "time": "2026-09-12T07:28:33.000Z"
+  },
+  "EURMYR": {
+    "requestedSymbol": "EURMYR=X",
+    "ok": true,
+    "canonicalSymbol": "EURMYR=X",
+    "currency": "MYR",
+    "price": 4.719,
+    "time": "2026-09-11T18:22:30.000Z"
+  },
+  "EURMXN": {
+    "requestedSymbol": "EURMXN=X",
+    "ok": true,
+    "canonicalSymbol": "EURMXN=X",
+    "currency": "MXN",
+    "price": 19.6933,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "EURKRW": {
+    "requestedSymbol": "EURKRW=X",
+    "ok": true,
+    "canonicalSymbol": "EURKRW=X",
+    "currency": "KRW",
+    "price": 1554.8,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "EURJPY": {
+    "requestedSymbol": "EURJPY=X",
+    "ok": true,
+    "canonicalSymbol": "EURJPY=X",
+    "currency": "JPY",
+    "price": 178.142,
+    "time": "2026-09-11T21:28:34.000Z"
+  },
+  "EURINR": {
+    "requestedSymbol": "EURINR=X",
+    "ok": true,
+    "canonicalSymbol": "EURINR=X",
+    "currency": "INR",
+    "price": 110.7998,
+    "time": "2026-09-12T03:30:16.000Z"
+  },
+  "EURIDR": {
+    "requestedSymbol": "EURIDR=X",
+    "ok": true,
+    "canonicalSymbol": "EURIDR=X",
+    "currency": "IDR",
+    "price": 20410,
+    "time": "2026-09-11T18:22:30.000Z"
+  },
+  "EURHUF": {
+    "requestedSymbol": "EURHUF=X",
+    "ok": true,
+    "canonicalSymbol": "EURHUF=X",
+    "currency": "HUF",
+    "price": 363.2,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "EURHKD": {
+    "requestedSymbol": "EURHKD=X",
+    "ok": true,
+    "canonicalSymbol": "EURHKD=X",
+    "currency": "HKD",
+    "price": 9.0962,
+    "time": "2026-09-12T07:28:33.000Z"
+  },
+  "EURGBP": {
+    "requestedSymbol": "EURGBP=X",
+    "ok": true,
+    "canonicalSymbol": "EURGBP=X",
+    "currency": "GBP",
+    "price": 0.8579,
+    "time": "2026-09-12T07:28:33.000Z"
+  },
+  "EURDKK": {
+    "requestedSymbol": "EURDKK=X",
+    "ok": true,
+    "canonicalSymbol": "EURDKK=X",
+    "currency": "DKK",
+    "price": 7.4747,
+    "time": "2026-09-12T07:28:33.000Z"
+  },
+  "EURCZK": {
+    "requestedSymbol": "EURCZK=X",
+    "ok": true,
+    "canonicalSymbol": "EURCZK=X",
+    "currency": "CZK",
+    "price": 24.205,
+    "time": "2026-09-11T21:30:29.000Z"
+  },
+  "EURCNY": {
+    "requestedSymbol": "EURCNY=X",
+    "ok": true,
+    "canonicalSymbol": "EURCNY=X",
+    "currency": "CNY",
+    "price": 7.7539,
+    "time": "2026-09-12T02:32:54.000Z"
+  },
+  "EURCNH": {
+    "requestedSymbol": "EURCNH=X",
+    "ok": true,
+    "canonicalSymbol": "EURCNH=X",
+    "currency": "",
+    "price": 7.7756,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "EURCHF": {
+    "requestedSymbol": "EURCHF=X",
+    "ok": true,
+    "canonicalSymbol": "EURCHF=X",
+    "currency": "CHF",
+    "price": 0.9467,
+    "time": "2026-09-12T07:28:33.000Z"
+  },
+  "EURCAD": {
+    "requestedSymbol": "EURCAD=X",
+    "ok": true,
+    "canonicalSymbol": "EURCAD=X",
+    "currency": "CAD",
+    "price": 1.6085,
+    "time": "2026-09-12T07:28:33.000Z"
+  },
+  "EURBRL": {
+    "requestedSymbol": "EURBRL=X",
+    "ok": true,
+    "canonicalSymbol": "EURBRL=X",
+    "currency": "BRL",
+    "price": 5.9423,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "EURAUD": {
+    "requestedSymbol": "EURAUD=X",
+    "ok": true,
+    "canonicalSymbol": "EURAUD=X",
+    "currency": "AUD",
+    "price": 1.6172,
+    "time": "2026-09-12T07:28:33.000Z"
+  },
+  "EURAED": {
+    "requestedSymbol": "EURAED=X",
+    "ok": true,
+    "canonicalSymbol": "EURAED=X",
+    "currency": "AED",
+    "price": 4.2591,
+    "time": "2026-09-12T07:27:33.000Z"
+  },
+  "DKKVND": {
+    "requestedSymbol": "DKKVND=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "DKKTHB": {
+    "requestedSymbol": "DKKTHB=X",
+    "ok": true,
+    "canonicalSymbol": "DKKTHB=X",
+    "currency": "THB",
+    "price": 5.08,
+    "time": "2026-09-11T21:28:34.000Z"
+  },
+  "DKKSAR": {
+    "requestedSymbol": "DKKSAR=X",
+    "ok": true,
+    "canonicalSymbol": "DKKSAR=X",
+    "currency": "SAR",
+    "price": 0.5823,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "DKKQAR": {
+    "requestedSymbol": "DKKQAR=X",
+    "ok": true,
+    "canonicalSymbol": "DKKQAR=X",
+    "currency": "QAR",
+    "price": 0.5643,
+    "time": "2026-09-11T18:22:30.000Z"
+  },
+  "DKKPLN": {
+    "requestedSymbol": "DKKPLN=X",
+    "ok": true,
+    "canonicalSymbol": "DKKPLN=X",
+    "currency": "PLN",
+    "price": 0.5777,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "DKKPHP": {
+    "requestedSymbol": "DKKPHP=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "DKKMYR": {
+    "requestedSymbol": "DKKMYR=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "DKKIDR": {
+    "requestedSymbol": "DKKIDR=X",
+    "ok": true,
+    "canonicalSymbol": "DKKIDR=X",
+    "currency": "IDR",
+    "price": 2729.7,
+    "time": "2026-09-11T18:22:30.000Z"
+  },
+  "DKKHUF": {
+    "requestedSymbol": "DKKHUF=X",
+    "ok": true,
+    "canonicalSymbol": "DKKHUF=X",
+    "currency": "HUF",
+    "price": 48.57,
+    "time": "2026-09-11T23:40:31.000Z"
+  },
+  "DKKCZK": {
+    "requestedSymbol": "DKKCZK=X",
+    "ok": true,
+    "canonicalSymbol": "DKKCZK=X",
+    "currency": "CZK",
+    "price": 3.235,
+    "time": "2026-09-11T23:40:31.000Z"
+  },
+  "DKKAED": {
+    "requestedSymbol": "DKKAED=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "CZKVND": {
+    "requestedSymbol": "CZKVND=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "CZKTHB": {
+    "requestedSymbol": "CZKTHB=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "CZKSAR": {
+    "requestedSymbol": "CZKSAR=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "CZKQAR": {
+    "requestedSymbol": "CZKQAR=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "CZKPHP": {
+    "requestedSymbol": "CZKPHP=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "CZKMYR": {
+    "requestedSymbol": "CZKMYR=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "CZKIDR": {
+    "requestedSymbol": "CZKIDR=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "CZKHUF": {
+    "requestedSymbol": "CZKHUF=X",
+    "ok": true,
+    "canonicalSymbol": "CZKHUF=X",
+    "currency": "HUF",
+    "price": 15.006,
+    "time": "2026-09-12T04:04:30.000Z"
+  },
+  "CZKAED": {
+    "requestedSymbol": "CZKAED=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "CNYZAR": {
+    "requestedSymbol": "CNYZAR=X",
+    "ok": true,
+    "canonicalSymbol": "CNYZAR=X",
+    "currency": "ZAR",
+    "price": 2.4009,
+    "time": "2026-09-12T04:04:30.000Z"
+  },
+  "CNYVND": {
+    "requestedSymbol": "CNYVND=X",
+    "ok": true,
+    "canonicalSymbol": "CNYVND=X",
+    "currency": null,
+    "price": 3862.3,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "CNYTWD": {
+    "requestedSymbol": "CNYTWD=X",
+    "ok": true,
+    "canonicalSymbol": "CNYTWD=X",
+    "currency": "TWD",
+    "price": 4.7218,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "CNYTRY": {
+    "requestedSymbol": "CNYTRY=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "CNYTHB": {
+    "requestedSymbol": "CNYTHB=X",
+    "ok": true,
+    "canonicalSymbol": "CNYTHB=X",
+    "currency": "THB",
+    "price": 4.9287,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "CNYSGD": {
+    "requestedSymbol": "CNYSGD=X",
+    "ok": true,
+    "canonicalSymbol": "CNYSGD=X",
+    "currency": "SGD",
+    "price": 0.1883,
+    "time": "2026-09-11T21:22:34.000Z"
+  },
+  "CNYSEK": {
+    "requestedSymbol": "CNYSEK=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "CNYSAR": {
+    "requestedSymbol": "CNYSAR=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "CNYQAR": {
+    "requestedSymbol": "CNYQAR=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "CNYPLN": {
+    "requestedSymbol": "CNYPLN=X",
+    "ok": true,
+    "canonicalSymbol": "CNYPLN=X",
+    "currency": "PLN",
+    "price": 0.5549,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "CNYPHP": {
+    "requestedSymbol": "CNYPHP=X",
+    "ok": true,
+    "canonicalSymbol": "CNYPHP=X",
+    "currency": "PHP",
+    "price": 9.3469,
+    "time": "2026-09-12T03:57:30.000Z"
+  },
+  "CNYNOK": {
+    "requestedSymbol": "CNYNOK=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "CNYMYR": {
+    "requestedSymbol": "CNYMYR=X",
+    "ok": true,
+    "canonicalSymbol": "CNYMYR=X",
+    "currency": "MYR",
+    "price": 0.6068,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "CNYMXN": {
+    "requestedSymbol": "CNYMXN=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "CNYKRW": {
+    "requestedSymbol": "CNYKRW=X",
+    "ok": true,
+    "canonicalSymbol": "CNYKRW=X",
+    "currency": "KRW",
+    "price": 199.988,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "CNYINR": {
+    "requestedSymbol": "CNYINR=X",
+    "ok": true,
+    "canonicalSymbol": "CNYINR=X",
+    "currency": "INR",
+    "price": 14.2459,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "CNYIDR": {
+    "requestedSymbol": "CNYIDR=X",
+    "ok": true,
+    "canonicalSymbol": "CNYIDR=X",
+    "currency": "IDR",
+    "price": 2624.9,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "CNYHUF": {
+    "requestedSymbol": "CNYHUF=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "CNYHKD": {
+    "requestedSymbol": "CNYHKD=X",
+    "ok": true,
+    "canonicalSymbol": "CNYHKD=X",
+    "currency": "HKD",
+    "price": 1.1686,
+    "time": "2026-09-12T04:04:30.000Z"
+  },
+  "CNYDKK": {
+    "requestedSymbol": "CNYDKK=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "CNYCZK": {
+    "requestedSymbol": "CNYCZK=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "CNYCNH": {
+    "requestedSymbol": "CNYCNH=X",
+    "ok": true,
+    "canonicalSymbol": "CNYCNH=X",
+    "currency": null,
+    "price": 0.999,
+    "time": "2026-09-11T21:25:34.000Z"
+  },
+  "CNYBRL": {
+    "requestedSymbol": "CNYBRL=X",
+    "ok": true,
+    "canonicalSymbol": "CNYBRL=X",
+    "currency": "BRL",
+    "price": 0.764,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "CNYAED": {
+    "requestedSymbol": "CNYAED=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "CNHZAR": {
+    "requestedSymbol": "CNHZAR=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "CNHVND": {
+    "requestedSymbol": "CNHVND=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "CNHTWD": {
+    "requestedSymbol": "CNHTWD=X",
+    "ok": true,
+    "canonicalSymbol": "CNHTWD=X",
+    "currency": "TWD",
+    "price": 4.7173,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "CNHTRY": {
+    "requestedSymbol": "CNHTRY=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "CNHTHB": {
+    "requestedSymbol": "CNHTHB=X",
+    "ok": true,
+    "canonicalSymbol": "CNHTHB=X",
+    "currency": "THB",
+    "price": 4.9211,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "CNHSGD": {
+    "requestedSymbol": "CNHSGD=X",
+    "ok": true,
+    "canonicalSymbol": "CNHSGD=X",
+    "currency": "SGD",
+    "price": 0.1886,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "CNHSEK": {
+    "requestedSymbol": "CNHSEK=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "CNHSAR": {
+    "requestedSymbol": "CNHSAR=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "CNHQAR": {
+    "requestedSymbol": "CNHQAR=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "CNHPLN": {
+    "requestedSymbol": "CNHPLN=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "CNHPHP": {
+    "requestedSymbol": "CNHPHP=X",
+    "ok": true,
+    "canonicalSymbol": "CNHPHP=X",
+    "currency": "PHP",
+    "price": 9.3399,
+    "time": "2026-09-11T20:27:33.000Z"
+  },
+  "CNHNOK": {
+    "requestedSymbol": "CNHNOK=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "CNHMYR": {
+    "requestedSymbol": "CNHMYR=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "CNHMXN": {
+    "requestedSymbol": "CNHMXN=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "CNHKRW": {
+    "requestedSymbol": "CNHKRW=X",
+    "ok": true,
+    "canonicalSymbol": "CNHKRW=X",
+    "currency": "KRW",
+    "price": 199.89,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "CNHINR": {
+    "requestedSymbol": "CNHINR=X",
+    "ok": true,
+    "canonicalSymbol": "CNHINR=X",
+    "currency": "INR",
+    "price": 14.2408,
+    "time": "2026-09-11T18:22:30.000Z"
+  },
+  "CNHIDR": {
+    "requestedSymbol": "CNHIDR=X",
+    "ok": true,
+    "canonicalSymbol": "CNHIDR=X",
+    "currency": "IDR",
+    "price": 2624.3,
+    "time": "2026-09-11T18:22:30.000Z"
+  },
+  "CNHHUF": {
+    "requestedSymbol": "CNHHUF=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "CNHHKD": {
+    "requestedSymbol": "CNHHKD=X",
+    "ok": true,
+    "canonicalSymbol": "CNHHKD=X",
+    "currency": "HKD",
+    "price": 1.1687,
+    "time": "2026-09-11T21:29:34.000Z"
+  },
+  "CNHDKK": {
+    "requestedSymbol": "CNHDKK=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "CNHCZK": {
+    "requestedSymbol": "CNHCZK=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "CNHBRL": {
+    "requestedSymbol": "CNHBRL=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "CNHAED": {
+    "requestedSymbol": "CNHAED=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "CHFZAR": {
+    "requestedSymbol": "CHFZAR=X",
+    "ok": true,
+    "canonicalSymbol": "CHFZAR=X",
+    "currency": "ZAR",
+    "price": 19.725,
+    "time": "2026-09-12T07:28:33.000Z"
+  },
+  "CHFVND": {
+    "requestedSymbol": "CHFVND=X",
+    "ok": true,
+    "canonicalSymbol": "CHFVND=X",
+    "currency": "VND",
+    "price": 31749,
+    "time": "2026-09-11T18:22:30.000Z"
+  },
+  "CHFTWD": {
+    "requestedSymbol": "CHFTWD=X",
+    "ok": true,
+    "canonicalSymbol": "CHFTWD=X",
+    "currency": "TWD",
+    "price": 38.776,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "CHFTRY": {
+    "requestedSymbol": "CHFTRY=X",
+    "ok": true,
+    "canonicalSymbol": "CHFTRY=X",
+    "currency": "TRY",
+    "price": 59.4584,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "CHFTHB": {
+    "requestedSymbol": "CHFTHB=X",
+    "ok": true,
+    "canonicalSymbol": "CHFTHB=X",
+    "currency": "THB",
+    "price": 40.451,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "CHFSGD": {
+    "requestedSymbol": "CHFSGD=X",
+    "ok": true,
+    "canonicalSymbol": "CHFSGD=X",
+    "currency": "SGD",
+    "price": 1.5511,
+    "time": "2026-09-12T07:27:33.000Z"
+  },
+  "CHFSEK": {
+    "requestedSymbol": "CHFSEK=X",
+    "ok": true,
+    "canonicalSymbol": "CHFSEK=X",
+    "currency": "SEK",
+    "price": 11.8636,
+    "time": "2026-09-12T07:28:33.000Z"
+  },
+  "CHFSAR": {
+    "requestedSymbol": "CHFSAR=X",
+    "ok": true,
+    "canonicalSymbol": "CHFSAR=X",
+    "currency": "SAR",
+    "price": 4.5977,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "CHFQAR": {
+    "requestedSymbol": "CHFQAR=X",
+    "ok": true,
+    "canonicalSymbol": "CHFQAR=X",
+    "currency": "QAR",
+    "price": 4.4573,
+    "time": "2026-09-11T18:22:30.000Z"
+  },
+  "CHFPLN": {
+    "requestedSymbol": "CHFPLN=X",
+    "ok": true,
+    "canonicalSymbol": "CHFPLN=X",
+    "currency": "PLN",
+    "price": 4.562,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "CHFPHP": {
+    "requestedSymbol": "CHFPHP=X",
+    "ok": true,
+    "canonicalSymbol": "CHFPHP=X",
+    "currency": "PHP",
+    "price": 76.755,
+    "time": "2026-09-11T20:27:33.000Z"
+  },
+  "CHFNOK": {
+    "requestedSymbol": "CHFNOK=X",
+    "ok": true,
+    "canonicalSymbol": "CHFNOK=X",
+    "currency": "NOK",
+    "price": 11.3614,
+    "time": "2026-09-12T07:28:33.000Z"
+  },
+  "CHFMYR": {
+    "requestedSymbol": "CHFMYR=X",
+    "ok": true,
+    "canonicalSymbol": "CHFMYR=X",
+    "currency": "MYR",
+    "price": 4.9839,
+    "time": "2026-09-11T18:22:30.000Z"
+  },
+  "CHFMXN": {
+    "requestedSymbol": "CHFMXN=X",
+    "ok": true,
+    "canonicalSymbol": "CHFMXN=X",
+    "currency": "MXN",
+    "price": 20.7904,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "CHFKRW": {
+    "requestedSymbol": "CHFKRW=X",
+    "ok": true,
+    "canonicalSymbol": "CHFKRW=X",
+    "currency": "KRW",
+    "price": 1642.62,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "CHFJPY": {
+    "requestedSymbol": "CHFJPY=X",
+    "ok": true,
+    "canonicalSymbol": "CHFJPY=X",
+    "currency": "JPY",
+    "price": 188.066,
+    "time": "2026-09-11T21:28:34.000Z"
+  },
+  "CHFINR": {
+    "requestedSymbol": "CHFINR=X",
+    "ok": true,
+    "canonicalSymbol": "CHFINR=X",
+    "currency": "INR",
+    "price": 117.025,
+    "time": "2026-09-11T18:22:30.000Z"
+  },
+  "CHFIDR": {
+    "requestedSymbol": "CHFIDR=X",
+    "ok": true,
+    "canonicalSymbol": "CHFIDR=X",
+    "currency": "IDR",
+    "price": 21566.8,
+    "time": "2026-09-11T18:22:30.000Z"
+  },
+  "CHFHUF": {
+    "requestedSymbol": "CHFHUF=X",
+    "ok": true,
+    "canonicalSymbol": "CHFHUF=X",
+    "currency": "HUF",
+    "price": 383.58,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "CHFHKD": {
+    "requestedSymbol": "CHFHKD=X",
+    "ok": true,
+    "canonicalSymbol": "CHFHKD=X",
+    "currency": "HKD",
+    "price": 9.603,
+    "time": "2026-09-12T07:28:33.000Z"
+  },
+  "CHFDKK": {
+    "requestedSymbol": "CHFDKK=X",
+    "ok": true,
+    "canonicalSymbol": "CHFDKK=X",
+    "currency": "DKK",
+    "price": 7.8911,
+    "time": "2026-09-12T07:28:33.000Z"
+  },
+  "CHFCZK": {
+    "requestedSymbol": "CHFCZK=X",
+    "ok": true,
+    "canonicalSymbol": "CHFCZK=X",
+    "currency": "CZK",
+    "price": 25.557,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "CHFCNY": {
+    "requestedSymbol": "CHFCNY=X",
+    "ok": true,
+    "canonicalSymbol": "CHFCNY=X",
+    "currency": "CNY",
+    "price": 8.1854,
+    "time": "2026-09-12T02:32:54.000Z"
+  },
+  "CHFCNH": {
+    "requestedSymbol": "CHFCNH=X",
+    "ok": true,
+    "canonicalSymbol": "CHFCNH=X",
+    "currency": "",
+    "price": 8.209,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "CHFBRL": {
+    "requestedSymbol": "CHFBRL=X",
+    "ok": true,
+    "canonicalSymbol": "CHFBRL=X",
+    "currency": "BRL",
+    "price": 6.2733,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "CHFAED": {
+    "requestedSymbol": "CHFAED=X",
+    "ok": true,
+    "canonicalSymbol": "CHFAED=X",
+    "currency": "AED",
+    "price": 4.4965,
+    "time": "2026-09-12T07:27:33.000Z"
+  },
+  "CADZAR": {
+    "requestedSymbol": "CADZAR=X",
+    "ok": true,
+    "canonicalSymbol": "CADZAR=X",
+    "currency": "ZAR",
+    "price": 11.6124,
+    "time": "2026-09-12T07:27:33.000Z"
+  },
+  "CADVND": {
+    "requestedSymbol": "CADVND=X",
+    "ok": true,
+    "canonicalSymbol": "CADVND=X",
+    "currency": "VND",
+    "price": 18687.1,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "CADTWD": {
+    "requestedSymbol": "CADTWD=X",
+    "ok": true,
+    "canonicalSymbol": "CADTWD=X",
+    "currency": "TWD",
+    "price": 22.834,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "CADTRY": {
+    "requestedSymbol": "CADTRY=X",
+    "ok": true,
+    "canonicalSymbol": "CADTRY=X",
+    "currency": "TRY",
+    "price": 35.0055,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "CADTHB": {
+    "requestedSymbol": "CADTHB=X",
+    "ok": true,
+    "canonicalSymbol": "CADTHB=X",
+    "currency": "THB",
+    "price": 23.835,
+    "time": "2026-09-12T04:03:30.000Z"
+  },
+  "CADSGD": {
+    "requestedSymbol": "CADSGD=X",
+    "ok": true,
+    "canonicalSymbol": "CADSGD=X",
+    "currency": "SGD",
+    "price": 0.913,
+    "time": "2026-09-12T07:27:33.000Z"
+  },
+  "CADSEK": {
+    "requestedSymbol": "CADSEK=X",
+    "ok": true,
+    "canonicalSymbol": "CADSEK=X",
+    "currency": "SEK",
+    "price": 6.9797,
+    "time": "2026-09-12T07:27:33.000Z"
+  },
+  "CADSAR": {
+    "requestedSymbol": "CADSAR=X",
+    "ok": true,
+    "canonicalSymbol": "CADSAR=X",
+    "currency": "SAR",
+    "price": 2.7029,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "CADQAR": {
+    "requestedSymbol": "CADQAR=X",
+    "ok": true,
+    "canonicalSymbol": "CADQAR=X",
+    "currency": "QAR",
+    "price": 2.6198,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "CADPLN": {
+    "requestedSymbol": "CADPLN=X",
+    "ok": true,
+    "canonicalSymbol": "CADPLN=X",
+    "currency": "PLN",
+    "price": 2.681,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "CADPHP": {
+    "requestedSymbol": "CADPHP=X",
+    "ok": true,
+    "canonicalSymbol": "CADPHP=X",
+    "currency": "PHP",
+    "price": 45.159,
+    "time": "2026-09-12T03:57:30.000Z"
+  },
+  "CADNOK": {
+    "requestedSymbol": "CADNOK=X",
+    "ok": true,
+    "canonicalSymbol": "CADNOK=X",
+    "currency": "NOK",
+    "price": 6.684,
+    "time": "2026-09-12T07:27:33.000Z"
+  },
+  "CADMYR": {
+    "requestedSymbol": "CADMYR=X",
+    "ok": true,
+    "canonicalSymbol": "CADMYR=X",
+    "currency": "MYR",
+    "price": 2.9299,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "CADMXN": {
+    "requestedSymbol": "CADMXN=X",
+    "ok": true,
+    "canonicalSymbol": "CADMXN=X",
+    "currency": "MXN",
+    "price": 12.2407,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "CADKRW": {
+    "requestedSymbol": "CADKRW=X",
+    "ok": true,
+    "canonicalSymbol": "CADKRW=X",
+    "currency": "KRW",
+    "price": 967.02,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "CADJPY": {
+    "requestedSymbol": "CADJPY=X",
+    "ok": true,
+    "canonicalSymbol": "CADJPY=X",
+    "currency": "JPY",
+    "price": 110.696,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "CADINR": {
+    "requestedSymbol": "CADINR=X",
+    "ok": true,
+    "canonicalSymbol": "CADINR=X",
+    "currency": "INR",
+    "price": 68.878,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "CADIDR": {
+    "requestedSymbol": "CADIDR=X",
+    "ok": true,
+    "canonicalSymbol": "CADIDR=X",
+    "currency": "IDR",
+    "price": 12692.6,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "CADHUF": {
+    "requestedSymbol": "CADHUF=X",
+    "ok": true,
+    "canonicalSymbol": "CADHUF=X",
+    "currency": "HUF",
+    "price": 225.68,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "CADHKD": {
+    "requestedSymbol": "CADHKD=X",
+    "ok": true,
+    "canonicalSymbol": "CADHKD=X",
+    "currency": "HKD",
+    "price": 5.6523,
+    "time": "2026-09-12T07:27:33.000Z"
+  },
+  "CADDKK": {
+    "requestedSymbol": "CADDKK=X",
+    "ok": true,
+    "canonicalSymbol": "CADDKK=X",
+    "currency": "DKK",
+    "price": 4.641,
+    "time": "2026-09-12T07:27:33.000Z"
+  },
+  "CADCZK": {
+    "requestedSymbol": "CADCZK=X",
+    "ok": true,
+    "canonicalSymbol": "CADCZK=X",
+    "currency": "CZK",
+    "price": 15.05,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "CADCNY": {
+    "requestedSymbol": "CADCNY=X",
+    "ok": true,
+    "canonicalSymbol": "CADCNY=X",
+    "currency": "CNY",
+    "price": 4.836,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "CADCNH": {
+    "requestedSymbol": "CADCNH=X",
+    "ok": true,
+    "canonicalSymbol": "CADCNH=X",
+    "currency": "",
+    "price": 4.8308,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "CADCHF": {
+    "requestedSymbol": "CADCHF=X",
+    "ok": true,
+    "canonicalSymbol": "CADCHF=X",
+    "currency": "CHF",
+    "price": 0.588,
+    "time": "2026-09-12T07:27:33.000Z"
+  },
+  "CADBRL": {
+    "requestedSymbol": "CADBRL=X",
+    "ok": true,
+    "canonicalSymbol": "CADBRL=X",
+    "currency": "BRL",
+    "price": 3.6949,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "CADAED": {
+    "requestedSymbol": "CADAED=X",
+    "ok": true,
+    "canonicalSymbol": "CADAED=X",
+    "currency": "AED",
+    "price": 2.6429,
+    "time": "2026-09-12T07:27:33.000Z"
+  },
+  "BRLZAR": {
+    "requestedSymbol": "BRLZAR=X",
+    "ok": true,
+    "canonicalSymbol": "BRLZAR=X",
+    "currency": "ZAR",
+    "price": 3.1373,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "BRLVND": {
+    "requestedSymbol": "BRLVND=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "BRLTRY": {
+    "requestedSymbol": "BRLTRY=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "BRLTHB": {
+    "requestedSymbol": "BRLTHB=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "BRLSEK": {
+    "requestedSymbol": "BRLSEK=X",
+    "ok": true,
+    "canonicalSymbol": "BRLSEK=X",
+    "currency": "SEK",
+    "price": 1.8883,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "BRLSAR": {
+    "requestedSymbol": "BRLSAR=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "BRLQAR": {
+    "requestedSymbol": "BRLQAR=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "BRLPLN": {
+    "requestedSymbol": "BRLPLN=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "BRLPHP": {
+    "requestedSymbol": "BRLPHP=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "BRLNOK": {
+    "requestedSymbol": "BRLNOK=X",
+    "ok": true,
+    "canonicalSymbol": "BRLNOK=X",
+    "currency": "NOK",
+    "price": 1.8101,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "BRLMYR": {
+    "requestedSymbol": "BRLMYR=X",
+    "ok": true,
+    "canonicalSymbol": "BRLMYR=X",
+    "currency": "MYR",
+    "price": 0.7915,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "BRLMXN": {
+    "requestedSymbol": "BRLMXN=X",
+    "ok": true,
+    "canonicalSymbol": "BRLMXN=X",
+    "currency": "MXN",
+    "price": 3.3096,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "BRLIDR": {
+    "requestedSymbol": "BRLIDR=X",
+    "ok": true,
+    "canonicalSymbol": "BRLIDR=X",
+    "currency": "IDR",
+    "price": 3432.9,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "BRLHUF": {
+    "requestedSymbol": "BRLHUF=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "BRLDKK": {
+    "requestedSymbol": "BRLDKK=X",
+    "ok": true,
+    "canonicalSymbol": "BRLDKK=X",
+    "currency": "DKK",
+    "price": 1.2552,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "BRLCZK": {
+    "requestedSymbol": "BRLCZK=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "BRLAED": {
+    "requestedSymbol": "BRLAED=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "AUDZAR": {
+    "requestedSymbol": "AUDZAR=X",
+    "ok": true,
+    "canonicalSymbol": "AUDZAR=X",
+    "currency": "ZAR",
+    "price": 11.5495,
+    "time": "2026-09-12T07:27:33.000Z"
+  },
+  "AUDVND": {
+    "requestedSymbol": "AUDVND=X",
+    "ok": false,
+    "canonicalSymbol": null,
+    "currency": null,
+    "price": null,
+    "time": null
+  },
+  "AUDUSD": {
+    "requestedSymbol": "AUDUSD=X",
+    "ok": true,
+    "canonicalSymbol": "AUDUSD=X",
+    "currency": "USD",
+    "price": 0.7173,
+    "time": "2026-09-12T07:28:34.000Z"
+  },
+  "AUDTWD": {
+    "requestedSymbol": "AUDTWD=X",
+    "ok": true,
+    "canonicalSymbol": "AUDTWD=X",
+    "currency": "TWD",
+    "price": 22.662,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "AUDTRY": {
+    "requestedSymbol": "AUDTRY=X",
+    "ok": true,
+    "canonicalSymbol": "AUDTRY=X",
+    "currency": "TRY",
+    "price": 34.8109,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "AUDTHB": {
+    "requestedSymbol": "AUDTHB=X",
+    "ok": true,
+    "canonicalSymbol": "AUDTHB=X",
+    "currency": "THB",
+    "price": 23.683,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "AUDSGD": {
+    "requestedSymbol": "AUDSGD=X",
+    "ok": true,
+    "canonicalSymbol": "AUDSGD=X",
+    "currency": "SGD",
+    "price": 0.906,
+    "time": "2026-09-12T07:27:33.000Z"
+  },
+  "AUDSEK": {
+    "requestedSymbol": "AUDSEK=X",
+    "ok": true,
+    "canonicalSymbol": "AUDSEK=X",
+    "currency": "SEK",
+    "price": 6.9419,
+    "time": "2026-09-12T07:27:33.000Z"
+  },
+  "AUDSAR": {
+    "requestedSymbol": "AUDSAR=X",
+    "ok": true,
+    "canonicalSymbol": "AUDSAR=X",
+    "currency": "SAR",
+    "price": 2.6879,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "AUDQAR": {
+    "requestedSymbol": "AUDQAR=X",
+    "ok": true,
+    "canonicalSymbol": "AUDQAR=X",
+    "currency": "QAR",
+    "price": 2.6063,
+    "time": "2026-09-11T18:22:30.000Z"
+  },
+  "AUDPLN": {
+    "requestedSymbol": "AUDPLN=X",
+    "ok": true,
+    "canonicalSymbol": "AUDPLN=X",
+    "currency": "PLN",
+    "price": 2.667,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "AUDPHP": {
+    "requestedSymbol": "AUDPHP=X",
+    "ok": true,
+    "canonicalSymbol": "AUDPHP=X",
+    "currency": "PHP",
+    "price": 44.949,
+    "time": "2026-09-11T20:27:33.000Z"
+  },
+  "AUDNZD": {
+    "requestedSymbol": "AUDNZD=X",
+    "ok": true,
+    "canonicalSymbol": "AUDNZD=X",
+    "currency": "NZD",
+    "price": 1.2326,
+    "time": "2026-09-12T07:27:33.000Z"
+  },
+  "AUDNOK": {
+    "requestedSymbol": "AUDNOK=X",
+    "ok": true,
+    "canonicalSymbol": "AUDNOK=X",
+    "currency": "NOK",
+    "price": 6.6523,
+    "time": "2026-09-12T07:27:33.000Z"
+  },
+  "AUDMYR": {
+    "requestedSymbol": "AUDMYR=X",
+    "ok": true,
+    "canonicalSymbol": "AUDMYR=X",
+    "currency": "MYR",
+    "price": 2.9192,
+    "time": "2026-09-11T18:22:30.000Z"
+  },
+  "AUDMXN": {
+    "requestedSymbol": "AUDMXN=X",
+    "ok": true,
+    "canonicalSymbol": "AUDMXN=X",
+    "currency": "MXN",
+    "price": 12.1731,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "AUDKRW": {
+    "requestedSymbol": "AUDKRW=X",
+    "ok": true,
+    "canonicalSymbol": "AUDKRW=X",
+    "currency": "KRW",
+    "price": 961.64,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "AUDJPY": {
+    "requestedSymbol": "AUDJPY=X",
+    "ok": true,
+    "canonicalSymbol": "AUDJPY=X",
+    "currency": "JPY",
+    "price": 110.117,
+    "time": "2026-09-11T21:28:34.000Z"
+  },
+  "AUDINR": {
+    "requestedSymbol": "AUDINR=X",
+    "ok": true,
+    "canonicalSymbol": "AUDINR=X",
+    "currency": "INR",
+    "price": 68.4902,
+    "time": "2026-09-12T03:30:16.000Z"
+  },
+  "AUDIDR": {
+    "requestedSymbol": "AUDIDR=X",
+    "ok": true,
+    "canonicalSymbol": "AUDIDR=X",
+    "currency": "IDR",
+    "price": 12632,
+    "time": "2026-09-11T18:22:30.000Z"
+  },
+  "AUDHUF": {
+    "requestedSymbol": "AUDHUF=X",
+    "ok": true,
+    "canonicalSymbol": "AUDHUF=X",
+    "currency": "HUF",
+    "price": 224.42,
+    "time": "2026-09-11T23:27:31.000Z"
+  },
+  "AUDHKD": {
+    "requestedSymbol": "AUDHKD=X",
+    "ok": true,
+    "canonicalSymbol": "AUDHKD=X",
+    "currency": "HKD",
+    "price": 5.6207,
+    "time": "2026-09-12T07:27:33.000Z"
+  },
+  "AUDDKK": {
+    "requestedSymbol": "AUDDKK=X",
+    "ok": true,
+    "canonicalSymbol": "AUDDKK=X",
+    "currency": "DKK",
+    "price": 4.6203,
+    "time": "2026-09-12T07:27:33.000Z"
+  },
+  "AUDCZK": {
+    "requestedSymbol": "AUDCZK=X",
+    "ok": true,
+    "canonicalSymbol": "AUDCZK=X",
+    "currency": "CZK",
+    "price": 14.947,
+    "time": "2026-09-11T23:27:31.000Z"
+  },
+  "AUDCNY": {
+    "requestedSymbol": "AUDCNY=X",
+    "ok": true,
+    "canonicalSymbol": "AUDCNY=X",
+    "currency": "CNY",
+    "price": 4.7955,
+    "time": "2026-09-12T02:32:54.000Z"
+  },
+  "AUDCNH": {
+    "requestedSymbol": "AUDCNH=X",
+    "ok": true,
+    "canonicalSymbol": "AUDCNH=X",
+    "currency": "",
+    "price": 4.8046,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "AUDCHF": {
+    "requestedSymbol": "AUDCHF=X",
+    "ok": true,
+    "canonicalSymbol": "AUDCHF=X",
+    "currency": "CHF",
+    "price": 0.5848,
+    "time": "2026-09-12T07:27:33.000Z"
+  },
+  "AUDCAD": {
+    "requestedSymbol": "AUDCAD=X",
+    "ok": true,
+    "canonicalSymbol": "AUDCAD=X",
+    "currency": "CAD",
+    "price": 0.9936,
+    "time": "2026-09-12T07:27:33.000Z"
+  },
+  "AUDBRL": {
+    "requestedSymbol": "AUDBRL=X",
+    "ok": true,
+    "canonicalSymbol": "AUDBRL=X",
+    "currency": "BRL",
+    "price": 3.6715,
+    "time": "2026-09-11T21:27:34.000Z"
+  },
+  "AUDAED": {
+    "requestedSymbol": "AUDAED=X",
+    "ok": true,
+    "canonicalSymbol": "AUDAED=X",
+    "currency": "AED",
+    "price": 2.6286,
+    "time": "2026-09-12T07:27:33.000Z"
+  },
+  "AEDSAR": {
+    "requestedSymbol": "AEDSAR=X",
+    "ok": true,
+    "canonicalSymbol": "AEDSAR=X",
+    "currency": "SAR",
+    "price": 1.0175,
+    "time": "2026-09-12T04:02:30.000Z"
+  },
+  "AEDQAR": {
+    "requestedSymbol": "AEDQAR=X",
+    "ok": true,
+    "canonicalSymbol": "AEDQAR=X",
+    "currency": "QAR",
+    "price": 0.9861,
+    "time": "2026-09-12T04:02:30.000Z"
+  }
+}

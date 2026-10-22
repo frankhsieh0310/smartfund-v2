@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "register": [
+    { "domain": "BORROW_FEE", "accessStatus": "NOT_CONFIGURED", "licenseStatus": "LICENSE_PENDING", "redistributionStatus": "UNKNOWN", "historyAvailable": "UNKNOWN" },
+    { "domain": "BORROW_RATE", "accessStatus": "NOT_CONFIGURED", "licenseStatus": "LICENSE_PENDING", "redistributionStatus": "UNKNOWN", "historyAvailable": "UNKNOWN" },
+    { "domain": "UTILIZATION", "accessStatus": "NOT_CONFIGURED", "licenseStatus": "LICENSE_PENDING", "redistributionStatus": "UNKNOWN", "historyAvailable": "UNKNOWN" },
+    { "domain": "SHARES_AVAILABLE", "accessStatus": "NOT_CONFIGURED", "licenseStatus": "LICENSE_PENDING", "redistributionStatus": "UNKNOWN", "historyAvailable": "UNKNOWN" },
+    { "domain": "RECALL", "accessStatus": "NOT_CONFIGURED", "licenseStatus": "LICENSE_PENDING", "redistributionStatus": "UNKNOWN", "historyAvailable": "UNKNOWN" },
+    { "domain": "INSTITUTIONAL_LOAN_BALANCE", "provider": "TWSE Data E-Shop", "accessStatus": "NOT_SUBSCRIBED", "licenseStatus": "LICENSE_REQUIRED", "redistributionStatus": "RESTRICTED", "historyAvailable": true }
+  ]
+}
