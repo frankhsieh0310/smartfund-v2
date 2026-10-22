@@ -26,12 +26,24 @@ export async function isPublicReadyAsset(assetType:string,identifier:string){
     return Boolean(row?.isActive&&row.latestClose!=null&&row.latestDate&&row._count.history>=PUBLIC_HISTORY_MIN_ROWS&&sourceDateCurrent);
   }
   if(type==="ETF"){
-    const row=await prisma.etf.findFirst({where:{isActive:true,OR:[{id:key},{code:{equals:key,mode:"insensitive"}}]},select:{latestPrice:true,latestNav:true,history:{orderBy:{date:"desc"},take:PUBLIC_HISTORY_MIN_ROWS,select:{date:true}}}});
-    return Boolean((row?.latestPrice!=null||row?.latestNav!=null)&&row?.history.length>=PUBLIC_HISTORY_MIN_ROWS&&freshnessStatus(row.history[0]?.date,"MARKET_DAY")==="CURRENT");
+    // 2026-10-22（使用者核准，一.2功能篩選）: 之前這裡只檢查isActive/有沒有價格/歷史深度，沒有
+    // 檢查tw_purchasable_classification APPROVED——代表只要使用者知道一檔範圍外ETF的id/code，
+    // 就能直接加進自選／組合（繞過本來就有篩選的搜尋功能）。這支函式同時是watchlists／
+    // portfolios兩個route加項目時共用的驗證入口，修這裡就同時補上兩邊的缺口。
+    const row=await prisma.etf.findFirst({where:{isActive:true,OR:[{id:key},{code:{equals:key,mode:"insensitive"}}]},select:{id:true,latestPrice:true,latestNav:true,history:{orderBy:{date:"desc"},take:PUBLIC_HISTORY_MIN_ROWS,select:{date:true}}}});
+    if(!row)return false;
+    const approved=await prisma.$queryRawUnsafe<{n:number}[]>(`SELECT count(*)::int n FROM tw_purchasable_classification WHERE asset_type='ETF' AND asset_id=$1 AND status='APPROVED'`,row.id);
+    if(approved[0].n===0)return false;
+    return Boolean((row.latestPrice!=null||row.latestNav!=null)&&row.history.length>=PUBLIC_HISTORY_MIN_ROWS&&freshnessStatus(row.history[0]?.date,"MARKET_DAY")==="CURRENT");
   }
   if(type==="FUND"){
-    const row=await prisma.fund.findFirst({where:{isActive:true,OR:[{id:key},{code:{equals:key,mode:"insensitive"}},{isin:{equals:key,mode:"insensitive"}}]},select:{latestNav:true,latestNavDate:true,history:{orderBy:{date:"desc"},take:PUBLIC_HISTORY_MIN_ROWS,select:{date:true}}}});
-    return Boolean(row?.latestNav!=null&&row.latestNavDate&&row.history.length>=PUBLIC_HISTORY_MIN_ROWS&&!['STALE','UNKNOWN','UNAVAILABLE'].includes(freshnessStatus(row.latestNavDate,"PUBLICATION_AWARE")));
+    // 同上，補上FUND分支的APPROVED檢查——這是範圍外Yahoo美國共同基金最可能被繞過搜尋、直接
+    // 加進自選／組合的路徑，因為很多範圍外基金本身淨值資料是新鮮的，之前完全沒有被擋下來。
+    const row=await prisma.fund.findFirst({where:{isActive:true,OR:[{id:key},{code:{equals:key,mode:"insensitive"}},{isin:{equals:key,mode:"insensitive"}}]},select:{id:true,latestNav:true,latestNavDate:true,history:{orderBy:{date:"desc"},take:PUBLIC_HISTORY_MIN_ROWS,select:{date:true}}}});
+    if(!row)return false;
+    const approved=await prisma.$queryRawUnsafe<{n:number}[]>(`SELECT count(*)::int n FROM tw_purchasable_classification WHERE asset_type='FUND' AND asset_id=$1 AND status='APPROVED'`,row.id);
+    if(approved[0].n===0)return false;
+    return Boolean(row.latestNav!=null&&row.latestNavDate&&row.history.length>=PUBLIC_HISTORY_MIN_ROWS&&!['STALE','UNKNOWN','UNAVAILABLE'].includes(freshnessStatus(row.latestNavDate,"PUBLICATION_AWARE")));
   }
   return false;
 }

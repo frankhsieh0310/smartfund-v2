@@ -38,8 +38,22 @@ export async function GET(request: Request) {
 
   if (items.length === 0) return Response.json({ ok: true, month, eventCount: 0, events: [] }, { headers: { ...corsHeaders, 'Cache-Control': 'private, max-age=60' } });
 
-  const etfIds = items.filter((i) => i.assetType === 'ETF').map((i) => i.assetId);
-  const fundIds = items.filter((i) => i.assetType === 'FUND').map((i) => i.assetId);
+  // 2026-10-22（使用者核准，一.2功能篩選）: items是由呼叫端（App）直接傳入的assetType:assetId，
+  // 這支route本身不會「發現」新資產，但沒有限制傳入的id一定要是四類核心母體——加上
+  // tw_purchasable_classification APPROVED篩選，避免有範圍外id被直接傳進來查到日曆事件。
+  const rawEtfIds = items.filter((i) => i.assetType === 'ETF').map((i) => i.assetId);
+  const rawFundIds = items.filter((i) => i.assetType === 'FUND').map((i) => i.assetId);
+  const approvedIds = (rawEtfIds.length || rawFundIds.length)
+    ? await prisma.$queryRawUnsafe<{ asset_type: string; asset_id: string }[]>(
+        `SELECT asset_type, asset_id FROM tw_purchasable_classification
+         WHERE status='APPROVED' AND ((asset_type='ETF' AND asset_id=ANY($1::text[])) OR (asset_type='FUND' AND asset_id=ANY($2::text[])))`,
+        rawEtfIds, rawFundIds,
+      )
+    : [];
+  const approvedEtfSet = new Set(approvedIds.filter((r) => r.asset_type === 'ETF').map((r) => r.asset_id));
+  const approvedFundSet = new Set(approvedIds.filter((r) => r.asset_type === 'FUND').map((r) => r.asset_id));
+  const etfIds = rawEtfIds.filter((id) => approvedEtfSet.has(id));
+  const fundIds = rawFundIds.filter((id) => approvedFundSet.has(id));
   const scopesFor = (assetType: 'ETF' | 'FUND', assetId: string) => items.find((i) => i.assetType === assetType && i.assetId === assetId)?.scopes ?? [];
 
   const [etfDistributions, fundDistributions, etfHoldings, fundHoldings, etfNames, fundNames] = await Promise.all([

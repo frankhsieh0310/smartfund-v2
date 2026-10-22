@@ -74,6 +74,10 @@ async function loadStock(item: CompareRequestItem, start: Date | undefined, end:
 async function loadEtf(item: CompareRequestItem, start: Date | undefined, end: Date): Promise<LoadedItem> {
   const row = await prisma.etf.findFirst({ where: { id: item.canonicalEntityId }, include: { history: { where: { date: { ...(start ? { gte: start } : {}), lte: end } }, orderBy: { date: "asc" }, take: 5000 }, holdings: { orderBy: [{ asOfDate: "desc" }, { rank: "asc" }], take: 100 } } });
   if (!row) throw new WebDataError("NOT_FOUND", "Canonical ETF not found.");
+  // 2026-10-22（使用者核准，一.2功能篩選）: 比較功能之前能直接用id查到任何ETF，沒有限制在四類
+  // 核心母體內——補上跟搜尋/自選/組合一樣的APPROVED檢查，範圍外的視同NOT_FOUND，不透露存在。
+  const approvedEtf = await prisma.$queryRawUnsafe<{ n: number }[]>(`SELECT count(*)::int n FROM tw_purchasable_classification WHERE asset_type='ETF' AND asset_id=$1 AND status='APPROVED'`, row.id);
+  if (approvedEtf[0].n === 0) throw new WebDataError("NOT_FOUND", "Canonical ETF not found.");
   const observations = row.history.flatMap((entry) => { const value = point(entry.date, entry.price ?? entry.nav, row.dataSource ?? row.dataProvider ?? row.provider, row.isin, entry.createdAt); return value ? [value] : []; });
   return { request: item, identity: { assetType: "ETF", canonicalEntityId: row.id, symbolOrCode: row.code, name: row.name, currency: row.currency, market: row.exchange }, currentValue: asNumber(row.latestPrice ?? row.latestNav), currentValueSemantic: "PRICE", returnSemantic: "PRICE_RETURN", observations, effectiveAsOfDate: asIso(row.priceUpdatedAt), lastCanonicalUpdatedAt: asIso(row.updatedAt), frequency: "DAILY", source: row.dataSource ?? row.dataProvider ?? row.provider, structural: { nav: asNumber(row.latestNav), aum: asNumber(row.aum), aumCurrency: row.currency, expenseRatio: asNumber(row.expenseRatio), category: row.category, holdingsCoverage: row.holdings.length ? "PARTIAL" : "UNAVAILABLE", holdingsAsOfDate: asIso(row.holdings[0]?.asOfDate) } };
 }
@@ -81,6 +85,9 @@ async function loadEtf(item: CompareRequestItem, start: Date | undefined, end: D
 async function loadFund(item: CompareRequestItem, start: Date | undefined, end: Date): Promise<LoadedItem> {
   const row = await prisma.fund.findFirst({ where: { id: item.canonicalEntityId }, include: { history: { where: { date: { ...(start ? { gte: start } : {}), lte: end } }, orderBy: { date: "asc" }, take: 5000 } } });
   if (!row) throw new WebDataError("NOT_FOUND", "Canonical fund not found.");
+  // 同loadEtf：補上APPROVED檢查，範圍外基金（例如Yahoo美國共同基金）視同NOT_FOUND。
+  const approvedFund = await prisma.$queryRawUnsafe<{ n: number }[]>(`SELECT count(*)::int n FROM tw_purchasable_classification WHERE asset_type='FUND' AND asset_id=$1 AND status='APPROVED'`, row.id);
+  if (approvedFund[0].n === 0) throw new WebDataError("NOT_FOUND", "Canonical fund not found.");
   const source = row.lastNavSource ?? row.dataSource ?? row.dataProvider;
   const observations = row.history.flatMap((entry) => { const value = point(entry.date, entry.nav, source, row.isin ?? row.id, entry.createdAt); return value ? [value] : []; });
   return { request: item, identity: { assetType: "FUND", canonicalEntityId: row.id, symbolOrCode: row.code ?? row.isin ?? row.id, name: row.name, currency: row.currency, market: row.domicile }, currentValue: asNumber(row.latestNav), currentValueSemantic: "NAV", returnSemantic: "NAV_RETURN", observations, effectiveAsOfDate: asIso(row.latestNavDate ?? row.navUpdatedAt), lastCanonicalUpdatedAt: asIso(row.updatedAt), frequency: "AVAILABLE_DATES", source, structural: { aum: asNumber(row.aum), aumCurrency: row.currency, expenseRatio: asNumber(row.expenseRatio), category: row.category, shareClassIdentity: { isin: row.isin, code: row.code } } };
