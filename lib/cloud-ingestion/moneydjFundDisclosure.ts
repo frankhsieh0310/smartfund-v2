@@ -235,16 +235,20 @@ export async function persistMoneydjDisclosure(
       );
       if (!lock[0]?.locked) throw new Error("MONEYDJ_DISCLOSURE_SINGLE_WRITER_LOCKED");
       for (const [index, holding] of disclosure.holdings.entries()) {
+        // 2026-10-21 夜間（使用者核准）: 跟 persistNameOnlyHoldings 同一種bug（VERIFIED live:
+        // MFZP3在2026-10-21整天每次MoneyDJ排程都是Postgres 42804「column "id" is of type uuid but
+        // expression is of type text」），這裡的INSERT同樣是把globalThis.crypto.randomUUID()這個
+        // JS字串綁到$1、沒有對uuid欄位做cast——那邊已經改成gen_random_uuid()伺服器端產生，這裡當時
+        // 漏改。比照同樣的修法。
         await tx.$executeRawUnsafe(
           `INSERT INTO holdings
              (id, asset_type, fund_id, share_class_id, as_of_date, rank, holding_name, holding_code,
               weight, security_id, source, source_record_id, filing_id, weight_method, created_at)
-           VALUES ($1, 'FUND', $2, $3, $4::date, $5, $6, NULL, $7, NULL, $8, $9, $10, $11, CURRENT_TIMESTAMP)
+           VALUES (gen_random_uuid(), 'FUND', $1, $2, $3::date, $4, $5, NULL, $6, NULL, $7, $8, $9, $10, CURRENT_TIMESTAMP)
            ON CONFLICT (fund_id, source, filing_id, source_record_id)
              WHERE fund_id IS NOT NULL AND source IS NOT NULL AND filing_id IS NOT NULL AND source_record_id IS NOT NULL
            DO UPDATE SET rank = EXCLUDED.rank, holding_name = EXCLUDED.holding_name,
                          weight = EXCLUDED.weight, weight_method = EXCLUDED.weight_method`,
-          globalThis.crypto.randomUUID(),
           fundId,
           shareClassId,
           disclosure.date,

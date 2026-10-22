@@ -104,14 +104,52 @@ export async function GET(request: Request) {
     for (const r of navRows) latestNavByFundId.set(r.id, r.latest_nav != null ? Number(r.latest_nav) : null);
   }
 
+  // 2026-10-21 夜間（使用者核准）: JUMP_REVIEW的既有邏輯每次都拿candidate跟funds.latest_nav比
+  // ——但latest_nav本身因為一直被擋永遠沒更新，等於永遠拿「同一個過時的基準值」比對，只要基金
+  // 真的發生一次性大幅變動（例如配息平準金調整、淨值重編），就會卡死：第一天合理擋下來review，
+  // 但第二天、第三天…CSV的新值其實已經跟第一天的候選值很接近（代表不是單日雜訊，是真的新淨
+  // 值），卻因為比較基準還是同一個舊值，天天被擋，資料永遠凍結（VERIFIED：永豐中國科技50大等
+  // 4檔已經卡住3.5個月）。
+  // 修正：查最近2天這個job的production_scheduler_runs details，看這檔基金是否也在那兩天的
+  // jump_review_detail清單裡、而且候選值跟今天的候選值很接近（2%以內）——連續3天（含今天）都
+  // 出現同一個新值，才判定是真實的淨值變動，不是單日雜訊，允許通過並寫入，在log跟details裡
+  // 清楚標記是「override」，不是靜默放行。沒有連續3天證據的，維持原本行為（擋下、算
+  // jumpReviewCount），不改變既有保守預設。
+  const recentJumpReviewRows = await prisma.$queryRawUnsafe<Array<{ started_at: string; details: any }>>(
+    `SELECT started_at::text, details FROM production_scheduler_runs
+     WHERE job_id = $1 AND started_at >= now() - interval '3 days' AND status IN ('COMPLETED','PARTIAL')
+     ORDER BY started_at DESC LIMIT 5`,
+    [JOB],
+  );
+  const priorJumpReviewsByFund = new Map<string, number[]>(); // fundId -> [nav, nav, ...] from prior runs
+  for (const row of recentJumpReviewRows) {
+    for (const d of row.details?.jump_review_detail ?? []) {
+      if (!priorJumpReviewsByFund.has(d.fundId)) priorJumpReviewsByFund.set(d.fundId, []);
+      priorJumpReviewsByFund.get(d.fundId)!.push(d.candidateNav);
+    }
+  }
+
   const candidates: SitcaMatchedCandidate[] = [];
   let unitMismatchCount = 0;
   let jumpReviewCount = 0;
+  const jumpReviewDetail: Array<{ fundId: string; candidateNav: number; lastKnownNav: number | null }> = [];
+  const jumpReviewOverrides: Array<{ fundId: string; candidateNav: number; lastKnownNav: number | null; priorValues: number[] }> = [];
   for (const m of currencyOk) {
     const lastKnown = latestNavByFundId.get(m.fundId) ?? null;
     const sanity = checkNavSanity(m.nav, lastKnown);
     if (sanity === "UNIT_MISMATCH") { unitMismatchCount++; continue; }
-    if (sanity === "JUMP_REVIEW") { jumpReviewCount++; continue; }
+    if (sanity === "JUMP_REVIEW") {
+      const priorValues = priorJumpReviewsByFund.get(m.fundId) ?? [];
+      const consistentWithPrior = priorValues.length >= 2 && priorValues.every((v) => Math.abs(v - m.nav) / m.nav <= 0.02);
+      if (consistentWithPrior) {
+        jumpReviewOverrides.push({ fundId: m.fundId, candidateNav: m.nav, lastKnownNav: lastKnown, priorValues });
+        candidates.push({ fundId: m.fundId, navDate: m.navDate, nav: m.nav, matchedBy: m.matchedBy });
+        continue;
+      }
+      jumpReviewCount++;
+      jumpReviewDetail.push({ fundId: m.fundId, candidateNav: m.nav, lastKnownNav: lastKnown });
+      continue;
+    }
     candidates.push({ fundId: m.fundId, navDate: m.navDate, nav: m.nav, matchedBy: m.matchedBy });
   }
 
@@ -130,6 +168,7 @@ export async function GET(request: Request) {
       unmatched_count: unmatched.length, currency_mismatch_count: currencyMismatchCount,
       unit_mismatch_count: unitMismatchCount, jump_review_count: jumpReviewCount,
       write_candidate_count: candidates.length, written: writeResult.written, write_error_count: writeResult.writeErrorCount,
+      jump_review_detail: jumpReviewDetail, jump_review_overrides: jumpReviewOverrides,
     },
   });
 

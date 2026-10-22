@@ -29,6 +29,9 @@ const ALLOWED_JOB_IDS = new Set([
   "LOCAL_OPENCLAW_GATEWAY",
   "LOCAL_TW_ETF_LOOKUP_MORGAN_IMPORT",
   "LOCAL_TW_ETF_LOOKUP_MEGA_UPLOADER",
+  // 2026-10-21 夜間（使用者核准）: CBOE fx-options-public改回本機排程後，用這個jobId回報
+  // COMPLETED/FAILED/SKIPPED（SKIPPED是「偵測到別的instance還在正常執行中，本次讓出」）。
+  "LOCAL_FX_OPTIONS_PUBLIC",
 ]);
 
 function isAuthorized(request: Request): boolean {

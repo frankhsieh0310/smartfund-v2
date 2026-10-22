@@ -160,6 +160,17 @@ export async function GET(request: Request) {
   );
   const domesticFundFreshness = evaluateFreshness("domestic_fund_nav", domesticFundFreshRow[0]?.max_date ?? null, 4);
 
+  // 2026-10-22（使用者核准，CBOE本機殘留鎖檔修復的延伸稽核，二.6）：fx_metrics整張表
+  // 過去完全沒有freshness check，CBOE三個指數停止更新長達數月都沒人發現。這裡用整張表
+  // 最新一筆observed_at（不分metric種類）——發現即使排除已知停更的CBOE三指數，其餘所有
+  // metric種類最新也只到40天前（2026-09-12），即使FX_CARRY_CIP_ANALYTICS這個job每天
+  // 都回報COMPLETED，也沒有真的寫入新資料，是一個獨立於CBOE之外、本次新發現、尚未
+  // 排查根因的SYSTEM異常，先用freshness check讓它在每日報告中可見，根因留待下一輪處理。
+  const fxMetricsFreshRow = await prisma.$queryRawUnsafe<Array<{ max_date: string | null }>>(
+    `SELECT to_char(max(observed_at), 'YYYY-MM-DD') AS max_date FROM fx_metrics`,
+  );
+  const fxMetricsFreshness = evaluateFreshness("fx_metrics", fxMetricsFreshRow[0]?.max_date ?? null, 4);
+
   // 2026-10-18 (使用者規則定案，第 2b 項): 判斷依據從「排程有沒有報錯」改成「母體裡真的有
   //多少比例在最近一個更新日拿到資料」。只挑小表（fund_performances/etf_performances/
   // futures_technical_analytics）——etf_history／fund_history 這兩張大表故意沒做，見
@@ -470,8 +481,18 @@ export async function GET(request: Request) {
       break; // already spent too long on this check this run -- stop before risking the whole route
     }
     try {
-      const perf = await fetchYahooTwPerformance(row.data_source);
-      yahooTwSamples.push({ code: row.code, ourReturn1y: row.return_1y, yahooTwReturn1y: perf?.navReturn.y1 ?? null, fetchFailed: perf === null });
+      // 2026-10-21 夜間（使用者核准）: 原本perf===null（乾淨地拿不到資料，不是rate-limit/exception
+      // 那種要整批中止的情況）直接算fetchFailed，沒有重試——VERIFIED今晚00752就是這樣被標成異常，
+      // 但這類單次抓取失敗往往是Yahoo奇摩那次請求剛好逾時/暫時性問題，不是真的資料不存在。加一次
+      // 重試（等3秒、同一支symbol再試一次），重試後還是null才真的算fetchFailed。
+      let perf = await fetchYahooTwPerformance(row.data_source);
+      let retried = false;
+      if (perf === null && Date.now() - startedMs <= YAHOO_TW_CHECK_MAX_ELAPSED_MS) {
+        await new Promise((r) => setTimeout(r, 3000));
+        perf = await fetchYahooTwPerformance(row.data_source);
+        retried = true;
+      }
+      yahooTwSamples.push({ code: row.code, ourReturn1y: row.return_1y, yahooTwReturn1y: perf?.navReturn.y1 ?? null, fetchFailed: perf === null, retried });
     } catch {
       yahooTwSamples.push({ code: row.code, ourReturn1y: row.return_1y, yahooTwReturn1y: null, fetchFailed: true });
       break; // rate-limited or similar -- stop hitting Yahoo for the rest of today's sample
@@ -545,7 +566,7 @@ export async function GET(request: Request) {
   const SYSTEM_CATEGORY = "SYSTEM" as const;
   const anomalies = [
     ...pipelineHealth.filter((p) => p.anomaly).map((p) => ({ type: "PIPELINE", category: SYSTEM_CATEGORY, jobId: p.jobId, reasons: p.anomalyReasons })),
-    ...[stockFreshness, domesticFundFreshness].filter((f) => f.anomaly).map((f) => ({ type: "FRESHNESS", category: SYSTEM_CATEGORY, label: f.label, reason: f.anomalyReason })),
+    ...[stockFreshness, domesticFundFreshness, fxMetricsFreshness].filter((f) => f.anomaly).map((f) => ({ type: "FRESHNESS", category: SYSTEM_CATEGORY, label: f.label, reason: f.anomalyReason })),
     ...(etfDataSourceGap.anomaly ? [{ type: "ETF_DATA_SOURCE_GAP", category: SYSTEM_CATEGORY, newCodes: etfDataSourceGap.newCodes }] : []),
     // 每檔都已經用上面的即時查證分好 SYSTEM / EXTERNAL_DELAY，這裡依分類拆成最多兩筆，而不是
     // 整批套同一個分類——有證據（checkedAt/officialLatestDate）支持才會出現在 EXTERNAL_DELAY 那筆。
@@ -607,7 +628,7 @@ export async function GET(request: Request) {
   // buildDailySummary.ts for the message format (unit-tested separately).
   const summary = buildDailySummary({
     today, anomalyCount: anomalies.length, pipelineHealth,
-    freshness: [stockFreshness, domesticFundFreshness], etfDataSourceGap, yahooTwCheck, fredCommodityCheck, coverage,
+    freshness: [stockFreshness, domesticFundFreshness, fxMetricsFreshness], etfDataSourceGap, yahooTwCheck, fredCommodityCheck, coverage,
   });
   const notifyResult = await notifyAnomaly(summary);
 
@@ -616,7 +637,7 @@ export async function GET(request: Request) {
     status, attempted: RUN_LOG_PIPELINES.length + 7 + coverage.length, completed: RUN_LOG_PIPELINES.length + 7 + coverage.length - anomalies.length,
     inserted: 0, updated: 0, failed: anomalies.length, retryableFailures: 0, checkpointAfter: null,
     details: {
-      date: today, pipeline_health: pipelineHealth, stock_freshness: stockFreshness, domestic_fund_freshness: domesticFundFreshness,
+      date: today, pipeline_health: pipelineHealth, stock_freshness: stockFreshness, domestic_fund_freshness: domesticFundFreshness, fx_metrics_freshness: fxMetricsFreshness,
       etf_data_source_gap: etfDataSourceGap, yahoo_tw_return_check: yahooTwCheck, fred_commodity_check: fredCommodityCheck, coverage,
       active_etf_official_holdings: activeEtfOfficialHoldings, active_etf_official_holdings_evidence: activeEtfGapWithEvidence, local_schedule_reporting: localScheduleReporting,
       core_universe_fund_gap_evidence: coreUniverseFundGapWithEvidence,

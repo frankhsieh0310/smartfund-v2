@@ -165,22 +165,39 @@ export type MoneydjParseFailureResult = {
 // details.sample_failures array (up to 5 {code,reason} pairs per run) and classifies each one
 // individually against the three error classes moneydjFundDisclosure.ts now throws.
 export async function checkMoneydjParseFailures(query: QueryFn, windowHours = 24): Promise<MoneydjParseFailureResult> {
+  // 2026-10-21 夜間（使用者核准）: 原本不管24小時窗口內哪次run取樣到就算——VERIFIED live:
+  // HSZ19那次失敗是MONEYDJ_DISCLOSURE_SINGLE_WRITER_LOCKED（兩個排程執行重疊時的暫時性鎖衝突，
+  // 設計上就是讓輸的那邊下一輪重試），之後的run已經成功，卻因為24小時窗口內「曾經」取樣到就被
+  // 永久算進異常，跟checkPipelineRunLog的errorCount24h自我痊癒邏輯（「掃到最新一筆乾淨的run就
+  // 停」）不一致。這裡改成同一套規則：只看「最新一次」這個code出現在sample_failures裡的那次run
+  // 之後，有沒有更新的run（不管那次run的sample_failures裡有沒有取樣到這個code都一樣）——如果
+  // 有，代表當時失敗後排程繼續正常跑，視為已經有機會自我痊癒，不再算進今天的異常清單；只有「這
+  // 個code最後一次出現時，剛好也是這24小時窗口裡最後一次run」才算真的還沒解決。
   const rows = await query(
-    `SELECT details->'sample_failures' AS sample_failures
+    `SELECT started_at::text AS started_at, details->'sample_failures' AS sample_failures
        FROM production_scheduler_runs
-      WHERE job_id = 'CLOUD_MONEYDJ_FUND' AND started_at > now() - interval '${windowHours} hours'`,
+      WHERE job_id = 'CLOUD_MONEYDJ_FUND' AND started_at > now() - interval '${windowHours} hours'
+      ORDER BY started_at ASC`,
     [],
   );
+  const latestRunStartedAt = rows.length > 0 ? rows[rows.length - 1].started_at : null;
   let notDisclosedCount = 0;
   const nameOnlyCodes = new Set<string>();
   const parseFailedCodes = new Set<string>();
+  const lastSeenAt = new Map<string, { startedAt: string; reason: string }>(); // code -> most recent occurrence
   for (const row of rows) {
     const sampleFailures: Array<{ code: string; reason: string }> = row.sample_failures ?? [];
     for (const f of sampleFailures) {
-      if (/MONEYDJ_HOLDINGS_NOT_DISCLOSED/.test(f.reason)) { notDisclosedCount++; continue; }
-      if (/MONEYDJ_HOLDINGS_NAME_ONLY_NO_WEIGHT/.test(f.reason)) { nameOnlyCodes.add(f.code); continue; }
-      parseFailedCodes.add(f.code);
+      if (/MONEYDJ_HOLDINGS_NOT_DISCLOSED/.test(f.reason)) { notDisclosedCount++; continue; } // benign, never self-heal-gated
+      lastSeenAt.set(f.code, { startedAt: row.started_at, reason: f.reason });
     }
+  }
+  for (const [code, last] of lastSeenAt) {
+    // 自我痊癒判定：這個code最後出現的那次run，如果不是整個窗口裡最新的一次run，代表後面至少
+    // 還有一次run跑過（不管那次有沒有再失敗），給它機會自己恢復，不算今天的異常。
+    if (last.startedAt !== latestRunStartedAt) continue;
+    if (/MONEYDJ_HOLDINGS_NAME_ONLY_NO_WEIGHT/.test(last.reason)) nameOnlyCodes.add(code);
+    else parseFailedCodes.add(code);
   }
   return {
     notDisclosedCount,
@@ -510,6 +527,8 @@ export type YahooTwReturnSample = {
   ourReturn1y: number | null;
   yahooTwReturn1y: number | null; // null when the fetch itself failed/was rate-limited
   fetchFailed: boolean;
+  /** 2026-10-21 夜間：true 代表第一次抓取失敗、重試過一次。單純紀錄用，不影響分類邏輯。 */
+  retried?: boolean;
 };
 
 export type YahooTwReturnCheckResult = {
