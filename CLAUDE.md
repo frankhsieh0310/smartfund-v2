@@ -24,6 +24,16 @@ npx vercel deploy --prod --meta commit=$(git rev-parse HEAD)
 
 **Preview驗證必須真正執行到被改的程式碼**：2026-10-22晚上的SITCA_NAV_SYNC卡住事故，根因那段escape hatch程式碼（`5b700f760`）**從來沒有在Preview環境被真正呼叫執行過**——只做了typecheck/build成功，沒有實際觸發那支route、讓那段新程式碼跑一次，所以`$queryRawUnsafe(sql, [JOB])`這個語法錯誤直到上線後第一次排程才爆出來。**以後修改任何cron route／API route，光是typecheck/build成功不算驗證完成**：必須想辦法讓Preview環境（或本機、但要遵守第零條）實際執行到被改的那段程式碼至少一次，附上執行結果的log（哪一步、什麼輸出、有沒有丟錯）當作證明，才能說「Preview驗證通過」。
 
+## 第三條（永久規則，2026-10-23）：唯讀查詢只准用BEGIN READ ONLY或SET LOCAL，且只能走DIRECT_URL
+
+**事故**：2026-10-23 03:04–05:25 UTC，正式環境每一個會寫入資料庫的cron job全部收到Postgres錯誤`25006: cannot execute INSERT/UPDATE in a read-only transaction`，持續超過2小時。根因VERIFIED：`DATABASE_URL`跟`DIRECT_URL`實際上**都是走Supavisor連線池**（`DIRECT_URL`走session mode/5432埠，不是真正bypass pooler的直連），而`mcs-deploy`worktree裡7支舊腳本（`verify2.mjs`～`verify7.mjs`、`verify_review.mjs`，2026-10-18留下的，已刪除）用**工作階段層級**（不是`SET LOCAL`、也不是在交易內）執行了`SET default_transaction_read_only = on`——這個設定殘留在被歸還連線池的後端連線上，之後任何人（包含正式App自己的寫入請求）抽到那條被污染的連線，就會變成唯讀，直到那條連線被淘汰。用`pg_terminate_backend`終止所有`application_name='Supavisor'`、`state='idle'`的後端連線後，05:33 UTC起恢復正常寫入（SITCA_NAV_SYNC抽3檔跟官方CSV逐日比對完全一致）。
+
+**規則**：
+1. **任何腳本、任何連線，都不准執行工作階段層級的`SET default_transaction_read_only`或`SET SESSION CHARACTERISTICS AS TRANSACTION READ ONLY`**——這類設定不會隨交易結束自動還原，一旦連線被歸還連線池，會污染之後抽到這條連線的任何人（不限於自己）。
+2. 真的需要唯讀保護時，只能用**交易層級**的寫法：`BEGIN READ ONLY; ...; ROLLBACK;`（整個交易結束就自動解除，不會殘留），或`SET LOCAL`（只在當前交易內有效，COMMIT/ROLLBACK後自動失效）。
+3. 任何會動到連線層級設定（即使是LOCAL/交易層級）的唯讀查詢，**一律只能走`DIRECT_URL`**，不准走`DATABASE_URL`（連線池）——即使`DIRECT_URL`這次發現其實也是走Supavisor（session mode），它跟App實際寫入用的池子分開，風險比直接動`DATABASE_URL`低。
+4. 診斷/驗證用的scratch腳本，用完要刪，不要留在worktree裡超過當天——這次事故的根因就是4天前的舊腳本留著沒清，而且沒人記得它做過什麼。
+
 ## 第一條（永久規則，2026-10-22）：只處理台灣買得到的四類核心母體
 
 任何資料來源、排程、匯入，只能處理「四類核心母體的商品」——**現行掛牌台股ETF、SITCA國內基金、TDCC 3-2境外基金、美股ETF**——以及「這四類需要用到的市場資料」（例如持股穿透需要的個股與債券、指數、匯率、利率、原物料）。**台灣買不到的投資商品（例如美國共同基金）一律不抓、不存、不算**。新增任何資料來源之前，必須先說明它屬於哪一類，不屬於這四類或其必要市場資料的，不做。
