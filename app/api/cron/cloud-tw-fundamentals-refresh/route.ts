@@ -46,6 +46,15 @@ function rowsFor(exchange: Exchange, body: unknown): { fields: string[]; rows: s
   const table = (body as { tables?: Array<{ fields?: string[]; data?: string[][] }> }).tables?.[0];
   return { fields: table?.fields ?? [], rows: table?.data ?? [] };
 }
+// 2026-10-23（使用者核准，查證TWSE實際行為後新增）: 直接打TWSE BWIBBU_d端點VERIFIED在台北時間
+// 16:30（這支route目前排程時間）、甚至更早的11:40都還回「很抱歉，沒有符合條件的資料!」（無
+// fields/data，只有stat跟total:0）——這是TWSE當天還沒公布本益比統計，不是schema真的壞了。舊
+// 邏輯把這個狀況跟真正的schema改版混在一起，天天報UNEXPECTED_SCHEMA（算PARTIAL/FAILED），卻
+// 從來沒有真正重試過（這支route一天只有一次run_key，失敗了就等明天）。這裡把兩者分開判斷。
+function isTwseNotYetPublished(body: unknown): boolean {
+  const data = body as { fields?: string[]; data?: string[][]; stat?: string };
+  return !data.fields && !data.data && typeof data.stat === "string" && data.stat.includes("沒有符合條件");
+}
 function dayBucketKey(prefix: string, now = new Date()): string {
   return `${prefix}:${now.toISOString().slice(0, 10)}`; // e.g. cloud-tw-fundamentals-refresh:2026-09-12
 }
@@ -71,7 +80,8 @@ export async function GET(request: Request) {
 
   let inserted = 0;
   let failed = 0;
-  const perExchange: Record<string, { matched: number; httpStatus: number } | { error: string }> = {};
+  let notYetPublishedCount = 0;
+  const perExchange: Record<string, { matched: number; httpStatus: number } | { error: string } | { notYetPublished: true }> = {};
 
   for (const exchange of ["TWSE", "TPEx"] as const) {
     const targetMap = targetByExchange.get(exchange)!;
@@ -80,6 +90,11 @@ export async function GET(request: Request) {
     try {
       const result = await fetchJson(endpoint);
       if (result.status !== 200) throw new Error(`${exchange}_HTTP_${result.status}`);
+      if (exchange === "TWSE" && isTwseNotYetPublished(result.body)) {
+        notYetPublishedCount += 1;
+        perExchange[exchange] = { notYetPublished: true };
+        continue;
+      }
       const parsed = rowsFor(exchange, result.body);
       const tickerIndex = parsed.fields.indexOf("證券代號") >= 0 ? parsed.fields.indexOf("證券代號") : parsed.fields.indexOf("股票代號");
       const peIndex = parsed.fields.indexOf("本益比");
@@ -106,7 +121,15 @@ export async function GET(request: Request) {
   // 2026-10-22（使用者核准，三.三稽核發現）: 之前兩邊都HTTP 200回傳空資料（inserted=0，沒有
   // 丟錯）時完全沒guard，直接算COMPLETED——VERIFIED stock_financial_facts這個來源已經6天沒有
   // 新資料（上次2026-10-16），但一直回報COMPLETED沒人發現。
-  const status = failed === 2 ? "FAILED" : failed > 0 ? "PARTIAL" : targets.length > 0 && inserted === 0 ? "PARTIAL" : "COMPLETED";
+  // 2026-10-23（使用者核准）: TWSE當天還沒公布本益比統計(isTwseNotYetPublished)跟真正schema壞
+  // 掉是兩回事——前者回報SKIPPED（終態但不是錯誤，beginRun允許同一天稍晚的重試排程接手同一個
+  // run_key重新嘗試），不要跟UNEXPECTED_SCHEMA一起算PARTIAL/FAILED，也不要因此卡住一整天不重試。
+  const status: "FAILED" | "PARTIAL" | "SKIPPED" | "COMPLETED" =
+    failed === 2 ? "FAILED"
+    : notYetPublishedCount > 0 && failed === 0 && inserted === 0 ? "SKIPPED"
+    : failed > 0 ? "PARTIAL"
+    : targets.length > 0 && inserted === 0 ? "PARTIAL"
+    : "COMPLETED";
   await finishRun(runId, JOB, PROVIDER, startedMs, {
     status, attempted: targets.length, completed: inserted, inserted, updated: 0, failed,
     retryableFailures: failed, checkpointAfter: after, error: failed ? JSON.stringify(perExchange) : null,

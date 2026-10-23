@@ -70,117 +70,139 @@ export async function GET(request: Request) {
     return Response.json({ ok: false, job: JOB, runId, status: "FAILED", error: String(e?.message ?? e) }, { status: 502 });
   }
 
-  // Candidate pool is NOT restricted by currency (fixed: used to be `WHERE currency = 'TWD'`, which
-  // meant a fund whose currency had been corrected away from 'TWD' would silently fall out of this
-  // query forever, even though it's still a legitimate SITCA-matched domestic/TDCC-listed fund).
-  // Same non-currency condition as the mobile API's fund-list filter (data_provider exclusion) — the
-  // in-memory currency gate below is what actually decides write eligibility per row.
-  const fundRows = await prisma.$queryRawUnsafe<FundRow[]>(
-    `SELECT id, code, name, currency FROM funds WHERE COALESCE(data_provider, '') NOT IN ('yahoo', 'SEC')`,
-  );
-  const { matched, unmatched } = matchSitcaRows(rows, fundRows);
-
-  // Currency gate (user-approved Step 1, Task Z write-enable pre-check Part b): funds.currency is
-  // fund-family-level, not per-share-class, so a SITCA row denominated in e.g. USD/JPY/CNY will
-  // disagree with a TWD-tagged fund row even when the match itself (name/class) is correct. Per the
-  // explicit rule, these are reported and skipped — never written — until the underlying funds.currency
-  // data-quality gap (Part 2 investigation) is fixed.
-  let currencyMismatchCount = 0;
-  const currencyOk = matched.filter((m) => {
-    if (m.sitcaCurrency === m.fundCurrency) return true;
-    currencyMismatchCount++;
-    return false;
-  });
-
-  // Sanity check against each fund's own current latest_nav before it's allowed into the write
-  // batch — same two-failure-mode philosophy as market-close-sync's priceSanity.ts, with a stricter
-  // 20% threshold appropriate for a fund NAV (lib/sitca-nav-sync/navSanity.ts).
-  const latestNavByFundId = new Map<string, number | null>();
-  if (currencyOk.length > 0) {
-    const navRows = await prisma.$queryRawUnsafe<Array<{ id: string; latest_nav: string | null }>>(
-      `SELECT id, latest_nav::text FROM funds WHERE id = ANY($1::text[])`,
-      [...new Set(currencyOk.map((m) => m.fundId))],
+  // 2026-10-23（使用者核准，根因修正）: 從這裡到結尾，只要任何一步丟出例外（不只是上面
+  // fetchSitcaRows那段），一律要走finishRun寫FAILED+真實錯誤訊息，不能讓例外直接往外傳、留下
+  // 一筆永遠卡在IN_PROGRESS、沒有任何錯誤紀錄的production_scheduler_runs紀錄——這正是
+  // 2026-10-22 03:33 UTC起連續21次卡住的根因（見下方try區塊內的實際bug）。
+  try {
+    // Candidate pool is NOT restricted by currency (fixed: used to be `WHERE currency = 'TWD'`, which
+    // meant a fund whose currency had been corrected away from 'TWD' would silently fall out of this
+    // query forever, even though it's still a legitimate SITCA-matched domestic/TDCC-listed fund).
+    // Same non-currency condition as the mobile API's fund-list filter (data_provider exclusion) — the
+    // in-memory currency gate below is what actually decides write eligibility per row.
+    const fundRows = await prisma.$queryRawUnsafe<FundRow[]>(
+      `SELECT id, code, name, currency FROM funds WHERE COALESCE(data_provider, '') NOT IN ('yahoo', 'SEC')`,
     );
-    for (const r of navRows) latestNavByFundId.set(r.id, r.latest_nav != null ? Number(r.latest_nav) : null);
-  }
+    const { matched, unmatched } = matchSitcaRows(rows, fundRows);
 
-  // 2026-10-21 夜間（使用者核准）: JUMP_REVIEW的既有邏輯每次都拿candidate跟funds.latest_nav比
-  // ——但latest_nav本身因為一直被擋永遠沒更新，等於永遠拿「同一個過時的基準值」比對，只要基金
-  // 真的發生一次性大幅變動（例如配息平準金調整、淨值重編），就會卡死：第一天合理擋下來review，
-  // 但第二天、第三天…CSV的新值其實已經跟第一天的候選值很接近（代表不是單日雜訊，是真的新淨
-  // 值），卻因為比較基準還是同一個舊值，天天被擋，資料永遠凍結（VERIFIED：永豐中國科技50大等
-  // 4檔已經卡住3.5個月）。
-  // 修正：查最近2天這個job的production_scheduler_runs details，看這檔基金是否也在那兩天的
-  // jump_review_detail清單裡、而且候選值跟今天的候選值很接近（2%以內）——連續3天（含今天）都
-  // 出現同一個新值，才判定是真實的淨值變動，不是單日雜訊，允許通過並寫入，在log跟details裡
-  // 清楚標記是「override」，不是靜默放行。沒有連續3天證據的，維持原本行為（擋下、算
-  // jumpReviewCount），不改變既有保守預設。
-  const recentJumpReviewRows = await prisma.$queryRawUnsafe<Array<{ started_at: string; details: any }>>(
-    `SELECT started_at::text, details FROM production_scheduler_runs
-     WHERE job_id = $1 AND started_at >= now() - interval '3 days' AND status IN ('COMPLETED','PARTIAL')
-     ORDER BY started_at DESC LIMIT 5`,
-    [JOB],
-  );
-  const priorJumpReviewsByFund = new Map<string, number[]>(); // fundId -> [nav, nav, ...] from prior runs
-  for (const row of recentJumpReviewRows) {
-    for (const d of row.details?.jump_review_detail ?? []) {
-      if (!priorJumpReviewsByFund.has(d.fundId)) priorJumpReviewsByFund.set(d.fundId, []);
-      priorJumpReviewsByFund.get(d.fundId)!.push(d.candidateNav);
+    // Currency gate (user-approved Step 1, Task Z write-enable pre-check Part b): funds.currency is
+    // fund-family-level, not per-share-class, so a SITCA row denominated in e.g. USD/JPY/CNY will
+    // disagree with a TWD-tagged fund row even when the match itself (name/class) is correct. Per the
+    // explicit rule, these are reported and skipped — never written — until the underlying funds.currency
+    // data-quality gap (Part 2 investigation) is fixed.
+    let currencyMismatchCount = 0;
+    const currencyOk = matched.filter((m) => {
+      if (m.sitcaCurrency === m.fundCurrency) return true;
+      currencyMismatchCount++;
+      return false;
+    });
+
+    // Sanity check against each fund's own current latest_nav before it's allowed into the write
+    // batch — same two-failure-mode philosophy as market-close-sync's priceSanity.ts, with a stricter
+    // 20% threshold appropriate for a fund NAV (lib/sitca-nav-sync/navSanity.ts).
+    const latestNavByFundId = new Map<string, number | null>();
+    if (currencyOk.length > 0) {
+      const navRows = await prisma.$queryRawUnsafe<Array<{ id: string; latest_nav: string | null }>>(
+        `SELECT id, latest_nav::text FROM funds WHERE id = ANY($1::text[])`,
+        [...new Set(currencyOk.map((m) => m.fundId))],
+      );
+      for (const r of navRows) latestNavByFundId.set(r.id, r.latest_nav != null ? Number(r.latest_nav) : null);
     }
-  }
 
-  const candidates: SitcaMatchedCandidate[] = [];
-  let unitMismatchCount = 0;
-  let jumpReviewCount = 0;
-  const jumpReviewDetail: Array<{ fundId: string; candidateNav: number; lastKnownNav: number | null }> = [];
-  const jumpReviewOverrides: Array<{ fundId: string; candidateNav: number; lastKnownNav: number | null; priorValues: number[] }> = [];
-  for (const m of currencyOk) {
-    const lastKnown = latestNavByFundId.get(m.fundId) ?? null;
-    const sanity = checkNavSanity(m.nav, lastKnown);
-    if (sanity === "UNIT_MISMATCH") { unitMismatchCount++; continue; }
-    if (sanity === "JUMP_REVIEW") {
-      const priorValues = priorJumpReviewsByFund.get(m.fundId) ?? [];
-      const consistentWithPrior = priorValues.length >= 2 && priorValues.every((v) => Math.abs(v - m.nav) / m.nav <= 0.02);
-      if (consistentWithPrior) {
-        jumpReviewOverrides.push({ fundId: m.fundId, candidateNav: m.nav, lastKnownNav: lastKnown, priorValues });
-        candidates.push({ fundId: m.fundId, navDate: m.navDate, nav: m.nav, matchedBy: m.matchedBy });
+    // 2026-10-21 夜間（使用者核准）: JUMP_REVIEW的既有邏輯每次都拿candidate跟funds.latest_nav比
+    // ——但latest_nav本身因為一直被擋永遠沒更新，等於永遠拿「同一個過時的基準值」比對，只要基金
+    // 真的發生一次性大幅變動（例如配息平準金調整、淨值重編），就會卡死：第一天合理擋下來review，
+    // 但第二天、第三天…CSV的新值其實已經跟第一天的候選值很接近（代表不是單日雜訊，是真的新淨
+    // 值），卻因為比較基準還是同一個舊值，天天被擋，資料永遠凍結（VERIFIED：永豐中國科技50大等
+    // 4檔已經卡住3.5個月）。
+    // 修正：查最近2天這個job的production_scheduler_runs details，看這檔基金是否也在那兩天的
+    // jump_review_detail清單裡、而且候選值跟今天的候選值很接近（2%以內）——連續3天（含今天）都
+    // 出現同一個新值，才判定是真實的淨值變動，不是單日雜訊，允許通過並寫入，在log跟details裡
+    // 清楚標記是「override」，不是靜默放行。沒有連續3天證據的，維持原本行為（擋下、算
+    // jumpReviewCount），不改變既有保守預設。
+    //
+    // 2026-10-23根因修正: prisma.$queryRawUnsafe的參數是variadic（...values），不是接受一個陣列
+    // 當作「params清單」——下面原本寫的`[JOB]`會把整個陣列`['SITCA_NAV_SYNC']`當成$1單一個值綁
+    // 進去，變成拿text（job_id欄位）去跟text[]比，Postgres直接丟42883語法錯誤（operator does
+    // not exist: text = text[]）。這個例外沒有被外層任何try/catch接住，從2026-10-22 03:33 UTC
+    // 起每小時排程都在這裡炸掉、finishRun從未被呼叫，production_scheduler_runs那筆紀錄永遠卡
+    // 在IN_PROGRESS——這才是21筆卡住紀錄的真正根因，跟fund_history表大小、鎖等待都無關（已用
+    // EXPLAIN ANALYZE跟實際20筆fund_id寫入測試證明那些路徑本身都是正常速度）。正確寫法是直接
+    // 傳`JOB`這個字串本身（讓它被spread成一個值），不要包一層陣列。
+    const recentJumpReviewRows = await prisma.$queryRawUnsafe<Array<{ started_at: string; details: any }>>(
+      `SELECT started_at::text, details FROM production_scheduler_runs
+       WHERE job_id = $1 AND started_at >= now() - interval '3 days' AND status IN ('COMPLETED','PARTIAL')
+       ORDER BY started_at DESC LIMIT 5`,
+      JOB,
+    );
+    const priorJumpReviewsByFund = new Map<string, number[]>(); // fundId -> [nav, nav, ...] from prior runs
+    for (const row of recentJumpReviewRows) {
+      for (const d of row.details?.jump_review_detail ?? []) {
+        if (!priorJumpReviewsByFund.has(d.fundId)) priorJumpReviewsByFund.set(d.fundId, []);
+        priorJumpReviewsByFund.get(d.fundId)!.push(d.candidateNav);
+      }
+    }
+
+    const candidates: SitcaMatchedCandidate[] = [];
+    let unitMismatchCount = 0;
+    let jumpReviewCount = 0;
+    const jumpReviewDetail: Array<{ fundId: string; candidateNav: number; lastKnownNav: number | null }> = [];
+    const jumpReviewOverrides: Array<{ fundId: string; candidateNav: number; lastKnownNav: number | null; priorValues: number[] }> = [];
+    for (const m of currencyOk) {
+      const lastKnown = latestNavByFundId.get(m.fundId) ?? null;
+      const sanity = checkNavSanity(m.nav, lastKnown);
+      if (sanity === "UNIT_MISMATCH") { unitMismatchCount++; continue; }
+      if (sanity === "JUMP_REVIEW") {
+        const priorValues = priorJumpReviewsByFund.get(m.fundId) ?? [];
+        const consistentWithPrior = priorValues.length >= 2 && priorValues.every((v) => Math.abs(v - m.nav) / m.nav <= 0.02);
+        if (consistentWithPrior) {
+          jumpReviewOverrides.push({ fundId: m.fundId, candidateNav: m.nav, lastKnownNav: lastKnown, priorValues });
+          candidates.push({ fundId: m.fundId, navDate: m.navDate, nav: m.nav, matchedBy: m.matchedBy });
+          continue;
+        }
+        jumpReviewCount++;
+        jumpReviewDetail.push({ fundId: m.fundId, candidateNav: m.nav, lastKnownNav: lastKnown });
         continue;
       }
-      jumpReviewCount++;
-      jumpReviewDetail.push({ fundId: m.fundId, candidateNav: m.nav, lastKnownNav: lastKnown });
-      continue;
+      candidates.push({ fundId: m.fundId, navDate: m.navDate, nav: m.nav, matchedBy: m.matchedBy });
     }
-    candidates.push({ fundId: m.fundId, navDate: m.navDate, nav: m.nav, matchedBy: m.matchedBy });
+
+    const writeResult = await writeBatchIfEnabled(writerQuery, candidates, new Date().toISOString(), writeEnabledThisRun);
+
+    const matchedByCode = matched.filter((m) => m.matchedBy === "CODE").length;
+    const matchedByName = matched.filter((m) => m.matchedBy === "NAME").length;
+
+    // 2026-10-22（使用者核准，三.三稽核發現）: 之前不論write_error_count或matched數量掉到0都無
+    // 條件回報COMPLETED。
+    const status = writeResult.writeErrorCount > 0 ? "PARTIAL"
+      : writeEnabledThisRun && candidates.length > 0 && writeResult.written === 0 ? "PARTIAL"
+      : "COMPLETED";
+    await finishRun(runId, JOB, "SITCA_FSC_OFFICIAL_DAILY_NAV_CSV", startedMs, {
+      status, attempted: rows.length, completed: writeResult.written, inserted: writeResult.written, updated: 0,
+      failed: unmatched.length + writeResult.writeErrorCount, retryableFailures: 0, checkpointAfter: null,
+      details: {
+        run_mode: currentRunMode(), csv_row_count: rows.length, twd_fund_count: fundRows.length,
+        matched_count: matched.length, matched_by_code: matchedByCode, matched_by_name: matchedByName,
+        unmatched_count: unmatched.length, currency_mismatch_count: currencyMismatchCount,
+        unit_mismatch_count: unitMismatchCount, jump_review_count: jumpReviewCount,
+        write_candidate_count: candidates.length, written: writeResult.written, write_error_count: writeResult.writeErrorCount,
+        jump_review_detail: jumpReviewDetail, jump_review_overrides: jumpReviewOverrides,
+      },
+    });
+
+    return Response.json({
+      ok: true, job: JOB, runId, status, runMode: currentRunMode(),
+      csvRowCount: rows.length, twdFundCount: fundRows.length,
+      matchedCount: matched.length, matchedByCode, matchedByName, unmatchedCount: unmatched.length,
+      currencyMismatchCount, unitMismatchCount, jumpReviewCount, writeCandidateCount: candidates.length,
+      written: writeResult.written, writeErrorCount: writeResult.writeErrorCount,
+    });
+  } catch (e: any) {
+    await finishRun(runId, JOB, "SITCA_FSC_OFFICIAL_DAILY_NAV_CSV", startedMs, {
+      status: "FAILED", attempted: rows.length, completed: 0, inserted: 0, updated: 0, failed: 0, retryableFailures: 0,
+      error: String(e?.message ?? e), checkpointAfter: null,
+      details: { run_mode: currentRunMode(), stage: "post-fetch" },
+    });
+    return Response.json({ ok: false, job: JOB, runId, status: "FAILED", error: String(e?.message ?? e) }, { status: 502 });
   }
-
-  const writeResult = await writeBatchIfEnabled(writerQuery, candidates, new Date().toISOString(), writeEnabledThisRun);
-
-  const matchedByCode = matched.filter((m) => m.matchedBy === "CODE").length;
-  const matchedByName = matched.filter((m) => m.matchedBy === "NAME").length;
-
-  // 2026-10-22（使用者核准，三.三稽核發現）: 之前不論write_error_count或matched數量掉到0都無
-  // 條件回報COMPLETED。
-  const status = writeResult.writeErrorCount > 0 ? "PARTIAL"
-    : writeEnabledThisRun && candidates.length > 0 && writeResult.written === 0 ? "PARTIAL"
-    : "COMPLETED";
-  await finishRun(runId, JOB, "SITCA_FSC_OFFICIAL_DAILY_NAV_CSV", startedMs, {
-    status, attempted: rows.length, completed: writeResult.written, inserted: writeResult.written, updated: 0,
-    failed: unmatched.length + writeResult.writeErrorCount, retryableFailures: 0, checkpointAfter: null,
-    details: {
-      run_mode: currentRunMode(), csv_row_count: rows.length, twd_fund_count: fundRows.length,
-      matched_count: matched.length, matched_by_code: matchedByCode, matched_by_name: matchedByName,
-      unmatched_count: unmatched.length, currency_mismatch_count: currencyMismatchCount,
-      unit_mismatch_count: unitMismatchCount, jump_review_count: jumpReviewCount,
-      write_candidate_count: candidates.length, written: writeResult.written, write_error_count: writeResult.writeErrorCount,
-      jump_review_detail: jumpReviewDetail, jump_review_overrides: jumpReviewOverrides,
-    },
-  });
-
-  return Response.json({
-    ok: true, job: JOB, runId, status, runMode: currentRunMode(),
-    csvRowCount: rows.length, twdFundCount: fundRows.length,
-    matchedCount: matched.length, matchedByCode, matchedByName, unmatchedCount: unmatched.length,
-    currencyMismatchCount, unitMismatchCount, jumpReviewCount, writeCandidateCount: candidates.length,
-    written: writeResult.written, writeErrorCount: writeResult.writeErrorCount,
-  });
 }

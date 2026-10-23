@@ -273,6 +273,14 @@
       "schedule": "30 8 * * 1-5"
     },
     {
+      "path": "/api/cron/cloud-tw-fundamentals-refresh",
+      "schedule": "30 9 * * 1-5"
+    },
+    {
+      "path": "/api/cron/cloud-tw-fundamentals-refresh",
+      "schedule": "0 11 * * 1-5"
+    },
+    {
       "path": "/api/cron/cloud-global-pe-recompute",
       "schedule": "0 */3 * * *"
     },

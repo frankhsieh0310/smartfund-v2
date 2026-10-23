@@ -484,7 +484,17 @@ export async function GET(request: Request) {
   const now = new Date();
   const registry = await loadExchangeCalendarRegistry();
   const { unmappedTotal, unmappedBySuffix, universeTotal } = await computeUnmapped(registry);
-  const coreUniverseIds = await getCoreUniverseCachedForToday(now.toISOString().slice(0, 10));
+  const activityCoreUniverseIds = await getCoreUniverseCachedForToday(now.toISOString().slice(0, 10));
+  // 2026-10-23（使用者核准，第一條永久規則）: computeCoreUniverse()/getCoreUniverseCachedForToday()
+  // 本身在10交易日驗收凍結期間不能動（見上面Task X4註解），所以在這裡、取得結果之後，額外用
+  // tw_purchasable_classification（APPROVED）再篩一次——否則這個交易活躍度篩選完全不管四類核心
+  // 母體範圍，任何「活躍交易但台灣買不到」的ETF一樣會被排進每日BAR/QUOTE_FINAL價格寫入。VERIFIED
+  // 這正是2026-10-22起範圍外ETF（來源BAR、QUOTE_FINAL）持續有新價格寫入的根因。
+  const approvedEtfIdRows = await prisma.$queryRawUnsafe<Array<{ asset_id: string }>>(
+    `SELECT asset_id FROM tw_purchasable_classification WHERE asset_type = 'ETF' AND status = 'APPROVED'`,
+  );
+  const approvedEtfIds = new Set(approvedEtfIdRows.map((r) => r.asset_id));
+  const coreUniverseIds = new Set([...activityCoreUniverseIds].filter((id) => approvedEtfIds.has(id)));
 
   const marketDetails: MarketDetail[] = [];
   let timeBudgetStop = false;
