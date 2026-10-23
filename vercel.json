@@ -37,6 +37,10 @@
       "schedule": "*/15 * * * *"
     },
     {
+      "path": "/api/cron/out-of-scope-purge",
+      "schedule": "*/10 * * * *"
+    },
+    {
       "path": "/api/workflows/bootstrap?workflow=poc",
       "schedule": "0 5 * * *"
     },
