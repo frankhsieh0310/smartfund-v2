@@ -18,6 +18,8 @@
 export type CronSchedule = { expr: string }; // standard 5-field: minute hour day month dow (UTC)
 
 export const JOB_SCHEDULES: Record<string, CronSchedule[]> = {
+  // 2026-10-23: 連線池唯讀事故後新增的主動寫入探測，每15分鐘一次。
+  WRITE_PROBE: [{ expr: "*/15 * * * *" }],
   ETF_RETURNS_SYNC: [{ expr: "*/10 * * * *" }],
   ETF_RETURNS_SYNC_TW: [{ expr: "*/15 * * * *" }],
   US_FUND_NAV_SYNC: [{ expr: "*/15 23,0,1,2,3 * * *" }],

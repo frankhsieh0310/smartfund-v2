@@ -33,6 +33,10 @@
   },
   "crons": [
     {
+      "path": "/api/cron/write-probe",
+      "schedule": "*/15 * * * *"
+    },
+    {
       "path": "/api/workflows/bootstrap?workflow=poc",
       "schedule": "0 5 * * *"
     },

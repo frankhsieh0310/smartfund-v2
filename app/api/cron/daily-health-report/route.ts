@@ -98,6 +98,10 @@ const query: QueryFn = (sql, params) => prisma.$queryRawUnsafe<any[]>(sql, ...pa
 // （見 beginRun 的 runKey 慣例），這裡用前綴比對，checkPipelineRunLog 內部若查不到完全比對的
 // job_id 會回報 NO_RUN_IN_LAST_24H，之後如有需要可以再改成前綴查詢。
 const RUN_LOG_PIPELINES = [
+  // 2026-10-23（連線池唯讀事故後新增）: write-probe每15分鐘對write_probe_heartbeat做一次真實
+  // UPDATE，失敗會立刻送Telegram通知（lib/daily-health-report/notify.ts），這裡再加一層：如果
+  // 它整天都沒跑或整天都FAILED，健康報告也要能抓到、分類成SYSTEM。
+  "WRITE_PROBE",
   "MARKET_CLOSE_SYNC_SHADOW",
   "ETF_RETURNS_SYNC",
   "ETF_RETURNS_SYNC_TW",
