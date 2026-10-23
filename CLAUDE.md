@@ -11,6 +11,19 @@
 - 要驗證完整的route/API行為，用Preview環境（`vercel deploy`不帶`--prod`），而且該route自己的寫入開關（如果有）要關閉。
 - 真的需要對正式資料庫寫入才能驗證的情況（例如這次這種「批次transaction是否真的只觸發一次trigger」），必須先回去問使用者，不能自己判斷「反正資料是對的就無害」。
 
+## 第二條（永久規則，2026-10-23）：部署指令固定格式；Preview驗證必須實際跑到被改的那段程式
+
+**部署指令固定格式**：每次要給使用者部署指令，一律用這個格式，不准用`npx vercel --prod`：
+```bash
+cd <worktree路徑>
+git log -1 --oneline
+Remove-Item .env -ErrorAction SilentlyContinue
+npx vercel deploy --prod --meta commit=$(git rev-parse HEAD)
+```
+（`Remove-Item .env`是使用者自己的標準流程，執行後worktree裡的`.env`會消失——事後如果要在同一個worktree跑任何需要查正式資料庫的本機腳本，要用另一個還有`.env`的worktree，不要假設`.env`還在。）
+
+**Preview驗證必須真正執行到被改的程式碼**：2026-10-22晚上的SITCA_NAV_SYNC卡住事故，根因那段escape hatch程式碼（`5b700f760`）**從來沒有在Preview環境被真正呼叫執行過**——只做了typecheck/build成功，沒有實際觸發那支route、讓那段新程式碼跑一次，所以`$queryRawUnsafe(sql, [JOB])`這個語法錯誤直到上線後第一次排程才爆出來。**以後修改任何cron route／API route，光是typecheck/build成功不算驗證完成**：必須想辦法讓Preview環境（或本機、但要遵守第零條）實際執行到被改的那段程式碼至少一次，附上執行結果的log（哪一步、什麼輸出、有沒有丟錯）當作證明，才能說「Preview驗證通過」。
+
 ## 第一條（永久規則，2026-10-22）：只處理台灣買得到的四類核心母體
 
 任何資料來源、排程、匯入，只能處理「四類核心母體的商品」——**現行掛牌台股ETF、SITCA國內基金、TDCC 3-2境外基金、美股ETF**——以及「這四類需要用到的市場資料」（例如持股穿透需要的個股與債券、指數、匯率、利率、原物料）。**台灣買不到的投資商品（例如美國共同基金）一律不抓、不存、不算**。新增任何資料來源之前，必須先說明它屬於哪一類，不屬於這四類或其必要市場資料的，不做。

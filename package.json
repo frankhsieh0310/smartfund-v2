@@ -55,6 +55,7 @@
     "data:government-yield:build-serving": "node --experimental-strip-types scripts/data/government-yield/build-government-yield-serving.ts",
     "dev": "next dev",
     "postinstall": "prisma generate",
+    "prebuild": "tsx scripts/lint/check-raw-query-array-vararg.ts",
     "build": "next build",
     "start": "next start",
     "monitor:assets": "node --experimental-strip-types scripts/data/monitor/run-asset-monitor.ts",
