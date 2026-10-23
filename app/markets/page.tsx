@@ -197,7 +197,7 @@ export default function MarketsPage() {
           <div className="text-[13px] tracking-[8px] text-[#F5B700] font-semibold mb-3">GLOBAL MARKETS</div>
           <h1 className="text-[48px] font-black text-white mb-2">全球市場中心</h1>
           <p className="text-[16px] text-slate-400">
-            {data ? `涵蓋股市指數、公債殖利率、大宗商品與加密貨幣，共 ${totalCount} 個市場指標` : "資料載入中…"}
+            {data ? `涵蓋股市指數、公債殖利率、大宗商品，共 ${totalCount} 個市場指標` : "資料載入中…"}
           </p>
         </div>
 
