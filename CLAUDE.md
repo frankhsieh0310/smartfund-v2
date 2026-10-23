@@ -26,7 +26,9 @@ npx vercel deploy --prod --meta commit=$(git rev-parse HEAD)
 
 ## 第三條（永久規則，2026-10-23，2026-10-23更正過一次）：唯讀/逾時設定只准用交易層級寫法，腳本結束前RESET ALL
 
-**事故**：2026-10-23 03:04–05:25 UTC，正式環境每一個會寫入資料庫的cron job全部收到Postgres錯誤`25006: cannot execute INSERT/UPDATE in a read-only transaction`，持續超過2小時。根因VERIFIED：`mcs-deploy`worktree裡7支舊腳本（`verify2.mjs`～`verify7.mjs`、`verify_review.mjs`，2026-10-18留下的，已刪除）用**工作階段層級**（不是`SET LOCAL`、也不是在交易內）執行了`SET default_transaction_read_only = on`——這個設定殘留在被歸還連線池的後端連線上，之後任何人（包含正式App自己的寫入請求）抽到那條被污染的連線，就會變成唯讀，直到那條連線被淘汰。用`pg_terminate_backend`終止所有`application_name='Supavisor'`、`state='idle'`的後端連線後，05:33 UTC起恢復正常寫入（SITCA_NAV_SYNC抽3檔跟官方CSV逐日比對完全一致）。
+**事故**：2026-10-23 03:04–05:25 UTC，正式環境每一個會寫入資料庫的cron job全部收到Postgres錯誤`25006: cannot execute INSERT/UPDATE in a read-only transaction`，持續超過2小時。用`pg_terminate_backend`終止所有`application_name='Supavisor'`、`state='idle'`的後端連線後，05:33 UTC起恢復正常寫入（SITCA_NAV_SYNC抽3檔跟官方CSV逐日比對完全一致）。
+
+**根因：UNKNOWN（更正，2026-10-23）**。原本這裡寫「根因VERIFIED是`mcs-deploy`裡7支10/18舊腳本用工作階段層級`SET default_transaction_read_only=on`污染連線池」——**這個結論是錯的，已更正**：那7支腳本的執行時間（2026-10-18 20:21-20:27）跟事故開始時間（2026-10-23 03:04 UTC）相差將近5天，對不上，而且每支都有正確呼叫`client.end()`。**目前唯一能確定的是：全repo（app/、lib/）靜態搜尋沒有找到任何已部署程式碼執行`SET SESSION`/`SET default_transaction`/`read_only`相關SQL**，`twapp_writer`、`postgres`等角色本身的`rolconfig`也都是乾淨的。已排除的可能：(1) 這7支舊腳本（時間點不符）；(2) 角色層級設定（VERIFIED乾淨）；(3) `yahoo-etf-full-sweep`這個Vercel Workflow（03:00 UTC啟動，離第一筆錯誤只差4分鐘，時間上可疑，但VERIFIED它本身跟它的依賴套件、`@workflow`套件原始碼都沒有相關SQL字串）。真正根因待台股視窗那邊查證的結果一起比對。
 
 **更正（2026-10-23）**：第一版這裡寫「唯讀查詢一律只能走`DIRECT_URL`」——**VERIFIED這條規則沒有效**，查過`DIRECT_URL`的連線字串，username是`postgres.<project-ref>`、host是`aws-1-ap-southeast-1.pooler.supabase.com`，**`DIRECT_URL`本身也是走Supavisor連線池**（session mode，5432埠），不是真正bypass pooler的直連。`DIRECT_URL`跟`DATABASE_URL`是不是共用同一批後端連線還不確定（UNKNOWN），所以「走DIRECT_URL比較安全」這個假設不成立，**刪除這條規則**。
 
@@ -34,7 +36,7 @@ npx vercel deploy --prod --meta commit=$(git rev-parse HEAD)
 1. **任何腳本、任何連線，不管走DIRECT_URL還是DATABASE_URL，都不准執行工作階段層級的`SET default_transaction_read_only`、`SET SESSION CHARACTERISTICS AS TRANSACTION READ ONLY`，或其他任何會在連線關閉前持續存在、不隨交易結束自動還原的`SET`**——這類設定一旦連線被歸還連線池，會污染之後抽到這條連線的任何人（不限於自己）。
 2. 真的需要唯讀保護時，只能用**交易層級**的寫法：`BEGIN READ ONLY; ...; ROLLBACK;`（整個交易結束自動解除，不會殘留）。需要逾時設定時，只能用`SET LOCAL`（只在當前交易內有效，COMMIT/ROLLBACK後自動失效），不准用不帶`LOCAL`的`SET statement_timeout`等。
 3. **每一支腳本結束前（不管成功或失敗的收尾路徑），一律要對這個連線執行一次`RESET ALL`**，再呼叫`client.end()`關閉連線——即使理論上只用了交易層級設定、COMMIT/ROLLBACK後應該自動清空，`RESET ALL`是最後一道防線，成本幾乎是0。
-4. 診斷/驗證用的scratch腳本，用完要刪，不要留在worktree裡超過當天——這次事故的根因就是4天前的舊腳本留著沒清，而且沒人記得它做過什麼。
+4. 診斷/驗證用的scratch腳本，用完要刪，不要留在worktree裡超過當天——留著4天沒清的舊腳本（即使最後證實跟這次事故時間點對不上）一樣會造成「沒人記得它做過什麼、查事故時卻要花時間排除」的成本。
 
 ## 第一條（永久規則，2026-10-22）：只處理台灣買得到的四類核心母體
 
