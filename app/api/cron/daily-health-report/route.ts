@@ -238,6 +238,17 @@ export async function GET(request: Request) {
   );
   const globalIndexFreshness = evaluateFreshness("global_index_snapshots", globalIndexFreshRow[0]?.max_date ?? null, 4);
 
+  // 2026-10-23（使用者核准）: 一般投資人複委託買不到的美股ETF（虛擬資產現貨/期貨、超過2倍正向
+  // /1倍反向槓桿）已經排除成EXCLUDED_RETAIL_RESTRICTED，lib/tw-purchasable/classify.ts每天重新
+  // 分類時會自動套用同一條規則。這裡做反向檢查：如果這個數字掉到低於238（2026-10-23第一次套用
+  // 這條規則時的檔數），代表有東西把本該排除的ETF錯誤改回APPROVED，需要立刻查。
+  const retailRestrictedCountRow = await prisma.$queryRawUnsafe<Array<{ n: number }>>(
+    `SELECT count(*)::int AS n FROM tw_purchasable_classification WHERE asset_type='ETF' AND status='EXCLUDED_RETAIL_RESTRICTED'`,
+  );
+  const retailRestrictedCount = retailRestrictedCountRow[0]?.n ?? 0;
+  const RETAIL_RESTRICTED_MIN_BASELINE = 238;
+  const retailRestrictedDropped = retailRestrictedCount < RETAIL_RESTRICTED_MIN_BASELINE;
+
   // 2026-10-22（使用者核准，第一條永久規則）: YAHOO_FUND_FULL_SWEEP（美國共同基金全量掃描，
   // 不屬於四類核心母體）已經永久停用——這裡做反向檢查，確保它沒有被意外重新啟動（例如有人
   // 不小心把vercel.json的cron entry加回去，或Vercel Workflow被重新start()）。過去24小時內
@@ -648,6 +659,7 @@ export async function GET(request: Request) {
     ...[stockFreshness, domesticFundFreshness, fxMetricsFreshness, moneyMarketFreshness, globalIndexFreshness].filter((f) => f.anomaly).map((f) => ({ type: "FRESHNESS", category: SYSTEM_CATEGORY, label: f.label, reason: f.anomalyReason })),
     ...(etfDataSourceGap.anomaly ? [{ type: "ETF_DATA_SOURCE_GAP", category: SYSTEM_CATEGORY, newCodes: etfDataSourceGap.newCodes }] : []),
     ...(decommissionedJobReactivated ? [{ type: "OUT_OF_SCOPE_JOB_REACTIVATED", category: SYSTEM_CATEGORY, rows: decommissionedRows }] : []),
+    ...(retailRestrictedDropped ? [{ type: "RETAIL_RESTRICTED_ETF_COUNT_DROPPED", category: SYSTEM_CATEGORY, currentCount: retailRestrictedCount, minBaseline: RETAIL_RESTRICTED_MIN_BASELINE }] : []),
     // 每檔都已經用上面的即時查證分好 SYSTEM / EXTERNAL_DELAY，這裡依分類拆成最多兩筆，而不是
     // 整批套同一個分類——有證據（checkedAt/officialLatestDate）支持才會出現在 EXTERNAL_DELAY 那筆。
     ...(activeEtfGapWithEvidence.some((e) => e.category === SYSTEM_CATEGORY)

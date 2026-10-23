@@ -18,6 +18,7 @@ import { prisma } from "@/lib/prisma";
 import { fetchSitcaIdentityRows } from "@/lib/sitca-nav-sync/sitcaFetch";
 import { fetchTdccOffshoreBasicInfoNames, TDCC_OFFSHORE_BASIC_INFO_SOURCE } from "./tdccOffshoreBasicInfo";
 import { fetchOfficialEtfList } from "@/lib/cron/newListingDetection";
+import { checkRetailRestricted } from "./retailRestrictedEtf";
 import { fetchCurrentlyTradingTwCodes } from "@/lib/cron/twCurrentlyTradingCheck";
 
 const SITCA_SOURCE = "SITCA_NAV_CSV";
@@ -37,7 +38,7 @@ export type ClassifyResult = {
   domesticFund: { officialCount: number; matched: number };
   offshoreFund: { officialCount: number; matched: number };
   etf: { officialCount: number; matched: number };
-  usEtf: { candidateCount: number; matched: number };
+  usEtf: { candidateCount: number; matched: number; retailRestricted: number };
 };
 
 async function upsertApproved(
@@ -133,7 +134,7 @@ export async function classifyTwPurchasable(writeEnabled: boolean): Promise<Clas
   // 註解）；(d) 近 10 天內有 etf_history 的檢查用一次查詢批量做，不逐檔查。
   const usEtfCandidates = await prisma.etf.findMany({
     where: { isActive: true, dataSource: { not: null }, exchange: { in: US_EXCHANGES } },
-    select: { id: true },
+    select: { id: true, name: true, category: true },
   });
   const usEtfIds = usEtfCandidates.map((e) => e.id);
   const freshRows = usEtfIds.length
@@ -143,10 +144,36 @@ export async function classifyTwPurchasable(writeEnabled: boolean): Promise<Clas
       )
     : [];
   const freshIdSet = new Set(freshRows.map((r) => r.id));
-  const usEtfMatches = usEtfIds
-    .filter((id) => freshIdSet.has(id))
-    .map((id) => ({ assetType: "ETF" as const, assetId: id, source: US_ETF_SOURCE, sourceRecordRef: id }));
+  // 2026-10-23（使用者核准）: 一般投資人透過複委託買不到的美股ETF（虛擬資產現貨/期貨ETF、超過
+  // 2倍正向/1倍反向槓桿的ETF）排除在核心母體外，見 retailRestrictedEtf.ts 的判定依據。每天重新
+  // 分類時都套用同一條規則，不會因為下一輪classify又把它們重新加回APPROVED。
+  const freshCandidates = usEtfCandidates.filter((e) => freshIdSet.has(e.id));
+  const usEtfMatches: { assetType: "ETF"; assetId: string; source: string; sourceRecordRef: string }[] = [];
+  const retailRestrictedMatches: { assetType: "ETF"; assetId: string; source: string; sourceRecordRef: string }[] = [];
+  for (const e of freshCandidates) {
+    const check = checkRetailRestricted(e.name, e.category);
+    if (check.excluded) {
+      retailRestrictedMatches.push({ assetType: "ETF", assetId: e.id, source: `RETAIL_RESTRICTED:${check.reason}`, sourceRecordRef: e.id });
+    } else {
+      usEtfMatches.push({ assetType: "ETF", assetId: e.id, source: US_ETF_SOURCE, sourceRecordRef: e.id });
+    }
+  }
   await upsertApproved(usEtfMatches, writeEnabled);
+  if (writeEnabled && retailRestrictedMatches.length) {
+    const CHUNK = 500;
+    for (let i = 0; i < retailRestrictedMatches.length; i += CHUNK) {
+      const chunk = retailRestrictedMatches.slice(i, i + CHUNK);
+      const values = chunk.map((_, idx) => `(gen_random_uuid(), $${idx * 4 + 1}, $${idx * 4 + 2}, 'EXCLUDED_RETAIL_RESTRICTED', $${idx * 4 + 3}, $${idx * 4 + 4}, now(), now(), now())`).join(",\n");
+      await prisma.$executeRawUnsafe(
+        `INSERT INTO tw_purchasable_classification (id, asset_type, asset_id, status, source, source_record_ref, checked_at, created_at, updated_at)
+         VALUES ${values}
+         ON CONFLICT (asset_type, asset_id) DO UPDATE SET
+           status = CASE WHEN tw_purchasable_classification.status = 'APPROVED' THEN 'EXCLUDED_RETAIL_RESTRICTED' ELSE tw_purchasable_classification.status END,
+           source = EXCLUDED.source, source_record_ref = EXCLUDED.source_record_ref, checked_at = now(), updated_at = now()`,
+        ...chunk.flatMap((r) => [r.assetType, r.assetId, r.source, r.sourceRecordRef]),
+      );
+    }
+  }
 
   // officialCount 改成只算現行掛牌的那些（跟上面 etfMatches 用同一個 tradingCodes 過濾），
   // 不是整份 427 檔官方清單——否則母體本身就含已下市商品，分母錯誤。
@@ -157,6 +184,6 @@ export async function classifyTwPurchasable(writeEnabled: boolean): Promise<Clas
     domesticFund: { officialCount: sitcaRows.length, matched: domesticMatches.length },
     offshoreFund: { officialCount: tdccNames.size, matched: offshoreMatches.length },
     etf: { officialCount: twseTrading + tpexTrading, matched: etfMatches.length },
-    usEtf: { candidateCount: usEtfIds.length, matched: usEtfMatches.length },
+    usEtf: { candidateCount: usEtfIds.length, matched: usEtfMatches.length, retailRestricted: retailRestrictedMatches.length },
   };
 }
