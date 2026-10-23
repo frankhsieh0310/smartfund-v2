@@ -269,10 +269,20 @@ async function createMissingOffshoreFunds(
     // 2026-10-21（使用者核准，第一優先修正）: 名稱比對判定「缺漏」，但ISIN其實已經存在於funds
     // 表——不是新基金，是官方把顯示名稱換了寫法（見上面detectNewOffshoreFunds的註解，VERIFIED
     // SG9999001127案例）。用ISIN比對，不再只靠名稱。
+    // 2026-10-23（使用者核准，改用TDCC基金代碼+ISIN辨識）: VERIFIED用TDCC opendata官方id=3-2/3-4
+    // 兩個端點直接查證SG9999001127這個案例：USGFSG（星幣）跟USGFUS（美元）是兩個真實存在、各自
+    // 有獨立每日淨值序列的級別，只是TDCC這份資料集裡ISIN是「基金家族層級」，不是每個級別都不同
+    // ——純ISIN比對會把「新級別」誤判成「改名衝突」而不建立。改成：ISIN相同時，還要再比對TDCC
+    // 基金代碼（navRow.code，即這裡的taxId）是否也相同——代碼也相同才是真的改名/relabel（不建
+    // 立，歸類成skippedIsinConflict）；代碼不同就是TDCC/SITCA餵料本身就有的「同ISIN、不同級別」
+    // 情況，視為合法新級別，照正常流程建立。
     if (navRow.isin && existingByIsin.has(navRow.isin)) {
       const existing = existingByIsin.get(navRow.isin)!;
-      skippedIsinConflict.push({ taxId: row.taxId, name: row.name, isin: navRow.isin, existingName: existing.name, existingCode: existing.code });
-      continue;
+      if (existing.code === row.taxId) {
+        skippedIsinConflict.push({ taxId: row.taxId, name: row.name, isin: navRow.isin, existingName: existing.name, existingCode: existing.code });
+        continue;
+      }
+      // 代碼不同——同ISIN的另一個級別，不是改名衝突，繼續往下走正常建立流程。
     }
     // 2026-10-21（使用者核准，不准猜測幣別）: dataset 3-4 目前本身就是ISO代碼（VERIFIED，EUR/USD/
     // AUD/JPY/ZAR/GBP/CAD/CHF/NZD/HKD/SGD/SEK），但不保證永遠如此。原本遇到不是三碼大寫ISO格式
