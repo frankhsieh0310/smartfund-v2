@@ -11,7 +11,10 @@ import { listGovernmentYieldSeries } from "../../services/governmentYieldService
 import { buildProvenance } from "./provenance.ts";
 import type { CoverageStatus, FreshnessStatus, Provenance } from "./types.ts";
 
-export const SEARCH_ASSET_TYPES = ["STOCK", "ETF", "FUND", "INDEX", "DERIVATIVES", "FIXED_INCOME", "FX", "MACRO", "COMMODITY", "CRYPTO"] as const;
+// 2026-10-23（使用者核准，台灣買不到的就不要放）: CRYPTO從搜尋可選類型移除——加密貨幣不屬於
+// 四類核心母體，也不是這四類需要的市場資料本身（獨立的加密貨幣瀏覽功能，不是任何ETF持股反查
+// 的必要查詢路徑）。
+export const SEARCH_ASSET_TYPES = ["STOCK", "ETF", "FUND", "INDEX", "DERIVATIVES", "FIXED_INCOME", "FX", "MACRO", "COMMODITY"] as const;
 export type SearchAssetType = typeof SEARCH_ASSET_TYPES[number];
 export type SearchType = "ALL" | SearchAssetType;
 export const DEFAULT_TOTAL_LIMIT = 30;
@@ -84,7 +87,7 @@ async function searchMacro(query: string): Promise<DomainPayload> {
   return identityPayload(rows.map((row) => ({ identity: { assetType: "MACRO" as const, id: row.id, symbol: row.seriesId, name: row.name, displayName: row.name, currency: null, market: row.provider, country: row.country }, metrics: emptyMetrics, source: row.source })));
 }
 
-async function searchMarketDomain(query: string, assetType: "COMMODITY" | "CRYPTO"): Promise<DomainPayload> {
+async function searchMarketDomain(query: string, assetType: "COMMODITY"): Promise<DomainPayload> {
   const contains = { contains: query, mode: "insensitive" as const };
   const rows = await prisma.marketMaster.findMany({ where: { assetType, OR: [{ symbol: contains }, { name: contains }, { nameZh: contains }] }, orderBy: [{ name: "asc" }, { id: "asc" }], take: MAX_CANDIDATES_PER_DOMAIN });
   return identityPayload(rows.map((row) => ({ identity: { assetType, id: row.id, symbol: row.symbol, name: row.name, displayName: row.nameZh ?? row.name, currency: row.currency, market: row.exchange, country: row.country ?? row.region }, metrics: emptyMetrics, source: row.provider })));
@@ -157,7 +160,6 @@ const runners: Record<SearchAssetType, (query: string) => Promise<DomainPayload>
   FX: (query) => searchFx(query, { page: 1, pageSize: MAX_CANDIDATES_PER_DOMAIN }) as Promise<DomainPayload>,
   MACRO: searchMacro,
   COMMODITY: (query) => searchMarketDomain(query, "COMMODITY"),
-  CRYPTO: (query) => searchMarketDomain(query, "CRYPTO"),
 };
 
 export async function globalSearch(input: { query: string; type?: SearchType; limit?: number }): Promise<GlobalSearchResponse> {

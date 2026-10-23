@@ -5,8 +5,9 @@ import { getIndexList, getIndexSummaries } from "./indexService.ts";
 import { buildProvenance } from "./provenance.ts";
 import { numberOrNull, type CoverageStatus, type FreshnessStatus, type Provenance } from "./types.ts";
 
-export type HomeMarketAssetType = "INDEX" | "YIELD" | "FX" | "COMMODITY" | "VOLATILITY" | "RATE" | "CRYPTO";
-export type HomeMarketTab = "stocks" | "bonds" | "fx" | "commodities" | "crypto";
+// 2026-10-23（使用者核准，台灣買不到的就不要放）: CRYPTO從首頁市場總覽移除。
+export type HomeMarketAssetType = "INDEX" | "YIELD" | "FX" | "COMMODITY" | "VOLATILITY" | "RATE";
+export type HomeMarketTab = "stocks" | "bonds" | "fx" | "commodities";
 
 export interface HomeMarketCard {
   assetType: HomeMarketAssetType;
@@ -58,7 +59,6 @@ const FX_SYMBOLS = ["USDTWD=X", "EURUSD=X", "JPY=X"] as const;
 const YIELD_SERIES = ["DGS2", "DGS10", "DGS30"] as const;
 const RATE_SERIES = ["SOFR", "FEDFUNDS"] as const;
 const COMMODITY_SYMBOLS = ["GOLD", "WTI", "BRENT", "COPPER"] as const;
-const CRYPTO_SYMBOLS = ["BTC-USD", "ETH-USD"] as const;
 
 const unavailable = (assetType: HomeMarketAssetType, id: string, label: string, symbolOrCode: string): HomeMarketCard => ({
   assetType, id, label, symbolOrCode, value: null, change: null, changePercent: null, unit: null, currency: null,
@@ -101,14 +101,14 @@ async function economicCards(seriesIds: readonly string[], assetType: "YIELD" | 
   });
 }
 
-async function marketMasterCards(symbols: readonly string[], assetType: "COMMODITY" | "CRYPTO"): Promise<HomeMarketCard[]> {
+async function marketMasterCards(symbols: readonly string[], assetType: "COMMODITY"): Promise<HomeMarketCard[]> {
   const rows = await prisma.marketMaster.findMany({ where: { assetType, isActive: true, symbol: { in: [...symbols] } }, orderBy: { symbol: "asc" } });
   const bySymbol = new Map(rows.map((row) => [row.symbol, row]));
   return symbols.map((symbol) => {
     const row = bySymbol.get(symbol);
     if (!row) return unavailable(assetType, symbol, symbol, symbol);
     const provenance = buildProvenance({ source: row.provider, sourceRecordId: row.symbol, asOfDate: row.latestDate, lastUpdated: row.updatedAt });
-    return { assetType, id: row.id, label: row.name, symbolOrCode: row.symbol, value: numberOrNull(row.latestClose), change: numberOrNull(row.latestChange), changePercent: numberOrNull(row.latestChangePct), unit: null, currency: row.currency, asOfDate: provenance.asOfDate, lastUpdated: provenance.lastUpdated, freshnessStatus: freshnessStatus(row.latestDate, assetType === "CRYPTO" ? "CONTINUOUS" : "MARKET_DAY"), source: row.provider, provenance, detailHref: null, coverageStatus: row.latestDate ? "FULL" : "UNKNOWN" };
+    return { assetType, id: row.id, label: row.name, symbolOrCode: row.symbol, value: numberOrNull(row.latestClose), change: numberOrNull(row.latestChange), changePercent: numberOrNull(row.latestChangePct), unit: null, currency: row.currency, asOfDate: provenance.asOfDate, lastUpdated: provenance.lastUpdated, freshnessStatus: freshnessStatus(row.latestDate, "MARKET_DAY"), source: row.provider, provenance, detailHref: null, coverageStatus: row.latestDate ? "FULL" : "UNKNOWN" };
   });
 }
 
@@ -121,13 +121,13 @@ async function volatilityCards(): Promise<HomeMarketCard[]> {
 
 export async function getHomeMarketOverview(): Promise<HomeMarketOverview> {
   const [results, indexAvailable] = await Promise.all([Promise.allSettled([
-    indexCards(), economicCards(YIELD_SERIES, "YIELD"), fxCards(), marketMasterCards(COMMODITY_SYMBOLS, "COMMODITY"), volatilityCards(), economicCards(RATE_SERIES, "RATE"), marketMasterCards(CRYPTO_SYMBOLS, "CRYPTO"),
+    indexCards(), economicCards(YIELD_SERIES, "YIELD"), fxCards(), marketMasterCards(COMMODITY_SYMBOLS, "COMMODITY"), volatilityCards(), economicCards(RATE_SERIES, "RATE"),
   ]), availableIndexCards().catch(() => ({ cards: [] as HomeMarketCard[], total: 0 }))]);
-  const domains: HomeMarketAssetType[] = ["INDEX", "YIELD", "FX", "COMMODITY", "VOLATILITY", "RATE", "CRYPTO"];
+  const domains: HomeMarketAssetType[] = ["INDEX", "YIELD", "FX", "COMMODITY", "VOLATILITY", "RATE"];
   const cards = results.map((result) => result.status === "fulfilled" ? result.value : []) as HomeMarketCard[][];
   const unavailableDomains = results.flatMap((result, index) => result.status === "rejected" ? [domains[index]] : []);
   const visible = (items: HomeMarketCard[]) => items.filter((item) => item.value !== null);
-  const tabs = { stocks: visible([...cards[0], ...cards[4]]), bonds: visible([...cards[1], ...cards[5]]), fx: visible(cards[2]), commodities: visible(cards[3]), crypto: visible(cards[6]) };
+  const tabs = { stocks: visible([...cards[0], ...cards[4]]), bonds: visible([...cards[1], ...cards[5]]), fx: visible(cards[2]), commodities: visible(cards[3]) };
   return {
     tabs,
     available: { ...tabs, stocks: indexAvailable.cards.length ? indexAvailable.cards : tabs.stocks },

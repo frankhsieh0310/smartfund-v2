@@ -22,7 +22,8 @@ type HomeMarketCard = {
   asOfDate: string | null;
 };
 
-type HomeMarketOverview = { tabs: Record<"stocks" | "bonds" | "fx" | "commodities" | "crypto", HomeMarketCard[]> };
+// 2026-10-23（使用者核准，台灣買不到的就不要放）: crypto tab移除。
+type HomeMarketOverview = { tabs: Record<"stocks" | "bonds" | "fx" | "commodities", HomeMarketCard[]> };
 
 type MktItem = { name: string; value: string; pts: string; pct: string; up: boolean; asOfDate: string | null };
 type MktSection = { id: string; label: string; emoji: string; items: MktItem[] };
@@ -148,7 +149,6 @@ export default function MarketsPage() {
     { id: "stocks", label: "股市指數", emoji: "📈", items: data.tabs.stocks.map(toItem) },
     { id: "bonds", label: "公債殖利率", emoji: "📊", items: data.tabs.bonds.map(toItem) },
     { id: "commodities", label: "大宗商品", emoji: "🥇", items: data.tabs.commodities.map(toItem) },
-    { id: "crypto", label: "加密貨幣", emoji: "₿", items: data.tabs.crypto.map(toItem) },
   ].filter((s) => s.items.length > 0) : [];
 
   const filtered = SECTIONS.map(s => ({

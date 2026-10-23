@@ -9,7 +9,7 @@ const validType = (value: string | undefined): SearchType => value && SEARCH_ASS
 const numberLabel = (value: number | null) => value === null ? "—" : new Intl.NumberFormat("zh-TW", { maximumFractionDigits: 6 }).format(value);
 const dateLabel = (value: string | null) => value ? new Intl.DateTimeFormat("zh-TW", { dateStyle: "medium", timeZone: "UTC" }).format(new Date(value)) : "—";
 const display = (value: string | null | undefined, fallback = "資料未提供") => value?.trim() || fallback;
-const typeLabels: Record<SearchType, string> = { ALL: "全部", STOCK: "股票", ETF: "ETF", FUND: "基金", INDEX: "指數", DERIVATIVES: "衍生品", FIXED_INCOME: "固定收益", FX: "外匯", MACRO: "總經", COMMODITY: "商品", CRYPTO: "加密資產" };
+const typeLabels: Record<SearchType, string> = { ALL: "全部", STOCK: "股票", ETF: "ETF", FUND: "基金", INDEX: "指數", DERIVATIVES: "衍生品", FIXED_INCOME: "固定收益", FX: "外匯", MACRO: "總經", COMMODITY: "商品" };
 
 export default async function SearchPage({ searchParams }: { searchParams: SearchParams }) {
   const params = await searchParams;
