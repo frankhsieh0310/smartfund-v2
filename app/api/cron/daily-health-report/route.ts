@@ -18,6 +18,7 @@ import { fetchYahooChartPeriod } from "@/lib/services/dataProviders/yahoo/yahooC
 import { CORE_COMMODITY_ROOTS } from "@/lib/cron/commodityUpdate";
 import { notifyAnomaly } from "@/lib/daily-health-report/notify";
 import { buildDailySummary } from "@/lib/daily-health-report/buildDailySummary";
+import { latestScheduledTradingDay } from "@/lib/market-calendar/twseHolidayCalendar";
 import { fetchYahooTwPerformance } from "@/lib/yahoo/twPerformancePage";
 import { AllianzOfficialPcfAdapter } from "@/lib/etf-holdings-engine/adapters/allianz";
 import { FhtOfficialPcfAdapter } from "@/lib/etf-holdings-engine/adapters/fht";
@@ -270,6 +271,27 @@ export async function GET(request: Request) {
   const etfHistoryGapCount = etfHistoryGapRows[0]?.n ?? 0;
   const ETF_HISTORY_GAP_MAX = 0;
   const etfHistoryGapExceeded = etfHistoryGapCount > ETF_HISTORY_GAP_MAX;
+
+  // 2026-10-24（使用者核准）: 單靠上面「跟同交易所 peer-max 比」分不出「今天真的休市」跟「整個
+  // 交易所的資料都沒進來」——兩種情況看起來一樣（大家都停在同一天）。這裡另外對照證交所自己公布
+  // 的開休市日曆（lib/market-calendar/twseHolidayCalendar.ts），只有在日曆講「這是交易日」的情況
+  // 下，TWSE/TPEx 核心母體 ETF 全部停在同一個舊日期才算市場級異常。
+  let twMarketWideGap: { scheduledTradingDay: string; actualLatestDate: string | null } | null = null;
+  try {
+    const scheduledDay = await latestScheduledTradingDay();
+    const twLatestRow = await prisma.$queryRawUnsafe<Array<{ max_date: Date | null }>>(`
+      SELECT MAX(h.date) AS max_date FROM etfs e JOIN etf_history h ON h.etf_id = e.id
+      WHERE e.exchange IN ('TWSE','TPEx')
+        AND e.id IN (SELECT asset_id FROM tw_purchasable_classification WHERE asset_type='ETF' AND status='APPROVED')
+        AND h.price IS NOT NULL
+    `);
+    const twLatestDate = twLatestRow[0]?.max_date ?? null;
+    if (!twLatestDate || twLatestDate.getTime() < scheduledDay.getTime()) {
+      twMarketWideGap = { scheduledTradingDay: scheduledDay.toISOString().slice(0, 10), actualLatestDate: twLatestDate?.toISOString().slice(0, 10) ?? null };
+    }
+  } catch {
+    // 證交所日曆端點暫時打不到：不要讓整份健康報告掛掉，這一項檢查這次先跳過，不當成異常。
+  }
 
   // 2026-10-22（使用者核准，第一條永久規則）: YAHOO_FUND_FULL_SWEEP（美國共同基金全量掃描，
   // 不屬於四類核心母體）已經永久停用——這裡做反向檢查，確保它沒有被意外重新啟動（例如有人
@@ -683,6 +705,7 @@ export async function GET(request: Request) {
     ...(decommissionedJobReactivated ? [{ type: "OUT_OF_SCOPE_JOB_REACTIVATED", category: SYSTEM_CATEGORY, rows: decommissionedRows }] : []),
     ...(retailRestrictedDropped ? [{ type: "RETAIL_RESTRICTED_ETF_COUNT_DROPPED", category: SYSTEM_CATEGORY, currentCount: retailRestrictedCount, minBaseline: RETAIL_RESTRICTED_MIN_BASELINE }] : []),
     ...(etfHistoryGapExceeded ? [{ type: "ETF_HISTORY_GAP", category: SYSTEM_CATEGORY, gapCount: etfHistoryGapCount }] : []),
+    ...(twMarketWideGap ? [{ type: "TW_EXCHANGE_WIDE_DATA_GAP", category: SYSTEM_CATEGORY, ...twMarketWideGap }] : []),
     // 每檔都已經用上面的即時查證分好 SYSTEM / EXTERNAL_DELAY，這裡依分類拆成最多兩筆，而不是
     // 整批套同一個分類——有證據（checkedAt/officialLatestDate）支持才會出現在 EXTERNAL_DELAY 那筆。
     ...(activeEtfGapWithEvidence.some((e) => e.category === SYSTEM_CATEGORY)

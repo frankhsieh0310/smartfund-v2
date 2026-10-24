@@ -7,15 +7,24 @@
 // 2026-10-24 root-cause finding (VERIFIED live): the symptom that triggered this route -- 0050 and
 // 534 other core ETFs' detail pages 404ing -- was NOT one root cause. Two different things were
 // mixed together:
-//   1. 359 of them are TWSE/TPEx-listed. VERIFIED both exchanges' own official feeds
-//      (openapi.twse.com.tw STOCK_DAY_ALL, tpex.org.tw openapi tpex_mainboard_quotes) show EVERY
-//      listed security -- 1383 + 1017 rows checked -- still dated 1151022 (2026-10-22) as of
-//      Saturday 2026-10-24. That means Friday 2026-10-23 was not a TWSE/TPEx trading session at
-//      all (exact holiday reason UNKNOWN -- no calendar lookup was available -- but both official
-//      exchanges agreeing with zero exceptions is itself the authoritative signal). There is
-//      nothing to backfill for these; Thursday's close is correctly the latest data. The real bug
-//      was the detail page treating "not fresh" as "404" (fixed separately in
-//      app/etf/[code]/page.tsx) rather than a missing write.
+//   1. 359 of them are TWSE/TPEx-listed. VERIFIED both exchanges' own official feeds -- not just
+//      the "latest" feeds but date-explicit queries for 2026-10-23 specifically (TWSE STOCK_DAY,
+//      STOCK_DAY_AVG_ALL, and MI_INDEX; TPEx's otc/afterTrading endpoint, which came back
+//      "stat":"ok","totalCount":0, a clean non-error response) -- show ZERO trading records for
+//      that date on either exchange. VERIFIED separately against TWSE's own published annual
+//      holiday calendar (twse.com.tw holidaySchedule, now at
+//      lib/market-calendar/twseHolidayCalendar.ts) that 2026-10-23 is NOT a listed holiday --
+//      October only has 10/9 (National Day makeup) and 10/26 (Taiwan Retrocession Day makeup).
+//      So this was a genuine trading day on the calendar with no data published by either
+//      exchange -- exact cause UNKNOWN (a same-week ad-hoc closure, e.g. typhoon, is plausible
+//      but no suspension-announcement endpoint was found to confirm it; no fetch error on our
+//      side either). There is nothing to backfill FOR THESE SPECIFIC ETFs from any source, since
+//      the exchanges' own systems have nothing to serve -- daily-health-report's
+//      TW_EXCHANGE_WIDE_DATA_GAP check (cross-referencing the same holiday calendar) is what
+//      surfaces this class of problem going forward instead of requiring another by-hand
+//      investigation. The ETF detail-page bug (treating "not fresh" as "404") was real and is
+//      fixed separately in app/etf/[code]/page.tsx regardless of which of these two explanations
+//      turns out to be true for any given gap.
 //   2. 175 of them are US-exchange-listed (NYSEArca/NasdaqGM/Cboe US/etc). VERIFIED live via
 //      Yahoo's own chart API that most of these (4 of 5 spot-checked) already HAVE a real Friday
 //      close available upstream -- our own pipeline just hadn't reached them yet this cycle. THIS
