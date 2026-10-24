@@ -37,6 +37,119 @@ function HeaderDropdown({ label, items, open, onToggle, onClose }: {
   );
 }
 
+// 排行榜 -- 接上既有、本來就在跑的正式資料 API（/api/rankings/performance，App 的排行中心
+// src/ranking/service.ts 早就在用同一支）。只是網站這邊的畫面從沒接過，一直顯示「資料準備中」。
+// ETF/FUND 維度、期間、資產類別跟 App 版用同一套清單，保持兩邊一致。
+type AssetType = "ETF" | "FUND";
+type RankingType = "PERFORMANCE" | "AUM" | "VOLUME" | "DIVIDEND_YIELD" | "BETA" | "MORNINGSTAR";
+type Period = "1M" | "3M" | "6M" | "YTD" | "1Y" | "3Y" | "5Y";
+type AssetCategory = "STOCK" | "BOND" | "COMMODITY" | "MIXED";
+type RankingRow = { id: string; code: string | null; name: string; metricValue: number; metricDisplay: string; price: number | null; priceDate: string | null; classificationBasis?: "OFFICIAL" | "KEYWORD_FALLBACK" | "UNCLASSIFIED" };
+type RankingResponse = { assetType: AssetType; rankingType: RankingType; period?: Period; supported: boolean; total: number; results: RankingRow[]; reason?: string };
+
+const ETF_DIMENSIONS: { key: RankingType; label: string }[] = [
+  { key: "PERFORMANCE", label: "績效" }, { key: "AUM", label: "規模" }, { key: "VOLUME", label: "交易" },
+  { key: "DIVIDEND_YIELD", label: "配息" }, { key: "BETA", label: "Beta" },
+];
+const FUND_DIMENSIONS: { key: RankingType; label: string }[] = [
+  { key: "PERFORMANCE", label: "績效" }, { key: "MORNINGSTAR", label: "晨星評等" },
+];
+const CATEGORIES: { key: AssetCategory | "ALL"; label: string }[] = [
+  { key: "ALL", label: "全部" }, { key: "STOCK", label: "股票型" }, { key: "BOND", label: "債券型" }, { key: "COMMODITY", label: "商品型" },
+];
+const CANDIDATE_PERIODS: Period[] = ["1M", "3M", "6M", "YTD", "1Y", "3Y", "5Y"];
+
+async function fetchRanking(assetType: AssetType, rankingType: RankingType, opts: { period?: Period; category?: AssetCategory | "ALL" } = {}, signal?: AbortSignal): Promise<RankingResponse> {
+  const params = new URLSearchParams({ assetType, rankingType, limit: "30", page: "1" });
+  if (opts.period) params.set("period", opts.period);
+  if (opts.category && opts.category !== "ALL") params.set("category", opts.category);
+  const res = await fetch(`/api/rankings/performance?${params.toString()}`, { signal });
+  return res.json();
+}
+
+function RankingTable() {
+  const [assetType, setAssetType] = useState<AssetType>("ETF");
+  const [dimension, setDimension] = useState<RankingType>("PERFORMANCE");
+  const [period, setPeriod] = useState<Period>("1Y");
+  const [category, setCategory] = useState<AssetCategory | "ALL">("ALL");
+  const [availablePeriods, setAvailablePeriods] = useState<Period[] | null>(null);
+  const [state, setState] = useState<{ status: "loading" | "error" | "ready"; data?: RankingResponse }>({ status: "loading" });
+
+  const dimensions = assetType === "ETF" ? ETF_DIMENSIONS : FUND_DIMENSIONS;
+
+  useEffect(() => {
+    if (dimension !== "PERFORMANCE") { setAvailablePeriods(null); return; }
+    let cancelled = false;
+    (async () => {
+      const checks = await Promise.all(CANDIDATE_PERIODS.map((p) => fetchRanking(assetType, "PERFORMANCE", { period: p }).then((r) => (r.supported ? p : null)).catch(() => null)));
+      if (cancelled) return;
+      const real = checks.filter((p): p is Period => p !== null);
+      setAvailablePeriods(real);
+      if (real.length && !real.includes(period)) setPeriod(real[0]);
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [assetType, dimension]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setState({ status: "loading" });
+    fetchRanking(assetType, dimension, { ...(dimension === "PERFORMANCE" ? { period } : {}), category }, controller.signal)
+      .then((data) => !controller.signal.aborted && setState({ status: "ready", data }))
+      .catch(() => !controller.signal.aborted && setState({ status: "error" }));
+    return () => controller.abort();
+  }, [assetType, dimension, period, category]);
+
+  const detailHref = (row: RankingRow) => (assetType === "ETF" ? `/etf/${encodeURIComponent(row.code ?? row.id)}` : `/funds/${encodeURIComponent(row.id)}`);
+
+  return (
+    <section className="mt-8 overflow-hidden rounded-2xl border border-white/[0.09] bg-white/[0.03]">
+      <div className="flex flex-wrap gap-2 border-b border-white/[0.08] p-5">
+        {(["ETF", "FUND"] as const).map((t) => (
+          <button key={t} onClick={() => { setAssetType(t); setDimension("PERFORMANCE"); }} className={`rounded-full px-4 py-2 text-[13px] font-bold ${assetType === t ? "bg-[#F5B700] text-[#0B1220]" : "bg-white/[0.06] text-slate-300"}`}>{t === "ETF" ? "ETF" : "基金"}</button>
+        ))}
+        <span className="mx-2 self-center text-slate-600">|</span>
+        {dimensions.map((d) => (
+          <button key={d.key} onClick={() => setDimension(d.key)} className={`rounded-full px-4 py-2 text-[13px] font-bold ${dimension === d.key ? "bg-white/[0.14] text-white" : "bg-white/[0.06] text-slate-400"}`}>{d.label}</button>
+        ))}
+        <span className="mx-2 self-center text-slate-600">|</span>
+        {CATEGORIES.map((c) => (
+          <button key={c.key} onClick={() => setCategory(c.key)} className={`rounded-full px-3 py-1.5 text-[12px] font-bold ${category === c.key ? "bg-white/[0.14] text-white" : "bg-white/[0.04] text-slate-500"}`}>{c.label}</button>
+        ))}
+      </div>
+      {dimension === "PERFORMANCE" && availablePeriods && availablePeriods.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 border-b border-white/[0.06] px-5 py-3">
+          {availablePeriods.map((p) => (
+            <button key={p} onClick={() => setPeriod(p)} className={`rounded-lg px-3 py-1.5 text-[12px] font-bold ${period === p ? "bg-[#F5B700] text-[#0B1220]" : "bg-white/[0.05] text-slate-400"}`}>{p}</button>
+          ))}
+        </div>
+      )}
+      {state.status === "loading" ? (
+        <div className="py-16 text-center text-slate-500">載入中…</div>
+      ) : state.status === "error" ? (
+        <div className="py-16 text-center text-slate-500">排行資料暫時無法載入，請稍後再試。</div>
+      ) : !state.data?.supported ? (
+        <div className="py-16 text-center text-slate-500">這個維度目前沒有真實資料可供排行。</div>
+      ) : state.data.results.length === 0 ? (
+        <div className="py-16 text-center text-slate-500">目前沒有符合的資料。</div>
+      ) : (
+        <div className="divide-y divide-white/[0.05]">
+          {state.data.results.map((row, idx) => (
+            <Link key={row.id} href={detailHref(row)} className="flex items-center gap-4 px-5 py-4 hover:bg-white/[0.03]">
+              <span className="w-6 text-[13px] text-slate-600">{idx + 1}</span>
+              <div className="min-w-0 flex-1">
+                <div className="truncate font-bold text-white">{row.name}</div>
+                <div className="mt-0.5 text-[12px] text-slate-500">{row.code ?? ""}{row.priceDate ? `・${row.priceDate}` : ""}{row.classificationBasis === "KEYWORD_FALLBACK" ? "・分類依名稱關鍵字判斷" : ""}</div>
+              </div>
+              <span className="text-[16px] font-bold text-[#F5B700]">{row.metricDisplay}</span>
+            </Link>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
 export default function RankingsPage() {
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const headerRef = useRef<HTMLElement>(null);
@@ -89,14 +202,9 @@ export default function RankingsPage() {
           <div className="text-[13px] text-slate-500">資料更新時間：—</div>
         </section>
 
-        {/* 2026-10-21（14點任務第10項）: 這個區塊原本的資產/篩選分頁完全沒接任何資料，點了也
-            不會改變任何東西，表格永遠固定顯示「資料準備中」——對使用者來說是一堆看起來能互動、
-            其實全部死掉的控制項。隱藏這些假互動，只留誠實的待補說明。 */}
-        <section className="mt-8 overflow-hidden rounded-2xl border border-white/[0.09] bg-white/[0.035] px-6 py-16 text-center">
-          <div className="text-[11px] font-bold tracking-[0.2em] text-[#F5B700]/70">DATA PENDING</div>
-          <div className="mt-4 text-[18px] font-bold text-slate-300">排行榜資料準備中</div>
-          <div className="mt-2 text-[13px] text-slate-600">資料完成後將顯示全球市場最新排行。</div>
-        </section>
+        {/* 2026-10-24: 接上 /api/rankings/performance（既有、已上線、App 排行中心本來就在用的
+            同一支 API），取代之前永遠顯示「資料準備中」的死畫面。 */}
+        <RankingTable />
 
         <section className="mt-10 flex flex-col justify-between gap-7 rounded-2xl border border-[#F5B700]/20 bg-[#F5B700]/[0.055] p-7 md:flex-row md:items-center md:p-9">
           <div>
