@@ -19,7 +19,11 @@ const PROVIDER = "YAHOO_QUOTE_SUMMARY";
 const CHECKPOINT_KEY = "cloud-yahoo-fundamentals-refresh:ROLLING";
 const BATCH_SIZE = 50;
 const TIME_BUDGET_MS = 250_000;
-const PACE_MS = 500; // 介於呼叫之間的間隔，避免一次性打爆429
+// 2026-10-24（使用者核准加速）: 第一次正式執行426次呼叫、0次429/401/403，顯示500ms間隔有
+// 餘裕。保守下修到400ms（+25%吞吐量），不是砍到最低、先觀察下一次執行的rateStats再評估能否
+// 再往下調——跟排程頻率（vercel.json改成每15分鐘一次）一起算，TW+US+擴充市場第一次完整同步
+// 預期在幾小時內完成，不用壓到有429風險的程度。
+const PACE_MS = 400; // 介於呼叫之間的間隔，避免一次性打爆429
 
 export async function GET(request: Request) {
   if (!isAuthorizedCron(request)) return unauthorizedCron();

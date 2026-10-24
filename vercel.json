@@ -250,7 +250,7 @@
     },
     {
       "path": "/api/cron/cloud-yahoo-fundamentals-refresh",
-      "schedule": "0 * * * *"
+      "schedule": "*/15 * * * *"
     },
     {
       "path": "/api/cron/cloud-saved-filter-alerts",

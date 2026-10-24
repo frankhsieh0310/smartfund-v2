@@ -44,19 +44,56 @@ const SYNCED_MARKER_METRIC = `${METRIC_PREFIX}_synced`;
 // 2026-10-24（使用者核准修正，範圍缺陷）: 原本沒有country篩選，掃描全部81,766檔全球活躍股票
 // （DE/IT/FR/HK/CN/GB/CA/JP/AU/KR/NL/SE/SG...），但選股反查(stockScreener.ts)只服務
 // market "TW"/"US"兩種——其他市場的基本面同步完全是浪費額度，而且因為ticker排序，TW要等
-// 掃完前6791檔、US要等掃完前33735檔才會輪到，等於優先權完全錯置。改成只掃TW+US。
+// 掃完前6791檔、US要等掃完前33735檔才會輪到，等於優先權完全錯置。先只掃TW+US。
+//
+// 2026-10-24（使用者核准擴充）: 完成TW/US後，擴充到「四類核心母體的ETF實際有持有」的其他
+// 市場股票——不是整個該國股票池，只是這些ETF holdings清單裡真的出現的個股。用ticker+country
+// 對stocks表做match（etf_holdings本身沒有stock_id外鍵）。基金持股(fund_holdings)目前查過，
+// 透過canonical_issuer_stock_links的ISIN橋接表完全沒有資料（0筆match），這張橋接表看起來
+// 還沒被填入——基金持股這條路暫時擴充不了，只能先擴充ETF持股這條路，已明確回報使用者。
+async function findCoreUniverseHeldStockIds(): Promise<string[]> {
+  const rows = await prisma.$queryRawUnsafe<{ id: string }[]>(
+    `SELECT DISTINCT s.id
+       FROM stocks s
+       JOIN etf_holdings eh ON eh.ticker = s.ticker AND (eh.country = s.country OR eh.country IS NULL)
+       JOIN tw_purchasable_classification c ON c.asset_type = 'ETF' AND c.status = 'APPROVED' AND c.asset_id = eh.etf_id
+      WHERE s.is_active AND s.country NOT IN ('TW', 'US')`,
+  );
+  return rows.map((r) => r.id);
+}
+
+// 「先台股、美股；完成後擴充」(使用者原話) 的排序保證：只要今天TW/US還有任何一檔沒同步過，
+// 這一輪就只掃TW/US，不讓擴充市場搶額度；TW/US今天全部同步完才會把擴充股票清單也納入candidate。
+async function hasStaleTwUsToday(): Promise<boolean> {
+  const rows = await prisma.$queryRawUnsafe<{ exists: boolean }[]>(
+    `SELECT EXISTS (
+       SELECT 1 FROM stocks s
+        WHERE s.is_active AND s.country IN ('TW', 'US')
+          AND NOT EXISTS (
+            SELECT 1 FROM stock_financial_facts f
+             WHERE f.stock_id = s.id AND f.metric = $1 AND f.period_end = CURRENT_DATE
+          )
+     ) AS exists`,
+    SYNCED_MARKER_METRIC,
+  );
+  return rows[0]?.exists ?? false;
+}
+
 export async function findStaleFundamentalStocks(limit: number, afterTicker: string | null): Promise<StaleFundamentalStock[]> {
+  const twUsNotDoneYet = await hasStaleTwUsToday();
+  const heldStockIds = twUsNotDoneYet ? [] : await findCoreUniverseHeldStockIds();
+  const countryScope = twUsNotDoneYet ? `s.country IN ('TW', 'US')` : `(s.country IN ('TW', 'US') OR s.id = ANY($4::text[]))`;
   return prisma.$queryRawUnsafe<StaleFundamentalStock[]>(
     `SELECT s.id, s.ticker, s.yahoo_symbol AS "yahooSymbol", s.currency
        FROM stocks s
-      WHERE s.is_active AND s.country IN ('TW', 'US') AND s.ticker > $2
+      WHERE s.is_active AND ${countryScope} AND s.ticker > $2
         AND NOT EXISTS (
           SELECT 1 FROM stock_financial_facts f
            WHERE f.stock_id = s.id AND f.metric = $3 AND f.period_end = CURRENT_DATE
         )
       ORDER BY s.ticker ASC
       LIMIT $1`,
-    limit, afterTicker ?? "", SYNCED_MARKER_METRIC,
+    limit, afterTicker ?? "", SYNCED_MARKER_METRIC, heldStockIds,
   );
 }
 
