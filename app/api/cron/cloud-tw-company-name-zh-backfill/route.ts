@@ -5,7 +5,7 @@
 // 不需要之後手動關掉。
 import { isAuthorizedCron, unauthorizedCron } from "@/lib/cron/authorize";
 import { beginRun, finishRun, readCheckpoint, writeCheckpoint } from "@/lib/cloud-ingestion/runContext";
-import { findStocksMissingNameZh, backfillOneStockNameZh } from "@/lib/cron/twCompanyNameZhBackfill";
+import { findStocksMissingNameZh, backfillOneStockNameZh, fetchOfficialTwShortNames } from "@/lib/cron/twCompanyNameZhBackfill";
 import { isTwCompanyNameZhBackfillWriteEnabled } from "@/lib/cron/twCompanyNameZhBackfillWriteGate";
 
 export const runtime = "nodejs";
@@ -33,6 +33,8 @@ export async function GET(request: Request) {
   let cursor = before?.lastSymbol ?? null;
   let attempted = 0, succeeded = 0, written = 0, failed = 0, stoppedEarly: string | null = null;
   const failureReasons: Record<string, number> = {};
+  const anomalies: Array<{ ticker: string; yahoo: string; official: string }> = [];
+  const officialNames = await fetchOfficialTwShortNames();
 
   try {
     while (Date.now() - started < TIME_BUDGET_MS && !stoppedEarly) {
@@ -41,11 +43,12 @@ export async function GET(request: Request) {
       for (const stock of batch) {
         if (Date.now() - started >= TIME_BUDGET_MS) break;
         attempted++;
-        const result = await backfillOneStockNameZh(stock, writeEnabled);
+        const result = await backfillOneStockNameZh(stock, writeEnabled, officialNames);
         if (result.ok) { succeeded++; if (result.written) written++; }
         else {
           failed++;
           failureReasons[result.failureReason ?? "UNKNOWN"] = (failureReasons[result.failureReason ?? "UNKNOWN"] ?? 0) + 1;
+          if (result.anomaly) anomalies.push({ ticker: stock.ticker, ...result.anomaly });
           if (result.failureReason?.startsWith("RATE_LIMITED")) { stoppedEarly = result.failureReason; cursor = stock.ticker; break; }
         }
         cursor = stock.ticker;
@@ -65,9 +68,9 @@ export async function GET(request: Request) {
       status, attempted, completed: succeeded, inserted: written, updated: 0, failed,
       retryableFailures: failed, checkpointAfter: after,
       error: failed ? JSON.stringify(failureReasons) : null,
-      details: { writeEnabled, failureReasons, stoppedEarly, cursor: after.lastSymbol },
+      details: { writeEnabled, failureReasons, stoppedEarly, cursor: after.lastSymbol, officialNamesLoaded: officialNames.size, anomalies },
     });
-    return Response.json({ ok: status !== "FAILED", job: JOB, writeEnabled, attempted, succeeded, written, failed, failureReasons, stoppedEarly, status, runtimeMs: Date.now() - started });
+    return Response.json({ ok: status !== "FAILED", job: JOB, writeEnabled, attempted, succeeded, written, failed, failureReasons, anomalies, officialNamesLoaded: officialNames.size, stoppedEarly, status, runtimeMs: Date.now() - started });
   } catch (e) {
     await finishRun(runId, JOB, PROVIDER, started, { status: "FAILED", attempted, completed: succeeded, inserted: written, updated: 0, failed: failed + 1, retryableFailures: 1, checkpointAfter: null, error: (e as Error).message });
     return Response.json({ ok: false, job: JOB, error: (e as Error).message }, { status: 500 });
