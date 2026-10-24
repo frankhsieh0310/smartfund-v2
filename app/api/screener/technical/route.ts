@@ -14,6 +14,8 @@
 // ROE/ROA/成長率/毛利率/淨利率這些原本因為net_income的TTM還原問題被排除（見上一版註解）——
 // 現在全部改讀Yahoo現成算好的比率，不再有那個問題。
 import { prisma } from "@/lib/prisma";
+import { getAccountForRequest } from "@/lib/auth/userService";
+import { SCREENER_FREE_MAX_CONDITIONS, SCREENER_FREE_MAX_RESULTS } from "@/lib/payments/plans";
 
 const headers = { "Access-Control-Allow-Origin": "*", "Cache-Control": "no-store" };
 
@@ -69,14 +71,26 @@ function buildWhere(conditions: Condition[]): string {
 
 export async function GET(request: Request) {
   const q = new URL(request.url).searchParams;
-  const conditions = parseConditions(q);
+  let conditions = parseConditions(q);
   if (conditions.length === 0) {
     return Response.json({
       ok: false, error: "NO_CONDITIONS",
       hint: "技術面: rsi_below|rsi_above|macd_histogram_below|macd_histogram_above=<number>, price_vs_ma20|price_vs_ma60=above|below. 基本面(Yahoo): pe|pb|dividend_yield|roe|roa|revenue_growth|earnings_growth|gross_margin|profit_margin + _below|_above=<number>",
     }, { status: 400, headers });
   }
-  const limit = Math.min(50, Math.max(1, Number(q.get("limit")) || 20));
+
+  // 免費／付費分層（2026-10-24使用者核准定案）: 伺服器端強制執行，不能只靠前端藏起來——
+  // 未登入或試用期已過的免費帳號，條件數最多3個、結果最多20檔；登入帳號用getAccountForRequest
+  // 的accessTier（跟其他付費功能共用同一套FREE_FEATURES/PAID_FEATURES判斷邏輯），不用另外寫
+  // 一套。totalMatchedBeforeLimit用來讓前端顯示「還有N檔符合條件」。
+  const account = await getAccountForRequest(request).catch(() => null);
+  const isPaidOrTrial = account?.accessTier === "trial" || account?.accessTier === "paid";
+  const truncatedConditions = !isPaidOrTrial && conditions.length > SCREENER_FREE_MAX_CONDITIONS;
+  if (truncatedConditions) conditions = conditions.slice(0, SCREENER_FREE_MAX_CONDITIONS);
+
+  const limit = isPaidOrTrial
+    ? Math.min(50, Math.max(1, Number(q.get("limit")) || 20))
+    : SCREENER_FREE_MAX_RESULTS;
   const market = q.get("market"); // "TW" | "US" | null(=both)
   const marketClause = market === "TW" || market === "US" ? `AND s.country = '${market}'` : "";
   const where = buildWhere(conditions);
@@ -99,18 +113,31 @@ export async function GET(request: Request) {
   }).join("\n");
 
   const needsPeFallback = neededFields.has("pe");
-  const sql = `SELECT s.ticker, s.company_name, s.country, t.date::text, t.rsi14::text, t.macd_histogram::text, t.ma20::text, t.ma60::text, s.latest_close::text AS "latestPrice"
-            ${fundamentalSelect ? `, ${fundamentalSelect}` : ""}
-       FROM stocks s
+  const fromClause = `FROM stocks s
        CROSS JOIN LATERAL (
          SELECT * FROM stock_technical st WHERE st.stock_id = s.id ORDER BY st.date DESC LIMIT 1
        ) t
        ${fundamentalJoins}
-      WHERE s.is_active ${marketClause} ${where}
+      WHERE s.is_active ${marketClause} ${where}`;
+  // 免費版結果數受限時多拿一筆，用來判斷「還有更多」；真的有更多才額外付一次COUNT查詢的成本
+  // 換精確數字（使用者規格要求顯示「還有N檔符合條件」，不是只顯示「還有更多」）。
+  const fetchLimit = isPaidOrTrial ? limit : limit + 1;
+  const sql = `SELECT s.ticker, s.company_name, s.country, t.date::text, t.rsi14::text, t.macd_histogram::text, t.ma20::text, t.ma60::text, s.latest_close::text AS "latestPrice"
+            ${fundamentalSelect ? `, ${fundamentalSelect}` : ""}
+       ${fromClause}
       ORDER BY t.date DESC
-      LIMIT ${limit}`.replace("$pe_fallback", "$1");
+      LIMIT ${fetchLimit}`.replace("$pe_fallback", "$1");
 
-  const rows = await prisma.$queryRawUnsafe<Array<Record<string, string | null>>>(sql, ...(needsPeFallback ? [PE_FALLBACK_METRICS] : []));
+  const queryParams = needsPeFallback ? [PE_FALLBACK_METRICS] : [];
+  const rows = await prisma.$queryRawUnsafe<Array<Record<string, string | null>>>(sql, ...queryParams);
+
+  let remainingCount: number | null = null;
+  if (!isPaidOrTrial && rows.length > limit) {
+    const countSql = `SELECT count(*)::int n ${fromClause}`.replace("$pe_fallback", "$1");
+    const countRows = await prisma.$queryRawUnsafe<{ n: number }[]>(countSql, ...queryParams);
+    remainingCount = Math.max(0, (countRows[0]?.n ?? limit) - limit);
+    rows.length = limit;
+  }
 
   return Response.json({
     ok: true,
@@ -118,6 +145,12 @@ export async function GET(request: Request) {
     market: market === "TW" || market === "US" ? market : "ALL",
     total: rows.length,
     generated_at: new Date().toISOString(),
+    tier: isPaidOrTrial ? "FULL" : "FREE",
+    truncatedConditions,
+    remainingCount,
+    upgradeHint: !isPaidOrTrial && (truncatedConditions || remainingCount)
+      ? `免費版最多${SCREENER_FREE_MAX_CONDITIONS}個條件、顯示前${SCREENER_FREE_MAX_RESULTS}檔結果${remainingCount ? `，還有 ${remainingCount} 檔符合條件` : ""}。升級查看完整結果。`
+      : null,
     results: rows.map((r) => ({
       ticker: r.ticker,
       name: r.company_name,

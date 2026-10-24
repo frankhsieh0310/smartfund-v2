@@ -41,6 +41,20 @@ export const PAID_FEATURES = [
 
 export type FeatureKey = (typeof FREE_FEATURES)[number] | (typeof PAID_FEATURES)[number];
 
+// 2026-10-24（選股反查免費/付費分層設定，使用者核准定案）: 技術選股反查本身在PAID_FEATURES
+// 清單裡，但免費使用者（試用期過後）仍然可以用「受限版」，不是完全鎖住——跟其他PAID_FEATURES
+// 的二元鎖（LockedFeature整頁鎖）不一樣，這裡要分層：免費可以用，付費版本看得更多。
+export const SCREENER_FREE_MAX_CONDITIONS = 3;
+export const SCREENER_FREE_MAX_RESULTS = 20;
+export const SCREENER_FREE_MAX_HOLDINGS_PER_STOCK = 5;
+export const SCREENER_PRESETS = [
+  { key: "high_yield_low_pe", label: "高殖利率加低本益比", query: "dividend_yield_above=0.03&pe_below=15" },
+  { key: "ma_bullish", label: "均線多頭排列", query: "price_vs_ma20=above&price_vs_ma60=above" },
+  { key: "revenue_growth", label: "營收連續成長", query: "revenue_growth_above=0.1" },
+  { key: "rsi_oversold_bounce", label: "RSI 超賣反彈", query: "rsi_below=30" },
+  { key: "low_pb", label: "低股價淨值比", query: "pb_below=1" },
+] as const;
+
 export type AccessTier = "trial" | "paid" | "free";
 
 /** `plan` is the Prisma `Plan` enum (`FREE` | `PREMIUM` | `TEAM`); `createdAt` is `User.createdAt`.
