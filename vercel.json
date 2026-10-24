@@ -253,6 +253,10 @@
       "schedule": "0 * * * *"
     },
     {
+      "path": "/api/cron/cloud-saved-filter-alerts",
+      "schedule": "30 12 * * *"
+    },
+    {
       "path": "/api/cron/cloud-etf-price",
       "schedule": "17 * * * *"
     },
