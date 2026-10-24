@@ -20,12 +20,13 @@ type HomeMarketCard = {
   unit: string | null;
   currency: string | null;
   asOfDate: string | null;
+  detailHref: string | null;
 };
 
 // 2026-10-23（使用者核准，台灣買不到的就不要放）: crypto tab移除。
 type HomeMarketOverview = { tabs: Record<"stocks" | "bonds" | "fx" | "commodities", HomeMarketCard[]> };
 
-type MktItem = { name: string; value: string; pts: string; pct: string; up: boolean; asOfDate: string | null };
+type MktItem = { name: string; value: string; pts: string; pct: string; up: boolean; asOfDate: string | null; detailHref: string | null };
 type MktSection = { id: string; label: string; emoji: string; items: MktItem[] };
 
 function fmtValue(v: number | null, unit: string | null): string {
@@ -48,7 +49,7 @@ function fmtPct(v: number | null, assetType: string): string {
 }
 function toItem(c: HomeMarketCard): MktItem {
   const pct = c.changePercent === null ? null : (FRACTION_UNIT_TYPES.has(c.assetType) ? c.changePercent * 100 : c.changePercent);
-  return { name: c.label, value: fmtValue(c.value, c.unit), pts: fmtChange(c.change), pct: fmtPct(c.changePercent, c.assetType), up: (pct ?? 0) >= 0, asOfDate: c.asOfDate };
+  return { name: c.label, value: fmtValue(c.value, c.unit), pts: fmtChange(c.change), pct: fmtPct(c.changePercent, c.assetType), up: (pct ?? 0) >= 0, asOfDate: c.asOfDate, detailHref: c.detailHref };
 }
 
 // ── Sparkline (direction indicator only, not a real price series) ──────────
@@ -83,10 +84,11 @@ function Sparkline({ up }: { up: boolean }) {
 function MktRow({ item, rank }: { item: MktItem; rank: number }) {
   const color = item.up ? "text-emerald-400" : "text-red-400";
   const arrow = item.up ? "▲" : "▼";
-  return (
-    <div className="flex items-center gap-4 px-5 py-3.5 border-b border-white/[0.05] hover:bg-white/[0.03] transition-colors">
+  const rowClass = "flex items-center gap-4 px-5 py-3.5 border-b border-white/[0.05] hover:bg-white/[0.03] transition-colors";
+  const content = (
+    <>
       <span className="w-6 text-[12px] text-slate-600 shrink-0">{rank}</span>
-      <span className="flex-1 text-[15px] text-slate-300 truncate">{item.name}</span>
+      <span className={`flex-1 text-[15px] truncate ${item.detailHref ? "text-white font-semibold" : "text-slate-300"}`}>{item.name}</span>
       <span className="text-[17px] font-bold text-white w-28 text-right shrink-0">{item.value}</span>
       <span className={`text-[13px] font-semibold w-36 text-right shrink-0 ${color}`}>
         {arrow} {item.pts}
@@ -97,7 +99,12 @@ function MktRow({ item, rank }: { item: MktItem; rank: number }) {
       <div className="w-20 flex justify-end shrink-0">
         <Sparkline up={item.up} />
       </div>
-    </div>
+    </>
+  );
+  return item.detailHref ? (
+    <Link href={item.detailHref} className={rowClass}>{content}</Link>
+  ) : (
+    <div className={rowClass}>{content}</div>
   );
 }
 

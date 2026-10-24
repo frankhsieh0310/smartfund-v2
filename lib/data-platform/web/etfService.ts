@@ -163,6 +163,11 @@ export async function getEtfDetail(code: string): Promise<ServiceResponse<{ iden
   if (!key) throw new WebDataError("INVALID_QUERY", "An ETF code is required.");
   const row = await prisma.etf.findFirst({ where: { OR: [{ id: key }, { code: { equals: key, mode: "insensitive" } }, { isin: { equals: key, mode: "insensitive" } }] }, include: { history: { where: { OR: [{ price: { not: null } }, { nav: { not: null } }] }, orderBy: { date: "desc" }, take: 2 } } });
   if (!row) throw new WebDataError("NOT_FOUND", "ETF not found.");
+  // 2026-10-24（使用者規則，第一條）: 詳情頁是「使用者挑選商品」這一層，不是持股穿透揭露，
+  // 必須套用核心母體過濾——直接用 id/code/isin 查表原本會讓任何不在核心母體的 ETF（例如
+  // LSE/Tokyo/HKSE 上市的，表裡仍有大量歷史遺留資料）只要猜得到網址就看得到詳情頁。
+  const coreIds = await getCoreUniverseEtfIds();
+  if (!coreIds.has(row.id)) throw new WebDataError("NOT_FOUND", "ETF not found.");
   const latest = row.history[0];
   const previous = row.history[1];
   const latestValue = numberOrNull(latest?.price ?? latest?.nav ?? row.latestPrice ?? row.latestNav);

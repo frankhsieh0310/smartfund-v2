@@ -97,7 +97,7 @@ async function economicCards(seriesIds: readonly string[], assetType: "YIELD" | 
     const latest = row.values[0];
     const source = row.provider || row.source;
     const provenance = buildProvenance({ source, sourceRecordId: seriesId, asOfDate: latest?.date, lastUpdated: latest?.updatedAt ?? latest?.importedAt ?? row.updatedAt });
-    return { assetType, id: row.id, label: row.name, symbolOrCode: seriesId, value: numberOrNull(latest?.value), change: null, changePercent: null, unit: row.unit, currency: null, asOfDate: provenance.asOfDate, lastUpdated: provenance.lastUpdated, freshnessStatus: freshnessStatus(latest?.date, "PUBLICATION_AWARE"), source, provenance, detailHref: null, coverageStatus: latest ? "FULL" : "UNKNOWN" };
+    return { assetType, id: row.id, label: row.name, symbolOrCode: seriesId, value: numberOrNull(latest?.value), change: null, changePercent: null, unit: row.unit, currency: null, asOfDate: provenance.asOfDate, lastUpdated: provenance.lastUpdated, freshnessStatus: freshnessStatus(latest?.date, "PUBLICATION_AWARE"), source, provenance, detailHref: assetType === "YIELD" ? `/bonds/${encodeURIComponent(seriesId)}` : null, coverageStatus: latest ? "FULL" : "UNKNOWN" };
   });
 }
 

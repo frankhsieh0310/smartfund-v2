@@ -204,6 +204,11 @@ export async function getFundDetail(identifier: string, relationLimit = 20, rang
   if (!(["1M", "3M", "6M", "1Y", "3Y", "5Y", "10Y", "MAX"] as string[]).includes(range)) throw new WebDataError("INVALID_QUERY", "Unsupported fund history range.");
   const row = await prisma.fund.findFirst({ where: { OR: [{ id: key }, { code: { equals: key, mode: "insensitive" } }, { isin: { equals: key, mode: "insensitive" } }] } });
   if (!row) throw new WebDataError("NOT_FOUND", "Fund not found.");
+  // 2026-10-24（使用者規則，第一條）: 詳情頁是「使用者挑選商品」這一層，必須套用核心母體過濾
+  // （同 etfService.getEtfDetail 的理由）——否則任何不是 SITCA 國內基金／TDCC 境外基金的舊資料
+  // 只要猜得到網址就看得到詳情頁。
+  const coreFundIds = await getCoreUniverseFundIds();
+  if (!coreFundIds.has(row.id)) throw new WebDataError("NOT_FOUND", "Fund not found.");
   const sectionLimit = Math.min(relationLimit, 20);
   const from = rangeStart(range);
   const [historyRows, performance, shareClasses, documents, classifications, riskMetrics, holdings] = await Promise.all([
