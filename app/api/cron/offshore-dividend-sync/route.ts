@@ -76,6 +76,7 @@ export async function GET(request: Request) {
   let totalWritten = 0, totalSkippedExisting = 0, totalWriteErrorCount = 0, totalCandidateCount = 0, totalDuplicatesCollapsed = 0;
   const allConflicts: Array<{ fundId: string; exDate: string; amounts: number[]; count: number }> = [];
   let pendingBuffer: DistributionWriteCandidate[] = [];
+  const sampleErrors: string[] = [];
 
   async function flush() {
     if (pendingBuffer.length === 0) return;
@@ -114,6 +115,11 @@ export async function GET(request: Request) {
         httpStatus = e.httpStatus;
         break; // stop immediately on 403/429, do not sleep further
       }
+      // 2026-10-24（使用者核准診斷）: 連續11天every run 100% error_count，但http_status/
+      // rate_limited都是null/false——原本的catch只計數、完全沒記錄e.message，查不出根因。
+      // 先記下錯誤訊息（取樣，不是每一筆都存，避免details爆量），下一次正式執行後直接看
+      // production_scheduler_runs.details就知道實際錯誤是什麼，不用再猜。
+      if (sampleErrors.length < 5) sampleErrors.push((e as Error).message ?? String(e));
       errorCount++;
       if (writeEnabledThisRun) newlyAttempted.add(f.id);
     }
@@ -142,6 +148,7 @@ export async function GET(request: Request) {
       duplicates_collapsed: totalDuplicatesCollapsed, conflicts: allConflicts,
       cycle_processed_total: new Set([...startingProcessed, ...newlyAttempted]).size,
       cycle_reset: cycleWillReset,
+      sample_errors: sampleErrors,
     },
   });
 
