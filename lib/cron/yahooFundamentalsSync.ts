@@ -46,17 +46,29 @@ const SYNCED_MARKER_METRIC = `${METRIC_PREFIX}_synced`;
 // market "TW"/"US"兩種——其他市場的基本面同步完全是浪費額度，而且因為ticker排序，TW要等
 // 掃完前6791檔、US要等掃完前33735檔才會輪到，等於優先權完全錯置。先只掃TW+US。
 //
-// 2026-10-24（使用者核准擴充）: 完成TW/US後，擴充到「四類核心母體的ETF實際有持有」的其他
-// 市場股票——不是整個該國股票池，只是這些ETF holdings清單裡真的出現的個股。用ticker+country
-// 對stocks表做match（etf_holdings本身沒有stock_id外鍵）。基金持股(fund_holdings)目前查過，
-// 透過canonical_issuer_stock_links的ISIN橋接表完全沒有資料（0筆match），這張橋接表看起來
-// 還沒被填入——基金持股這條路暫時擴充不了，只能先擴充ETF持股這條路，已明確回報使用者。
+// 2026-10-24（使用者核准擴充，修正資料來源）: 完成TW/US後，擴充到「四類核心母體的ETF／基金
+// 實際有持有」的其他市場股票——不是整個該國股票池。
+// - ETF這條：etf_holdings本身有ticker+country，直接對stocks表match（etf_holdings沒有
+//   stock_id外鍵，用ticker+country是能確定的對應）。
+// - 基金這條：原本想走canonical_issuer_stock_links的ISIN橋接表，查到完全是空的（0筆）—— 但
+//   那條路本身就是錯的，fund_holdings/FundHoldingCanonical這張表全庫只有10筆，不是基金持股
+//   真正的資料來源。真正的資料在holdings表（asset_type='FUND'，28.9萬筆）+已經建好、
+//   選股反查(/api/mobile/reverse-holdings)本來就在用的reverse_current_positions／
+//   reverse_current_securities投影表——這張投影表的product_key對FUND是"FUND:<fund_id>"，
+//   可以直接parse出fund_id跟tw_purchasable_classification對應，不需要ISIN。改用這個已驗證
+//   可用的來源，不再碰fund_holdings/ISIN橋接。
 async function findCoreUniverseHeldStockIds(): Promise<string[]> {
   const rows = await prisma.$queryRawUnsafe<{ id: string }[]>(
     `SELECT DISTINCT s.id
        FROM stocks s
        JOIN etf_holdings eh ON eh.ticker = s.ticker AND (eh.country = s.country OR eh.country IS NULL)
        JOIN tw_purchasable_classification c ON c.asset_type = 'ETF' AND c.status = 'APPROVED' AND c.asset_id = eh.etf_id
+      WHERE s.is_active AND s.country NOT IN ('TW', 'US')
+     UNION
+     SELECT DISTINCT s.id
+       FROM stocks s
+       JOIN reverse_current_positions p ON p.stock_id = s.id AND p.type = '基金'
+       JOIN tw_purchasable_classification c ON c.asset_type = 'FUND' AND c.status = 'APPROVED' AND c.asset_id = split_part(p.product_key, ':', 2)
       WHERE s.is_active AND s.country NOT IN ('TW', 'US')`,
   );
   return rows.map((r) => r.id);
