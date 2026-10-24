@@ -6,13 +6,15 @@
 // route（不是硬塞進股票那支，資料模型不一樣：market_data沒有股票的history table結構，且商品只有
 // 6檔，不需要股票那種LATERAL-join-全市場的bounded查詢）。
 //
-// 商品沒有像stock_technical那樣的每日預先算好指標表，直接對market_data（既有OHLCV）即時算
-// （reuse lib/cron/stockTechnicalDaily.ts的computeTechnicalSeries——純函式，跟市場無關）：6檔
-// 商品，即時算一次的成本可以忽略，不需要另外建cron。
+// 商品沒有像stock_technical那樣的每日預先算好指標表，直接對futures_root_market_observations
+// （既有OHLCV，lib/cron/commodityUpdate.ts/api/cron/yahoo-commodity每天寫入，來源YAHOO_CHART）
+// 即時算（reuse lib/cron/stockTechnicalDaily.ts的computeTechnicalSeries——純函式，跟市場無關）：
+// 6檔商品，即時算一次的成本可以忽略，不需要另外建cron。
 //
-// 已知限制（揭露，不在這次修復範圍內）：market_data商品價格停在2026-08-18（約2個月前），是
-// lib/cron/commodityUpdate.ts這條既有pipeline本身的新鮮度問題，不是這支screener的bug——商品技術
-// 面計算本身在既有資料上是正確的，等那條pipeline修好資料就會自動跟著新。
+// 2026-10-24訂正：第一版這裡誤讀了market_data這張表（停在2026-08-18，約2個月前）——查證後
+// market_data是沒人再寫入的舊表，真正的資料在futures_root_market_observations，VERIFIED這張表
+// 每天確實都有真實新資料寫入（最新到2026-10-23，6500+筆歷史），commodityUpdate.ts/yahoo-commodity
+// 這條pipeline本身從頭到尾沒有壞過，是這支screener第一版讀錯表。
 import { prisma } from "@/lib/prisma";
 import { computeTechnicalSeries, type PricePoint } from "@/lib/cron/stockTechnicalDaily";
 import { etfsForCommodity, type CommodityKey as EtfMappingCommodityKey } from "@/lib/data-platform/commodityEtfMapping";
@@ -63,7 +65,7 @@ export async function GET(request: Request) {
 
   const results = await Promise.all(COMMODITIES.map(async (c) => {
     const history = await prisma.$queryRawUnsafe<{ date: Date; close: string; high: string | null; low: string | null }[]>(
-      `SELECT date, close::text, high::text, low::text FROM market_data WHERE symbol = $1 AND type = 'COMMODITY' ORDER BY date ASC`,
+      `SELECT observed_date AS date, close::text, high::text, low::text FROM futures_root_market_observations WHERE yahoo_symbol = $1 ORDER BY observed_date ASC`,
       c.yahooSymbol,
     );
     if (!history.length) return null;
