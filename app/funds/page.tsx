@@ -74,6 +74,7 @@ export default async function FundsPage({ searchParams }: { searchParams: Search
             <Link href="/" className="transition-colors hover:text-white">市場總覽</Link>
             <Link href="/etf" className="transition-colors hover:text-white">ETF</Link>
             <Link href="/funds" className="text-[#F5B700]">基金</Link>
+            <Link href="/compare" className="transition-colors hover:text-white">比較</Link>
             <Link href="/rankings" className="transition-colors hover:text-white">排行榜</Link>
           </nav>
           <Link href="/search" className="rounded-lg border border-white/20 px-4 py-2 text-[13px] font-semibold text-slate-200 transition-colors hover:bg-white/[0.06]">搜尋</Link>

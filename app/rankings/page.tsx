@@ -12,7 +12,7 @@ const investmentItems = [
 ];
 const researchItems = [
   { label: "SmartMatch", href: "/quiz" }, { label: "篩選器", href: "/etf" },
-  { label: "商品比較（尚未開放）" }, { label: "投資組合健檢", href: "/portfolio" },
+  { label: "商品比較", href: "/compare" }, { label: "投資組合健檢", href: "/portfolio" },
 ];
 function HeaderDropdown({ label, items, open, onToggle, onClose }: {
   label: string;
