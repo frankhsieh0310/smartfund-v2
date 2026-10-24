@@ -23,7 +23,7 @@ const investmentItems = [
 ];
 const researchItems = [
   { label: "SmartMatch", href: "/quiz" }, { label: "篩選器", href: "/screener" },
-  { label: "商品比較", href: "/compare" }, { label: "配息資訊與試算", href: "/dividend-center" }, { label: "新商品", href: "/new-listings" }, { label: "投資組合健檢", href: "/portfolio" },
+  { label: "商品比較", href: "/compare" }, { label: "配息資訊與試算", href: "/dividend-center" }, { label: "新商品", href: "/new-listings" }, { label: "投資日曆", href: "/calendar" }, { label: "投資組合健檢", href: "/portfolio" },
 ];
 
 function HeaderDropdown({ label, items, open, onToggle, onClose }: {
