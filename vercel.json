@@ -257,6 +257,10 @@
       "schedule": "30 12 * * *"
     },
     {
+      "path": "/api/cron/cloud-us-treasury-sync",
+      "schedule": "0 21 * * *"
+    },
+    {
       "path": "/api/cron/cloud-tw-company-name-zh-backfill",
       "schedule": "*/10 * * * *"
     },
