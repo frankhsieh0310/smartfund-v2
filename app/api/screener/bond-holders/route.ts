@@ -17,6 +17,8 @@
 // No NLP/fuzzy matching anywhere -- pure structural regex parsing, per user instruction.
 import { prisma } from "@/lib/prisma";
 import { parseBondDisclosureName, normalizeIssuer } from "@/lib/data-platform/bondNameParsing";
+import { resolveBondIssuerAlias } from "@/lib/data-platform/bondIssuerAliases";
+import { getAccountForRequest } from "@/lib/auth/userService";
 
 const headers = { "Access-Control-Allow-Origin": "*", "Cache-Control": "no-store" };
 const CUSIP_RE = /^[0-9A-Z]{9}$/;
@@ -25,8 +27,87 @@ const ISIN_RE = /^[A-Z]{2}[0-9A-Z]{9}[0-9]$/;
 type EtfHolderRow = { etf_id: string; code: string; name: string; holding_name: string; weight: string; as_of_date: string | null; source: string | null; coupon_rate: string | null; maturity_date: string | null };
 type FundDisclosureRow = { fund_id: string; code: string | null; name: string; holding_name: string; weight: string; as_of_date: string | null };
 
+// 2026-10-24（使用者核准定案）: 新增「依發行機構」查詢，跟既有CUSIP/ISIN查詢整合成同一個入口。
+// 這是付費功能（既有CUSIP/ISIN查詢維持原樣，不加限制）；發行機構名稱只接受
+// lib/data-platform/bondIssuerAliases.ts裡「已確認對應」的別名，查不到就回報找不到、不猜。
+async function handleIssuerQuery(request: Request, issuerQuery: string) {
+  const account = await getAccountForRequest(request);
+  if (!account) return Response.json({ ok: false, error: "UNAUTHORIZED" }, { status: 401, headers });
+  if (account.accessTier === "free") {
+    return Response.json({ ok: false, error: "依發行機構查詢是付費功能，試用期或訂閱後才能使用。" }, { status: 403, headers });
+  }
+  const alias = resolveBondIssuerAlias(issuerQuery);
+  if (!alias) return Response.json({ ok: false, error: "ISSUER_NOT_RECOGNIZED", hint: "目前只支援已核對過對應關係的發行機構名稱" }, { status: 404, headers });
+
+  const etfRows = await prisma.$queryRawUnsafe<EtfHolderRow[]>(
+    `WITH candidates AS (
+       SELECT h.etf_id, h.holding_name, h.weight, h.as_of_date, h.source, h.coupon_rate::text, h.maturity_date::text,
+              ROW_NUMBER() OVER (PARTITION BY h.etf_id, h.holding_name ORDER BY h.as_of_date DESC NULLS LAST) rn
+         FROM holdings h
+        WHERE h.asset_type = 'ETF' AND h.etf_id IS NOT NULL AND h.holding_name ILIKE '%' || $1 || '%'
+     )
+     SELECT c.etf_id, e.code, e.name, c.holding_name, c.weight::text AS weight, c.as_of_date::text, c.source, c.coupon_rate, c.maturity_date
+       FROM candidates c JOIN etfs e ON e.id = c.etf_id
+      WHERE c.rn = 1 AND e.is_active`,
+    alias.issuerKey.split(" ")[0],
+  );
+  const bondEtfResults = etfRows
+    .filter((r) => normalizeIssuer(r.holding_name) === alias.issuerKey)
+    .map((r) => ({ etfId: r.etf_id, code: r.code, name: r.name, holdingName: r.holding_name, weightPct: Number(r.weight), asOfDate: r.as_of_date, source: r.source }))
+    .sort((a, b) => b.weightPct - a.weightPct);
+
+  const fundRows = await prisma.$queryRawUnsafe<FundDisclosureRow[]>(
+    `WITH candidates AS (
+       SELECT h.fund_id, h.holding_name, h.weight, h.as_of_date,
+              ROW_NUMBER() OVER (PARTITION BY h.fund_id, h.holding_name ORDER BY h.as_of_date DESC NULLS LAST) rn
+         FROM holdings h
+        WHERE h.asset_type = 'FUND' AND h.fund_id IS NOT NULL AND h.source = 'MONEYDJ_PUBLIC_DISCLOSURE'
+          AND h.holding_name ILIKE '%' || $1 || '%'
+     )
+     SELECT c.fund_id, f.code, f.name, c.holding_name, c.weight::text AS weight, c.as_of_date::text
+       FROM candidates c JOIN funds f ON f.id = c.fund_id
+      WHERE c.rn = 1 AND f.is_active`,
+    alias.issuerKey.split(" ")[0],
+  );
+  const bondFundResults = fundRows
+    .filter((r) => { const parsed = parseBondDisclosureName(r.holding_name); return parsed.looksLikeBond && normalizeIssuer(parsed.issuerRaw) === alias.issuerKey; })
+    .map((r) => ({ fundId: r.fund_id, code: r.code, name: r.name, holdingName: r.holding_name, weightPct: Number(r.weight), asOfDate: r.as_of_date }))
+    .sort((a, b) => b.weightPct - a.weightPct);
+
+  // 持有該公司股票的基金與ETF（跟債券分開列——同一間公司，兩種不同的持有標的）。用已經在跑的
+  // reverse_current_positions投影（選股反查/mobile reverse-holdings本來就在用），不是另外寫一套。
+  let stockHolders: Array<{ productKey: string; type: string; weightPct: number }> = [];
+  if (alias.stockTicker) {
+    const stock = await prisma.$queryRawUnsafe<Array<{ id: string }>>(
+      `SELECT id FROM stocks WHERE ticker = $1 AND country = 'US' AND is_active LIMIT 1`,
+      alias.stockTicker,
+    );
+    if (stock[0]) {
+      const positions = await prisma.$queryRawUnsafe<Array<{ product_key: string; type: string; weight: string }>>(
+        `SELECT product_key, type, weight::text FROM reverse_current_positions WHERE stock_id = $1 ORDER BY weight DESC NULLS LAST`,
+        stock[0].id,
+      );
+      stockHolders = positions.map((p) => ({ productKey: p.product_key, type: p.type, weightPct: Number(p.weight) }));
+    }
+  }
+
+  return Response.json({
+    ok: true,
+    query: { value: issuerQuery, matchedBy: "ISSUER", resolvedIssuer: alias.displayNameZh, issuerKey: alias.issuerKey },
+    scopeNote: "依發行機構查詢只支援已核對過對應關係的發行機構名稱；債券與股票持有分開列出，不合併計算比例。",
+    results: {
+      bondHolders: { etf: bondEtfResults, fund: bondFundResults },
+      stockHolders,
+    },
+    generated_at: new Date().toISOString(),
+  }, { headers });
+}
+
 export async function GET(request: Request) {
   const q = new URL(request.url).searchParams;
+  const issuerQuery = q.get("issuer");
+  if (issuerQuery) return handleIssuerQuery(request, issuerQuery);
+
   const raw = (q.get("cusip") ?? q.get("isin") ?? "").trim().toUpperCase();
   if (!raw) return Response.json({ ok: false, error: "MISSING_CUSIP_OR_ISIN" }, { status: 400, headers });
   const isCusip = CUSIP_RE.test(raw);
