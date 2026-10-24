@@ -116,21 +116,34 @@ export function computeTechnicalSeries(prices: PricePoint[]): TechnicalRow[] {
 
 export type StaleStock = { id: string; ticker: string; latestTechnicalDate: string | null };
 
-/** Stocks (TW only this round) whose stock_history has a date newer than their stock_technical --
- * i.e. genuinely behind, not just "never computed" (that's the other script's job). */
-export async function findStaleTwStocks(limit: number, afterTicker: string | null): Promise<StaleStock[]> {
+/** Stocks whose stock_history has a date newer than their stock_technical -- i.e. genuinely
+ * behind, not just "never computed" (that's the other script's job). `countries` scopes the
+ * market (e.g. ['TW'] or ['US']) -- kept as a parameter instead of two near-duplicate functions
+ * so TW and US share one query/index path. */
+async function findStaleStocksByCountry(countries: string[], limit: number, afterTicker: string | null): Promise<StaleStock[]> {
   return prisma.$queryRawUnsafe<StaleStock[]>(
     `SELECT s.id, s.ticker, (SELECT MAX(t.date)::text FROM stock_technical t WHERE t.stock_id = s.id) AS "latestTechnicalDate"
        FROM stocks s
-      WHERE s.is_active AND s.exchange IN ('TWSE','TPEx') AND s.ticker > $2
+      WHERE s.is_active AND s.country = ANY($3::text[]) AND s.ticker > $2
         AND EXISTS (
           SELECT 1 FROM stock_history h WHERE h.stock_id = s.id
             AND h.date > COALESCE((SELECT MAX(t.date) FROM stock_technical t WHERE t.stock_id = s.id), '1900-01-01'::date)
         )
       ORDER BY s.ticker ASC
       LIMIT $1`,
-    limit, afterTicker ?? "",
+    limit, afterTicker ?? "", countries,
   );
+}
+
+export async function findStaleTwStocks(limit: number, afterTicker: string | null): Promise<StaleStock[]> {
+  return findStaleStocksByCountry(["TW"], limit, afterTicker);
+}
+
+/** Same as findStaleTwStocks, scoped to US-listed stocks (NASDAQ/NYSE/AMEX etc., country='US') --
+ * 2026-10-24（選股反查第一階段）: stock-technical-daily 本來只做 TW，美股完全沒有每日更新，
+ * 確認AAPL停在2026-08-14（約2.5個月前）——不是「全部都停」，是美股從來沒被排進這支cron。 */
+export async function findStaleUsStocks(limit: number, afterTicker: string | null): Promise<StaleStock[]> {
+  return findStaleStocksByCountry(["US"], limit, afterTicker);
 }
 
 /** Fetches enough trailing price history (240+ bars for MA240) to recompute correctly, then

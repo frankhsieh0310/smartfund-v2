@@ -245,6 +245,10 @@
       "schedule": "0 8 * * 1-5"
     },
     {
+      "path": "/api/cron/stock-technical-daily-us",
+      "schedule": "0 10 * * 1-5"
+    },
+    {
       "path": "/api/cron/cloud-etf-price",
       "schedule": "17 * * * *"
     },
