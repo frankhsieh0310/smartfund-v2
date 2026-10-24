@@ -249,6 +249,10 @@
       "schedule": "17 * * * *"
     },
     {
+      "path": "/api/cron/etf-history-gap-backfill",
+      "schedule": "5,35 * * * *"
+    },
+    {
       "path": "/api/cron/cloud-fund-nav?provider=ALL",
       "schedule": "27 * * * *"
     },

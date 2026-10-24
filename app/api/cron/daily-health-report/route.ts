@@ -249,6 +249,28 @@ export async function GET(request: Request) {
   const RETAIL_RESTRICTED_MIN_BASELINE = 238;
   const retailRestrictedDropped = retailRestrictedCount < RETAIL_RESTRICTED_MIN_BASELINE;
 
+  // 2026-10-24（使用者核准）: 0050 等 535 檔核心母體 ETF 詳情頁一度 404，根因是 etf_history
+  // 落後同交易所其他 ETF（詳見 app/api/cron/etf-history-gap-backfill/route.ts 開頭的完整說明）。
+  // 詳情頁已改成不再因為資料不夠新就擋頁面，但「落後同交易所其他 ETF 超過 5 天」本身仍然是真正
+  // 的資料異常，要能被健康報告看見——用同一個「落後同交易所peer-max」判斷法，不需要交易所假期
+  // 日曆，一般假日本來就是全交易所一起落後、不會誤報。
+  const etfHistoryGapRows = await prisma.$queryRawUnsafe<Array<{ n: number }>>(`
+    WITH peer_max AS (
+      SELECT e.exchange, MAX(h.date) AS max_date
+      FROM etfs e JOIN etf_history h ON h.etf_id = e.id
+      WHERE e.id IN (SELECT asset_id FROM tw_purchasable_classification WHERE asset_type='ETF' AND status='APPROVED') AND h.price IS NOT NULL
+      GROUP BY e.exchange
+    )
+    SELECT count(*)::int AS n FROM etfs e
+    JOIN peer_max pm ON pm.exchange = e.exchange
+    WHERE e.id IN (SELECT asset_id FROM tw_purchasable_classification WHERE asset_type='ETF' AND status='APPROVED')
+      AND e.is_active = true
+      AND (SELECT MAX(h.date) FROM etf_history h WHERE h.etf_id = e.id AND h.price IS NOT NULL) < pm.max_date - INTERVAL '5 days'
+  `);
+  const etfHistoryGapCount = etfHistoryGapRows[0]?.n ?? 0;
+  const ETF_HISTORY_GAP_MAX = 0;
+  const etfHistoryGapExceeded = etfHistoryGapCount > ETF_HISTORY_GAP_MAX;
+
   // 2026-10-22（使用者核准，第一條永久規則）: YAHOO_FUND_FULL_SWEEP（美國共同基金全量掃描，
   // 不屬於四類核心母體）已經永久停用——這裡做反向檢查，確保它沒有被意外重新啟動（例如有人
   // 不小心把vercel.json的cron entry加回去，或Vercel Workflow被重新start()）。過去24小時內
@@ -660,6 +682,7 @@ export async function GET(request: Request) {
     ...(etfDataSourceGap.anomaly ? [{ type: "ETF_DATA_SOURCE_GAP", category: SYSTEM_CATEGORY, newCodes: etfDataSourceGap.newCodes }] : []),
     ...(decommissionedJobReactivated ? [{ type: "OUT_OF_SCOPE_JOB_REACTIVATED", category: SYSTEM_CATEGORY, rows: decommissionedRows }] : []),
     ...(retailRestrictedDropped ? [{ type: "RETAIL_RESTRICTED_ETF_COUNT_DROPPED", category: SYSTEM_CATEGORY, currentCount: retailRestrictedCount, minBaseline: RETAIL_RESTRICTED_MIN_BASELINE }] : []),
+    ...(etfHistoryGapExceeded ? [{ type: "ETF_HISTORY_GAP", category: SYSTEM_CATEGORY, gapCount: etfHistoryGapCount }] : []),
     // 每檔都已經用上面的即時查證分好 SYSTEM / EXTERNAL_DELAY，這裡依分類拆成最多兩筆，而不是
     // 整批套同一個分類——有證據（checkedAt/officialLatestDate）支持才會出現在 EXTERNAL_DELAY 那筆。
     ...(activeEtfGapWithEvidence.some((e) => e.category === SYSTEM_CATEGORY)
