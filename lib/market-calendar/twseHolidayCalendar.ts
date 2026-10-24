@@ -49,3 +49,39 @@ export async function latestScheduledTradingDay(from = new Date()): Promise<Date
   }
   return cursor; // fallback -- should not happen inside 14 days
 }
+
+const pad2 = (n: number) => String(n).padStart(2, "0");
+const rocDateParam = (date: Date) => `${date.getUTCFullYear()}${pad2(date.getUTCMonth() + 1)}${pad2(date.getUTCDate())}`;
+const slashDateParam = (date: Date) => `${date.getUTCFullYear()}/${pad2(date.getUTCMonth() + 1)}/${pad2(date.getUTCDate())}`;
+
+/** Live check against TWSE's own date-explicit afterTrading endpoint: does TWSE itself have ANY
+ * closing-price data for this date right now? Distinguishes "the whole exchange didn't trade that
+ * day" (e.g. a same-week ad-hoc closure like a typhoon suspension -- not in the annual holiday
+ * calendar, so isTwseTradingDay() alone can't see it) from "it should have data and doesn't yet".
+ * 2026-10-24（使用者核准，VERIFIED live 用 10/23 驗證）: MI_INDEX 回報「很抱歉，沒有符合條件的
+ * 資料!」就是官方自己也沒有這天的資料，不是我們抓取方式的問題。 */
+export async function twseHasTradingDataForDate(date: Date): Promise<boolean | null> {
+  try {
+    const res = await fetch(`https://www.twse.com.tw/rwd/zh/afterTrading/MI_INDEX?date=${rocDateParam(date)}&response=json`, { headers: { "User-Agent": "Mozilla/5.0" }, signal: AbortSignal.timeout(15_000) });
+    if (!res.ok) return null;
+    const body = (await res.json()) as { stat?: string; tables?: Array<{ data?: unknown[] }> };
+    if (body.stat && body.stat.includes("沒有符合條件的資料")) return false;
+    if (body.stat && body.stat.includes("尖峰時間")) return null; // rate-limited, inconclusive -- do not treat as "no data"
+    return Boolean(body.tables?.some((t) => (t.data?.length ?? 0) > 0));
+  } catch {
+    return null;
+  }
+}
+
+/** Same check against TPEx's own date-explicit endpoint. */
+export async function tpexHasTradingDataForDate(date: Date): Promise<boolean | null> {
+  try {
+    const res = await fetch(`https://www.tpex.org.tw/www/zh-tw/afterTrading/otc?date=${slashDateParam(date)}&response=json`, { headers: { "User-Agent": "Mozilla/5.0" }, signal: AbortSignal.timeout(15_000) });
+    if (!res.ok) return null;
+    const body = (await res.json()) as { stat?: string; tables?: Array<{ data?: unknown[] }> };
+    if (body.stat !== "ok") return null;
+    return Boolean(body.tables?.some((t) => (t.data?.length ?? 0) > 0));
+  } catch {
+    return null;
+  }
+}

@@ -18,7 +18,7 @@ import { fetchYahooChartPeriod } from "@/lib/services/dataProviders/yahoo/yahooC
 import { CORE_COMMODITY_ROOTS } from "@/lib/cron/commodityUpdate";
 import { notifyAnomaly } from "@/lib/daily-health-report/notify";
 import { buildDailySummary } from "@/lib/daily-health-report/buildDailySummary";
-import { latestScheduledTradingDay } from "@/lib/market-calendar/twseHolidayCalendar";
+import { latestScheduledTradingDay, twseHasTradingDataForDate, tpexHasTradingDataForDate } from "@/lib/market-calendar/twseHolidayCalendar";
 import { fetchYahooTwPerformance } from "@/lib/yahoo/twPerformancePage";
 import { AllianzOfficialPcfAdapter } from "@/lib/etf-holdings-engine/adapters/allianz";
 import { FhtOfficialPcfAdapter } from "@/lib/etf-holdings-engine/adapters/fht";
@@ -272,11 +272,14 @@ export async function GET(request: Request) {
   const ETF_HISTORY_GAP_MAX = 0;
   const etfHistoryGapExceeded = etfHistoryGapCount > ETF_HISTORY_GAP_MAX;
 
-  // 2026-10-24（使用者核准）: 單靠上面「跟同交易所 peer-max 比」分不出「今天真的休市」跟「整個
-  // 交易所的資料都沒進來」——兩種情況看起來一樣（大家都停在同一天）。這裡另外對照證交所自己公布
-  // 的開休市日曆（lib/market-calendar/twseHolidayCalendar.ts），只有在日曆講「這是交易日」的情況
-  // 下，TWSE/TPEx 核心母體 ETF 全部停在同一個舊日期才算市場級異常。
+  // 2026-10-24（使用者核准，10/23 颱風臨時休市案例驗證過）: 單靠「跟同交易所 peer-max 比」或
+  // 單靠年度開休市日曆都分不出「真的休市（例如颱風臨時公告，不在年度日曆裡）」跟「整個交易所的
+  // 資料都沒進來」——兩種情況看起來一樣（大家都停在同一天）。這裡在日曆判斷「應該是交易日」之後，
+  // 再即時查一次證交所／櫃買中心自己當天的盤後資料（twseHasTradingDataForDate／
+  // tpexHasTradingDataForDate）：兩邊官方自己都沒有資料 → 判定為臨時休市，不算異常，只在報告裡
+  // 註記；只有官方有資料、我們卻沒有的時候，才列為 SYSTEM 異常。
   let twMarketWideGap: { scheduledTradingDay: string; actualLatestDate: string | null } | null = null;
+  let twAdHocClosureNote: string | null = null;
   try {
     const scheduledDay = await latestScheduledTradingDay();
     const twLatestRow = await prisma.$queryRawUnsafe<Array<{ max_date: Date | null }>>(`
@@ -287,7 +290,15 @@ export async function GET(request: Request) {
     `);
     const twLatestDate = twLatestRow[0]?.max_date ?? null;
     if (!twLatestDate || twLatestDate.getTime() < scheduledDay.getTime()) {
-      twMarketWideGap = { scheduledTradingDay: scheduledDay.toISOString().slice(0, 10), actualLatestDate: twLatestDate?.toISOString().slice(0, 10) ?? null };
+      const [twseHasData, tpexHasData] = await Promise.all([
+        twseHasTradingDataForDate(scheduledDay),
+        tpexHasTradingDataForDate(scheduledDay),
+      ]);
+      if (twseHasData === false && tpexHasData === false) {
+        twAdHocClosureNote = `${scheduledDay.toISOString().slice(0, 10)}：官方無交易資料，判定為臨時休市`;
+      } else {
+        twMarketWideGap = { scheduledTradingDay: scheduledDay.toISOString().slice(0, 10), actualLatestDate: twLatestDate?.toISOString().slice(0, 10) ?? null };
+      }
     }
   } catch {
     // 證交所日曆端點暫時打不到：不要讓整份健康報告掛掉，這一項檢查這次先跳過，不當成異常。
@@ -784,6 +795,7 @@ export async function GET(request: Request) {
       core_universe_etf_gap_evidence: coreUniverseEtfGapWithEvidence,
       moneydj_parse_failures: moneydjParseFailures,
       fund_currency_format_check: currencyFormatCheck, fund_currency_official_check: currencyOfficialCheck, new_fund_skipped_invalid_currency: newFundSkippedCurrency,
+      tw_exchange_ad_hoc_closure_note: twAdHocClosureNote,
       new_fund_create_failures: newFundCreateFailures, new_fund_isin_conflicts: newFundIsinConflicts,
       yahoo_fund_currency_unresolved_total: yahooFundCurrencyUnresolvedTotal, yahoo_fund_currency_unresolved_samples: yahooFundCurrencyUnresolvedSamples,
       anomaly_count: anomalies.length, system_anomaly_count: systemAnomalyCount, external_delay_anomaly_count: externalDelayAnomalyCount,
