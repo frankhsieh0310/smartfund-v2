@@ -25,7 +25,12 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const QA_EMAIL = "smartmatch-qa-20261021@example.com" as const;
-const LIFECYCLE_JOB_ID = "QA_TEST_ACCOUNT_LIFECYCLE" as const;
+// 2026-10-24（使用者明確核准，只限這一次）: 原本的 QA_TEST_ACCOUNT_LIFECYCLE 那筆紀錄已經
+// 正確終結在410（帳號已刪除，見上面條件3的註解），使用者這次要用同一支route的機制重建一次
+// 帳號做提醒／投資日曆測試。換一個新的job_id等於透過route自己的「沒有這個job_id的紀錄就正常
+// 建立」邏輯重建，不用直接動Production資料庫的任何一列——測完一樣要從App刪除帳號，410邏輯
+// 對這個新job_id一樣適用。
+const LIFECYCLE_JOB_ID = "QA_TEST_ACCOUNT_LIFECYCLE_R2" as const;
 
 function isAuthorized(request: Request): boolean {
   const secret = process.env.QA_TEST_ACCOUNT_SECRET;
