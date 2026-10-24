@@ -18,6 +18,7 @@
 import { prisma } from "@/lib/prisma";
 import { parseBondDisclosureName, normalizeIssuer } from "@/lib/data-platform/bondNameParsing";
 import { resolveBondIssuerAlias } from "@/lib/data-platform/bondIssuerAliases";
+import { resolveCountryAlias } from "@/lib/data-platform/countryAllocationAliases";
 import { getAccountForRequest } from "@/lib/auth/userService";
 
 const headers = { "Access-Control-Allow-Origin": "*", "Cache-Control": "no-store" };
@@ -103,10 +104,51 @@ async function handleIssuerQuery(request: Request, issuerQuery: string) {
   }, { headers });
 }
 
+// 2026-10-25（使用者核准定案）: 用國家配置比例排序基金（ETF沒有國家配置資料來源，見下方
+// scopeNote明確排除，不自行用holdings逐筆加總country算比例——那是自己計算，不是照抄來源）。
+// 只限四類核心母體APPROVED的基金，每檔基金取「最新一次」揭露的那筆，資料不足（查不到這個
+// 國家的揭露）的基金不列入、不估算。
+async function handleCountryQuery(request: Request, countryQuery: string) {
+  const account = await getAccountForRequest(request);
+  if (!account) return Response.json({ ok: false, error: "UNAUTHORIZED" }, { status: 401, headers });
+  if (account.accessTier === "free") {
+    return Response.json({ ok: false, error: "依國家查詢是付費功能，試用期或訂閱後才能使用。" }, { status: 403, headers });
+  }
+  const alias = resolveCountryAlias(countryQuery);
+  if (!alias) return Response.json({ ok: false, error: "COUNTRY_NOT_RECOGNIZED", hint: "目前只支援已核對過對應關係的國家名稱" }, { status: 404, headers });
+
+  const rows = await prisma.$queryRawUnsafe<Array<{ fund_id: string; code: string | null; name: string; raw_category: string; percentage: string; as_of_date: string }>>(
+    `WITH latest AS (
+       SELECT a.fund_id, a.raw_category, a.percentage, a.as_of_date,
+              ROW_NUMBER() OVER (PARTITION BY a.fund_id ORDER BY a.as_of_date DESC NULLS LAST) rn
+         FROM fund_source_allocation_observations a
+         JOIN tw_purchasable_classification c ON c.asset_type = 'FUND' AND c.status = 'APPROVED' AND c.asset_id = a.fund_id
+        WHERE a.domain = 'REGION_ALLOCATION' AND a.raw_category = ANY($1::text[]) AND a.percentage IS NOT NULL
+     )
+     SELECT l.fund_id, f.code, f.name, l.raw_category, l.percentage::text, l.as_of_date::text
+       FROM latest l JOIN funds f ON f.id = l.fund_id
+      WHERE l.rn = 1 AND f.is_active
+      ORDER BY l.percentage DESC`,
+    alias.rawCategories,
+  );
+
+  return Response.json({
+    ok: true,
+    query: { value: countryQuery, matchedBy: "COUNTRY", resolvedCountry: alias.displayNameZh },
+    scopeNote: "只有基金（MoneyDJ揭露的地區配置）有這項資料，ETF目前沒有可照抄的國家配置來源，不列入。依各基金公布的配置資料，部分基金只公布前十大持股或摘要配置，不是逐筆持股加總算出來的比例；每一列都標示資料日期。資料不足（沒有揭露過這個國家）的基金不列入，不自行估算。",
+    results: {
+      funds: rows.map((r) => ({ fundId: r.fund_id, code: r.code, name: r.name, rawCategory: r.raw_category, allocationPct: Number(r.percentage), asOfDate: r.as_of_date })),
+    },
+    generated_at: new Date().toISOString(),
+  }, { headers });
+}
+
 export async function GET(request: Request) {
   const q = new URL(request.url).searchParams;
   const issuerQuery = q.get("issuer");
   if (issuerQuery) return handleIssuerQuery(request, issuerQuery);
+  const countryQuery = q.get("country");
+  if (countryQuery) return handleCountryQuery(request, countryQuery);
 
   const raw = (q.get("cusip") ?? q.get("isin") ?? "").trim().toUpperCase();
   if (!raw) return Response.json({ ok: false, error: "MISSING_CUSIP_OR_ISIN" }, { status: 400, headers });
