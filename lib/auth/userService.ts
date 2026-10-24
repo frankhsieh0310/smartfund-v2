@@ -3,6 +3,7 @@ import type { User as SupabaseUser } from "@supabase/supabase-js";
 
 import { prisma } from "@/lib/prisma";
 import { getAuthenticatedSupabaseUser } from "@/lib/auth/supabaseAuth";
+import { getAccessTier, getTrialEndsAt, type AccessTier } from "@/lib/payments/plans";
 
 export class AuthenticatedUserConflictError extends Error {}
 
@@ -11,6 +12,8 @@ export type AccountResponse = {
   email: string;
   name: string | null;
   plan: PrismaUser["plan"];
+  accessTier: AccessTier;
+  trialEndsAt: string;
 };
 
 function displayNameFrom(identity: SupabaseUser) {
@@ -54,8 +57,9 @@ function toAccountResponse(user: PrismaUser): AccountResponse {
     id: user.id,
     email: user.email,
     name: user.displayName,
-    // TODO: Replace this temporary account-plan boundary with Entitlement Service output.
     plan: user.plan,
+    accessTier: getAccessTier(user),
+    trialEndsAt: getTrialEndsAt(user.createdAt).toISOString(),
   };
 }
 
