@@ -1,24 +1,10 @@
-// 新商品 -- 網站版原本不存在這個頁面。接上既有的 /api/mobile/new-listings（唯一資料來源是
-// product_listing_events，由 lib/cron/newListingDetection.ts 從證交所/櫃買中心官方公告偵測寫入，
-// 不是估計值）。沒有獨立的「網站版」API，但這支本來就是通用 JSON，不是只能給 App 用的格式。
+// 新商品 -- 網站版原本不存在這個頁面。資料來源是 lib/data-platform/web/newListingsService.ts
+// （唯一資料來源是 product_listing_events，由 lib/cron/newListingDetection.ts 從證交所/櫃買中心
+// 官方公告偵測寫入，不是估計值），跟 app/api/mobile/new-listings 共用同一支函式。這裡直接呼叫
+// 該函式，不透過 HTTP 自我呼叫自己的 API route -- VERIFIED live 在 Preview 部署上，伺服器端自我
+// 呼叫會被 Vercel 的 Deployment Protection 擋下（500），直接呼叫函式沒有這個問題。
 import Link from "next/link";
-
-type ListingEvent = { code: string; name: string; listed_date: string | null; source: string; source_url: string | null; detail_available: boolean; product_id: string | null };
-type NewListingsResponse = { upcoming: ListingEvent[]; recent: ListingEvent[]; window_days: number; generated_at: string };
-
-async function getNewListings(): Promise<NewListingsResponse | null> {
-  try {
-    // Server component fetch needs an absolute URL. VERCEL_URL is set by Vercel to this exact
-    // deployment's own hostname (so a Preview build calls itself, not production); falls back to
-    // the production domain only for local dev without it set.
-    const base = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "https://www.smartmatchpilot.com";
-    const res = await fetch(`${base}/api/mobile/new-listings?days=30`, { cache: "no-store" });
-    if (!res.ok) return null;
-    return res.json();
-  } catch {
-    return null;
-  }
-}
+import { getNewListingEvents, type ListingEvent } from "@/lib/data-platform/web/newListingsService";
 
 function EventRow({ event }: { event: ListingEvent }) {
   const content = (
@@ -42,7 +28,7 @@ function EventRow({ event }: { event: ListingEvent }) {
 }
 
 export default async function NewListingsPage() {
-  const data = await getNewListings();
+  const data = await getNewListingEvents(30).catch(() => null);
 
   return (
     <main className="min-h-screen bg-[#07111f] text-white">

@@ -5,43 +5,18 @@
 //   - recent: NEW_LISTING events listed within the last `days` (default 30, query param ?days=N).
 // product_id is null until the brand-provider auto-match resolves it (see newListingDetection.ts);
 // such rows link to the official source only, not to a product detail page, until resolved.
-import { prisma } from "@/lib/prisma";
+//
+// 2026-10-24: query logic moved to lib/data-platform/web/newListingsService.ts so
+// app/new-listings/page.tsx can call it directly instead of HTTP-fetching this route.
+import { getNewListingEvents } from "@/lib/data-platform/web/newListingsService";
 
 const headers = { "Access-Control-Allow-Origin": "*", "Cache-Control": "no-store" };
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
-  const days = Math.max(1, Math.min(90, Number(url.searchParams.get("days")) || 30));
-  const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-  const now = new Date();
-
-  const events = await prisma.$queryRawUnsafe<
-    { code: string; name: string; milestone_date: Date | null; source: string; source_url: string | null; product_id: string | null }[]
-  >(
-    `SELECT code, name, milestone_date, source, source_url, product_id
-     FROM product_listing_events
-     WHERE event_type = 'NEW_LISTING' AND (milestone_date IS NULL OR milestone_date >= $1)
-     ORDER BY milestone_date DESC NULLS FIRST`,
-    cutoff,
-  );
-
-  const upcoming = events.filter((e) => e.milestone_date && e.milestone_date > now);
-  const recent = events.filter((e) => !e.milestone_date || e.milestone_date <= now);
-
-  const shape = (e: (typeof events)[number]) => ({
-    code: e.code,
-    name: e.name,
-    listed_date: e.milestone_date ? e.milestone_date.toISOString().slice(0, 10) : null,
-    source: e.source,
-    source_url: e.source_url,
-    detail_available: Boolean(e.product_id),
-    product_id: e.product_id,
-  });
-
-  return Response.json(
-    { upcoming: upcoming.map(shape), recent: recent.map(shape), window_days: days, generated_at: new Date().toISOString() },
-    { headers },
-  );
+  const days = Number(url.searchParams.get("days")) || 30;
+  const data = await getNewListingEvents(days);
+  return Response.json(data, { headers });
 }
 
 export async function OPTIONS() {
