@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCoreUniverseEtfIds } from "@/lib/tw-purchasable/coreUniverseFilter";
 import { freshnessStatus as computeFreshnessStatus } from "@/lib/data-platform/web/freshness";
+import { computeTechnicalSeries, type PricePoint } from "@/lib/cron/stockTechnicalDaily";
 import { UniversalAssetDetail, type DetailData, type HistoryPoint, type Metric } from "@/components/asset/UniversalAssetDetail";
 
 const fmt = (value: unknown, suffix = "") => value == null ? "—" : `${Number(value).toLocaleString(undefined, { maximumFractionDigits: 4 })}${suffix}`;
@@ -29,7 +30,24 @@ export default async function EtfDetailPage({ params }: { params: Promise<{ code
     else if (etf) {
       const latestRow = etf.history[0];
       const previousRow = etf.history[1];
-      const allHistory: HistoryPoint[] = etf.history.toReversed().map((row) => ({ date: row.date.toISOString().slice(0, 10), value: Number(row.price) })).filter((row) => Number.isFinite(row.value));
+      const ascHistory = etf.history.toReversed();
+      // 技術分析（2026-10-24 修正）: etfs 沒有 StockTechnical 那種每日預先算好的指標表，之前這裡
+      // 只傳 {date,value} 給圖表元件，SMA/EMA/RSI/MACD/布林通道/KD/ATR 全部沒東西可畫（獨立驗收
+      // 代理發現：按鈕能選取但完全沒畫出任何線）。etf_history 本來就有真實 open/high/low/close/
+      // volume（VERIFIED SVIX 近三日資料），所以用既有的 computeTechnicalSeries()（跟
+      // stock_technical 排程算法完全相同的公式，lib/cron/stockTechnicalDaily.ts）就地計算，不需要
+      // 新建資料表或排程——CLAUDE.md 明確允許「技術指標本身的計算公式」這個例外。
+      const pricePoints: PricePoint[] = ascHistory.map((row) => ({ date: row.date, high: row.high != null ? Number(row.high) : null, low: row.low != null ? Number(row.low) : null, close: row.close != null ? Number(row.close) : Number(row.price) })).filter((p) => Number.isFinite(p.close));
+      const technicalByDate = new Map(computeTechnicalSeries(pricePoints).map((row) => [row.date, row]));
+      const allHistory: HistoryPoint[] = ascHistory.map((row) => {
+        const dateKey = row.date.toISOString().slice(0, 10);
+        const t = technicalByDate.get(dateKey);
+        return {
+          date: dateKey, value: Number(row.price),
+          open: row.open != null ? Number(row.open) : null, high: row.high != null ? Number(row.high) : null, low: row.low != null ? Number(row.low) : null, close: row.close != null ? Number(row.close) : null, volume: row.volume != null ? Number(row.volume) : null,
+          ma20: t?.ma20 ?? null, ema12: t?.ema12 ?? null, macd: t?.macd ?? null, macdSignal: t?.macdSignal ?? null, rsi14: t?.rsi14 ?? null, kdK: t?.kdK ?? null, kdD: t?.kdD ?? null, atr14: t?.atr14 ?? null, bollingerUpper: t?.bollingerUpper ?? null, bollingerMiddle: t?.bollingerMiddle ?? null, bollingerLower: t?.bollingerLower ?? null,
+        };
+      }).filter((row) => Number.isFinite(row.value));
       const latest = latestRow?.price != null ? Number(latestRow.price) : (etf.latestPrice == null ? null : Number(etf.latestPrice));
       const previous = previousRow?.price != null ? Number(previousRow.price) : undefined;
       const change = latest != null && Number.isFinite(latest) && previous != null ? latest - previous : null;
