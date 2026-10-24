@@ -26,7 +26,7 @@ type HomeMarketCard = {
   asOfDate: string | null;
 };
 
-type HomeMarketOverview = { tabs: Record<"stocks" | "bonds" | "fx" | "commodities" | "crypto", HomeMarketCard[]> };
+type HomeMarketOverview = { tabs: Record<"stocks" | "bonds" | "fx" | "commodities", HomeMarketCard[]> };
 
 function fmtValue(v: number | null, unit: string | null): string {
   if (v === null) return "—";
@@ -125,7 +125,7 @@ export function MarketOverviewSection() {
   if (error) return null; // real-data-only section: hide rather than show nothing useful
   if (!data) return null;
 
-  const { stocks, bonds, commodities, crypto } = data.tabs;
+  const { stocks, bonds, commodities } = data.tabs;
 
   return (
     <section className="relative z-10 py-20" style={{ backgroundColor: "#0a1628" }}>
@@ -142,7 +142,6 @@ export function MarketOverviewSection() {
         <GroupRow emoji="📈" label="股市指數" sublabel="STOCK INDICES" items={stocks} />
         <GroupRow emoji="📊" label="公債殖利率" sublabel="BOND YIELDS" items={bonds} />
         <GroupRow emoji="🥇" label="大宗商品" sublabel="COMMODITIES" items={commodities} />
-        <GroupRow emoji="₿" label="加密貨幣" sublabel="CRYPTO" items={crypto} />
       </div>
     </section>
   );
