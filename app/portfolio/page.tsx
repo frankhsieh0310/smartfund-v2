@@ -4,10 +4,13 @@ import Link from "next/link";
 import { AuthButton } from "@/components/auth/AuthButton";
 import { useEffect, useRef, useState } from "react";
 
+// 2026-10-24（使用者規則，第一條）: 核心母體只有「現行掛牌台股ETF、SITCA國內基金、TDCC境外
+// 基金、美股ETF」四類——網站上能直接挑選的只有 ETF 與基金兩種產品。股票/債券/指數/外匯/商品是
+// 這四類需要的市場資料，不是本站販售的商品；REITs/加密貨幣/期貨完全不在範圍內。之前這裡把這些
+// 全部列成「投資商品」選單項目（即使用灰字停用樣式），獨立驗收代理指出這本身就違反「只顯示四類
+// 核心母體」規則——使用者看到選單會誤以為這是平台涵蓋的商品類型。已移除，只留真的能挑選的兩種。
 const investmentItems = [
-  { label: "股票" }, { label: "ETF", href: "/etf" }, { label: "基金", href: "/funds" },
-  { label: "債券" }, { label: "REITs" }, { label: "指數" }, { label: "外匯" },
-  { label: "商品" }, { label: "加密貨幣" }, { label: "期貨" },
+  { label: "ETF", href: "/etf" }, { label: "基金", href: "/funds" },
 ];
 const researchItems = [
   { label: "SmartMatch", href: "/quiz" }, { label: "篩選器", href: "/etf" },

@@ -5,10 +5,10 @@ import { AuthButton } from "@/components/auth/AuthButton";
 import { useEffect, useRef, useState } from "react";
 
 
+// 2026-10-24（使用者規則，第一條）: 核心母體只有「現行掛牌台股ETF、SITCA國內基金、TDCC境外
+// 基金、美股ETF」四類，網站上能直接挑選的只有 ETF 與基金——同一個修正見 app/portfolio/page.tsx。
 const investmentItems = [
-  { label: "股票" }, { label: "ETF", href: "/etf" }, { label: "基金", href: "/funds" },
-  { label: "債券" }, { label: "REITs" }, { label: "指數" }, { label: "外匯" },
-  { label: "商品" }, { label: "加密貨幣" }, { label: "期貨" },
+  { label: "ETF", href: "/etf" }, { label: "基金", href: "/funds" },
 ];
 const researchItems = [
   { label: "SmartMatch", href: "/quiz" }, { label: "篩選器", href: "/etf" },
