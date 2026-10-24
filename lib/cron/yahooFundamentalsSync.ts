@@ -75,9 +75,14 @@ export async function syncOneStockFundamentals(stock: StaleFundamentalStock, wri
   // Yahoo了」的標記本身，不是某個欄位的值；findStaleFundamentalStocks跟screener的PE備援都靠
   // 這筆標記判斷「Yahoo有沒有被問過」，不是看特定欄位有沒有值。
   const allRows = [...rows, { key: "_synced", value: 1 }];
+  // 2026-10-24（這一版第一次正式執行就FAILED，查production_scheduler_runs的error欄位抓到的
+  // 根因，使用者核准修正）: updated_at在schema.prisma標@updatedAt，但那只在Prisma Client的
+  // 一般create/update呼叫才會自動帶，這裡是$executeRawUnsafe直接寫SQL，繞過了那層自動填值，
+  // DB本身updated_at是NOT NULL、沒有DEFAULT，INSERT沒給值就直接違反NOT NULL整個transaction
+  // 失敗（attempted=1, failed=1, 0筆真的寫進去）。INSERT跟ON CONFLICT UPDATE都要補上。
   await prisma.$executeRawUnsafe(
-    `INSERT INTO stock_financial_facts (id, stock_id, metric, period_end, value, unit, currency, source, source_fact_key, source_document_url)
-     SELECT gen_random_uuid()::text, $1, value->>'metric', $2::date, (value->>'value')::numeric, 'RATIO', $3, 'YAHOO_QUOTE_SUMMARY', value->>'sourceFactKey', $4
+    `INSERT INTO stock_financial_facts (id, stock_id, metric, period_end, value, unit, currency, source, source_fact_key, source_document_url, imported_at, updated_at)
+     SELECT gen_random_uuid()::text, $1, value->>'metric', $2::date, (value->>'value')::numeric, 'RATIO', $3, 'YAHOO_QUOTE_SUMMARY', value->>'sourceFactKey', $4, now(), now()
        FROM jsonb_array_elements($5::jsonb) value
      ON CONFLICT (stock_id, metric, period_end, source, source_fact_key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`,
     stock.id, today, stock.currency, qs.url,
