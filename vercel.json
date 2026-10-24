@@ -261,6 +261,10 @@
       "schedule": "*/10 * * * *"
     },
     {
+      "path": "/api/cron/cloud-global-stock-price-sync",
+      "schedule": "*/20 * * * *"
+    },
+    {
       "path": "/api/cron/cloud-etf-price",
       "schedule": "17 * * * *"
     },

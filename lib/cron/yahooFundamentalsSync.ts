@@ -6,6 +6,7 @@
 // （不一致時列為異常，不是拿來自己選一個當正確答案），不是這次的主要讀取來源。
 import { prisma } from "@/lib/prisma";
 import { fetchQuoteSummary, rawNum, newRateStats, type RateStats } from "@/lib/yahoo/productSession";
+import { findCoreUniverseHeldStockIds } from "@/lib/cron/coreUniverseHeldStocks";
 
 const MODULES = ["summaryDetail", "financialData", "defaultKeyStatistics"];
 
@@ -46,34 +47,10 @@ const SYNCED_MARKER_METRIC = `${METRIC_PREFIX}_synced`;
 // market "TW"/"US"兩種——其他市場的基本面同步完全是浪費額度，而且因為ticker排序，TW要等
 // 掃完前6791檔、US要等掃完前33735檔才會輪到，等於優先權完全錯置。先只掃TW+US。
 //
-// 2026-10-24（使用者核准擴充，修正資料來源）: 完成TW/US後，擴充到「四類核心母體的ETF／基金
-// 實際有持有」的其他市場股票——不是整個該國股票池。
-// - ETF這條：etf_holdings本身有ticker+country，直接對stocks表match（etf_holdings沒有
-//   stock_id外鍵，用ticker+country是能確定的對應）。
-// - 基金這條：原本想走canonical_issuer_stock_links的ISIN橋接表，查到完全是空的（0筆）—— 但
-//   那條路本身就是錯的，fund_holdings/FundHoldingCanonical這張表全庫只有10筆，不是基金持股
-//   真正的資料來源。真正的資料在holdings表（asset_type='FUND'，28.9萬筆）+已經建好、
-//   選股反查(/api/mobile/reverse-holdings)本來就在用的reverse_current_positions／
-//   reverse_current_securities投影表——這張投影表的product_key對FUND是"FUND:<fund_id>"，
-//   可以直接parse出fund_id跟tw_purchasable_classification對應，不需要ISIN。改用這個已驗證
-//   可用的來源，不再碰fund_holdings/ISIN橋接。
-async function findCoreUniverseHeldStockIds(): Promise<string[]> {
-  const rows = await prisma.$queryRawUnsafe<{ id: string }[]>(
-    `SELECT DISTINCT s.id
-       FROM stocks s
-       JOIN etf_holdings eh ON eh.ticker = s.ticker AND (eh.country = s.country OR eh.country IS NULL)
-       JOIN tw_purchasable_classification c ON c.asset_type = 'ETF' AND c.status = 'APPROVED' AND c.asset_id = eh.etf_id
-      WHERE s.is_active AND s.country NOT IN ('TW', 'US')
-     UNION
-     SELECT DISTINCT s.id
-       FROM stocks s
-       JOIN reverse_current_positions p ON p.stock_id = s.id AND p.type = '基金'
-       JOIN tw_purchasable_classification c ON c.asset_type = 'FUND' AND c.status = 'APPROVED' AND c.asset_id = split_part(p.product_key, ':', 2)
-      WHERE s.is_active AND s.country NOT IN ('TW', 'US')`,
-  );
-  return rows.map((r) => r.id);
-}
-
+// 2026-10-24（使用者核准擴充）: 完成TW/US後，擴充到「四類核心母體的ETF／基金實際有持有」的
+// 其他市場股票（findCoreUniverseHeldStockIds，已抽成共用模組lib/cron/coreUniverseHeldStocks.ts，
+// 給全球股票最新價格同步cron共用，避免兩邊各寫一份drift）。
+//
 // 「先台股、美股；完成後擴充」(使用者原話) 的排序保證：只要今天TW/US還有任何一檔沒同步過，
 // 這一輪就只掃TW/US，不讓擴充市場搶額度；TW/US今天全部同步完才會把擴充股票清單也納入candidate。
 async function hasStaleTwUsToday(): Promise<boolean> {
