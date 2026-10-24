@@ -85,3 +85,32 @@ export async function tpexHasTradingDataForDate(date: Date): Promise<boolean | n
     return null;
   }
 }
+
+// 2026-10-24（使用者核准定案，取代所有「星期幾／交易日曆」猜測新鮮度的做法，見 CLAUDE.md
+// 「資料新鮮度判斷」）: 新鮮度不跟「今天」或「推算出的應該交易日」比較，跟證交所／櫃買中心
+// 官方來源「實際最新一筆有資料的日期」比較——官方自己都還沒有更新，就不算我們過期。這支函式
+// 往回找官方最新一天「真的有資料」的日期（TWSE 或 TPEx 任一邊確認即可），不做星期幾假設
+// （週末本來就查得到「沒有資料」，live check 本身就會正確處理，不需要額外猜）。用短 TTL
+// 記憶體快取，避免同一個 process 在短時間內對 TWSE/TPEx 重複打一樣的查詢。
+let latestTradingDateCache: { date: string; fetchedAt: number } | null = null;
+const LATEST_TRADING_DATE_CACHE_TTL_MS = 10 * 60 * 1000; // 10 分鐘
+
+/** The most recent date TWSE or TPEx actually confirms (live) having trading data for, walking
+ * back from `from` up to 10 days. Returns null if inconclusive within that window (e.g. every
+ * check rate-limited) -- callers must treat null as "unknown", never as "stale". */
+export async function getLatestConfirmedTwTradingDate(from = new Date()): Promise<string | null> {
+  if (latestTradingDateCache && Date.now() - latestTradingDateCache.fetchedAt < LATEST_TRADING_DATE_CACHE_TTL_MS) {
+    return latestTradingDateCache.date;
+  }
+  const cursor = new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth(), from.getUTCDate()));
+  for (let i = 0; i < 10; i++) {
+    const [twse, tpex] = await Promise.all([twseHasTradingDataForDate(cursor), tpexHasTradingDataForDate(cursor)]);
+    if (twse === true || tpex === true) {
+      const date = isoDate(cursor);
+      latestTradingDateCache = { date, fetchedAt: Date.now() };
+      return date;
+    }
+    cursor.setUTCDate(cursor.getUTCDate() - 1);
+  }
+  return null; // inconclusive within the window -- do not guess
+}

@@ -1,6 +1,7 @@
 import { prisma } from "../../prisma.ts";
 import { dateKey, latestClosedTradingDate, loadExchangeCalendarRegistry } from "../../../scripts/data/daily/exchange-calendar.ts";
 import { freshnessStatus } from "./freshness.ts";
+import { getLatestConfirmedTwTradingDate } from "../../market-calendar/twseHolidayCalendar.ts";
 
 export const PUBLIC_HISTORY_MIN_ROWS=20;
 export type PublicReadyState={currentReady:boolean;historyReady:boolean;detailReady:boolean;publicReady:boolean;historyRows:number;earliestDate:string|null;latestDate:string|null;freshness:string;reason:string};
@@ -34,7 +35,16 @@ export async function isPublicReadyAsset(assetType:string,identifier:string){
     if(!row)return false;
     const approved=await prisma.$queryRawUnsafe<{n:number}[]>(`SELECT count(*)::int n FROM tw_purchasable_classification WHERE asset_type='ETF' AND asset_id=$1 AND status='APPROVED'`,row.id);
     if(approved[0].n===0)return false;
-    return Boolean((row.latestPrice!=null||row.latestNav!=null)&&row.history.length>=PUBLIC_HISTORY_MIN_ROWS&&freshnessStatus(row.history[0]?.date,"MARKET_DAY")==="CURRENT");
+    if(!((row.latestPrice!=null||row.latestNav!=null)&&row.history.length>=PUBLIC_HISTORY_MIN_ROWS))return false;
+    // 2026-10-24（使用者核准定案，見CLAUDE.md「資料新鮮度判斷」）: 不跟「今天」或猜出來的
+    // 應該交易日比較——跟TWSE/TPEx官方live confirm的「實際最新有資料的日期」比較。官方自己
+    // 都還沒更新（例如颱風臨時休市），我們現有的資料就還算最新，不算過期。查不到（inconclusive）
+    // 時不猜，直接當作目前這筆資料視為ready，避免live check暫時失敗就誤擋掉整個台股ETF清單。
+    const latestDate=row.history[0]?.date;
+    if(!latestDate)return false;
+    const confirmed=await getLatestConfirmedTwTradingDate();
+    if(confirmed===null)return true;
+    return latestDate.toISOString().slice(0,10)>=confirmed;
   }
   if(type==="FUND"){
     // 同上，補上FUND分支的APPROVED檢查——這是範圍外Yahoo美國共同基金最可能被繞過搜尋、直接

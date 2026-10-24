@@ -1,7 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "../../prisma.ts";
 import { WebDataError } from "./errors.ts";
-import { freshnessStatus } from "./freshness.ts";
+import { freshnessStatus, twAwareFreshnessStatus } from "./freshness.ts";
 import { normalizePagination, paginationMeta } from "./pagination.ts";
 import { buildProvenance } from "./provenance.ts";
 import { isoOrNull, numberOrNull, type CanonicalIdentity, type HistoryQuery, type ListQuery, type ServiceResponse, type SummaryMetrics } from "./types.ts";
@@ -136,12 +136,14 @@ export async function getEtfList(query: EtfListQuery = {}): Promise<ServiceRespo
   const sources = [...new Set(rows.map((row) => row.dataSource ?? row.dataProvider ?? row.provider).filter(Boolean))];
   const source = sources.length === 1 ? sources[0]! : sources.length ? "MULTIPLE_CANONICAL_SOURCES" : null;
   const provenance = buildProvenance({ source, asOfDate: latest, lastUpdated: updated });
-  return { data: rowsWithExact.map((row) => {
+  const items = await Promise.all(rowsWithExact.map(async (row) => {
     const assetMetric = metricByEtf.get(row.id);
     const flow = flowByEtf.get(row.id);
     const ready = readyByEtf.get(row.id);
-    return { identity: etfIdentity(row), issuer: row.provider || null, category: row.category, price: numberOrNull(row.latestPrice), metrics: etfMetrics(row), nav: numberOrNull(assetMetric?.nav ?? row.latestNav), aum: numberOrNull(assetMetric?.aum ?? row.aum), sharesOutstanding: numberOrNull(assetMetric?.shares_outstanding), premiumDiscount: numberOrNull(row.premium), holdingsCount: row._count.holdings, flowCoverage: { status: flow ? "PARTIAL_CURRENT" : "UNAVAILABLE", asOfDate: isoOrNull(flow?.observation_date) }, freshnessStatus: freshnessStatus(ready?.latest_date, "MARKET_DAY"), publicReady: (row.latestPrice != null || row.latestNav != null) && ready?.history_ready === true && freshnessStatus(ready.latest_date, "MARKET_DAY") === "CURRENT", source: row.dataSource ?? row.dataProvider ?? row.provider };
-  }), meta: { asOfDate: provenance.asOfDate, lastUpdated: provenance.lastUpdated, freshnessStatus: freshnessStatus(latest, "MARKET_DAY"), source, provenance, coverageStatus: "PARTIAL_CURRENT" }, pagination: paginationMeta(page, pageSize, total), error: null };
+    const rowFreshness = await twAwareFreshnessStatus(row.exchange, ready?.latest_date, "MARKET_DAY");
+    return { identity: etfIdentity(row), issuer: row.provider || null, category: row.category, price: numberOrNull(row.latestPrice), metrics: etfMetrics(row), nav: numberOrNull(assetMetric?.nav ?? row.latestNav), aum: numberOrNull(assetMetric?.aum ?? row.aum), sharesOutstanding: numberOrNull(assetMetric?.shares_outstanding), premiumDiscount: numberOrNull(row.premium), holdingsCount: row._count.holdings, flowCoverage: { status: (flow ? "PARTIAL_CURRENT" : "UNAVAILABLE") as "PARTIAL_CURRENT" | "UNAVAILABLE", asOfDate: isoOrNull(flow?.observation_date) }, freshnessStatus: rowFreshness, publicReady: (row.latestPrice != null || row.latestNav != null) && ready?.history_ready === true && rowFreshness === "CURRENT", source: row.dataSource ?? row.dataProvider ?? row.provider };
+  }));
+  return { data: items, meta: { asOfDate: provenance.asOfDate, lastUpdated: provenance.lastUpdated, freshnessStatus: freshnessStatus(latest, "MARKET_DAY"), source, provenance, coverageStatus: "PARTIAL_CURRENT" }, pagination: paginationMeta(page, pageSize, total), error: null };
 }
 
 export async function getEtfFilterOptions(): Promise<{ exchanges: string[]; currencies: string[]; issuers: string[]; categories: string[] }> {
@@ -191,7 +193,8 @@ export async function getEtfDetail(code: string): Promise<ServiceResponse<{ iden
   const asOf = latest?.date ?? row.priceUpdatedAt;
   const source = row.dataSource ?? row.dataProvider ?? row.provider;
   const provenance = buildProvenance({ source, sourceRecordId: row.isin, asOfDate: asOf, lastUpdated: row.updatedAt });
-  return { data: { identity: etfIdentity(row), metrics: { ...etfMetrics(row), priceOrNav: latestValue, change, changePercent, asOfDate: isoOrNull(asOf) }, nav: numberOrNull(latest?.nav ?? row.latestNav), aum: numberOrNull(latest?.aum ?? row.aum), premiumDiscount: numberOrNull(latest?.premium ?? row.premium), expenseRatio: numberOrNull(row.expenseRatio), holdingsCount: holdings.length, holdingsAsOfDate: isoOrNull(latestHolding?.asOfDate), topHoldings: holdings.slice(0, 10).map((holding) => ({ name: holding.holdingName, symbol: holding.ticker, weight: numberOrNull(holding.weight) })), assetAllocation: allocation((holding) => holding.assetType), sectorAllocation: allocation((holding) => holding.sector), category: row.category }, meta: { asOfDate: provenance.asOfDate, lastUpdated: provenance.lastUpdated, freshnessStatus: freshnessStatus(asOf, "MARKET_DAY"), source, provenance, coverageStatus: "FULL" }, pagination: null, error: null };
+  const detailFreshness = await twAwareFreshnessStatus(row.exchange, asOf, "MARKET_DAY");
+  return { data: { identity: etfIdentity(row), metrics: { ...etfMetrics(row), priceOrNav: latestValue, change, changePercent, asOfDate: isoOrNull(asOf) }, nav: numberOrNull(latest?.nav ?? row.latestNav), aum: numberOrNull(latest?.aum ?? row.aum), premiumDiscount: numberOrNull(latest?.premium ?? row.premium), expenseRatio: numberOrNull(row.expenseRatio), holdingsCount: holdings.length, holdingsAsOfDate: isoOrNull(latestHolding?.asOfDate), topHoldings: holdings.slice(0, 10).map((holding) => ({ name: holding.holdingName, symbol: holding.ticker, weight: numberOrNull(holding.weight) })), assetAllocation: allocation((holding) => holding.assetType), sectorAllocation: allocation((holding) => holding.sector), category: row.category }, meta: { asOfDate: provenance.asOfDate, lastUpdated: provenance.lastUpdated, freshnessStatus: detailFreshness, source, provenance, coverageStatus: "FULL" }, pagination: null, error: null };
 }
 
 export async function getEtfHistory(code: string, query: HistoryQuery = {}): Promise<ServiceResponse<Array<{ date: string; price: number | null; nav: number | null; premiumDiscount: number | null; volume: number | null; aum: number | null; open: number | null; high: number | null; low: number | null; close: number | null; adjustedClose: number | null }>>> {
