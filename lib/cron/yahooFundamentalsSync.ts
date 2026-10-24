@@ -41,11 +41,15 @@ const SYNCED_MARKER_METRIC = `${METRIC_PREFIX}_synced`;
 
 /** Stocks Yahoo hasn't been successfully checked for today, oldest/never-synced first (ticker
  * order gives a stable, resumable cursor across runs within the same day). */
+// 2026-10-24（使用者核准修正，範圍缺陷）: 原本沒有country篩選，掃描全部81,766檔全球活躍股票
+// （DE/IT/FR/HK/CN/GB/CA/JP/AU/KR/NL/SE/SG...），但選股反查(stockScreener.ts)只服務
+// market "TW"/"US"兩種——其他市場的基本面同步完全是浪費額度，而且因為ticker排序，TW要等
+// 掃完前6791檔、US要等掃完前33735檔才會輪到，等於優先權完全錯置。改成只掃TW+US。
 export async function findStaleFundamentalStocks(limit: number, afterTicker: string | null): Promise<StaleFundamentalStock[]> {
   return prisma.$queryRawUnsafe<StaleFundamentalStock[]>(
     `SELECT s.id, s.ticker, s.yahoo_symbol AS "yahooSymbol", s.currency
        FROM stocks s
-      WHERE s.is_active AND s.ticker > $2
+      WHERE s.is_active AND s.country IN ('TW', 'US') AND s.ticker > $2
         AND NOT EXISTS (
           SELECT 1 FROM stock_financial_facts f
            WHERE f.stock_id = s.id AND f.metric = $3 AND f.period_end = CURRENT_DATE
