@@ -53,8 +53,32 @@ function buildWhere(conditions: ScreenerCondition[]): string {
   return clauses.length ? `AND ${clauses.join(" AND ")}` : "";
 }
 
+// 2026-10-24（獨立代理驗收發現，使用者核准修正）: PE的官方來源備援只能在「Yahoo完全沒查過這檔
+// 股票」時使用——一旦Yahoo查過（不管Yahoo有沒有實際給出PE值），就要照Yahoo的結果為準，包含
+// Yahoo判定「沒有PE」的情況（例如虧損股，Yahoo自己的頁面也不顯示PE）。原本的COALESCE邏輯分不出
+// 「Yahoo還沒查」跟「Yahoo查過、真的沒有」兩種情況——兩者都是「沒有yahoo_fundamentals.pe這筆
+// 資料」，會被誤接去讀舊的官方備援，等於虧損股被塞進一個Yahoo本來就不會顯示的PE數字，違反
+// 「Yahoo沒有的數字顯示無資料，不准補算」。用yahoo_fundamentals._synced這個同步完成標記
+// （lib/cron/yahooFundamentalsSync.ts每次成功打完Yahoo都會寫，不管九個欄位有沒有值）分辨兩者。
+function buildFundamentalJoins(neededFields: Set<FundamentalField>): string {
+  return [...neededFields].map((f) => {
+    if (f === "pe") {
+      return `LEFT JOIN LATERAL (
+        SELECT CASE
+          WHEN EXISTS (SELECT 1 FROM stock_financial_facts WHERE stock_id = s.id AND metric = 'yahoo_fundamentals._synced')
+            THEN (SELECT value FROM stock_financial_facts WHERE stock_id = s.id AND metric = 'yahoo_fundamentals.pe' ORDER BY period_end DESC LIMIT 1)
+          ELSE (SELECT value FROM stock_financial_facts WHERE stock_id = s.id AND metric = ANY($pe_fallback::text[]) ORDER BY period_end DESC LIMIT 1)
+        END AS value
+      ) f_pe ON true`;
+    }
+    return `LEFT JOIN LATERAL (
+      SELECT value FROM stock_financial_facts WHERE stock_id = s.id AND metric = 'yahoo_fundamentals.${f}' ORDER BY period_end DESC LIMIT 1
+    ) f_${f} ON true`;
+  }).join("\n");
+}
+
 export type ScreenerRow = {
-  ticker: string; name: string; country: string; asOfDate: string;
+  ticker: string; yahooSymbol: string; name: string; country: string; technicalAsOfDate: string;
   rsi14: number | null; macdHistogram: number | null; ma20: number | null; ma60: number | null; latestPrice: number | null;
 } & Record<FundamentalField, number | null>;
 
@@ -64,19 +88,7 @@ export async function runStockScreenerQuery(conditions: ScreenerCondition[], mar
   const neededFields = new Set(conditions.filter((c): c is Extract<ScreenerCondition, { field: FundamentalField }> => isFundamentalField(c.field)).map((c) => c.field));
 
   const fundamentalSelect = [...neededFields].map((f) => `f_${f}.value::text AS "${f}"`).join(", ");
-  const fundamentalJoins = [...neededFields].map((f) => {
-    if (f === "pe") {
-      return `LEFT JOIN LATERAL (
-        SELECT COALESCE(
-          (SELECT value FROM stock_financial_facts WHERE stock_id = s.id AND metric = 'yahoo_fundamentals.pe' ORDER BY period_end DESC LIMIT 1),
-          (SELECT value FROM stock_financial_facts WHERE stock_id = s.id AND metric = ANY($pe_fallback::text[]) ORDER BY period_end DESC LIMIT 1)
-        ) AS value
-      ) f_pe ON true`;
-    }
-    return `LEFT JOIN LATERAL (
-      SELECT value FROM stock_financial_facts WHERE stock_id = s.id AND metric = 'yahoo_fundamentals.${f}' ORDER BY period_end DESC LIMIT 1
-    ) f_${f} ON true`;
-  }).join("\n");
+  const fundamentalJoins = buildFundamentalJoins(neededFields);
 
   const needsPeFallback = neededFields.has("pe");
   const fromClause = `FROM stocks s
@@ -85,7 +97,7 @@ export async function runStockScreenerQuery(conditions: ScreenerCondition[], mar
        ) t
        ${fundamentalJoins}
       WHERE s.is_active ${marketClause} ${where}`;
-  const sql = `SELECT s.ticker, s.company_name, s.country, t.date::text, t.rsi14::text, t.macd_histogram::text, t.ma20::text, t.ma60::text, s.latest_close::text AS "latestPrice"
+  const sql = `SELECT s.ticker, s.yahoo_symbol AS "yahooSymbol", s.company_name, s.country, t.date::text, t.rsi14::text, t.macd_histogram::text, t.ma20::text, t.ma60::text, s.latest_close::text AS "latestPrice"
             ${fundamentalSelect ? `, ${fundamentalSelect}` : ""}
        ${fromClause}
       ORDER BY t.date DESC
@@ -94,7 +106,11 @@ export async function runStockScreenerQuery(conditions: ScreenerCondition[], mar
   const queryParams = needsPeFallback ? [PE_FALLBACK_METRICS] : [];
   const rows = await prisma.$queryRawUnsafe<Array<Record<string, string | null>>>(sql, ...queryParams);
   return rows.map((r) => ({
-    ticker: r.ticker!, name: r.company_name!, country: r.country!, asOfDate: r.date!,
+    ticker: r.ticker!, yahooSymbol: r.yahooSymbol!, name: r.company_name!, country: r.country!, technicalAsOfDate: r.date!,
+    // 2026-10-24（獨立代理驗收發現，使用者核准修正）: 原本叫asOfDate容易誤導——latestPrice跟PE
+    // 其實分別來自不同、更新頻率不同的來源（latestPrice是stocks表自己的latest_close，由另一條
+    // 更頻繁的價格cron更新；PE來自yahoo_fundamentals或官方備援），不是跟著這個技術指標日期走。
+    // 改名明確只代表「這一列技術指標（RSI/MACD/MA）算到哪一天」。
     rsi14: r.rsi14 !== null ? Number(r.rsi14) : null,
     macdHistogram: r.macd_histogram !== null ? Number(r.macd_histogram) : null,
     ma20: r.ma20 !== null ? Number(r.ma20) : null,
@@ -108,19 +124,7 @@ export async function countStockScreenerMatches(conditions: ScreenerCondition[],
   const marketClause = market === "TW" || market === "US" ? `AND s.country = '${market}'` : "";
   const where = buildWhere(conditions);
   const neededFields = new Set(conditions.filter((c): c is Extract<ScreenerCondition, { field: FundamentalField }> => isFundamentalField(c.field)).map((c) => c.field));
-  const fundamentalJoins = [...neededFields].map((f) => {
-    if (f === "pe") {
-      return `LEFT JOIN LATERAL (
-        SELECT COALESCE(
-          (SELECT value FROM stock_financial_facts WHERE stock_id = s.id AND metric = 'yahoo_fundamentals.pe' ORDER BY period_end DESC LIMIT 1),
-          (SELECT value FROM stock_financial_facts WHERE stock_id = s.id AND metric = ANY($pe_fallback::text[]) ORDER BY period_end DESC LIMIT 1)
-        ) AS value
-      ) f_pe ON true`;
-    }
-    return `LEFT JOIN LATERAL (
-      SELECT value FROM stock_financial_facts WHERE stock_id = s.id AND metric = 'yahoo_fundamentals.${f}' ORDER BY period_end DESC LIMIT 1
-    ) f_${f} ON true`;
-  }).join("\n");
+  const fundamentalJoins = buildFundamentalJoins(neededFields);
   const needsPeFallback = neededFields.has("pe");
   const sql = `SELECT count(*)::int n
        FROM stocks s

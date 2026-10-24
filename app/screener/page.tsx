@@ -9,7 +9,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 type ScreenerResult = {
-  ticker: string; name: string; country: string; asOfDate: string;
+  ticker: string; name: string; country: string; technicalAsOfDate: string;
   rsi14: number | null; macdHistogram: number | null; ma20: number | null; latestPrice: number | null;
   pe: number | null; pb: number | null; dividendYield: number | null; roe: number | null;
 };
@@ -115,7 +115,7 @@ export default function ScreenerPage() {
                       RSI14 {r.rsi14?.toFixed(2) ?? "—"} · MA20 {r.ma20?.toFixed(2) ?? "—"}
                       {fundamentalLine(r) ? ` · ${fundamentalLine(r)}` : ""}
                     </div>
-                    <div className="text-[11px] text-slate-600">資料日期：{r.asOfDate} · 查持有名單與完整功能請下載 App</div>
+                    <div className="text-[11px] text-slate-600">技術指標日期：{r.technicalAsOfDate}（股價／本益比為即時資料）· 查持有名單與完整功能請下載 App</div>
                   </div>
                 ))}
               </div>

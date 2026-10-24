@@ -30,8 +30,17 @@ export const YAHOO_FUNDAMENTAL_METRICS = ["pe", "pb", "dividendYield", "roe", "r
 
 export type StaleFundamentalStock = { id: string; ticker: string; yahooSymbol: string; currency: string };
 
-/** Stocks whose yahoo_fundamentals facts are missing or not from today, oldest/never-synced
- * first (ticker order gives a stable, resumable cursor across runs within the same day). */
+// 2026-10-24（獨立代理驗收發現的根因，使用者核准修正）: 原本用「有沒有yahoo_fundamentals.pe」
+// 判斷「今天同步過了沒」——虧損股Yahoo本來就不會給PE（Yahoo自己的網頁也不顯示），這種股票會
+// 永遠被判定「還沒同步」，每小時都重新打一次Yahoo（浪費），而且screener那邊的PE備援邏輯也沒辦法
+// 分辨「Yahoo還沒查過」跟「Yahoo查過了、真的沒有PE」——兩種情況都是「沒有yahoo_fundamentals.pe
+// 這筆資料」，長得一模一樣，導致後者也會被誤接去讀舊的官方備援來源，違反「Yahoo沒有的數字顯示
+// 無資料，不准補算」。改用一個獨立的「_synced」標記：只要今天成功打過一次Yahoo（不管九個欄位裡
+// 有沒有真的拿到值），就寫這筆標記——判斷「今天同不同步過」看這個，不是看pe本身有沒有值。
+const SYNCED_MARKER_METRIC = `${METRIC_PREFIX}_synced`;
+
+/** Stocks Yahoo hasn't been successfully checked for today, oldest/never-synced first (ticker
+ * order gives a stable, resumable cursor across runs within the same day). */
 export async function findStaleFundamentalStocks(limit: number, afterTicker: string | null): Promise<StaleFundamentalStock[]> {
   return prisma.$queryRawUnsafe<StaleFundamentalStock[]>(
     `SELECT s.id, s.ticker, s.yahoo_symbol AS "yahooSymbol", s.currency
@@ -43,7 +52,7 @@ export async function findStaleFundamentalStocks(limit: number, afterTicker: str
         )
       ORDER BY s.ticker ASC
       LIMIT $1`,
-    limit, afterTicker ?? "", `${METRIC_PREFIX}pe`,
+    limit, afterTicker ?? "", SYNCED_MARKER_METRIC,
   );
 }
 
@@ -59,16 +68,20 @@ export async function syncOneStockFundamentals(stock: StaleFundamentalStock, wri
   const rows = YAHOO_FUNDAMENTAL_METRICS
     .map((key) => ({ key: key as string, value: fundamentals[key] }))
     .filter((r): r is { key: string; value: number } => r.value !== null && Number.isFinite(r.value));
-  if (!writeEnabled || rows.length === 0) return { ok: true, written: 0 };
+  if (!writeEnabled) return { ok: true, written: 0 };
 
   const today = new Date().toISOString().slice(0, 10);
+  // _synced一定要寫（即使九個欄位全部是null，例如虧損股沒有PE也沒有ROE）——這是「今天查過
+  // Yahoo了」的標記本身，不是某個欄位的值；findStaleFundamentalStocks跟screener的PE備援都靠
+  // 這筆標記判斷「Yahoo有沒有被問過」，不是看特定欄位有沒有值。
+  const allRows = [...rows, { key: "_synced", value: 1 }];
   await prisma.$executeRawUnsafe(
     `INSERT INTO stock_financial_facts (id, stock_id, metric, period_end, value, unit, currency, source, source_fact_key, source_document_url)
      SELECT gen_random_uuid()::text, $1, value->>'metric', $2::date, (value->>'value')::numeric, 'RATIO', $3, 'YAHOO_QUOTE_SUMMARY', value->>'sourceFactKey', $4
        FROM jsonb_array_elements($5::jsonb) value
      ON CONFLICT (stock_id, metric, period_end, source, source_fact_key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`,
     stock.id, today, stock.currency, qs.url,
-    JSON.stringify(rows.map((r) => ({ metric: `${METRIC_PREFIX}${r.key}`, value: r.value, sourceFactKey: `${stock.yahooSymbol}:${today}` }))),
+    JSON.stringify(allRows.map((r) => ({ metric: `${METRIC_PREFIX}${r.key}`, value: r.value, sourceFactKey: `${stock.yahooSymbol}:${today}` }))),
   );
   return { ok: true, written: rows.length };
 }
