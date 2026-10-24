@@ -257,6 +257,10 @@
       "schedule": "30 12 * * *"
     },
     {
+      "path": "/api/cron/cloud-tw-company-name-zh-backfill",
+      "schedule": "*/10 * * * *"
+    },
+    {
       "path": "/api/cron/cloud-etf-price",
       "schedule": "17 * * * *"
     },
