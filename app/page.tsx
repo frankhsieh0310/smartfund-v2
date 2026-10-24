@@ -29,8 +29,6 @@ export default function Home() {
             <Link href="/etf"     className="hover:text-white transition-colors">ETF篩選器</Link>
             <Link href="/funds"   className="hover:text-white transition-colors">基金篩選器</Link>
             <Link href="/markets" className="hover:text-white transition-colors">市場中心</Link>
-            <Link href="/clients" className="hover:text-white transition-colors">客戶管理</Link>
-            <Link href="/pricing" className="hover:text-[#F5B700] transition-colors">方案</Link>
           </nav>
           <div className="flex items-center gap-4">
             <a href="#" className="text-[16px] font-semibold text-slate-300 border border-white/30 px-5 py-2.5 rounded-lg hover:bg-white/10 transition-colors">登入</a>

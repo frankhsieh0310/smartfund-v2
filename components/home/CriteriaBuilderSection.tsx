@@ -399,12 +399,6 @@ export function CriteriaBuilderSection() {
                   升級 Premium 可使用最多 20 個條件，並儲存不限組數的投資條件。
                 </div>
               </div>
-              <Link
-                href="/pricing"
-                className="ml-4 bg-[#F5B700] hover:bg-[#e0a800] text-[#020817] px-5 py-2 rounded-xl font-bold text-[14px] transition-colors shrink-0"
-              >
-                查看方案
-              </Link>
             </div>
           )}
         </div>

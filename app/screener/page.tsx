@@ -84,7 +84,6 @@ export default function ScreenerPage() {
             <HeaderDropdown label="研究工具" items={researchItems} open={activeDropdown === "research"} onToggle={() => setActiveDropdown((value) => value === "research" ? null : "research")} onClose={() => setActiveDropdown(null)} />
             <Link href="/rankings" className="whitespace-nowrap py-7 transition-colors hover:text-white">排行榜</Link>
             <Link href="/portfolio" className="whitespace-nowrap py-7 transition-colors hover:text-white">投資組合</Link>
-            <Link href="/pricing" className="whitespace-nowrap py-7 transition-colors hover:text-[#F5B700]">會員專區</Link>
           </nav>
           <div className="flex items-center gap-2 sm:gap-4">
             <AuthButton className="hidden rounded-lg border border-white/30 px-5 py-2.5 text-[15px] font-semibold text-slate-300 transition-colors hover:bg-white/10 sm:block" />

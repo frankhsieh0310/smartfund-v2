@@ -14,8 +14,6 @@ export function SiteFooter() {
             <Link href="/etf" className="transition-colors hover:text-slate-300">ETF資料庫</Link>
             <Link href="/funds" className="transition-colors hover:text-slate-300">基金資料庫</Link>
             <Link href="/quiz" className="transition-colors hover:text-slate-300">人格分析</Link>
-            <Link href="/clients" className="transition-colors hover:text-slate-300">客戶管理</Link>
-            <Link href="/pricing" className="transition-colors hover:text-slate-300">方案說明</Link>
             <a href="mailto:contact@smartmatchpilot.com" className="transition-colors hover:text-slate-300">聯絡我們</a>
           </div>
           <div className="min-w-0 text-[13px] text-slate-400 lg:text-right">

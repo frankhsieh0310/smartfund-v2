@@ -183,7 +183,6 @@ export default function RankingsPage() {
             <HeaderDropdown label="研究工具" items={researchItems} open={activeDropdown === "research"} onToggle={() => setActiveDropdown((value) => value === "research" ? null : "research")} onClose={() => setActiveDropdown(null)} />
             <Link href="/rankings" className="whitespace-nowrap py-7 text-white">排行榜</Link>
             <Link href="/portfolio" className="whitespace-nowrap py-7 transition-colors hover:text-white">投資組合</Link>
-            <Link href="/pricing" className="whitespace-nowrap py-7 transition-colors hover:text-[#F5B700]">會員專區</Link>
           </nav>
           <div className="flex items-center gap-2 sm:gap-4">
             <AuthButton className="hidden rounded-lg border border-white/30 px-5 py-2.5 text-[15px] font-semibold text-slate-300 transition-colors hover:bg-white/10 sm:block" />
@@ -206,14 +205,6 @@ export default function RankingsPage() {
             同一支 API），取代之前永遠顯示「資料準備中」的死畫面。 */}
         <RankingTable />
 
-        <section className="mt-10 flex flex-col justify-between gap-7 rounded-2xl border border-[#F5B700]/20 bg-[#F5B700]/[0.055] p-7 md:flex-row md:items-center md:p-9">
-          <div>
-            <div className="inline-flex rounded-full border border-[#F5B700]/25 bg-[#F5B700]/10 px-3 py-1 text-[9px] font-bold tracking-[0.14em] text-[#F5B700]">PREMIUM</div>
-            <h2 className="mt-4 text-[24px] font-black">進階排行榜</h2>
-            <p className="mt-3 max-w-3xl text-[13px] leading-7 text-slate-400">未來可支援多期間、風險調整後、資產類別、區域與自訂條件排行。</p>
-          </div>
-          <Link href="/pricing" className="shrink-0 rounded-xl border border-[#F5B700]/35 px-6 py-3 text-center text-[14px] font-bold text-[#F5B700] transition-colors hover:bg-[#F5B700]/10">查看 Premium</Link>
-        </section>
       </div>
     </main>
   );

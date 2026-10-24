@@ -325,8 +325,6 @@ function Navbar() {
           <a href="/quiz" className="text-[#F5B700]">投資人格分析</a>
           <a href="/etf" className="hover:text-white transition-colors">ETF篩選器</a>
           <a href="/funds" className="hover:text-white transition-colors">基金篩選器</a>
-          <a href="/clients" className="hover:text-white transition-colors">客戶管理</a>
-          <a href="/pricing" className="hover:text-[#F5B700] transition-colors">方案</a>
         </div>
         <div className="flex items-center gap-3">
           <a href="#" className="text-[14px] font-semibold text-slate-300 border border-white/30 px-4 py-2 rounded-lg hover:bg-white/10 transition-colors">登入</a>
@@ -490,8 +488,7 @@ function QuizContent() {
 
           {saved && (
             <div className="border border-green-500/30 bg-green-500/10 rounded-2xl p-5 mb-8 text-center">
-              <div className="text-green-400 font-bold text-[16px]">✓ 已儲存至客戶管理中心</div>
-              <a href="/clients" className="text-[14px] text-green-400 hover:underline mt-1 block">前往查看 →</a>
+              <div className="text-green-400 font-bold text-[16px]">✓ 已儲存</div>
             </div>
           )}
 
