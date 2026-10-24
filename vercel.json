@@ -105,8 +105,8 @@
       "schedule": "0 4 * * *"
     },
     {
-      "path": "/api/cron/offshore-dividend-sync",
-      "schedule": "*/15 5-8 * * *"
+      "path": "/api/cron/cloud-offshore-dividend-tdcc",
+      "schedule": "30 20 * * *"
     },
     {
       "path": "/api/cron/domestic-dividend-sync",
