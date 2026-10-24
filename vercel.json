@@ -249,6 +249,10 @@
       "schedule": "0 10 * * 1-5"
     },
     {
+      "path": "/api/cron/cloud-yahoo-fundamentals-refresh",
+      "schedule": "0 * * * *"
+    },
+    {
       "path": "/api/cron/cloud-etf-price",
       "schedule": "17 * * * *"
     },
