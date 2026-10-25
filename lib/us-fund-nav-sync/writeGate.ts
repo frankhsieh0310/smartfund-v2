@@ -2,7 +2,7 @@
 // MARKET_CLOSE_SYNC_WRITE / ETF_RETURNS_SYNC_WRITE — the three pipelines' write switches never
 // interact, same pattern established for etf-returns-sync vs market-close-sync.
 export function isWriteEnabled(): boolean {
-  return process.env.FUND_NAV_SYNC_WRITE === "on";
+  return process.env.FUND_NAV_SYNC_WRITE?.trim() === "on";
 }
 
 export type RunMode = "SHADOW" | "WRITE";

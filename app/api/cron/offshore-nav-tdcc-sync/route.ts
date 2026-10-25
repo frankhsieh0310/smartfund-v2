@@ -47,7 +47,7 @@ const JOB = "OFFSHORE_NAV_TDCC_SYNC";
 const query = (sql: string, params: any[]) => prisma.$queryRawUnsafe<any[]>(sql, ...params);
 
 function isWriteEnabled(): boolean {
-  return process.env.OFFSHORE_NAV_TDCC_SYNC_WRITE === "on";
+  return process.env.OFFSHORE_NAV_TDCC_SYNC_WRITE?.trim() === "on";
 }
 
 export async function GET(request: Request) {

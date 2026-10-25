@@ -13,7 +13,7 @@ const JOB = "ALERT_EVALUATE";
 export async function GET(request: Request) {
   if (!isAuthorizedCron(request)) return unauthorizedCron();
   const started = Date.now();
-  const writeEnabled = process.env.ALERT_EVALUATE_WRITE === "on";
+  const writeEnabled = process.env.ALERT_EVALUATE_WRITE?.trim() === "on";
   const runKey = `alert-evaluate:${new Date().toISOString().slice(0, 16)}`; // per-minute bucket, this cron is meant to run frequently
   const { runId, skipped } = await beginRun({ jobName: JOB, provider: "INTERNAL", runKey, universeCount: 0, batchSize: 1, checkpointBefore: null });
   if (skipped) return Response.json({ ok: true, job: JOB, skipped: true });

@@ -14,7 +14,7 @@ const JOB = "ALERT_DISPATCH";
 export async function GET(request: Request) {
   if (!isAuthorizedCron(request)) return unauthorizedCron();
   const started = Date.now();
-  const writeEnabled = process.env.ALERT_EVALUATE_WRITE === "on";
+  const writeEnabled = process.env.ALERT_EVALUATE_WRITE?.trim() === "on";
   const runKey = `alert-dispatch:${new Date().toISOString().slice(0, 16)}`;
   const { runId, skipped } = await beginRun({ jobName: JOB, provider: "EXPO_PUSH", runKey, universeCount: 0, batchSize: 1, checkpointBefore: null });
   if (skipped) return Response.json({ ok: true, job: JOB, skipped: true });

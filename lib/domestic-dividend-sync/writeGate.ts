@@ -1,5 +1,5 @@
 export function isWriteEnabled(): boolean {
-  return process.env.DOMESTIC_DIVIDEND_SYNC_WRITE === "on";
+  return process.env.DOMESTIC_DIVIDEND_SYNC_WRITE?.trim() === "on";
 }
 
 export function currentRunMode(): "WRITE" | "SHADOW" {

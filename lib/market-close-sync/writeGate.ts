@@ -3,7 +3,7 @@
 // keeps the pipeline in shadow mode, matching every prior task's behavior unchanged.
 
 export function isWriteEnabled(): boolean {
-  return process.env.MARKET_CLOSE_SYNC_WRITE === "on";
+  return process.env.MARKET_CLOSE_SYNC_WRITE?.trim() === "on";
 }
 
 export type RunMode = "SHADOW" | "WRITE";

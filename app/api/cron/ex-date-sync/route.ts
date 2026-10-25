@@ -18,7 +18,7 @@ const JOB = "EX_DATE_SYNC";
 export async function GET(request: Request) {
   if (!isAuthorizedCron(request)) return unauthorizedCron();
   const started = Date.now();
-  const writeEnabled = process.env.EX_DATE_SYNC_WRITE === "on";
+  const writeEnabled = process.env.EX_DATE_SYNC_WRITE?.trim() === "on";
   const runKey = `ex-date-sync:${new Date().toISOString().slice(0, 10)}`;
   const { runId, skipped } = await beginRun({ jobName: JOB, provider: "TWSE_TPEX_EXRIGHT", runKey, universeCount: 0, batchSize: 1, checkpointBefore: null });
   if (skipped) return Response.json({ ok: true, job: JOB, skipped: true });

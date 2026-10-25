@@ -3,5 +3,5 @@
 // orphaned local-only script scripts/data/money-market/run-global-money-market.ts, which had no
 // write gate, no cloud cron, and never reported to production_scheduler_runs at all.
 export function isMoneyMarketWriteEnabled(): boolean {
-  return process.env.MONEY_MARKET_RATES_WRITE === "on";
+  return process.env.MONEY_MARKET_RATES_WRITE?.trim() === "on";
 }

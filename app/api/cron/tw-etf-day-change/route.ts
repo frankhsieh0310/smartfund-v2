@@ -31,7 +31,7 @@ const REQUEST_DELAY_MS = 3_200;
 const TIME_BUDGET_MS = 260_000;
 
 function isWriteEnabled(): boolean {
-  return process.env.TW_ETF_DAY_CHANGE_WRITE === "on";
+  return process.env.TW_ETF_DAY_CHANGE_WRITE?.trim() === "on";
 }
 
 function sleep(ms: number) {

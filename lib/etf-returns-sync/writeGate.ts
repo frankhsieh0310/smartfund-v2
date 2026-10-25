@@ -3,7 +3,7 @@
 // MARKET_CLOSE_SYNC_WRITE since this is a fully independent pipeline.
 
 export function isWriteEnabled(): boolean {
-  return process.env.ETF_RETURNS_SYNC_WRITE === "on";
+  return process.env.ETF_RETURNS_SYNC_WRITE?.trim() === "on";
 }
 
 export type RunMode = "SHADOW" | "WRITE";

@@ -42,7 +42,7 @@ const TIME_BUDGET_MS = 270_000;
 const query = (sql: string, params: any[]) => prisma.$queryRawUnsafe<any[]>(sql, ...params);
 
 function isWriteEnabled(): boolean {
-  return process.env.FUND_RETURNS_SYNC_WRITE === "on";
+  return process.env.FUND_RETURNS_SYNC_WRITE?.trim() === "on";
 }
 
 function sleep(ms: number) {

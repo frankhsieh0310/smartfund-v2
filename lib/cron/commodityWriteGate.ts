@@ -4,5 +4,5 @@
 // branch) originally had NO write gate at all; added here before any deploy, per the user's
 // explicit round-5 instruction to shadow-run and spot-check before writing.
 export function isCommoditySyncWriteEnabled(): boolean {
-  return process.env.COMMODITY_SYNC_WRITE === "on";
+  return process.env.COMMODITY_SYNC_WRITE?.trim() === "on";
 }

@@ -2,7 +2,7 @@
 // transaction再觸發一次refresh_reverse_products」的批次模式；關閉時維持原本逐檔各自commit的
 // 行為（persistMoneydjDisclosure，不受這個開關影響）。
 export function isMoneydjFundBatchRefreshEnabled(): boolean {
-  return process.env.MONEYDJ_FUND_BATCH_REFRESH === "on";
+  return process.env.MONEYDJ_FUND_BATCH_REFRESH?.trim() === "on";
 }
 
 // 每個外層transaction包幾檔——預設20，不是使用者口頭提到的50或原本DEFAULT_BATCH=80，避免單一
