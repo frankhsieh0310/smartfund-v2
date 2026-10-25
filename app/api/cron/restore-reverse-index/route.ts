@@ -9,6 +9,15 @@
 // - 2026-10-25（使用者核准修正）: Claude手上沒有Production的CRON_SECRET，改成排進
 //   vercel.json自動排程（每10分鐘一次），每次分批處理；佇列清空、筆數恢復後用checkpoint記下
 //   「已完成」，之後每次執行直接回報SKIPPED，不會無限重複重seed/drain。
+// - 2026-10-25（第一次執行完成後發現的bug，使用者核准修正）: 第一次跑完markedDone:true，但
+//   總筆數只有40,068（原本估計約113,000），基金只恢復123筆（原本估計約35,242筆）——VERIFIED
+//   根因：refresh_reverse_products(etf_keys, fund_keys)的fund_keys參數要吃「裸UUID」（函式
+//   內部自己會補"FUND:"前綴去比對product_key，而且要用fund_share_classes.master_fund_id
+//   （多個share class會併成同一個product_key），不是每個fund.id各自一把）。原本seed SQL塞的是
+//   'FUND:'||f.id（已經帶前綴、也沒有resolve master_fund_id），導致fund_keys跟實際product_key
+//   對不起來，幾乎全部沒比對上。已修正seed SQL；ETF這邊的key格式本來就是對的（product_key直接
+//   比對，不用額外前綴），但第一次只恢復2,831/6,971個product，原因還沒查清楚，標UNKNOWN，
+//   這次重跑順便觀察結果。checkpoint key改版號（v2），讓修好的邏輯重新跑一輪，不用手動重置。
 // - 每次執行限時（TIME_BUDGET_MS，比其他cron更保守）。避開01:00-05:30台北時間這件事故意不用
 //   vercel.json的cron語法表示——vercel.json的排程時間是UTC，跟台北時間差8小時，用UTC硬湊
 //   "01:00-05:30台北"反而容易湊錯；改成route自己內部用Asia/Taipei時區判斷(inForbiddenWindow)，
@@ -23,7 +32,7 @@ export const maxDuration = 90;
 export const dynamic = "force-dynamic";
 
 const JOB = "RESTORE_REVERSE_INDEX_INCIDENT_20261024";
-const CHECKPOINT_KEY = "restore-reverse-index:incident-20261024";
+const CHECKPOINT_KEY = "restore-reverse-index:incident-20261024-v2";
 const TIME_BUDGET_MS = 70_000;
 
 function taipeiHour(): number {
@@ -71,8 +80,10 @@ export async function GET(request: Request) {
              ELSE 'ETF:'||coalesce(nullif(e.isin,''),coalesce(e.exchange,'')||':'||e.code) END
            FROM etfs e
           WHERE e.is_active AND e.id IN (SELECT asset_id FROM tw_purchasable_classification WHERE asset_type='ETF' AND status='APPROVED')
-         UNION ALL
-         SELECT $1, 'FUND', 'FUND:'||f.id FROM funds f
+         UNION
+         SELECT $1, 'FUND', coalesce(sc.master_fund_id, f.id)
+           FROM funds f
+           LEFT JOIN fund_share_classes sc ON sc.fund_id = f.id
           WHERE f.is_active AND f.id IN (SELECT asset_id FROM tw_purchasable_classification WHERE asset_type='FUND' AND status='APPROVED')`,
         tx,
       );
