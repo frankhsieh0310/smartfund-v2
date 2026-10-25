@@ -270,7 +270,7 @@
     },
     {
       "path": "/api/cron/cloud-stock-yahoo-profile-backfill",
-      "schedule": "*/15 * * * *"
+      "schedule": "*/5 * * * *"
     },
     {
       "path": "/api/cron/cloud-global-stock-price-sync",

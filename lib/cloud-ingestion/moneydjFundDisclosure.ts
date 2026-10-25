@@ -15,7 +15,33 @@ import type { PrismaClient } from "@prisma/client";
 export const MONEYDJ_SOURCE = "MONEYDJ_PUBLIC_DISCLOSURE";
 export const MONEYDJ_ADVISORY_LOCK = "smartfund:fund-moneydj-disclosure:v1";
 
-export type DisclosedHolding = { name: string; weight: number };
+export type DisclosedHolding = { name: string; weight: number; country: string | null; rawName: string };
+
+// 2026-10-25（使用者核准範圍）: MoneyDJ 有些版面把持股名稱、產業、國家用逗號塞進同一個欄位，
+// 例如「NVIDIA CORP,資訊科技,美國」或「AbbVie,美國,生物科技」(國家跟產業順序不固定，不能用
+// 位置判斷)。只把「逗號分隔的片段裡，剛好等於已知中文國家名稱」的那一段拆出來存到 country
+// 欄位（轉成跟現有 holdings.country 慣例一致的英文全名，例如 BLACKROCK_OFFICIAL_CSV 來源用的
+// "United States"/"Hong Kong"），名稱只保留第一段（逗號前）。沒有命中已知國家名稱的片段，原樣
+// 丟棄（不是產業分類欄位目前的需求），country 維持 NULL，不猜測、不改變既有行為。
+const MONEYDJ_CJK_COUNTRY_TO_EN: Record<string, string> = {
+  "美國": "United States", "台灣": "Taiwan", "中國": "China", "香港": "Hong Kong",
+  "日本": "Japan", "韓國": "South Korea", "南韓": "South Korea", "英國": "United Kingdom",
+  "德國": "Germany", "法國": "France", "荷蘭": "Netherlands", "瑞士": "Switzerland",
+  "瑞典": "Sweden", "義大利": "Italy", "加拿大": "Canada", "西班牙": "Spain",
+  "愛爾蘭": "Ireland", "比利時": "Belgium", "澳洲": "Australia", "盧森堡": "Luxembourg",
+  "新加坡": "Singapore", "印度": "India", "以色列": "Israel", "巴西": "Brazil",
+  "墨西哥": "Mexico", "丹麥": "Denmark", "挪威": "Norway", "芬蘭": "Finland", "奧地利": "Austria",
+};
+
+function splitHoldingNameCountry(raw: string): { name: string; country: string | null } {
+  const parts = raw.split(",").map((p) => p.trim());
+  if (parts.length < 2) return { name: raw, country: null };
+  let country: string | null = null;
+  for (const part of parts.slice(1)) {
+    if (MONEYDJ_CJK_COUNTRY_TO_EN[part]) { country = MONEYDJ_CJK_COUNTRY_TO_EN[part]; break; }
+  }
+  return { name: parts[0], country };
+}
 export type MoneydjDisclosure = {
   url: string;
   date: string; // YYYY-MM-DD (資料月份)
@@ -132,7 +158,8 @@ export async function fetchMoneydjDisclosure(moneydjCode: string): Promise<Money
         if (weightMatch) {
           const weight = Number(weightMatch[1]);
           if (Number.isFinite(weight)) {
-            holdings.push({ name, weight });
+            const cleaned = splitHoldingNameCountry(name);
+            holdings.push({ name: cleaned.name, weight, country: cleaned.country, rawName: name });
             holdingsTables.add($table);
           }
           return;
@@ -155,7 +182,8 @@ export async function fetchMoneydjDisclosure(moneydjCode: string): Promise<Money
           if (!weightMatch) continue;
           const weight = Number(weightMatch[1]);
           if (Number.isFinite(weight)) {
-            holdings.push({ name, weight });
+            const cleaned = splitHoldingNameCountry(name);
+            holdings.push({ name: cleaned.name, weight, country: cleaned.country, rawName: name });
             holdingsTables.add($table);
           }
         }
@@ -243,12 +271,12 @@ export async function persistMoneydjDisclosure(
         await tx.$executeRawUnsafe(
           `INSERT INTO holdings
              (id, asset_type, fund_id, share_class_id, as_of_date, rank, holding_name, holding_code,
-              weight, security_id, source, source_record_id, filing_id, weight_method, created_at)
-           VALUES (gen_random_uuid(), 'FUND', $1, $2, $3::date, $4, $5, NULL, $6, NULL, $7, $8, $9, $10, CURRENT_TIMESTAMP)
+              weight, security_id, source, source_record_id, filing_id, weight_method, country, created_at)
+           VALUES (gen_random_uuid(), 'FUND', $1, $2, $3::date, $4, $5, NULL, $6, NULL, $7, $8, $9, $10, $11, CURRENT_TIMESTAMP)
            ON CONFLICT (fund_id, source, filing_id, source_record_id)
              WHERE fund_id IS NOT NULL AND source IS NOT NULL AND filing_id IS NOT NULL AND source_record_id IS NOT NULL
            DO UPDATE SET rank = EXCLUDED.rank, holding_name = EXCLUDED.holding_name,
-                         weight = EXCLUDED.weight, weight_method = EXCLUDED.weight_method`,
+                         weight = EXCLUDED.weight, weight_method = EXCLUDED.weight_method, country = EXCLUDED.country`,
           fundId,
           shareClassId,
           disclosure.date,
@@ -256,9 +284,14 @@ export async function persistMoneydjDisclosure(
           holding.name,
           holding.weight,
           MONEYDJ_SOURCE,
-          `${disclosure.date}:${index + 1}:${holding.name}`,
+          // 2026-10-25（使用者核准範圍）: 用rawName（清洗前的原始文字）組key，跟修這個功能之前
+          // 既有資料庫裡已經存在的source_record_id格式完全一致——如果改用清洗後的name組key，
+          // 同一個月重新排程時會因為key變了而INSERT新row（跟舊row並存、同一檔股票權重算兩次），
+          // 不是ON CONFLICT覆蓋。holding_name欄位本身還是存清洗後的乾淨名稱。
+          `${disclosure.date}:${index + 1}:${holding.rawName}`,
           filingId,
           disclosure.scope,
+          holding.country,
         );
       }
     },
@@ -311,12 +344,12 @@ export async function persistMoneydjDisclosureBatch(
           await tx.$executeRawUnsafe(
             `INSERT INTO holdings
                (id, asset_type, fund_id, share_class_id, as_of_date, rank, holding_name, holding_code,
-                weight, security_id, source, source_record_id, filing_id, weight_method, created_at)
-             VALUES (gen_random_uuid(), 'FUND', $1, $2, $3::date, $4, $5, NULL, $6, NULL, $7, $8, $9, $10, CURRENT_TIMESTAMP)
+                weight, security_id, source, source_record_id, filing_id, weight_method, country, created_at)
+             VALUES (gen_random_uuid(), 'FUND', $1, $2, $3::date, $4, $5, NULL, $6, NULL, $7, $8, $9, $10, $11, CURRENT_TIMESTAMP)
              ON CONFLICT (fund_id, source, filing_id, source_record_id)
                WHERE fund_id IS NOT NULL AND source IS NOT NULL AND filing_id IS NOT NULL AND source_record_id IS NOT NULL
              DO UPDATE SET rank = EXCLUDED.rank, holding_name = EXCLUDED.holding_name,
-                           weight = EXCLUDED.weight, weight_method = EXCLUDED.weight_method`,
+                           weight = EXCLUDED.weight, weight_method = EXCLUDED.weight_method, country = EXCLUDED.country`,
             item.fundId,
             item.shareClassId,
             item.disclosure.date,
@@ -324,9 +357,12 @@ export async function persistMoneydjDisclosureBatch(
             holding.name,
             holding.weight,
             MONEYDJ_SOURCE,
-            `${item.disclosure.date}:${index + 1}:${holding.name}`,
+            // 同單檔版本：key用rawName（清洗前原始文字），跟既有資料庫裡的source_record_id格式
+            // 保持一致，避免同一個月重新排程時INSERT出重複row。
+            `${item.disclosure.date}:${index + 1}:${holding.rawName}`,
             filingId,
             item.disclosure.scope,
+            holding.country,
           );
         }
       }
