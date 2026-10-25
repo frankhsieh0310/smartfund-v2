@@ -106,7 +106,7 @@
     },
     {
       "path": "/api/cron/cloud-offshore-dividend-tdcc",
-      "schedule": "30 20 * * *"
+      "schedule": "30 23 * * *"
     },
     {
       "path": "/api/cron/domestic-dividend-sync",
@@ -258,7 +258,7 @@
     },
     {
       "path": "/api/cron/cloud-us-treasury-sync",
-      "schedule": "0 21 * * *"
+      "schedule": "30 11 * * *"
     },
     {
       "path": "/api/cron/restore-reverse-index",
