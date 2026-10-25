@@ -13,7 +13,10 @@ export const dynamic = "force-dynamic";
 
 const JOB = "CLOUD_STOCK_YAHOO_PROFILE_BACKFILL";
 const PROVIDER = "YAHOO_QUOTE_SUMMARY";
-const CHECKPOINT_KEY = "cloud-stock-yahoo-profile-backfill:ROLLING";
+// 2026-10-25（使用者核准範圍）: 範圍從「全部81,766檔active股票」改成「核心母體實際持有的
+// 8,121檔」（見stockYahooProfileBackfill.ts），bump checkpoint key讓cursor重新從頭跑，
+// 不要卡在舊的、已經跑到字母序中間的游標上，漏掉核心母體裡字母序比較前面的股票。
+const CHECKPOINT_KEY = "cloud-stock-yahoo-profile-backfill:ROLLING-v2-core-universe-only";
 const BATCH_SIZE = 500;
 const TIME_BUDGET_MS = 250_000;
 const PACE_MS = 400;
