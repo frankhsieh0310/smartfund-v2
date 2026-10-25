@@ -12,7 +12,8 @@
 import { isAuthorizedCron, unauthorizedCron } from "@/lib/cron/authorize";
 import { prisma } from "@/lib/prisma";
 import { beginRun, finishRun } from "@/lib/cloud-ingestion/runContext";
-import { checkPipelineRunLog, checkMoneydjParseFailures, evaluateFreshness, checkEtfDataSourceGap, evaluateYahooTwReturnConsistency, evaluateFredCommodityConsistency, checkCommodityTechnicalCoverage, checkFundPerformanceCoverage, checkEtfPerformanceCoverage, checkEtfHistoryFreshness, checkFundHistoryFreshness, checkCoreUniverseEtfCoverage, checkCoreUniverseFundCoverage, checkCoreUniverseFundGapDetail, checkCoreUniverseEtfGapDetail, checkActiveEtfOfficialHoldingsCoverage, checkLocalScheduleReporting, checkCoreUniverseFundCurrencyFormat, evaluateFundCurrencyOfficialConsistency, type QueryFn, type YahooTwReturnSample, type FredCommoditySample, type FundCurrencyOfficialSample } from "@/lib/daily-health-report/checks";
+import { checkPipelineRunLog, checkMoneydjParseFailures, evaluateFreshness, checkEtfDataSourceGap, evaluateYahooTwReturnConsistency, evaluateFredCommodityConsistency, evaluateTdccDividendConsistency, checkCommodityTechnicalCoverage, checkFundPerformanceCoverage, checkEtfPerformanceCoverage, checkEtfHistoryFreshness, checkFundHistoryFreshness, checkCoreUniverseEtfCoverage, checkCoreUniverseFundCoverage, checkCoreUniverseFundGapDetail, checkCoreUniverseEtfGapDetail, checkActiveEtfOfficialHoldingsCoverage, checkLocalScheduleReporting, checkCoreUniverseFundCurrencyFormat, evaluateFundCurrencyOfficialConsistency, type QueryFn, type YahooTwReturnSample, type FredCommoditySample, type FundCurrencyOfficialSample, type TdccDividendSample } from "@/lib/daily-health-report/checks";
+import { fetchTdccOffshoreDividendCsv, SOURCE as TDCC_DIVIDEND_SOURCE } from "@/lib/cron/offshoreDividendTdccSync";
 import { mapTdccCurrencyToIso, isValidIsoCurrency } from "@/lib/tdcc-currency-map";
 import { fetchYahooChartPeriod } from "@/lib/services/dataProviders/yahoo/yahooClient";
 import { CORE_COMMODITY_ROOTS } from "@/lib/cron/commodityUpdate";
@@ -701,6 +702,37 @@ export async function GET(request: Request) {
   );
   const fredCommodityCheck = evaluateFredCommodityConsistency(fredSamples);
 
+  // 2026-10-25（使用者核准定案）: 每天抽查OFFSHORE_DIVIDEND_TDCC_WRITE寫入的紀錄，跟TDCC CSV
+  // 現在的值重新比對一次——不是重新驗證TDCC這個官方來源本身（已經人工抽查過2筆跟總代理官網
+  // 完全一致），是抓「我們寫入之後，來源被更正、或我們寫入當下就有誤」這種情況。抽最近寫入的
+  // 10筆（不是全部641筆，避免每天都重算整批）。
+  let tdccDividendCheck = { samples: [] as TdccDividendSample[], mismatches: [] as TdccDividendSample[], anomaly: false };
+  try {
+    const recentRows = await prisma.$queryRawUnsafe<Array<{ isin: string; ex_date: string; distribution_amount: string; distribution_currency: string }>>(
+      `SELECT f.isin, d.ex_date::text, d.distribution_amount::text, d.distribution_currency
+         FROM fund_distribution_observations d JOIN funds f ON f.id = d.fund_id
+        WHERE d.source = $1
+        ORDER BY d.created_at DESC LIMIT 10`,
+      TDCC_DIVIDEND_SOURCE,
+    );
+    if (recentRows.length > 0) {
+      const csvRows = await fetchTdccOffshoreDividendCsv();
+      const csvByKey = new Map(csvRows.map((r) => [`${r.isin}|${r.exDate}`, r]));
+      const tdccSamples: TdccDividendSample[] = recentRows.map((r) => {
+        const csv = csvByKey.get(`${r.isin}|${r.ex_date}`);
+        return {
+          fundCode: r.isin, exDate: r.ex_date,
+          ourAmount: Number(r.distribution_amount), ourCurrency: r.distribution_currency,
+          tdccAmount: csv ? Number(csv.amountPerUnit) : null, tdccCurrency: csv ? csv.currency : null,
+          fetchFailed: false,
+        };
+      });
+      tdccDividendCheck = evaluateTdccDividendConsistency(tdccSamples);
+    }
+  } catch (e) {
+    tdccDividendCheck = { samples: [], mismatches: [{ fundCode: "FETCH_ERROR", exDate: "", ourAmount: null, tdccAmount: null, ourCurrency: null, tdccCurrency: null, fetchFailed: true }], anomaly: true };
+  }
+
   // 2026-10-20（使用者訂立）: 每個異常都要分類成 SYSTEM（必須為 0）或 EXTERNAL_DELAY（只有
   // 在「實際查看來源網站、確認對方尚未公布」且附上查證時間與結果時才可以歸類，且只在分類當下
   // 真的做了這個查證）。目前沒有任何一種異常類型內建「自動查證來源網站、記錄查證時間與結果」
@@ -728,6 +760,7 @@ export async function GET(request: Request) {
     ...(localScheduleReporting.anomaly ? [{ type: "LOCAL_SCHEDULE_NOT_REPORTED", category: SYSTEM_CATEGORY, missing: localScheduleReporting.missing }] : []),
     ...(yahooTwCheck.anomaly ? [{ type: "YAHOO_TW_RETURN_MISMATCH", category: SYSTEM_CATEGORY, mismatches: yahooTwCheck.mismatches }] : []),
     ...(fredCommodityCheck.anomaly ? [{ type: "FRED_COMMODITY_MISMATCH", category: SYSTEM_CATEGORY, mismatches: fredCommodityCheck.mismatches }] : []),
+    ...(tdccDividendCheck.anomaly ? [{ type: "TDCC_DIVIDEND_MISMATCH", category: SYSTEM_CATEGORY, mismatches: tdccDividendCheck.mismatches }] : []),
     // core_universe_fund 的缺口現在有即時證據分類（見上面 coreUniverseFundGapWithEvidence），不
     // 再用這裡的籠統 COVERAGE 寫法；其他覆蓋率檢查（包含 core_universe_etf，還沒做證據查證）
     // 維持原本行為。

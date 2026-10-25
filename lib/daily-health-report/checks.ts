@@ -575,6 +575,33 @@ export function evaluateYahooTwReturnConsistency(samples: YahooTwReturnSample[])
   return { samples, mismatches, anomaly: mismatches.length > 0 };
 }
 
+// 2026-10-25（使用者核准定案）: OFFSHORE_DIVIDEND_TDCC_WRITE開啟前抽查過2筆跟總代理官網完全
+// 一致，但「每天持續抽查」不能每天真的去逐一爬5個不同總代理官網（太慢、太脆弱），改成每天
+// 重新下載TDCC CSV本身（跟寫入時用的是同一個來源），比對我們已經寫入的紀錄是否還是跟CSV現在
+// 的值一致——抓的是「我們寫入後，來源資料被更正/我們寫入當下就有誤」這種情況，不是每天重新
+// 驗證TDCC本身對不對（TDCC是官方來源，已經做過人工抽查，不是每天都要重新驗證官方本身）。
+export type TdccDividendSample = {
+  fundCode: string; exDate: string;
+  ourAmount: number | null; tdccAmount: number | null;
+  ourCurrency: string | null; tdccCurrency: string | null;
+  fetchFailed: boolean;
+};
+export type TdccDividendCheckResult = {
+  samples: TdccDividendSample[];
+  mismatches: TdccDividendSample[];
+  anomaly: boolean;
+};
+export function evaluateTdccDividendConsistency(samples: TdccDividendSample[]): TdccDividendCheckResult {
+  const mismatches = samples.filter((s) => {
+    if (s.fetchFailed) return true;
+    if (s.ourAmount === null || s.tdccAmount === null) return s.ourAmount !== s.tdccAmount;
+    const amountMismatch = Math.abs(s.ourAmount - s.tdccAmount) > 0.0001;
+    const currencyMismatch = s.ourCurrency !== s.tdccCurrency;
+    return amountMismatch || currencyMismatch;
+  });
+  return { samples, mismatches, anomaly: mismatches.length > 0 };
+}
+
 export type FredCommoditySample = {
   label: "WTI_CRUDE" | "NATURAL_GAS";
   ourSymbol: string; // our Yahoo root's symbol, e.g. "CL=F"
