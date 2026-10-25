@@ -3119,6 +3119,9 @@ model Stock {
   createdAt           DateTime                       @default(now()) @map("created_at")
   updatedAt           DateTime                       @updatedAt @map("updated_at")
   historyBackfilledAt DateTime?                      @map("history_backfilled_at")
+  // 2026-10-25（使用者核准定案）: 選股反查跨市場掛牌名稱歧義判斷用，只新增欄位，不動既有欄位。
+  yahooLongName       String?                        @map("yahoo_long_name")
+  yahooHqCountry      String?                        @map("yahoo_hq_country")
   history             StockHistory[]
   financialFacts      StockFinancialFact[]
   technical           StockTechnical[]
