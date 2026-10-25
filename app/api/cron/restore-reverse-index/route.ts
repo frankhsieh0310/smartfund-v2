@@ -6,13 +6,16 @@
 //   邏輯（跟scripts/recovery/install-reverse-current-index.ts完全一樣）分批處理」——不直接呼叫
 //   refresh_reverse_products(NULL,NULL)。
 // - 寫入開關：REVERSE_INDEX_RESTORE_WRITE（只限這一個變數），shadow mode預設關閉。
-// - NOT 排進vercel.json的cron排程——這是一次性修復，使用者要親自決定什麼時候觸發
-//   （用CRON_SECRET手動curl），不是自動定期跑。
-// - 每次執行限時（TIME_BUDGET_MS，比其他cron更保守），避開01:00-05:30台北時間（即使被誤觸發
-//   也會直接跳過，不執行）。
+// - 2026-10-25（使用者核准修正）: Claude手上沒有Production的CRON_SECRET，改成排進
+//   vercel.json自動排程（每10分鐘一次），每次分批處理；佇列清空、筆數恢復後用checkpoint記下
+//   「已完成」，之後每次執行直接回報SKIPPED，不會無限重複重seed/drain。
+// - 每次執行限時（TIME_BUDGET_MS，比其他cron更保守）。避開01:00-05:30台北時間這件事故意不用
+//   vercel.json的cron語法表示——vercel.json的排程時間是UTC，跟台北時間差8小時，用UTC硬湊
+//   "01:00-05:30台北"反而容易湊錯；改成route自己內部用Asia/Taipei時區判斷(inForbiddenWindow)，
+//   不管Vercel什麼時候觸發，該擋的時段一定擋得住。
 import { isAuthorizedCron, unauthorizedCron } from "@/lib/cron/authorize";
 import { prisma } from "@/lib/prisma";
-import { beginRun, finishRun } from "@/lib/cloud-ingestion/runContext";
+import { beginRun, finishRun, readCheckpoint, writeCheckpoint } from "@/lib/cloud-ingestion/runContext";
 import { isReverseIndexRestoreWriteEnabled } from "@/lib/cron/reverseIndexRestoreWriteGate";
 
 export const runtime = "nodejs";
@@ -20,6 +23,7 @@ export const maxDuration = 90;
 export const dynamic = "force-dynamic";
 
 const JOB = "RESTORE_REVERSE_INDEX_INCIDENT_20261024";
+const CHECKPOINT_KEY = "restore-reverse-index:incident-20261024";
 const TIME_BUDGET_MS = 70_000;
 
 function taipeiHour(): number {
@@ -38,8 +42,12 @@ export async function GET(request: Request) {
   }
   const started = Date.now();
   const writeEnabled = isReverseIndexRestoreWriteEnabled();
+  const before = await readCheckpoint(CHECKPOINT_KEY);
+  if (before?.lastSymbol === "DONE") {
+    return Response.json({ ok: true, job: JOB, skipped: true, reason: "ALREADY_RESTORED" });
+  }
   const runKey = `restore-reverse-index:${new Date().toISOString().slice(0, 16)}`;
-  const { runId, skipped } = await beginRun({ jobName: JOB, provider: "INTERNAL_PG_FUNCTION", runKey, universeCount: 0, batchSize: 100, checkpointBefore: null });
+  const { runId, skipped } = await beginRun({ jobName: JOB, provider: "INTERNAL_PG_FUNCTION", runKey, universeCount: 0, batchSize: 100, checkpointBefore: before });
   if (skipped) return Response.json({ ok: true, job: JOB, skipped: true, runKey });
 
   try {
@@ -93,13 +101,17 @@ export async function GET(request: Request) {
 
     const remaining = await prisma.$queryRawUnsafe<{ c: number }[]>(`SELECT count(*)::int c FROM reverse_refresh_queue`);
     const positions = await prisma.$queryRawUnsafe<{ c: number }[]>(`SELECT count(*)::int c FROM reverse_current_positions`);
-    const status = remaining[0].c === 0 ? "COMPLETED" : "PARTIAL";
+    const fullyRestored = remaining[0].c === 0 && positions[0].c > 0;
+    const status = fullyRestored ? "COMPLETED" : "PARTIAL";
+    if (fullyRestored) {
+      await writeCheckpoint(JOB, CHECKPOINT_KEY, runId, { lastSymbol: "DONE", processed: positions[0].c, succeeded: positions[0].c, failed: 0 });
+    }
     await finishRun(runId, JOB, "INTERNAL_PG_FUNCTION", started, {
       status, attempted: drainedRows, completed: drainedRows, inserted: 0, updated: 0, failed: 0, retryableFailures: remaining[0].c,
       checkpointAfter: null, error: null,
-      details: { writeEnabled: true, seeded, drainedBatches, drainedRows, remainingQueue: remaining[0].c, currentPositions: positions[0].c },
+      details: { writeEnabled: true, seeded, drainedBatches, drainedRows, remainingQueue: remaining[0].c, currentPositions: positions[0].c, markedDone: fullyRestored },
     });
-    return Response.json({ ok: true, job: JOB, writeEnabled: true, seeded, drainedBatches, drainedRows, remainingQueue: remaining[0].c, currentPositions: positions[0].c, status });
+    return Response.json({ ok: true, job: JOB, writeEnabled: true, seeded, drainedBatches, drainedRows, remainingQueue: remaining[0].c, currentPositions: positions[0].c, status, markedDone: fullyRestored });
   } catch (e) {
     await finishRun(runId, JOB, "INTERNAL_PG_FUNCTION", started, { status: "FAILED", attempted: 0, completed: 0, inserted: 0, updated: 0, failed: 1, retryableFailures: 1, checkpointAfter: null, error: (e as Error).message });
     return Response.json({ ok: false, job: JOB, error: (e as Error).message }, { status: 500 });
