@@ -35,10 +35,21 @@ export async function GET(request: Request) {
   let attempted = 0, succeeded = 0, written = 0, failed = 0, stoppedEarly: string | null = null;
   const failureReasons: Record<string, number> = {};
 
+  let exhaustedUniverse = false;
   try {
     while (Date.now() - started < TIME_BUDGET_MS && !stoppedEarly) {
       const batch = await findStocksMissingYahooProfile(BATCH_SIZE, cursor);
-      if (batch.length === 0) break;
+      if (batch.length === 0) {
+        // 2026-10-26（重開機後發現、已修正）: 游標只往前走、沒有回頭邏輯，導致任何在某一批
+        // 失敗（NO_LONG_NAME/OTHER，沒有寫入yahoo_long_name）但不是401/403/429的股票，一旦
+        // 游標移到它後面，就永遠不會再被這支cron碰到——8,132檔卡在7,857檔不動，卡住的就是這
+        // 275檔。跟cloud-global-stock-price-sync同一套處理：遊標跑到清單尾端就繞回開頭，讓
+        // 還缺資料（yahoo_long_name仍是NULL）的股票下一輪能重新被選到。
+        if (cursor === null) break; // 真的沒有任何符合條件的股票
+        cursor = null;
+        exhaustedUniverse = true;
+        continue;
+      }
       for (const stock of batch) {
         if (Date.now() - started >= TIME_BUDGET_MS) break;
         attempted++;
