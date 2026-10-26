@@ -24,16 +24,18 @@ export const dynamic = "force-dynamic";
 
 const JOB = "LOCAL_SCHEDULE_MONITOR";
 
-type WatchedSchedule = { label: string; jobIdPrefix: string };
-const WATCHED: WatchedSchedule[] = [
+// disabledReason: schedules the user deliberately disabled -- kept in the list for the record, but skipped (no alert).
+type WatchedSchedule = { label: string; jobIdPrefix: string; disabledReason?: string };
+const WATCHED_ALL: WatchedSchedule[] = [
   { label: "SmartMatch Mega ETF Holdings（兆豐 ETF 官方持股桌機排程）", jobIdPrefix: "ETF_OFFICIAL_HOLDINGS_MEGA_DESKTOP:" },
   { label: "1330 TW Price Update（tw-industry-radar）", jobIdPrefix: "LOCAL_1330_TW_PRICE_UPDATE" },
   { label: "1500 Institutional Update（tw-industry-radar）", jobIdPrefix: "LOCAL_1500_INSTITUTIONAL_UPDATE" },
   { label: "1700 TW Data Final Update（tw-industry-radar）", jobIdPrefix: "LOCAL_1700_TW_DATA_FINAL_UPDATE" },
   { label: "OpenClaw Gateway（tw-data-updater 本機長駐 daemon）", jobIdPrefix: "LOCAL_OPENCLAW_GATEWAY" },
-  { label: "tw-etf-lookup 摩根持股匯入", jobIdPrefix: "LOCAL_TW_ETF_LOOKUP_MORGAN_IMPORT" },
+  { label: "tw-etf-lookup 摩根持股匯入", jobIdPrefix: "LOCAL_TW_ETF_LOOKUP_MORGAN_IMPORT", disabledReason: "2026-10-23 使用者指示停用（Windows 排程只停用、不刪除）" },
   { label: "tw-etf-lookup Mega uploader", jobIdPrefix: "LOCAL_TW_ETF_LOOKUP_MEGA_UPLOADER" },
 ];
+const WATCHED = WATCHED_ALL.filter((w) => !w.disabledReason);
 
 export async function GET(request: Request) {
   if (!isAuthorizedCron(request)) return unauthorizedCron();
@@ -71,8 +73,8 @@ export async function GET(request: Request) {
     status: missing.length > 0 ? "PARTIAL" : "COMPLETED",
     attempted: WATCHED.length, completed: WATCHED.length - missing.length, inserted: 0, updated: 0,
     failed: missing.length, retryableFailures: 0, checkpointAfter: null,
-    details: { date: today, results, missing_count: missing.length, notify_result: notifyResult },
+    details: { date: today, results, missing_count: missing.length, notify_result: notifyResult, disabled: WATCHED_ALL.filter((w) => w.disabledReason).map((w) => ({ label: w.label, reason: w.disabledReason })) },
   });
 
-  return Response.json({ ok: true, job: JOB, runId, results, missingCount: missing.length, notifyResult });
+  return Response.json({ ok: true, job: JOB, runId, results, missingCount: missing.length, notifyResult, disabled: WATCHED_ALL.filter((w) => w.disabledReason).map((w) => ({ label: w.label, reason: w.disabledReason })) });
 }
