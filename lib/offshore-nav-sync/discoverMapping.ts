@@ -64,11 +64,16 @@ export async function discoverNewMappings(
   const discovered: OffshoreMappingEntry[] = [];
   const unresolved: UnresolvedOffshoreFund[] = [];
 
+  // 2026-10-26（使用者核准範圍）: 查「51檔境外淨值落後」原因，VERIFIED 多數NO_EXACT_MATCH
+  // 的evidence其實是同一檔基金、只差在Yahoo那邊的名稱沒有空白（例如我方「貝萊德中國基金 A2
+  // 美元」對Yahoo「貝萊德中國基金A2美元」）——不是猜測性模糊比對，去掉空白後是逐字相同的
+  // 官方基金全名，比對規則本身過嚴格才漏掉。只正規化空白，不做任何同義詞/相似度比對。
+  const normalizeWs = (s: string) => s.replace(/\s+/g, "");
   for (const fund of candidates) {
     if (Date.now() - startedMs > timeBudgetMs) break;
     try {
       const results = await searchYahooFund(fund.name, AbortSignal.timeout(10_000));
-      const exact = results.filter((r) => r.name === fund.name);
+      const exact = results.filter((r) => r.name === fund.name || normalizeWs(r.name) === normalizeWs(fund.name));
       if (exact.length === 1) {
         discovered.push({ fundId: fund.fundId, code: fund.code ?? "", yahooFundId: exact[0].id });
       } else if (exact.length > 1) {
