@@ -102,7 +102,31 @@ export type AliasInsertPlan = {
 // unique_names退場，公司債ETF持有的這家公司債券（country為空、原本靠unique_names配對到
 // 次要掛牌）反而配不到任何一檔，造成移除。修法：三種候選一律套用同一個「全系統唯一才加入」
 // 檢查，不再只限SUFFIX_STRIPPED——跟SUFFIX_STRIPPED用同一個安全原則，不製造新的名稱衝突。
-/** 計算每檔主要掛牌股票要新增的別名清單（含唯一性檢查，三種候選一律檢查），不執行任何寫入。 */
+// 2026-10-28（使用者核准範圍，全規模ROLLBACK測試第3次重跑才VERIFIED發現）: 上面的
+// clash check只比對「這批次開始前」reverse_current_securities裡既有的別名，比對不到
+// 「同一批次裡，另一檔股票也剛好產生同一個正規化文字」這種情況——兩邊各自覺得自己唯一、
+// 各自成功計畫插入，等全部插入完、refresh_reverse_securities重建後，這個名字才變成兩檔
+// 股票共用，可能打斷第三者（原本靠這個名字唯一性配對到的其他持股）的比對。實測抓到
+// VDV(Samsung Fire & Marine Insurance等)、FLBR(Vale SA等)共7筆這種批次內互撞造成的
+// 錯誤移除。修法：產生完整批次候選後，先在記憶體裡統計每個正規化文字被幾檔「不同」股票
+// 用到，批次內被兩檔以上股票共用的文字，整批都不插入（不只留最後一個）。
+function dedupeAcrossBatch(plans: AliasInsertPlan[]): AliasInsertPlan[] {
+  const textOwners = new Map<string, Set<string>>();
+  for (const p of plans) {
+    if (p.skippedReason) continue;
+    const key = normalizeForUniqueness(p.text);
+    if (!textOwners.has(key)) textOwners.set(key, new Set());
+    textOwners.get(key)!.add(p.stockId);
+  }
+  const batchCollisions = new Set([...textOwners.entries()].filter(([, ids]) => ids.size > 1).map(([k]) => k));
+  return plans.map((p) =>
+    !p.skippedReason && batchCollisions.has(normalizeForUniqueness(p.text))
+      ? { ...p, skippedReason: "NOT_GLOBALLY_UNIQUE" as const }
+      : p,
+  );
+}
+
+/** 計算每檔主要掛牌股票要新增的別名清單（含唯一性檢查，三種候選一律檢查，並排除批次內互撞），不執行任何寫入。 */
 export async function planAliasInserts(stocks: PrimaryListingStock[]): Promise<AliasInsertPlan[]> {
   const plans: AliasInsertPlan[] = [];
   for (const s of stocks) {
@@ -121,7 +145,7 @@ export async function planAliasInserts(stocks: PrimaryListingStock[]): Promise<A
       plans.push({ stockId: s.id, ticker: s.ticker, text: c.text, kind: c.kind });
     }
   }
-  return plans;
+  return dedupeAcrossBatch(plans);
 }
 
 export async function applyAliasInserts(plans: AliasInsertPlan[]): Promise<number> {
