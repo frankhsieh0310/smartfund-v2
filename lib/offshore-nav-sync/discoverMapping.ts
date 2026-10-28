@@ -57,12 +57,18 @@ export async function discoverNewMappings(
   existingMapping: OffshoreMappingEntry[],
   timeBudgetMs: number,
   requestSpacingMs: number,
-): Promise<{ discovered: OffshoreMappingEntry[]; unresolved: UnresolvedOffshoreFund[] }> {
+  alreadyTriedToday: Set<string> = new Set(),
+): Promise<{ discovered: OffshoreMappingEntry[]; unresolved: UnresolvedOffshoreFund[]; attemptedThisRun: string[] }> {
   const startedMs = Date.now();
   const mappedIds = new Set(existingMapping.map((m) => m.fundId));
-  const candidates = await findUnmappedTdccOffshoreFunds(query, mappedIds);
+  // 2026-10-28（使用者核准修正，「39檔境外淨值落後」根因）: candidates本身固定ORDER BY
+  // created_at DESC，沒有這層「今天已經試過」過濾的話，時間預算用完時永遠只處理得到清單最前面
+  // 那一截，後面的候選排不到第二次機會——見completion.ts的DISCOVERY_PROGRESS_CHECKPOINT_KEY
+  // 說明。這裡只是「跳過今天試過的」，不改變任何既有的exact-name比對規則本身。
+  const candidates = (await findUnmappedTdccOffshoreFunds(query, mappedIds)).filter((c) => !alreadyTriedToday.has(c.fundId));
   const discovered: OffshoreMappingEntry[] = [];
   const unresolved: UnresolvedOffshoreFund[] = [];
+  const attemptedThisRun: string[] = [];
 
   // 2026-10-26（使用者核准範圍）: 查「51檔境外淨值落後」原因，VERIFIED 多數NO_EXACT_MATCH
   // 的evidence其實是同一檔基金、只差在Yahoo那邊的名稱沒有空白（例如我方「貝萊德中國基金 A2
@@ -71,6 +77,7 @@ export async function discoverNewMappings(
   const normalizeWs = (s: string) => s.replace(/\s+/g, "");
   for (const fund of candidates) {
     if (Date.now() - startedMs > timeBudgetMs) break;
+    attemptedThisRun.push(fund.fundId);
     try {
       const results = await searchYahooFund(fund.name, AbortSignal.timeout(10_000));
       const exact = results.filter((r) => r.name === fund.name || normalizeWs(r.name) === normalizeWs(fund.name));
@@ -88,5 +95,5 @@ export async function discoverNewMappings(
     }
     await sleep(requestSpacingMs);
   }
-  return { discovered, unresolved };
+  return { discovered, unresolved, attemptedThisRun };
 }

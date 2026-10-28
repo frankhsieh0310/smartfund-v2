@@ -23,7 +23,7 @@ import { prisma } from "@/lib/prisma";
 import { beginRun, finishRun, writeCheckpoint } from "@/lib/cloud-ingestion/runContext";
 import { loadMapping, MAPPING_CHECKPOINT_KEY } from "@/lib/offshore-nav-sync/mapping";
 import { discoverNewMappings } from "@/lib/offshore-nav-sync/discoverMapping";
-import { loadDailyProgress, saveDailyProgress } from "@/lib/offshore-nav-sync/completion";
+import { loadDailyProgress, saveDailyProgress, loadDiscoveryProgress, saveDiscoveryProgress } from "@/lib/offshore-nav-sync/completion";
 import { loadKnownNoData, saveKnownNoData, isOnCooldown } from "@/lib/offshore-nav-sync/knownNoData";
 import { fetchOffshoreNav, RateLimitedError } from "@/lib/offshore-nav-sync/navFetch";
 import { checkOffshoreNavSanity } from "@/lib/offshore-nav-sync/navSanity";
@@ -85,7 +85,12 @@ export async function GET(request: Request) {
   // is capped well under it, so it can never starve the NAV-fetch budget below a useful minimum.
   const DISCOVERY_TIME_BUDGET_MS = 45_000;
   const DISCOVERY_REQUEST_SPACING_MS = 1_100;
-  const { discovered, unresolved } = await discoverNewMappings(query, mapping, DISCOVERY_TIME_BUDGET_MS, DISCOVERY_REQUEST_SPACING_MS);
+  // 2026-10-28（使用者核准修正，「39檔境外淨值落後」VERIFIED根因，見completion.ts的
+  // DISCOVERY_PROGRESS_CHECKPOINT_KEY說明）: 候選清單固定newest-first，45秒預算每輪都只碰得到
+  // 最前面那一截，後面的候選永遠排不到——改用跟NAV-fetch階段同樣的「今天已經試過」機制，讓
+  // 每輪往候選清單後面推進。
+  const discoveryAttemptedToday = await loadDiscoveryProgress(query, today);
+  const { discovered, unresolved, attemptedThisRun: discoveryAttemptedThisRun } = await discoverNewMappings(query, mapping, DISCOVERY_TIME_BUDGET_MS, DISCOVERY_REQUEST_SPACING_MS, discoveryAttemptedToday);
   if (discovered.length > 0) {
     mapping.push(...discovered);
     // Same SHADOW MODE gate as everything else below -- discovery still runs and classifies (so a
@@ -94,6 +99,10 @@ export async function GET(request: Request) {
     if (writeEnabledThisRun) {
       await writeCheckpoint(JOB, MAPPING_CHECKPOINT_KEY, runId, { lastSymbol: JSON.stringify(mapping), processed: mapping.length, succeeded: discovered.length, failed: unresolved.length });
     }
+  }
+  if (writeEnabledThisRun && discoveryAttemptedThisRun.length > 0) {
+    const mergedDiscoveryAttempted = new Set([...discoveryAttemptedToday, ...discoveryAttemptedThisRun]);
+    await saveDiscoveryProgress(query, today, mergedDiscoveryAttempted);
   }
 
   const attemptedToday = await loadDailyProgress(query, today);
@@ -179,6 +188,7 @@ export async function GET(request: Request) {
       attempted_today_total: mergedAttempted.size, cooldown_skipped_count: cooldownSkippedCount,
       mapping_discovered_count: discovered.length, mapping_unresolved_count: unresolved.length,
       mapping_unresolved_sample: unresolved.slice(0, 10),
+      discovery_attempted_this_run: discoveryAttemptedThisRun.length, discovery_attempted_today_total: discoveryAttemptedToday.size + discoveryAttemptedThisRun.length,
     },
   });
 
