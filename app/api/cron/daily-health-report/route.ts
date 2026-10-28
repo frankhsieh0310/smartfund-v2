@@ -378,7 +378,26 @@ export async function GET(request: Request) {
       sitcaFetchError = e instanceof Error ? e.message : String(e);
     }
     const sitcaByCode = new Map<string, string>(); // code -> nav string ("-" means not yet published)
-    if (sitcaCsvRows) for (const cols of sitcaCsvRows) if (cols.length >= 7 && cols[3]) sitcaByCode.set(cols[3], cols[6]);
+    // 2026-10-28（VERIFIED根因修正）: 原本只存NAV值、沒存日期(cols[0])，導致「SITCA CSV裡這個
+    // 代號有值」就直接判SYSTEM，完全沒比較那個值的日期是不是真的比我方latestNavDate新。
+    // 直接查證：SITCA官方CSV本身同時混著20261022跟20261027兩種日期(3987筆20261022、489筆
+    // 20261027)，代表SITCA自己對大部分基金就是只公布到10/22——這些代號在CSV裡「有值」沒錯，
+    // 但那個值的日期跟我方latestNavDate一樣舊，官方沒有更新≠我們過期，應該是EXTERNAL_DELAY，
+    // 不是SYSTEM。改成同時存日期，用日期比較決定分類（CLAUDE.md「資料新鮮度判斷」規則）。
+    const sitcaDateByCode = new Map<string, string>(); // code -> "YYYY-MM-DD"
+    if (sitcaCsvRows) {
+      for (const cols of sitcaCsvRows) {
+        if (cols.length >= 7 && cols[3]) {
+          const rawDate = (cols[0] ?? "").trim();
+          const iso = /^\d{8}$/.test(rawDate) ? `${rawDate.slice(0, 4)}-${rawDate.slice(4, 6)}-${rawDate.slice(6, 8)}` : null;
+          const existingDate = sitcaDateByCode.get(cols[3]);
+          if (!existingDate || (iso && iso > existingDate)) {
+            sitcaByCode.set(cols[3], cols[6]);
+            if (iso) sitcaDateByCode.set(cols[3], iso);
+          }
+        }
+      }
+    }
 
     for (const fund of coreUniverseFundGapRows) {
       if (fund.dataProvider === "tdcc-offshore") continue; // handled separately below (TDCC source, not SITCA)
@@ -387,6 +406,7 @@ export async function GET(request: Request) {
         continue;
       }
       const csvNav = fund.code ? sitcaByCode.get(fund.code) : undefined;
+      const csvDate = fund.code ? sitcaDateByCode.get(fund.code) : undefined;
       if (csvNav === "-" || csvNav === "") {
         if (fund.latestNavDate === null) {
           coreUniverseFundNeverReported.push({ code: fund.code, name: fund.name, dataProvider: fund.dataProvider });
@@ -395,8 +415,10 @@ export async function GET(request: Request) {
         }
       } else if (csvNav === undefined) {
         coreUniverseFundGapWithEvidence.push({ code: fund.code, name: fund.name, dataProvider: fund.dataProvider, category: "EXTERNAL_DELAY", reason: "ABSENT_FROM_TODAYS_SITCA_CSV_DESPITE_PRIOR_REAL_NAV", checkedAt });
+      } else if (csvDate && fund.latestNavDate && csvDate <= fund.latestNavDate) {
+        coreUniverseFundGapWithEvidence.push({ code: fund.code, name: fund.name, dataProvider: fund.dataProvider, category: "EXTERNAL_DELAY", reason: `SITCA_OWN_DATA_ALSO_STALE_AT_${csvDate}`, checkedAt });
       } else {
-        coreUniverseFundGapWithEvidence.push({ code: fund.code, name: fund.name, dataProvider: fund.dataProvider, category: "SYSTEM", reason: `SITCA_HAS_REAL_NAV_${csvNav}_NOT_INGESTED`, checkedAt });
+        coreUniverseFundGapWithEvidence.push({ code: fund.code, name: fund.name, dataProvider: fund.dataProvider, category: "SYSTEM", reason: `SITCA_HAS_REAL_NAV_${csvNav}_DATED_${csvDate ?? "UNKNOWN"}_NOT_INGESTED`, checkedAt });
       }
     }
 
