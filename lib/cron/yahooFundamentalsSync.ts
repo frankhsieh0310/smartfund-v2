@@ -70,12 +70,16 @@ async function hasStaleTwUsToday(): Promise<boolean> {
 
 export async function findStaleFundamentalStocks(limit: number, afterTicker: string | null): Promise<StaleFundamentalStock[]> {
   const twUsNotDoneYet = await hasStaleTwUsToday();
+  // VERIFIED根因(2026-10-28, CLOUD_YAHOO_FUNDAMENTALS_REFRESH每輪都失敗): twUsNotDoneYet=true
+  // 時原本的SQL文字完全不含$4，但呼叫端還是傳了4個參數——Postgres沒辦法從SQL裡任何地方推斷
+  // $4的型別，直接丟42P18「could not determine data type of parameter $4」。改成SQL文字固定都
+  // 引用$4::text[]，twUsNotDoneYet=true時傳空陣列（ANY(ARRAY[])本來就不會多比對到任何東西，
+  // 等於沒有這個條件，邏輯不變）。
   const heldStockIds = twUsNotDoneYet ? [] : await findCoreUniverseHeldStockIds();
-  const countryScope = twUsNotDoneYet ? `s.country IN ('TW', 'US')` : `(s.country IN ('TW', 'US') OR s.id = ANY($4::text[]))`;
   return prisma.$queryRawUnsafe<StaleFundamentalStock[]>(
     `SELECT s.id, s.ticker, s.yahoo_symbol AS "yahooSymbol", s.currency
        FROM stocks s
-      WHERE s.is_active AND ${countryScope} AND s.ticker > $2
+      WHERE s.is_active AND (s.country IN ('TW', 'US') OR s.id = ANY($4::text[])) AND s.ticker > $2
         AND NOT EXISTS (
           SELECT 1 FROM stock_financial_facts f
            WHERE f.stock_id = s.id AND f.metric = $3 AND f.period_end = CURRENT_DATE

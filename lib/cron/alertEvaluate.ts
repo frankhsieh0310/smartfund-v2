@@ -195,8 +195,13 @@ export async function runAlertEvaluate(writeEnabled: boolean): Promise<AlertEval
       });
       result.triggeredNew++;
     } catch (e) {
-      // unique dedupeKey violation -- already fired today, not an error
-      if (!(e instanceof Error && e.message.includes("dedupeKey"))) result.errors++;
+      // unique dedupeKey violation -- already fired today, not an error. VERIFIED根因
+      // (2026-10-28, ALERT_EVALUATE每15分鐘跑一次連續失敗): Prisma在Postgres唯一鍵衝突時
+      // 訊息裡放的是DB欄位名"dedupe_key"（snake_case），不是model欄位名"dedupeKey"
+      // （camelCase），原本用字串比對"dedupeKey"永遠比不中，導致同一天第二次之後每次
+      // 重複觸發都被誤判成真正的error。改用Prisma標準的唯一鍵違反錯誤碼P2002判斷。
+      const isDupeKeyViolation = typeof e === "object" && e !== null && (e as { code?: string }).code === "P2002";
+      if (!isDupeKeyViolation) result.errors++;
     }
   }
   return result;

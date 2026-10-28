@@ -179,9 +179,16 @@ export async function GET(request: Request) {
 
     let deletedThisRun = 0;
     while (Date.now() - startedMs < TIME_BUDGET_MS) {
+      // VERIFIED根因(2026-10-28, OUT_OF_SCOPE_PURGE每輪都42703失敗卡住)：原本用id IN(...)分批，
+      // 但bond_etf_research_snapshot/bond_etf_technical_analytics/etf_flow_coverage/
+      // etf_issuer_mappings/etf_yahoo_observations/etf_yahoo_terminal_status這6張表的主鍵是
+      // etf_id(或etf_id+其他欄位)複合鍵，根本沒有id欄位，DELETE WHERE id IN(...)直接噴
+      // column "id" does not exist；而且因為TASKS是依序處理、卡在同一個task不會往下一個table
+      // 跳，這6張表只要排到就會讓整支排程從那之後完全卡住。改用ctid（每張Postgres表都有的
+      // 實體列位置），不需要知道每張表實際的主鍵欄位名稱，批次刪除邏輯不變。
       const result = await prisma.$executeRawUnsafe(
-        `WITH victims AS (SELECT id FROM ${activeTask.table} WHERE ${activeTask.filterSql} LIMIT ${activeTask.batchSize})
-         DELETE FROM ${activeTask.table} WHERE id IN (SELECT id FROM victims)`,
+        `WITH victims AS (SELECT ctid FROM ${activeTask.table} WHERE ${activeTask.filterSql} LIMIT ${activeTask.batchSize})
+         DELETE FROM ${activeTask.table} WHERE ctid IN (SELECT ctid FROM victims)`,
       );
       const deletedCount = typeof result === "number" ? result : Number(result);
       deletedThisRun += deletedCount;
