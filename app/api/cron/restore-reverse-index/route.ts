@@ -32,7 +32,11 @@ export const maxDuration = 90;
 export const dynamic = "force-dynamic";
 
 const JOB = "RESTORE_REVERSE_INDEX_INCIDENT_20261024";
-const CHECKPOINT_KEY = "restore-reverse-index:incident-20261024-v2";
+// 2026-10-28（使用者核准）: 版號跳到v3，讓這支既有的、已經驗證過安全（小批次、advisory lock、
+// 避開01:00-05:30）的重建排程，用修好的refresh_reverse_products（債券誤配+別名唯一性修正）
+// 把reverse_refresh_queue重新灌一次、整個reverse_current_positions分批重算一輪，不用另外
+// 手動跑一次性腳本。
+const CHECKPOINT_KEY = "restore-reverse-index:incident-20261024-v3-bond-fix";
 const TIME_BUDGET_MS = 70_000;
 
 function taipeiHour(): number {
