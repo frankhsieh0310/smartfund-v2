@@ -37,6 +37,10 @@
       "schedule": "*/15 * * * *"
     },
     {
+      "path": "/api/cron/cleanup-qa-leftover-user",
+      "schedule": "0 */6 * * *"
+    },
+    {
       "path": "/api/cron/out-of-scope-purge",
       "schedule": "*/10 * * * *"
     },
