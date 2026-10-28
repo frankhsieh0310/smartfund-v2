@@ -734,7 +734,10 @@ export async function checkLocalScheduleReporting(query: QueryFn): Promise<Local
     // 2026-10-20 新增：第一次成功回報已確認（OpenClaw 用獨立腳本測過 reportSchedule；摩根持股
     // 匯入／Mega uploader 都用 schtasks /run 實測過，log 裡的 REPORT 行確認 HTTP 200），才加進來。
     { label: "OpenClaw Gateway（tw-data-updater 本機長駐 daemon）", jobIdPrefix: "LOCAL_OPENCLAW_GATEWAY" },
-    { label: "tw-etf-lookup 摩根持股匯入", jobIdPrefix: "LOCAL_TW_ETF_LOOKUP_MORGAN_IMPORT" },
+    // 2026-10-28: 「tw-etf-lookup 摩根持股匯入」使用者已在2026-10-22/23自行停用這個本機排程
+    // (schtasks Disable-ScheduledTask)，雲端那邊的local-schedule-monitor已經跳過它(commit
+    // 9047de874)，但這支健康報告自己的watched清單是另一條獨立程式碼路徑，一直沒跳過，天天
+    // 誤報成SYSTEM異常。移出清單，跟雲端那邊的處理方式一致。
     { label: "tw-etf-lookup Mega uploader", jobIdPrefix: "LOCAL_TW_ETF_LOOKUP_MEGA_UPLOADER" },
   ];
   const missing: LocalScheduleReportingResult["missing"] = [];
