@@ -64,12 +64,23 @@ export async function GET(request: Request) {
   const twseJob = registry.jobs.find((j) => j.id === "twse-yahoo-daily")!;
   const today = mostRecentTradingDay(twseJob, new Date().toISOString().slice(0, 10));
 
+  // 2026-10-29（使用者核准，FUND_RETURNS_SYNC頻率從每天48次掉到每天1次的根因修正）: VERIFIED
+  // production_scheduler_checkpoints.last_symbol卡在空字串""——這週discoverNewMappings新找到的
+  // 境外基金mapping裡，有200多筆offshore-nav-sync:yahoo-mapping checkpoint的entry只解析出
+  // yahooFundId、沒有code（VERIFIED combined排序後最前面連續200+筆都是code===""）。原本用
+  // entry.code當游標：這批code===""的entry把每次呼叫的前~78筆全部佔滿，lastCode最後存成""，
+  // 下一次呼叫的`afterCode ? ... : 0`把空字串當成falsy、游標永遠被重置回最前面——同一批
+  // code===""的基金被無限重抓，從未真正往後推進，當天剩下的47次呼叫因為run_key
+  // (JOB:today:afterCode)完全沒變而被beginRun當成重複直接skip，直到隔天today换了才能再跑一次
+  // （一樣卡在同一批、同一個結果）。改成用yahooFundId當排序/游標鍵——每筆entry一定有
+  // yahooFundId（不可能是空字串），行為不變（DB寫入本來就用entry.fundId，不是code），
+  // 只是讓游標能真正往後推進，不再卡死。
   const [offshoreMapping, domesticMapping] = await Promise.all([loadMapping(query), loadDomesticYahooMapping(query)]);
-  const combined = [...offshoreMapping, ...domesticMapping].sort((a, b) => a.code.localeCompare(b.code));
+  const combined = [...offshoreMapping, ...domesticMapping].sort((a, b) => a.yahooFundId.localeCompare(b.yahooFundId));
 
   const checkpoint = await readCheckpoint(CHECKPOINT_KEY);
   const afterCode = checkpoint?.lastSymbol ?? null;
-  const startIndex = afterCode ? combined.findIndex((m) => m.code > afterCode) : 0;
+  const startIndex = afterCode ? combined.findIndex((m) => m.yahooFundId > afterCode) : 0;
   const batch = startIndex === -1 ? [] : combined.slice(Math.max(startIndex, 0), Math.max(startIndex, 0) + 200);
 
   const { runId, skipped } = await beginRun({
@@ -108,7 +119,7 @@ export async function GET(request: Request) {
       if (e instanceof YahooFundRateLimitedError) { rateLimitStop = true; break; }
       failed++;
     }
-    lastCode = entry.code;
+    lastCode = entry.yahooFundId;
     await sleep(REQUEST_DELAY_MS);
   }
 
