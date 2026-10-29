@@ -6,7 +6,7 @@
 // placeholder and why). This page only lets users pick ETF or FUND (the two product types among
 // the four core categories -- see CLAUDE.md "第一條" -- a user can directly browse and compare;
 // STOCK/INDEX/FX are market data the platform uses internally, not products sold here).
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
 type PickerAssetType = "ETF" | "FUND";
@@ -63,6 +63,31 @@ export default function ComparePage() {
     setResults([]);
   };
   const removeItem = (item: SelectedItem) => setSelected((prev) => prev.filter((candidate) => !(candidate.assetType === item.assetType && candidate.canonicalEntityId === item.canonicalEntityId)));
+
+  // 2026-10-29（獨立代理稽核發現：ETF/基金詳情頁沒有任何進入比較頁的路徑）: 詳情頁的
+  // 「+ 加入比較」連結帶 ?type=ETF|FUND&code=XXX，這裡讀純window.location.search（不用
+  // useSearchParams，避免額外的Suspense邊界要求），用現有/api/search找到對應商品直接預先
+  // addItem，不是只把使用者丟到空白的比較頁要他自己重新搜尋一次。
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const prefType = params.get("type");
+    const prefCode = params.get("code");
+    if (!prefCode || (prefType !== "ETF" && prefType !== "FUND")) return;
+    (async () => {
+      try {
+        const res = await fetch(`/api/search?q=${encodeURIComponent(prefCode)}&type=${prefType}&limit=8`);
+        if (!res.ok) return;
+        const body = await res.json();
+        type RawRow = { assetType: PickerAssetType; canonicalId: string; symbolOrCode: string | null; displayName: string; currency: string | null };
+        const rows: RawRow[] = body.data ?? [];
+        const match = rows.find((r) => r.symbolOrCode?.toLowerCase() === prefCode.toLowerCase()) ?? rows[0];
+        if (match) setSelected((prev) => prev.some((item) => item.assetType === match.assetType && item.canonicalEntityId === match.canonicalId) ? prev : [...prev, { assetType: match.assetType, canonicalEntityId: match.canonicalId, label: match.displayName, symbol: match.symbolOrCode }]);
+      } catch {
+        // 預先加入失敗就留給使用者自己搜尋，不擋頁面載入
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const runCompare = useCallback(async () => {
     setRequestError(null);

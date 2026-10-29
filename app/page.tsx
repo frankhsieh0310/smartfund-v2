@@ -19,10 +19,10 @@ export default function Home() {
 
       {/* ══ NAVBAR ══════════════════════════════════════════════════ */}
       <header className="fixed top-0 left-0 w-full z-50 bg-[#040a18]/90 backdrop-blur-xl border-b border-white/[0.08]">
-        <div className="max-w-[1600px] mx-auto h-20 px-10 flex items-center justify-between">
-          <div>
-            <div className="text-[32px] font-black text-white leading-none">Smart<span className="text-[#F5B700]">Match</span></div>
-            <div className="text-[12px] text-slate-400 mt-0.5">Investment Intelligence Platform</div>
+        <div className="max-w-[1600px] mx-auto h-20 px-4 sm:px-6 lg:px-10 flex items-center justify-between gap-2">
+          <div className="min-w-0 shrink">
+            <div className="text-[22px] sm:text-[28px] lg:text-[32px] font-black text-white leading-none whitespace-nowrap">Smart<span className="text-[#F5B700]">Match</span></div>
+            <div className="hidden sm:block text-[12px] text-slate-400 mt-0.5 whitespace-nowrap">Investment Intelligence Platform</div>
           </div>
           <nav className="hidden lg:flex gap-8 text-[18px] font-semibold text-slate-300">
             <Link href="/quiz"    className="hover:text-white transition-colors">投資人格分析</Link>
@@ -30,9 +30,9 @@ export default function Home() {
             <Link href="/funds"   className="hover:text-white transition-colors">基金篩選器</Link>
             <Link href="/markets" className="hover:text-white transition-colors">市場中心</Link>
           </nav>
-          <div className="flex items-center gap-4">
-            <a href="#" className="text-[16px] font-semibold text-slate-300 border border-white/30 px-5 py-2.5 rounded-lg hover:bg-white/10 transition-colors">登入</a>
-            <Link href="/quiz" className="bg-[#F5B700] hover:bg-[#e0a800] text-[#0B1220] px-6 py-2.5 rounded-lg font-bold text-[16px] transition-colors">開始建立</Link>
+          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+            <a href="#" className="hidden sm:inline-block text-[16px] font-semibold text-slate-300 border border-white/30 px-5 py-2.5 rounded-lg hover:bg-white/10 transition-colors whitespace-nowrap">登入</a>
+            <Link href="/quiz" className="bg-[#F5B700] hover:bg-[#e0a800] text-[#0B1220] px-3 py-2 sm:px-6 sm:py-2.5 rounded-lg font-bold text-[13px] sm:text-[16px] transition-colors whitespace-nowrap">開始建立</Link>
           </div>
         </div>
       </header>
