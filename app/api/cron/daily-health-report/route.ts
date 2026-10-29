@@ -145,14 +145,24 @@ const RUN_LOG_PIPELINES = [
   // 全部先前都不在這份清單裡，不管跑成什麼樣子（包括VERIFIED已經真的停擺的OFFSHORE_DIVIDEND_SYNC
   // 21天、CLOUD_TW_FUNDAMENTALS_REFRESH 6天、YAHOO_INDEX_QUOTE 39天）都不會被health report看到。
   "OFFSHORE_NAV_TDCC_SYNC",
-  "OFFSHORE_DIVIDEND_SYNC",
+  // 2026-10-29（使用者核准修正，VERIFIED）: OFFSHORE_DIVIDEND_SYNC這支route已經不在vercel.json的
+  // cron清單裡了（最後一次真的被觸發是2026-10-24，之後vercel.json改用cloud-offshore-dividend-tdcc
+  // 取代），不是停擺，是退役——跟先前local_schedule_reporting誤報已停用摩根排程是同一種模式。
+  // 真正接手的CLOUD_OFFSHORE_DIVIDEND_TDCC原本完全不在這份清單裡（VERIFIED每天COMPLETED、
+  // 554/554），改watch它才是對的。
+  "CLOUD_OFFSHORE_DIVIDEND_TDCC",
   "DOMESTIC_DIVIDEND_SYNC",
   "EX_DATE_SYNC",
   "CLOUD_GLOBAL_PE_RECOMPUTE",
   "CLOUD_TW_FUNDAMENTALS_REFRESH",
   "CONSENSUS_LIVE_INGEST",
   "STOCK_TECHNICAL_DAILY_TW",
-  "YAHOO_INDEX_QUOTE",
+  // 2026-10-29（使用者核准修正，VERIFIED）: YAHOO_INDEX_QUOTE對應的phase=quote完全不在
+  // vercel.json的排程裡（只排了phase=history），job名稱本身是route.ts裡動態組出來的
+  // `YAHOO_INDEX_${phase.toUpperCase()}`——這個phase從來沒被排程觸發過，不是壞掉，是這個job
+  // 根本不會再被排程呼叫。真正在跑的YAHOO_INDEX_HISTORY VERIFIED每天正常執行（最新2026-10-29
+  // 00:26），global_index_snapshots本身的新鮮度另外有獨立檢查（globalIndexFreshness），移除
+  // 這個永遠不會有新run的job id不會少看到任何真實異常。
   "YAHOO_INDEX_HISTORY",
   "FX_FORWARD_POINTS_REFERENCE_CURVE",
   "ALERT_DISPATCH",
