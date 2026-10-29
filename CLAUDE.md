@@ -569,3 +569,16 @@ master 為正式基準分支。新工作一律從最新的 master 開分支；�
 4. 在`C:\Users\User\Desktop\smartfund-v2`執行`git fetch`+`git checkout <部署commit sha>`（detached HEAD即可，不需要建分支）。
 5. 切換後，手動執行一次`SmartFund-CorporateActions`、`SmartFund-ShareBuyback`、`SmartMatch Mega ETF Holdings`這3支排程，各自附上寫入前後筆數、run log、以及（如果該腳本有串`local-schedule-report`）回報結果，確認在新commit下仍能正常運作。
 6. **不准**在本機排程執行前自動`git pull`——同步只在這個部署後的固定步驟裡手動做一次，排程本身不應該有改動程式碼的副作用。
+
+## 2026-10-29：global_index_benchmark_resolution_queue 先不處理（使用者核准定案）
+
+**狀態**：`global_index_benchmark_resolution_queue`（ETF→指數代碼自動解析佇列）VERIFIED 223檔
+全部卡在`IDENTITY_PENDING`、`resolution_reason='LABEL_METADATA_HAS_NO_VERIFIED_SOURCE_DOCUMENT_OR_
+OFFICIAL_IDENTIFIER'`，0檔解析成功——是先前就已經卡住的既有系統，不是這一輪新發現的bug。
+
+**這次（ETF追蹤誤差/追蹤差距功能）刻意不碰、不延伸這個佇列**，改成另外手動逐檔核實、縮小範圍
+（`lib/data-platform/web/trackingError.ts`的`TRACKED_ETFS`，規模前50大台股/美股ETF裡只收錄
+能VERIFIED查到免費、官方、每日更新指數資料的那幾檔），兩者是平行、不互相依賴的做法。
+
+**往後如果要重新處理這個佇列**：這是獨立、規模不小的工程（223檔逐一要找到官方指數識別碼來源
+文件），需要使用者另外核准規模與時程，不要在其他任務裡順手展開。
