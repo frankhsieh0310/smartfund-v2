@@ -174,7 +174,7 @@ export interface FundDetailData {
   flows: FundSection<null>;
 }
 
-type HoldingRow = { security_id: string | null; holding_name: string | null; weight: unknown; market_value: unknown; currency: string | null; report_date: Date; source: string; updated_at: Date };
+type HoldingRow = { security_id: string | null; holding_name: string | null; weight: unknown; market_value: unknown; currency: string | null; report_date: Date; source: string; updated_at: Date; rank: number | null };
 // 2026-10-19: MoneyDJ's "names only, no weight disclosed at all" page shape (see
 // MoneydjHoldingsNameOnlyError in lib/cloud-ingestion/moneydjFundDisclosure.ts) persists into its
 // own dedicated fund_holdings_name_only table, never into fund_holdings/holdings (both of which
@@ -218,9 +218,21 @@ export async function getFundDetail(identifier: string, relationLimit = 20, rang
     sectionLimit ? prisma.$queryRaw<DocumentRow[]>(Prisma.sql`SELECT id, document_type AS "documentType", document_title AS "documentTitle", document_date AS "documentDate", effective_date AS "effectiveDate", language, url, source, source_record_id AS "sourceRecordId", updated_at AS "updatedAt" FROM fund_documents WHERE fund_id = ${row.id} AND is_current IS TRUE AND url LIKE 'https://%' ORDER BY document_date DESC NULLS LAST, updated_at DESC LIMIT ${sectionLimit}`) : Promise.resolve([]),
     sectionLimit ? prisma.$queryRaw<ClassificationRow[]>(Prisma.sql`SELECT id, classification_type AS "classificationType", classification_name AS "classificationName", classification_value AS "classificationValue", classification_method AS "classificationMethod", benchmark_name AS "benchmarkName", benchmark_code AS "benchmarkCode", benchmark_id AS "benchmarkId", source, source_record_id AS "sourceRecordId", as_of_date AS "asOfDate", updated_at AS "updatedAt" FROM fund_classifications WHERE fund_id = ${row.id} ORDER BY as_of_date DESC NULLS LAST, updated_at DESC LIMIT ${sectionLimit}`) : Promise.resolve([]),
     sectionLimit ? prisma.$queryRaw<RiskMetricRow[]>(Prisma.sql`SELECT id, metric_code AS "metricCode", period, value, as_of_date AS "asOfDate", calculation_method AS "calculationMethod", observation_count AS "observationCount", source, return_semantics AS "returnSemantics", updated_at AS "updatedAt" FROM fund_risk_metrics WHERE fund_id = ${row.id} ORDER BY as_of_date DESC, updated_at DESC LIMIT ${sectionLimit}`) : Promise.resolve([]),
-    sectionLimit ? prisma.$queryRaw<HoldingRow[]>(Prisma.sql`SELECT security_id, holding_name, weight, market_value, currency, report_date, source, updated_at FROM fund_holdings WHERE fund_id = ${row.id} AND report_date = (SELECT MAX(report_date) FROM fund_holdings WHERE fund_id = ${row.id}) ORDER BY weight DESC NULLS LAST, market_value DESC NULLS LAST LIMIT ${FUND_DETAIL_LIMITS.holdings}`) : Promise.resolve([]),
+    // 2026-10-29（使用者核准，基金前十大持股免費功能缺口修正）: VERIFIED fund_holdings這張表全站
+    // 只有1檔基金有資料——實際上千檔基金的MoneyDJ持股揭露(157,903筆MONEYDJ_PUBLIC_DISCLOSURE來源)
+    // 是寫進holdings表（跟ETF共用同一張表，用fund_id區分），之前這裡一直讀錯表，所以基金詳情頁
+    // 幾乎永遠顯示「尚無holdings資料」。改讀holdings，一樣先鎖最新as_of_date；同一天同一檔持股
+    // 偶爾有多個來源各寫一筆（跟ETF那次修的bug同一種），下面用security_id/holding_name去重，
+    // 優先留MONEYDJ_PUBLIC_DISCLOSURE（這批基金持股揭露最主要、最完整的來源）。
+    sectionLimit ? prisma.$queryRaw<HoldingRow[]>(Prisma.sql`SELECT security_id, holding_name, weight, market_value, currency, as_of_date AS report_date, source, created_at AS updated_at, rank FROM holdings WHERE fund_id = ${row.id} AND as_of_date = (SELECT MAX(as_of_date) FROM holdings WHERE fund_id = ${row.id}) ORDER BY weight DESC NULLS LAST, market_value DESC NULLS LAST LIMIT 200`) : Promise.resolve([]),
   ]);
-  const nameOnlyHoldings = sectionLimit && holdings.length === 0
+  const dedupedHoldings = [...new Map(
+    holdings
+      .slice()
+      .sort((a, b) => (a.source === "MONEYDJ_PUBLIC_DISCLOSURE" ? -1 : b.source === "MONEYDJ_PUBLIC_DISCLOSURE" ? 1 : 0))
+      .map((item) => [item.security_id ?? item.holding_name, item] as const),
+  ).values()].slice(0, FUND_DETAIL_LIMITS.holdings);
+  const nameOnlyHoldings = sectionLimit && dedupedHoldings.length === 0
     ? await prisma.$queryRaw<NameOnlyHoldingRow[]>(Prisma.sql`SELECT holding_name, as_of_date, source, updated_at FROM fund_holdings_name_only WHERE fund_id = ${row.id} AND as_of_date = (SELECT MAX(as_of_date) FROM fund_holdings_name_only WHERE fund_id = ${row.id}) ORDER BY rank ASC LIMIT ${FUND_DETAIL_LIMITS.holdings}`)
     : [];
   const source = row.lastNavSource ?? row.dataSource ?? row.dataProvider;
@@ -231,7 +243,7 @@ export async function getFundDetail(identifier: string, relationLimit = 20, rang
   const performanceDate = performance?.date ?? latestHistory?.date;
   const performanceProvenance = buildProvenance({ source, sourceRecordId: row.id, asOfDate: performanceDate, lastUpdated: performance?.createdAt ?? latestHistory?.createdAt });
   const riskLatest = riskMetrics[0];
-  const holdingLatest = holdings[0];
+  const holdingLatest = dedupedHoldings[0];
   const documentLatest = documents[0];
   const classificationLatest = classifications[0];
   const shareLatest = shareClasses[0];
@@ -261,7 +273,7 @@ export async function getFundDetail(identifier: string, relationLimit = 20, rang
     classifications: { coverage: sectionCoverage(classifications.length, classifications.length > 0), data: classifications.map((item) => ({ type: item.classificationType, name: item.classificationName, value: item.classificationValue, method: item.classificationMethod, benchmarkName: item.benchmarkName, benchmarkCode: item.benchmarkCode, benchmarkId: item.benchmarkId, source: item.source, asOfDate: isoOrNull(item.asOfDate) })), provenance: buildProvenance({ source: classificationLatest?.source, sourceRecordId: classificationLatest?.sourceRecordId, asOfDate: classificationLatest?.asOfDate, lastUpdated: classificationLatest?.updatedAt }) },
     holdings: nameOnlyHoldings.length
       ? { coverage: sectionCoverage(nameOnlyHoldings.length), data: { reportDate: isoOrNull(nameOnlyHoldings[0].as_of_date), items: nameOnlyHoldings.map((item) => ({ holdingName: item.holding_name, securityId: null, weight: null, marketValue: null, currency: null, source: item.source, weightDisclosed: false })) }, provenance: buildProvenance({ source: nameOnlyHoldings[0].source, sourceRecordId: row.id, asOfDate: nameOnlyHoldings[0].as_of_date, lastUpdated: nameOnlyHoldings[0].updated_at }) }
-      : { coverage: sectionCoverage(holdings.length), data: { reportDate: isoOrNull(holdingLatest?.report_date), items: holdings.map((item) => ({ holdingName: item.holding_name, securityId: item.security_id, weight: numberOrNull(item.weight), marketValue: numberOrNull(item.market_value), currency: item.currency, source: item.source, weightDisclosed: true })) }, provenance: buildProvenance({ source: holdingLatest?.source, sourceRecordId: row.id, asOfDate: holdingLatest?.report_date, lastUpdated: holdingLatest?.updated_at }) },
+      : { coverage: sectionCoverage(dedupedHoldings.length), data: { reportDate: isoOrNull(holdingLatest?.report_date), items: dedupedHoldings.map((item) => ({ holdingName: item.holding_name, securityId: item.security_id, weight: numberOrNull(item.weight), marketValue: numberOrNull(item.market_value), currency: item.currency, source: item.source, weightDisclosed: true })) }, provenance: buildProvenance({ source: holdingLatest?.source, sourceRecordId: row.id, asOfDate: holdingLatest?.report_date, lastUpdated: holdingLatest?.updated_at }) },
     documents: { coverage: sectionCoverage(documents.length, documents.length > 0), data: documents.map((item) => ({ type: item.documentType, title: item.documentTitle, date: isoOrNull(item.documentDate ?? item.effectiveDate), language: item.language, url: item.url, source: item.source })), provenance: buildProvenance({ source: documentLatest?.source, sourceRecordId: documentLatest?.sourceRecordId, asOfDate: documentLatest?.documentDate ?? documentLatest?.effectiveDate, lastUpdated: documentLatest?.updatedAt }) },
     flows: { coverage: "SOURCE_PENDING", data: null, provenance: buildProvenance({}) },
   };
