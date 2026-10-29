@@ -141,7 +141,14 @@ export async function getEtfList(query: EtfListQuery = {}): Promise<ServiceRespo
     const flow = flowByEtf.get(row.id);
     const ready = readyByEtf.get(row.id);
     const rowFreshness = await twAwareFreshnessStatus(row.exchange, ready?.latest_date, "MARKET_DAY");
-    return { identity: etfIdentity(row), issuer: row.provider || null, category: row.category, price: numberOrNull(row.latestPrice), metrics: etfMetrics(row), nav: numberOrNull(assetMetric?.nav ?? row.latestNav), aum: numberOrNull(assetMetric?.aum ?? row.aum), sharesOutstanding: numberOrNull(assetMetric?.shares_outstanding), premiumDiscount: numberOrNull(row.premium), holdingsCount: row._count.holdings, flowCoverage: { status: (flow ? "PARTIAL_CURRENT" : "UNAVAILABLE") as "PARTIAL_CURRENT" | "UNAVAILABLE", asOfDate: isoOrNull(flow?.observation_date) }, freshnessStatus: rowFreshness, publicReady: (row.latestPrice != null || row.latestNav != null) && ready?.history_ready === true && rowFreshness === "CURRENT", source: row.dataSource ?? row.dataProvider ?? row.provider };
+    // 2026-10-29（使用者核准，AUM雙來源衝突查證定案）: etf_asset_metrics.aum（來源
+    // MONEYDJ_ETF_PUBLIC）VERIFIED跟Yahoo/證交所差了超過10^6倍、停在2026-08-13沒再更新過
+    // ——抽查0050/SPY/QQQ，etfs.aum跟Yahoo Finance當前數字幾乎完全一致（SPY $809.22B、
+    // QQQ $498.95B，誤差在個位數美元），0050也跟證交所ETFortune頁面同量級，etf_asset_metrics.aum
+    // 才是錯的那個。改成只用etfs.aum，不再讓assetMetric.aum蓋掉它。nav/shares_outstanding這兩個
+    // assetMetric欄位沒有這個問題（VERIFIED抽查0050/0056/00878的metrics_nav全部是null，從來沒蓋掉
+    // 過etfs.latest_nav），維持原狀不動。
+    return { identity: etfIdentity(row), issuer: row.provider || null, category: row.category, price: numberOrNull(row.latestPrice), metrics: etfMetrics(row), nav: numberOrNull(assetMetric?.nav ?? row.latestNav), aum: numberOrNull(row.aum), sharesOutstanding: numberOrNull(assetMetric?.shares_outstanding), premiumDiscount: numberOrNull(row.premium), holdingsCount: row._count.holdings, flowCoverage: { status: (flow ? "PARTIAL_CURRENT" : "UNAVAILABLE") as "PARTIAL_CURRENT" | "UNAVAILABLE", asOfDate: isoOrNull(flow?.observation_date) }, freshnessStatus: rowFreshness, publicReady: (row.latestPrice != null || row.latestNav != null) && ready?.history_ready === true && rowFreshness === "CURRENT", source: row.dataSource ?? row.dataProvider ?? row.provider };
   }));
   return { data: items, meta: { asOfDate: provenance.asOfDate, lastUpdated: provenance.lastUpdated, freshnessStatus: freshnessStatus(latest, "MARKET_DAY"), source, provenance, coverageStatus: "PARTIAL_CURRENT" }, pagination: paginationMeta(page, pageSize, total), error: null };
 }
