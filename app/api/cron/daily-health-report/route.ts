@@ -121,6 +121,7 @@ const RUN_LOG_PIPELINES = [
   // 既有checkPipelineRunLog「今天有一次COMPLETED就不算異常」的邏輯相容，不會因為大部分時間是
   // no-op就被誤判。
   "CLOUD_SEC_13F_SYNC",
+  "CLOUD_TW_BANK_RATE_SYNC",
   "CLOUD_ETF_PRICE",
   "CLOUD_FUND_NAV:SITCA",
   "CLOUD_MONEYDJ_FUND",

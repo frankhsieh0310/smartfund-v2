@@ -97,11 +97,14 @@ export default async function EtfDetailPage({ params }: { params: Promise<{ code
       // 不拿別的幣別利率頂替。
       const riskFreeSource = RISK_FREE_RATE_SOURCES[etf.currency ?? ""];
       let riskFreeRatePct: number | null = null;
+      let riskFreeRateAsOf: string | null = null;
       if (riskFreeSource) {
-        const riskFreeRateRow = await prisma.$queryRawUnsafe<{ value: unknown }[]>(
-          `SELECT value FROM treasury_fiscal_observations WHERE metric_code = 'TREASURY_YIELD_3_MO' ORDER BY observation_date DESC LIMIT 1`,
+        const riskFreeRateRow = await prisma.$queryRawUnsafe<{ value: unknown; observation_date: Date }[]>(
+          `SELECT value, observation_date FROM treasury_fiscal_observations WHERE metric_code = $1 ORDER BY observation_date DESC LIMIT 1`,
+          riskFreeSource.metricCode,
         );
         riskFreeRatePct = riskFreeRateRow[0]?.value != null ? Number(riskFreeRateRow[0].value) : null;
+        riskFreeRateAsOf = riskFreeRateRow[0]?.observation_date ? dateText(riskFreeRateRow[0].observation_date) ?? null : null;
       }
       const sharpeUnavailableReason = !riskFreeSource ? (RISK_FREE_RATE_UNAVAILABLE_REASON[etf.currency ?? ""] ?? `尚無${etf.currency ?? "此幣別"}的官方無風險利率自動化來源，暫不計算夏普值`) : null;
       const calculatedRisk = calculateVolatilityAndSharpe(
@@ -117,7 +120,7 @@ export default async function EtfDetailPage({ params }: { params: Promise<{ code
           ? { label: "Sharpe", value: `—（${sharpeUnavailableReason}）` }
           : { label: "Sharpe", value: calculatedRisk.sharpe1y != null ? `${calculatedRisk.sharpe1y.toFixed(2)}（本App計算）` : "—" };
       const riskMethodNote = etf.volatility1y == null || etf.sharpe1y == null
-        ? `${RISK_CALC_METHOD_LABEL}${riskFreeSource ? `無風險利率來源：${riskFreeSource.label}。` : ""}`
+        ? `${RISK_CALC_METHOD_LABEL}${riskFreeSource ? `無風險利率來源：${riskFreeSource.label}${riskFreeRateAsOf ? `（資料日期：${riskFreeRateAsOf}）` : ""}。` : ""}`
         : null;
       data = { type: "ETF", code: etf.code, name: etf.name, officialName: etf.nameEn ?? undefined, exchange: etf.exchange ?? undefined, region: etf.region ?? undefined, currency: etf.currency, isin: etf.isin ?? undefined, summary: [metric("最新價格", latest), metric("NAV（同期）", sameDateNav), metric("Premium / Discount（同期）", sameDatePremium, "%"), { label: "漲跌 / 漲跌幅", value: change == null || !previous ? "—" : `${fmt(change)} / ${((change / previous) * 100).toFixed(2)}%` }], performance: [metric("1M", etf.return1m, "%"), metric("3M", etf.return3m, "%"), metric("6M", etf.return6m, "%"), metric("YTD", etf.returnYtd, "%"), metric("1Y", etf.return1y, "%"), metric("3Y", etf.return3y, "%"), metric("5Y", etf.return5y, "%")], risk: [volatilityMetric, metric("Beta", etf.beta), metric("Max Drawdown", etf.maxDrawdown, "%"), sharpeMetric, ...(riskMethodNote ? [{ label: "計算方法", value: riskMethodNote }] : [])], keyData: [metric("NAV", etf.latestNav), metric("AUM", etf.aum), metric("Expense Ratio", pctFraction(etf.expenseRatio), "%"), metric("Dividend Yield", pctFraction(etf.dividendYield), "%"), { label: "Issuer", value: etf.provider }, { label: "Asset Class", value: etf.category ?? "—" }, { label: "Benchmark", value: etf.benchmark ?? "—" }, { label: "Holdings Count", value: dedupedHoldings.length ? String(dedupedHoldings.length) : "—" }, metric("Premium / Discount", sameDatePremium, "%")], relatedData: related, history: allHistory, priceDate: dateText(latestRow?.date ?? etf.priceUpdatedAt), source: etf.dataProvider ?? etf.provider, lastUpdated: dateText(etf.updatedAt), updatedAt: dateText(etf.priceUpdatedAt ?? etf.updatedAt), frequency: "依既有 ETF Canonical Data 更新", freshnessStatus: displayFreshness };
     }
