@@ -265,14 +265,18 @@ export async function getFundDetail(identifier: string, relationLimit = 20, rang
   if (!fees.length && (row.expenseRatio !== null || row.distributionFreq)) fees.push({ shareClass: row.name, managementFee: null, ongoingCharges: null, ter: numberOrNull(row.expenseRatio), salesChargeFront: null, salesChargeBack: null, performanceFee: null, minimumInitialInvestment: null, distributionFrequency: row.distributionFreq, hedgingTerms: null, source, asOfDate: isoOrNull(row.latestNavDate) });
   const classificationAssetClass = classifications.find((item) => /ASSET.CLASS/i.test(item.classificationType))?.classificationValue ?? classifications.find((item) => /ASSET.CLASS/i.test(item.classificationType))?.classificationName ?? null;
   // 2026-10-29（使用者核准，免費功能缺口——基金風險指標）: VERIFIED核心母體5,884檔基金裡，
-  // fund_risk_metrics的sharpe_3y/std_dev_3y（Yahoo官方來源，但只對3,6%的非核心母體基金有資料）
-  // 覆蓋率是0——這批基金完全沒有既有的標準差/夏普值。跟ETF那次一樣，用fund_history真實NAV
-  // 自行計算（lib/data-platform/web/riskCalc.ts，同一套年化標準差/夏普值公式），只有在
-  // riskMetrics完全沒有既有1Y資料時才補上，並標示「本App計算」跟計算方法。
-  const hasOfficial1yRisk = riskMetrics.some((m) => /_1Y$/i.test(m.metricCode) && (/SHARPE|STD|VOLATIL/i.test(m.metricCode)));
+  // fund_risk_metrics的sharpe_3y/std_dev_3y（Yahoo官方來源，但只對3.6%的非核心母體基金有資料）
+  // 覆蓋率是0，但另一批既有「DERIVED_FROM_FUND_HISTORY」一次性計算（2026-08-09~09-08，已經
+  // 不是活躍排程，VERIFIED沒有任何現行cron還在寫入）用的是SHARPE_RF_ZERO（無風險利率固定當0），
+  // 跟ETF這次統一採用的真實利率規則不一致。標準差（VOLATILITY_1Y）不受無風險利率影響，既有的
+  // 保留；SHARPE_1Y無論有沒有既有值，一律用真實利率重新計算覆蓋過去，沒有官方利率來源的幣別
+  // 就不顯示Sharpe、標示原因——跟ETF完全同一套規則。SHARPE_3Y/5Y因為riskCalc.ts目前只支援1年期
+  // 窗口，這次沒有一併修正，維持原本RF=0的舊值，列為已知限制。
+  const hasOfficial1yVolatility = riskMetrics.some((m) => /VOLATIL.*_1Y$|_1Y.*VOLATIL/i.test(m.metricCode));
+  const existingSharpe1y = riskMetrics.find((m) => /SHARPE.*_1Y$|_1Y.*SHARPE/i.test(m.metricCode));
   let calculatedFundRisk: { period: string; value: number; label: string }[] = [];
   let fundRiskMethodNote: string | null = null;
-  if (!hasOfficial1yRisk) {
+  {
     const oneYearAgo = new Date(Date.UTC(new Date().getUTCFullYear() - 1, new Date().getUTCMonth(), new Date().getUTCDate()));
     const riskFreeSource = RISK_FREE_RATE_SOURCES[row.currency ?? ""];
     let riskFreeRatePct: number | null = null;
@@ -285,10 +289,17 @@ export async function getFundDetail(identifier: string, relationLimit = 20, rang
     }
     const navPoints = historyRows.filter((r) => r.date >= oneYearAgo && r.nav != null).map((r) => ({ date: r.date, close: Number(r.nav) })).toReversed();
     const calc = calculateVolatilityAndSharpe(navPoints, riskFreeRatePct);
-    if (calc.volatility1yPct != null) calculatedFundRisk.push({ period: "1Y", value: calc.volatility1yPct, label: "VOLATILITY_1Y（本App計算）" });
-    if (calc.sharpe1y != null) calculatedFundRisk.push({ period: "1Y", value: calc.sharpe1y, label: "SHARPE_1Y（本App計算）" });
-    if (calculatedFundRisk.length) fundRiskMethodNote = `${RISK_CALC_METHOD_LABEL}${riskFreeSource ? `無風險利率來源：${riskFreeSource.label}。` : "此幣別尚無官方無風險利率自動化來源，Sharpe暫不計算。"}`;
+    if (!hasOfficial1yVolatility && calc.volatility1yPct != null) calculatedFundRisk.push({ period: "1Y", value: calc.volatility1yPct, label: "VOLATILITY_1Y（本App計算）" });
+    if (calc.sharpe1y != null) calculatedFundRisk.push({ period: "1Y", value: calc.sharpe1y, label: "SHARPE_1Y（本App計算，取代RF=0的舊算法）" });
+    if (calc.sharpe1y != null || (!hasOfficial1yVolatility && calc.volatility1yPct != null)) {
+      fundRiskMethodNote = `${RISK_CALC_METHOD_LABEL}${riskFreeSource ? `無風險利率來源：${riskFreeSource.label}。` : "此幣別尚無官方無風險利率自動化來源，Sharpe暫不計算。"}`;
+    } else if (existingSharpe1y?.calculationMethod === "SHARPE_RF_ZERO") {
+      // 有舊的RF=0版本，但重算失敗（例如價格資料不足20筆）——不留誤導性的RF=0舊值在畫面上。
+      fundRiskMethodNote = riskFreeSource ? "資料不足以重新計算Sharpe（需至少20個交易日的真實NAV）" : "此幣別尚無官方無風險利率自動化來源，Sharpe暫不計算";
+    }
   }
+  // 舊版RF=0的SHARPE_1Y一律從既有riskMetrics拿掉，避免跟上面重新計算的版本同時顯示在畫面上。
+  const filteredRiskMetrics = riskMetrics.filter((m) => !(/SHARPE.*_1Y$|_1Y.*SHARPE/i.test(m.metricCode) && m.calculationMethod === "SHARPE_RF_ZERO"));
 
   const chronologicalHistory = historyRows.toReversed();
   const sampledHistory = chronologicalHistory.length <= FUND_DETAIL_LIMITS.history
@@ -311,8 +322,8 @@ export async function getFundDetail(identifier: string, relationLimit = 20, rang
     // fund_risk_metrics裡sharpe_3y/std_dev_3y這批Yahoo一次性回填的資料as_of_date全部是null，
     // 呼叫.toISOString()會直接丟錯誤——目前核心母體基金剛好沒有命中這個組合（抽查0筆），所以
     // 還沒在正式環境爆出來，但是個真的bug，順手用?. 防呆，不等它真的命中才修。
-    riskMetrics: { coverage: sectionCoverage(riskMetrics.length + calculatedFundRisk.length), data: [
-      ...riskMetrics.map((item) => ({ metricCode: item.metricCode, period: item.period, value: Number(item.value), asOfDate: item.asOfDate?.toISOString() ?? null, calculationMethod: item.calculationMethod, observationCount: item.observationCount, source: item.source, returnSemantics: item.returnSemantics })),
+    riskMetrics: { coverage: sectionCoverage(filteredRiskMetrics.length + calculatedFundRisk.length), data: [
+      ...filteredRiskMetrics.map((item) => ({ metricCode: item.metricCode, period: item.period, value: Number(item.value), asOfDate: item.asOfDate?.toISOString() ?? null, calculationMethod: item.calculationMethod, observationCount: item.observationCount, source: item.source, returnSemantics: item.returnSemantics })),
       ...calculatedFundRisk.map((item) => ({ metricCode: item.label, period: item.period, value: item.value, asOfDate: null, calculationMethod: fundRiskMethodNote ?? "本App計算", observationCount: 0, source: "SMARTMATCH_CALCULATED", returnSemantics: null })),
     ], provenance: buildProvenance({ source: riskLatest?.source ?? (calculatedFundRisk.length ? "SMARTMATCH_CALCULATED" : undefined), sourceRecordId: riskLatest?.id, asOfDate: riskLatest?.asOfDate, lastUpdated: riskLatest?.updatedAt }) },
     shareClasses: { coverage: sectionCoverage(shareClasses.length, shareClasses.length > 0), data: shareClasses.map((item) => ({ id: item.id, name: item.shareClassName, code: item.shareClassCode, isin: item.isin, currency: item.currency, distributionType: item.distributionType, accumulationDistribution: item.accumulatingDistributing, hedged: item.hedged, hedgedCurrency: item.hedgedCurrency, investorType: item.institutionalRetail, source: item.source })), provenance: buildProvenance({ source: shareLatest?.source, sourceRecordId: shareLatest?.sourceRecordId, asOfDate: shareLatest?.termsAsOfDate, lastUpdated: shareLatest?.updatedAt }) },
