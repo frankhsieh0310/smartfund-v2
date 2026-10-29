@@ -582,3 +582,37 @@ OFFICIAL_IDENTIFIER'`，0檔解析成功——是先前就已經卡住的既有�
 
 **往後如果要重新處理這個佇列**：這是獨立、規模不小的工程（223檔逐一要找到官方指數識別碼來源
 文件），需要使用者另外核准規模與時程，不要在其他任務裡順手展開。
+
+## 2026-10-29：美股ETF追蹤誤差暫不上線（使用者核准定案）
+
+**狀態**：`lib/data-platform/web/trackingError.ts`已經改用adjusted_close(還原權值)+總報酬指數
+(^SP500TR/^NDXT)，VERIFIED比最早版本(用市價+價格指數)準確很多——VOO從1.46%降到0.82%、SPY從
+1.43%降到1.30%，但VERIFIED業界實際公布數字(StockRover/SeekingAlpha)是0.0-0.04%量級，還是差了
+一個數量級；QQQ用^NDXT算出來更差(11.7%)，懷疑^NDXT這個Yahoo指數本身資料有問題，沒查清楚。
+沒找到SPDR/Vanguard/Invesco官方自己公布追蹤誤差數字的頁面可以直接照抄。
+
+**使用者核准**：畫面上美股ETF一律顯示「無資料」，不要顯示這個不準的數字。程式碼保留（不刪除），
+往後如果要重新處理：
+1. 先查清楚^NDXT這類Yahoo總報酬指數是否可靠（跟官方Nasdaq/ICE發布的數字對照）。
+2. 或改找發行商(SPDR/Vanguard/Invesco/iShares)官網是否有自己公布的追蹤誤差數字可以照抄
+   （元大模式——照抄比自算更可靠）。
+3. 需要使用者另外核准規模與時程。
+
+## 2026-10-29：新加坡大華基金NEW_FUND_CREATE_FAILED——根因是funds.isin的DB層unique
+constraint，跟既有「TDCC代碼+ISIN」判斷規則互相矛盾（需要使用者決定是否改schema）
+
+**VERIFIED根因**：`lib/cron/newFundListingDetection.ts`的`createMissingOffshoreFunds`本來就有
+2026-10-23訂的規則——「ISIN相同但TDCC基金代碼(taxId)不同」視為合法的不同級別（同一檔基金、
+不同貨幣級別，例如USGFSG星幣／USGFUS美元共用同一個基金家族ISIN），應該要能各自建立。但
+VERIFIED兩個直接問題：
+1. 原本的`prisma.fund.create()`完全沒有寫入`code`欄位——導致下一輪執行時，既有列的
+   `existing.code`永遠是null，跟任何taxId比對都不相等，讓「代碼相同才是真的改名」這條規則
+   永遠失效。**已修**（這次commit補上`code: row.taxId`）。
+2. **還沒解的部分**：VERIFIED `funds.isin`在資料庫層本身就有`CREATE UNIQUE INDEX funds_isin_key`
+   （Prisma schema也標`@unique`）——這代表就算代碼判斷邏輯完全正確，資料庫本身也**物理上**
+   不允許兩筆不同基金共用同一個ISIN，不管代碼是否不同。「新加坡大華新加坡增長基金(美元)」
+   (taxId=USGFUS)目前還是建不起來，因為同ISIN的星幣級別(USGFSG)已經佔用了這個ISIN。
+
+**需要使用者決定**：要讓同ISIN、不同TDCC代碼的多級別基金都能建立，`funds.isin`的unique
+constraint需要改成複合唯一鍵（例如`UNIQUE(isin, code)`）或乾脆拿掉單欄位的unique——這是
+schema變更，照規則需要使用者核准才能執行，這次沒有自己動手改。

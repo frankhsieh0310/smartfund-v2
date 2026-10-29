@@ -299,8 +299,13 @@ async function createMissingOffshoreFunds(
     // 10/20那次FAILED run的根因（一筆unique constraint錯誤讓後面所有本來能成功建立的基金全部
     // 漏掉）。
     try {
+      // 2026-10-29（VERIFIED，新加坡大華基金NEW_FUND_CREATE_FAILED根因修正第一步）: 原本這裡
+      // 完全沒有寫入code（TDCC基金代碼/row.taxId），導致上面「ISIN相同時比對code是否也相同」
+      // 的relabel判斷下一輪永遠失效（existing.code永遠是null，跟任何真實taxId都不相等）——
+      // 補上code才能讓這個判斷真正生效。
       await prisma.fund.create({
         data: {
+          code: row.taxId,
           name: row.name,
           company,
           currency: rawCurrency,
