@@ -174,6 +174,7 @@ export interface FundDetailData {
   /** 2026-10-29: 產業/區域配置，來源 Yahoo奇摩股市基金頁"持股狀況"，排程 FUND_ALLOCATION_SYNC。 */
   sectorAllocation: FundSection<Array<{ label: string; weight: number }>> & { asOfDate: string | null };
   regionAllocation: FundSection<Array<{ label: string; weight: number }>> & { asOfDate: string | null };
+  managers: FundSection<Array<{ name: string; role: string | null; startDate: string | null }>>;
   documents: FundSection<Array<{ type: string; title: string | null; date: string | null; language: string | null; url: string; source: string }>>;
   flows: FundSection<null>;
 }
@@ -236,13 +237,17 @@ export async function getFundDetail(identifier: string, relationLimit = 20, rang
       .sort((a, b) => (a.source === "MONEYDJ_PUBLIC_DISCLOSURE" ? -1 : b.source === "MONEYDJ_PUBLIC_DISCLOSURE" ? 1 : 0))
       .map((item) => [item.security_id ?? item.holding_name, item] as const),
   ).values()].slice(0, FUND_DETAIL_LIMITS.holdings);
-  const [sectorAllocationRows, regionAllocationRows] = await Promise.all([
+  const [sectorAllocationRows, regionAllocationRows, managerRows] = await Promise.all([
     prisma.$queryRawUnsafe<{ classification_code: string; classification_value: string; as_of_date: Date }[]>(
       `SELECT classification_code, classification_value, as_of_date FROM fund_classifications WHERE fund_id = $1 AND classification_type = 'YAHOO_SECTOR_ALLOCATION' ORDER BY classification_value::numeric DESC`,
       row.id,
     ),
     prisma.$queryRawUnsafe<{ classification_code: string; classification_value: string; as_of_date: Date }[]>(
       `SELECT classification_code, classification_value, as_of_date FROM fund_classifications WHERE fund_id = $1 AND classification_type = 'YAHOO_REGION_ALLOCATION' ORDER BY classification_value::numeric DESC`,
+      row.id,
+    ),
+    prisma.$queryRawUnsafe<{ name: string; role: string | null; start_date: Date | null }[]>(
+      `SELECT m.name, a.role, a.start_date FROM fund_manager_assignments a JOIN fund_managers m ON m.id = a.manager_id WHERE a.fund_id = $1 AND a.end_date IS NULL ORDER BY a.start_date DESC NULLS LAST`,
       row.id,
     ),
   ]);
@@ -335,6 +340,7 @@ export async function getFundDetail(identifier: string, relationLimit = 20, rang
     documents: { coverage: sectionCoverage(documents.length, documents.length > 0), data: documents.map((item) => ({ type: item.documentType, title: item.documentTitle, date: isoOrNull(item.documentDate ?? item.effectiveDate), language: item.language, url: item.url, source: item.source })), provenance: buildProvenance({ source: documentLatest?.source, sourceRecordId: documentLatest?.sourceRecordId, asOfDate: documentLatest?.documentDate ?? documentLatest?.effectiveDate, lastUpdated: documentLatest?.updatedAt }) },
     sectorAllocation: { coverage: sectionCoverage(sectorAllocationRows.length), data: sectorAllocationRows.map((r) => ({ label: r.classification_code, weight: Number(r.classification_value) })), asOfDate: isoOrNull(sectorAllocationRows[0]?.as_of_date), provenance: buildProvenance({ source: "YAHOO_FUND_HOLDINGS_PAGE", sourceRecordId: row.id, asOfDate: sectorAllocationRows[0]?.as_of_date, lastUpdated: sectorAllocationRows[0]?.as_of_date }) },
     regionAllocation: { coverage: sectionCoverage(regionAllocationRows.length), data: regionAllocationRows.map((r) => ({ label: r.classification_code, weight: Number(r.classification_value) })), asOfDate: isoOrNull(regionAllocationRows[0]?.as_of_date), provenance: buildProvenance({ source: "YAHOO_FUND_HOLDINGS_PAGE", sourceRecordId: row.id, asOfDate: regionAllocationRows[0]?.as_of_date, lastUpdated: regionAllocationRows[0]?.as_of_date }) },
+    managers: { coverage: sectionCoverage(managerRows.length), data: managerRows.map((m) => ({ name: m.name, role: m.role, startDate: isoOrNull(m.start_date) })), provenance: buildProvenance({ source: "YAHOO_FUND_HOLDINGS_PAGE", sourceRecordId: row.id, asOfDate: managerRows[0]?.start_date, lastUpdated: managerRows[0]?.start_date }) },
     flows: { coverage: "SOURCE_PENDING", data: null, provenance: buildProvenance({}) },
   };
   if (data.company && /^(待補|unknown|n\/a)/i.test(data.company)) data.company = null;

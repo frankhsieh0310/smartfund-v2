@@ -17,7 +17,7 @@ import { isAuthorizedCron, unauthorizedCron } from "@/lib/cron/authorize";
 import { beginRun, finishRun, readCheckpoint, writeCheckpoint } from "@/lib/cloud-ingestion/runContext";
 import { loadMapping } from "@/lib/offshore-nav-sync/mapping";
 import { loadDomesticYahooMapping } from "@/lib/holdings-alt-source/domesticYahooMapping";
-import { fetchYahooFundAllocation } from "@/lib/yahoo/fundAllocationPage";
+import { fetchYahooFundAllocation, managerFullName } from "@/lib/yahoo/fundAllocationPage";
 import { YahooFundRateLimitedError } from "@/lib/yahoo/fundPerformancePage";
 import { isFundAllocationSyncWriteEnabled } from "@/lib/cron/fundAllocationWriteGate";
 
@@ -96,6 +96,26 @@ export async function GET(request: Request) {
                 `INSERT INTO fund_classifications (id, fund_id, classification_type, classification_code, classification_name, classification_value, source, source_record_id, as_of_date, classification_method, created_at, updated_at)
                  VALUES (gen_random_uuid()::text, $1, 'YAHOO_REGION_ALLOCATION', $2, $2, $3, 'YAHOO_FUND_HOLDINGS_PAGE', $4, $5::date, 'YAHOO_PUBLISHED', NOW(), NOW())`,
                 entry.fundId, region.nameInChinese, String(region.weight), entry.yahooFundId, allocation.regionsAsOf,
+              );
+            }
+            // 2026-10-29（使用者核准，基金經理人缺口）: 同一頁本來就有managers陣列，不另外多打
+            // 一次請求。既有fund_managers沒有name的unique constraint，用「名字一致」查詢避免
+            // 重複建人；每次先清掉這檔基金舊的assignment再整批重寫（跟上面sector/region同一套
+            // delete+rewrite作法），避免卸任經理人一直留著。
+            await tx.$executeRawUnsafe(`DELETE FROM fund_manager_assignments WHERE fund_id = $1 AND source = 'YAHOO_FUND_HOLDINGS_PAGE'`, entry.fundId);
+            for (const manager of allocation.managers) {
+              const name = managerFullName(manager);
+              if (!name) continue;
+              const existing = await tx.$queryRawUnsafe<{ id: string }[]>(`SELECT id FROM fund_managers WHERE name = $1 LIMIT 1`, name);
+              const managerId = existing[0]?.id ?? (await tx.$queryRawUnsafe<{ id: string }[]>(
+                `INSERT INTO fund_managers (id, name, source, source_record_id, verification_status, created_at, updated_at)
+                 VALUES (gen_random_uuid()::text, $1, 'YAHOO_FUND_HOLDINGS_PAGE', $2, 'VERIFIED_SUPPLEMENTAL', NOW(), NOW()) RETURNING id`,
+                name, `${entry.yahooFundId}:manager:${name}`,
+              ))[0].id;
+              await tx.$executeRawUnsafe(
+                `INSERT INTO fund_manager_assignments (id, manager_id, fund_id, start_date, role, source, source_record_id, verified_at, created_at, updated_at)
+                 VALUES (gen_random_uuid()::text, $1, $2, $3::date, $4, 'YAHOO_FUND_HOLDINGS_PAGE', $5, NOW(), NOW(), NOW())`,
+                managerId, entry.fundId, manager.startDate, manager.role, `${entry.yahooFundId}:manager:${name}`,
               );
             }
           });
