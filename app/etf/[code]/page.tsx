@@ -72,7 +72,15 @@ export default async function EtfDetailPage({ params }: { params: Promise<{ code
       const latest = latestRow?.price != null ? Number(latestRow.price) : (etf.latestPrice == null ? null : Number(etf.latestPrice));
       const previous = previousRow?.price != null ? Number(previousRow.price) : undefined;
       const change = latest != null && Number.isFinite(latest) && previous != null ? latest - previous : null;
-      const sameDateNav = latestRow?.nav ?? null;
+      // 2026-10-29（VERIFIED，競品對照追蹤——折溢價一直顯示「—」）: etf_history.nav這張表
+      // VERIFIED幾乎整表是空的(0050全部4351筆只有3筆有nav)，原本折溢價只用這個欄位算，所以
+      // 永遠算不出來。etfs.latestNav/latestPrice這兩個欄位本身就是同一支官方每日канон資料來源
+      // 寫入的、跟etf_history.price同一天更新(VERIFIED 0050兩者priceUpdatedAt/latestRow.date
+      // 都是2026-10-28)——etf_history沒有nav時，退回用這兩個欄位算，只在日期對得上(同一個
+      // latest交易日)時才用，避免拿舊的etfs.latestNav去配新的latestRow.price。
+      const latestRowDateStr = latestRow?.date ? dateText(latestRow.date) : null;
+      const etfLatestNavDateStr = dateText(etf.priceUpdatedAt);
+      const sameDateNav = latestRow?.nav ?? (latestRowDateStr && latestRowDateStr === etfLatestNavDateStr ? etf.latestNav : null);
       const sameDatePremium = latestRow?.price != null && sameDateNav != null ? ((Number(latestRow.price) / Number(sameDateNav)) - 1) * 100 : null;
       // 同一檔持股被不同來源各寫一筆時，優先留 ETF_OFFICIAL_DAILY_SNAPSHOT 那一筆（官方每日快照
       // 流程，比舊版URL字串來源的欄位更完整）；兩者都沒有就留先出現的那筆，不是用猜的，只是避免
