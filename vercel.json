@@ -329,6 +329,10 @@
       "schedule": "0 13 * * *"
     },
     {
+      "path": "/api/cron/cloud-sec-13f-sync",
+      "schedule": "20 13 * * *"
+    },
+    {
       "path": "/api/cron/etf-official-holdings?issuer=Cathay",
       "schedule": "5,25,45 11-14 * * 1-5"
     },

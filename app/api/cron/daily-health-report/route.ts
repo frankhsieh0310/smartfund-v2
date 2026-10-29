@@ -116,6 +116,11 @@ const RUN_LOG_PIPELINES = [
   // 沒有被重新啟動」的反向檢查取代。
   "OFFSHORE_NAV_SYNC",
   "INSTITUTIONAL_UPDATE",
+  // 2026-10-29（使用者核准，重建13F排程）: 每天COMPLETED一次就算健康——大部分日子16個機構全部
+  // 「本季已有申報」直接skip，只有季度截止日(2/14,5/15,8/14,11/14)後才會真的抓到新資料，這跟
+  // 既有checkPipelineRunLog「今天有一次COMPLETED就不算異常」的邏輯相容，不會因為大部分時間是
+  // no-op就被誤判。
+  "CLOUD_SEC_13F_SYNC",
   "CLOUD_ETF_PRICE",
   "CLOUD_FUND_NAV:SITCA",
   "CLOUD_MONEYDJ_FUND",
