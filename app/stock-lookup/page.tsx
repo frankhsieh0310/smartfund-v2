@@ -163,7 +163,12 @@ export default function StockLookupPage() {
                       <span className="rounded-full bg-white/[0.06] px-2.5 py-0.5 text-[11px] font-bold text-slate-300">{p.type}</span>
                     </div>
                     <div className="text-[12px] text-slate-500">
-                      持股權重 {p.holdings[0]?.weight != null ? `${(p.holdings[0].weight * 100).toFixed(2)}%` : "—"} · 資料日期 {p.date ?? "—"}
+                      {/* 2026-10-29（VERIFIED，競品對照稽核發現）: /api/mobile/reverse-holdings回傳的
+                          weight本身已經是百分比數字（例如9.97代表9.97%），不是0-1的小數——這裡原本
+                          多乘了一次100，導致查台積電時部分持股顯示超過100%、最高到6312%。既有App端
+                          (app/reverse-lookup.tsx、RelatedHoldingsPanel.tsx)本來就是直接weight.toFixed(2)，
+                          沒有這個問題，這裡改成跟App一致。 */}
+                      持股權重 {p.holdings[0]?.weight != null ? `${p.holdings[0].weight.toFixed(2)}%` : "—"} · 資料日期 {p.date ?? "—"}
                     </div>
                   </div>
                 ))}
