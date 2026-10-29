@@ -78,10 +78,14 @@ export async function GET(request: Request) {
     const observationDate = rocYmToIso(targetMonth);
 
     if (writeEnabled) {
+      // 2026-10-29（VERIFIED，今晚13:40 UTC第一次正式排程FAILED後修正）: treasury_fiscal_observations
+      // 的official_field是NOT NULL、沒有預設值的欄位（existing lib/cron/usTreasurySync.ts的寫法
+      // 存官方欄位原名），原本這支route完全沒帶這個欄位，正式環境第一次執行直接撞NOT NULL
+      // constraint（23502）整次FAILED、0筆寫入。補上官方欄位原名「定存利率-一年期-機動」。
       await prisma.$executeRawUnsafe(
         `INSERT INTO treasury_fiscal_observations
-           (id, country, metric_code, metric_name, observation_date, value, unit, currency, frequency, source, source_record_id, source_url, created_at, updated_at, verification_status)
-         VALUES (gen_random_uuid()::text, 'TW', 'CBC_5BANK_1Y_DEPOSIT_AVG', '五大銀行新臺幣一年期定存機動利率平均', $1::date, $2, 'PERCENT_PER_ANNUM', 'TWD', 'MONTHLY', 'CENTRAL_BANK_OF_TAIWAN', $3, 'https://cpx.cbc.gov.tw/api/OpenData/DataSet?set_id=10359', NOW(), NOW(), 'VERIFIED_OFFICIAL')
+           (id, country, metric_code, metric_name, official_field, observation_date, value, unit, currency, frequency, source, source_record_id, source_url, created_at, updated_at, verification_status)
+         VALUES (gen_random_uuid()::text, 'TW', 'CBC_5BANK_1Y_DEPOSIT_AVG', '五大銀行新臺幣一年期定存機動利率平均', '定存利率-一年期-機動', $1::date, $2, 'PERCENT_PER_ANNUM', 'TWD', 'MONTHLY', 'CENTRAL_BANK_OF_TAIWAN', $3, 'https://cpx.cbc.gov.tw/api/OpenData/DataSet?set_id=10359', NOW(), NOW(), 'VERIFIED_OFFICIAL')
          ON CONFLICT (country, metric_code, observation_date, source) DO UPDATE SET value = EXCLUDED.value, source_record_id = EXCLUDED.source_record_id, updated_at = NOW()`,
         observationDate, avgRate, `CBC_5BANK_1Y_DEPOSIT_AVG:${targetMonth}`,
       );
