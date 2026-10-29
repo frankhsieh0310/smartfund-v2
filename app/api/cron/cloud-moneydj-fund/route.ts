@@ -69,6 +69,12 @@ const FRESH_DAYS = 25; // matches the local disclosure worker's re-fetch guard
 // yahoo-etf-full-sweep (TIME_BUDGET_MS well under maxDuration=300s so a checkpoint write always
 // happens). Not a maxDuration increase — maxDuration stays 300.
 const TIME_BUDGET_MS = 240_000;
+// 2026-10-29（使用者核准，43%永久失敗率根因修正）: 原本兩個批次迴圈在「成功」的請求之間完全沒有
+// 延遲——只有撞到403/429後才sleep(2_000)並結束整批，正常請求是逐筆打完就馬上打下一筆。
+// VERIFIED production_scheduler_runs累積43%的HTTP_429失敗率，是我們自己打太快觸發MoneyDJ的
+// 限流，不是對方外部延遲，使用者核准定案：改成每一筆請求（成功或失敗）之間都插入這個延遲。
+// 1500ms/筆 x 最多80筆 = 最多120s，仍在TIME_BUDGET_MS=240_000的預算內，不會讓checkpoint寫不進去。
+const PER_ITEM_DELAY_MS = 1_500;
 
 // 2026-10-19: hourBucketKey() (lib/cloud-ingestion/runContext.ts) dedups run_key per CALENDAR HOUR,
 // shared by 9 other cron routes that genuinely want "at most once per hour" semantics. This route no
@@ -120,6 +126,7 @@ export async function runMoneydjBatch(
     cursor: string;
     startedMs: number;
     timeBudgetMs: number;
+    perItemDelayMs?: number;
     now?: () => number;
     sleep?: (ms: number) => Promise<void>;
     processOne: (fund: MappedFund) => Promise<{ rowsPersisted: number; isNewMonth: boolean }>;
@@ -178,6 +185,7 @@ export async function runMoneydjBatch(
     // this invocation is hard-killed immediately after: onProgress, not the run's final return, is
     // what the next invocation's readCheckpoint() actually resumes from.
     await opts.onProgress(lastId, { attempted, updatedFunds, failed });
+    if (opts.perItemDelayMs) await sleep(opts.perItemDelayMs);
   }
 
   return { attempted, updatedFunds, rowsPersisted, failed, retryable, http403, http429, alreadyCurrent, backoffStop, timeBudgetStop, failures, lastId };
@@ -196,6 +204,7 @@ export async function runMoneydjBatchGrouped(
     startedMs: number;
     timeBudgetMs: number;
     innerBatchSize: number;
+    perItemDelayMs?: number;
     now?: () => number;
     sleep?: (ms: number) => Promise<void>;
     fetchOne: (fund: MappedFund) => Promise<{ disclosure: import("@/lib/cloud-ingestion/moneydjFundDisclosure").MoneydjDisclosure } | { nameOnly: { rowsPersisted: number } }>;
@@ -263,6 +272,7 @@ export async function runMoneydjBatchGrouped(
       failures.push({ code: fund.moneydjCode, reason: message });
     }
     await opts.onProgress(lastId, { attempted, updatedFunds, failed });
+    if (opts.perItemDelayMs) await sleep(opts.perItemDelayMs);
   }
   await flush();
 
@@ -380,6 +390,7 @@ export async function GET(request: Request) {
         startedMs,
         timeBudgetMs: TIME_BUDGET_MS,
         innerBatchSize,
+        perItemDelayMs: PER_ITEM_DELAY_MS,
         fetchOne: async (fund) => {
           try {
             const disclosure = await fetchMoneydjDisclosure(fund.moneydjCode);
@@ -411,6 +422,7 @@ export async function GET(request: Request) {
         cursor,
         startedMs,
         timeBudgetMs: TIME_BUDGET_MS,
+        perItemDelayMs: PER_ITEM_DELAY_MS,
         processOne: (fund) =>
           fetchMoneydjDisclosure(fund.moneydjCode)
             .then((disclosure) =>
