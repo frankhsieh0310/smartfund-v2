@@ -35,9 +35,11 @@ const CHECKPOINT_KEY = "fund-returns-sync:cursor";
 const REQUEST_DELAY_MS = 3_200;
 // Raised from 150s to 270s this round (audit found the 2,168-fund universe was taking ~4 days/pass
 // at the old budget + hourly cadence): maxDuration=290s gives 20s margin. REQUEST_DELAY_MS is left
-// untouched — that's the anti-scraping-pace rule, not the lever to pull. vercel.json also now
-// triggers this route twice/hour (:11 and :41) instead of once, so the combined fix is budget x2
-// AND frequency x2, comfortably covering the universe within a day.
+// untouched — that's the anti-scraping-pace rule, not the lever to pull.
+// 2026-10-29（使用者核准，再加快一輪）: universe已經長到2489檔；VERIFIED過去5天(27次執行)
+// http_429一直是0，有餘裕。改成frequency而不是REQUEST_DELAY_MS這個唯一安全的加速槓桿——
+// vercel.json從每小時2次(:11/:41)改成每小時3次(:01/:21/:41)，單次請求節奏完全不變，
+// 只是一天內多跑約50%次數，不會提高被429的風險。
 const TIME_BUDGET_MS = 270_000;
 const query = (sql: string, params: any[]) => prisma.$queryRawUnsafe<any[]>(sql, ...params);
 

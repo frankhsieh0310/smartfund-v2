@@ -146,11 +146,15 @@
     },
     {
       "path": "/api/cron/fund-returns-sync",
-      "schedule": "41 * * * *"
+      "schedule": "1 * * * *"
     },
     {
       "path": "/api/cron/fund-returns-sync",
-      "schedule": "11 * * * *"
+      "schedule": "21 * * * *"
+    },
+    {
+      "path": "/api/cron/fund-returns-sync",
+      "schedule": "41 * * * *"
     },
     {
       "path": "/api/cron/yahoo-commodity?phase=history&group=cbot&symbols=ZC=F,ZW=F,KE=F,ZS=F,ZL=F,ZM=F,ZO=F,ZR=F",
