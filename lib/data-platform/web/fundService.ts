@@ -216,8 +216,16 @@ export async function getFundDetail(identifier: string, relationLimit = 20, rang
   if (!coreFundIds.has(row.id)) throw new WebDataError("NOT_FOUND", "Fund not found.");
   const sectionLimit = Math.min(relationLimit, 20);
   const from = rangeStart(range);
-  const [historyRows, performance, shareClasses, documents, classifications, riskMetrics, holdings] = await Promise.all([
+  // 2026-10-29（VERIFIED，獨立代理驗收抓到的bug）: 下面historyRows本來就會被`range`參數（預設
+  // "1Y"）的from篩選器限制成只有近1年資料——這支查詢本來是給NAV走勢圖用的，圖表本來就該照
+  // 使用者選的區間篩選沒有問題。但風險指標計算(1Y/3Y/5Y)原本直接複用這包已經被砍到剩1年的
+  // historyRows，導致不管算哪個窗口、篩出來的navPoints永遠是同一批（最多1年）資料，1Y/3Y/5Y
+  // 三個期間算出來的Sharpe數字完全一樣（VERIFIED ABSUEAUSD三個期間都是0.8824）——改成另外抓一包
+  // 不受`range`限制、往回抓滿5年的NAV序列專門給風險計算用，兩邊互不影響。
+  const riskCalcFromDate = new Date(Date.UTC(new Date().getUTCFullYear() - 5, new Date().getUTCMonth(), new Date().getUTCDate()));
+  const [historyRows, riskCalcHistoryRows, performance, shareClasses, documents, classifications, riskMetrics, holdings] = await Promise.all([
     prisma.fundHistory.findMany({ where: { fundId: row.id, ...(from ? { date: { gte: from } } : {}) }, orderBy: { date: "desc" }, take: 10_000, select: { date: true, nav: true, return1m: true, return3m: true, return6m: true, returnYtd: true, return1y: true, return3y: true, return5y: true, createdAt: true } }),
+    prisma.fundHistory.findMany({ where: { fundId: row.id, date: { gte: riskCalcFromDate }, nav: { not: null } }, orderBy: { date: "asc" }, take: 2_000, select: { date: true, nav: true } }),
     prisma.fundPerformance.findFirst({ where: { fundId: row.id }, orderBy: { date: "desc" } }),
     sectionLimit ? prisma.$queryRaw<ShareClassRow[]>(Prisma.sql`SELECT id, share_class_name AS "shareClassName", share_class_code AS "shareClassCode", isin, currency, distribution_type AS "distributionType", distribution_frequency AS "distributionFrequency", accumulating_distributing AS "accumulatingDistributing", hedged_currency AS "hedgedCurrency", hedged, institutional_retail AS "institutionalRetail", management_fee AS "managementFee", ongoing_charges AS "ongoingCharges", ter, sales_charge_front AS "salesChargeFront", sales_charge_back AS "salesChargeBack", performance_fee AS "performanceFee", minimum_initial_investment AS "minimumInitialInvestment", terms_source AS "termsSource", terms_source_record_id AS "termsSourceRecordId", terms_as_of_date AS "termsAsOfDate", source, source_record_id AS "sourceRecordId", updated_at AS "updatedAt" FROM fund_share_classes WHERE fund_id = ${row.id} ORDER BY updated_at DESC LIMIT ${sectionLimit}`) : Promise.resolve([]),
     sectionLimit ? prisma.$queryRaw<DocumentRow[]>(Prisma.sql`SELECT id, document_type AS "documentType", document_title AS "documentTitle", document_date AS "documentDate", effective_date AS "effectiveDate", language, url, source, source_record_id AS "sourceRecordId", updated_at AS "updatedAt" FROM fund_documents WHERE fund_id = ${row.id} AND is_current IS TRUE AND url LIKE 'https://%' ORDER BY document_date DESC NULLS LAST, updated_at DESC LIMIT ${sectionLimit}`) : Promise.resolve([]),
@@ -282,7 +290,7 @@ export async function getFundDetail(identifier: string, relationLimit = 20, rang
   // 天的真實價格就算多長窗口的年化標準差/夏普值」，不需要另外改公式，只要餵3年/5年的NAV歷史
   // 進去即可，1Y/3Y/5Y三個窗口共用同一套函式與同一個無風險利率來源。
   const WINDOWS: Array<{ years: number; period: "1Y" | "3Y" | "5Y" }> = [{ years: 1, period: "1Y" }, { years: 3, period: "3Y" }, { years: 5, period: "5Y" }];
-  let calculatedFundRisk: { period: string; value: number; label: string }[] = [];
+  let calculatedFundRisk: { period: string; value: number; label: string; observationCount: number }[] = [];
   let fundRiskMethodNote: string | null = null;
   {
     const riskFreeSource = RISK_FREE_RATE_SOURCES[row.currency ?? ""];
@@ -299,10 +307,10 @@ export async function getFundDetail(identifier: string, relationLimit = 20, rang
     for (const w of WINDOWS) {
       const cutoff = new Date(Date.UTC(new Date().getUTCFullYear() - w.years, new Date().getUTCMonth(), new Date().getUTCDate()));
       const hasOfficialVolatility = riskMetrics.some((m) => new RegExp(`VOLATIL.*_${w.period}$|_${w.period}.*VOLATIL`, "i").test(m.metricCode));
-      const navPoints = historyRows.filter((r) => r.date >= cutoff && r.nav != null).map((r) => ({ date: r.date, close: Number(r.nav) })).toReversed();
+      const navPoints = riskCalcHistoryRows.filter((r) => r.date >= cutoff && r.nav != null).map((r) => ({ date: r.date, close: Number(r.nav) }));
       const calc = calculateVolatilityAndSharpe(navPoints, riskFreeRatePct);
-      if (!hasOfficialVolatility && calc.volatility1yPct != null) { calculatedFundRisk.push({ period: w.period, value: calc.volatility1yPct, label: `VOLATILITY_${w.period}（本App計算）` }); anyCalculated = true; }
-      if (calc.sharpe1y != null) { calculatedFundRisk.push({ period: w.period, value: calc.sharpe1y, label: `SHARPE_${w.period}（本App計算，取代RF=0的舊算法）` }); anyCalculated = true; }
+      if (!hasOfficialVolatility && calc.volatility1yPct != null) { calculatedFundRisk.push({ period: w.period, value: calc.volatility1yPct, label: `VOLATILITY_${w.period}（本App計算）`, observationCount: calc.observationCount }); anyCalculated = true; }
+      if (calc.sharpe1y != null) { calculatedFundRisk.push({ period: w.period, value: calc.sharpe1y, label: `SHARPE_${w.period}（本App計算，取代RF=0的舊算法）`, observationCount: calc.observationCount }); anyCalculated = true; }
       else if (riskMetrics.some((m) => new RegExp(`SHARPE.*_${w.period}$|_${w.period}.*SHARPE`, "i").test(m.metricCode) && m.calculationMethod === "SHARPE_RF_ZERO")) anyFailedWithStaleRfZero = true;
     }
     if (anyCalculated) {
@@ -338,7 +346,7 @@ export async function getFundDetail(identifier: string, relationLimit = 20, rang
     // 還沒在正式環境爆出來，但是個真的bug，順手用?. 防呆，不等它真的命中才修。
     riskMetrics: { coverage: sectionCoverage(filteredRiskMetrics.length + calculatedFundRisk.length), data: [
       ...filteredRiskMetrics.map((item) => ({ metricCode: item.metricCode, period: item.period, value: Number(item.value), asOfDate: item.asOfDate?.toISOString() ?? null, calculationMethod: item.calculationMethod, observationCount: item.observationCount, source: item.source, returnSemantics: item.returnSemantics })),
-      ...calculatedFundRisk.map((item) => ({ metricCode: item.label, period: item.period, value: item.value, asOfDate: null, calculationMethod: fundRiskMethodNote ?? "本App計算", observationCount: 0, source: "SMARTMATCH_CALCULATED", returnSemantics: null })),
+      ...calculatedFundRisk.map((item) => ({ metricCode: item.label, period: item.period, value: item.value, asOfDate: null, calculationMethod: fundRiskMethodNote ?? "本App計算", observationCount: item.observationCount, source: "SMARTMATCH_CALCULATED", returnSemantics: null })),
     ], provenance: buildProvenance({ source: riskLatest?.source ?? (calculatedFundRisk.length ? "SMARTMATCH_CALCULATED" : undefined), sourceRecordId: riskLatest?.id, asOfDate: riskLatest?.asOfDate, lastUpdated: riskLatest?.updatedAt }) },
     shareClasses: { coverage: sectionCoverage(shareClasses.length, shareClasses.length > 0), data: shareClasses.map((item) => ({ id: item.id, name: item.shareClassName, code: item.shareClassCode, isin: item.isin, currency: item.currency, distributionType: item.distributionType, accumulationDistribution: item.accumulatingDistributing, hedged: item.hedged, hedgedCurrency: item.hedgedCurrency, investorType: item.institutionalRetail, source: item.source })), provenance: buildProvenance({ source: shareLatest?.source, sourceRecordId: shareLatest?.sourceRecordId, asOfDate: shareLatest?.termsAsOfDate, lastUpdated: shareLatest?.updatedAt }) },
     feesTerms: { coverage: sectionCoverage(fees.length, fees.some((item) => Object.values(item).some((value) => value === null))), data: fees, provenance: buildProvenance({ source: shareLatest?.termsSource ?? shareLatest?.source ?? source, sourceRecordId: shareLatest?.termsSourceRecordId, asOfDate: shareLatest?.termsAsOfDate ?? row.latestNavDate, lastUpdated: shareLatest?.updatedAt ?? row.updatedAt }) },
