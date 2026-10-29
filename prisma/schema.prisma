@@ -613,7 +613,7 @@ model EtfHistory {
 
 model Fund {
   id               String                @id @default(uuid())
-  isin             String?               @unique
+  isin             String?
   code             String?               @unique
   name             String
   legalName        String?               @map("legal_name")
@@ -672,6 +672,9 @@ model Fund {
   @@index([distributionFreq])
   @@index([morningstar])
   @@index([return1y])
+  // 2026-10-29（使用者核准，migration 20261029140000_funds_isin_composite_unique）:
+  // isin 改成跟 code 組合的複合 unique，允許同 ISIN、不同 TDCC 代碼的合法不同股別。
+  @@unique([isin, code], name: "funds_isin_code_key", map: "funds_isin_code_key")
   @@map("funds")
 }
 
