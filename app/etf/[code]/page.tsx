@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getCoreUniverseEtfIds } from "@/lib/tw-purchasable/coreUniverseFilter";
 import { freshnessStatus as computeFreshnessStatus } from "@/lib/data-platform/web/freshness";
 import { computeTechnicalSeries, type PricePoint } from "@/lib/cron/stockTechnicalDaily";
+import { calculateVolatilityAndSharpe, RISK_CALC_METHOD_LABEL } from "@/lib/data-platform/web/riskCalc";
 import { UniversalAssetDetail, type DetailData, type HistoryPoint, type Metric } from "@/components/asset/UniversalAssetDetail";
 
 const fmt = (value: unknown, suffix = "") => value == null ? "—" : `${Number(value).toLocaleString(undefined, { maximumFractionDigits: 4 })}${suffix}`;
@@ -85,7 +86,27 @@ export default async function EtfDetailPage({ params }: { params: Promise<{ code
       const related = dedupedHoldings.slice(0, 10).map((holding) => ({ label: `${holding.rank}. ${holding.holdingName}${holding.holdingCode ? ` (${holding.holdingCode})` : ""}`, value: `${Number(holding.weight).toFixed(2)}%${holding.sector ? `・${holding.sector}` : ""}${holding.country ? `・${holding.country}` : ""}` }));
       // 純顯示用：資料夠不夠新只決定畫面上的「資料狀態」標籤文字，不再決定頁面能不能打開。
       const displayFreshness: DetailData["freshnessStatus"] = computeFreshnessStatus(latestRow?.date ?? etf.priceUpdatedAt ?? null, "MARKET_DAY") === "CURRENT" ? "LATEST" : "STALE";
-      data = { type: "ETF", code: etf.code, name: etf.name, officialName: etf.nameEn ?? undefined, exchange: etf.exchange ?? undefined, region: etf.region ?? undefined, currency: etf.currency, isin: etf.isin ?? undefined, summary: [metric("最新價格", latest), metric("NAV（同期）", sameDateNav), metric("Premium / Discount（同期）", sameDatePremium, "%"), { label: "漲跌 / 漲跌幅", value: change == null || !previous ? "—" : `${fmt(change)} / ${((change / previous) * 100).toFixed(2)}%` }], performance: [metric("1M", etf.return1m, "%"), metric("3M", etf.return3m, "%"), metric("6M", etf.return6m, "%"), metric("YTD", etf.returnYtd, "%"), metric("1Y", etf.return1y, "%"), metric("3Y", etf.return3y, "%"), metric("5Y", etf.return5y, "%")], risk: [metric("Volatility", etf.volatility1y, "%"), metric("Beta", etf.beta), metric("Max Drawdown", etf.maxDrawdown, "%"), metric("Sharpe", etf.sharpe1y)], keyData: [metric("NAV", etf.latestNav), metric("AUM", etf.aum), metric("Expense Ratio", pctFraction(etf.expenseRatio), "%"), metric("Dividend Yield", pctFraction(etf.dividendYield), "%"), { label: "Issuer", value: etf.provider }, { label: "Asset Class", value: etf.category ?? "—" }, { label: "Benchmark", value: etf.benchmark ?? "—" }, { label: "Holdings Count", value: dedupedHoldings.length ? String(dedupedHoldings.length) : "—" }, metric("Premium / Discount", sameDatePremium, "%")], relatedData: related, history: allHistory, priceDate: dateText(latestRow?.date ?? etf.priceUpdatedAt), source: etf.dataProvider ?? etf.provider, lastUpdated: dateText(etf.updatedAt), updatedAt: dateText(etf.priceUpdatedAt ?? etf.updatedAt), frequency: "依既有 ETF Canonical Data 更新", freshnessStatus: displayFreshness };
+      // 2026-10-29（使用者核准，免費功能缺口——風險指標）: VERIFIED etfs.volatility_1y/sharpe_1y
+      // 這兩欄幾乎整表是空的（6201檔只有4筆volatility、0筆sharpe），只有beta有93%覆蓋率。
+      // 兩欄位沒有官方/Yahoo數字可抄，照CLAUDE.md「技術與風險指標可依真實價格計算」的例外，用
+      // etf_history真實收盤價自行計算年化標準差跟夏普值（lib/data-platform/web/riskCalc.ts），
+      // 一律標示「本App計算」，官方欄位本身有值時優先用官方的，沒有才用自算的頂上。
+      const oneYearAgo = new Date(Date.UTC(new Date().getUTCFullYear() - 1, new Date().getUTCMonth(), new Date().getUTCDate()));
+      const riskFreeRateRow = await prisma.$queryRawUnsafe<{ close: unknown }[]>(
+        `SELECT close FROM market_data WHERE symbol = 'US2Y' ORDER BY date DESC LIMIT 1`,
+      );
+      const riskFreeRatePct = riskFreeRateRow[0]?.close != null ? Number(riskFreeRateRow[0].close) : null;
+      const calculatedRisk = calculateVolatilityAndSharpe(
+        ascHistory.filter((row) => row.date >= oneYearAgo && row.price != null).map((row) => ({ date: row.date, close: Number(row.price) })),
+        riskFreeRatePct,
+      );
+      const volatilityMetric: Metric = etf.volatility1y != null
+        ? metric("Volatility", etf.volatility1y, "%")
+        : { label: "Volatility", value: calculatedRisk.volatility1yPct != null ? `${fmt(calculatedRisk.volatility1yPct, "%")}（本App計算）` : "—" };
+      const sharpeMetric: Metric = etf.sharpe1y != null
+        ? metric("Sharpe", etf.sharpe1y)
+        : { label: "Sharpe", value: calculatedRisk.sharpe1y != null ? `${calculatedRisk.sharpe1y.toFixed(2)}（本App計算）` : "—" };
+      data = { type: "ETF", code: etf.code, name: etf.name, officialName: etf.nameEn ?? undefined, exchange: etf.exchange ?? undefined, region: etf.region ?? undefined, currency: etf.currency, isin: etf.isin ?? undefined, summary: [metric("最新價格", latest), metric("NAV（同期）", sameDateNav), metric("Premium / Discount（同期）", sameDatePremium, "%"), { label: "漲跌 / 漲跌幅", value: change == null || !previous ? "—" : `${fmt(change)} / ${((change / previous) * 100).toFixed(2)}%` }], performance: [metric("1M", etf.return1m, "%"), metric("3M", etf.return3m, "%"), metric("6M", etf.return6m, "%"), metric("YTD", etf.returnYtd, "%"), metric("1Y", etf.return1y, "%"), metric("3Y", etf.return3y, "%"), metric("5Y", etf.return5y, "%")], risk: [volatilityMetric, metric("Beta", etf.beta), metric("Max Drawdown", etf.maxDrawdown, "%"), sharpeMetric, ...(etf.volatility1y == null || etf.sharpe1y == null ? [{ label: "計算方法", value: RISK_CALC_METHOD_LABEL }] : [])], keyData: [metric("NAV", etf.latestNav), metric("AUM", etf.aum), metric("Expense Ratio", pctFraction(etf.expenseRatio), "%"), metric("Dividend Yield", pctFraction(etf.dividendYield), "%"), { label: "Issuer", value: etf.provider }, { label: "Asset Class", value: etf.category ?? "—" }, { label: "Benchmark", value: etf.benchmark ?? "—" }, { label: "Holdings Count", value: dedupedHoldings.length ? String(dedupedHoldings.length) : "—" }, metric("Premium / Discount", sameDatePremium, "%")], relatedData: related, history: allHistory, priceDate: dateText(latestRow?.date ?? etf.priceUpdatedAt), source: etf.dataProvider ?? etf.provider, lastUpdated: dateText(etf.updatedAt), updatedAt: dateText(etf.priceUpdatedAt ?? etf.updatedAt), frequency: "依既有 ETF Canonical Data 更新", freshnessStatus: displayFreshness };
     }
   } catch { data = null; }
   if (!data) notFound();
