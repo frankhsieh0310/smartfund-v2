@@ -44,11 +44,24 @@ export function calculateVolatilityAndSharpe(prices: DailyPricePoint[], riskFree
 }
 
 // Shown next to every self-calculated risk figure so it is never mistaken for a Yahoo/official
-// number. US2Y (not a 1-3 month T-bill) is used as the risk-free proxy because it is the shortest
-// US Treasury maturity with a currently-fresh daily quote in this database (VERIFIED 2026-10-29:
-// US13W/3-month-bill data is stale since 2026-07-09, while US2Y/US5Y/US10Y/US30Y are all current
-// through 2026-10-27) — a short but not ultra-short maturity is a defensible, clearly-labeled
-// approximation, not a silent substitution.
+// number.
 export const RISK_CALC_METHOD_LABEL =
-  "本App計算：以近1年(252個交易日)每日報酬率的年化標準差為波動率；夏普值=(年化報酬率-無風險利率)/年化波動率，" +
-  "無風險利率取美國2年期公債殖利率（財政部每日公布，近期3個月期國庫券資料來源已逾3個月未更新，改用此替代）。";
+  "本App計算：以近1年(252個交易日)每日報酬率的年化標準差為波動率；夏普值=(年化報酬率-無風險利率)/年化波動率。";
+
+// 2026-10-29（使用者核准，USD無風險利率來源修正）: CLOUD_US_TREASURY_SYNC（美國財政部官方
+// Daily Treasury Par Yield Curve）已經有每天更新的3個月期公債殖利率（TREASURY_YIELD_3_MO，
+// VERIFIED最新到2026-10-26），這比先前暫用的美國2年期公債殖利率更貼近傳統無風險利率定義
+// （短天期、幾乎零信用風險），改用它。
+export const RISK_FREE_RATE_SOURCES: Record<string, { label: string }> = {
+  USD: { label: "美國財政部每日公布3個月期公債殖利率（Daily Treasury Par Yield Curve Rates, TREASURY_YIELD_3_MO）" },
+};
+
+// 2026-10-29（使用者核准，TWD/其他幣別無風險利率查證結果）: 查過兩個官方來源都還沒能自動取得——
+// 台灣銀行牌告利率頁(rate.bot.com.tw)有機器人防護challenge(proof-of-work)，不准繞過；中央銀行
+// 開放資料平台(cpx.cbc.gov.tw/api/OpenData/DataSet?set_id=6022，央行貼放利率/重貼現率)有正式
+// API文件，但實際呼叫回傳200且內容是空的(Content-Length:0)，還需要再查正確的呼叫方式。
+// 照使用者指示的原則：找不到官方利率來源的幣別，不計算夏普值，在畫面上標示原因，不要用猜的
+// 利率或用別的幣別的利率頂替。
+export const RISK_FREE_RATE_UNAVAILABLE_REASON: Record<string, string> = {
+  TWD: "新台幣無風險利率尚未取得官方自動化來源（台灣銀行牌告利率頁有機器人防護、央行開放資料API目前呼叫無回應內容），暫不計算夏普值",
+};
