@@ -8,6 +8,7 @@ import { isoOrNull, numberOrNull, type CanonicalIdentity, type HistoryQuery, typ
 import { mapFundMainCategory, type FundMainCategory } from "./fundCategoryMapping.ts";
 import { getCoreUniverseFundIds } from "../../tw-purchasable/coreUniverseFilter.ts";
 import { getNonRepresentativeShareClassFundIds, getShareClassCountMap } from "./fundShareClassGrouping.ts";
+import { calculateVolatilityAndSharpe, RISK_CALC_METHOD_LABEL, RISK_FREE_RATE_SOURCES } from "./riskCalc.ts";
 
 // 2026-10-16: 925 distinct fund names (1,887 rows) share a display name with at least one other
 // fund row -- VERIFIED live these are overwhelmingly genuinely different, real, purchasable share
@@ -165,7 +166,7 @@ export interface FundDetailData {
   nav: FundSection<{ value: number | null; currency: string | null; date: string | null }>;
   history: FundSection<Array<{ date: string; nav: number | null }>> & { range: FundDetailRange; maxPoints: number };
   performance: FundSection<{ return1M: number | null; return3M: number | null; return6M: number | null; returnYtd: number | null; return1Y: number | null; return3YAnnualized: number | null; return5YAnnualized: number | null; semantics: "NAV_RETURN" }>;
-  riskMetrics: FundSection<Array<{ metricCode: string; period: string; value: number; asOfDate: string; calculationMethod: string; observationCount: number; source: string; returnSemantics: string | null }>>;
+  riskMetrics: FundSection<Array<{ metricCode: string; period: string; value: number; asOfDate: string | null; calculationMethod: string; observationCount: number; source: string; returnSemantics: string | null }>>;
   shareClasses: FundSection<Array<{ id: string; name: string; code: string | null; isin: string | null; currency: string | null; distributionType: string | null; accumulationDistribution: string | null; hedged: boolean | null; hedgedCurrency: string | null; investorType: string | null; source: string }>>;
   feesTerms: FundSection<Array<{ shareClass: string; managementFee: number | null; ongoingCharges: number | null; ter: number | null; salesChargeFront: number | null; salesChargeBack: number | null; performanceFee: number | null; minimumInitialInvestment: number | null; distributionFrequency: string | null; hedgingTerms: string | null; source: string | null; asOfDate: string | null }>>;
   classifications: FundSection<Array<{ type: string; name: string; value: string | null; method: string; benchmarkName: string | null; benchmarkCode: string | null; benchmarkId: string | null; source: string; asOfDate: string | null }>>;
@@ -263,6 +264,32 @@ export async function getFundDetail(identifier: string, relationLimit = 20, rang
   const fees: FundDetailData["feesTerms"]["data"] = shareClasses.map((shareClass) => ({ shareClass: shareClass.shareClassName, managementFee: numberOrNull(shareClass.managementFee), ongoingCharges: numberOrNull(shareClass.ongoingCharges), ter: numberOrNull(shareClass.ter), salesChargeFront: numberOrNull(shareClass.salesChargeFront), salesChargeBack: numberOrNull(shareClass.salesChargeBack), performanceFee: numberOrNull(shareClass.performanceFee), minimumInitialInvestment: numberOrNull(shareClass.minimumInitialInvestment), distributionFrequency: shareClass.distributionFrequency ?? row.distributionFreq, hedgingTerms: shareClass.hedged === null ? null : shareClass.hedged ? shareClass.hedgedCurrency ? `HEDGED_${shareClass.hedgedCurrency}` : "HEDGED" : "UNHEDGED", source: shareClass.termsSource ?? shareClass.source, asOfDate: isoOrNull(shareClass.termsAsOfDate) }));
   if (!fees.length && (row.expenseRatio !== null || row.distributionFreq)) fees.push({ shareClass: row.name, managementFee: null, ongoingCharges: null, ter: numberOrNull(row.expenseRatio), salesChargeFront: null, salesChargeBack: null, performanceFee: null, minimumInitialInvestment: null, distributionFrequency: row.distributionFreq, hedgingTerms: null, source, asOfDate: isoOrNull(row.latestNavDate) });
   const classificationAssetClass = classifications.find((item) => /ASSET.CLASS/i.test(item.classificationType))?.classificationValue ?? classifications.find((item) => /ASSET.CLASS/i.test(item.classificationType))?.classificationName ?? null;
+  // 2026-10-29（使用者核准，免費功能缺口——基金風險指標）: VERIFIED核心母體5,884檔基金裡，
+  // fund_risk_metrics的sharpe_3y/std_dev_3y（Yahoo官方來源，但只對3,6%的非核心母體基金有資料）
+  // 覆蓋率是0——這批基金完全沒有既有的標準差/夏普值。跟ETF那次一樣，用fund_history真實NAV
+  // 自行計算（lib/data-platform/web/riskCalc.ts，同一套年化標準差/夏普值公式），只有在
+  // riskMetrics完全沒有既有1Y資料時才補上，並標示「本App計算」跟計算方法。
+  const hasOfficial1yRisk = riskMetrics.some((m) => /_1Y$/i.test(m.metricCode) && (/SHARPE|STD|VOLATIL/i.test(m.metricCode)));
+  let calculatedFundRisk: { period: string; value: number; label: string }[] = [];
+  let fundRiskMethodNote: string | null = null;
+  if (!hasOfficial1yRisk) {
+    const oneYearAgo = new Date(Date.UTC(new Date().getUTCFullYear() - 1, new Date().getUTCMonth(), new Date().getUTCDate()));
+    const riskFreeSource = RISK_FREE_RATE_SOURCES[row.currency ?? ""];
+    let riskFreeRatePct: number | null = null;
+    if (riskFreeSource) {
+      const rfr = await prisma.$queryRawUnsafe<{ value: unknown }[]>(
+        `SELECT value FROM treasury_fiscal_observations WHERE metric_code = $1 ORDER BY observation_date DESC LIMIT 1`,
+        riskFreeSource.metricCode,
+      );
+      riskFreeRatePct = rfr[0]?.value != null ? Number(rfr[0].value) : null;
+    }
+    const navPoints = historyRows.filter((r) => r.date >= oneYearAgo && r.nav != null).map((r) => ({ date: r.date, close: Number(r.nav) })).toReversed();
+    const calc = calculateVolatilityAndSharpe(navPoints, riskFreeRatePct);
+    if (calc.volatility1yPct != null) calculatedFundRisk.push({ period: "1Y", value: calc.volatility1yPct, label: "VOLATILITY_1Y（本App計算）" });
+    if (calc.sharpe1y != null) calculatedFundRisk.push({ period: "1Y", value: calc.sharpe1y, label: "SHARPE_1Y（本App計算）" });
+    if (calculatedFundRisk.length) fundRiskMethodNote = `${RISK_CALC_METHOD_LABEL}${riskFreeSource ? `無風險利率來源：${riskFreeSource.label}。` : "此幣別尚無官方無風險利率自動化來源，Sharpe暫不計算。"}`;
+  }
+
   const chronologicalHistory = historyRows.toReversed();
   const sampledHistory = chronologicalHistory.length <= FUND_DETAIL_LIMITS.history
     ? chronologicalHistory
@@ -280,7 +307,14 @@ export async function getFundDetail(identifier: string, relationLimit = 20, rang
     nav: { coverage: row.latestNav !== null ? "AVAILABLE" : row.latestNavDate === null ? "SOURCE_PENDING" : "UNAVAILABLE", data: { value: numberOrNull(row.latestNav), currency: row.currency, date: isoOrNull(row.latestNavDate) }, provenance },
     history: { coverage: sectionCoverage(historyRows.length, historyRows.length < 2), range, maxPoints: FUND_DETAIL_LIMITS.history, data: sampledHistory.map((item) => ({ date: item.date.toISOString(), nav: numberOrNull(item.nav) })), provenance: historyProvenance },
     performance: { coverage: latestReturns && [latestReturns.return1m, latestReturns.return3m, latestReturns.return6m, latestReturns.returnYtd, latestReturns.return1y, latestReturns.return3y, latestReturns.return5y].some((value) => value !== null) ? "AVAILABLE" : "UNAVAILABLE", data: { return1M: numberOrNull(latestReturns?.return1m), return3M: numberOrNull(latestReturns?.return3m), return6M: numberOrNull(latestReturns?.return6m), returnYtd: numberOrNull(latestReturns?.returnYtd), return1Y: numberOrNull(latestReturns?.return1y), return3YAnnualized: numberOrNull(latestReturns?.return3y), return5YAnnualized: numberOrNull(latestReturns?.return5y), semantics: "NAV_RETURN" }, provenance: performanceProvenance },
-    riskMetrics: { coverage: sectionCoverage(riskMetrics.length), data: riskMetrics.map((item) => ({ metricCode: item.metricCode, period: item.period, value: Number(item.value), asOfDate: item.asOfDate.toISOString(), calculationMethod: item.calculationMethod, observationCount: item.observationCount, source: item.source, returnSemantics: item.returnSemantics })), provenance: buildProvenance({ source: riskLatest?.source, sourceRecordId: riskLatest?.id, asOfDate: riskLatest?.asOfDate, lastUpdated: riskLatest?.updatedAt }) },
+    // 2026-10-29（VERIFIED，順手修正）: 原本item.asOfDate.toISOString()假設一定有日期，但
+    // fund_risk_metrics裡sharpe_3y/std_dev_3y這批Yahoo一次性回填的資料as_of_date全部是null，
+    // 呼叫.toISOString()會直接丟錯誤——目前核心母體基金剛好沒有命中這個組合（抽查0筆），所以
+    // 還沒在正式環境爆出來，但是個真的bug，順手用?. 防呆，不等它真的命中才修。
+    riskMetrics: { coverage: sectionCoverage(riskMetrics.length + calculatedFundRisk.length), data: [
+      ...riskMetrics.map((item) => ({ metricCode: item.metricCode, period: item.period, value: Number(item.value), asOfDate: item.asOfDate?.toISOString() ?? null, calculationMethod: item.calculationMethod, observationCount: item.observationCount, source: item.source, returnSemantics: item.returnSemantics })),
+      ...calculatedFundRisk.map((item) => ({ metricCode: item.label, period: item.period, value: item.value, asOfDate: null, calculationMethod: fundRiskMethodNote ?? "本App計算", observationCount: 0, source: "SMARTMATCH_CALCULATED", returnSemantics: null })),
+    ], provenance: buildProvenance({ source: riskLatest?.source ?? (calculatedFundRisk.length ? "SMARTMATCH_CALCULATED" : undefined), sourceRecordId: riskLatest?.id, asOfDate: riskLatest?.asOfDate, lastUpdated: riskLatest?.updatedAt }) },
     shareClasses: { coverage: sectionCoverage(shareClasses.length, shareClasses.length > 0), data: shareClasses.map((item) => ({ id: item.id, name: item.shareClassName, code: item.shareClassCode, isin: item.isin, currency: item.currency, distributionType: item.distributionType, accumulationDistribution: item.accumulatingDistributing, hedged: item.hedged, hedgedCurrency: item.hedgedCurrency, investorType: item.institutionalRetail, source: item.source })), provenance: buildProvenance({ source: shareLatest?.source, sourceRecordId: shareLatest?.sourceRecordId, asOfDate: shareLatest?.termsAsOfDate, lastUpdated: shareLatest?.updatedAt }) },
     feesTerms: { coverage: sectionCoverage(fees.length, fees.some((item) => Object.values(item).some((value) => value === null))), data: fees, provenance: buildProvenance({ source: shareLatest?.termsSource ?? shareLatest?.source ?? source, sourceRecordId: shareLatest?.termsSourceRecordId, asOfDate: shareLatest?.termsAsOfDate ?? row.latestNavDate, lastUpdated: shareLatest?.updatedAt ?? row.updatedAt }) },
     classifications: { coverage: sectionCoverage(classifications.length, classifications.length > 0), data: classifications.map((item) => ({ type: item.classificationType, name: item.classificationName, value: item.classificationValue, method: item.classificationMethod, benchmarkName: item.benchmarkName, benchmarkCode: item.benchmarkCode, benchmarkId: item.benchmarkId, source: item.source, asOfDate: isoOrNull(item.asOfDate) })), provenance: buildProvenance({ source: classificationLatest?.source, sourceRecordId: classificationLatest?.sourceRecordId, asOfDate: classificationLatest?.asOfDate, lastUpdated: classificationLatest?.updatedAt }) },
