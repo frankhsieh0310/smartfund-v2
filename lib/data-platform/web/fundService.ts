@@ -170,6 +170,9 @@ export interface FundDetailData {
   feesTerms: FundSection<Array<{ shareClass: string; managementFee: number | null; ongoingCharges: number | null; ter: number | null; salesChargeFront: number | null; salesChargeBack: number | null; performanceFee: number | null; minimumInitialInvestment: number | null; distributionFrequency: string | null; hedgingTerms: string | null; source: string | null; asOfDate: string | null }>>;
   classifications: FundSection<Array<{ type: string; name: string; value: string | null; method: string; benchmarkName: string | null; benchmarkCode: string | null; benchmarkId: string | null; source: string; asOfDate: string | null }>>;
   holdings: FundSection<{ reportDate: string | null; items: Array<{ holdingName: string | null; securityId: string | null; weight: number | null; marketValue: number | null; currency: string | null; source: string; weightDisclosed: boolean }> }>;
+  /** 2026-10-29: 產業/區域配置，來源 Yahoo奇摩股市基金頁"持股狀況"，排程 FUND_ALLOCATION_SYNC。 */
+  sectorAllocation: FundSection<Array<{ label: string; weight: number }>> & { asOfDate: string | null };
+  regionAllocation: FundSection<Array<{ label: string; weight: number }>> & { asOfDate: string | null };
   documents: FundSection<Array<{ type: string; title: string | null; date: string | null; language: string | null; url: string; source: string }>>;
   flows: FundSection<null>;
 }
@@ -232,6 +235,16 @@ export async function getFundDetail(identifier: string, relationLimit = 20, rang
       .sort((a, b) => (a.source === "MONEYDJ_PUBLIC_DISCLOSURE" ? -1 : b.source === "MONEYDJ_PUBLIC_DISCLOSURE" ? 1 : 0))
       .map((item) => [item.security_id ?? item.holding_name, item] as const),
   ).values()].slice(0, FUND_DETAIL_LIMITS.holdings);
+  const [sectorAllocationRows, regionAllocationRows] = await Promise.all([
+    prisma.$queryRawUnsafe<{ classification_code: string; classification_value: string; as_of_date: Date }[]>(
+      `SELECT classification_code, classification_value, as_of_date FROM fund_classifications WHERE fund_id = $1 AND classification_type = 'YAHOO_SECTOR_ALLOCATION' ORDER BY classification_value::numeric DESC`,
+      row.id,
+    ),
+    prisma.$queryRawUnsafe<{ classification_code: string; classification_value: string; as_of_date: Date }[]>(
+      `SELECT classification_code, classification_value, as_of_date FROM fund_classifications WHERE fund_id = $1 AND classification_type = 'YAHOO_REGION_ALLOCATION' ORDER BY classification_value::numeric DESC`,
+      row.id,
+    ),
+  ]);
   const nameOnlyHoldings = sectionLimit && dedupedHoldings.length === 0
     ? await prisma.$queryRaw<NameOnlyHoldingRow[]>(Prisma.sql`SELECT holding_name, as_of_date, source, updated_at FROM fund_holdings_name_only WHERE fund_id = ${row.id} AND as_of_date = (SELECT MAX(as_of_date) FROM fund_holdings_name_only WHERE fund_id = ${row.id}) ORDER BY rank ASC LIMIT ${FUND_DETAIL_LIMITS.holdings}`)
     : [];
@@ -275,6 +288,8 @@ export async function getFundDetail(identifier: string, relationLimit = 20, rang
       ? { coverage: sectionCoverage(nameOnlyHoldings.length), data: { reportDate: isoOrNull(nameOnlyHoldings[0].as_of_date), items: nameOnlyHoldings.map((item) => ({ holdingName: item.holding_name, securityId: null, weight: null, marketValue: null, currency: null, source: item.source, weightDisclosed: false })) }, provenance: buildProvenance({ source: nameOnlyHoldings[0].source, sourceRecordId: row.id, asOfDate: nameOnlyHoldings[0].as_of_date, lastUpdated: nameOnlyHoldings[0].updated_at }) }
       : { coverage: sectionCoverage(dedupedHoldings.length), data: { reportDate: isoOrNull(holdingLatest?.report_date), items: dedupedHoldings.map((item) => ({ holdingName: item.holding_name, securityId: item.security_id, weight: numberOrNull(item.weight), marketValue: numberOrNull(item.market_value), currency: item.currency, source: item.source, weightDisclosed: true })) }, provenance: buildProvenance({ source: holdingLatest?.source, sourceRecordId: row.id, asOfDate: holdingLatest?.report_date, lastUpdated: holdingLatest?.updated_at }) },
     documents: { coverage: sectionCoverage(documents.length, documents.length > 0), data: documents.map((item) => ({ type: item.documentType, title: item.documentTitle, date: isoOrNull(item.documentDate ?? item.effectiveDate), language: item.language, url: item.url, source: item.source })), provenance: buildProvenance({ source: documentLatest?.source, sourceRecordId: documentLatest?.sourceRecordId, asOfDate: documentLatest?.documentDate ?? documentLatest?.effectiveDate, lastUpdated: documentLatest?.updatedAt }) },
+    sectorAllocation: { coverage: sectionCoverage(sectorAllocationRows.length), data: sectorAllocationRows.map((r) => ({ label: r.classification_code, weight: Number(r.classification_value) })), asOfDate: isoOrNull(sectorAllocationRows[0]?.as_of_date), provenance: buildProvenance({ source: "YAHOO_FUND_HOLDINGS_PAGE", sourceRecordId: row.id, asOfDate: sectorAllocationRows[0]?.as_of_date, lastUpdated: sectorAllocationRows[0]?.as_of_date }) },
+    regionAllocation: { coverage: sectionCoverage(regionAllocationRows.length), data: regionAllocationRows.map((r) => ({ label: r.classification_code, weight: Number(r.classification_value) })), asOfDate: isoOrNull(regionAllocationRows[0]?.as_of_date), provenance: buildProvenance({ source: "YAHOO_FUND_HOLDINGS_PAGE", sourceRecordId: row.id, asOfDate: regionAllocationRows[0]?.as_of_date, lastUpdated: regionAllocationRows[0]?.as_of_date }) },
     flows: { coverage: "SOURCE_PENDING", data: null, provenance: buildProvenance({}) },
   };
   if (data.company && /^(待補|unknown|n\/a)/i.test(data.company)) data.company = null;
