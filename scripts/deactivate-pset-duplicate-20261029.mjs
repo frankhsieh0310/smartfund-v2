@@ -8,8 +8,14 @@
 // 垂死列，資料停在10/18後沒再更新，被tw_purchasable_classification誤標成APPROVED，使使用者
 // 誤以為多了一檔可買的ETF。
 //
-// 只停用不刪除：is_active設false、tw_purchasable_classification改成EXCLUDED_DUPLICATE，
-// 保留所有歷史資料與這筆本身，可隨時回復。單一交易，先查目前狀態再寫入。
+// 只停用不刪除：is_active設false，保留所有歷史資料與這筆本身，可隨時回復。單一交易，先查
+// 目前狀態再寫入。
+//
+// 2026-10-29 修正：tw_purchasable_classification.status有CHECK constraint，只接受
+// APPROVED/NOT_APPROVED/UNKNOWN/EXCLUDED_RETAIL_RESTRICTED這4種，原本寫的EXCLUDED_DUPLICATE
+// 不在清單裡，第一次執行失敗（交易已自動回復，沒有任何資料被改到）。改用既有允許的
+// NOT_APPROVED，原因寫在source欄位（這張表本來就用source當原因欄位，例如既有
+// RETAIL_RESTRICTED:LEVERAGE_LONG_3X_OVER_2X_LIMIT這種「分類前綴:具體原因」慣例）。
 
 import { PrismaClient } from "@prisma/client";
 
@@ -22,11 +28,12 @@ async function main() {
   if (before.length === 0) { console.log("這筆ETF已經不存在，不需要再處理。"); return; }
   if (before[0].code !== "^PSET") { console.log("code不是預期的^PSET，中止，避免動錯資料。"); return; }
 
+  const reason = "DUPLICATE_INDEX_ROW:^PSET為誤建的指數重複列（^為Yahoo指數記號、Nasdaq GIDS為指數資料來源非掛牌交易所），正確代碼是PSET(Principal Quality ETF)";
   await prisma.$transaction([
     prisma.$executeRawUnsafe(`UPDATE etfs SET is_active = false, updated_at = NOW() WHERE id = $1`, ETF_ID),
     prisma.$executeRawUnsafe(
-      `UPDATE tw_purchasable_classification SET status = 'EXCLUDED_DUPLICATE', updated_at = NOW() WHERE asset_type = 'ETF' AND asset_id = $1`,
-      ETF_ID,
+      `UPDATE tw_purchasable_classification SET status = 'NOT_APPROVED', source = $2, updated_at = NOW() WHERE asset_type = 'ETF' AND asset_id = $1`,
+      ETF_ID, reason,
     ),
   ]);
 
