@@ -188,7 +188,18 @@ export async function getEtfDetail(code: string): Promise<ServiceResponse<{ iden
     ? (authoritativeChangePercent != null ? latestValue - latestValue / (1 + changePercent / 100) : latestValue - (previousValue as number))
     : null;
   const latestHolding = await prisma.holding.findFirst({ where: { etfId: row.id }, orderBy: [{ asOfDate: "desc" }, { rank: "asc" }], select: { asOfDate: true } });
-  const holdings = latestHolding ? await prisma.holding.findMany({ where: { etfId: row.id, asOfDate: latestHolding.asOfDate }, orderBy: { rank: "asc" }, select: { holdingName: true, ticker: true, weight: true, sector: true, assetType: true } }) : [];
+  const rawHoldings = latestHolding ? await prisma.holding.findMany({ where: { etfId: row.id, asOfDate: latestHolding.asOfDate }, orderBy: { rank: "asc" }, select: { holdingName: true, ticker: true, weight: true, sector: true, assetType: true, securityId: true, source: true, rank: true } }) : [];
+  // 2026-10-29（VERIFIED，競品對照稽核發現的資料正確性bug）: 同一天、同一檔持股常被兩條不同
+  // 擷取來源（ETF_OFFICIAL_DAILY_SNAPSHOT vs 舊版URL字串來源）各寫一筆，之前這裡直接用
+  // holdings.length/holdings.slice(0,10)/allocation()加總，等於每檔持股的權重被算了兩次——
+  // holdingsCount膨脹成兩倍、assetAllocation/sectorAllocation的百分比加總也跟著膨脹。先依
+  // securityId（沒有就用holdingName）去重，優先留ETF_OFFICIAL_DAILY_SNAPSHOT那一筆。
+  const holdings = [...new Map(
+    rawHoldings
+      .slice()
+      .sort((a, b) => (a.source === "ETF_OFFICIAL_DAILY_SNAPSHOT" ? -1 : b.source === "ETF_OFFICIAL_DAILY_SNAPSHOT" ? 1 : 0))
+      .map((holding) => [holding.securityId ?? holding.holdingName, holding] as const),
+  ).values()].sort((a, b) => a.rank - b.rank);
   const allocation = <T extends string>(keyFor: (holding: typeof holdings[number]) => T | null) => [...holdings.reduce((values, holding) => { const label = keyFor(holding); const weight = numberOrNull(holding.weight); if (label && weight != null) values.set(label, (values.get(label) ?? 0) + weight); return values; }, new Map<T, number>())].map(([label, weight]) => ({ label, weight })).sort((left, right) => right.weight - left.weight);
   const asOf = latest?.date ?? row.priceUpdatedAt;
   const source = row.dataSource ?? row.dataProvider ?? row.provider;

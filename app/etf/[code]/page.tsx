@@ -18,7 +18,27 @@ export default async function EtfDetailPage({ params }: { params: Promise<{ code
   const { code } = await params;
   let data: DetailData | null = null;
   try {
-    const etf = await prisma.etf.findUnique({ where: { code: decodeURIComponent(code) }, include: { history: { where: { price: { not: null } }, orderBy: { date: "desc" }, take: 5000 }, holdings: { orderBy: { rank: "asc" }, take: 10 }, _count: { select: { holdings: true } } } });
+    // 2026-10-29（VERIFIED，競品對照稽核發現的資料正確性bug）: holdings是「每個as_of_date一份
+    // 完整持股快照」的表，之前這裡的include完全沒有依最新as_of_date過濾就orderBy rank take 10、
+    // _count整張表——結果「Holdings Count」把全部歷史快照的列數加總顯示（0050 VERIFIED顯示
+    // 2164，實際該檔只有50-102檔），「相關資產」也變成跨日期混抓rank最小的10列（0050 VERIFIED
+    // 11個項目全部顯示"1. 台積電"，因為每個快照日的rank=1剛好都是台積電，排序時贏過其他快照日
+    // 的rank=2,3...）。改成先查最新as_of_date，holdings跟count都鎖定那一天，跟lib/data-platform/
+    // web/etfService.ts的getEtfDetail本來就用的作法一致（那支本來就是對的，只有這支page.tsx有
+    // 這個bug）。
+    const latestHoldingDate = await prisma.holding.findFirst({ where: { etf: { code: decodeURIComponent(code) } }, orderBy: { asOfDate: "desc" }, select: { asOfDate: true } });
+    const etf = await prisma.etf.findUnique({
+      where: { code: decodeURIComponent(code) },
+      include: {
+        history: { where: { price: { not: null } }, orderBy: { date: "desc" }, take: 5000 },
+        // 不在這裡take:10 -- 同一天、同一檔持股常被兩條不同的擷取來源各寫一筆（VERIFIED 0050
+        // 2026-10-27同時有 ETF_OFFICIAL_DAILY_SNAPSHOT 跟 官方網頁URL 兩種source，security_id
+        // 相同、weight相同），先把當天全部抓出來，下面依security_id/holdingName去重後再取前10，
+        // 不然原本的take:10會在去重前就被同一檔的重複列塞滿（VERIFIED「相關資產」曾經11項全部
+        // 顯示"1. 台積電"）。
+        holdings: latestHoldingDate ? { where: { asOfDate: latestHoldingDate.asOfDate }, orderBy: { rank: "asc" } } : { where: { id: "" } },
+      },
+    });
     // 2026-10-24（使用者規則）: 核心母體商品的詳情頁永遠不准 404。之前這裡用 isPublicReadyAsset
     // 擋掉任何「最新一筆 etf_history 不是當前交易日」的 ETF -- VERIFIED live 這個規則錯誤地把
     // 「今天不是交易日/資料還沒輪到更新」當成「這檔 ETF 不給看」，連 0050 這種龍頭 ETF 都擋掉。
@@ -53,10 +73,19 @@ export default async function EtfDetailPage({ params }: { params: Promise<{ code
       const change = latest != null && Number.isFinite(latest) && previous != null ? latest - previous : null;
       const sameDateNav = latestRow?.nav ?? null;
       const sameDatePremium = latestRow?.price != null && sameDateNav != null ? ((Number(latestRow.price) / Number(sameDateNav)) - 1) * 100 : null;
-      const related = etf.holdings.map((holding) => ({ label: `${holding.rank}. ${holding.holdingName}${holding.holdingCode ? ` (${holding.holdingCode})` : ""}`, value: `${Number(holding.weight).toFixed(2)}%${holding.sector ? `・${holding.sector}` : ""}${holding.country ? `・${holding.country}` : ""}` }));
+      // 同一檔持股被不同來源各寫一筆時，優先留 ETF_OFFICIAL_DAILY_SNAPSHOT 那一筆（官方每日快照
+      // 流程，比舊版URL字串來源的欄位更完整）；兩者都沒有就留先出現的那筆，不是用猜的，只是避免
+      // 同一檔重複顯示兩次。
+      const dedupedHoldings = [...new Map(
+        etf.holdings
+          .slice()
+          .sort((a, b) => (a.source === "ETF_OFFICIAL_DAILY_SNAPSHOT" ? -1 : b.source === "ETF_OFFICIAL_DAILY_SNAPSHOT" ? 1 : 0))
+          .map((holding) => [holding.securityId ?? holding.holdingName, holding] as const),
+      ).values()].sort((a, b) => a.rank - b.rank);
+      const related = dedupedHoldings.slice(0, 10).map((holding) => ({ label: `${holding.rank}. ${holding.holdingName}${holding.holdingCode ? ` (${holding.holdingCode})` : ""}`, value: `${Number(holding.weight).toFixed(2)}%${holding.sector ? `・${holding.sector}` : ""}${holding.country ? `・${holding.country}` : ""}` }));
       // 純顯示用：資料夠不夠新只決定畫面上的「資料狀態」標籤文字，不再決定頁面能不能打開。
       const displayFreshness: DetailData["freshnessStatus"] = computeFreshnessStatus(latestRow?.date ?? etf.priceUpdatedAt ?? null, "MARKET_DAY") === "CURRENT" ? "LATEST" : "STALE";
-      data = { type: "ETF", code: etf.code, name: etf.name, officialName: etf.nameEn ?? undefined, exchange: etf.exchange ?? undefined, region: etf.region ?? undefined, currency: etf.currency, isin: etf.isin ?? undefined, summary: [metric("最新價格", latest), metric("NAV（同期）", sameDateNav), metric("Premium / Discount（同期）", sameDatePremium, "%"), { label: "漲跌 / 漲跌幅", value: change == null || !previous ? "—" : `${fmt(change)} / ${((change / previous) * 100).toFixed(2)}%` }], performance: [metric("1M", etf.return1m, "%"), metric("3M", etf.return3m, "%"), metric("6M", etf.return6m, "%"), metric("YTD", etf.returnYtd, "%"), metric("1Y", etf.return1y, "%"), metric("3Y", etf.return3y, "%"), metric("5Y", etf.return5y, "%")], risk: [metric("Volatility", etf.volatility1y, "%"), metric("Beta", etf.beta), metric("Max Drawdown", etf.maxDrawdown, "%"), metric("Sharpe", etf.sharpe1y)], keyData: [metric("NAV", etf.latestNav), metric("AUM", etf.aum), metric("Expense Ratio", pctFraction(etf.expenseRatio), "%"), metric("Dividend Yield", pctFraction(etf.dividendYield), "%"), { label: "Issuer", value: etf.provider }, { label: "Asset Class", value: etf.category ?? "—" }, { label: "Benchmark", value: etf.benchmark ?? "—" }, { label: "Holdings Count", value: etf._count.holdings ? String(etf._count.holdings) : "—" }, metric("Premium / Discount", sameDatePremium, "%")], relatedData: related, history: allHistory, priceDate: dateText(latestRow?.date ?? etf.priceUpdatedAt), source: etf.dataProvider ?? etf.provider, lastUpdated: dateText(etf.updatedAt), updatedAt: dateText(etf.priceUpdatedAt ?? etf.updatedAt), frequency: "依既有 ETF Canonical Data 更新", freshnessStatus: displayFreshness };
+      data = { type: "ETF", code: etf.code, name: etf.name, officialName: etf.nameEn ?? undefined, exchange: etf.exchange ?? undefined, region: etf.region ?? undefined, currency: etf.currency, isin: etf.isin ?? undefined, summary: [metric("最新價格", latest), metric("NAV（同期）", sameDateNav), metric("Premium / Discount（同期）", sameDatePremium, "%"), { label: "漲跌 / 漲跌幅", value: change == null || !previous ? "—" : `${fmt(change)} / ${((change / previous) * 100).toFixed(2)}%` }], performance: [metric("1M", etf.return1m, "%"), metric("3M", etf.return3m, "%"), metric("6M", etf.return6m, "%"), metric("YTD", etf.returnYtd, "%"), metric("1Y", etf.return1y, "%"), metric("3Y", etf.return3y, "%"), metric("5Y", etf.return5y, "%")], risk: [metric("Volatility", etf.volatility1y, "%"), metric("Beta", etf.beta), metric("Max Drawdown", etf.maxDrawdown, "%"), metric("Sharpe", etf.sharpe1y)], keyData: [metric("NAV", etf.latestNav), metric("AUM", etf.aum), metric("Expense Ratio", pctFraction(etf.expenseRatio), "%"), metric("Dividend Yield", pctFraction(etf.dividendYield), "%"), { label: "Issuer", value: etf.provider }, { label: "Asset Class", value: etf.category ?? "—" }, { label: "Benchmark", value: etf.benchmark ?? "—" }, { label: "Holdings Count", value: dedupedHoldings.length ? String(dedupedHoldings.length) : "—" }, metric("Premium / Discount", sameDatePremium, "%")], relatedData: related, history: allHistory, priceDate: dateText(latestRow?.date ?? etf.priceUpdatedAt), source: etf.dataProvider ?? etf.provider, lastUpdated: dateText(etf.updatedAt), updatedAt: dateText(etf.priceUpdatedAt ?? etf.updatedAt), frequency: "依既有 ETF Canonical Data 更新", freshnessStatus: displayFreshness };
     }
   } catch { data = null; }
   if (!data) notFound();
