@@ -341,6 +341,10 @@
       "schedule": "26 * * * *"
     },
     {
+      "path": "/api/cron/cloud-yuanta-tracking-difference-sync",
+      "schedule": "0 10 * * *"
+    },
+    {
       "path": "/api/cron/etf-official-holdings?issuer=Cathay",
       "schedule": "5,25,45 11-14 * * 1-5"
     },
