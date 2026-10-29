@@ -288,6 +288,22 @@ export async function GET(request: Request) {
   const etfHistoryGapCount = etfHistoryGapRows[0]?.n ?? 0;
   const ETF_HISTORY_GAP_MAX = 0;
   const etfHistoryGapExceeded = etfHistoryGapCount > ETF_HISTORY_GAP_MAX;
+  // 同一批落後ETF的明細（給下面的Yahoo即時核實用，跟core_universe_etf_gap同一套證據紀律）。
+  const etfHistoryGapDetailRows = etfHistoryGapExceeded ? await prisma.$queryRawUnsafe<Array<{ code: string; name: string; dataSource: string | null; ownLatestDate: Date }>>(`
+    WITH peer_max AS (
+      SELECT e.exchange, MAX(h.date) AS max_date
+      FROM etfs e JOIN etf_history h ON h.etf_id = e.id
+      WHERE e.id IN (SELECT asset_id FROM tw_purchasable_classification WHERE asset_type='ETF' AND status='APPROVED') AND h.price IS NOT NULL
+      GROUP BY e.exchange
+    )
+    SELECT e.code, e.name, e.data_source AS "dataSource", (SELECT MAX(h.date) FROM etf_history h WHERE h.etf_id = e.id AND h.price IS NOT NULL) AS "ownLatestDate"
+    FROM etfs e
+    JOIN peer_max pm ON pm.exchange = e.exchange
+    WHERE e.id IN (SELECT asset_id FROM tw_purchasable_classification WHERE asset_type='ETF' AND status='APPROVED')
+      AND e.is_active = true
+      AND (SELECT MAX(h.date) FROM etf_history h WHERE h.etf_id = e.id AND h.price IS NOT NULL) < pm.max_date - INTERVAL '5 days'
+    LIMIT 20
+  `) : [];
 
   // 2026-10-24（使用者核准，10/23 颱風臨時休市案例驗證過）: 單靠「跟同交易所 peer-max 比」或
   // 單靠年度開休市日曆都分不出「真的休市（例如颱風臨時公告，不在年度日曆裡）」跟「整個交易所的
@@ -612,6 +628,40 @@ export async function GET(request: Request) {
     }
   }
 
+  // 2026-10-29（使用者核准，第三項：「Yahoo本身沒更新」寫成自動規則）: ETF_HISTORY_GAP原本只
+  // 回報一個數字，不知道是我方排程壞了還是Yahoo自己沒更新。同一套coreUniverseEtfGap的證據紀律：
+  // 即時查Yahoo該ETF最近5天的真實收盤，Yahoo比我們自己最新一筆還新=SYSTEM（代表來源有、我方沒
+  // 抓到）；Yahoo跟我們一樣舊或更舊=EXTERNAL_DELAY（來源端自己沒更新，附Yahoo查到的日期當證據）。
+  // 有界：最多查8檔、最多花20秒，不讓這個新步驟把整個路由拖過maxDuration=180。
+  const ETF_HISTORY_GAP_VERIFY_MAX_ITEMS = 8;
+  const ETF_HISTORY_GAP_VERIFY_MAX_ELAPSED_MS = 20_000;
+  const etfHistoryGapWithEvidence: Array<{ code: string; name: string; category: "SYSTEM" | "EXTERNAL_DELAY"; reason: string; checkedAt: string }> = [];
+  {
+    const verifyStartedMs = Date.now();
+    for (const etf of etfHistoryGapDetailRows) {
+      const checkedAt = new Date().toISOString();
+      if (etfHistoryGapWithEvidence.length >= ETF_HISTORY_GAP_VERIFY_MAX_ITEMS || Date.now() - verifyStartedMs > ETF_HISTORY_GAP_VERIFY_MAX_ELAPSED_MS || Date.now() - startedMs > 150_000) {
+        etfHistoryGapWithEvidence.push({ code: etf.code, name: etf.name, category: "SYSTEM", reason: "NOT_VERIFIED_BUDGET_EXHAUSTED", checkedAt });
+        continue;
+      }
+      try {
+        const symbol = etf.dataSource ?? etf.code;
+        const period2 = Math.floor(Date.now() / 1000);
+        const period1 = period2 - 5 * 24 * 60 * 60;
+        const chart = await fetchYahooChartPeriod(symbol, period1, period2);
+        const latestRealClose = chart?.candles.filter((c) => c.close != null).at(-1);
+        const ownLatestIso = new Date(etf.ownLatestDate).toISOString().slice(0, 10);
+        if (latestRealClose && latestRealClose.date.toISOString().slice(0, 10) > ownLatestIso) {
+          etfHistoryGapWithEvidence.push({ code: etf.code, name: etf.name, category: "SYSTEM", reason: `YAHOO_HAS_DATA_AS_OF_${latestRealClose.date.toISOString().slice(0, 10)}_NOT_INGESTED(own=${ownLatestIso})`, checkedAt });
+        } else {
+          etfHistoryGapWithEvidence.push({ code: etf.code, name: etf.name, category: "EXTERNAL_DELAY", reason: latestRealClose ? `YAHOO_LATEST_${latestRealClose.date.toISOString().slice(0, 10)}_SAME_OR_OLDER_THAN_OURS(own=${ownLatestIso})` : "YAHOO_RETURNED_NO_REAL_CLOSE_IN_LAST_5D", checkedAt });
+        }
+      } catch (e) {
+        etfHistoryGapWithEvidence.push({ code: etf.code, name: etf.name, category: "SYSTEM", reason: `VERIFY_FAILED: ${e instanceof Error ? e.message : String(e)}`, checkedAt });
+      }
+    }
+  }
+
   // 2026-10-20（使用者訂立）: 對缺資料/過期的主動式 ETF，即時打一次該投信官網，記錄「官網當下
   // 顯示的最新資料日期」跟「查詢時間」當證據——只有官網自己的最新日期確實還是舊的，才能標
   // EXTERNAL_DELAY；查不到、查詢本身失敗、或官網其實已經有更新資料（代表是我方排程沒抓到），
@@ -785,7 +835,14 @@ export async function GET(request: Request) {
     ...(etfDataSourceGap.anomaly ? [{ type: "ETF_DATA_SOURCE_GAP", category: SYSTEM_CATEGORY, newCodes: etfDataSourceGap.newCodes }] : []),
     ...(decommissionedJobReactivated ? [{ type: "OUT_OF_SCOPE_JOB_REACTIVATED", category: SYSTEM_CATEGORY, rows: decommissionedRows }] : []),
     ...(retailRestrictedDropped ? [{ type: "RETAIL_RESTRICTED_ETF_COUNT_DROPPED", category: SYSTEM_CATEGORY, currentCount: retailRestrictedCount, minBaseline: RETAIL_RESTRICTED_MIN_BASELINE }] : []),
-    ...(etfHistoryGapExceeded ? [{ type: "ETF_HISTORY_GAP", category: SYSTEM_CATEGORY, gapCount: etfHistoryGapCount }] : []),
+    // 跟core_universe_etf同一套紀律：每檔都已經用上面的即時Yahoo查證分好SYSTEM/EXTERNAL_DELAY，
+    // 這裡依分類拆成最多兩筆，而不是整批通通算SYSTEM。
+    ...(etfHistoryGapWithEvidence.some((e) => e.category === SYSTEM_CATEGORY)
+      ? [{ type: "ETF_HISTORY_GAP", category: SYSTEM_CATEGORY, gapCount: etfHistoryGapCount, items: etfHistoryGapWithEvidence.filter((e) => e.category === SYSTEM_CATEGORY) }]
+      : []),
+    ...(etfHistoryGapWithEvidence.some((e) => e.category === "EXTERNAL_DELAY")
+      ? [{ type: "ETF_HISTORY_GAP", category: "EXTERNAL_DELAY" as const, gapCount: etfHistoryGapCount, items: etfHistoryGapWithEvidence.filter((e) => e.category === "EXTERNAL_DELAY") }]
+      : []),
     ...(twMarketWideGap ? [{ type: "TW_EXCHANGE_WIDE_DATA_GAP", category: SYSTEM_CATEGORY, ...twMarketWideGap }] : []),
     // 每檔都已經用上面的即時查證分好 SYSTEM / EXTERNAL_DELAY，這裡依分類拆成最多兩筆，而不是
     // 整批套同一個分類——有證據（checkedAt/officialLatestDate）支持才會出現在 EXTERNAL_DELAY 那筆。
@@ -864,6 +921,7 @@ export async function GET(request: Request) {
       core_universe_fund_never_reported_count: coreUniverseFundNeverReported.length,
       core_universe_fund_never_reported_sample: coreUniverseFundNeverReported.slice(0, 20),
       core_universe_etf_gap_evidence: coreUniverseEtfGapWithEvidence,
+      etf_history_gap_evidence: etfHistoryGapWithEvidence,
       moneydj_parse_failures: moneydjParseFailures,
       fund_currency_format_check: currencyFormatCheck, fund_currency_official_check: currencyOfficialCheck, new_fund_skipped_invalid_currency: newFundSkippedCurrency,
       tw_exchange_ad_hoc_closure_note: twAdHocClosureNote,
