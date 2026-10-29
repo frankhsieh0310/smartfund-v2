@@ -269,20 +269,19 @@ export async function getFundDetail(identifier: string, relationLimit = 20, rang
   const fees: FundDetailData["feesTerms"]["data"] = shareClasses.map((shareClass) => ({ shareClass: shareClass.shareClassName, managementFee: numberOrNull(shareClass.managementFee), ongoingCharges: numberOrNull(shareClass.ongoingCharges), ter: numberOrNull(shareClass.ter), salesChargeFront: numberOrNull(shareClass.salesChargeFront), salesChargeBack: numberOrNull(shareClass.salesChargeBack), performanceFee: numberOrNull(shareClass.performanceFee), minimumInitialInvestment: numberOrNull(shareClass.minimumInitialInvestment), distributionFrequency: shareClass.distributionFrequency ?? row.distributionFreq, hedgingTerms: shareClass.hedged === null ? null : shareClass.hedged ? shareClass.hedgedCurrency ? `HEDGED_${shareClass.hedgedCurrency}` : "HEDGED" : "UNHEDGED", source: shareClass.termsSource ?? shareClass.source, asOfDate: isoOrNull(shareClass.termsAsOfDate) }));
   if (!fees.length && (row.expenseRatio !== null || row.distributionFreq)) fees.push({ shareClass: row.name, managementFee: null, ongoingCharges: null, ter: numberOrNull(row.expenseRatio), salesChargeFront: null, salesChargeBack: null, performanceFee: null, minimumInitialInvestment: null, distributionFrequency: row.distributionFreq, hedgingTerms: null, source, asOfDate: isoOrNull(row.latestNavDate) });
   const classificationAssetClass = classifications.find((item) => /ASSET.CLASS/i.test(item.classificationType))?.classificationValue ?? classifications.find((item) => /ASSET.CLASS/i.test(item.classificationType))?.classificationName ?? null;
-  // 2026-10-29（使用者核准，免費功能缺口——基金風險指標）: VERIFIED核心母體5,884檔基金裡，
-  // fund_risk_metrics的sharpe_3y/std_dev_3y（Yahoo官方來源，但只對3.6%的非核心母體基金有資料）
-  // 覆蓋率是0，但另一批既有「DERIVED_FROM_FUND_HISTORY」一次性計算（2026-08-09~09-08，已經
-  // 不是活躍排程，VERIFIED沒有任何現行cron還在寫入）用的是SHARPE_RF_ZERO（無風險利率固定當0），
-  // 跟ETF這次統一採用的真實利率規則不一致。標準差（VOLATILITY_1Y）不受無風險利率影響，既有的
-  // 保留；SHARPE_1Y無論有沒有既有值，一律用真實利率重新計算覆蓋過去，沒有官方利率來源的幣別
-  // 就不顯示Sharpe、標示原因——跟ETF完全同一套規則。SHARPE_3Y/5Y因為riskCalc.ts目前只支援1年期
-  // 窗口，這次沒有一併修正，維持原本RF=0的舊值，列為已知限制。
-  const hasOfficial1yVolatility = riskMetrics.some((m) => /VOLATIL.*_1Y$|_1Y.*VOLATIL/i.test(m.metricCode));
-  const existingSharpe1y = riskMetrics.find((m) => /SHARPE.*_1Y$|_1Y.*SHARPE/i.test(m.metricCode));
+  // 2026-10-29（使用者核准，免費功能缺口——基金風險指標，含3Y/5Y擴充）: VERIFIED核心母體
+  // 5,884檔基金裡，fund_risk_metrics的sharpe_3y/std_dev_3y（Yahoo官方來源）覆蓋率是0，但另一批
+  // 既有「DERIVED_FROM_FUND_HISTORY」一次性計算（2026-08-09~09-08，已經不是活躍排程，VERIFIED
+  // 沒有任何現行cron還在寫入）用的是SHARPE_RF_ZERO（無風險利率固定當0），跟ETF這次統一採用的
+  // 真實利率規則不一致。標準差不受無風險利率影響，既有的VOLATILITY_1Y/3Y/5Y保留；SHARPE_1Y/3Y/
+  // 5Y無論有沒有既有值，一律用真實利率重新計算覆蓋過去，沒有官方利率來源的幣別就不顯示Sharpe、
+  // 標示原因——跟ETF完全同一套規則。riskCalc.ts的calculateVolatilityAndSharpe本身就是「餵多少
+  // 天的真實價格就算多長窗口的年化標準差/夏普值」，不需要另外改公式，只要餵3年/5年的NAV歷史
+  // 進去即可，1Y/3Y/5Y三個窗口共用同一套函式與同一個無風險利率來源。
+  const WINDOWS: Array<{ years: number; period: "1Y" | "3Y" | "5Y" }> = [{ years: 1, period: "1Y" }, { years: 3, period: "3Y" }, { years: 5, period: "5Y" }];
   let calculatedFundRisk: { period: string; value: number; label: string }[] = [];
   let fundRiskMethodNote: string | null = null;
   {
-    const oneYearAgo = new Date(Date.UTC(new Date().getUTCFullYear() - 1, new Date().getUTCMonth(), new Date().getUTCDate()));
     const riskFreeSource = RISK_FREE_RATE_SOURCES[row.currency ?? ""];
     let riskFreeRatePct: number | null = null;
     if (riskFreeSource) {
@@ -292,19 +291,26 @@ export async function getFundDetail(identifier: string, relationLimit = 20, rang
       );
       riskFreeRatePct = rfr[0]?.value != null ? Number(rfr[0].value) : null;
     }
-    const navPoints = historyRows.filter((r) => r.date >= oneYearAgo && r.nav != null).map((r) => ({ date: r.date, close: Number(r.nav) })).toReversed();
-    const calc = calculateVolatilityAndSharpe(navPoints, riskFreeRatePct);
-    if (!hasOfficial1yVolatility && calc.volatility1yPct != null) calculatedFundRisk.push({ period: "1Y", value: calc.volatility1yPct, label: "VOLATILITY_1Y（本App計算）" });
-    if (calc.sharpe1y != null) calculatedFundRisk.push({ period: "1Y", value: calc.sharpe1y, label: "SHARPE_1Y（本App計算，取代RF=0的舊算法）" });
-    if (calc.sharpe1y != null || (!hasOfficial1yVolatility && calc.volatility1yPct != null)) {
+    let anyCalculated = false;
+    let anyFailedWithStaleRfZero = false;
+    for (const w of WINDOWS) {
+      const cutoff = new Date(Date.UTC(new Date().getUTCFullYear() - w.years, new Date().getUTCMonth(), new Date().getUTCDate()));
+      const hasOfficialVolatility = riskMetrics.some((m) => new RegExp(`VOLATIL.*_${w.period}$|_${w.period}.*VOLATIL`, "i").test(m.metricCode));
+      const navPoints = historyRows.filter((r) => r.date >= cutoff && r.nav != null).map((r) => ({ date: r.date, close: Number(r.nav) })).toReversed();
+      const calc = calculateVolatilityAndSharpe(navPoints, riskFreeRatePct);
+      if (!hasOfficialVolatility && calc.volatility1yPct != null) { calculatedFundRisk.push({ period: w.period, value: calc.volatility1yPct, label: `VOLATILITY_${w.period}（本App計算）` }); anyCalculated = true; }
+      if (calc.sharpe1y != null) { calculatedFundRisk.push({ period: w.period, value: calc.sharpe1y, label: `SHARPE_${w.period}（本App計算，取代RF=0的舊算法）` }); anyCalculated = true; }
+      else if (riskMetrics.some((m) => new RegExp(`SHARPE.*_${w.period}$|_${w.period}.*SHARPE`, "i").test(m.metricCode) && m.calculationMethod === "SHARPE_RF_ZERO")) anyFailedWithStaleRfZero = true;
+    }
+    if (anyCalculated) {
       fundRiskMethodNote = `${RISK_CALC_METHOD_LABEL}${riskFreeSource ? `無風險利率來源：${riskFreeSource.label}。` : "此幣別尚無官方無風險利率自動化來源，Sharpe暫不計算。"}`;
-    } else if (existingSharpe1y?.calculationMethod === "SHARPE_RF_ZERO") {
+    } else if (anyFailedWithStaleRfZero) {
       // 有舊的RF=0版本，但重算失敗（例如價格資料不足20筆）——不留誤導性的RF=0舊值在畫面上。
       fundRiskMethodNote = riskFreeSource ? "資料不足以重新計算Sharpe（需至少20個交易日的真實NAV）" : "此幣別尚無官方無風險利率自動化來源，Sharpe暫不計算";
     }
   }
-  // 舊版RF=0的SHARPE_1Y一律從既有riskMetrics拿掉，避免跟上面重新計算的版本同時顯示在畫面上。
-  const filteredRiskMetrics = riskMetrics.filter((m) => !(/SHARPE.*_1Y$|_1Y.*SHARPE/i.test(m.metricCode) && m.calculationMethod === "SHARPE_RF_ZERO"));
+  // 舊版RF=0的SHARPE_1Y/3Y/5Y一律從既有riskMetrics拿掉，避免跟上面重新計算的版本同時顯示在畫面上。
+  const filteredRiskMetrics = riskMetrics.filter((m) => !(/SHARPE.*_(1Y|3Y|5Y)$|_(1Y|3Y|5Y).*SHARPE/i.test(m.metricCode) && m.calculationMethod === "SHARPE_RF_ZERO"));
 
   const chronologicalHistory = historyRows.toReversed();
   const sampledHistory = chronologicalHistory.length <= FUND_DETAIL_LIMITS.history
