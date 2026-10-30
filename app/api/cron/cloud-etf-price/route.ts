@@ -344,10 +344,10 @@ export async function GET(request: Request) {
   try {
     const twseData = await fetchTwseEtfPremiumDiscount();
     const coreEtfRows = await prisma.etf.findMany({ where: { id: { in: coreEtfIds } }, select: { id: true, code: true } });
-    const matched: Array<{ id: string; code: string; premiumPct: number; estimatedNav: number; asOfDate: string }> = [];
+    const matched: Array<{ id: string; code: string; premiumPct: number; estimatedNav: number; previousNav: number; asOfDate: string }> = [];
     for (const row of coreEtfRows) {
       const d = twseData.get(row.code);
-      if (d) matched.push({ id: row.id, code: row.code, premiumPct: d.premiumPct, estimatedNav: d.estimatedNav, asOfDate: d.asOfDate });
+      if (d) matched.push({ id: row.id, code: row.code, premiumPct: d.premiumPct, estimatedNav: d.estimatedNav, previousNav: d.previousNav, asOfDate: d.asOfDate });
     }
     const { runId: premiumRunId, skipped: premiumSkipped } = await beginRun({
       jobName: premiumJob,
@@ -367,7 +367,11 @@ export async function GET(request: Request) {
             create: { etfId: m.id, date: asOfDate, premium: m.premiumPct, nav: m.estimatedNav, source: "TWSE_MIS_OFFICIAL", sourceUrl: "https://mis.twse.com.tw/stock/various-areas/etf-price/indicator-disclosure-etf", knownAt: new Date() },
             update: { premium: m.premiumPct, nav: m.estimatedNav },
           });
-          await prisma.$executeRawUnsafe(`UPDATE etfs SET premium = $1, updated_at = NOW() WHERE id = $2`, m.premiumPct, m.id);
+          // 2026-10-30（使用者核准，淨值欄顯示異常修正）: h欄位（前一營業日已公告之基金淨值）是
+          // 跟今天的預估折溢價不同的另一個官方數字——ETF列表頁/詳情頁的「淨值」欄要顯示的是這個，
+          // 不是f欄位（今日盤中預估淨值，那個是算折溢價用的）。同步鏡像寫進etfs.latest_nav，蓋掉
+          // 死掉的舊latest_nav。
+          await prisma.$executeRawUnsafe(`UPDATE etfs SET premium = $1, latest_nav = $2, updated_at = NOW() WHERE id = $3`, m.premiumPct, m.previousNav, m.id);
           written++;
         }
       }

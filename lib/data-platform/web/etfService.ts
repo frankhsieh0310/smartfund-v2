@@ -126,8 +126,14 @@ export async function getEtfList(query: EtfListQuery = {}): Promise<ServiceRespo
   ]);
   const rowsWithExact = term ? [...exactRows, ...rows.filter((row) => !exactRows.some((exact) => exact.id === row.id))].slice(0, pageSize) : rows;
   const ids = rowsWithExact.map((row) => row.id);
+  // 2026-10-30（使用者核准，淨值欄顯示異常修正）: 元大追蹤差距曾經借用這張表的nav欄位存放完全
+  //不同意義的數字（深度-239.92%），被這裡的「同etf_id挑最新一筆」邏輯誤當淨值撿走。追蹤差距的寫入
+  // 程式已經改寫到專屬的etf_tracking_difference表，但這裡仍明確只信任已知代表「真淨值」的來源白名單，
+  // 不再對「這個etf_id最新一筆是誰」照單全收——未來任何來源想借用這個generic nav欄位存別的意義，
+  // 都不會悄悄污染這份列表。
+  const NAV_SOURCE_ALLOWLIST = Prisma.sql`('DERIVED_AUM_NAV_X_SHARES', 'BlackRock / iShares Official Product Data', 'ISHARES_OFFICIAL', 'BLACKROCK_ISHARES_OFFICIAL_PRODUCT_DATA')`;
   const [assetMetrics, flowCoverage, readiness] = ids.length ? await Promise.all([
-    prisma.$queryRaw<AssetMetricRow[]>(Prisma.sql`SELECT DISTINCT ON (etf_id) etf_id, observation_date, aum, shares_outstanding, nav, source FROM etf_asset_metrics WHERE etf_id IN (${Prisma.join(ids)}) ORDER BY etf_id, observation_date DESC, updated_at DESC LIMIT ${pageSize}`),
+    prisma.$queryRaw<AssetMetricRow[]>(Prisma.sql`SELECT DISTINCT ON (etf_id) etf_id, observation_date, aum, shares_outstanding, nav, source FROM etf_asset_metrics WHERE etf_id IN (${Prisma.join(ids)}) AND (nav IS NULL OR source IN ${NAV_SOURCE_ALLOWLIST}) ORDER BY etf_id, observation_date DESC, updated_at DESC LIMIT ${pageSize}`),
     prisma.$queryRaw<FlowCoverageRow[]>(Prisma.sql`SELECT etf_id, MAX(observation_date) AS observation_date FROM etf_flows WHERE etf_id IN (${Prisma.join(ids)}) GROUP BY etf_id LIMIT ${pageSize}`),
     // 2026-10-30（使用者核准，ETF折溢價接官方資料）: latest_premium/latest_premium_date 一起從
     // 同一筆etf_history row取（跟app/etf/[code]/page.tsx一樣的「同一筆記錄」保證），不是分開

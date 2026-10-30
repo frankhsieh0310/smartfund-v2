@@ -1,9 +1,12 @@
 // ETF追蹤差距 — copies Yuanta's own official number verbatim (lib/etf-holdings-engine/adapters/
 // yuantaTrackingDifference.ts), scoped to the hand-verified TRACKED_YUANTA_FUND_IDS table (matched
-// by ETF code, never by Chinese name). Storage: etf_asset_metrics, no schema change — this table
-// has no flexible metric-type column, so `source_record_id` is repurposed as the metric
-// discriminator and `nav` as the generic value slot (documented below and in the adapter file),
-// per the user's explicit "不要新增欄位，存在既有的etf_asset_metrics" instruction.
+// by ETF code, never by Chinese name). Storage: etf_tracking_difference (dedicated table, see
+// migration SQL from 2026-10-30 "淨值欄顯示異常" fix).
+//
+// 2026-10-30（使用者核准，淨值欄顯示異常修正）: 這支原本把追蹤差距寫進 etf_asset_metrics.nav
+// （用 source_record_id 當判別欄位），結果被 ETF 列表頁的 nav query（DISTINCT ON etf_id ORDER BY
+// observation_date DESC）隨便撿到，顯示成離譜的「淨值 -1.47」。追蹤差距跟淨值是完全不同的兩個數字，
+// 不能共用同一個generic value欄位 — 改用專屬的 etf_tracking_difference 表，不再寫 etf_asset_metrics。
 //
 // SHADOW MODE BY DEFAULT: unless YUANTA_TRACKING_DIFFERENCE_SYNC_WRITE is exactly "on", fetches and
 // parses but writes nothing.
@@ -40,14 +43,12 @@ export async function GET(request: Request) {
       if (!etf.length) { missing++; continue; }
       results.push({ code, deviation: d.deviation, lsdeviation: d.lsdeviation, asOfDate: d.asOfDate });
       if (writeEnabled) {
-        for (const [recordId, value] of [["YUANTA_TRACKING_DIFFERENCE_DAILY", d.deviation], ["YUANTA_TRACKING_DIFFERENCE_CUMULATIVE", d.lsdeviation]] as const) {
-          await prisma.$executeRawUnsafe(
-            `INSERT INTO etf_asset_metrics (id, etf_id, observation_date, nav, currency, source, source_record_id, source_url, retrieved_at, verification_status, created_at, updated_at)
-             VALUES (gen_random_uuid()::text, $1, $2::date, $3, 'TWD', 'YUANTA_OFFICIAL', $4, 'https://www.yuantaetfs.com/tradeInfo/trackingDifference/ETF', NOW(), 'VERIFIED_OFFICIAL', NOW(), NOW())
-             ON CONFLICT (etf_id, observation_date, source, source_record_id) DO UPDATE SET nav = EXCLUDED.nav, updated_at = NOW()`,
-            etf[0].id, d.asOfDate, value, recordId,
-          );
-        }
+        await prisma.$executeRawUnsafe(
+          `INSERT INTO etf_tracking_difference (id, etf_id, observation_date, daily_pct, cumulative_pct, source, source_url, retrieved_at, created_at, updated_at)
+           VALUES (gen_random_uuid()::text, $1, $2::date, $3, $4, 'YUANTA_OFFICIAL', 'https://www.yuantaetfs.com/tradeInfo/trackingDifference/ETF', NOW(), NOW(), NOW())
+           ON CONFLICT (etf_id, observation_date, source) DO UPDATE SET daily_pct = EXCLUDED.daily_pct, cumulative_pct = EXCLUDED.cumulative_pct, updated_at = NOW()`,
+          etf[0].id, d.asOfDate, d.deviation, d.lsdeviation,
+        );
         written++;
       }
     }

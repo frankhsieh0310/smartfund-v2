@@ -141,15 +141,16 @@ export default async function EtfDetailPage({ params }: { params: Promise<{ code
       // 2026-10-29（使用者核准）: 追蹤差距目前只對元大發行的5檔ETF有資料（照抄元大官網自己
       // 公布的數字，不是自算），其餘ETF沒有資料就不顯示任何追蹤差距/誤差欄位，不留假的「—」
       // 誤導成「查過但沒有」。
-      const trackingRows = await prisma.$queryRawUnsafe<{ source_record_id: string; nav: unknown; observation_date: Date }[]>(
-        `SELECT source_record_id, nav, observation_date FROM etf_asset_metrics WHERE etf_id = $1 AND source = 'YUANTA_OFFICIAL' AND source_record_id IN ('YUANTA_TRACKING_DIFFERENCE_DAILY', 'YUANTA_TRACKING_DIFFERENCE_CUMULATIVE') ORDER BY observation_date DESC LIMIT 2`,
+      // 2026-10-30（使用者核准，淨值欄顯示異常修正）: 改讀專屬的 etf_tracking_difference 表，
+      // 不再跟 etf_asset_metrics.nav 共用欄位（那是造成列表頁淨值顯示-1.47的根因）。
+      const trackingRows = await prisma.$queryRawUnsafe<{ daily_pct: unknown; cumulative_pct: unknown; observation_date: Date }[]>(
+        `SELECT daily_pct, cumulative_pct, observation_date FROM etf_tracking_difference WHERE etf_id = $1 AND source = 'YUANTA_OFFICIAL' ORDER BY observation_date DESC LIMIT 1`,
         etf.id,
-      );
-      const trackingDaily = trackingRows.find((r) => r.source_record_id === "YUANTA_TRACKING_DIFFERENCE_DAILY");
-      const trackingCumulative = trackingRows.find((r) => r.source_record_id === "YUANTA_TRACKING_DIFFERENCE_CUMULATIVE");
-      const trackingMetrics: Metric[] = trackingDaily || trackingCumulative ? [
-        { label: "追蹤差距（日）", value: trackingDaily ? `${fmt(trackingDaily.nav, "%")}（${dateText(trackingDaily.observation_date)}，來源：元大投信官網）` : "—" },
-        { label: "追蹤差距（累計）", value: trackingCumulative ? `${fmt(trackingCumulative.nav, "%")}（${dateText(trackingCumulative.observation_date)}，來源：元大投信官網）` : "—" },
+      ).catch(() => []);
+      const trackingRow = trackingRows[0];
+      const trackingMetrics: Metric[] = trackingRow ? [
+        { label: "追蹤差距（日）", value: trackingRow.daily_pct != null ? `${fmt(trackingRow.daily_pct, "%")}（${dateText(trackingRow.observation_date)}，來源：元大投信官網）` : "—" },
+        { label: "追蹤差距（累計）", value: trackingRow.cumulative_pct != null ? `${fmt(trackingRow.cumulative_pct, "%")}（${dateText(trackingRow.observation_date)}，來源：元大投信官網）` : "—" },
       ] : [];
       data = { type: "ETF", code: etf.code, name: etf.name, officialName: etf.nameEn ?? undefined, exchange: etf.exchange ?? undefined, region: etf.region ?? undefined, currency: etf.currency, isin: etf.isin ?? undefined, summary: [metric("最新價格", latest), metric("NAV（同期，證交所MIS盤中預估）", sameDateNav), { label: premiumLabel, value: premiumDisplay }, { label: "漲跌 / 漲跌幅", value: change == null || !previous ? "—" : `${fmt(change)} / ${((change / previous) * 100).toFixed(2)}%` }], performance: [metric("1M", etf.return1m, "%"), metric("3M", etf.return3m, "%"), metric("6M", etf.return6m, "%"), metric("YTD", etf.returnYtd, "%"), metric("1Y", etf.return1y, "%"), metric("3Y", etf.return3y, "%"), metric("5Y", etf.return5y, "%")], risk: [volatilityMetric, metric("Beta", etf.beta), metric("Max Drawdown", etf.maxDrawdown, "%"), sharpeMetric, ...(riskMethodNote ? [{ label: "計算方法", value: riskMethodNote }] : [])], keyData: [metric("NAV", etf.latestNav), metric("AUM", etf.aum), metric("Expense Ratio", pctFraction(etf.expenseRatio), "%"), metric("Dividend Yield", pctFraction(etf.dividendYield), "%"), { label: "Issuer", value: etf.provider }, { label: "Asset Class", value: etf.category ?? "—" }, { label: "Benchmark", value: etf.benchmark ?? "—" }, { label: "Holdings Count", value: dedupedHoldings.length ? String(dedupedHoldings.length) : "—" }, { label: premiumLabel, value: premiumDisplay }, ...trackingMetrics], relatedData: related, history: allHistory, priceDate: dateText(latestRow?.date ?? etf.priceUpdatedAt), source: etf.dataProvider ?? etf.provider, lastUpdated: dateText(etf.updatedAt), updatedAt: dateText(etf.priceUpdatedAt ?? etf.updatedAt), frequency: "依既有 ETF Canonical Data 更新", freshnessStatus: displayFreshness };
     }
