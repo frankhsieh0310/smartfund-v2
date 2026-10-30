@@ -165,13 +165,13 @@ const RUN_LOG_PIPELINES = [
   "CLOUD_TW_FUNDAMENTALS_REFRESH",
   "CONSENSUS_LIVE_INGEST",
   "STOCK_TECHNICAL_DAILY_TW",
-  // 2026-10-29（使用者核准修正，VERIFIED）: YAHOO_INDEX_QUOTE對應的phase=quote完全不在
-  // vercel.json的排程裡（只排了phase=history），job名稱本身是route.ts裡動態組出來的
-  // `YAHOO_INDEX_${phase.toUpperCase()}`——這個phase從來沒被排程觸發過，不是壞掉，是這個job
-  // 根本不會再被排程呼叫。真正在跑的YAHOO_INDEX_HISTORY VERIFIED每天正常執行（最新2026-10-29
-  // 00:26），global_index_snapshots本身的新鮮度另外有獨立檢查（globalIndexFreshness），移除
-  // 這個永遠不會有新run的job id不會少看到任何真實異常。
   "YAHOO_INDEX_HISTORY",
+  // 2026-10-30（使用者核准，根治global_index_snapshots 47天未更新的根因）: 上面2026-10-29的
+  // 註解診斷對了（phase=quote從未被排程過），但當時的處理是「移除監控」而不是「把排程補上」，
+  // 導致問題只是不再被誤報、沒有真的解決。現在已經在vercel.json補上
+  // `/api/cron/yahoo-index?phase=quote`（每天22:00 UTC，美股收盤後），所以YAHOO_INDEX_QUOTE
+  // 重新加回這份清單正確監控。
+  "YAHOO_INDEX_QUOTE",
   "FX_FORWARD_POINTS_REFERENCE_CURVE",
   "ALERT_DISPATCH",
   "ALERT_EVALUATE",

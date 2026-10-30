@@ -199,6 +199,12 @@ export async function checkMoneydjParseFailures(query: QueryFn, windowHours = 24
     const sampleFailures: Array<{ code: string; reason: string }> = row.sample_failures ?? [];
     for (const f of sampleFailures) {
       if (/MONEYDJ_HOLDINGS_NOT_DISCLOSED/.test(f.reason)) { notDisclosedCount++; continue; } // benign, never self-heal-gated
+      // 2026-10-30（使用者核准，VERIFIED live: ACFH03 00:15 UTC那次的"parse failed"其實是
+      // reason:"HTTP_429"——這支route本來就照CLAUDE.md規則遇429就backoff_stop不硬闖，是正確
+      // 行為，不是解析壞掉，卻被這裡的catch-all else歸類成MONEYDJ_PARSE_FAILED，誤導成「程式
+      // 壞了要修」。HTTP 429/403/5xx是上游限流或暫時性錯誤，跟真正解析不出來的HTML是不同問題，
+      // 同樣視為benign、不計入parseFailedCodes。
+      if (/^HTTP_(429|403|5\d\d)$/.test(f.reason)) continue;
       lastSeenAt.set(f.code, { startedAt: row.started_at, reason: f.reason });
     }
   }

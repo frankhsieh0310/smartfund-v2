@@ -177,6 +177,10 @@
       "schedule": "30 21 * * 1-5"
     },
     {
+      "path": "/api/cron/yahoo-index?phase=quote",
+      "schedule": "0 22 * * *"
+    },
+    {
       "path": "/api/cron/yahoo-index?phase=history",
       "schedule": "26 0 * * *"
     },

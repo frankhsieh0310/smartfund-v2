@@ -1,5 +1,37 @@
 @AGENTS.md
 
+## 進行中工作（2026-10-30更新，之後接續請先看這段）
+
+**已完成（含本次2026-10-30這輪）**：
+- 競品稽核3個真bug（加入比較入口、風險卡片換行、手機版header裁切）已修好並VERIFIED部署生效。
+- 13F、TW_BANK_RATE_SYNC NOT NULL bug 已修好（TW_BANK_RATE_SYNC待今晚13:40 UTC排程重跑驗證）。
+- funds.isin改(isin,code)複合unique index：已核准、已部署、已VERIFIED正式環境索引存在。
+- FUND_RETURNS_SYNC：已核准加速，vercel.json改每小時3次(:01/:21/:41)，已同步更新scheduleRegistry。
+- ETF折溢價（Premium/Discount）：d29be28cd那次修正已VERIFIED正式環境正常顯示（0050示例0.6759%），不需要再修。
+- global_index_snapshots 47天未更新：VERIFIED根因是vercel.json從未排程過`phase=quote`（只排了
+  `phase=history`），已補上每日22:00 UTC排程，並把YAHOO_INDEX_QUOTE加回daily-health-report的
+  監控清單。
+- YUANTA_TRACKING_DIFFERENCE_SYNC已加進scheduleRegistry（避免首次執行前被誤報NO_RUN_IN_24H）。
+- CLOUD_MONEYDJ_FUND「ACFH03解析失敗」誤報：VERIFIED實際原因是HTTP_429（已照政策正確backoff，
+  不是解析壞掉），health report的分類邏輯已修正排除HTTP_429/403/5xx。
+- YAHOO_TW_RETURN_MISMATCH(00870B)：VERIFIED該ETF頁面現在正常載入、data_source symbol正確
+  (00870B.TWO)，判斷為單次暫時性抓取失敗，非bug。
+
+**做到一半 / 還沒做**：
+- 基金各期間報酬率UNAVAILABLE：VERIFIED根因是Yahoo mapping discovery從未對大量基金執行過——
+  有code的5859檔基金中，3731檔(64%)從未嘗試過mapping，只有2128檔(36%)成功配對。這是大規模
+  資料缺口，不是單一bug，修復需要跑mapping discovery（會寫入production，需另外核准規模與節奏，
+  見下方「需要使用者決定」）。
+- tw-industry-radar本機排程（1330/1700）回報問題：待使用者檢查Windows工作排程器「執行身分」設定。
+- 美股ETF追蹤誤差：`lib/data-platform/web/trackingError.ts`有未commit的WIP（改用Total Return
+  指數），使用者先前核准「不上線」，先保持未commit狀態，不在這次部署範圍內。
+
+**需要使用者決定**：
+1. 基金期間報酬率大量UNAVAILABLE（3731檔從未跑過Yahoo mapping discovery）：要不要核准批次執行
+   discovery（會寫入production_scheduler正式表的fund_provider_mappings，規模大，需要決定節奏
+   /分批方式以避免429）。
+2. tw-industry-radar本機排程3天沒回報成功，需要使用者自己檢查Windows工作排程器的執行身分設定。
+
 ## 第零條（永久規則，2026-10-22，違規後再次明確寫下）：本機一律不准寫入正式資料庫，除非使用者明確核准這個動作
 
 沒有使用者在對話裡明確寫出「核准你直接對正式資料庫執行」這句話等級的授權，**一律不准**從本機（或任何worktree）對Production資料庫執行任何寫入（INSERT/UPDATE/DELETE，含透過application函式間接觸發的寫入）——**「功能測試」、「驗證寫法正確」、「反正資料來源是官方、不會寫錯」都不是例外**。即使資料本身正確、即使upsert機制讓它idempotent無害，動作本身沒有核准就是不准做。

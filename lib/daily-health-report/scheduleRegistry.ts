@@ -38,7 +38,13 @@ export const JOB_SCHEDULES: Record<string, CronSchedule[]> = {
   // flat-24h fallback in checks.ts instead -- same treatment as the self-looping workflow jobs below.
   // Worth separate follow-up (checking the GitHub Actions run history directly, possibly tightening
   // or re-triggering the workflow), but out of scope for tonight's fix given the deadline.
-  FUND_RETURNS_SYNC: [{ expr: "41 * * * *" }, { expr: "11 * * * *" }],
+  // 2026-10-30: vercel.json改成每小時3次(:01/:21/:41)後同步更新，避免這裡用舊的2次排程誤判
+  // overdue。
+  FUND_RETURNS_SYNC: [{ expr: "1,21,41 * * * *" }],
+  // 2026-10-30（使用者核准，加回scheduleRegistry）: YUANTA_TRACKING_DIFFERENCE_SYNC
+  // 2026-10-29 18:35新增，排程每天10:00 UTC，先前沒登記在這裡所以落到checks.ts的保守
+  // 「過去24小時」判斷，首次執行時間點還沒到就先被誤報NO_RUN_IN_LAST_24H。
+  YUANTA_TRACKING_DIFFERENCE_SYNC: [{ expr: "0 10 * * *" }],
   TW_ETF_DAY_CHANGE: [{ expr: "*/15 6-8 * * 1-5" }],
   YAHOO_COMMODITY_TECHNICAL: [{ expr: "30 21 * * 1-5" }],
   HOLDINGS_ALT_SOURCE_SYNC: [{ expr: "52 * * * *" }],
