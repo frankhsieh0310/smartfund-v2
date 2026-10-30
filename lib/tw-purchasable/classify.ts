@@ -19,7 +19,6 @@ import { fetchSitcaIdentityRows } from "@/lib/sitca-nav-sync/sitcaFetch";
 import { fetchTdccOffshoreBasicInfoNames, TDCC_OFFSHORE_BASIC_INFO_SOURCE } from "./tdccOffshoreBasicInfo";
 import { fetchOfficialEtfList } from "@/lib/cron/newListingDetection";
 import { checkRetailRestricted } from "./retailRestrictedEtf";
-import { fetchCurrentlyTradingTwCodes } from "@/lib/cron/twCurrentlyTradingCheck";
 
 const SITCA_SOURCE = "SITCA_NAV_CSV";
 const TWSE_SOURCE = "TWSE_T187AP47_L";
@@ -116,17 +115,18 @@ export async function classifyTwPurchasable(writeEnabled: boolean): Promise<Clas
   }
 
   // ETF: TWSE + TPEx t187ap47 code == etfs.code
-  // 2026-10-18 修正：t187ap47 官方清單本身 VERIFIED 會包含已經不在交易的 ETF（唯讀對照
-  // TWSE/TPEx 今天真實收盤行情，427 檔官方清單裡有 68 檔完全沒有今天的收盤紀錄）——單純
-  // 「代號存在於官方清單」不等於「現在買得到」，額外要求代號也出現在今天的收盤行情裡才算
-  // 核心母體，跟上面美股ETF第4類用同一個「現行掛牌」查詢，不寫兩套。
+  // 2026-10-18 這裡原本額外要求代號也出現在「今天的收盤行情」裡才核准，理由是t187ap47官方清單
+  // 本身包含已經不在交易的ETF。2026-10-31（使用者核准，根因修正）：VERIFIED這個「當天有收盤
+  // 行情」條件本身太嚴，誤傷了低流動性、但其實還在掛牌的ETF（00793B/00847B這兩檔公司債ETF連續
+  // 多天沒有成交量，被這個條件卡住一直拿不到APPROVED，結果被out-of-scope-purge當成範圍外刪掉）。
+  // 改回「在證交所/櫃買中心官方清單上就視為掛牌中」這個更貼近「官方來源實際公布」原則的判斷，不
+  // 再額外要求當天成交——沒有成交量不等於下市。
   const [twseRows, tpexRows] = await Promise.all([fetchOfficialEtfList("TWSE"), fetchOfficialEtfList("TPEx")]);
-  const tradingCodes = await fetchCurrentlyTradingTwCodes();
   const allEtfs = await prisma.etf.findMany({ select: { id: true, code: true } });
   const etfByCode = new Map(allEtfs.map((e) => [e.code, e.id]));
   const etfMatches = [
-    ...twseRows.filter((r) => etfByCode.has(r.code) && tradingCodes.has(r.code)).map((r) => ({ assetType: "ETF" as const, assetId: etfByCode.get(r.code)!, source: TWSE_SOURCE, sourceRecordRef: r.code })),
-    ...tpexRows.filter((r) => etfByCode.has(r.code) && tradingCodes.has(r.code)).map((r) => ({ assetType: "ETF" as const, assetId: etfByCode.get(r.code)!, source: TPEX_SOURCE, sourceRecordRef: r.code })),
+    ...twseRows.filter((r) => etfByCode.has(r.code)).map((r) => ({ assetType: "ETF" as const, assetId: etfByCode.get(r.code)!, source: TWSE_SOURCE, sourceRecordRef: r.code })),
+    ...tpexRows.filter((r) => etfByCode.has(r.code)).map((r) => ({ assetType: "ETF" as const, assetId: etfByCode.get(r.code)!, source: TPEX_SOURCE, sourceRecordRef: r.code })),
   ];
   await upsertApproved(etfMatches, writeEnabled);
 
@@ -175,15 +175,10 @@ export async function classifyTwPurchasable(writeEnabled: boolean): Promise<Clas
     }
   }
 
-  // officialCount 改成只算現行掛牌的那些（跟上面 etfMatches 用同一個 tradingCodes 過濾），
-  // 不是整份 427 檔官方清單——否則母體本身就含已下市商品，分母錯誤。
-  const twseTrading = twseRows.filter((r) => tradingCodes.has(r.code)).length;
-  const tpexTrading = tpexRows.filter((r) => tradingCodes.has(r.code)).length;
-
   return {
     domesticFund: { officialCount: sitcaRows.length, matched: domesticMatches.length },
     offshoreFund: { officialCount: tdccNames.size, matched: offshoreMatches.length },
-    etf: { officialCount: twseTrading + tpexTrading, matched: etfMatches.length },
+    etf: { officialCount: twseRows.length + tpexRows.length, matched: etfMatches.length },
     usEtf: { candidateCount: usEtfIds.length, matched: usEtfMatches.length, retailRestricted: retailRestrictedMatches.length },
   };
 }

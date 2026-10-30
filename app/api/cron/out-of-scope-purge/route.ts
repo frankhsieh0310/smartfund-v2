@@ -1,13 +1,21 @@
 // 2026-10-23（使用者核准）: 範圍外資料（台灣買不到、不屬於四類核心母體）的清理排程。
 //
-// 範圍外ETF定義（沿用Thread B匯出時已經驗證過的同一條SUBQ，不重新發明）：既不是
-// tw_purchasable_classification的APPROVED，**也不是**目前is_active=true又掛在美股主要交易所的
-// ETF——第二個條件是刻意保留的保護傘，涵蓋那87檔還沒做完補檔檢查的美股ETF（不管它們最後classify
-// 結果是APPROVED/EXCLUDED_RETAIL_RESTRICTED/沒有任何分類紀錄，只要還在美股交易所掛牌且active，
-// 這支route就不會刪它）。
-const ETF_OOS_SUBQ = `(SELECT id FROM etfs WHERE id NOT IN (SELECT asset_id FROM tw_purchasable_classification WHERE asset_type='ETF' AND status='APPROVED') AND NOT (is_active=true AND exchange IN ('NYSE','NYSEArca','NYSE American','NasdaqGM','Nasdaq GIDS','Cboe US')))`;
-// 範圍外基金：不是tw_purchasable_classification的APPROVED（SITCA國內 / TDCC境外都算在內）。
-const FUND_OOS_SUBQ = `(SELECT id FROM funds WHERE id NOT IN (SELECT asset_id FROM tw_purchasable_classification WHERE asset_type='FUND' AND status='APPROVED'))`;
+// 2026-10-31（使用者核准，根因修正——誤刪真實ETF事故）: 原本的定義是「不是APPROVED就刪」，
+// 把「還沒分類」（classify排程還沒跑到）跟「明確被排除」當成同一件事。VERIFIED事故：
+// 009831/009832這兩檔2026-10-29才上市的ETF，自動建檔成功後還沒等到classify排程核准，
+// 就被下一次out-of-scope-purge（每10分鐘一輪）當成「範圍外」砍掉；00793B/00847B這兩檔低流動性
+// 公司債ETF，則是被「核准要求當天有收盤行情」這個過嚴的classify條件卡住（連續無成交量不代表
+// 下市），同樣被這裡刪除。改成兩個條件都收緊：(1) 只刪tw_purchasable_classification裡明確是
+// NOT_APPROVED或EXCLUDED_RETAIL_RESTRICTED的紀錄——沒有分類紀錄（代表還沒分類完、狀態未知）一律
+// 不刪，這是跟classify.ts自己的設計原則一致（它本來就刻意「不比對到就不寫NOT_APPROVED」，見
+// classify.ts開頭註解）；(2) 新建檔未滿14天的一律不刪，留時間給classify排程追上。
+// classify.ts那邊「核准要求當天有收盤行情」的條件也一併拿掉，改成只要在證交所/櫃買中心官方
+// t187ap47清單上就視為掛牌中（見該檔案的對應修正）。
+const ETF_OOS_SUBQ = `(SELECT id FROM etfs e WHERE EXISTS (SELECT 1 FROM tw_purchasable_classification c WHERE c.asset_type='ETF' AND c.asset_id=e.id AND c.status IN ('NOT_APPROVED','EXCLUDED_RETAIL_RESTRICTED')) AND e.created_at <= now() - interval '14 days' AND NOT (e.is_active=true AND e.exchange IN ('NYSE','NYSEArca','NYSE American','NasdaqGM','Nasdaq GIDS','Cboe US')))`;
+// 範圍外基金：同一套收緊邏輯（跟ETF面同一個根因、同一次修正——funds這邊的classify.ts同樣是
+// 「比對不到就不寫NOT_APPROVED、留一筆都不寫」的設計，所以「沒有分類紀錄」在這裡原本也會被
+// 誤判成範圍外）。
+const FUND_OOS_SUBQ = `(SELECT id FROM funds f WHERE EXISTS (SELECT 1 FROM tw_purchasable_classification c WHERE c.asset_type='FUND' AND c.asset_id=f.id AND c.status IN ('NOT_APPROVED','EXCLUDED_RETAIL_RESTRICTED')) AND f.created_at <= now() - interval '14 days')`;
 
 import { isAuthorizedCron, unauthorizedCron } from "@/lib/cron/authorize";
 import { prisma } from "@/lib/prisma";
