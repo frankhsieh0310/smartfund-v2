@@ -141,6 +141,27 @@ function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
+// 2026-10-30（使用者更正核准）: 原本用`name LIKE '%ETF%'`排除ETF是錯的——名稱帶「ETF」不代表
+// 真的在證交所/櫃買中心掛牌，VERIFIED 93150643C「兆豐全球債券ETF策略收益組合基金」只有ISIN
+// (TW000T0136C5)、沒有交易所代號，是一般申購/贖回的ETF組合基金（fund of funds），不是掛牌ETF，
+// 原本的名稱規則會錯誤排除它。改成逐檔用證交所/櫃買中心官方資料人工核對（不是用名稱猜）：
+// 2026-10-30人工核對這批候選裡「名稱帶ETF」的11檔，10檔VERIFIED是真正掛牌ETF（已有對應
+// 掛牌代號、也已經在etfs表裡），只有93150643C不是。掛牌ETF用這份清單（funds.code）明確排除，
+// 不用字串規則猜；93150643C從清單移除，回到這支backfill的範圍內。往後新出現的「名稱帶ETF」
+// 候選，需要再次人工核對證交所/櫃買中心清單才能加入這份清單，不是自動判斷。
+const CONFIRMED_LISTED_ETF_FUND_CODES = [
+  "42553637", // 群益15年期以上電信業公司債ETF基金 -> 00722B (TPEx)
+  "88313560", // 富邦全球入息不動產與基礎建設ETF基金 -> 00908 (TWSE)
+  "93218545", // 中國信託15年期以上已開發市場投資級優化收益ESG美元公司債券ETF基金 -> 00948B (TPEx)
+  "00685061", // 第一金台股趨勢優股息主動式ETF基金 -> 00994A (TWSE)
+  "93155485", // 群益ESG 20年期以上BBB投資等級公司債ETF基金 -> 00937B (TPEx)
+  "00534206", // 野村美日ETF傘型基金之美國創新研發龍頭ETF基金 -> 00971 (TWSE)
+  "00719359", // 中國信託台日韓PCB ETF基金 -> 009828 (TWSE)
+  "00719554", // 大華銀韓國KOSPI 50 ETF基金 -> 009829 (TWSE)
+  "00723403", // 安聯亞洲半導體主動式ETF基金 -> 00412A (TWSE)
+  "00684611", // 凱基台灣主動式ETF基金 -> 00407A (TWSE)
+];
+
 export async function findBackfillCandidates(query: QueryFn, afterFundId: string | null, limit: number): Promise<BackfillCandidate[]> {
   const rows = await query(
     `SELECT f.id AS "fundId", f.code, f.name, f.currency, f.latest_nav::text AS "latestNav", to_char(f.latest_nav_date, 'YYYY-MM-DD') AS "latestNavDate"
@@ -149,11 +170,11 @@ export async function findBackfillCandidates(query: QueryFn, afterFundId: string
       WHERE c.asset_type = 'FUND' AND c.status = 'APPROVED'
         AND COALESCE(f.data_provider, '') NOT IN ('yahoo', 'SEC', 'tdcc-offshore')
         AND NOT EXISTS (SELECT 1 FROM fund_provider_mappings m WHERE m.fund_id = f.id AND m.provider = 'yahoo')
-        AND f.name NOT LIKE '%ETF%'
+        AND NOT (f.code = ANY($3::text[]))
         AND ($1::text IS NULL OR f.id > $1)
       ORDER BY f.id ASC
       LIMIT $2`,
-    [afterFundId, limit],
+    [afterFundId, limit, CONFIRMED_LISTED_ETF_FUND_CODES],
   );
   return rows.map((r: { fundId: string; code: string | null; name: string; currency: string | null; latestNav: string | null; latestNavDate: string | null }) => ({
     fundId: r.fundId, code: r.code, name: r.name, currency: r.currency,

@@ -11,9 +11,20 @@
 // Matching is by ETF CODE, never by Chinese name (per explicit instruction): this module maps
 // fund_id -> ETF code via a small hand-verified table (TRACKED_YUANTA_FUND_IDS below), not fuzzy
 // name matching — the same mistake that left global_index_benchmark_resolution_queue stuck at 0/223.
+//
+// 2026-10-30（使用者發現+VERIFIED修正）: 有些fund_id（VERIFIED 006206上證50、00637L滬深300正向
+// 2倍）在allData裡出現「兩組」F/I列，一組showNtd="Y"（元大投信自己換算成台幣計價、網頁上實際
+// 顯示的版本，對應頁面註四「追蹤標的台幣計價參考」）、一組showNtd="N"（原幣/未換算版本，網頁不
+// 顯示）。原本的「每個fund_id最後一筆F、最後一筆I」邏輯會不分青紅皂白被showNtd="N"那組蓋掉——
+// VERIFIED 006206原本存成deviation 0.45/lsdeviation 8.5，但官網實際顯示（也是showNtd="Y"那組）
+// 是0%/0.54%；00637L同理原本存成0.47/4.38，官網實際顯示是0%/-2.11%。其餘有雙組的fund_id
+// （00631L等）兩組剛好同值所以沒看出問題，但邏輯本身就是錯的。
+// 修正：每個fund_id、每個type（F/I）只挑showNtd==="Y"的那一列；該fund_id+type完全沒有"Y"列時
+// （VERIFIED 00660歐洲50、00661日經225——這兩檔只有原幣一組、沒有台幣換算版本）才退回用該
+// type現有的列，跟網頁實際顯示的數字一致（已逐檔VERIFIED，見本次commit訊息）。
 const BASE = "https://www.yuantaetfs.com";
 
-type RawRow = { fund_id: string; type: "I" | "F" | "S"; name: string; deviation: number; lsdeviation: number; daydate: string };
+type RawRow = { fund_id: string; type: "I" | "F" | "S"; name: string; deviation: number; lsdeviation: number; daydate: string; showNtd: "Y" | "N" };
 
 export type YuantaTrackingDifference = { deviation: number; lsdeviation: number; asOfDate: string; indexName: string };
 
@@ -40,11 +51,15 @@ export async function fetchAllYuantaTrackingDifferences(): Promise<Map<string, Y
   const allData: RawRow[] = state?.data?.[0]?.allData ?? [];
   if (!allData.length) throw new Error("YUANTA_TD_NO_ALLDATA — __NUXT__ state present but data[0].allData missing/empty");
 
+  // 每個fund_id、每個type只留一列：showNtd="Y"（台幣換算、網頁實際顯示的版本）優先；該
+  // fund_id+type沒有"Y"列時才退回用現有的列（原幣版本，網頁本身也只有這個版本可顯示）。
   const byFundId = new Map<string, { fundRow?: RawRow; indexRow?: RawRow }>();
   for (const row of allData) {
+    if (row.type !== "F" && row.type !== "I") continue;
     const entry = byFundId.get(row.fund_id) ?? {};
-    if (row.type === "F") entry.fundRow = row;
-    else if (row.type === "I") entry.indexRow = row;
+    const slot = row.type === "F" ? "fundRow" : "indexRow";
+    const existing = entry[slot];
+    if (!existing || (row.showNtd === "Y" && existing.showNtd !== "Y")) entry[slot] = row;
     byFundId.set(row.fund_id, entry);
   }
 
