@@ -38,7 +38,7 @@ export interface EtfListItem {
 
 type AssetMetricRow = { etf_id: string; observation_date: Date; aum: unknown; shares_outstanding: unknown; nav: unknown; source: string };
 type FlowCoverageRow = { etf_id: string; observation_date: Date };
-type ReadyRow = { id: string; latest_date: Date | null; history_ready: boolean };
+type ReadyRow = { id: string; latest_date: Date | null; history_ready: boolean; latest_premium: unknown; latest_premium_date: Date | null };
 
 // 2026-10-13 QA-round-1 dedup fix: 92 TW ETFs exist as TWO rows -- a bare code ("006208") and a
 // Yahoo-suffixed code ("006208.TW"/".TWO") for the same real-world ETF, from two independent
@@ -126,7 +126,10 @@ export async function getEtfList(query: EtfListQuery = {}): Promise<ServiceRespo
   const [assetMetrics, flowCoverage, readiness] = ids.length ? await Promise.all([
     prisma.$queryRaw<AssetMetricRow[]>(Prisma.sql`SELECT DISTINCT ON (etf_id) etf_id, observation_date, aum, shares_outstanding, nav, source FROM etf_asset_metrics WHERE etf_id IN (${Prisma.join(ids)}) ORDER BY etf_id, observation_date DESC, updated_at DESC LIMIT ${pageSize}`),
     prisma.$queryRaw<FlowCoverageRow[]>(Prisma.sql`SELECT etf_id, MAX(observation_date) AS observation_date FROM etf_flows WHERE etf_id IN (${Prisma.join(ids)}) GROUP BY etf_id LIMIT ${pageSize}`),
-    prisma.$queryRaw<ReadyRow[]>(Prisma.sql`SELECT e.id,(SELECT h.date FROM etf_history h WHERE h.etf_id=e.id ORDER BY h.date DESC LIMIT 1) latest_date,EXISTS(SELECT 1 FROM etf_history h WHERE h.etf_id=e.id OFFSET 19 LIMIT 1) history_ready FROM etfs e WHERE e.id IN (${Prisma.join(ids)})`),
+    // 2026-10-30（使用者核准，ETF折溢價接官方資料）: latest_premium/latest_premium_date 一起從
+    // 同一筆etf_history row取（跟app/etf/[code]/page.tsx一樣的「同一筆記錄」保證），不是分開
+    // 查日期再配etfs.premium——避免重演今天上午etfs.latestNav那種死資料配錯日期的bug。
+    prisma.$queryRaw<ReadyRow[]>(Prisma.sql`SELECT e.id,(SELECT h.date FROM etf_history h WHERE h.etf_id=e.id ORDER BY h.date DESC LIMIT 1) latest_date,EXISTS(SELECT 1 FROM etf_history h WHERE h.etf_id=e.id OFFSET 19 LIMIT 1) history_ready,(SELECT h.premium FROM etf_history h WHERE h.etf_id=e.id AND h.premium IS NOT NULL ORDER BY h.date DESC LIMIT 1) latest_premium,(SELECT h.date FROM etf_history h WHERE h.etf_id=e.id AND h.premium IS NOT NULL ORDER BY h.date DESC LIMIT 1) latest_premium_date FROM etfs e WHERE e.id IN (${Prisma.join(ids)})`),
   ]) : [[], [], []];
   const metricByEtf = new Map(assetMetrics.map((row) => [row.etf_id, row]));
   const flowByEtf = new Map(flowCoverage.map((row) => [row.etf_id, row]));
@@ -148,7 +151,11 @@ export async function getEtfList(query: EtfListQuery = {}): Promise<ServiceRespo
     // 才是錯的那個。改成只用etfs.aum，不再讓assetMetric.aum蓋掉它。nav/shares_outstanding這兩個
     // assetMetric欄位沒有這個問題（VERIFIED抽查0050/0056/00878的metrics_nav全部是null，從來沒蓋掉
     // 過etfs.latest_nav），維持原狀不動。
-    return { identity: etfIdentity(row), issuer: row.provider || null, category: row.category, price: numberOrNull(row.latestPrice), metrics: etfMetrics(row), nav: numberOrNull(assetMetric?.nav ?? row.latestNav), aum: numberOrNull(row.aum), sharesOutstanding: numberOrNull(assetMetric?.shares_outstanding), premiumDiscount: numberOrNull(row.premium), holdingsCount: row._count.holdings, flowCoverage: { status: (flow ? "PARTIAL_CURRENT" : "UNAVAILABLE") as "PARTIAL_CURRENT" | "UNAVAILABLE", asOfDate: isoOrNull(flow?.observation_date) }, freshnessStatus: rowFreshness, publicReady: (row.latestPrice != null || row.latestNav != null) && ready?.history_ready === true && rowFreshness === "CURRENT", source: row.dataSource ?? row.dataProvider ?? row.provider };
+    // 2026-10-30（使用者核准）: premiumDiscount只信latest_premium/latest_premium_date這組「同一筆
+    // etf_history記錄」配對出來的值，不直接讀row.premium（那是鏡像欄位，沒有自己的日期可核實）。
+    const premiumAgeDays = ready?.latest_premium_date ? (Date.now() - ready.latest_premium_date.getTime()) / 86_400_000 : null;
+    const premiumDiscount = premiumAgeDays != null && premiumAgeDays <= 3 ? numberOrNull(ready!.latest_premium) : null;
+    return { identity: etfIdentity(row), issuer: row.provider || null, category: row.category, price: numberOrNull(row.latestPrice), metrics: etfMetrics(row), nav: numberOrNull(assetMetric?.nav ?? row.latestNav), aum: numberOrNull(row.aum), sharesOutstanding: numberOrNull(assetMetric?.shares_outstanding), premiumDiscount, holdingsCount: row._count.holdings, flowCoverage: { status: (flow ? "PARTIAL_CURRENT" : "UNAVAILABLE") as "PARTIAL_CURRENT" | "UNAVAILABLE", asOfDate: isoOrNull(flow?.observation_date) }, freshnessStatus: rowFreshness, publicReady: (row.latestPrice != null || row.latestNav != null) && ready?.history_ready === true && rowFreshness === "CURRENT", source: row.dataSource ?? row.dataProvider ?? row.provider };
   }));
   return { data: items, meta: { asOfDate: provenance.asOfDate, lastUpdated: provenance.lastUpdated, freshnessStatus: freshnessStatus(latest, "MARKET_DAY"), source, provenance, coverageStatus: "PARTIAL_CURRENT" }, pagination: paginationMeta(page, pageSize, total), error: null };
 }
@@ -212,7 +219,12 @@ export async function getEtfDetail(code: string): Promise<ServiceResponse<{ iden
   const source = row.dataSource ?? row.dataProvider ?? row.provider;
   const provenance = buildProvenance({ source, sourceRecordId: row.isin, asOfDate: asOf, lastUpdated: row.updatedAt });
   const detailFreshness = await twAwareFreshnessStatus(row.exchange, asOf, "MARKET_DAY");
-  return { data: { identity: etfIdentity(row), metrics: { ...etfMetrics(row), priceOrNav: latestValue, change, changePercent, asOfDate: isoOrNull(asOf) }, nav: numberOrNull(latest?.nav ?? row.latestNav), aum: numberOrNull(latest?.aum ?? row.aum), premiumDiscount: numberOrNull(latest?.premium ?? row.premium), expenseRatio: numberOrNull(row.expenseRatio), holdingsCount: holdings.length, holdingsAsOfDate: isoOrNull(latestHolding?.asOfDate), topHoldings: holdings.slice(0, 10).map((holding) => ({ name: holding.holdingName, symbol: holding.ticker, weight: numberOrNull(holding.weight) })), assetAllocation: allocation((holding) => holding.assetType), sectorAllocation: allocation((holding) => holding.sector), category: row.category }, meta: { asOfDate: provenance.asOfDate, lastUpdated: provenance.lastUpdated, freshnessStatus: detailFreshness, source, provenance, coverageStatus: "FULL" }, pagination: null, error: null };
+  // 2026-10-30（使用者核准）: 只信etf_history裡「premium本身有值」的那一筆記錄自己的日期，不
+  // 落回row.premium（鏡像欄位，沒有自己的日期可核實同一天）——同一套規則跟getEtfList一致。
+  const premiumRow = await prisma.etfHistory.findFirst({ where: { etfId: row.id, premium: { not: null } }, orderBy: { date: "desc" }, select: { premium: true, date: true } });
+  const premiumAgeDays = premiumRow ? (Date.now() - premiumRow.date.getTime()) / 86_400_000 : null;
+  const premiumDiscount = premiumAgeDays != null && premiumAgeDays <= 3 ? numberOrNull(premiumRow!.premium) : null;
+  return { data: { identity: etfIdentity(row), metrics: { ...etfMetrics(row), priceOrNav: latestValue, change, changePercent, asOfDate: isoOrNull(asOf) }, nav: numberOrNull(latest?.nav ?? row.latestNav), aum: numberOrNull(latest?.aum ?? row.aum), premiumDiscount, expenseRatio: numberOrNull(row.expenseRatio), holdingsCount: holdings.length, holdingsAsOfDate: isoOrNull(latestHolding?.asOfDate), topHoldings: holdings.slice(0, 10).map((holding) => ({ name: holding.holdingName, symbol: holding.ticker, weight: numberOrNull(holding.weight) })), assetAllocation: allocation((holding) => holding.assetType), sectorAllocation: allocation((holding) => holding.sector), category: row.category }, meta: { asOfDate: provenance.asOfDate, lastUpdated: provenance.lastUpdated, freshnessStatus: detailFreshness, source, provenance, coverageStatus: "FULL" }, pagination: null, error: null };
 }
 
 export async function getEtfHistory(code: string, query: HistoryQuery = {}): Promise<ServiceResponse<Array<{ date: string; price: number | null; nav: number | null; premiumDiscount: number | null; volume: number | null; aum: number | null; open: number | null; high: number | null; low: number | null; close: number | null; adjustedClose: number | null }>>> {

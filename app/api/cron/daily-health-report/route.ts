@@ -180,6 +180,10 @@ const RUN_LOG_PIPELINES = [
   // （每天約4.5小時不執行），但其餘約19.5小時每20分鐘跑一次，用保守的flat-24h fallback（不放進
   // scheduleRegistry精確建模）足夠安全、不會誤報。
   "FUND_YAHOO_MAPPING_BACKFILL",
+  // 2026-10-30（使用者核准，ETF折溢價接官方資料）: 併進CLOUD_ETF_PRICE排程（每小時:17），
+  // 一次抓證交所MIS全市場ETF快照，自己的job_id單獨記錄。每小時跑一次，保守的flat-24h fallback
+  // 足夠安全。
+  "ETF_PREMIUM_DISCOUNT_SYNC",
 ];
 
 export async function GET(request: Request) {

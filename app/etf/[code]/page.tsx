@@ -72,17 +72,17 @@ export default async function EtfDetailPage({ params }: { params: Promise<{ code
       const latest = latestRow?.price != null ? Number(latestRow.price) : (etf.latestPrice == null ? null : Number(etf.latestPrice));
       const previous = previousRow?.price != null ? Number(previousRow.price) : undefined;
       const change = latest != null && Number.isFinite(latest) && previous != null ? latest - previous : null;
-      // 2026-10-30（使用者發現+VERIFIED撤回，取代2026-10-29那版）: 2026-10-29那版假設
-      // etfs.priceUpdatedAt「同一天」就代表etfs.latestNav也是當天更新，VERIFIED這個假設是錯的——
-      // 全專案搜尋過，沒有任何排程會寫入etfs.latest_nav（只有lib/cron/priceUpdate.ts會更新
-      // latestPrice+priceUpdatedAt，latestNav完全沒有對應的排程），這欄位是死資料，只是恰好
-      // 數值接近近幾天的價格才會被誤判成「同一天」。VERIFIED 0050 2026-10-30：latestPrice用
-      // 今天收盤104.95（price cron剛更新），latestNav卻是108.66（實際是2026-10-28的收盤價，
-      // 不是今天的淨值），算出-3.41%這種不合理的折溢價，但priceUpdatedAt被錯誤當成「同一天」
-      // 通過了guard。使用者核准「沒有可靠官方折溢價來源就不要顯示」，在證交所折溢價資料源
-      // 接上之前，這裡先不計算、不顯示自算的Premium/Discount，避免拿死資料的latestNav誤導。
-      const sameDateNav = latestRow?.nav ?? null;
-      const sameDatePremium = latestRow?.price != null && sameDateNav != null ? ((Number(latestRow.price) / Number(sameDateNav)) - 1) * 100 : null;
+      // 2026-10-30（使用者核准，ETF折溢價接官方資料，取代2026-10-29/上午那兩版自算邏輯）:
+      // 上一版VERIFIED etfs.latest_nav是死資料（沒有任何排程更新），自算折溢價會把死NAV配上
+      // 新價格，算出不合理數字。現在改成直接讀證交所MIS官方發布的折溢價（app/api/cron/
+      // cloud-etf-price/route.ts的ETF_PREMIUM_DISCOUNT_SYNC步驟寫進etf_history.premium），
+      // 這個值跟它自己的date一起查、只信同一筆記錄，不跟latestRow的price交叉配對，3天內的才顯示，
+      // 避免排程中斷時顯示過期數字。
+      const premiumRow = await prisma.etfHistory.findFirst({ where: { etfId: etf.id, premium: { not: null } }, orderBy: { date: "desc" }, select: { premium: true, nav: true, date: true } });
+      const premiumAgeDays = premiumRow ? (Date.now() - premiumRow.date.getTime()) / 86_400_000 : null;
+      const premiumFresh = premiumAgeDays != null && premiumAgeDays <= 3;
+      const sameDatePremium = premiumFresh ? Number(premiumRow!.premium) : null;
+      const sameDateNav = premiumFresh && premiumRow!.nav != null ? Number(premiumRow!.nav) : null;
       // 同一檔持股被不同來源各寫一筆時，優先留 ETF_OFFICIAL_DAILY_SNAPSHOT 那一筆（官方每日快照
       // 流程，比舊版URL字串來源的欄位更完整）；兩者都沒有就留先出現的那筆，不是用猜的，只是避免
       // 同一檔重複顯示兩次。

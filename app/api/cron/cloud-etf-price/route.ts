@@ -12,6 +12,8 @@ import { isAuthorizedCron, unauthorizedCron } from "@/lib/cron/authorize";
 import { prisma } from "@/lib/prisma";
 import { fetchYahooChartPeriod } from "@/lib/services/dataProviders/yahoo/yahooClient";
 import { getCoreUniverseEtfIds } from "@/lib/tw-purchasable/coreUniverseFilter";
+import { fetchTwseEtfPremiumDiscount } from "@/lib/data-platform/web/twseEtfPremiumDiscount";
+import { isEtfPremiumDiscountSyncWriteEnabled } from "@/lib/cron/etfPremiumDiscountSyncWriteGate";
 import {
   beginRun,
   finishRun,
@@ -324,6 +326,64 @@ export async function GET(request: Request) {
     },
   });
 
+  // 2026-10-30（使用者核准，ETF折溢價接官方資料）: 併進這支現有的ETF排程（同一個cron trigger，
+  // 不新增vercel.json項目——Vercel cron數量已接近上限）。證交所MIS的all_etf.txt一次回傳全市場
+  // ETF，不用像上面那樣分批游標，所以這裡直接整批處理、用自己的時間預算守住，獨立的job_id方便
+  // 稽核。SHADOW MODE BY DEFAULT：ETF_PREMIUM_DISCOUNT_SYNC_WRITE不是"on"時只抓取比對、不寫入。
+  //
+  // 存放位置：寫進etf_history.premium/nav（跟這份TWSE記錄自己的日期`date`一起，VERIFIED
+  // price(e)/estimatedNav(f)/premiumPct(g)/asOfDate(i)都來自同一筆官方記錄，不會有日期不一致
+  // 問題），不是另開一張表——etf_history本來就有premium/nav欄位（prisma schema裡本來就有，
+  // 只是nav幾乎整表是空的），跟上面主迴圈寫price/open/high/low/close用同一個
+  // etfId_date unique key upsert，天然不會互相覆蓋。etfs.premium欄位也同步鏡像寫入（使用者
+  // 這輪明確要求的欄位），但讀取端（app/etf/[code]/page.tsx、etfService.ts）一律改成優先讀
+  // etf_history當天那一筆，不是只看etfs.premium，避免重演今天上午那種死資料配新日期的問題。
+  const premiumJob = "ETF_PREMIUM_DISCOUNT_SYNC";
+  const premiumWriteEnabled = isEtfPremiumDiscountSyncWriteEnabled();
+  let premiumResult: Record<string, unknown> = { skipped: true, reason: "NOT_ATTEMPTED" };
+  try {
+    const twseData = await fetchTwseEtfPremiumDiscount();
+    const coreEtfRows = await prisma.etf.findMany({ where: { id: { in: coreEtfIds } }, select: { id: true, code: true } });
+    const matched: Array<{ id: string; code: string; premiumPct: number; estimatedNav: number; asOfDate: string }> = [];
+    for (const row of coreEtfRows) {
+      const d = twseData.get(row.code);
+      if (d) matched.push({ id: row.id, code: row.code, premiumPct: d.premiumPct, estimatedNav: d.estimatedNav, asOfDate: d.asOfDate });
+    }
+    const { runId: premiumRunId, skipped: premiumSkipped } = await beginRun({
+      jobName: premiumJob,
+      provider: "TWSE_MIS_OFFICIAL",
+      runKey: `${premiumJob}:${new Date().toISOString().slice(0, 10)}`,
+      universeCount: coreEtfRows.length,
+      batchSize: matched.length,
+      checkpointBefore: null,
+    });
+    if (!premiumSkipped) {
+      let written = 0;
+      if (premiumWriteEnabled) {
+        for (const m of matched) {
+          const asOfDate = utcDate(new Date(`${m.asOfDate}T00:00:00.000Z`));
+          await prisma.etfHistory.upsert({
+            where: { etfId_date: { etfId: m.id, date: asOfDate } },
+            create: { etfId: m.id, date: asOfDate, premium: m.premiumPct, nav: m.estimatedNav, source: "TWSE_MIS_OFFICIAL", sourceUrl: "https://mis.twse.com.tw/stock/various-areas/etf-price/indicator-disclosure-etf", knownAt: new Date() },
+            update: { premium: m.premiumPct, nav: m.estimatedNav },
+          });
+          await prisma.$executeRawUnsafe(`UPDATE etfs SET premium = $1, updated_at = NOW() WHERE id = $2`, m.premiumPct, m.id);
+          written++;
+        }
+      }
+      await finishRun(premiumRunId, premiumJob, "TWSE_MIS_OFFICIAL", Date.now(), {
+        status: "COMPLETED", attempted: matched.length, completed: matched.length, inserted: written, updated: 0,
+        failed: coreEtfRows.length - matched.length, retryableFailures: 0, checkpointAfter: null,
+        details: { writeEnabled: premiumWriteEnabled, matchedCount: matched.length, coreCount: coreEtfRows.length, sample: matched.slice(0, 5) },
+      });
+      premiumResult = { attempted: matched.length, written, writeEnabled: premiumWriteEnabled, coreCount: coreEtfRows.length };
+    } else {
+      premiumResult = { skipped: true, reason: "DUPLICATE_RUN_KEY" };
+    }
+  } catch (error) {
+    premiumResult = { ok: false, error: (error as Error).message };
+  }
+
   return Response.json({
     ok: true,
     job: JOB,
@@ -344,5 +404,6 @@ export async function GET(request: Request) {
     universeCount,
     runtimeMs: Date.now() - startedMs,
     status,
+    premiumDiscountSync: premiumResult,
   });
 }
