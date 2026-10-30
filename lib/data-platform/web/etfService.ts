@@ -28,6 +28,9 @@ export interface EtfListItem {
   aum: number | null;
   sharesOutstanding: number | null;
   premiumDiscount: number | null;
+  // 2026-10-30（使用者核准）: premiumDiscount是證交所MIS的盤中預估折溢價，不是收盤後結算值，
+  // 呼叫端（網站列表頁/詳情頁、App）要用這個日期標示「預估、資料日期」，不能當成已結算數字顯示。
+  premiumDiscountAsOfDate: string | null;
   holdingsCount: number;
   flowCoverage: { status: "PARTIAL_CURRENT" | "UNAVAILABLE"; asOfDate: string | null };
   metrics: SummaryMetrics;
@@ -154,8 +157,10 @@ export async function getEtfList(query: EtfListQuery = {}): Promise<ServiceRespo
     // 2026-10-30（使用者核准）: premiumDiscount只信latest_premium/latest_premium_date這組「同一筆
     // etf_history記錄」配對出來的值，不直接讀row.premium（那是鏡像欄位，沒有自己的日期可核實）。
     const premiumAgeDays = ready?.latest_premium_date ? (Date.now() - ready.latest_premium_date.getTime()) / 86_400_000 : null;
-    const premiumDiscount = premiumAgeDays != null && premiumAgeDays <= 3 ? numberOrNull(ready!.latest_premium) : null;
-    return { identity: etfIdentity(row), issuer: row.provider || null, category: row.category, price: numberOrNull(row.latestPrice), metrics: etfMetrics(row), nav: numberOrNull(assetMetric?.nav ?? row.latestNav), aum: numberOrNull(row.aum), sharesOutstanding: numberOrNull(assetMetric?.shares_outstanding), premiumDiscount, holdingsCount: row._count.holdings, flowCoverage: { status: (flow ? "PARTIAL_CURRENT" : "UNAVAILABLE") as "PARTIAL_CURRENT" | "UNAVAILABLE", asOfDate: isoOrNull(flow?.observation_date) }, freshnessStatus: rowFreshness, publicReady: (row.latestPrice != null || row.latestNav != null) && ready?.history_ready === true && rowFreshness === "CURRENT", source: row.dataSource ?? row.dataProvider ?? row.provider };
+    const premiumFresh = premiumAgeDays != null && premiumAgeDays <= 3;
+    const premiumDiscount = premiumFresh ? numberOrNull(ready!.latest_premium) : null;
+    const premiumDiscountAsOfDate = premiumFresh ? isoOrNull(ready!.latest_premium_date) : null;
+    return { identity: etfIdentity(row), issuer: row.provider || null, category: row.category, price: numberOrNull(row.latestPrice), metrics: etfMetrics(row), nav: numberOrNull(assetMetric?.nav ?? row.latestNav), aum: numberOrNull(row.aum), sharesOutstanding: numberOrNull(assetMetric?.shares_outstanding), premiumDiscount, premiumDiscountAsOfDate, holdingsCount: row._count.holdings, flowCoverage: { status: (flow ? "PARTIAL_CURRENT" : "UNAVAILABLE") as "PARTIAL_CURRENT" | "UNAVAILABLE", asOfDate: isoOrNull(flow?.observation_date) }, freshnessStatus: rowFreshness, publicReady: (row.latestPrice != null || row.latestNav != null) && ready?.history_ready === true && rowFreshness === "CURRENT", source: row.dataSource ?? row.dataProvider ?? row.provider };
   }));
   return { data: items, meta: { asOfDate: provenance.asOfDate, lastUpdated: provenance.lastUpdated, freshnessStatus: freshnessStatus(latest, "MARKET_DAY"), source, provenance, coverageStatus: "PARTIAL_CURRENT" }, pagination: paginationMeta(page, pageSize, total), error: null };
 }
@@ -174,7 +179,7 @@ export async function searchEtfs(query: string, options: Omit<ListQuery, "query"
   return getEtfList({ ...options, query });
 }
 
-export async function getEtfDetail(code: string): Promise<ServiceResponse<{ identity: CanonicalIdentity; metrics: SummaryMetrics; nav: number | null; aum: number | null; premiumDiscount: number | null; expenseRatio: number | null; holdingsCount: number; holdingsAsOfDate: string | null; topHoldings: Array<{ name: string; symbol: string | null; weight: number | null }>; assetAllocation: Array<{ label: string; weight: number }>; sectorAllocation: Array<{ label: string; weight: number }>; category: string | null }>> {
+export async function getEtfDetail(code: string): Promise<ServiceResponse<{ identity: CanonicalIdentity; metrics: SummaryMetrics; nav: number | null; aum: number | null; premiumDiscount: number | null; premiumDiscountAsOfDate: string | null; expenseRatio: number | null; holdingsCount: number; holdingsAsOfDate: string | null; topHoldings: Array<{ name: string; symbol: string | null; weight: number | null }>; assetAllocation: Array<{ label: string; weight: number }>; sectorAllocation: Array<{ label: string; weight: number }>; category: string | null }>> {
   const key = decodeURIComponent(code).trim();
   if (!key) throw new WebDataError("INVALID_QUERY", "An ETF code is required.");
   const row = await prisma.etf.findFirst({ where: { OR: [{ id: key }, { code: { equals: key, mode: "insensitive" } }, { isin: { equals: key, mode: "insensitive" } }] }, include: { history: { where: { OR: [{ price: { not: null } }, { nav: { not: null } }] }, orderBy: { date: "desc" }, take: 2 } } });
@@ -223,8 +228,10 @@ export async function getEtfDetail(code: string): Promise<ServiceResponse<{ iden
   // 落回row.premium（鏡像欄位，沒有自己的日期可核實同一天）——同一套規則跟getEtfList一致。
   const premiumRow = await prisma.etfHistory.findFirst({ where: { etfId: row.id, premium: { not: null } }, orderBy: { date: "desc" }, select: { premium: true, date: true } });
   const premiumAgeDays = premiumRow ? (Date.now() - premiumRow.date.getTime()) / 86_400_000 : null;
-  const premiumDiscount = premiumAgeDays != null && premiumAgeDays <= 3 ? numberOrNull(premiumRow!.premium) : null;
-  return { data: { identity: etfIdentity(row), metrics: { ...etfMetrics(row), priceOrNav: latestValue, change, changePercent, asOfDate: isoOrNull(asOf) }, nav: numberOrNull(latest?.nav ?? row.latestNav), aum: numberOrNull(latest?.aum ?? row.aum), premiumDiscount, expenseRatio: numberOrNull(row.expenseRatio), holdingsCount: holdings.length, holdingsAsOfDate: isoOrNull(latestHolding?.asOfDate), topHoldings: holdings.slice(0, 10).map((holding) => ({ name: holding.holdingName, symbol: holding.ticker, weight: numberOrNull(holding.weight) })), assetAllocation: allocation((holding) => holding.assetType), sectorAllocation: allocation((holding) => holding.sector), category: row.category }, meta: { asOfDate: provenance.asOfDate, lastUpdated: provenance.lastUpdated, freshnessStatus: detailFreshness, source, provenance, coverageStatus: "FULL" }, pagination: null, error: null };
+  const premiumFreshD = premiumAgeDays != null && premiumAgeDays <= 3;
+  const premiumDiscount = premiumFreshD ? numberOrNull(premiumRow!.premium) : null;
+  const premiumDiscountAsOfDate = premiumFreshD ? isoOrNull(premiumRow!.date) : null;
+  return { data: { identity: etfIdentity(row), metrics: { ...etfMetrics(row), priceOrNav: latestValue, change, changePercent, asOfDate: isoOrNull(asOf) }, nav: numberOrNull(latest?.nav ?? row.latestNav), aum: numberOrNull(latest?.aum ?? row.aum), premiumDiscount, premiumDiscountAsOfDate, expenseRatio: numberOrNull(row.expenseRatio), holdingsCount: holdings.length, holdingsAsOfDate: isoOrNull(latestHolding?.asOfDate), topHoldings: holdings.slice(0, 10).map((holding) => ({ name: holding.holdingName, symbol: holding.ticker, weight: numberOrNull(holding.weight) })), assetAllocation: allocation((holding) => holding.assetType), sectorAllocation: allocation((holding) => holding.sector), category: row.category }, meta: { asOfDate: provenance.asOfDate, lastUpdated: provenance.lastUpdated, freshnessStatus: detailFreshness, source, provenance, coverageStatus: "FULL" }, pagination: null, error: null };
 }
 
 export async function getEtfHistory(code: string, query: HistoryQuery = {}): Promise<ServiceResponse<Array<{ date: string; price: number | null; nav: number | null; premiumDiscount: number | null; volume: number | null; aum: number | null; open: number | null; high: number | null; low: number | null; close: number | null; adjustedClose: number | null }>>> {
