@@ -25,6 +25,8 @@ import { loadDomesticYahooMapping } from "@/lib/holdings-alt-source/domesticYaho
 import { fetchYahooFundPerformance, YahooFundRateLimitedError } from "@/lib/yahoo/fundPerformancePage";
 import { loadExchangeCalendarRegistry } from "@/lib/market-close-sync/marketConfig";
 import { mostRecentTradingDay } from "@/lib/market-close-sync/marketTime";
+import { findBackfillCandidates, runMappingBackfillBatch, writeMatchedMappings } from "@/lib/holdings-alt-source/domesticYahooMappingBackfill";
+import { isFundYahooMappingBackfillWriteEnabled } from "@/lib/cron/fundYahooMappingBackfillWriteGate";
 
 export const runtime = "nodejs";
 export const maxDuration = 290;
@@ -40,11 +42,30 @@ const REQUEST_DELAY_MS = 3_200;
 // http_429一直是0，有餘裕。改成frequency而不是REQUEST_DELAY_MS這個唯一安全的加速槓桿——
 // vercel.json從每小時2次(:11/:41)改成每小時3次(:01/:21/:41)，單次請求節奏完全不變，
 // 只是一天內多跑約50%次數，不會提高被429的風險。
-const TIME_BUDGET_MS = 270_000;
+// 2026-10-30（使用者核准，併進這支既有排程而不是新增cron——vercel.json已經接近100個cron entry的
+// 上限）: 原本270_000讓出一塊固定預算給下面的mapping backfill步驟(BACKFILL_TIME_BUDGET_MS)，
+// 兩段合計(230s+40s=270s)還在maxDuration=290s內留20s margin，跟原本單純returns-sync那段的
+// margin邏輯一致。
+const TIME_BUDGET_MS = 230_000;
+const BACKFILL_TIME_BUDGET_MS = 40_000;
+const BACKFILL_REQUEST_SPACING_MS = 3_000;
+const BACKFILL_CHECKPOINT_KEY = "fund-yahoo-mapping-backfill:cursor";
 const query = (sql: string, params: any[]) => prisma.$queryRawUnsafe<any[]>(sql, ...params);
+const execute = (sql: string, params: any[]) => prisma.$executeRawUnsafe(sql, ...params);
 
 function isWriteEnabled(): boolean {
   return process.env.FUND_RETURNS_SYNC_WRITE?.trim() === "on";
+}
+
+// 2026-10-30（使用者核准）: mapping backfill打外部Yahoo search API，避開台北01:00-05:30
+// （=UTC 17:00-21:30，台灣沒有日光節約時間，固定offset換算）——沿用CLAUDE.md「資料庫維護窗口」
+// 同一個避開時段的慣例，不是這支pipeline自己發明的規則。returns-sync本身（讀既有mapping，不打
+// 新的外部搜尋）不受這個限制，只有backfill這個新增的搜尋步驟跳過這個時段。
+function isWithinMappingBackfillBlackout(now: Date): boolean {
+  const utcH = now.getUTCHours();
+  const utcM = now.getUTCMinutes();
+  const minutesOfDay = utcH * 60 + utcM;
+  return minutesOfDay >= 17 * 60 && minutesOfDay <= 21 * 60 + 30;
 }
 
 function sleep(ms: number) {
@@ -139,5 +160,49 @@ export async function GET(request: Request) {
     details: { writeEnabled, rateLimitStop, timeBudgetStop, lastCode, universeCount: combined.length },
   });
 
-  return Response.json({ ok: true, job: JOB, runId, status, attempted, written, noData, failed, writeEnabled, lastCode, universeCount: combined.length });
+  // 2026-10-30（使用者核准）: 基金期間報酬率大量UNAVAILABLE的根因修復——見
+  // lib/holdings-alt-source/domesticYahooMappingBackfill.ts頂部說明。併進這支既有排程（不新增
+  // cron），用上面讓出的固定小預算跑一批，游標接續，遇429/403立刻整批停止等下一輪。
+  const backfillJob = "FUND_YAHOO_MAPPING_BACKFILL";
+  const backfillWriteEnabled = isFundYahooMappingBackfillWriteEnabled();
+  let backfillResult: Record<string, unknown> = { skipped: true, reason: "BLACKOUT_WINDOW" };
+  if (!isWithinMappingBackfillBlackout(new Date())) {
+    const backfillCheckpoint = await readCheckpoint(BACKFILL_CHECKPOINT_KEY);
+    const backfillAfterId = backfillCheckpoint?.lastSymbol ?? null;
+    const maxCandidates = Math.ceil(BACKFILL_TIME_BUDGET_MS / BACKFILL_REQUEST_SPACING_MS);
+    let candidates = await findBackfillCandidates(query, backfillAfterId, maxCandidates);
+    let wrapped = false;
+    if (candidates.length === 0 && backfillAfterId !== null) {
+      // cursor reached the end of this pass -- wrap to the start, same convention as fund-returns-sync's own cursor above.
+      candidates = await findBackfillCandidates(query, null, maxCandidates);
+      wrapped = true;
+    }
+    const { runId: backfillRunId, skipped: backfillSkipped } = await beginRun({
+      jobName: backfillJob, provider: "YAHOO_TW_FUND_SEARCH", runKey: `${backfillJob}:${new Date().toISOString().slice(0, 13)}`,
+      universeCount: 0, batchSize: candidates.length, checkpointBefore: backfillCheckpoint,
+    });
+    if (!backfillSkipped) {
+      const { outcomes, rateLimitStop: backfillRateLimitStop, lastAttemptedFundId } = await runMappingBackfillBatch(candidates, BACKFILL_REQUEST_SPACING_MS);
+      const matched = outcomes.filter((o) => o.result === "MATCHED");
+      const written2 = backfillWriteEnabled ? await writeMatchedMappings(execute, outcomes) : 0;
+      await writeCheckpoint(backfillJob, BACKFILL_CHECKPOINT_KEY, backfillRunId, {
+        lastSymbol: wrapped && outcomes.length === 0 ? null : lastAttemptedFundId,
+        processed: (backfillCheckpoint?.processed ?? 0) + outcomes.length,
+        succeeded: (backfillCheckpoint?.succeeded ?? 0) + matched.length,
+        failed: outcomes.length - matched.length,
+      });
+      await finishRun(backfillRunId, backfillJob, "YAHOO_TW_FUND_SEARCH", Date.now(), {
+        status: backfillRateLimitStop ? "PARTIAL" : "COMPLETED",
+        attempted: outcomes.length, completed: matched.length, inserted: written2, updated: 0,
+        failed: outcomes.length - matched.length, retryableFailures: backfillRateLimitStop ? 1 : 0,
+        checkpointAfter: null,
+        details: { writeEnabled: backfillWriteEnabled, rateLimitStop: backfillRateLimitStop, wrapped, outcomes: outcomes.slice(0, 50) },
+      });
+      backfillResult = { attempted: outcomes.length, matched: matched.length, written: written2, writeEnabled: backfillWriteEnabled, rateLimitStop: backfillRateLimitStop, wrapped };
+    } else {
+      backfillResult = { skipped: true, reason: "DUPLICATE_RUN_KEY" };
+    }
+  }
+
+  return Response.json({ ok: true, job: JOB, runId, status, attempted, written, noData, failed, writeEnabled, lastCode, universeCount: combined.length, mappingBackfill: backfillResult });
 }

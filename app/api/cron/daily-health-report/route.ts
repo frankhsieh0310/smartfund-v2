@@ -175,6 +175,11 @@ const RUN_LOG_PIPELINES = [
   "FX_FORWARD_POINTS_REFERENCE_CURVE",
   "ALERT_DISPATCH",
   "ALERT_EVALUATE",
+  // 2026-10-30（使用者核准，基金期間報酬率UNAVAILABLE根因修復的一部分）: 併進FUND_RETURNS_SYNC
+  // 排程的mapping backfill步驟，自己的job_id單獨記錄方便稽核。有台北01:00-05:30的avoid window
+  // （每天約4.5小時不執行），但其餘約19.5小時每20分鐘跑一次，用保守的flat-24h fallback（不放進
+  // scheduleRegistry精確建模）足夠安全、不會誤報。
+  "FUND_YAHOO_MAPPING_BACKFILL",
 ];
 
 export async function GET(request: Request) {
