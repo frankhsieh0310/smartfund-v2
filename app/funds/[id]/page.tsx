@@ -11,6 +11,7 @@ const date = (value: string | null) => value ? new Intl.DateTimeFormat("zh-TW", 
 const number = (value: number | null, digits = 2) => value === null ? "—" : new Intl.NumberFormat("zh-TW", { maximumFractionDigits: digits }).format(value);
 const percent = (value: number | null) => value === null ? "—" : `${value >= 0 ? "+" : ""}${number(value, 2)}%`;
 const text = (value: string | null | undefined) => value?.trim() || "未提供";
+const yearMonthZh = (ym: string | null) => ym && /^\d{6}$/.test(ym) ? `${ym.slice(0, 4)} 年 ${ym.slice(4, 6)} 月` : "—";
 // 2026-10-31（使用者核准，淨值過期標示）: 單純UI顯示用的門檻，跟freshness.ts裡健康報告用的
 // PUBLICATION_AWARE(45天)分類無關、不共用——那個是給SYSTEM異常分類用的，這裡只是讓使用者
 // 一眼看出「這不是今天的淨值」，門檻訂得更嚴格(7天)，不改動既有的異常分類邏輯。
@@ -55,6 +56,33 @@ export default async function FundDetailPage({ params, searchParams }: { params:
         <Panel title="Share Classes" section={fund.shareClasses} footer>{fund.shareClasses.data.length ? <div className="space-y-3">{fund.shareClasses.data.map((item) => <div key={item.id} className="rounded-xl border border-white/[0.07] p-4"><div className="font-semibold text-white">{item.name}</div><div className="mt-2 text-xs leading-6 text-slate-500">{text(item.isin ?? item.code)} · {item.currency ? formatCurrencyZh(item.currency) : text(item.currency)} · {text(item.accumulationDistribution ?? item.distributionType)} · {item.hedged === null ? "避險未提供" : item.hedged ? `避險 ${text(item.hedgedCurrency)}` : "未避險"}</div></div>)}</div> : <Empty title="尚無 share class 資料" />}</Panel>
       </section>
       <Panel title="費用與條款" section={fund.feesTerms} footer className="mt-6">{fund.feesTerms.data.length ? <div className="overflow-x-auto"><table className="min-w-[950px] w-full text-left text-xs"><thead className="text-slate-500"><tr>{["Share Class", "管理費", "持續費用", "TER", "前收", "後收", "績效費", "最低投資", "配息頻率", "避險"].map((h) => <th key={h} className="px-3 py-3">{h}</th>)}</tr></thead><tbody>{fund.feesTerms.data.map((item) => <tr key={item.shareClass} className="border-t border-white/[0.06]"><td className="px-3 py-3 text-white">{item.shareClass}</td>{[item.managementFee, item.ongoingCharges, item.ter, item.salesChargeFront, item.salesChargeBack, item.performanceFee].map((value, index) => <td key={index} className="px-3 py-3">{percent(value)}</td>)}<td className="px-3 py-3">{number(item.minimumInitialInvestment)}</td><td className="px-3 py-3">{text(item.distributionFrequency)}</td><td className="px-3 py-3">{text(item.hedgingTerms)}</td></tr>)}</tbody></table></div> : <Empty title="尚無費用與條款" />}</Panel>
+      <Panel title="境內基金規模與當月實際費用（SITCA 月申報）" section={fund.monthlyDisclosure} footer className="mt-6">
+        {fund.monthlyDisclosure.data.yearMonth ? <>
+          <p className="mb-4 text-xs text-slate-500">資料月份：{yearMonthZh(fund.monthlyDisclosure.data.yearMonth)} · 來源：證券投資信託暨顧問商業同業公會 (SITCA)</p>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <Metric label="基金規模" value={fund.monthlyDisclosure.data.aumTwd === null ? "—" : `${number(fund.monthlyDisclosure.data.aumTwd, 0)} 元`} />
+            <Metric label="單位淨值" value={fund.monthlyDisclosure.data.navTwd === null ? "—" : number(fund.monthlyDisclosure.data.navTwd, 4)} />
+            <Metric label="受益人數" value={fund.monthlyDisclosure.data.totalHolders === null ? "—" : number(fund.monthlyDisclosure.data.totalHolders, 0)} />
+            <Metric label="本月申購總金額" value={fund.monthlyDisclosure.data.subscriptionTwd === null ? "—" : `${number(fund.monthlyDisclosure.data.subscriptionTwd, 0)} 元`} />
+            <Metric label="本月買回總金額" value={fund.monthlyDisclosure.data.redemptionTwd === null ? "—" : `${number(fund.monthlyDisclosure.data.redemptionTwd, 0)} 元`} />
+            <Metric
+              label={`${yearMonthZh(fund.monthlyDisclosure.data.yearMonth)} 實際經理費（占淨資產）`}
+              value={fund.monthlyDisclosure.data.mgmtFeePct === null ? "—" : `${number(fund.monthlyDisclosure.data.mgmtFeePct, 2)}%`}
+              detail="當月實際比率，非公開說明書年費率"
+            />
+            <Metric
+              label={`${yearMonthZh(fund.monthlyDisclosure.data.yearMonth)} 實際保管費（占淨資產）`}
+              value={fund.monthlyDisclosure.data.custodianFeePct === null ? "—" : `${number(fund.monthlyDisclosure.data.custodianFeePct, 2)}%`}
+              detail="當月實際比率，非公開說明書年費率"
+            />
+            <Metric
+              label={`${yearMonthZh(fund.monthlyDisclosure.data.yearMonth)} 實際合計費用（占淨資產）`}
+              value={fund.monthlyDisclosure.data.totalFeePct === null ? "—" : `${number(fund.monthlyDisclosure.data.totalFeePct, 2)}%`}
+              detail="當月實際比率，非公開說明書年費率"
+            />
+          </div>
+        </> : <Empty title="尚無 SITCA 月申報資料" />}
+      </Panel>
       <section className="mt-6 grid gap-6 xl:grid-cols-2">
         <Panel title="分類與 Benchmark" section={fund.classifications} footer>{fund.classifications.data.length ? <div className="space-y-3">{fund.classifications.data.map((item) => <div key={`${item.type}-${item.name}`} className="rounded-xl border border-white/[0.07] p-4"><div className="flex justify-between gap-4"><span className="text-slate-500">{item.type}</span><span className="text-right text-white">{item.value ?? item.name}</span></div>{item.benchmarkName && <p className="mt-2 text-xs text-slate-500">Benchmark：{item.benchmarkName}{item.benchmarkCode ? ` (${item.benchmarkCode})` : ""} · 僅識別資訊</p>}</div>)}</div> : <Empty title="尚無分類資料" />}</Panel>
         <Panel title="官方文件" section={fund.documents} footer>{fund.documents.data.length ? <div className="space-y-3">{fund.documents.data.map((item) => <a key={`${item.type}-${item.url}`} href={item.url} target="_blank" rel="noreferrer" className="block rounded-xl border border-white/[0.07] p-4 hover:border-white/20"><div className="font-semibold text-white">{item.title ?? item.type}</div><div className="mt-2 text-xs text-slate-500">{item.type} · {date(item.date)} · {text(item.language)}</div></a>)}</div> : <Empty title="尚無可驗證官方文件" />}</Panel>

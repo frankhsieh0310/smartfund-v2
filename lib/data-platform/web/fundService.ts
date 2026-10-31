@@ -185,6 +185,20 @@ export interface FundDetailData {
   managers: FundSection<Array<{ name: string; role: string | null; startDate: string | null }>>;
   documents: FundSection<Array<{ type: string; title: string | null; date: string | null; language: string | null; url: string; source: string }>>;
   flows: FundSection<null>;
+  /** 2026-10-31（使用者核准）: SITCA月申報的基金規模/受益人數/申購贖回(IN2201)與當月實際費用占
+   * 淨資產比率(IN2211，非公開說明書年費率，不可換算年化)。mgmtFeePct/custodianFeePct/totalFeePct
+   * 都是「yearMonth那個月」的實際值，畫面顯示務必帶上yearMonth與來源，不得另外標成「經理費率」。 */
+  monthlyDisclosure: FundSection<{
+    yearMonth: string | null;
+    aumTwd: number | null;
+    navTwd: number | null;
+    totalHolders: number | null;
+    subscriptionTwd: number | null;
+    redemptionTwd: number | null;
+    mgmtFeePct: number | null;
+    custodianFeePct: number | null;
+    totalFeePct: number | null;
+  }>;
 }
 
 type HoldingRow = { security_id: string | null; holding_name: string | null; weight: unknown; market_value: unknown; currency: string | null; report_date: Date; source: string; updated_at: Date; rank: number | null };
@@ -209,6 +223,7 @@ const rangeStart = (range: FundDetailRange): Date | undefined => {
 };
 
 const sectionCoverage = (count: number, partial = false): FundSectionCoverage => count === 0 ? "UNAVAILABLE" : partial ? "PARTIAL" : "AVAILABLE";
+const yearMonthToDate = (ym: string | null | undefined): string | null => ym && /^\d{6}$/.test(ym) ? `${ym.slice(0, 4)}-${ym.slice(4, 6)}-01` : null;
 
 export async function getFundDetail(identifier: string, relationLimit = 20, range: FundDetailRange = "1Y"): Promise<ServiceResponse<FundDetailData>> {
   const key = decodeURIComponent(identifier).trim();
@@ -267,6 +282,16 @@ export async function getFundDetail(identifier: string, relationLimit = 20, rang
     ),
     prisma.$queryRawUnsafe<{ name: string; role: string | null; start_date: Date | null }[]>(
       `SELECT m.name, a.role, a.start_date FROM fund_manager_assignments a JOIN fund_managers m ON m.id = a.manager_id WHERE a.fund_id = $1 AND a.end_date IS NULL ORDER BY a.start_date DESC NULLS LAST`,
+      row.id,
+    ),
+  ]);
+  const [aumDisclosureRows, feeDisclosureRows] = await Promise.all([
+    prisma.$queryRawUnsafe<{ year_month: string; aum_twd: unknown; nav_twd: unknown; total_holders: number | null; subscription_twd: unknown; redemption_twd: unknown }[]>(
+      `SELECT year_month, aum_twd, nav_twd, total_holders, subscription_twd, redemption_twd FROM fund_aum_disclosure_monthly WHERE fund_id = $1 ORDER BY year_month DESC LIMIT 1`,
+      row.id,
+    ),
+    prisma.$queryRawUnsafe<{ year_month: string; mgmt_fee_pct: unknown; custodian_fee_pct: unknown; total_fee_pct: unknown }[]>(
+      `SELECT year_month, mgmt_fee_pct, custodian_fee_pct, total_fee_pct FROM fund_fee_disclosure_monthly WHERE fund_id = $1 ORDER BY year_month DESC LIMIT 1`,
       row.id,
     ),
   ]);
@@ -367,6 +392,21 @@ export async function getFundDetail(identifier: string, relationLimit = 20, rang
     regionAllocation: { coverage: sectionCoverage(regionAllocationRows.length), data: regionAllocationRows.map((r) => ({ label: r.classification_code, weight: Number(r.classification_value) })), asOfDate: isoOrNull(regionAllocationRows[0]?.as_of_date), provenance: buildProvenance({ source: "YAHOO_FUND_HOLDINGS_PAGE", sourceRecordId: row.id, asOfDate: regionAllocationRows[0]?.as_of_date, lastUpdated: regionAllocationRows[0]?.as_of_date }) },
     managers: { coverage: sectionCoverage(managerRows.length), data: managerRows.map((m) => ({ name: m.name, role: m.role, startDate: isoOrNull(m.start_date) })), provenance: buildProvenance({ source: "YAHOO_FUND_HOLDINGS_PAGE", sourceRecordId: row.id, asOfDate: managerRows[0]?.start_date, lastUpdated: managerRows[0]?.start_date }) },
     flows: { coverage: "SOURCE_PENDING", data: null, provenance: buildProvenance({}) },
+    monthlyDisclosure: {
+      coverage: aumDisclosureRows.length || feeDisclosureRows.length ? "AVAILABLE" : "UNAVAILABLE",
+      data: {
+        yearMonth: aumDisclosureRows[0]?.year_month ?? feeDisclosureRows[0]?.year_month ?? null,
+        aumTwd: numberOrNull(aumDisclosureRows[0]?.aum_twd),
+        navTwd: numberOrNull(aumDisclosureRows[0]?.nav_twd),
+        totalHolders: aumDisclosureRows[0]?.total_holders ?? null,
+        subscriptionTwd: numberOrNull(aumDisclosureRows[0]?.subscription_twd),
+        redemptionTwd: numberOrNull(aumDisclosureRows[0]?.redemption_twd),
+        mgmtFeePct: numberOrNull(feeDisclosureRows[0]?.mgmt_fee_pct),
+        custodianFeePct: numberOrNull(feeDisclosureRows[0]?.custodian_fee_pct),
+        totalFeePct: numberOrNull(feeDisclosureRows[0]?.total_fee_pct),
+      },
+      provenance: buildProvenance({ source: "SITCA_IN2201_IN2211", sourceRecordId: row.id, asOfDate: yearMonthToDate(aumDisclosureRows[0]?.year_month ?? feeDisclosureRows[0]?.year_month), lastUpdated: row.updatedAt }),
+    },
   };
   if (data.company && /^(待補|unknown|n\/a)/i.test(data.company)) data.company = null;
   const meta: ResponseMeta = { asOfDate: provenance.asOfDate, lastUpdated: provenance.lastUpdated, freshnessStatus: freshnessStatus(row.latestNavDate, "PUBLICATION_AWARE"), source, provenance, coverageStatus: "PARTIAL_CURRENT" };
