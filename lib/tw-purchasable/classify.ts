@@ -111,27 +111,47 @@ export async function classifyTwPurchasable(writeEnabled: boolean): Promise<Clas
     .map((r) => ({ assetType: "FUND" as const, assetId: domesticByCode.get(r.taxId)!, source: SITCA_SOURCE, sourceRecordRef: r.taxId }))
     .filter((m) => !manualOverrides.has(`${m.assetType}:${m.assetId}`));
   await upsertApproved(domesticMatches, writeEnabled);
-  // 2026-10-31（VERIFIED，野村鴻運等16檔同一類問題）: SITCA有時會把一個基金統編拆成帶字母字尾
-  // 的子類型代碼（例如00968493 -> 00968493A累積型/00968493B TISA類型）。newFundListingDetection.ts
-  // 已經會幫新字尾代碼建立新的funds列（VERIFIED 16檔全部已經有對應的字尾列、且每天正常同步），
-  // 但舊的無字尾列從此再也比對不到SITCA CSV，永遠卡在APPROVED、資料停滯——這跟上面offshore的
-  // data_provider='yahoo'過期重複列是同一種「確定被取代、不是模糊的查無資料」情況，不是本檔案
-  // 開頭「12%代碼格式飄移」那種不確定案例，revoke不會弱化既有的保守政策。只在確認「字尾版本
-  // 已經是funds表裡的真實列」時才處理，避免誤傷真正暫時缺資料的基金。
+  // 2026-10-31（使用者核准修正，野村鴻運等16檔同一類問題）: SITCA有時會把一個基金統編拆成帶
+  // 字母字尾的子類型代碼（例如00968493 -> 00968493A累積型/00968493B TISA類型）。
+  // newFundListingDetection.ts已經會幫新字尾代碼建立新的funds列，但舊的無字尾列從此再也比對不到
+  // SITCA CSV。2026-10-31使用者更正：不能用NOT_APPROVED（out-of-scope-purge會把它連同可能還有
+  // 價值的多年fund_history一起刪掉）——改成只在「新舊代碼的NAV接得上」時，寫進獨立的
+  // fund_superseded_by_code表（只影響列表/搜尋顯示，不碰APPROVED狀態、不碰fund_history），接
+  // 不上的（通常是舊代碼fund_history本來就是空的，兩邊之間有數個月空窗、沒有相鄰資料可比對）
+  // 完全不處理，維持現狀——跟VERIFIED當時16檔裡只有1檔（00968493，有相鄰日資料且變動在這檔
+  // 基金自己歷史波動範圍內）通過這個檢查的結論一致。
+  const SUPERSEDE_ADJACENT_WINDOW_DAYS = 5; // 容許跨週末/假日
+  const SUPERSEDE_JUMP_GUARD_PCT = 0.20; // 跟navSanity.ts既有±20%跳空保護同一個門檻
   if (writeEnabled) {
     const sitcaTaxIdSet = new Set(sitcaRows.map((r) => r.taxId));
-    const staleSplitDuplicateIds = domesticFunds
+    const staleSplitCandidates = domesticFunds
       .filter((f) => {
         if (!f.code || sitcaTaxIdSet.has(f.code)) return false;
         const suffixed = `${f.code}A`;
         return domesticByCode.has(suffixed) && domesticByCode.get(suffixed) !== f.id;
       })
-      .map((f) => f.id);
-    if (staleSplitDuplicateIds.length > 0) {
+      .map((f) => ({ oldFundId: f.id, newFundId: domesticByCode.get(`${f.code}A`)! }));
+    for (const c of staleSplitCandidates) {
+      const oldLast = await prisma.$queryRawUnsafe<{ date: string; nav: string }[]>(
+        `SELECT date::text, nav::text FROM fund_history WHERE fund_id = $1 ORDER BY date DESC LIMIT 1`,
+        c.oldFundId,
+      );
+      if (!oldLast[0]) continue; // 舊代碼沒有歷史淨值可比對，維持現狀不處理
+      const newNear = await prisma.$queryRawUnsafe<{ nav: string }[]>(
+        `SELECT nav::text FROM fund_history WHERE fund_id = $1 AND date >= $2::date
+           AND date <= $2::date + interval '${SUPERSEDE_ADJACENT_WINDOW_DAYS} days'
+         ORDER BY date ASC LIMIT 1`,
+        c.newFundId, oldLast[0].date,
+      );
+      if (!newNear[0]) continue; // 新代碼在相鄰窗口內沒有資料，維持現狀不處理
+      const oldNav = Number(oldLast[0].nav), newNav = Number(newNear[0].nav);
+      if (!Number.isFinite(oldNav) || !Number.isFinite(newNav) || oldNav <= 0) continue;
+      if (Math.abs(newNav - oldNav) / oldNav > SUPERSEDE_JUMP_GUARD_PCT) continue; // 接不上，不處理
       await prisma.$executeRawUnsafe(
-        `UPDATE tw_purchasable_classification SET status = 'NOT_APPROVED', updated_at = now()
-         WHERE asset_type = 'FUND' AND status = 'APPROVED' AND asset_id = ANY($1::text[])`,
-        staleSplitDuplicateIds,
+        `INSERT INTO fund_superseded_by_code (old_fund_id, new_fund_id, reason)
+         VALUES ($1, $2, 'SITCA_CODE_SPLIT_VERIFIED_NAV_CONTINUITY')
+         ON CONFLICT (old_fund_id) DO UPDATE SET new_fund_id = EXCLUDED.new_fund_id, decided_at = now()`,
+        c.oldFundId, c.newFundId,
       );
     }
   }

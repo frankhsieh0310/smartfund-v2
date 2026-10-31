@@ -9,6 +9,7 @@ import { mapFundMainCategory, type FundMainCategory } from "./fundCategoryMappin
 import { getCoreUniverseFundIds } from "../../tw-purchasable/coreUniverseFilter.ts";
 import { getNonRepresentativeShareClassFundIds, getShareClassCountMap } from "./fundShareClassGrouping.ts";
 import { getFundIdsDuplicateOfListedEtf } from "./fundDuplicateOfEtf.ts";
+import { getFundIdsSupersededByNewCode } from "./fundSupersededByCode.ts";
 import { calculateVolatilityAndSharpe, RISK_CALC_METHOD_LABEL, RISK_FREE_RATE_SOURCES } from "./riskCalc.ts";
 
 // 2026-10-16: 925 distinct fund names (1,887 rows) share a display name with at least one other
@@ -78,16 +79,19 @@ export async function getFundList(query: FundListQuery = {}): Promise<ServiceRes
   const direction: Prisma.SortOrder = query.direction === "desc" ? "desc" : "asc";
   // 2026-10-19（使用者商品範圍規則，最高層）: 只顯示「台灣買得到」的核心母體基金（SITCA 國內
   // 基金＋TDCC 3-2 境內核備境外基金）。
-  const [coreFundIds, nonRepresentativeShareClassFundIds, duplicateOfEtfFundIds] = await Promise.all([
+  const [coreFundIds, nonRepresentativeShareClassFundIds, duplicateOfEtfFundIds, supersededFundIds] = await Promise.all([
     getCoreUniverseFundIds(),
     getNonRepresentativeShareClassFundIds(),
     getFundIdsDuplicateOfListedEtf(),
+    getFundIdsSupersededByNewCode(),
   ]);
   const where = {
     isActive: true,
     // 2026-10-30（使用者核准）: 名稱帶ETF但實際已經由etfs表某個掛牌代號代表的重複紀錄，只在
     // 這個列表查詢排除，不碰isActive/classification，見fundDuplicateOfEtf.ts的說明。
-    id: { in: Array.from(coreFundIds), notIn: [...nonRepresentativeShareClassFundIds, ...duplicateOfEtfFundIds] },
+    // 2026-10-31（使用者核准）: 舊的無字尾SITCA代碼被字母字尾新代碼取代後，同一個模式排除，
+    // 見fundSupersededByCode.ts的說明。
+    id: { in: Array.from(coreFundIds), notIn: [...nonRepresentativeShareClassFundIds, ...duplicateOfEtfFundIds, ...supersededFundIds] },
     NOT: {
       dataProvider: "yahoo",
       lastNavSource: null,
