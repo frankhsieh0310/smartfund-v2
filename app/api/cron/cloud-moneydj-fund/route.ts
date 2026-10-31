@@ -36,6 +36,9 @@ import {
   writeCheckpoint,
   type CheckpointRow,
 } from "@/lib/cloud-ingestion/runContext";
+import { runMoneydjSearchProbe } from "@/lib/cloud-ingestion/moneydjSearchProbe";
+import { nextMappingCandidates, searchMoneydjByName, pickUniqueExactMatch, MoneydjSearchRateLimitedError } from "@/lib/cloud-ingestion/moneydjMappingBackfill";
+import { isMoneydjMappingBackfillWriteEnabled } from "@/lib/cron/moneydjMappingBackfillWriteGate";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -345,8 +348,104 @@ async function nextCodes(cursor: string, batch: number): Promise<MappedFund[]> {
   );
 }
 
+// 2026-10-31（使用者核准，雲端除錯，一次性）: 本機被MoneyDJ封鎖，不准再從本機連線確認搜尋
+//端點——只能從雲端這支既有排程的執行環境裡試打candidate端點一次，把狀態碼跟回應前2000字存進
+// run log讓使用者看。只執行一次(用固定run_key擋住重複執行)，不寫入任何業務資料表。
+const SEARCH_PROBE_JOB = "MONEYDJ_SEARCH_PROBE";
+async function runSearchProbeOnce() {
+  const runKey = "moneydj-search-probe:one-time-20261031";
+  const { runId, skipped } = await beginRun({ jobName: SEARCH_PROBE_JOB, provider: "MONEYDJ", runKey, universeCount: 0, batchSize: 2, checkpointBefore: null });
+  if (skipped) return { skipped: true };
+  const startedMs = Date.now();
+  const { attempts, stoppedOnBlock } = await runMoneydjSearchProbe(["野村鴻運基金", "元大2001基金"]);
+  await finishRun(runId, SEARCH_PROBE_JOB, "MONEYDJ", startedMs, {
+    status: "COMPLETED", attempted: attempts.length, completed: attempts.length, inserted: 0, updated: 0, failed: 0,
+    retryableFailures: 0, checkpointAfter: null, details: { attempts, stoppedOnBlock },
+  });
+  return { skipped: false, stoppedOnBlock };
+}
+
+// 2026-10-31（使用者核准，MoneyDJ代碼配對backfill，寫入開關先關閉）: 併進這支既有排程，不新增
+// cron。每次執行配對一批缺持股的基金（名稱精確比對、唯一候選才算MATCHED），寫入
+// fund_mappings.moneydj_code——寫入後，上面既有的nextCodes()/主迴圈下次執行就會自然把它們納入
+// 抓取範圍，不需要另外接一段「抓持股」的程式碼。
+const MAPPING_BACKFILL_JOB = "MONEYDJ_MAPPING_BACKFILL";
+const MAPPING_BACKFILL_BATCH = 20;
+const MAPPING_BACKFILL_DELAY_MS = 3_000;
+async function runMappingBackfillOnce() {
+  const writeEnabled = isMoneydjMappingBackfillWriteEnabled();
+  const runKey = `moneydj-mapping-backfill:${new Date().toISOString().slice(0, 13)}`;
+  const { runId, skipped } = await beginRun({ jobName: MAPPING_BACKFILL_JOB, provider: "MONEYDJ", runKey, universeCount: 0, batchSize: MAPPING_BACKFILL_BATCH, checkpointBefore: null });
+  if (skipped) return { skipped: true };
+  const startedMs = Date.now();
+  const checkpoint = await readCheckpoint("moneydj-mapping-backfill:cursor");
+  const afterBaseCode = checkpoint?.lastSymbol ?? null;
+  let candidates = await nextMappingCandidates(afterBaseCode, MAPPING_BACKFILL_BATCH);
+  let wrapped = false;
+  if (candidates.length === 0 && afterBaseCode !== null) {
+    candidates = await nextMappingCandidates(null, MAPPING_BACKFILL_BATCH);
+    wrapped = true;
+  }
+  let attempted = 0, matched = 0, lastBaseCode: string | null = afterBaseCode;
+  let rateLimitStop = false;
+  const outcomes: Array<{ baseCode: string; name: string; result: string; moneydjCode?: string }> = [];
+  for (const cand of candidates) {
+    attempted++;
+    try {
+      const results = await searchMoneydjByName(cand.canonicalName);
+      const match = pickUniqueExactMatch(cand.canonicalName, results);
+      if (match) {
+        matched++;
+        outcomes.push({ baseCode: cand.baseCode, name: cand.canonicalName, result: "MATCHED", moneydjCode: match.moneydjCode });
+        if (writeEnabled) {
+          // fund_mappings 沒有 fund_id 的 unique constraint，用「有既有row就UPDATE，沒有才INSERT」
+          // 取代ON CONFLICT；status沿用既有慣例(AMBIGUOUS/NORMALIZED_FULL_NAME_EXACT同一批欄位)，
+          // 這裡標 NAME_EXACT_MATCH_BACKFILL 跟Yahoo那批backfill的EXACT_NAME_MATCH_BACKFILL一致風格。
+          const existing = await prisma.$queryRawUnsafe<{ id: string }[]>(`SELECT id FROM fund_mappings WHERE fund_id = $1 LIMIT 1`, cand.representativeFundId);
+          if (existing.length) {
+            await prisma.$executeRawUnsafe(
+              `UPDATE fund_mappings SET moneydj_code = $1, status = 'NAME_EXACT_MATCH_BACKFILL', candidate_count = 1, last_checked_at = now(), updated_at = now() WHERE id = $2`,
+              match.moneydjCode, existing[0].id,
+            );
+          } else {
+            await prisma.$executeRawUnsafe(
+              `INSERT INTO fund_mappings (id, fund_id, moneydj_code, status, candidate_count, last_checked_at, created_at, updated_at)
+               VALUES (gen_random_uuid()::text, $1, $2, 'NAME_EXACT_MATCH_BACKFILL', 1, now(), now(), now())`,
+              cand.representativeFundId, match.moneydjCode,
+            );
+          }
+        }
+      } else {
+        outcomes.push({ baseCode: cand.baseCode, name: cand.canonicalName, result: results.length === 0 ? "NO_RESULTS" : "AMBIGUOUS" });
+      }
+    } catch (e) {
+      if (e instanceof MoneydjSearchRateLimitedError) { rateLimitStop = true; break; }
+      outcomes.push({ baseCode: cand.baseCode, name: cand.canonicalName, result: "ERROR" });
+    }
+    lastBaseCode = cand.baseCode;
+    await new Promise((r) => setTimeout(r, MAPPING_BACKFILL_DELAY_MS));
+  }
+  await writeCheckpoint(MAPPING_BACKFILL_JOB, "moneydj-mapping-backfill:cursor", runId, {
+    lastSymbol: wrapped && attempted === 0 ? null : lastBaseCode,
+    processed: attempted, succeeded: matched, failed: attempted - matched,
+  });
+  await finishRun(runId, MAPPING_BACKFILL_JOB, "MONEYDJ", startedMs, {
+    status: rateLimitStop ? "PARTIAL" : "COMPLETED", attempted, completed: matched, inserted: writeEnabled ? matched : 0, updated: 0,
+    failed: attempted - matched, retryableFailures: rateLimitStop ? 1 : 0, checkpointAfter: null,
+    details: { writeEnabled, rateLimitStop, wrapped, outcomes: outcomes.slice(0, 50) },
+  });
+  return { skipped: false, attempted, matched, writeEnabled };
+}
+
 export async function GET(request: Request) {
   if (!isAuthorizedCron(request)) return unauthorizedCron();
+
+  // 一次性除錯探測 + 代碼配對backfill——跑在既有主流程之前，各自獨立的run_key/try-catch，失敗
+  // 不影響下面既有的holdings抓取流程。
+  let searchProbeResult: Awaited<ReturnType<typeof runSearchProbeOnce>> | { error: string } | null = null;
+  try { searchProbeResult = await runSearchProbeOnce(); } catch (e: any) { searchProbeResult = { error: String(e?.message ?? e) }; }
+  let mappingBackfillResult: Awaited<ReturnType<typeof runMappingBackfillOnce>> | { error: string } | null = null;
+  try { mappingBackfillResult = await runMappingBackfillOnce(); } catch (e: any) { mappingBackfillResult = { error: String(e?.message ?? e) }; }
 
   const url = new URL(request.url);
   const batch = Math.min(MAX_BATCH, Math.max(1, Number(url.searchParams.get("batch") ?? DEFAULT_BATCH)));
@@ -542,5 +641,7 @@ export async function GET(request: Request) {
     runtimeMs: Date.now() - startedMs,
     status,
     masterFundDedup: true,
+    searchProbe: searchProbeResult,
+    mappingBackfill: mappingBackfillResult,
   });
 }
