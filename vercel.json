@@ -246,7 +246,7 @@
     },
     {
       "path": "/api/cron/cloud-moneydj-fund",
-      "schedule": "*/15 * * * *"
+      "schedule": "0 4,10,16,22 * * *"
     },
     {
       "path": "/api/cron/cloud-fund-holdings?provider=ALL",

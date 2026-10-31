@@ -48,6 +48,11 @@ export const dynamic = "force-dynamic";
 const JOB = "CLOUD_MONEYDJ_FUND";
 const PROVIDER = "MONEYDJ";
 const CHECKPOINT_KEY = "cloud-moneydj-fund:ROLLING";
+// 2026-10-31（使用者核准，429降頻+冷卻期）: VERIFIED過去24小時95次執行有59次(62.1%)撞到
+// HTTP_429——幾乎每次一打就撞。改成撞到429之後記下時間，接下來COOLDOWN_HOURS內整支route（含
+// 下面的探測/backfill步驟）直接skip、不發任何請求，給MoneyDJ真正冷卻。
+const COOLDOWN_CHECKPOINT_KEY = "cloud-moneydj-fund:cooldown-until";
+const COOLDOWN_HOURS = 6;
 // 2026-10-08: confirmed in Production that no CLOUD_MONEYDJ_FUND run has EVER reached COMPLETED —
 // every invocation is left permanently IN_PROGRESS with attempted=0, because run stats are only
 // written once by finishRun() at the very end of the loop (same gap as the cloud-etf-price hang
@@ -68,8 +73,12 @@ const CHECKPOINT_KEY = "cloud-moneydj-fund:ROLLING";
 // 1500ms/筆仍打太快。批次減半、間隔拉長到3000ms：40筆 x 3000ms = 最多120s，仍在
 // TIME_BUDGET_MS=240_000預算內。目標429降到0；遇到429的既有行為不變（backoffStop，整輪停止、
 // 不重試，見runMoneydjBatch/runMoneydjBatchGrouped的backoffStop分支）。
-const DEFAULT_BATCH = 40;
-const MAX_BATCH = 40;
+// 2026-10-31（使用者核准，429降頻）: VERIFIED過去24小時62.1%的執行撞到429（幾乎每次第一個
+// 請求就撞），單純再降batch/delay幫助有限（backoffStop本來就在第一筆就觸發）——真正的槓桿是
+// 降低整天的cron次數（見vercel.json schedule改動）跟429後的冷卻期。這裡仍把batch/delay也降低，
+// 當冷卻期結束後重新開始嘗試時更保守。
+const DEFAULT_BATCH = 20;
+const MAX_BATCH = 20;
 const FRESH_DAYS = 25; // matches the local disclosure worker's re-fetch guard
 // 2026-10-08: the real fix for "every run stuck IN_PROGRESS" is a time budget, not just a smaller
 // batch cap — a smaller batch only lowers the odds of running out of time, it doesn't guarantee a
@@ -85,7 +94,7 @@ const TIME_BUDGET_MS = 210_000;
 // VERIFIED production_scheduler_runs累積43%的HTTP_429失敗率，是我們自己打太快觸發MoneyDJ的
 // 限流，不是對方外部延遲，使用者核准定案：改成每一筆請求（成功或失敗）之間都插入這個延遲。
 // 1500ms/筆 x 最多80筆 = 最多120s，仍在TIME_BUDGET_MS=240_000的預算內，不會讓checkpoint寫不進去。
-const PER_ITEM_DELAY_MS = 3_000;
+const PER_ITEM_DELAY_MS = 4_000;
 
 // 2026-10-19: hourBucketKey() (lib/cloud-ingestion/runContext.ts) dedups run_key per CALENDAR HOUR,
 // shared by 9 other cron routes that genuinely want "at most once per hour" semantics. This route no
@@ -355,6 +364,11 @@ async function nextCodes(cursor: string, batch: number): Promise<MappedFund[]> {
 // 2026-10-31（使用者核准，雲端除錯，一次性）: 本機被MoneyDJ封鎖，不准再從本機連線確認搜尋
 //端點——只能從雲端這支既有排程的執行環境裡試打candidate端點一次，把狀態碼跟回應前2000字存進
 // run log讓使用者看。只執行一次(用固定run_key擋住重複執行)，不寫入任何業務資料表。
+async function setMoneydjCooldown(runId: string) {
+  const cooldownUntil = new Date(Date.now() + COOLDOWN_HOURS * 60 * 60 * 1000);
+  await writeCheckpoint(JOB, COOLDOWN_CHECKPOINT_KEY, runId, { lastSymbol: cooldownUntil.toISOString(), processed: 0, succeeded: 0, failed: 0 });
+}
+
 const SEARCH_PROBE_JOB = "MONEYDJ_SEARCH_PROBE";
 async function runSearchProbeOnce() {
   const runKey = "moneydj-search-probe:one-time-20261031";
@@ -362,6 +376,7 @@ async function runSearchProbeOnce() {
   if (skipped) return { skipped: true };
   const startedMs = Date.now();
   const { attempts, stoppedOnBlock } = await runMoneydjSearchProbe(["野村鴻運基金", "元大2001基金"]);
+  if (stoppedOnBlock) await setMoneydjCooldown(runId);
   await finishRun(runId, SEARCH_PROBE_JOB, "MONEYDJ", startedMs, {
     status: "COMPLETED", attempted: attempts.length, completed: attempts.length, inserted: 0, updated: 0, failed: 0,
     retryableFailures: 0, checkpointAfter: null, details: { attempts, stoppedOnBlock },
@@ -382,6 +397,7 @@ async function runHoldingsPageProbeOnce() {
     { moneydjCode: "AC0001", fundName: "野村鴻運基金" },
     { moneydjCode: "ACFH20", fundName: "復華全球資產證券化基金（元大2001基金在fund_mappings沒有moneydj_code，改用這檔）" },
   ]);
+  if (stoppedOnBlock) await setMoneydjCooldown(runId);
   await finishRun(runId, HOLDINGS_PAGE_PROBE_JOB, "MONEYDJ", startedMs, {
     status: "COMPLETED", attempted: dumps.length, completed: dumps.length, inserted: 0, updated: 0, failed: 0,
     retryableFailures: 0, checkpointAfter: null, details: { dumps, stoppedOnBlock },
@@ -459,6 +475,7 @@ async function runMappingBackfillOnce() {
     lastSymbol: wrapped && attempted === 0 ? null : lastBaseCode,
     processed: attempted, succeeded: matched, failed: attempted - matched,
   });
+  if (rateLimitStop) await setMoneydjCooldown(runId);
   await finishRun(runId, MAPPING_BACKFILL_JOB, "MONEYDJ", startedMs, {
     status: rateLimitStop || timeBudgetStop ? "PARTIAL" : "COMPLETED", attempted, completed: matched, inserted: writeEnabled ? matched : 0, updated: 0,
     failed: attempted - matched, retryableFailures: rateLimitStop ? 1 : 0, checkpointAfter: null,
@@ -470,8 +487,18 @@ async function runMappingBackfillOnce() {
 export async function GET(request: Request) {
   if (!isAuthorizedCron(request)) return unauthorizedCron();
 
+  // 429冷卻期：整支route（含下面的探測/backfill/主迴圈）都要尊重這個冷卻——撞到429之後接下來
+  // COOLDOWN_HOURS小時內完全不發任何請求給MoneyDJ，包括探測步驟（探測排在冷卻期結束後的第一次
+  // 執行才跑，不是自己另外搶跑）。
+  const cooldown = await readCheckpoint(COOLDOWN_CHECKPOINT_KEY);
+  const cooldownUntil = cooldown?.lastSymbol ? new Date(cooldown.lastSymbol) : null;
+  if (cooldownUntil && cooldownUntil.getTime() > Date.now()) {
+    return Response.json({ ok: true, job: JOB, skipped: true, reason: "COOLDOWN_AFTER_429", cooldownUntil: cooldownUntil.toISOString() });
+  }
+
   // 一次性除錯探測 + 代碼配對backfill——跑在既有主流程之前，各自獨立的run_key/try-catch，失敗
-  // 不影響下面既有的holdings抓取流程。
+  // 不影響下面既有的holdings抓取流程。任何一個撞到429/被拒絕，各自內部就會設冷卻期（見各函式
+  // 內的setMoneydjCooldown呼叫），不只main loop自己撞到才算。
   let searchProbeResult: Awaited<ReturnType<typeof runSearchProbeOnce>> | { error: string } | null = null;
   try { searchProbeResult = await runSearchProbeOnce(); } catch (e: any) { searchProbeResult = { error: String(e?.message ?? e) }; }
   let mappingBackfillResult: Awaited<ReturnType<typeof runMappingBackfillOnce>> | { error: string } | null = null;
@@ -619,6 +646,13 @@ export async function GET(request: Request) {
     succeeded: after.succeeded,
     failed: after.failed,
   });
+
+  if (http429 > 0) {
+    const cooldownUntil = new Date(Date.now() + COOLDOWN_HOURS * 60 * 60 * 1000);
+    await writeCheckpoint(JOB, COOLDOWN_CHECKPOINT_KEY, runId, {
+      lastSymbol: cooldownUntil.toISOString(), processed: 0, succeeded: 0, failed: 0,
+    });
+  }
 
   const status =
     backoffStop || timeBudgetStop || (failed > 0 && updatedFunds === 0 && rowsPersisted === 0) ? "PARTIAL" : "COMPLETED";
