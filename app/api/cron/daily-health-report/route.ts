@@ -873,7 +873,10 @@ export async function GET(request: Request) {
       ? [{ type: "ACTIVE_ETF_OFFICIAL_HOLDINGS_GAP", category: "EXTERNAL_DELAY" as const, items: activeEtfGapWithEvidence.filter((e) => e.category === "EXTERNAL_DELAY") }]
       : []),
     ...(localScheduleReporting.anomaly ? [{ type: "LOCAL_SCHEDULE_NOT_REPORTED", category: SYSTEM_CATEGORY, missing: localScheduleReporting.missing }] : []),
-    ...(yahooTwCheck.anomaly ? [{ type: "YAHOO_TW_RETURN_MISMATCH", category: SYSTEM_CATEGORY, mismatches: yahooTwCheck.mismatches }] : []),
+    // 2026-10-31（使用者核准）: 單純抓取失敗(fetchFailed，例如009812這種偶發429/逾時)跟真正數值
+    // 分歧分開分類——前者是來源暫時連不上，算EXTERNAL_DELAY；後者才是真的SYSTEM異常。
+    ...(yahooTwCheck.valueMismatches.length > 0 ? [{ type: "YAHOO_TW_RETURN_MISMATCH", category: SYSTEM_CATEGORY, mismatches: yahooTwCheck.valueMismatches }] : []),
+    ...(yahooTwCheck.fetchFailures.length > 0 ? [{ type: "YAHOO_TW_RETURN_FETCH_FAILED", category: "EXTERNAL_DELAY" as const, mismatches: yahooTwCheck.fetchFailures }] : []),
     ...(fredCommodityCheck.anomaly ? [{ type: "FRED_COMMODITY_MISMATCH", category: SYSTEM_CATEGORY, mismatches: fredCommodityCheck.mismatches }] : []),
     ...(tdccDividendCheck.anomaly ? [{ type: "TDCC_DIVIDEND_MISMATCH", category: SYSTEM_CATEGORY, mismatches: tdccDividendCheck.mismatches }] : []),
     // core_universe_fund 的缺口現在有即時證據分類（見上面 coreUniverseFundGapWithEvidence），不

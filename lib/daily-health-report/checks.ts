@@ -570,6 +570,14 @@ export type YahooTwReturnCheckResult = {
   samples: YahooTwReturnSample[];
   /** Any sample whose |diff| exceeds this, or whose fetch failed, is flagged. */
   mismatches: Array<YahooTwReturnSample & { diff: number | null }>;
+  /** 2026-10-31（使用者核准）: mismatches 裡真正「兩邊數值對不上」的那一批(oneSided或diff超過
+   * 門檻)——這才是真的SYSTEM異常。 */
+  valueMismatches: Array<YahooTwReturnSample & { diff: number | null }>;
+  /** 單純「這次抓取失敗」（429/逾時/來源暫時連不上，不是數值分歧）——偶發的抓取失敗跟「兩邊
+   * 數值真的不一致」是不同性質的問題：一個是來源暫時連不上(EXTERNAL_DELAY)，一個是我們的
+   * parser或資料真的跟Yahoo奇摩算出來的不一樣(SYSTEM)。009812這種單次抓取失敗、下次就正常，
+   * 本質上就是前者，不該跟後者混在一起算SYSTEM異常。 */
+  fetchFailures: Array<YahooTwReturnSample & { diff: number | null }>;
   anomaly: boolean;
 };
 
@@ -587,17 +595,20 @@ const MISMATCH_THRESHOLD_PCT_POINTS = 15;
 // `diff === null` 分支，等於把「雙方一致地沒有資料」誤判成異常。只有「一邊有值、另一邊沒有」
 // 才是真正的分歧，才該算 mismatch；兩邊都是 null 時 diff 本來就該是 null，但不計入異常。
 export function evaluateYahooTwReturnConsistency(samples: YahooTwReturnSample[]): YahooTwReturnCheckResult {
-  const mismatches = samples
-    .map((s) => ({ ...s, diff: s.ourReturn1y != null && s.yahooTwReturn1y != null ? Math.abs(s.ourReturn1y - s.yahooTwReturn1y) : null }))
-    .filter((s) => {
-      if (s.fetchFailed) return true;
-      const bothNull = s.ourReturn1y == null && s.yahooTwReturn1y == null;
-      if (bothNull) return false; // 雙方一致沒有資料（例如新上市未滿一年）——不是分歧
-      const oneSided = (s.ourReturn1y == null) !== (s.yahooTwReturn1y == null);
-      if (oneSided) return true; // 一邊有值一邊沒有——真的分歧
-      return s.diff !== null && s.diff > MISMATCH_THRESHOLD_PCT_POINTS;
-    });
-  return { samples, mismatches, anomaly: mismatches.length > 0 };
+  const withDiff = samples.map((s) => ({ ...s, diff: s.ourReturn1y != null && s.yahooTwReturn1y != null ? Math.abs(s.ourReturn1y - s.yahooTwReturn1y) : null }));
+  const mismatches = withDiff.filter((s) => {
+    if (s.fetchFailed) return true;
+    const bothNull = s.ourReturn1y == null && s.yahooTwReturn1y == null;
+    if (bothNull) return false; // 雙方一致沒有資料（例如新上市未滿一年）——不是分歧
+    const oneSided = (s.ourReturn1y == null) !== (s.yahooTwReturn1y == null);
+    if (oneSided) return true; // 一邊有值一邊沒有——真的分歧
+    return s.diff !== null && s.diff > MISMATCH_THRESHOLD_PCT_POINTS;
+  });
+  // 2026-10-31（使用者核准）: 單純fetchFailed（這次抓不到，不是數值分歧）歸EXTERNAL_DELAY；
+  // 真正數值分歧(oneSided或diff超過門檻)才是SYSTEM。
+  const fetchFailures = mismatches.filter((s) => s.fetchFailed);
+  const valueMismatches = mismatches.filter((s) => !s.fetchFailed);
+  return { samples, mismatches, valueMismatches, fetchFailures, anomaly: valueMismatches.length > 0 };
 }
 
 // 2026-10-25（使用者核准定案）: OFFSHORE_DIVIDEND_TDCC_WRITE開啟前抽查過2筆跟總代理官網完全
