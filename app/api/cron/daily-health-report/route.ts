@@ -627,8 +627,12 @@ export async function GET(request: Request) {
       // and Yahoo-TW (40s) budgets, which are themselves measured from the same startedMs and will
       // adapt downward automatically, but this guard keeps this check itself from being the one that
       // eats into maxDuration=180 if a slow Yahoo response stalls it.
+      // 2026-10-31（使用者核准）: NOT_VERIFIED_BUDGET_EXHAUSTED原本標SYSTEM，但「預算不夠、沒
+      // 驗證到」不等於「確認壞了」——沒有證據支持SYSTEM這個強判斷，改成EXTERNAL_DELAY（跟「來源
+      // 端沒有新資料」同一個「還不能確定是我方問題」的精神），同一個改動套用到下面ETF_HISTORY_GAP
+      // 跟activeEtfGap兩處同樣寫法。
       if (coreUniverseEtfGapWithEvidence.length >= CORE_ETF_GAP_VERIFY_MAX_ITEMS || Date.now() - verifyStartedMs > CORE_ETF_GAP_VERIFY_MAX_ELAPSED_MS || Date.now() - startedMs > 120_000) {
-        coreUniverseEtfGapWithEvidence.push({ code: etf.code, name: etf.name, category: "SYSTEM", reason: "NOT_VERIFIED_BUDGET_EXHAUSTED", checkedAt });
+        coreUniverseEtfGapWithEvidence.push({ code: etf.code, name: etf.name, category: "EXTERNAL_DELAY", reason: "NOT_VERIFIED_BUDGET_EXHAUSTED", checkedAt });
         continue;
       }
       try {
@@ -661,7 +665,7 @@ export async function GET(request: Request) {
     for (const etf of etfHistoryGapDetailRows) {
       const checkedAt = new Date().toISOString();
       if (etfHistoryGapWithEvidence.length >= ETF_HISTORY_GAP_VERIFY_MAX_ITEMS || Date.now() - verifyStartedMs > ETF_HISTORY_GAP_VERIFY_MAX_ELAPSED_MS || Date.now() - startedMs > 150_000) {
-        etfHistoryGapWithEvidence.push({ code: etf.code, name: etf.name, category: "SYSTEM", reason: "NOT_VERIFIED_BUDGET_EXHAUSTED", checkedAt });
+        etfHistoryGapWithEvidence.push({ code: etf.code, name: etf.name, category: "EXTERNAL_DELAY", reason: "NOT_VERIFIED_BUDGET_EXHAUSTED", checkedAt });
         continue;
       }
       try {
@@ -694,7 +698,7 @@ export async function GET(request: Request) {
   for (const item of activeEtfOfficialHoldings.missingOrStale) {
     const idx = activeEtfGapWithEvidence.length;
     if (idx >= ACTIVE_ETF_VERIFY_MAX_ITEMS || Date.now() - startedMs > ACTIVE_ETF_VERIFY_MAX_ELAPSED_MS) {
-      activeEtfGapWithEvidence.push({ ...item, category: "SYSTEM", verifyNote: "NOT_VERIFIED_BUDGET_EXHAUSTED" });
+      activeEtfGapWithEvidence.push({ ...item, category: "EXTERNAL_DELAY", verifyNote: "NOT_VERIFIED_BUDGET_EXHAUSTED" });
       continue;
     }
     const adapter = resolveActiveEtfAdapter(item.name, item.provider);
