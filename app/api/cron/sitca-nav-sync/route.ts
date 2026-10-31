@@ -24,6 +24,7 @@ import { checkNavSanity } from "@/lib/sitca-nav-sync/navSanity";
 import { isWriteEnabled, currentRunMode } from "@/lib/sitca-nav-sync/writeGate";
 import { writeBatchIfEnabled, type QueryFn } from "@/lib/sitca-nav-sync/navWriter";
 import type { SitcaMatchedCandidate } from "@/lib/sitca-nav-sync/types";
+import { runMonthlyFeeDisclosure, runMonthlyAumDisclosure } from "@/lib/sitca-nav-sync/monthlyDisclosureWriter";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -173,6 +174,23 @@ export async function GET(request: Request) {
 
     const writeResult = await writeBatchIfEnabled(writerQuery, candidates, new Date().toISOString(), writeEnabledThisRun);
 
+    // 2026-10-31（使用者核准）: 境內基金費用揭露(IN2211)與規模揭露(IN2201)併進這支既有的
+    // sitca-nav-sync cron，不另外新增cron entry。各自有自己的run_key（每月一次）、自己的寫入開關
+    // （SITCA_FEE_DISCLOSURE_WRITE / SITCA_AUM_DISCLOSURE_WRITE），shadow模式預設不寫入。失敗不影響
+    // 上面每日NAV同步的結果判定。
+    let feeDisclosureResult: Awaited<ReturnType<typeof runMonthlyFeeDisclosure>> | null = null;
+    let aumDisclosureResult: Awaited<ReturnType<typeof runMonthlyAumDisclosure>> | null = null;
+    try {
+      feeDisclosureResult = await runMonthlyFeeDisclosure();
+    } catch (e: any) {
+      feeDisclosureResult = { ok: false, skipped: false, reason: String(e?.message ?? e) };
+    }
+    try {
+      aumDisclosureResult = await runMonthlyAumDisclosure();
+    } catch (e: any) {
+      aumDisclosureResult = { ok: false, skipped: false, reason: String(e?.message ?? e) };
+    }
+
     const matchedByCode = matched.filter((m) => m.matchedBy === "CODE").length;
     const matchedByName = matched.filter((m) => m.matchedBy === "NAME").length;
 
@@ -191,6 +209,7 @@ export async function GET(request: Request) {
         unit_mismatch_count: unitMismatchCount, jump_review_count: jumpReviewCount,
         write_candidate_count: candidates.length, written: writeResult.written, write_error_count: writeResult.writeErrorCount,
         jump_review_detail: jumpReviewDetail, jump_review_overrides: jumpReviewOverrides,
+        fee_disclosure: feeDisclosureResult, aum_disclosure: aumDisclosureResult,
       },
     });
 
@@ -200,6 +219,7 @@ export async function GET(request: Request) {
       matchedCount: matched.length, matchedByCode, matchedByName, unmatchedCount: unmatched.length,
       currencyMismatchCount, unitMismatchCount, jumpReviewCount, writeCandidateCount: candidates.length,
       written: writeResult.written, writeErrorCount: writeResult.writeErrorCount,
+      feeDisclosure: feeDisclosureResult, aumDisclosure: aumDisclosureResult,
     });
   } catch (e: any) {
     await finishRun(runId, JOB, "SITCA_FSC_OFFICIAL_DAILY_NAV_CSV", startedMs, {
