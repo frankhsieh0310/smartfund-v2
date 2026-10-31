@@ -604,8 +604,11 @@ export async function GET(request: Request) {
   // 回應裡最後一筆有收盤價就算「來源端其實有資料、我方沒抓到」=SYSTEM；Yahoo 本身也查不到/全是
   // null 才算 EXTERNAL_DELAY。有界：最多查 8 檔、最多花 30 秒。
   const coreUniverseEtfGapRows = await checkCoreUniverseEtfGapDetail(query, 4);
-  const CORE_ETF_GAP_VERIFY_MAX_ITEMS = 8;
-  const CORE_ETF_GAP_VERIFY_MAX_ELAPSED_MS = 20_000;
+  // 2026-10-31（使用者核准，3天內驗證完）: VERIFIED缺口54檔、每天只查8檔要7天才驗證得完。
+  // 提高到20檔/60秒，54/20≈3天內可以查完；仍遠低於120_000ms的整體累計上限（見下面迴圈內的
+  // 第三個條件）跟maxDuration=180s。
+  const CORE_ETF_GAP_VERIFY_MAX_ITEMS = 20;
+  const CORE_ETF_GAP_VERIFY_MAX_ELAPSED_MS = 60_000;
   const coreUniverseEtfGapWithEvidence: Array<{
     code: string; name: string; category: "SYSTEM" | "EXTERNAL_DELAY"; reason: string; checkedAt: string;
   }> = [];
