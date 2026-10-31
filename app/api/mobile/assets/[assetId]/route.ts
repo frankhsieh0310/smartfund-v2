@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { errorResponse } from '@/lib/data-platform/web/errors';
 import { getEtfDetail, getEtfHistory } from '@/lib/data-platform/web/etfService';
+import { TRACKED_YUANTA_FUND_IDS } from '@/lib/etf-holdings-engine/adapters/yuantaTrackingDifference';
 import { getFundDetail, type FundDetailRange } from '@/lib/data-platform/web/fundService';
 import { getFxDetail, getFxHistory } from '@/lib/data-platform/web/fxService';
 import { getIndexDetail, getIndexHistory } from '@/lib/data-platform/web/indexService';
@@ -88,7 +89,24 @@ async function resolveDetail(assetId: string, assetType: AssetType, period: Peri
     // 即使資料庫裡的 etfs.dividend_yield 本身是對的。這裡補一份到最外層，跟FUND分支既有的
         // 攤平慣例一致，不動 getEtfDetail() 本身（web頁面等其他讀 metrics.dividendYield 的地方不受影響）。
     if (!response.data) return response;
-    return { ...response, data: { ...response.data, dividendYield: response.data.metrics.dividendYield } };
+    // 2026-10-31（使用者核准，跟網站app/etf/[code]/page.tsx同一套邏輯）: 追蹤差距只對
+    // TRACKED_YUANTA_FUND_IDS名單內的ETF適用；名單內但這次沒資料要明確顯示「無資料」，不是
+    // 整段消失；不在名單裡的ETF完全不帶這組liteMetrics。
+    const code = response.data.identity.symbol;
+    const isYuantaTracked = Object.values(TRACKED_YUANTA_FUND_IDS).includes(code);
+    let trackingLiteMetrics: Array<{ key: string; label: string; value: string | number | null; unit?: string }> = [];
+    if (isYuantaTracked) {
+      const trackingRows = await prisma.$queryRawUnsafe<{ daily_pct: unknown; cumulative_pct: unknown; observation_date: Date }[]>(
+        `SELECT daily_pct, cumulative_pct, observation_date FROM etf_tracking_difference WHERE etf_id = $1 AND source = 'YUANTA_OFFICIAL' ORDER BY observation_date DESC LIMIT 1`,
+        assetId,
+      ).catch(() => []);
+      const row = trackingRows[0];
+      trackingLiteMetrics = [
+        { key: 'trackingDiffDaily', label: '追蹤差距（日）', value: row?.daily_pct != null ? Number(row.daily_pct) : '無資料', unit: row?.daily_pct != null ? '%' : undefined },
+        { key: 'trackingDiffCumulative', label: '追蹤差距（累計）', value: row?.cumulative_pct != null ? Number(row.cumulative_pct) : '無資料', unit: row?.cumulative_pct != null ? '%' : undefined },
+      ];
+    }
+    return { ...response, data: { ...response.data, dividendYield: response.data.metrics.dividendYield, liteMetrics: trackingLiteMetrics } };
   }
   if (assetType === 'INDEX') return getIndexDetail(assetId);
   if (assetType === 'FX') return getFxDetail(assetId);

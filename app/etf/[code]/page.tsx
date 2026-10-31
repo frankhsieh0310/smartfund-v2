@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getCoreUniverseEtfIds } from "@/lib/tw-purchasable/coreUniverseFilter";
 import { freshnessStatus as computeFreshnessStatus } from "@/lib/data-platform/web/freshness";
 import { computeTechnicalSeries, type PricePoint } from "@/lib/cron/stockTechnicalDaily";
+import { TRACKED_YUANTA_FUND_IDS } from "@/lib/etf-holdings-engine/adapters/yuantaTrackingDifference";
 import { calculateVolatilityAndSharpe, RISK_CALC_METHOD_LABEL, RISK_FREE_RATE_SOURCES, RISK_FREE_RATE_UNAVAILABLE_REASON } from "@/lib/data-platform/web/riskCalc";
 import { UniversalAssetDetail, type DetailData, type HistoryPoint, type Metric } from "@/components/asset/UniversalAssetDetail";
 
@@ -138,19 +139,23 @@ export default async function EtfDetailPage({ params }: { params: Promise<{ code
       const riskMethodNote = etf.volatility1y == null || etf.sharpe1y == null
         ? `${RISK_CALC_METHOD_LABEL}${riskFreeSource ? `無風險利率來源：${riskFreeSource.label}${riskFreeRateAsOf ? `（資料日期：${riskFreeRateAsOf}）` : ""}。` : ""}`
         : null;
-      // 2026-10-29（使用者核准）: 追蹤差距目前只對元大發行的5檔ETF有資料（照抄元大官網自己
-      // 公布的數字，不是自算），其餘ETF沒有資料就不顯示任何追蹤差距/誤差欄位，不留假的「—」
-      // 誤導成「查過但沒有」。
+      // 2026-10-29（使用者核准）: 追蹤差距只對元大發行、且在TRACKED_YUANTA_FUND_IDS名單裡的ETF
+      // 有意義（照抄元大官網自己公布的數字，不是自算）——不在名單裡的ETF，這組欄位永遠不適用，
+      // 維持完全不顯示，不是「無資料」。
       // 2026-10-30（使用者核准，淨值欄顯示異常修正）: 改讀專屬的 etf_tracking_difference 表，
       // 不再跟 etf_asset_metrics.nav 共用欄位（那是造成列表頁淨值顯示-1.47的根因）。
+      // 2026-10-31（使用者核准，更正）: 名單內的ETF如果這次沒有資料（例如元大官網這批還沒更新
+      // 或剛被還原漏掉），改成明確顯示「無資料」，不要整段消失——避免使用者看不出「這檔本來就
+      // 有追蹤差距，只是這次沒資料」跟「這檔本來就不追蹤差距」的差別。
+      const isYuantaTracked = Object.values(TRACKED_YUANTA_FUND_IDS).includes(etf.code);
       const trackingRows = await prisma.$queryRawUnsafe<{ daily_pct: unknown; cumulative_pct: unknown; observation_date: Date }[]>(
         `SELECT daily_pct, cumulative_pct, observation_date FROM etf_tracking_difference WHERE etf_id = $1 AND source = 'YUANTA_OFFICIAL' ORDER BY observation_date DESC LIMIT 1`,
         etf.id,
       ).catch(() => []);
       const trackingRow = trackingRows[0];
-      const trackingMetrics: Metric[] = trackingRow ? [
-        { label: "追蹤差距（日）", value: trackingRow.daily_pct != null ? `${fmt(trackingRow.daily_pct, "%")}（${dateText(trackingRow.observation_date)}，來源：元大投信官網）` : "—" },
-        { label: "追蹤差距（累計）", value: trackingRow.cumulative_pct != null ? `${fmt(trackingRow.cumulative_pct, "%")}（${dateText(trackingRow.observation_date)}，來源：元大投信官網）` : "—" },
+      const trackingMetrics: Metric[] = isYuantaTracked ? [
+        { label: "追蹤差距（日）", value: trackingRow?.daily_pct != null ? `${fmt(trackingRow.daily_pct, "%")}（${dateText(trackingRow.observation_date)}，來源：元大投信官網）` : "無資料" },
+        { label: "追蹤差距（累計）", value: trackingRow?.cumulative_pct != null ? `${fmt(trackingRow.cumulative_pct, "%")}（${dateText(trackingRow.observation_date)}，來源：元大投信官網）` : "無資料" },
       ] : [];
       data = { type: "ETF", code: etf.code, name: etf.name, officialName: etf.nameEn ?? undefined, exchange: etf.exchange ?? undefined, region: etf.region ?? undefined, currency: etf.currency, isin: etf.isin ?? undefined, summary: [metric("最新價格", latest), metric("NAV（同期，證交所MIS盤中預估）", sameDateNav), { label: premiumLabel, value: premiumDisplay }, { label: "漲跌 / 漲跌幅", value: change == null || !previous ? "—" : `${fmt(change)} / ${((change / previous) * 100).toFixed(2)}%` }], performance: [metric("1M", etf.return1m, "%"), metric("3M", etf.return3m, "%"), metric("6M", etf.return6m, "%"), metric("YTD", etf.returnYtd, "%"), metric("1Y", etf.return1y, "%"), metric("3Y", etf.return3y, "%"), metric("5Y", etf.return5y, "%")], risk: [volatilityMetric, metric("Beta", etf.beta), metric("Max Drawdown", etf.maxDrawdown, "%"), sharpeMetric, ...(riskMethodNote ? [{ label: "計算方法", value: riskMethodNote }] : [])], keyData: [metric("NAV", etf.latestNav), metric("AUM", etf.aum), metric("Expense Ratio", pctFraction(etf.expenseRatio), "%"), metric("Dividend Yield", pctFraction(etf.dividendYield), "%"), { label: "Issuer", value: etf.provider }, { label: "Asset Class", value: etf.category ?? "—" }, { label: "Benchmark", value: etf.benchmark ?? "—" }, { label: "Holdings Count", value: dedupedHoldings.length ? String(dedupedHoldings.length) : "—" }, { label: premiumLabel, value: premiumDisplay }, ...trackingMetrics], relatedData: related, history: allHistory, priceDate: dateText(latestRow?.date ?? etf.priceUpdatedAt), source: etf.dataProvider ?? etf.provider, lastUpdated: dateText(etf.updatedAt), updatedAt: dateText(etf.priceUpdatedAt ?? etf.updatedAt), frequency: "依既有 ETF Canonical Data 更新", freshnessStatus: displayFreshness };
     }

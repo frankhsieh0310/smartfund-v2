@@ -21,14 +21,22 @@ const CANDIDATES = (keyword: string): Array<{ label: string; url: string }> => [
   { label: "fundsearch_xdjhtm_keyword", url: `https://www.moneydj.com/funddjx/fundsearch.xdjhtm?keyword=${encodeURIComponent(keyword)}` },
 ];
 
-export async function runMoneydjSearchProbe(testNames: string[]): Promise<{ attempts: MoneydjSearchProbeAttempt[]; stoppedOnBlock: boolean }> {
+// 2026-10-31（VERIFIED，自己造成的bug修正）: 原本每個候選15秒逾時+2秒間隔，4個候選最差情況
+// 將近68秒，跟下面main loop的240秒預算疊加逼近這支route maxDuration=300秒的上限——VERIFIED
+// production造成2次IN_PROGRESS卡死(cloud-moneydj-fund:2026-10-31T11:00/11:15，從未完成、
+// completed_at一直是null)。改成硬性maxTotalMs預算，逾時立即停止、不再試下一個候選。
+export async function runMoneydjSearchProbe(testNames: string[], maxTotalMs = 20_000): Promise<{ attempts: MoneydjSearchProbeAttempt[]; stoppedOnBlock: boolean }> {
   const attempts: MoneydjSearchProbeAttempt[] = [];
   let stoppedOnBlock = false;
+  const startedMs = Date.now();
+  let timeBudgetStop = false;
   for (const name of testNames) {
+    if (stoppedOnBlock || timeBudgetStop) break;
     for (const { label, url } of CANDIDATES(name)) {
       if (stoppedOnBlock) break;
+      if (Date.now() - startedMs > maxTotalMs) { timeBudgetStop = true; break; }
       try {
-        const res = await fetch(url, { headers: { "User-Agent": UA }, signal: AbortSignal.timeout(15_000) });
+        const res = await fetch(url, { headers: { "User-Agent": UA }, signal: AbortSignal.timeout(6_000) });
         const text = await res.text();
         const blocked = res.status === 403 || res.status === 429 || /Access denied|too many requests/i.test(text);
         attempts.push({ candidateLabel: `${label}:${name}`, url, httpStatus: res.status, bodyHead: text.slice(0, 2000), blocked, error: null });
@@ -36,8 +44,8 @@ export async function runMoneydjSearchProbe(testNames: string[]): Promise<{ atte
       } catch (e: any) {
         attempts.push({ candidateLabel: `${label}:${name}`, url, httpStatus: null, bodyHead: null, blocked: false, error: String(e?.message ?? e) });
       }
-      await new Promise((r) => setTimeout(r, 2_000));
+      await new Promise((r) => setTimeout(r, 1_500));
     }
   }
-  return { attempts, stoppedOnBlock };
+  return { attempts, stoppedOnBlock: stoppedOnBlock || timeBudgetStop };
 }

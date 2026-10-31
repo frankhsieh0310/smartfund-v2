@@ -37,6 +37,7 @@ import {
   type CheckpointRow,
 } from "@/lib/cloud-ingestion/runContext";
 import { runMoneydjSearchProbe } from "@/lib/cloud-ingestion/moneydjSearchProbe";
+import { dumpMoneydjHoldingsPages } from "@/lib/cloud-ingestion/moneydjHoldingsPageProbe";
 import { nextMappingCandidates, searchMoneydjByName, pickUniqueExactMatch, MoneydjSearchRateLimitedError } from "@/lib/cloud-ingestion/moneydjMappingBackfill";
 import { isMoneydjMappingBackfillWriteEnabled } from "@/lib/cron/moneydjMappingBackfillWriteGate";
 
@@ -75,7 +76,10 @@ const FRESH_DAYS = 25; // matches the local disclosure worker's re-fetch guard
 // checkpoint gets written before Vercel's hard maxDuration kill. Same margin convention as
 // yahoo-etf-full-sweep (TIME_BUDGET_MS well under maxDuration=300s so a checkpoint write always
 // happens). Not a maxDuration increase — maxDuration stays 300.
-const TIME_BUDGET_MS = 240_000;
+// 2026-10-31（VERIFIED，自己造成的bug修正附帶調整）: 從240_000降到210_000，替上面新加的
+// search probe(≤20s)+mapping backfill(≤30s)讓出安全margin，三者相加(210+20+30=260s)
+// 仍在這支route maxDuration=300s之內，留40s給函式呼叫本身的額外開銷。
+const TIME_BUDGET_MS = 210_000;
 // 2026-10-29（使用者核准，43%永久失敗率根因修正）: 原本兩個批次迴圈在「成功」的請求之間完全沒有
 // 延遲——只有撞到403/429後才sleep(2_000)並結束整批，正常請求是逐筆打完就馬上打下一筆。
 // VERIFIED production_scheduler_runs累積43%的HTTP_429失敗率，是我們自己打太快觸發MoneyDJ的
@@ -365,6 +369,26 @@ async function runSearchProbeOnce() {
   return { skipped: false, stoppedOnBlock };
 }
 
+// 2026-10-31（使用者核准，雲端除錯，一次性）: 抓野村鴻運基金(AC0001)+復華全球資產證券化基金
+// (ACFH20，元大2001基金在fund_mappings裡沒有moneydj_code，沒辦法照原本要求測，改用這檔已知有
+// 持股資料的基金代替)的MoneyDJ持股頁原始HTML，存進run log，供下一步擴充解析用。
+const HOLDINGS_PAGE_PROBE_JOB = "MONEYDJ_HOLDINGS_PAGE_PROBE";
+async function runHoldingsPageProbeOnce() {
+  const runKey = "moneydj-holdings-page-probe:one-time-20261031";
+  const { runId, skipped } = await beginRun({ jobName: HOLDINGS_PAGE_PROBE_JOB, provider: "MONEYDJ", runKey, universeCount: 0, batchSize: 2, checkpointBefore: null });
+  if (skipped) return { skipped: true };
+  const startedMs = Date.now();
+  const { dumps, stoppedOnBlock } = await dumpMoneydjHoldingsPages([
+    { moneydjCode: "AC0001", fundName: "野村鴻運基金" },
+    { moneydjCode: "ACFH20", fundName: "復華全球資產證券化基金（元大2001基金在fund_mappings沒有moneydj_code，改用這檔）" },
+  ]);
+  await finishRun(runId, HOLDINGS_PAGE_PROBE_JOB, "MONEYDJ", startedMs, {
+    status: "COMPLETED", attempted: dumps.length, completed: dumps.length, inserted: 0, updated: 0, failed: 0,
+    retryableFailures: 0, checkpointAfter: null, details: { dumps, stoppedOnBlock },
+  });
+  return { skipped: false, stoppedOnBlock };
+}
+
 // 2026-10-31（使用者核准，MoneyDJ代碼配對backfill，寫入開關先關閉）: 併進這支既有排程，不新增
 // cron。每次執行配對一批缺持股的基金（名稱精確比對、唯一候選才算MATCHED），寫入
 // fund_mappings.moneydj_code——寫入後，上面既有的nextCodes()/主迴圈下次執行就會自然把它們納入
@@ -372,6 +396,11 @@ async function runSearchProbeOnce() {
 const MAPPING_BACKFILL_JOB = "MONEYDJ_MAPPING_BACKFILL";
 const MAPPING_BACKFILL_BATCH = 20;
 const MAPPING_BACKFILL_DELAY_MS = 3_000;
+// 2026-10-31（VERIFIED，自己造成的bug修正）: 原本沒有時間預算，20筆候選每筆3秒間隔(最差60秒)跟
+// 下面main loop的240秒疊加逼近這支route maxDuration=300秒——VERIFIED production造成2次
+// IN_PROGRESS卡死(cloud-moneydj-fund:2026-10-31T11:00/11:15)。加一個硬性時間預算，超時立即停止
+// （跟main loop一樣的time-budget-stop慣例），不等整批跑完。
+const MAPPING_BACKFILL_TIME_BUDGET_MS = 30_000;
 async function runMappingBackfillOnce() {
   const writeEnabled = isMoneydjMappingBackfillWriteEnabled();
   const runKey = `moneydj-mapping-backfill:${new Date().toISOString().slice(0, 13)}`;
@@ -387,9 +416,10 @@ async function runMappingBackfillOnce() {
     wrapped = true;
   }
   let attempted = 0, matched = 0, lastBaseCode: string | null = afterBaseCode;
-  let rateLimitStop = false;
+  let rateLimitStop = false, timeBudgetStop = false;
   const outcomes: Array<{ baseCode: string; name: string; result: string; moneydjCode?: string }> = [];
   for (const cand of candidates) {
+    if (Date.now() - startedMs > MAPPING_BACKFILL_TIME_BUDGET_MS) { timeBudgetStop = true; break; }
     attempted++;
     try {
       const results = await searchMoneydjByName(cand.canonicalName);
@@ -430,9 +460,9 @@ async function runMappingBackfillOnce() {
     processed: attempted, succeeded: matched, failed: attempted - matched,
   });
   await finishRun(runId, MAPPING_BACKFILL_JOB, "MONEYDJ", startedMs, {
-    status: rateLimitStop ? "PARTIAL" : "COMPLETED", attempted, completed: matched, inserted: writeEnabled ? matched : 0, updated: 0,
+    status: rateLimitStop || timeBudgetStop ? "PARTIAL" : "COMPLETED", attempted, completed: matched, inserted: writeEnabled ? matched : 0, updated: 0,
     failed: attempted - matched, retryableFailures: rateLimitStop ? 1 : 0, checkpointAfter: null,
-    details: { writeEnabled, rateLimitStop, wrapped, outcomes: outcomes.slice(0, 50) },
+    details: { writeEnabled, rateLimitStop, timeBudgetStop, wrapped, outcomes: outcomes.slice(0, 50) },
   });
   return { skipped: false, attempted, matched, writeEnabled };
 }
@@ -446,6 +476,8 @@ export async function GET(request: Request) {
   try { searchProbeResult = await runSearchProbeOnce(); } catch (e: any) { searchProbeResult = { error: String(e?.message ?? e) }; }
   let mappingBackfillResult: Awaited<ReturnType<typeof runMappingBackfillOnce>> | { error: string } | null = null;
   try { mappingBackfillResult = await runMappingBackfillOnce(); } catch (e: any) { mappingBackfillResult = { error: String(e?.message ?? e) }; }
+  let holdingsPageProbeResult: Awaited<ReturnType<typeof runHoldingsPageProbeOnce>> | { error: string } | null = null;
+  try { holdingsPageProbeResult = await runHoldingsPageProbeOnce(); } catch (e: any) { holdingsPageProbeResult = { error: String(e?.message ?? e) }; }
 
   const url = new URL(request.url);
   const batch = Math.min(MAX_BATCH, Math.max(1, Number(url.searchParams.get("batch") ?? DEFAULT_BATCH)));
@@ -643,5 +675,6 @@ export async function GET(request: Request) {
     masterFundDedup: true,
     searchProbe: searchProbeResult,
     mappingBackfill: mappingBackfillResult,
+    holdingsPageProbe: holdingsPageProbeResult,
   });
 }
