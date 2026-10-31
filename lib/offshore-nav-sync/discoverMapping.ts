@@ -52,6 +52,18 @@ export async function findUnmappedTdccOffshoreFunds(query: QueryFn, alreadyMappe
   return rows.filter((r: { id: string }) => !alreadyMappedIds.has(r.id)).map((r: { id: string; code: string | null; name: string }) => ({ fundId: r.id, code: r.code, name: r.name }));
 }
 
+// 2026-10-31（VERIFIED，新加坡大華2檔mapping被discovery重新寫回同一個壞對應）: Yahoo TW的
+// fundsSearch對「新加坡大華全球成長基金(美元)」「新加坡大華全球科技基金(美元)」這2檔基金名稱
+// EXACT match只回傳1個結果（符合這裡的比對規則），但那個id實際指向另一個級別/基金（VERIFIED
+// F0HKG062HN:FO、F0HKG062HM:FO回傳的淨值跟TDCC官方值差了25%+）——這是Yahoo搜尋結果本身的問題，
+// 不是比對規則太寬鬆，調嚴規則也擋不住。手動把這2筆從mapping移除後，discovery下一輪又會把它們
+// 當成「還沒mapping過的候選」重新搜尋、重新寫回同一個錯誤id。永久排除，讓它們改由
+// offshore-nav-tdcc-sync（TDCC CSV名稱比對，VERIFIED正確）涵蓋。
+const PERMANENTLY_EXCLUDED_FROM_DISCOVERY = new Set([
+  "31d4e169-18f9-485f-b6a6-c0f8da9a17cc", // 新加坡大華全球成長基金(美元)
+  "6ead7c6e-44a4-4b38-8c7a-4fd70973b7f1", // 新加坡大華全球科技基金(美元)
+]);
+
 export async function discoverNewMappings(
   query: QueryFn,
   existingMapping: OffshoreMappingEntry[],
@@ -65,7 +77,9 @@ export async function discoverNewMappings(
   // created_at DESC，沒有這層「今天已經試過」過濾的話，時間預算用完時永遠只處理得到清單最前面
   // 那一截，後面的候選排不到第二次機會——見completion.ts的DISCOVERY_PROGRESS_CHECKPOINT_KEY
   // 說明。這裡只是「跳過今天試過的」，不改變任何既有的exact-name比對規則本身。
-  const candidates = (await findUnmappedTdccOffshoreFunds(query, mappedIds)).filter((c) => !alreadyTriedToday.has(c.fundId));
+  const candidates = (await findUnmappedTdccOffshoreFunds(query, mappedIds))
+    .filter((c) => !alreadyTriedToday.has(c.fundId))
+    .filter((c) => !PERMANENTLY_EXCLUDED_FROM_DISCOVERY.has(c.fundId));
   const discovered: OffshoreMappingEntry[] = [];
   const unresolved: UnresolvedOffshoreFund[] = [];
   const attemptedThisRun: string[] = [];
