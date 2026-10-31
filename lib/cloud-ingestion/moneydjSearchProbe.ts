@@ -16,6 +16,19 @@ export type MoneydjSearchProbeAttempt = {
   error: string | null;
 };
 
+// 從原始bytes裡先用ascii粗略解碼出<meta charset>宣告，再用真正宣告的編碼正式解碼一次——
+// HTTP回應標頭常常沒帶charset（只在HTML meta標籤裡宣告），不能只信res.headers的content-type。
+function decodeByDeclaredCharset(buf: ArrayBuffer): string {
+  const sniff = new TextDecoder("ascii").decode(buf.slice(0, 2000));
+  const m = sniff.match(/charset=["']?([\w-]+)/i);
+  const charset = m ? m[1].toLowerCase() : "utf-8";
+  try {
+    return new TextDecoder(charset === "big5" ? "big5" : "utf-8").decode(buf);
+  } catch {
+    return new TextDecoder("utf-8").decode(buf);
+  }
+}
+
 const CANDIDATES = (keyword: string): Array<{ label: string; url: string }> => [
   { label: "YP302000_a_param", url: `https://www.moneydj.com/funddj/yb/YP302000.djhtm?a=${encodeURIComponent(keyword)}` },
   { label: "fundsearch_xdjhtm_keyword", url: `https://www.moneydj.com/funddjx/fundsearch.xdjhtm?keyword=${encodeURIComponent(keyword)}` },
@@ -37,7 +50,11 @@ export async function runMoneydjSearchProbe(testNames: string[], maxTotalMs = 20
       if (Date.now() - startedMs > maxTotalMs) { timeBudgetStop = true; break; }
       try {
         const res = await fetch(url, { headers: { "User-Agent": UA }, signal: AbortSignal.timeout(6_000) });
-        const text = await res.text();
+        // VERIFIED 2026-10-31: MoneyDJ不同頁面編碼不一致——funddj/yb/下的舊版頁面是Big5（跟既有
+        // moneydjFundDisclosure.ts處理持股頁一致），funddjx/下的新版搜尋頁反而是UTF-8。第一次探測
+        // 對兩種都用res.text()(預設UTF-8解碼)，Big5那個因此整頁亂碼。改成照各頁HTML自己宣告的
+        // <meta charset>解碼。
+        const text = decodeByDeclaredCharset(await res.arrayBuffer());
         const blocked = res.status === 403 || res.status === 429 || /Access denied|too many requests/i.test(text);
         attempts.push({ candidateLabel: `${label}:${name}`, url, httpStatus: res.status, bodyHead: text.slice(0, 2000), blocked, error: null });
         if (blocked) { stoppedOnBlock = true; break; }

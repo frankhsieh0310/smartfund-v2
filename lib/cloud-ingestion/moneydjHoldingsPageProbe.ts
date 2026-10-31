@@ -24,7 +24,9 @@ export async function dumpMoneydjHoldingsPages(
     const url = `https://www.moneydj.com/funddj/yp/yp013000.djhtm?a=${encodeURIComponent(target.moneydjCode)}&topc=`;
     try {
       const res = await fetch(url, { headers: { "User-Agent": UA }, signal: AbortSignal.timeout(8_000) });
-      const text = await res.text();
+      // VERIFIED 2026-10-31: yp013000.djhtm是Big5編碼（跟既有moneydjFundDisclosure.ts處理
+      // 持股頁一致），res.text()預設UTF-8解碼會整頁亂碼。
+      const text = new TextDecoder("big5").decode(await res.arrayBuffer());
       const blocked = res.status === 403 || res.status === 429 || /Access denied|too many requests/i.test(text);
       // 存前5000字（完整HTML太長，先存夠看出版面結構的量；真正要擴充解析時如果不夠，再加一次
       // 更大範圍的除錯）。

@@ -371,7 +371,8 @@ async function setMoneydjCooldown(runId: string) {
 
 const SEARCH_PROBE_JOB = "MONEYDJ_SEARCH_PROBE";
 async function runSearchProbeOnce() {
-  const runKey = "moneydj-search-probe:one-time-20261031";
+  // v2: 第一版探測因為UTF-8/Big5解碼bug拿到亂碼，換新run_key讓它真正重跑一次。
+  const runKey = "moneydj-search-probe:one-time-20261031-v2";
   const { runId, skipped } = await beginRun({ jobName: SEARCH_PROBE_JOB, provider: "MONEYDJ", runKey, universeCount: 0, batchSize: 2, checkpointBefore: null });
   if (skipped) return { skipped: true };
   const startedMs = Date.now();
@@ -389,7 +390,8 @@ async function runSearchProbeOnce() {
 // 持股資料的基金代替)的MoneyDJ持股頁原始HTML，存進run log，供下一步擴充解析用。
 const HOLDINGS_PAGE_PROBE_JOB = "MONEYDJ_HOLDINGS_PAGE_PROBE";
 async function runHoldingsPageProbeOnce() {
-  const runKey = "moneydj-holdings-page-probe:one-time-20261031";
+  // v2: 第一版探測因為UTF-8/Big5解碼bug拿到亂碼，換新run_key讓它真正重跑一次。
+  const runKey = "moneydj-holdings-page-probe:one-time-20261031-v2";
   const { runId, skipped } = await beginRun({ jobName: HOLDINGS_PAGE_PROBE_JOB, provider: "MONEYDJ", runKey, universeCount: 0, batchSize: 2, checkpointBefore: null });
   if (skipped) return { skipped: true };
   const startedMs = Date.now();
