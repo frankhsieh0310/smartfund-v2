@@ -24,7 +24,7 @@ export type UnresolvedOffshoreFund = {
   evidence: string; // candidate names/ids returned by Yahoo, or the error message -- never empty
 };
 
-type YahooFundSearchResult = { id: string; name: string };
+type YahooFundSearchResult = { id: string; name: string; currencyName?: string };
 
 async function searchYahooFund(keyword: string, signal?: AbortSignal): Promise<YahooFundSearchResult[]> {
   const query = JSON.stringify({ onshore: "2", q: keyword, limit: 10 });
@@ -35,13 +35,23 @@ async function searchYahooFund(keyword: string, signal?: AbortSignal): Promise<Y
   return json.data?.funds ?? [];
 }
 
+// 2026-10-31（使用者核准，AMBIGUOUS_MULTIPLE_EXACT用幣別去重）: VERIFIED「貝萊德世界礦業基金
+// A2美元」這類案例——Yahoo搜尋同一個顯示名稱回傳2筆，但currencyName分別是「歐元」跟「美元」，
+// 跟我方funds.currency(應該是USD)比對後只有一筆吻合。只用來NARROW已經通過exact-name比對的
+// 候選，幣別不只縮到1筆才採用；0筆或還是2筆以上一律維持AMBIGUOUS_MULTIPLE_EXACT，不猜。
+const YAHOO_CURRENCY_NAME_TO_ISO: Record<string, string> = {
+  "美元": "USD", "歐元": "EUR", "日圓": "JPY", "日元": "JPY", "英鎊": "GBP", "港幣": "HKD",
+  "澳幣": "AUD", "紐幣": "NZD", "加幣": "CAD", "瑞士法郎": "CHF", "人民幣": "CNY",
+  "新加坡幣": "SGD", "南非幣": "ZAR", "瑞典幣": "SEK", "挪威幣": "NOK", "丹麥幣": "DKK",
+};
+
 function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-export async function findUnmappedTdccOffshoreFunds(query: QueryFn, alreadyMappedIds: Set<string>): Promise<Array<{ fundId: string; code: string | null; name: string }>> {
+export async function findUnmappedTdccOffshoreFunds(query: QueryFn, alreadyMappedIds: Set<string>): Promise<Array<{ fundId: string; code: string | null; name: string; currency: string | null }>> {
   const rows = await query(
-    `SELECT c.asset_id AS id, f.code, f.name
+    `SELECT c.asset_id AS id, f.code, f.name, f.currency
        FROM tw_purchasable_classification c
        JOIN funds f ON f.id = c.asset_id
       WHERE c.asset_type = 'FUND' AND c.status = 'APPROVED' AND f.data_provider = 'tdcc-offshore'
@@ -49,7 +59,7 @@ export async function findUnmappedTdccOffshoreFunds(query: QueryFn, alreadyMappe
                                    // already-tried-and-failed one is the whole point of this fix
     [],
   );
-  return rows.filter((r: { id: string }) => !alreadyMappedIds.has(r.id)).map((r: { id: string; code: string | null; name: string }) => ({ fundId: r.id, code: r.code, name: r.name }));
+  return rows.filter((r: { id: string }) => !alreadyMappedIds.has(r.id)).map((r: { id: string; code: string | null; name: string; currency: string | null }) => ({ fundId: r.id, code: r.code, name: r.name, currency: r.currency }));
 }
 
 // 2026-10-31（VERIFIED，新加坡大華2檔mapping被discovery重新寫回同一個壞對應）: Yahoo TW的
@@ -98,7 +108,14 @@ export async function discoverNewMappings(
       if (exact.length === 1) {
         discovered.push({ fundId: fund.fundId, code: fund.code ?? "", yahooFundId: exact[0].id });
       } else if (exact.length > 1) {
-        unresolved.push({ fundId: fund.fundId, code: fund.code, name: fund.name, reason: "AMBIGUOUS_MULTIPLE_EXACT", evidence: exact.map((e) => e.id).join(", ") });
+        const byCurrency = fund.currency
+          ? exact.filter((e) => e.currencyName && YAHOO_CURRENCY_NAME_TO_ISO[e.currencyName] === fund.currency)
+          : [];
+        if (byCurrency.length === 1) {
+          discovered.push({ fundId: fund.fundId, code: fund.code ?? "", yahooFundId: byCurrency[0].id });
+        } else {
+          unresolved.push({ fundId: fund.fundId, code: fund.code, name: fund.name, reason: "AMBIGUOUS_MULTIPLE_EXACT", evidence: exact.map((e) => `${e.id}(${e.currencyName ?? "?"})`).join(", ") });
+        }
       } else if (results.length > 0) {
         unresolved.push({ fundId: fund.fundId, code: fund.code, name: fund.name, reason: "NO_EXACT_MATCH", evidence: results.slice(0, 5).map((r) => r.name).join(" | ") });
       } else {
