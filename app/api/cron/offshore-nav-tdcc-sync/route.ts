@@ -29,6 +29,7 @@ import { beginRun, finishRun } from "@/lib/cloud-ingestion/runContext";
 import { fetchTdccNavCsv, parseTdccNavCsv, excludeOverlapWithYahooMapping, filterNewerThanStored, filterNewerThanStoredByCode, indexByCode, TDCC_NAV_SOURCE } from "@/lib/offshore-nav-sync/tdccBatchSource";
 import { writeTdccNavBatch } from "@/lib/offshore-nav-sync/navWriter";
 import { loadMapping } from "@/lib/offshore-nav-sync/mapping";
+import { runOffshoreScaleSync } from "@/lib/offshore-scale-sync/writer";
 
 export const runtime = "nodejs";
 // Raised from 60s this round: the 2026-10-15 10:31 UTC production run (first real run after this
@@ -124,11 +125,18 @@ export async function GET(request: Request) {
     },
   });
 
+  // 2026-10-31（使用者核准）: 境外基金全球規模(TDCC opendata 3-2)併進這支既有的offshore-nav-tdcc
+  // -sync排程，不新增cron。獨立開關OFFSHORE_SCALE_WRITE、每天最多查一次，失敗不影響上面淨值
+  // 同步的結果判定。
+  let offshoreScaleResult: Awaited<ReturnType<typeof runOffshoreScaleSync>> | null = null;
+  try { offshoreScaleResult = await runOffshoreScaleSync(); } catch (e: any) { offshoreScaleResult = { ok: false, skipped: false, reason: String(e?.message ?? e) }; }
+
   return Response.json({
     ok: true, job: JOB, runId, writeEnabled,
     rawCandidateCount: rawCandidateFunds.length, yahooMappingExcludedCount: rawCandidateFunds.length - candidateFunds.length,
     candidateCount: candidateFunds.length, csvUniqueFundNames: byName.size, nameMatchedCount,
     writableRowCount: nameCandidates.length, codeCandidateCount: codeCandidateFunds.length, codeMatchedCount, codeWritableRowCount: codeCandidates.length,
     written: result.written, writeErrorCount: result.writeErrorCount,
+    offshoreScale: offshoreScaleResult,
   });
 }

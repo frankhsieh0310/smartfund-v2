@@ -206,6 +206,9 @@ export interface FundDetailData {
    * 基金，用基金代碼查詢分不出級別。年度費用率是整個曆年彙總，跟monthlyDisclosure的SITCA月實際
    * 費用是不同指標，畫面標示務必寫成「YYYY年度費用率（FundClear）」，不可混用或互相取代。 */
   annualMetricsFundclear: FundSection<Array<{ year: string; returnPct: number | null; feeRatePct: number | null; returnSource: string | null }>>;
+  /** 2026-10-31（使用者核准）: 境外基金全球規模(TDCC opendata 3-2，整個基金所有級別合計，原幣別)。
+   * 跟monthlyDisclosure(境內基金月申報)是不同的資料結構，境外基金專用。 */
+  offshoreScaleTdcc: FundSection<{ scaleAmountMillions: number | null; scaleCurrency: string | null; scaleAsOfDate: string | null }>;
 }
 
 type HoldingRow = { security_id: string | null; holding_name: string | null; weight: unknown; market_value: unknown; currency: string | null; report_date: Date; source: string; updated_at: Date; rank: number | null };
@@ -342,6 +345,11 @@ export async function getFundDetail(identifier: string, relationLimit = 20, rang
     `SELECT year, return_pct, fee_rate_pct, return_source FROM fund_annual_metrics_fundclear WHERE fund_id = $1 ORDER BY year DESC`,
     rowId,
   ).catch(() => []);
+  // 2026-10-31: fund_offshore_scale_tdcc 這張表要等使用者核准SQL才會存在，同樣用try/catch包起來。
+  const offshoreScaleRows = await prisma.$queryRawUnsafe<{ scale_amount_millions: unknown; scale_currency: string; scale_as_of_date: Date }[]>(
+    `SELECT scale_amount_millions, scale_currency, scale_as_of_date FROM fund_offshore_scale_tdcc WHERE fund_id = $1`,
+    rowId,
+  ).catch(() => []);
   const nameOnlyHoldings = sectionLimit && dedupedHoldings.length === 0
     ? await prisma.$queryRaw<NameOnlyHoldingRow[]>(Prisma.sql`SELECT holding_name, as_of_date, source, updated_at FROM fund_holdings_name_only WHERE fund_id = ${holdingsSourceId} AND as_of_date = (SELECT MAX(as_of_date) FROM fund_holdings_name_only WHERE fund_id = ${holdingsSourceId}) ORDER BY rank ASC LIMIT ${FUND_DETAIL_LIMITS.holdings}`)
     : [];
@@ -459,6 +467,15 @@ export async function getFundDetail(identifier: string, relationLimit = 20, rang
       coverage: sectionCoverage(annualMetricsRows.length),
       data: annualMetricsRows.map((r) => ({ year: r.year, returnPct: numberOrNull(r.return_pct), feeRatePct: numberOrNull(r.fee_rate_pct), returnSource: r.return_source })),
       provenance: buildProvenance({ source: "FUNDCLEAR_QUERY_RATE", sourceRecordId: row.id, asOfDate: annualMetricsRows[0]?.year ? `${annualMetricsRows[0].year}-12-31` : undefined, lastUpdated: row.updatedAt }),
+    },
+    offshoreScaleTdcc: {
+      coverage: sectionCoverage(offshoreScaleRows.length),
+      data: {
+        scaleAmountMillions: numberOrNull(offshoreScaleRows[0]?.scale_amount_millions),
+        scaleCurrency: offshoreScaleRows[0]?.scale_currency ?? null,
+        scaleAsOfDate: isoOrNull(offshoreScaleRows[0]?.scale_as_of_date),
+      },
+      provenance: buildProvenance({ source: "TDCC_OPENDATA_3-2", sourceRecordId: row.id, asOfDate: offshoreScaleRows[0]?.scale_as_of_date, lastUpdated: row.updatedAt }),
     },
   };
   if (data.company && /^(待補|unknown|n\/a)/i.test(data.company)) data.company = null;
