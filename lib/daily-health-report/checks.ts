@@ -62,7 +62,8 @@ const BENIGN_ERROR_PATTERNS: Record<string, RegExp> = {
 export async function checkPipelineRunLog(query: QueryFn, jobId: string): Promise<PipelineHealth> {
   const rows = await query(
     `SELECT status, error, details->>'write_error_count' AS write_error_count, started_at,
-            details->'checkpoint_after'->>'wrapped' AS wrapped
+            details->'checkpoint_after'->>'wrapped' AS wrapped,
+            details->>'shadow_cycle_reset' AS shadow_cycle_reset
        FROM production_scheduler_runs
       WHERE job_id = $1 AND started_at > now() - interval '24 hours'
       ORDER BY started_at DESC`,
@@ -128,7 +129,11 @@ export async function checkPipelineRunLog(query: QueryFn, jobId: string): Promis
 
   // (b) 當天是否已完整跑過一輪（COMPLETED 或 checkpoint wrapped=true 皆算），只有兩者都沒有
   //     才算真正的 PARTIAL 異常。
-  const hadFullPassToday = realRows.some((r) => r.status === "COMPLETED" || r.wrapped === "true");
+  // 2026-10-31（使用者核准，VERIFIED HOLDINGS_ALT_SOURCE_SYNC誤報）: 這支job是shadow/rolling
+  // cycle，從不回報status=COMPLETED、checkpoint_after.wrapped也永遠是null(VERIFIED 7天168次
+  // 執行全部如此)——用shadow_cycle_reset=true代表「這一輪完整跑完一圈」，跟其他job的wrapped=true
+  // 是同一個語意，缺這個判斷會讓這類job不管健康與否永遠被判定成LAST_RUN_PARTIAL異常。
+  const hadFullPassToday = realRows.some((r) => r.status === "COMPLETED" || r.wrapped === "true" || r.shadow_cycle_reset === "true");
   const allFailedOrPartial = realRows.length > 0 && realRows.every((r) => r.status === "PARTIAL" || r.status === "FAILED");
   if (!hadFullPassToday && allFailedOrPartial) {
     if (lastReal?.status === "PARTIAL") anomalyReasons.push("LAST_RUN_PARTIAL");
