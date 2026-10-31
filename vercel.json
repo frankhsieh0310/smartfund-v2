@@ -137,6 +137,10 @@
       "schedule": "*/15 6-8 * * 1-5"
     },
     {
+      "path": "/api/cron/tw-etf-issuer-fee",
+      "schedule": "0 9 * * *"
+    },
+    {
       "path": "/api/cron/offshore-nav-tdcc-sync",
       "schedule": "31 2 * * *"
     },
