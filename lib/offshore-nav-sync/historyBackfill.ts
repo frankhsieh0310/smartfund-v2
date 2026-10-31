@@ -72,22 +72,36 @@ export type QueryFnWrite = (sql: string, params: any[]) => Promise<any[]>;
 /** Upserts every point into fund_history using the SOURCE's own date for each row — never the
  * ingestion clock. Does not touch funds.latest_nav/latest_nav_date: the daily nav-sync writers
  * already own that, and this one-time catch-up must never race or disagree with them. */
-export async function writeBackfillHistory(query: QueryFnWrite, fundId: string, points: HistoryPoint[], nowIso: string): Promise<number> {
+// 2026-10-31（VERIFIED，第一次正式執行卡在IN_PROGRESS不動）: 這裡原本沒有自己的
+// statement_timeout，任何一個chunk的UPSERT只要撞到鎖等待/慢查詢就會無限期卡住，上層的280秒
+// deadline只在每個fund的迴圈最外層檢查一次，單一fund寫入卡住時完全擋不住——跟out-of-scope-purge
+// 之前120秒逾時同一類問題。SET LOCAL只在同一個交易內有效，改用prisma.$transaction把它跟真正的
+// UPSERT包在同一個交易裡（跟out-of-scope-purge的dry-run count查詢同一寫法），撞到逾時就算這個
+// fund失敗、繼續下一檔，不讓整個serverless invocation被拖到maxDuration都還跑不完、永遠留一筆
+// IN_PROGRESS。
+const WRITE_STATEMENT_TIMEOUT_MS = 20_000;
+const CHUNK = 500;
+
+export type PrismaLike = {
+  $transaction<T>(fn: (tx: { $executeRawUnsafe: (sql: string, ...params: any[]) => Promise<number> }) => Promise<T>, opts?: { timeout?: number }): Promise<T>;
+};
+
+export async function writeBackfillHistory(prismaClient: PrismaLike, fundId: string, points: HistoryPoint[], nowIso: string): Promise<number> {
   if (points.length === 0) return 0;
   let written = 0;
-  const CHUNK = 500;
   for (let i = 0; i < points.length; i += CHUNK) {
     const chunk = points.slice(i, i + CHUNK);
-    const result = await query(
-      `INSERT INTO fund_history (id, fund_id, date, nav, created_at)
-       SELECT gen_random_uuid()::text, $1::text, x.date::date, x.nav, $3::timestamptz
-       FROM jsonb_to_recordset($2::jsonb) AS x(date text, nav numeric)
-       ON CONFLICT (fund_id, date) DO UPDATE SET nav = EXCLUDED.nav
-       WHERE fund_history.nav IS DISTINCT FROM EXCLUDED.nav
-       RETURNING 1`,
-      [fundId, JSON.stringify(chunk), nowIso],
-    );
-    written += result.length;
+    written += await prismaClient.$transaction(async (tx) => {
+      await tx.$executeRawUnsafe(`SET LOCAL statement_timeout = '${WRITE_STATEMENT_TIMEOUT_MS}ms'`);
+      return tx.$executeRawUnsafe(
+        `INSERT INTO fund_history (id, fund_id, date, nav, created_at)
+         SELECT gen_random_uuid()::text, $1::text, x.date::date, x.nav, $3::timestamptz
+         FROM jsonb_to_recordset($2::jsonb) AS x(date text, nav numeric)
+         ON CONFLICT (fund_id, date) DO UPDATE SET nav = EXCLUDED.nav
+         WHERE fund_history.nav IS DISTINCT FROM EXCLUDED.nav`,
+        fundId, JSON.stringify(chunk), nowIso,
+      );
+    }, { timeout: WRITE_STATEMENT_TIMEOUT_MS + 5_000 });
   }
   return written;
 }

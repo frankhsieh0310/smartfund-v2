@@ -283,7 +283,7 @@ async function runHistoryBackfillSlice(outerStartedMs: number, offshoreMapping: 
         continue;
       }
       if (writeEnabled) {
-        totalWritten += await writeBackfillHistory(query, m.fundId, points, new Date().toISOString());
+        totalWritten += await writeBackfillHistory(prisma, m.fundId, points, new Date().toISOString());
         newlyDone.add(m.fundId);
       }
     } catch (e) {
