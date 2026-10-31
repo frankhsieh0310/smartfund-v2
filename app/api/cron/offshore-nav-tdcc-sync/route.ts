@@ -76,15 +76,19 @@ export async function GET(request: Request) {
   // non-"-9999" NAV sitting right there. Added `data_provider = 'tdcc-offshore' AND code IS NULL` to
   // this query (name-matching only, since these funds have no code to match by) fixes exactly that
   // gap without touching the code-matched branch's own population (code IS NOT NULL) at all.
+  // 2026-10-31（使用者核准，商品範圍最高原則）: VERIFIED這兩條候選查詢合計37,672檔裡96.3%
+  // (36,272檔)根本不是APPROVED——每輪都把CSV比對結果寫進這些範圍外基金的latest_nav/
+  // fund_history，完全是浪費（使用者永遠看不到這些商品）。補上APPROVED過濾，兩條都只保留
+  // 「台灣買得到」的候選。
   const [rawCandidateFunds, codeCandidateFunds, yahooMapping] = await Promise.all([
-    query(`SELECT id, name, latest_nav_date::text AS "latestNavDate" FROM funds WHERE data_provider = 'yahoo' OR (data_provider = 'tdcc-offshore' AND code IS NULL)`, []),
+    query(`SELECT id, name, latest_nav_date::text AS "latestNavDate" FROM funds WHERE (data_provider = 'yahoo' OR (data_provider = 'tdcc-offshore' AND code IS NULL)) AND id IN (SELECT asset_id FROM tw_purchasable_classification WHERE asset_type = 'FUND' AND status = 'APPROVED')`, []),
     // Task (this round): fund 107 and 24 siblings (data_provider='tdcc-offshore') were excluded from
     // every NAV pipeline — this query's old WHERE clause never selected them at all, even though
     // their NAV is sitting in this exact CSV right now. These funds carry TDCC's own 基金代碼
     // directly in `funds.code` (not a name match, which is why the 'yahoo' population above uses
     // name — those funds have no code), so they get their own code-matched branch below rather than
     // being folded into the name-matched population.
-    query(`SELECT id, code, latest_nav_date::text AS "latestNavDate" FROM funds WHERE data_provider = 'tdcc-offshore' AND code IS NOT NULL`, []),
+    query(`SELECT id, code, latest_nav_date::text AS "latestNavDate" FROM funds WHERE data_provider = 'tdcc-offshore' AND code IS NOT NULL AND id IN (SELECT asset_id FROM tw_purchasable_classification WHERE asset_type = 'FUND' AND status = 'APPROVED')`, []),
     loadMapping(query),
   ]);
   const candidateFunds = excludeOverlapWithYahooMapping(rawCandidateFunds, yahooMapping.map((m) => m.fundId));

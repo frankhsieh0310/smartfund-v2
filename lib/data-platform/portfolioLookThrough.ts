@@ -15,10 +15,22 @@ type ProductResult = {
   coverageDepth: CoverageDepth | null; presentRowCount: number; declaredCount: number | null; asOfDate: string | null; holdingsCoveredPct: number | null;
 };
 
+// 2026-10-31（使用者核准，商品範圍最高原則）: 「組合穿透」文件開頭已經明確說過濾只套用在
+// 「使用者挑選商品」這一層（不套用在商品本身揭露的持股內容）——但這裡原本完全沒有這一層檢查，
+// 任何人只要知道一個非APPROVED商品的id，都能把它當成items傳進來分析。補上跟
+// compareService.ts/publicReadiness.ts/reverseHoldings.ts同一個APPROVED檢查，非APPROVED視同
+// NOT_FOUND，不透露存在、不耗費任何額外查詢在範圍外商品上。
 async function fetchName(assetType: "ETF" | "FUND", id: string): Promise<{ code: string | null; name: string | null } | null> {
   const table = assetType === "ETF" ? "etfs" : "funds";
-  const rows = await prisma.$queryRawUnsafe<Array<{ code: string | null; name: string | null }>>(`SELECT code, name FROM ${table} WHERE id = $1`, id);
-  return rows[0] ?? null;
+  const rows = await prisma.$queryRawUnsafe<Array<{ code: string | null; name: string | null; approved: number }>>(
+    `SELECT f.code, f.name,
+       (SELECT count(*)::int FROM tw_purchasable_classification c WHERE c.asset_type = $2 AND c.asset_id = f.id AND c.status = 'APPROVED') AS approved
+     FROM ${table} f WHERE f.id = $1`,
+    id, assetType,
+  );
+  const row = rows[0];
+  if (!row || row.approved === 0) return null;
+  return { code: row.code, name: row.name };
 }
 
 export async function computePortfolioLookThrough(items: SelectedProductInput[], mode: AllocationMode) {

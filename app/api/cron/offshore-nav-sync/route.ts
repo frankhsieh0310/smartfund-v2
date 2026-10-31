@@ -85,6 +85,8 @@ export async function GET(request: Request) {
     return Response.json({ ok: true, job: JOB, skipped: true, reason: "run_key already present and running", runKey, runMode: currentRunMode() });
   }
 
+  // 2026-10-31（使用者核准，商品範圍最高原則）: loadMapping()現在已經統一過濾APPROVED，見
+  // mapping.ts的說明——這裡不用再重複過濾一次。
   const mapping = await loadMapping(query);
   if (mapping.length === 0) {
     // 2026-10-22（使用者核准，三.三稽核發現）: 這個分支之前回報COMPLETED——如果mapping一直是空的

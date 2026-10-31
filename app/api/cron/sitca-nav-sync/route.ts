@@ -80,8 +80,12 @@ export async function GET(request: Request) {
     // query forever, even though it's still a legitimate SITCA-matched domestic/TDCC-listed fund).
     // Same non-currency condition as the mobile API's fund-list filter (data_provider exclusion) — the
     // in-memory currency gate below is what actually decides write eligibility per row.
+    // 2026-10-31（使用者核准，商品範圍最高原則）: VERIFIED 6.7%(423/6319)的候選本來就不是
+    // APPROVED——classify.ts的分類判斷本身不依賴NAV是否同步，兩者解耦，過濾掉不會影響新基金
+    // 隔天被核准，只是不再浪費在使用者永遠看不到的商品上。
     const fundRows = await prisma.$queryRawUnsafe<FundRow[]>(
-      `SELECT id, code, name, currency FROM funds WHERE COALESCE(data_provider, '') NOT IN ('yahoo', 'SEC')`,
+      `SELECT id, code, name, currency FROM funds WHERE COALESCE(data_provider, '') NOT IN ('yahoo', 'SEC')
+         AND id IN (SELECT asset_id FROM tw_purchasable_classification WHERE asset_type = 'FUND' AND status = 'APPROVED')`,
     );
     const { matched, unmatched } = matchSitcaRows(rows, fundRows);
 
