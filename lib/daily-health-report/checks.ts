@@ -59,6 +59,16 @@ const BENIGN_ERROR_PATTERNS: Record<string, RegExp> = {
 //     就會誤判。改成看過去24小時的「所有」執行紀錄：只要其中任何一筆是 COMPLETED，或任何一筆
 //     的 checkpoint 回報 wrapped=true（代表母體已經跑完整整一圈），就不算異常——真正異常的
 //     情況是「過去24小時全部都是 PARTIAL/FAILED，完全沒有一次跑完整個母體」。
+// 2026-10-31（使用者核准，比shadow_cycle_reset更可靠的版本）: 原本用shadow_cycle_reset=true
+// 當「跑完一輪」的證明，但這個訊號本身是機率性的（約每2-3天才出現一次）——如果健康報告剛好查到
+// 沒有reset的24小時窗口，一樣會誤報，不是真的根治。改成更直接的健康定義：這類滾動式shadow job
+// 看「過去72小時checkpoint游標是否真的前進過」(production_scheduler_checkpoints.updated_at)
+// + 「最近的執行裡沒有連續3次以上FAILED」——這兩個條件只要滿足，就代表這支job確實在正常往前
+// 處理、不是卡死，不需要等到某個特定訊號出現才算健康。
+const ROLLING_SHADOW_JOBS: Record<string, string> = {
+  HOLDINGS_ALT_SOURCE_SYNC: "holdings-alt-source-sync:shadow-cursor",
+};
+
 export async function checkPipelineRunLog(query: QueryFn, jobId: string): Promise<PipelineHealth> {
   const rows = await query(
     `SELECT status, error, details->>'write_error_count' AS write_error_count, started_at,
@@ -69,6 +79,24 @@ export async function checkPipelineRunLog(query: QueryFn, jobId: string): Promis
       ORDER BY started_at DESC`,
     [jobId],
   );
+
+  const rollingShadowCheckpointKey = ROLLING_SHADOW_JOBS[jobId];
+  let rollingShadowHealthy = false;
+  if (rollingShadowCheckpointKey) {
+    const [checkpointRows, recentRows] = await Promise.all([
+      query(`SELECT updated_at FROM production_scheduler_checkpoints WHERE checkpoint_key = $1`, [rollingShadowCheckpointKey]),
+      query(`SELECT status FROM production_scheduler_runs WHERE job_id = $1 ORDER BY started_at DESC LIMIT 10`, [jobId]),
+    ]);
+    const checkpointAdvancedRecently = checkpointRows[0]?.updated_at
+      ? new Date(checkpointRows[0].updated_at).getTime() > Date.now() - 72 * 60 * 60 * 1000
+      : false;
+    let consecutiveFailed = 0;
+    for (const r of recentRows) {
+      if (r.status !== "FAILED") break;
+      consecutiveFailed++;
+    }
+    rollingShadowHealthy = checkpointAdvancedRecently && consecutiveFailed < 3;
+  }
 
   const benignPattern = BENIGN_ERROR_PATTERNS[jobId];
   // 2026-10-31（使用者核准，STALE_RUN_REAPED保底機制）: route.ts在算異常之前已經先呼叫
@@ -133,7 +161,7 @@ export async function checkPipelineRunLog(query: QueryFn, jobId: string): Promis
   // cycle，從不回報status=COMPLETED、checkpoint_after.wrapped也永遠是null(VERIFIED 7天168次
   // 執行全部如此)——用shadow_cycle_reset=true代表「這一輪完整跑完一圈」，跟其他job的wrapped=true
   // 是同一個語意，缺這個判斷會讓這類job不管健康與否永遠被判定成LAST_RUN_PARTIAL異常。
-  const hadFullPassToday = realRows.some((r) => r.status === "COMPLETED" || r.wrapped === "true" || r.shadow_cycle_reset === "true");
+  const hadFullPassToday = rollingShadowHealthy || realRows.some((r) => r.status === "COMPLETED" || r.wrapped === "true" || r.shadow_cycle_reset === "true");
   const allFailedOrPartial = realRows.length > 0 && realRows.every((r) => r.status === "PARTIAL" || r.status === "FAILED");
   if (!hadFullPassToday && allFailedOrPartial) {
     if (lastReal?.status === "PARTIAL") anomalyReasons.push("LAST_RUN_PARTIAL");
