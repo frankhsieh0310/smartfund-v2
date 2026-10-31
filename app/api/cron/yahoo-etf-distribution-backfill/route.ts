@@ -43,12 +43,15 @@ const WIDE_WINDOW_SECONDS = 450 * 86_400; // ~15 months of headroom for annual-f
 // Acceptance-test / high-liquidity ETFs get covered first so this doesn't wait on id order.
 const PRIORITY_SYMBOLS = ["SPY", "QQQ", "BND", "HYG", "SCHD", "VYM", "AGG", "VOO", "VTI", "GLD", "IEMG", "XLK", "IVV", "VNQ", "LQD"];
 
+// 2026-10-31（使用者核准，商品範圍最高原則）: VERIFIED「remaining: 8678」裡絕大多數不是
+// APPROVED——補上過濾，不浪費請求在使用者永遠看不到的ETF上。
 async function countRemaining(): Promise<number> {
   return (
     await query(
       `SELECT count(*)::int n FROM etfs e
         WHERE e.is_active = true AND EXISTS (SELECT 1 FROM etf_history h WHERE h.etf_id = e.id LIMIT 1)
-          AND NOT EXISTS (SELECT 1 FROM etf_distribution_events d WHERE d.etf_id = e.id LIMIT 1)`,
+          AND NOT EXISTS (SELECT 1 FROM etf_distribution_events d WHERE d.etf_id = e.id LIMIT 1)
+          AND e.id IN (SELECT asset_id FROM tw_purchasable_classification WHERE asset_type = 'ETF' AND status = 'APPROVED')`,
       [],
     )
   )[0]?.n ?? 0;
@@ -83,6 +86,7 @@ export async function GET(request: Request) {
           AND e.data_source ~ '^[A-Za-z0-9.^=-]{1,15}$'
           AND EXISTS (SELECT 1 FROM etf_history h WHERE h.etf_id = e.id LIMIT 1)
           AND NOT EXISTS (SELECT 1 FROM etf_distribution_events d WHERE d.etf_id = e.id LIMIT 1)
+          AND e.id IN (SELECT asset_id FROM tw_purchasable_classification WHERE asset_type = 'ETF' AND status = 'APPROVED')
         ORDER BY (CASE WHEN e.code = ANY($1) THEN 0 ELSE 1 END), e.id
         LIMIT $2`,
       [PRIORITY_SYMBOLS, batch],
