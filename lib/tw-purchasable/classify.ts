@@ -64,15 +64,77 @@ async function upsertApproved(
   return rows.length;
 }
 
+// 2026-10-31（使用者核准，人工排除機制）: 匯豐全球趨勢組合基金（合併消滅）、俄羅斯相關8個級別
+// （暫停申購贖回持續至今）VERIFIED確認不能申購，但它們的名字/代碼仍然出現在TDCC核備清單上——
+// 每天重新分類時upsertApproved會照官方清單把它們的status蓋回APPROVED。新增這張專屬表
+// （tw_purchasable_manual_overrides，RLS啟用+REVOKE anon/authenticated，見對應的DDL SQL）記錄
+// 人工判定，這裡的資產一律排除在「比對官方清單」的候選名單之外，絕不讓官方清單把它們蓋回
+// APPROVED，而且每輪都明確維持NOT_APPROVED（不是只是不碰它）。
+type ManualOverrideKey = string; // `${assetType}:${assetId}`
+async function loadManualOverrides(): Promise<Set<ManualOverrideKey>> {
+  const rows = await prisma.$queryRawUnsafe<{ asset_type: string; asset_id: string }[]>(
+    `SELECT asset_type, asset_id FROM tw_purchasable_manual_overrides`,
+  );
+  return new Set(rows.map((r) => `${r.asset_type}:${r.asset_id}`));
+}
+
+async function enforceManualOverrides(overrides: Set<ManualOverrideKey>, writeEnabled: boolean): Promise<void> {
+  if (!writeEnabled || overrides.size === 0) return;
+  const rows = [...overrides].map((k) => {
+    const [assetType, assetId] = k.split(":");
+    return { assetType, assetId };
+  });
+  const CHUNK = 500;
+  for (let i = 0; i < rows.length; i += CHUNK) {
+    const chunk = rows.slice(i, i + CHUNK);
+    const values = chunk.map((_, idx) => `($${idx * 2 + 1}, $${idx * 2 + 2}, 'MANUAL_OVERRIDE')`).join(",\n");
+    await prisma.$executeRawUnsafe(
+      `INSERT INTO tw_purchasable_classification (id, asset_type, asset_id, status, source, source_record_ref, checked_at, created_at, updated_at)
+       SELECT gen_random_uuid(), x.asset_type, x.asset_id, 'NOT_APPROVED', x.source, x.asset_id, now(), now(), now()
+       FROM (VALUES ${values}) AS x(asset_type, asset_id, source)
+       ON CONFLICT (asset_type, asset_id) DO UPDATE SET
+         status = 'NOT_APPROVED', source = 'MANUAL_OVERRIDE', checked_at = now(), updated_at = now()`,
+      ...chunk.flatMap((r) => [r.assetType, r.assetId]),
+    );
+  }
+}
+
 export async function classifyTwPurchasable(writeEnabled: boolean): Promise<ClassifyResult> {
+  const manualOverrides = await loadManualOverrides();
+
   // 境內基金 (domestic): SITCA 基金統編 == funds.code
   const sitcaRows = await fetchSitcaIdentityRows();
   const domesticFunds = await prisma.fund.findMany({ where: { code: { not: null } }, select: { id: true, code: true } });
   const domesticByCode = new Map(domesticFunds.map((f) => [f.code!, f.id]));
   const domesticMatches = sitcaRows
     .filter((r) => domesticByCode.has(r.taxId))
-    .map((r) => ({ assetType: "FUND" as const, assetId: domesticByCode.get(r.taxId)!, source: SITCA_SOURCE, sourceRecordRef: r.taxId }));
+    .map((r) => ({ assetType: "FUND" as const, assetId: domesticByCode.get(r.taxId)!, source: SITCA_SOURCE, sourceRecordRef: r.taxId }))
+    .filter((m) => !manualOverrides.has(`${m.assetType}:${m.assetId}`));
   await upsertApproved(domesticMatches, writeEnabled);
+  // 2026-10-31（VERIFIED，野村鴻運等16檔同一類問題）: SITCA有時會把一個基金統編拆成帶字母字尾
+  // 的子類型代碼（例如00968493 -> 00968493A累積型/00968493B TISA類型）。newFundListingDetection.ts
+  // 已經會幫新字尾代碼建立新的funds列（VERIFIED 16檔全部已經有對應的字尾列、且每天正常同步），
+  // 但舊的無字尾列從此再也比對不到SITCA CSV，永遠卡在APPROVED、資料停滯——這跟上面offshore的
+  // data_provider='yahoo'過期重複列是同一種「確定被取代、不是模糊的查無資料」情況，不是本檔案
+  // 開頭「12%代碼格式飄移」那種不確定案例，revoke不會弱化既有的保守政策。只在確認「字尾版本
+  // 已經是funds表裡的真實列」時才處理，避免誤傷真正暫時缺資料的基金。
+  if (writeEnabled) {
+    const sitcaTaxIdSet = new Set(sitcaRows.map((r) => r.taxId));
+    const staleSplitDuplicateIds = domesticFunds
+      .filter((f) => {
+        if (!f.code || sitcaTaxIdSet.has(f.code)) return false;
+        const suffixed = `${f.code}A`;
+        return domesticByCode.has(suffixed) && domesticByCode.get(suffixed) !== f.id;
+      })
+      .map((f) => f.id);
+    if (staleSplitDuplicateIds.length > 0) {
+      await prisma.$executeRawUnsafe(
+        `UPDATE tw_purchasable_classification SET status = 'NOT_APPROVED', updated_at = now()
+         WHERE asset_type = 'FUND' AND status = 'APPROVED' AND asset_id = ANY($1::text[])`,
+        staleSplitDuplicateIds,
+      );
+    }
+  }
 
   // 境外基金 (offshore): TDCC 3-2 fund name == funds.name
   // 2026-10-18 修正：29 檔純粹因為全形空白／多餘空白差異（例如 TDCC 名稱帶雙空白、我們存的
@@ -97,7 +159,8 @@ export async function classifyTwPurchasable(writeEnabled: boolean): Promise<Clas
     .map((f) => ({
       assetType: "FUND" as const, assetId: f.id, source: TDCC_OFFSHORE_BASIC_INFO_SOURCE,
       sourceRecordRef: tdccNames.has(f.name) ? f.name : tdccNamesNormalized.get(normalizeFundName(f.name))!,
-    }));
+    }))
+    .filter((m) => !manualOverrides.has(`${m.assetType}:${m.assetId}`));
   await upsertApproved(offshoreMatches, writeEnabled);
   // 2026-10-19 root-cause fix (paired with the data_provider='yahoo' exclusion above): rows that
   // were APPROVED by an earlier run before this fix existed stay APPROVED forever otherwise --
@@ -127,7 +190,7 @@ export async function classifyTwPurchasable(writeEnabled: boolean): Promise<Clas
   const etfMatches = [
     ...twseRows.filter((r) => etfByCode.has(r.code)).map((r) => ({ assetType: "ETF" as const, assetId: etfByCode.get(r.code)!, source: TWSE_SOURCE, sourceRecordRef: r.code })),
     ...tpexRows.filter((r) => etfByCode.has(r.code)).map((r) => ({ assetType: "ETF" as const, assetId: etfByCode.get(r.code)!, source: TPEX_SOURCE, sourceRecordRef: r.code })),
-  ];
+  ].filter((m) => !manualOverrides.has(`${m.assetType}:${m.assetId}`));
   await upsertApproved(etfMatches, writeEnabled);
 
   // 第 4 類：美股ETF。沒有官方核准清單可比對，規則本身就是候選條件（見上面 US_ETF_SOURCE
@@ -151,6 +214,7 @@ export async function classifyTwPurchasable(writeEnabled: boolean): Promise<Clas
   const usEtfMatches: { assetType: "ETF"; assetId: string; source: string; sourceRecordRef: string }[] = [];
   const retailRestrictedMatches: { assetType: "ETF"; assetId: string; source: string; sourceRecordRef: string }[] = [];
   for (const e of freshCandidates) {
+    if (manualOverrides.has(`ETF:${e.id}`)) continue;
     const check = checkRetailRestricted(e.name, e.category);
     if (check.excluded) {
       retailRestrictedMatches.push({ assetType: "ETF", assetId: e.id, source: `RETAIL_RESTRICTED:${check.reason}`, sourceRecordRef: e.id });
@@ -174,6 +238,8 @@ export async function classifyTwPurchasable(writeEnabled: boolean): Promise<Clas
       );
     }
   }
+
+  await enforceManualOverrides(manualOverrides, writeEnabled);
 
   return {
     domesticFund: { officialCount: sitcaRows.length, matched: domesticMatches.length },
