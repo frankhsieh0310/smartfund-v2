@@ -198,6 +198,9 @@ export interface FundDetailData {
     mgmtFeePct: number | null;
     custodianFeePct: number | null;
     totalFeePct: number | null;
+    /** 'SITCA_IN2201' 正常月申報；'FUNDCLEAR_QUERY_FUND_REPORT' 表示 SITCA 這個月代碼對不上、
+     * 改用 FundClear 補的規模（畫面要標示來源為 FundClear，不是 SITCA）。 */
+    aumSource: string | null;
   }>;
   /** 2026-10-31（使用者核准）: FundClear年度報酬率/年度費用率，只適用「只有一個級別」的境內
    * 基金，用基金代碼查詢分不出級別。年度費用率是整個曆年彙總，跟monthlyDisclosure的SITCA月實際
@@ -321,8 +324,8 @@ export async function getFundDetail(identifier: string, relationLimit = 20, rang
     ),
   ]);
   const [aumDisclosureRows, feeDisclosureRows] = await Promise.all([
-    prisma.$queryRawUnsafe<{ year_month: string; aum_twd: unknown; nav_twd: unknown; total_holders: number | null; subscription_twd: unknown; redemption_twd: unknown }[]>(
-      `SELECT year_month, aum_twd, nav_twd, total_holders, subscription_twd, redemption_twd FROM fund_aum_disclosure_monthly WHERE fund_id = $1 ORDER BY year_month DESC LIMIT 1`,
+    prisma.$queryRawUnsafe<{ year_month: string; aum_twd: unknown; nav_twd: unknown; total_holders: number | null; subscription_twd: unknown; redemption_twd: unknown; source: string }[]>(
+      `SELECT year_month, aum_twd, nav_twd, total_holders, subscription_twd, redemption_twd, source FROM fund_aum_disclosure_monthly WHERE fund_id = $1 ORDER BY year_month DESC LIMIT 1`,
       aumSourceId,
     ),
     prisma.$queryRawUnsafe<{ year_month: string; mgmt_fee_pct: unknown; custodian_fee_pct: unknown; total_fee_pct: unknown }[]>(
@@ -446,8 +449,9 @@ export async function getFundDetail(identifier: string, relationLimit = 20, rang
         mgmtFeePct: numberOrNull(feeDisclosureRows[0]?.mgmt_fee_pct),
         custodianFeePct: numberOrNull(feeDisclosureRows[0]?.custodian_fee_pct),
         totalFeePct: numberOrNull(feeDisclosureRows[0]?.total_fee_pct),
+        aumSource: aumDisclosureRows[0]?.source ?? null,
       },
-      provenance: buildProvenance({ source: "SITCA_IN2201_IN2211", sourceRecordId: row.id, asOfDate: yearMonthToDate(aumDisclosureRows[0]?.year_month ?? feeDisclosureRows[0]?.year_month), lastUpdated: row.updatedAt }),
+      provenance: buildProvenance({ source: aumDisclosureRows[0]?.source ?? "SITCA_IN2201_IN2211", sourceRecordId: row.id, asOfDate: yearMonthToDate(aumDisclosureRows[0]?.year_month ?? feeDisclosureRows[0]?.year_month), lastUpdated: row.updatedAt }),
     },
     annualMetricsFundclear: {
       coverage: sectionCoverage(annualMetricsRows.length),

@@ -26,6 +26,7 @@ import { writeBatchIfEnabled, type QueryFn } from "@/lib/sitca-nav-sync/navWrite
 import type { SitcaMatchedCandidate } from "@/lib/sitca-nav-sync/types";
 import { runMonthlyFeeDisclosure, runMonthlyAumDisclosure } from "@/lib/sitca-nav-sync/monthlyDisclosureWriter";
 import { runFundclearAnnualSync } from "@/lib/fundclear-annual-sync/writer";
+import { runFundclearAumGapFill } from "@/lib/sitca-nav-sync/fundclearAumGapFill";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -200,6 +201,12 @@ export async function GET(request: Request) {
     } catch (e: any) {
       fundclearAnnualResult = { ok: false, skipped: false, reason: String(e?.message ?? e) };
     }
+    let fundclearAumGapFillResult: Awaited<ReturnType<typeof runFundclearAumGapFill>> | null = null;
+    try {
+      fundclearAumGapFillResult = await runFundclearAumGapFill();
+    } catch (e: any) {
+      fundclearAumGapFillResult = { ok: false, skipped: false, reason: String(e?.message ?? e) };
+    }
 
     const matchedByCode = matched.filter((m) => m.matchedBy === "CODE").length;
     const matchedByName = matched.filter((m) => m.matchedBy === "NAME").length;
@@ -220,7 +227,7 @@ export async function GET(request: Request) {
         write_candidate_count: candidates.length, written: writeResult.written, write_error_count: writeResult.writeErrorCount,
         jump_review_detail: jumpReviewDetail, jump_review_overrides: jumpReviewOverrides,
         fee_disclosure: feeDisclosureResult, aum_disclosure: aumDisclosureResult,
-        fundclear_annual: fundclearAnnualResult,
+        fundclear_annual: fundclearAnnualResult, fundclear_aum_gap_fill: fundclearAumGapFillResult,
       },
     });
 
@@ -231,7 +238,7 @@ export async function GET(request: Request) {
       currencyMismatchCount, unitMismatchCount, jumpReviewCount, writeCandidateCount: candidates.length,
       written: writeResult.written, writeErrorCount: writeResult.writeErrorCount,
       feeDisclosure: feeDisclosureResult, aumDisclosure: aumDisclosureResult,
-      fundclearAnnual: fundclearAnnualResult,
+      fundclearAnnual: fundclearAnnualResult, fundclearAumGapFill: fundclearAumGapFillResult,
     });
   } catch (e: any) {
     await finishRun(runId, JOB, "SITCA_FSC_OFFICIAL_DAILY_NAV_CSV", startedMs, {

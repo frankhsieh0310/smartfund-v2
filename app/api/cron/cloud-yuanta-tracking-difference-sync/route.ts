@@ -59,7 +59,18 @@ export async function GET(request: Request) {
     });
     return Response.json({ ok: true, job: JOB, writeEnabled, written, missing, results });
   } catch (error) {
-    await finishRun(runId, JOB, PROVIDER, startedMs, { status: "FAILED", attempted: 0, completed: 0, inserted: 0, updated: 0, failed: 1, retryableFailures: 1, checkpointAfter: null, error: (error as Error).message });
-    return Response.json({ ok: false, job: JOB, error: (error as Error).message }, { status: 500 });
+    // 2026-10-31（使用者核准）: 元大官網週末/休市或當天還沒更新頁面時，__NUXT__ state裡的
+    // data[0].allData本來就是空的（YUANTA_TD_NO_ALLDATA）——這是「資料來源還沒有新資料」，不是
+    // 我們這邊的錯誤，不該跟真正的抓取失敗一樣算FAILED。這裡只認這一個已知的「無新資料」訊號，
+    // 其他任何錯誤仍然照舊算FAILED，不擴大解釋。
+    const message = (error as Error).message;
+    const isNoNewDataYet = message.includes("YUANTA_TD_NO_ALLDATA");
+    await finishRun(runId, JOB, PROVIDER, startedMs, {
+      status: isNoNewDataYet ? "SKIPPED" : "FAILED",
+      attempted: 0, completed: 0, inserted: 0, updated: 0, failed: isNoNewDataYet ? 0 : 1,
+      retryableFailures: isNoNewDataYet ? 0 : 1, checkpointAfter: null, error: message,
+      details: isNoNewDataYet ? { skipped_reason: "EXTERNAL_DELAY_NO_NEW_DATA" } : undefined,
+    });
+    return Response.json({ ok: true, job: JOB, skipped: isNoNewDataYet, reason: isNoNewDataYet ? "EXTERNAL_DELAY_NO_NEW_DATA" : undefined, error: isNoNewDataYet ? undefined : message }, { status: isNoNewDataYet ? 200 : 500 });
   }
 }
