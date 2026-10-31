@@ -11,7 +11,12 @@ const date = (value: string | null) => value ? new Intl.DateTimeFormat("zh-TW", 
 const number = (value: number | null, digits = 2) => value === null ? "—" : new Intl.NumberFormat("zh-TW", { maximumFractionDigits: digits }).format(value);
 const percent = (value: number | null) => value === null ? "—" : `${value >= 0 ? "+" : ""}${number(value, 2)}%`;
 const text = (value: string | null | undefined) => value?.trim() || "未提供";
-const yearMonthZh = (ym: string | null) => ym && /^\d{6}$/.test(ym) ? `${ym.slice(0, 4)} 年 ${ym.slice(4, 6)} 月` : "—";
+// 2026-10-31（VERIFIED，自己造成的bug修正）: fund_fee_disclosure_monthly/fund_aum_disclosure_monthly
+// 的 year_month 實際存的是 "YYYY-MM"（含dash，寫入端monthlyDisclosureFetch.ts/
+// fundclearAumGapFill.ts都是這個格式），這裡原本錯寫成只接受"YYYYMM"（6位數字、不含dash）的
+// 正則，導致正式網站上所有基金的「資料月份」跟每一筆費用標示都顯示「—」而不是「2026 年 09 月」
+// ——VERIFIED 00968493A 正式網站截圖重現。
+const yearMonthZh = (ym: string | null) => ym && /^\d{4}-\d{2}$/.test(ym) ? `${ym.slice(0, 4)} 年 ${ym.slice(5, 7)} 月` : "—";
 // 2026-10-31（使用者核准，淨值過期標示）: 單純UI顯示用的門檻，跟freshness.ts裡健康報告用的
 // PUBLICATION_AWARE(45天)分類無關、不共用——那個是給SYSTEM異常分類用的，這裡只是讓使用者
 // 一眼看出「這不是今天的淨值」，門檻訂得更嚴格(7天)，不改動既有的異常分類邏輯。

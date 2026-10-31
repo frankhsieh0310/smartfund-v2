@@ -230,7 +230,9 @@ const rangeStart = (range: FundDetailRange): Date | undefined => {
 };
 
 const sectionCoverage = (count: number, partial = false): FundSectionCoverage => count === 0 ? "UNAVAILABLE" : partial ? "PARTIAL" : "AVAILABLE";
-const yearMonthToDate = (ym: string | null | undefined): string | null => ym && /^\d{6}$/.test(ym) ? `${ym.slice(0, 4)}-${ym.slice(4, 6)}-01` : null;
+// 2026-10-31（VERIFIED，自己造成的bug修正）: year_month實際存的是"YYYY-MM"（含dash），不是
+// "YYYYMM"，原本的正則永遠不會match，asOfDate一直悄悄是null。
+const yearMonthToDate = (ym: string | null | undefined): string | null => ym && /^\d{4}-\d{2}$/.test(ym) ? `${ym}-01` : null;
 
 export async function getFundDetail(identifier: string, relationLimit = 20, range: FundDetailRange = "1Y"): Promise<ServiceResponse<FundDetailData>> {
   const key = decodeURIComponent(identifier).trim();
