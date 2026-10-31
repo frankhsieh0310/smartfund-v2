@@ -18,6 +18,9 @@ export type PipelineHealth = {
    * disclose, not a pipeline failure) -- counted here instead of errorCount24h, never contributes
    * to anomaly. */
   sourceUnavailableCount24h: number;
+  /** 2026-10-31: 被reapStaleRunningRuns()收割成FAILED/STALE_RUN_REAPED的紀錄數——已自動處理，
+   * 不計入anomaly，但要讓使用者看得到次數。 */
+  staleReapedCount24h: number;
 };
 
 // 2026-10-19（使用者撤回上午的排除，改成更嚴格的規則）: 上午曾經把 CLOUD_MONEYDJ_FUND 的
@@ -67,7 +70,14 @@ export async function checkPipelineRunLog(query: QueryFn, jobId: string): Promis
   );
 
   const benignPattern = BENIGN_ERROR_PATTERNS[jobId];
-  const isBenignError = (errMsg: string | null) => !!errMsg && !!benignPattern && benignPattern.test(errMsg);
+  // 2026-10-31（使用者核准，STALE_RUN_REAPED保底機制）: route.ts在算異常之前已經先呼叫
+  // reapStaleRunningRuns()，把卡死的IN_PROGRESS收割成FAILED/STALE_RUN_REAPED——這種「已經被
+  // 自動處理掉」的紀錄不該被這裡的ERROR_COUNT/LAST_RUN_FAILED/STUCK_IN_PROGRESS又重新算成
+  // 還在發生的SYSTEM異常，但要單獨記次數讓使用者看到有收割過。這是跨所有job的全域判斷
+  // （不像benignPattern是per-job），因為STALE_RUN_REAPED這個標記本身就是全域共用的。
+  const isStaleReaped = (errMsg: string | null) => errMsg === "STALE_RUN_REAPED";
+  const isBenignError = (errMsg: string | null) => isStaleReaped(errMsg) || (!!errMsg && !!benignPattern && benignPattern.test(errMsg));
+  const staleReapedCount24h = rows.filter((r) => isStaleReaped(r.error)).length;
   // 2026-10-21（使用者核准）: VERIFIED live case -- CLOUD_ETF_PRICE's 01:17 run failed one symbol
   // (00408A, YAHOO_CHART_NULL), but the very next 02:17 run (same checkpoint, same symbol pool)
   // came back completely clean and the symbol already has today's expected data -- that was a
@@ -110,14 +120,20 @@ export async function checkPipelineRunLog(query: QueryFn, jobId: string): Promis
   if (errorCount24h > 0) anomalyReasons.push(`ERROR_COUNT_${errorCount24h}`);
   if (writeErrorCount24h > 0) anomalyReasons.push(`WRITE_ERROR_COUNT_${writeErrorCount24h}`);
 
+  // 2026-10-31（使用者核准，STALE_RUN_REAPED保底機制）: 已經被reapStaleRunningRuns()收割成
+  // FAILED/STALE_RUN_REAPED的紀錄，不該在這裡被當成「真的FAILED」去判斷LAST_RUN_FAILED／
+  // PARTIAL／STUCK_IN_PROGRESS——改用rows裡第一筆「不是被收割的」當這幾個判斷用的「最新一筆」。
+  const lastReal = rows.find((r) => !isStaleReaped(r.error)) ?? null;
+  const realRows = rows.filter((r) => !isStaleReaped(r.error));
+
   // (b) 當天是否已完整跑過一輪（COMPLETED 或 checkpoint wrapped=true 皆算），只有兩者都沒有
   //     才算真正的 PARTIAL 異常。
-  const hadFullPassToday = rows.some((r) => r.status === "COMPLETED" || r.wrapped === "true");
-  const allFailedOrPartial = rows.length > 0 && rows.every((r) => r.status === "PARTIAL" || r.status === "FAILED");
+  const hadFullPassToday = realRows.some((r) => r.status === "COMPLETED" || r.wrapped === "true");
+  const allFailedOrPartial = realRows.length > 0 && realRows.every((r) => r.status === "PARTIAL" || r.status === "FAILED");
   if (!hadFullPassToday && allFailedOrPartial) {
-    if (last?.status === "PARTIAL") anomalyReasons.push("LAST_RUN_PARTIAL");
-    if (last?.status === "FAILED") anomalyReasons.push("LAST_RUN_FAILED");
-  } else if (last?.status === "FAILED" && !hadFullPassToday) {
+    if (lastReal?.status === "PARTIAL") anomalyReasons.push("LAST_RUN_PARTIAL");
+    if (lastReal?.status === "FAILED") anomalyReasons.push("LAST_RUN_FAILED");
+  } else if (lastReal?.status === "FAILED" && !hadFullPassToday) {
     anomalyReasons.push("LAST_RUN_FAILED");
   }
 
@@ -126,8 +142,10 @@ export async function checkPipelineRunLog(query: QueryFn, jobId: string): Promis
   // PARTIAL/FAILED，IN_PROGRESS兩者都不是，永遠卡住的執行紀錄就這樣對健康報告隱形。這裡補上：
   // 最新一筆是IN_PROGRESS、而且開始時間已經超過30分鐘（這些cron route的maxDuration都在120秒
   // 等級，正常執行不可能跑這麼久，30分鐘是留寬裕的保守門檻，避免把「還在跑」誤判成「卡住」）。
-  if (last?.status === "IN_PROGRESS") {
-    const startedAtMs = last.started_at ? new Date(last.started_at).getTime() : null;
+  // 2026-10-31：用lastReal不是last——真正還卡著的IN_PROGRESS（還沒被收割，例如剛好卡不到15分鐘）
+  // 才算，已經被收割的不算。
+  if (lastReal?.status === "IN_PROGRESS") {
+    const startedAtMs = lastReal.started_at ? new Date(lastReal.started_at).getTime() : null;
     if (startedAtMs !== null && Date.now() - startedAtMs > 30 * 60 * 1000) {
       anomalyReasons.push("STUCK_IN_PROGRESS");
     }
@@ -149,6 +167,7 @@ export async function checkPipelineRunLog(query: QueryFn, jobId: string): Promis
     errorCount24h,
     sourceUnavailableCount24h,
     writeErrorCount24h,
+    staleReapedCount24h,
     lastStatus: last?.status ?? null,
     lastError: last?.error ?? null,
     anomaly: anomalyReasons.length > 0,

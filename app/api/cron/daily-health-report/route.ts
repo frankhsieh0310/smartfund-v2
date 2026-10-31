@@ -11,7 +11,7 @@
 // writes the run log and returns, nothing else.
 import { isAuthorizedCron, unauthorizedCron } from "@/lib/cron/authorize";
 import { prisma } from "@/lib/prisma";
-import { beginRun, finishRun } from "@/lib/cloud-ingestion/runContext";
+import { beginRun, finishRun, reapStaleRunningRuns } from "@/lib/cloud-ingestion/runContext";
 import { checkPipelineRunLog, checkMoneydjParseFailures, evaluateFreshness, checkEtfDataSourceGap, evaluateYahooTwReturnConsistency, evaluateFredCommodityConsistency, evaluateTdccDividendConsistency, checkCommodityTechnicalCoverage, checkFundPerformanceCoverage, checkEtfPerformanceCoverage, checkEtfHistoryFreshness, checkFundHistoryFreshness, checkCoreUniverseEtfCoverage, checkCoreUniverseFundCoverage, checkCoreUniverseFundGapDetail, checkCoreUniverseEtfGapDetail, checkActiveEtfOfficialHoldingsCoverage, checkLocalScheduleReporting, checkCoreUniverseFundCurrencyFormat, evaluateFundCurrencyOfficialConsistency, type QueryFn, type YahooTwReturnSample, type FredCommoditySample, type FundCurrencyOfficialSample, type TdccDividendSample } from "@/lib/daily-health-report/checks";
 import { fetchTdccOffshoreDividendCsv, SOURCE as TDCC_DIVIDEND_SOURCE } from "@/lib/cron/offshoreDividendTdccSync";
 import { mapTdccCurrencyToIso, isValidIsoCurrency } from "@/lib/tdcc-currency-map";
@@ -200,6 +200,12 @@ export async function GET(request: Request) {
   if (skipped) {
     return Response.json({ ok: true, job: JOB, skipped: true, reason: "already ran today", runKey });
   }
+
+  // 2026-10-31（使用者核准，STALE_RUN_REAPED保底機制）: 在算任何異常之前，先把全系統卡在
+  // IN_PROGRESS超過15分鐘的執行紀錄收割掉，避免這種已知的「排程中斷、永遠沒呼叫finishRun」
+  // 情況被checks.ts誤判成還在發生的SYSTEM異常。15分鐘涵蓋了目前所有cron route已知的
+  // maxDuration(最長300秒=5分鐘)+5分鐘寬限，是保守值。
+  const reapedStaleRuns = await reapStaleRunningRuns(15);
 
   const pipelineHealth = await Promise.all(RUN_LOG_PIPELINES.map((j) => checkPipelineRunLog(query, j)));
 
@@ -946,5 +952,5 @@ export async function GET(request: Request) {
     },
   });
 
-  return Response.json({ ok: true, job: JOB, runId, status, anomalyCount: anomalies.length, systemAnomalyCount, externalDelayAnomalyCount, anomalies, etfDataSourceGap, activeEtfOfficialHoldings: activeEtfGapWithEvidence, yahooTwCheck, fredCommodityCheck, coverage, currencyFormatCheck, currencyOfficialCheck, notifyResult });
+  return Response.json({ ok: true, job: JOB, runId, status, anomalyCount: anomalies.length, systemAnomalyCount, externalDelayAnomalyCount, anomalies, etfDataSourceGap, activeEtfOfficialHoldings: activeEtfGapWithEvidence, yahooTwCheck, fredCommodityCheck, coverage, currencyFormatCheck, currencyOfficialCheck, notifyResult, reapedStaleRunsCount: reapedStaleRuns.length, reapedStaleRuns: reapedStaleRuns.slice(0, 50) });
 }

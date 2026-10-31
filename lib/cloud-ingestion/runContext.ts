@@ -210,6 +210,28 @@ export async function finishRun(
   void jobName;
 }
 
+// 2026-10-31（使用者核准，STALE_RUN_REAPED保底機制）: VERIFIED CLOUD_MONEYDJ_FUND過去7天有
+// 291次IN_PROGRESS卡死（10/26當天96次執行全部卡死），根因是這支route用時間分桶的run_key
+// （每15分鐘一個新桶），beginRun本身雖然已經有「同一個run_key超過STALE_RUNNING_TTL_SECONDS(6分鐘)
+// 就允許下一次攻佔」的機制，但下一次呼叫根本是不同的run_key（新的時間桶），永遠不會真正去碰
+// 那個卡住的舊row——卡住的row就這樣永久留著，不會被既有機制自動處理。改成在健康報告算異常之前
+// 先主動掃一次「所有job、RUNNING超過指定分鐘數」，直接標成FAILED、error='STALE_RUN_REAPED'。
+// 這是「每次執行都先掃一次」的做法裡最有效率的單點實作：因為時間分桶的run_key本來就不會被舊的
+// 卡住row卡住下一次執行（不像同一個run_key重複使用的排程），真正需要處理的只有「健康報告看到
+// 卡住的row誤判成異常」這件事，在健康報告自己要算異常之前掃一次已經足夠解決。
+export async function reapStaleRunningRuns(maxAgeMinutes = 15, bound?: BoundedDbOptions): Promise<Array<{ id: string; jobId: string; runKey: string | null; startedAt: string }>> {
+  const rows = await boundedQuery<{ id: string; job_id: string; run_key: string | null; started_at: string }>(
+    `UPDATE production_scheduler_runs
+       SET status = 'FAILED', completed_at = CURRENT_TIMESTAMP, error = 'STALE_RUN_REAPED'
+     WHERE status = 'IN_PROGRESS'
+       AND started_at < (CURRENT_TIMESTAMP - INTERVAL '${maxAgeMinutes} minutes')
+     RETURNING id, job_id, run_key, started_at`,
+    [],
+    bound,
+  );
+  return rows.map((r) => ({ id: r.id, jobId: r.job_id, runKey: r.run_key, startedAt: r.started_at }));
+}
+
 export async function readCheckpoint(checkpointKey: string, bound?: BoundedDbOptions): Promise<CheckpointRow | null> {
   const rows = await boundedQuery<{ last_symbol: string | null; processed: number; succeeded: number; failed: number; updated_at: Date }>(
     `SELECT last_symbol, processed, succeeded, failed, updated_at
