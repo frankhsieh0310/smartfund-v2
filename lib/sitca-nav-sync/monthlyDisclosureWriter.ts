@@ -142,33 +142,61 @@ export async function runMonthlyAumDisclosure(): Promise<AumResult> {
          AND id NOT IN (SELECT old_fund_id FROM fund_superseded_by_code)
          AND id IN (SELECT asset_id FROM tw_purchasable_classification WHERE asset_type = 'FUND' AND status = 'APPROVED')`,
     );
-    // AUM disclosure is share-class-level — exact funds.code match, no base-code stripping.
+    // AUM disclosure is normally share-class-level — exact funds.code match. But some older funds
+    // (VERIFIED 2026-10-31, 野村鴻運基金/00968493) are reported by SITCA under the bare base code
+    // with NO letter suffix at all even though funds.code already split them into 00968493A/B share
+    // classes — an exact match against those share-class codes then silently finds nothing, even
+    // though the fund's AUM genuinely was published this month. Fallback: when a row's own classCode
+    // is a bare 8-digit base code (no letter) and has no exact match, write it to every APPROVED
+    // sibling share class of that base code that didn't already get an exact-matched row this run
+    // (mirrors how fee disclosure already treats itself as fund-level, shared across share classes).
     const fundIdByExactCode = new Map(fundRows.map((f) => [f.code, f.id]));
+    const fundIdsByBaseCode = new Map<string, string[]>();
+    for (const f of fundRows) {
+      const base = f.code.replace(/[A-Za-z]+$/, "");
+      if (!fundIdsByBaseCode.has(base)) fundIdsByBaseCode.set(base, []);
+      fundIdsByBaseCode.get(base)!.push(f.id);
+    }
 
     let written = 0;
     let matchedFundCount = 0;
-    if (writeEnabled) {
-      for (const row of rows) {
-        const fundId = fundIdByExactCode.get(row.classCode);
-        if (!fundId) continue;
+    const exactMatchedFundIdsThisRun = new Set<string>();
+    for (const row of rows) {
+      if (fundIdByExactCode.has(row.classCode)) exactMatchedFundIdsThisRun.add(fundIdByExactCode.get(row.classCode)!);
+    }
+    async function writeAumRow(fundId: string, row: typeof rows[number]) {
+      if (!writeEnabled) return;
+      await prisma.$executeRawUnsafe(
+        `INSERT INTO fund_aum_disclosure_monthly
+           (fund_id, year_month, aum_twd, nav_twd, units_outstanding, natural_person_holders,
+            institutional_holders, total_holders, subscription_twd, redemption_twd, source, fetched_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'SITCA_IN2201', now())
+         ON CONFLICT (fund_id, year_month) DO UPDATE SET
+           aum_twd = EXCLUDED.aum_twd, nav_twd = EXCLUDED.nav_twd, units_outstanding = EXCLUDED.units_outstanding,
+           natural_person_holders = EXCLUDED.natural_person_holders, institutional_holders = EXCLUDED.institutional_holders,
+           total_holders = EXCLUDED.total_holders, subscription_twd = EXCLUDED.subscription_twd,
+           redemption_twd = EXCLUDED.redemption_twd, fetched_at = now()`,
+        fundId, yearMonth, row.aumTwd, row.navTwd, row.unitsOutstanding, row.naturalPersonHolders,
+        row.institutionalHolders, row.totalHolders, row.subscriptionTwd, row.redemptionTwd,
+      );
+    }
+    for (const row of rows) {
+      const exactFundId = fundIdByExactCode.get(row.classCode);
+      if (exactFundId) {
         matchedFundCount++;
-        await prisma.$executeRawUnsafe(
-          `INSERT INTO fund_aum_disclosure_monthly
-             (fund_id, year_month, aum_twd, nav_twd, units_outstanding, natural_person_holders,
-              institutional_holders, total_holders, subscription_twd, redemption_twd, source, fetched_at)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'SITCA_IN2201', now())
-           ON CONFLICT (fund_id, year_month) DO UPDATE SET
-             aum_twd = EXCLUDED.aum_twd, nav_twd = EXCLUDED.nav_twd, units_outstanding = EXCLUDED.units_outstanding,
-             natural_person_holders = EXCLUDED.natural_person_holders, institutional_holders = EXCLUDED.institutional_holders,
-             total_holders = EXCLUDED.total_holders, subscription_twd = EXCLUDED.subscription_twd,
-             redemption_twd = EXCLUDED.redemption_twd, fetched_at = now()`,
-          fundId, yearMonth, row.aumTwd, row.navTwd, row.unitsOutstanding, row.naturalPersonHolders,
-          row.institutionalHolders, row.totalHolders, row.subscriptionTwd, row.redemptionTwd,
-        );
-        written++;
+        await writeAumRow(exactFundId, row);
+        if (writeEnabled) written++;
+        continue;
       }
-    } else {
-      matchedFundCount = rows.filter((r) => fundIdByExactCode.has(r.classCode)).length;
+      if (/^[0-9]{8}$/.test(row.classCode)) {
+        const siblings = (fundIdsByBaseCode.get(row.classCode) ?? []).filter((id) => !exactMatchedFundIdsThisRun.has(id));
+        if (siblings.length === 0) continue;
+        matchedFundCount++;
+        for (const siblingId of siblings) {
+          await writeAumRow(siblingId, row);
+          if (writeEnabled) written++;
+        }
+      }
     }
 
     await finishRun(runId, AUM_JOB, "SITCA_AUM_DISCLOSURE_IN2201", startedMs, {

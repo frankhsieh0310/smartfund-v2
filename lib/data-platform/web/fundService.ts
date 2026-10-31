@@ -199,6 +199,10 @@ export interface FundDetailData {
     custodianFeePct: number | null;
     totalFeePct: number | null;
   }>;
+  /** 2026-10-31（使用者核准）: FundClear年度報酬率/年度費用率，只適用「只有一個級別」的境內
+   * 基金，用基金代碼查詢分不出級別。年度費用率是整個曆年彙總，跟monthlyDisclosure的SITCA月實際
+   * 費用是不同指標，畫面標示務必寫成「YYYY年度費用率（FundClear）」，不可混用或互相取代。 */
+  annualMetricsFundclear: FundSection<Array<{ year: string; returnPct: number | null; feeRatePct: number | null; returnSource: string | null }>>;
 }
 
 type HoldingRow = { security_id: string | null; holding_name: string | null; weight: unknown; market_value: unknown; currency: string | null; report_date: Date; source: string; updated_at: Date; rank: number | null };
@@ -326,6 +330,13 @@ export async function getFundDetail(identifier: string, relationLimit = 20, rang
       feeSourceId,
     ),
   ]);
+  // 2026-10-31: fund_annual_metrics_fundclear 這張表要等使用者核准
+  // scratch_fundclear_annual_table.sql 才會存在——用 try/catch 包起來，表還沒建好之前這裡安靜
+  // 回傳空陣列，不讓整個基金詳情頁因為一張還沒建的表而500。
+  const annualMetricsRows = await prisma.$queryRawUnsafe<{ year: string; return_pct: unknown; fee_rate_pct: unknown; return_source: string | null }[]>(
+    `SELECT year, return_pct, fee_rate_pct, return_source FROM fund_annual_metrics_fundclear WHERE fund_id = $1 ORDER BY year DESC`,
+    rowId,
+  ).catch(() => []);
   const nameOnlyHoldings = sectionLimit && dedupedHoldings.length === 0
     ? await prisma.$queryRaw<NameOnlyHoldingRow[]>(Prisma.sql`SELECT holding_name, as_of_date, source, updated_at FROM fund_holdings_name_only WHERE fund_id = ${holdingsSourceId} AND as_of_date = (SELECT MAX(as_of_date) FROM fund_holdings_name_only WHERE fund_id = ${holdingsSourceId}) ORDER BY rank ASC LIMIT ${FUND_DETAIL_LIMITS.holdings}`)
     : [];
@@ -437,6 +448,11 @@ export async function getFundDetail(identifier: string, relationLimit = 20, rang
         totalFeePct: numberOrNull(feeDisclosureRows[0]?.total_fee_pct),
       },
       provenance: buildProvenance({ source: "SITCA_IN2201_IN2211", sourceRecordId: row.id, asOfDate: yearMonthToDate(aumDisclosureRows[0]?.year_month ?? feeDisclosureRows[0]?.year_month), lastUpdated: row.updatedAt }),
+    },
+    annualMetricsFundclear: {
+      coverage: sectionCoverage(annualMetricsRows.length),
+      data: annualMetricsRows.map((r) => ({ year: r.year, returnPct: numberOrNull(r.return_pct), feeRatePct: numberOrNull(r.fee_rate_pct), returnSource: r.return_source })),
+      provenance: buildProvenance({ source: "FUNDCLEAR_QUERY_RATE", sourceRecordId: row.id, asOfDate: annualMetricsRows[0]?.year ? `${annualMetricsRows[0].year}-12-31` : undefined, lastUpdated: row.updatedAt }),
     },
   };
   if (data.company && /^(待補|unknown|n\/a)/i.test(data.company)) data.company = null;

@@ -25,6 +25,7 @@ import { isWriteEnabled, currentRunMode } from "@/lib/sitca-nav-sync/writeGate";
 import { writeBatchIfEnabled, type QueryFn } from "@/lib/sitca-nav-sync/navWriter";
 import type { SitcaMatchedCandidate } from "@/lib/sitca-nav-sync/types";
 import { runMonthlyFeeDisclosure, runMonthlyAumDisclosure } from "@/lib/sitca-nav-sync/monthlyDisclosureWriter";
+import { runFundclearAnnualSync } from "@/lib/fundclear-annual-sync/writer";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -190,6 +191,15 @@ export async function GET(request: Request) {
     } catch (e: any) {
       aumDisclosureResult = { ok: false, skipped: false, reason: String(e?.message ?? e) };
     }
+    // 2026-10-31（使用者核准）: FundClear 年度報酬率/年度費用率（query-rate）也併進這支既有cron，
+    // 只處理「只有一個級別」的境內基金。獨立開關 FUNDCLEAR_ANNUAL_WRITE，shadow模式預設不寫入，
+    // 失敗不影響上面每日NAV同步跟SITCA月揭露的結果判定。
+    let fundclearAnnualResult: Awaited<ReturnType<typeof runFundclearAnnualSync>> | null = null;
+    try {
+      fundclearAnnualResult = await runFundclearAnnualSync();
+    } catch (e: any) {
+      fundclearAnnualResult = { ok: false, skipped: false, reason: String(e?.message ?? e) };
+    }
 
     const matchedByCode = matched.filter((m) => m.matchedBy === "CODE").length;
     const matchedByName = matched.filter((m) => m.matchedBy === "NAME").length;
@@ -210,6 +220,7 @@ export async function GET(request: Request) {
         write_candidate_count: candidates.length, written: writeResult.written, write_error_count: writeResult.writeErrorCount,
         jump_review_detail: jumpReviewDetail, jump_review_overrides: jumpReviewOverrides,
         fee_disclosure: feeDisclosureResult, aum_disclosure: aumDisclosureResult,
+        fundclear_annual: fundclearAnnualResult,
       },
     });
 
@@ -220,6 +231,7 @@ export async function GET(request: Request) {
       currencyMismatchCount, unitMismatchCount, jumpReviewCount, writeCandidateCount: candidates.length,
       written: writeResult.written, writeErrorCount: writeResult.writeErrorCount,
       feeDisclosure: feeDisclosureResult, aumDisclosure: aumDisclosureResult,
+      fundclearAnnual: fundclearAnnualResult,
     });
   } catch (e: any) {
     await finishRun(runId, JOB, "SITCA_FSC_OFFICIAL_DAILY_NAV_CSV", startedMs, {
