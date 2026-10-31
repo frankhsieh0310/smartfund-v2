@@ -91,9 +91,14 @@ export default async function FundDetailPage({ params, searchParams }: { params:
       {fund.annualMetricsFundclear.data.length ? <Panel title="境內基金年度報酬率與年度費用率（FundClear，僅適用單一級別基金）" section={fund.annualMetricsFundclear} footer className="mt-6">
         <div className="overflow-x-auto"><table className="min-w-[500px] w-full text-left text-xs"><thead className="text-slate-500"><tr>{["年度", "年度報酬率", "年度費用率（FundClear）", "報酬率來源"].map((h) => <th key={h} className="px-3 py-3">{h}</th>)}</tr></thead><tbody>{fund.annualMetricsFundclear.data.map((item) => <tr key={item.year} className="border-t border-white/[0.06]"><td className="px-3 py-3 text-white">{item.year} 年</td><td className="px-3 py-3">{percent(item.returnPct)}</td><td className="px-3 py-3">{item.feeRatePct === null ? "—" : `${number(item.feeRatePct, 2)}%`}</td><td className="px-3 py-3">{text(item.returnSource)}</td></tr>)}</tbody></table></div>
       </Panel> : null}
-      {fund.offshoreScaleTdcc.data.scaleAmountMillions !== null ? <Panel title="境外基金全球規模（集保結算所 TDCC opendata，整個基金所有級別合計）" section={fund.offshoreScaleTdcc} footer className="mt-6">
+      {fund.offshoreScaleTdcc.data.scaleAmountMillions !== null ? <Panel title="基金全球規模（所有級別合計）" section={fund.offshoreScaleTdcc} footer className="mt-6">
         <p className="text-sm text-slate-300">{number(fund.offshoreScaleTdcc.data.scaleAmountMillions, 2)} 百萬 {fund.offshoreScaleTdcc.data.scaleCurrency}</p>
-        <p className="mt-2 text-xs text-slate-500">資料日期：{date(fund.offshoreScaleTdcc.data.scaleAsOfDate)} · 來源：臺灣集中保管結算所 (TDCC) opendata「境外基金基本資料」· 這是整個基金全球規模，不是台灣投資人持有金額</p>
+        <p className="mt-2 text-xs text-slate-500">資料日期：{date(fund.offshoreScaleTdcc.data.scaleAsOfDate)} · 來源：集保結算所 (TDCC)</p>
+      </Panel> : null}
+      {fund.offshoreTwHolding.data.twHoldingTwd !== null ? <Panel title="國人持有金額（新臺幣）" section={fund.offshoreTwHolding} footer className="mt-6">
+        <p className="text-sm text-slate-300">{number(fund.offshoreTwHolding.data.twHoldingTwd, 0)} 元</p>
+        <p className="mt-1 text-sm text-slate-300">國人持有比重：{fund.offshoreTwHolding.data.twHoldingPct === null ? "—" : `${number(fund.offshoreTwHolding.data.twHoldingPct, 2)}%`}</p>
+        <p className="mt-2 text-xs text-slate-500">資料月份：{yearMonthZh(fund.offshoreTwHolding.data.yearMonth)} · 來源：基金資訊觀測站 (FundClear) · 這是台灣投資人持有金額，不是基金全球規模</p>
       </Panel> : null}
       <section className="mt-6 grid gap-6 xl:grid-cols-2">
         <Panel title="分類與 Benchmark" section={fund.classifications} footer>{fund.classifications.data.length ? <div className="space-y-3">{fund.classifications.data.map((item) => <div key={`${item.type}-${item.name}`} className="rounded-xl border border-white/[0.07] p-4"><div className="flex justify-between gap-4"><span className="text-slate-500">{item.type}</span><span className="text-right text-white">{item.value ?? item.name}</span></div>{item.benchmarkName && <p className="mt-2 text-xs text-slate-500">Benchmark：{item.benchmarkName}{item.benchmarkCode ? ` (${item.benchmarkCode})` : ""} · 僅識別資訊</p>}</div>)}</div> : <Empty title="尚無分類資料" />}</Panel>

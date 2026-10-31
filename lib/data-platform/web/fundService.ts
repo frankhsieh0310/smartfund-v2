@@ -209,6 +209,9 @@ export interface FundDetailData {
   /** 2026-10-31（使用者核准）: 境外基金全球規模(TDCC opendata 3-2，整個基金所有級別合計，原幣別)。
    * 跟monthlyDisclosure(境內基金月申報)是不同的資料結構，境外基金專用。 */
   offshoreScaleTdcc: FundSection<{ scaleAmountMillions: number | null; scaleCurrency: string | null; scaleAsOfDate: string | null }>;
+  /** 2026-10-31（使用者核准）: 境外基金國人持有金額(FundClear)，新臺幣計價——跟上面
+   * offshoreScaleTdcc(全球規模，原幣別)是完全不同的指標，畫面不可混在一起。 */
+  offshoreTwHolding: FundSection<{ twHoldingTwd: number | null; twHoldingPct: number | null; yearMonth: string | null }>;
 }
 
 type HoldingRow = { security_id: string | null; holding_name: string | null; weight: unknown; market_value: unknown; currency: string | null; report_date: Date; source: string; updated_at: Date; rank: number | null };
@@ -350,6 +353,11 @@ export async function getFundDetail(identifier: string, relationLimit = 20, rang
     `SELECT scale_amount_millions, scale_currency, scale_as_of_date FROM fund_offshore_scale_tdcc WHERE fund_id = $1`,
     rowId,
   ).catch(() => []);
+  // 2026-10-31: fund_offshore_tw_holding_fundclear 這張表要等使用者核准SQL才會存在。
+  const offshoreTwHoldingRows = await prisma.$queryRawUnsafe<{ tw_holding_twd: unknown; tw_holding_pct: unknown; year_month: string }[]>(
+    `SELECT tw_holding_twd, tw_holding_pct, year_month FROM fund_offshore_tw_holding_fundclear WHERE fund_id = $1`,
+    rowId,
+  ).catch(() => []);
   const nameOnlyHoldings = sectionLimit && dedupedHoldings.length === 0
     ? await prisma.$queryRaw<NameOnlyHoldingRow[]>(Prisma.sql`SELECT holding_name, as_of_date, source, updated_at FROM fund_holdings_name_only WHERE fund_id = ${holdingsSourceId} AND as_of_date = (SELECT MAX(as_of_date) FROM fund_holdings_name_only WHERE fund_id = ${holdingsSourceId}) ORDER BY rank ASC LIMIT ${FUND_DETAIL_LIMITS.holdings}`)
     : [];
@@ -476,6 +484,15 @@ export async function getFundDetail(identifier: string, relationLimit = 20, rang
         scaleAsOfDate: isoOrNull(offshoreScaleRows[0]?.scale_as_of_date),
       },
       provenance: buildProvenance({ source: "TDCC_OPENDATA_3-2", sourceRecordId: row.id, asOfDate: offshoreScaleRows[0]?.scale_as_of_date, lastUpdated: row.updatedAt }),
+    },
+    offshoreTwHolding: {
+      coverage: sectionCoverage(offshoreTwHoldingRows.length),
+      data: {
+        twHoldingTwd: numberOrNull(offshoreTwHoldingRows[0]?.tw_holding_twd),
+        twHoldingPct: numberOrNull(offshoreTwHoldingRows[0]?.tw_holding_pct),
+        yearMonth: offshoreTwHoldingRows[0]?.year_month ?? null,
+      },
+      provenance: buildProvenance({ source: "FUNDCLEAR_QUERY_FUND_REPORT", sourceRecordId: row.id, asOfDate: yearMonthToDate(offshoreTwHoldingRows[0]?.year_month), lastUpdated: row.updatedAt }),
     },
   };
   if (data.company && /^(待補|unknown|n\/a)/i.test(data.company)) data.company = null;

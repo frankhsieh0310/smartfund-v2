@@ -30,6 +30,7 @@ import { fetchTdccNavCsv, parseTdccNavCsv, excludeOverlapWithYahooMapping, filte
 import { writeTdccNavBatch } from "@/lib/offshore-nav-sync/navWriter";
 import { loadMapping } from "@/lib/offshore-nav-sync/mapping";
 import { runOffshoreScaleSync } from "@/lib/offshore-scale-sync/writer";
+import { runOffshoreTwHoldingSync } from "@/lib/offshore-scale-sync/twHoldingWriter";
 
 export const runtime = "nodejs";
 // Raised from 60s this round: the 2026-10-15 10:31 UTC production run (first real run after this
@@ -130,6 +131,10 @@ export async function GET(request: Request) {
   // 同步的結果判定。
   let offshoreScaleResult: Awaited<ReturnType<typeof runOffshoreScaleSync>> | null = null;
   try { offshoreScaleResult = await runOffshoreScaleSync(); } catch (e: any) { offshoreScaleResult = { ok: false, skipped: false, reason: String(e?.message ?? e) }; }
+  // 2026-10-31（使用者核准）: 境外基金國人持有金額(FundClear)也併進這支既有排程，獨立開關
+  // OFFSHORE_TW_HOLDING_WRITE，跟上面TDCC全球規模是不同指標、不同表，互不影響彼此的結果判定。
+  let offshoreTwHoldingResult: Awaited<ReturnType<typeof runOffshoreTwHoldingSync>> | null = null;
+  try { offshoreTwHoldingResult = await runOffshoreTwHoldingSync(); } catch (e: any) { offshoreTwHoldingResult = { ok: false, skipped: false, reason: String(e?.message ?? e) }; }
 
   return Response.json({
     ok: true, job: JOB, runId, writeEnabled,
@@ -138,5 +143,6 @@ export async function GET(request: Request) {
     writableRowCount: nameCandidates.length, codeCandidateCount: codeCandidateFunds.length, codeMatchedCount, codeWritableRowCount: codeCandidates.length,
     written: result.written, writeErrorCount: result.writeErrorCount,
     offshoreScale: offshoreScaleResult,
+    offshoreTwHolding: offshoreTwHoldingResult,
   });
 }
