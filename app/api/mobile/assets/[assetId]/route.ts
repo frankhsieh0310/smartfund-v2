@@ -115,7 +115,20 @@ async function resolveDetail(assetId: string, assetType: AssetType, period: Peri
   // 既有欄位格式（跟上面的 navPending 同一慣例）。
   const navAgeDays = data.nav.data.date ? Math.floor((Date.now() - Date.parse(data.nav.data.date)) / 86_400_000) : null;
   const navDelayed = navAgeDays !== null && navAgeDays > 7;
-  return { data: { identity: data.identity, metrics: { priceOrNav: latestNav, change, changePercent, currency: data.nav.data.currency, asOfDate: data.nav.data.date, navPending, navDelayed, navAgeDays, performance1M: perf.return1M, performance3M: perf.return3M, performance1Y: perf.return1Y, dividendYield: data.dividendYield }, liteMetrics: [{ key: 'company', label: 'Company', value: data.company }, { key: 'category', label: 'Category', value: data.category }, { key: 'fundCategory', label: 'Fund Category', value: data.fundCategory }, { key: 'fundSubcategory', label: 'Fund Subcategory', value: data.fundSubcategory }, { key: 'assetClass', label: 'Asset Class', value: data.assetClass }, { key: 'fee', label: 'Expense / Fee', value: data.feesTerms.data[0]?.ter ?? data.feesTerms.data[0]?.ongoingCharges ?? data.feesTerms.data[0]?.managementFee ?? null, unit: '%' }, { key: 'return6M', label: '6M Return', value: perf.return6M, unit: '%' }, { key: 'returnYtd', label: 'YTD Return', value: perf.returnYtd, unit: '%' }, { key: 'return3YAnnualized', label: '3Y Return (annualized)', value: perf.return3YAnnualized, unit: '%' }, { key: 'return5YAnnualized', label: '5Y Return (annualized)', value: perf.return5YAnnualized, unit: '%' }] }, meta: response.meta, error: response.error };
+  // 2026-10-31（使用者核准）: SITCA月申報的規模/受益人數/申購贖回、當月實際費用占淨資產比率
+  // （非公開說明書年費率，標示務必帶上年月，不可換算年化）——跟網站 app/funds/[id]/page.tsx
+  // 同一批資料，用同一套 liteMetrics 泛型管道帶給 App，App 端不需要另外改程式碼就能顯示。
+  const monthlyDisclosure = data.monthlyDisclosure.data;
+  const ym = monthlyDisclosure.yearMonth;
+  const ymZh = ym && /^\d{6}$/.test(ym) ? `${ym.slice(0, 4)} 年 ${ym.slice(4, 6)} 月` : null;
+  return { data: { identity: data.identity, metrics: { priceOrNav: latestNav, change, changePercent, currency: data.nav.data.currency, asOfDate: data.nav.data.date, navPending, navDelayed, navAgeDays, performance1M: perf.return1M, performance3M: perf.return3M, performance1Y: perf.return1Y, dividendYield: data.dividendYield }, liteMetrics: [{ key: 'company', label: 'Company', value: data.company }, { key: 'category', label: 'Category', value: data.category }, { key: 'fundCategory', label: 'Fund Category', value: data.fundCategory }, { key: 'fundSubcategory', label: 'Fund Subcategory', value: data.fundSubcategory }, { key: 'assetClass', label: 'Asset Class', value: data.assetClass }, { key: 'fee', label: 'Expense / Fee', value: data.feesTerms.data[0]?.ter ?? data.feesTerms.data[0]?.ongoingCharges ?? data.feesTerms.data[0]?.managementFee ?? null, unit: '%' }, { key: 'return6M', label: '6M Return', value: perf.return6M, unit: '%' }, { key: 'returnYtd', label: 'YTD Return', value: perf.returnYtd, unit: '%' }, { key: 'return3YAnnualized', label: '3Y Return (annualized)', value: perf.return3YAnnualized, unit: '%' }, { key: 'return5YAnnualized', label: '5Y Return (annualized)', value: perf.return5YAnnualized, unit: '%' }, ...(ymZh ? [
+    { key: 'sitcaAum', label: `基金規模（${ymZh}，來源：SITCA）`, value: monthlyDisclosure.aumTwd, unit: '元' },
+    { key: 'sitcaHolders', label: `受益人數（${ymZh}，來源：SITCA）`, value: monthlyDisclosure.totalHolders },
+    { key: 'sitcaSubscription', label: `本月申購總金額（${ymZh}，來源：SITCA）`, value: monthlyDisclosure.subscriptionTwd, unit: '元' },
+    { key: 'sitcaRedemption', label: `本月買回總金額（${ymZh}，來源：SITCA）`, value: monthlyDisclosure.redemptionTwd, unit: '元' },
+    { key: 'sitcaMgmtFeePct', label: `${ymZh}實際經理費（占淨資產，來源：SITCA，非年費率）`, value: monthlyDisclosure.mgmtFeePct, unit: '%' },
+    { key: 'sitcaTotalFeePct', label: `${ymZh}實際合計費用（占淨資產，來源：SITCA，非年費率）`, value: monthlyDisclosure.totalFeePct, unit: '%' },
+  ] : [])] }, meta: response.meta, error: response.error };
 }
 
 async function pagedHistory(assetType: Extract<AssetType, 'STOCK' | 'ETF' | 'INDEX' | 'FX'>, symbol: string, period: Period) {
