@@ -239,6 +239,37 @@ export async function getFundDetail(identifier: string, relationLimit = 20, rang
   if (!coreFundIds.has(row.id)) throw new WebDataError("NOT_FOUND", "Fund not found.");
   const sectionLimit = Math.min(relationLimit, 20);
   const from = rangeStart(range);
+  // 2026-10-31（使用者核准）: 持股/產業配置/區域配置/經理人/基金規模屬於「基金層級」資料——
+  // 同一檔基金（funds.code去掉級別字尾後相同）的不同級別只要有一個有資料，其他級別應該共用同
+  // 一份顯示，不是每個級別各自缺資料。這是READ時的fallback join，不是寫入時複製多份：寫入端
+  // （monthlyDisclosureWriter.ts等）維持原樣，只在這裡「自己這個級別沒有資料時，才借別的級別的
+  // 資料來顯示」，自己本來就有的資料永遠優先、不會被覆蓋。報酬率(fundHistory/fundPerformance)
+  // 維持級別層級、不套用這個fallback。
+  const rowId = row.id;
+  const baseCode = row.code ? row.code.replace(/[A-Za-z]+$/, "") : null;
+  const siblingIds = baseCode
+    ? (await prisma.$queryRawUnsafe<{ id: string }[]>(
+        `SELECT id FROM funds WHERE code ~ ('^' || $1 || '[A-Za-z]*$')`,
+        baseCode,
+      )).map((r) => r.id)
+    : [rowId];
+  async function pickSourceFundId(table: string, dateColumn: string | null): Promise<string> {
+    if (siblingIds.length <= 1) return rowId;
+    const order = dateColumn ? `ORDER BY (fund_id = $2) DESC, ${dateColumn} DESC NULLS LAST` : `ORDER BY (fund_id = $2) DESC`;
+    const picked = await prisma.$queryRawUnsafe<{ fund_id: string }[]>(
+      `SELECT fund_id FROM ${table} WHERE fund_id = ANY($1::text[]) ${order} LIMIT 1`,
+      siblingIds, rowId,
+    );
+    return picked[0]?.fund_id ?? rowId;
+  }
+  const [holdingsSourceId, sectorSourceId, regionSourceId, managerSourceId, aumSourceId, feeSourceId] = await Promise.all([
+    pickSourceFundId("holdings", "as_of_date"),
+    pickSourceFundId("(SELECT fund_id, as_of_date FROM fund_classifications WHERE classification_type = 'YAHOO_SECTOR_ALLOCATION') t", "as_of_date"),
+    pickSourceFundId("(SELECT fund_id, as_of_date FROM fund_classifications WHERE classification_type = 'YAHOO_REGION_ALLOCATION') t", "as_of_date"),
+    pickSourceFundId("(SELECT fund_id, start_date FROM fund_manager_assignments WHERE end_date IS NULL) t", "start_date"),
+    pickSourceFundId("fund_aum_disclosure_monthly", "year_month"),
+    pickSourceFundId("fund_fee_disclosure_monthly", "year_month"),
+  ]);
   // 2026-10-29（VERIFIED，獨立代理驗收抓到的bug）: 下面historyRows本來就會被`range`參數（預設
   // "1Y"）的from篩選器限制成只有近1年資料——這支查詢本來是給NAV走勢圖用的，圖表本來就該照
   // 使用者選的區間篩選沒有問題。但風險指標計算(1Y/3Y/5Y)原本直接複用這包已經被砍到剩1年的
@@ -263,7 +294,7 @@ export async function getFundDetail(identifier: string, relationLimit = 20, rang
     // 幾乎永遠顯示「尚無holdings資料」。改讀holdings，一樣先鎖最新as_of_date；同一天同一檔持股
     // 偶爾有多個來源各寫一筆（跟ETF那次修的bug同一種），下面用security_id/holding_name去重，
     // 優先留MONEYDJ_PUBLIC_DISCLOSURE（這批基金持股揭露最主要、最完整的來源）。
-    sectionLimit ? prisma.$queryRaw<HoldingRow[]>(Prisma.sql`SELECT security_id, holding_name, weight, market_value, currency, as_of_date AS report_date, source, created_at AS updated_at, rank FROM holdings WHERE fund_id = ${row.id} AND as_of_date = (SELECT MAX(as_of_date) FROM holdings WHERE fund_id = ${row.id}) ORDER BY weight DESC NULLS LAST, market_value DESC NULLS LAST LIMIT 200`) : Promise.resolve([]),
+    sectionLimit ? prisma.$queryRaw<HoldingRow[]>(Prisma.sql`SELECT security_id, holding_name, weight, market_value, currency, as_of_date AS report_date, source, created_at AS updated_at, rank FROM holdings WHERE fund_id = ${holdingsSourceId} AND as_of_date = (SELECT MAX(as_of_date) FROM holdings WHERE fund_id = ${holdingsSourceId}) ORDER BY weight DESC NULLS LAST, market_value DESC NULLS LAST LIMIT 200`) : Promise.resolve([]),
   ]);
   const dedupedHoldings = [...new Map(
     holdings
@@ -274,29 +305,29 @@ export async function getFundDetail(identifier: string, relationLimit = 20, rang
   const [sectorAllocationRows, regionAllocationRows, managerRows] = await Promise.all([
     prisma.$queryRawUnsafe<{ classification_code: string; classification_value: string; as_of_date: Date }[]>(
       `SELECT classification_code, classification_value, as_of_date FROM fund_classifications WHERE fund_id = $1 AND classification_type = 'YAHOO_SECTOR_ALLOCATION' ORDER BY classification_value::numeric DESC`,
-      row.id,
+      sectorSourceId,
     ),
     prisma.$queryRawUnsafe<{ classification_code: string; classification_value: string; as_of_date: Date }[]>(
       `SELECT classification_code, classification_value, as_of_date FROM fund_classifications WHERE fund_id = $1 AND classification_type = 'YAHOO_REGION_ALLOCATION' ORDER BY classification_value::numeric DESC`,
-      row.id,
+      regionSourceId,
     ),
     prisma.$queryRawUnsafe<{ name: string; role: string | null; start_date: Date | null }[]>(
       `SELECT m.name, a.role, a.start_date FROM fund_manager_assignments a JOIN fund_managers m ON m.id = a.manager_id WHERE a.fund_id = $1 AND a.end_date IS NULL ORDER BY a.start_date DESC NULLS LAST`,
-      row.id,
+      managerSourceId,
     ),
   ]);
   const [aumDisclosureRows, feeDisclosureRows] = await Promise.all([
     prisma.$queryRawUnsafe<{ year_month: string; aum_twd: unknown; nav_twd: unknown; total_holders: number | null; subscription_twd: unknown; redemption_twd: unknown }[]>(
       `SELECT year_month, aum_twd, nav_twd, total_holders, subscription_twd, redemption_twd FROM fund_aum_disclosure_monthly WHERE fund_id = $1 ORDER BY year_month DESC LIMIT 1`,
-      row.id,
+      aumSourceId,
     ),
     prisma.$queryRawUnsafe<{ year_month: string; mgmt_fee_pct: unknown; custodian_fee_pct: unknown; total_fee_pct: unknown }[]>(
       `SELECT year_month, mgmt_fee_pct, custodian_fee_pct, total_fee_pct FROM fund_fee_disclosure_monthly WHERE fund_id = $1 ORDER BY year_month DESC LIMIT 1`,
-      row.id,
+      feeSourceId,
     ),
   ]);
   const nameOnlyHoldings = sectionLimit && dedupedHoldings.length === 0
-    ? await prisma.$queryRaw<NameOnlyHoldingRow[]>(Prisma.sql`SELECT holding_name, as_of_date, source, updated_at FROM fund_holdings_name_only WHERE fund_id = ${row.id} AND as_of_date = (SELECT MAX(as_of_date) FROM fund_holdings_name_only WHERE fund_id = ${row.id}) ORDER BY rank ASC LIMIT ${FUND_DETAIL_LIMITS.holdings}`)
+    ? await prisma.$queryRaw<NameOnlyHoldingRow[]>(Prisma.sql`SELECT holding_name, as_of_date, source, updated_at FROM fund_holdings_name_only WHERE fund_id = ${holdingsSourceId} AND as_of_date = (SELECT MAX(as_of_date) FROM fund_holdings_name_only WHERE fund_id = ${holdingsSourceId}) ORDER BY rank ASC LIMIT ${FUND_DETAIL_LIMITS.holdings}`)
     : [];
   const source = row.lastNavSource ?? row.dataSource ?? row.dataProvider;
   const provenance = buildProvenance({ source, sourceRecordId: row.isin, asOfDate: row.latestNavDate, lastUpdated: row.updatedAt });

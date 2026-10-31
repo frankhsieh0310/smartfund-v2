@@ -56,6 +56,21 @@ function parseNum(s: string): number {
   return Number(s.replace(/,/g, "").replace("%", "")) || 0;
 }
 
+// Cheap peek: one GET only (no POST, no ~2MB all-companies table) just to read SITCA's own
+// currently-selected default year/month, so the writer can check "do we already have this
+// month" before paying for the expensive POST.
+export async function peekFeeLatestYearMonth(): Promise<string> {
+  const getRes = await fetch(FEE_URL, { headers: { "User-Agent": UA } });
+  if (getRes.status === 403) throw Object.assign(new Error("SITCA_FEE_HTTP_403"), { blocked: true, httpStatus: 403 });
+  if (!getRes.ok) throw new Error(`SITCA_FEE_GET_HTTP_${getRes.status}`);
+  const getHtml = await getRes.text();
+  const ymMatch = getHtml.match(/<option selected="selected" value="(\d{4})"/);
+  const year = ymMatch ? ymMatch[1] : String(new Date().getUTCFullYear());
+  const monthMatch = getHtml.match(/ctl00_ContentPlaceHolder1_ddlQ_M"[\s\S]*?<option selected="selected" value="(\w+)"/);
+  const month = monthMatch?.[1] ?? "1";
+  return `${year}-${month.padStart(2, "0")}`;
+}
+
 export async function fetchFeeDisclosureAllCompanies(yearMonth6?: string): Promise<{ yearMonth: string; rows: FeeDisclosureRow[] }> {
   const getRes = await fetch(FEE_URL, { headers: { "User-Agent": UA } });
   if (getRes.status === 403) throw Object.assign(new Error("SITCA_FEE_HTTP_403"), { blocked: true, httpStatus: 403 });
@@ -111,6 +126,18 @@ export type AumDisclosureRow = {
 };
 
 const AUM_URL = "https://www.sitca.org.tw/ROC/Industry/IN2201.aspx?pid=IN2221_01";
+
+// Cheap peek: same idea as peekFeeLatestYearMonth(), one GET only.
+export async function peekAumLatestYearMonth(): Promise<string> {
+  const getRes = await fetch(AUM_URL, { headers: { "User-Agent": UA } });
+  if (getRes.status === 403) throw Object.assign(new Error("SITCA_AUM_HTTP_403"), { blocked: true, httpStatus: 403 });
+  if (!getRes.ok) throw new Error(`SITCA_AUM_GET_HTTP_${getRes.status}`);
+  const getHtml = await getRes.text();
+  const ymMatch = getHtml.match(/<option selected="selected" value="(\d{6})"/);
+  const yearMonth6 = ymMatch?.[1];
+  if (!yearMonth6) throw new Error("SITCA_AUM_NO_DEFAULT_YEARMONTH");
+  return `${yearMonth6.slice(0, 4)}-${yearMonth6.slice(4)}`;
+}
 
 export async function fetchAumDisclosureAllCompanies(): Promise<{ yearMonth: string; rows: AumDisclosureRow[] }> {
   const getRes = await fetch(AUM_URL, { headers: { "User-Agent": UA } });

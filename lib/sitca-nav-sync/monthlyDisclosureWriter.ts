@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { beginRun, finishRun } from "@/lib/cloud-ingestion/runContext";
-import { fetchFeeDisclosureAllCompanies, fetchAumDisclosureAllCompanies } from "./monthlyDisclosureFetch";
+import { fetchFeeDisclosureAllCompanies, fetchAumDisclosureAllCompanies, peekFeeLatestYearMonth, peekAumLatestYearMonth } from "./monthlyDisclosureFetch";
 import { isFeeDisclosureWriteEnabled, isAumDisclosureWriteEnabled } from "./monthlyDisclosureWriteGate";
 
 const FEE_JOB = "SITCA_FEE_DISCLOSURE_MONTHLY";
@@ -14,27 +14,43 @@ function isWithinForbiddenTaipeiWindow(now: Date): boolean {
 type FeeResult = { ok: boolean; skipped: boolean; reason?: string; yearMonth?: string; rowCount?: number; matchedFundCount?: number; written?: number };
 type AumResult = { ok: boolean; skipped: boolean; reason?: string; yearMonth?: string; rowCount?: number; matchedFundCount?: number; written?: number };
 
-// Both the fee-disclosure (IN2211) and AUM-disclosure (IN2201) pages publish once a month (every
-// month's 10th business day, per SITCA's own stated update cadence) — so this is gated to run at most
-// once per calendar month via its own run_key, independent of the daily NAV sync it's appended after.
+// 2026-10-31（使用者核准，修正觸發條件）: 原本「每月第一次執行」的run_key邏輯在月初第一次跑完
+// 之後，整個月都不會再檢查——如果那一次SITCA還沒公布當月資料，就要等到下個月才會再試。改成
+// 「資料庫裡還沒有SITCA目前公布的最新月份，就抓」：每次用一次廉價的GET（peekXxxLatestYearMonth，
+// 不做完整POST抓全市場表）取得SITCA目前預設選中的最新年月，跟DB現有的MAX(year_month)比較，
+// 只有在DB落後時才真正付出完整POST的成本去抓、寫入。run_key改成每天一個，確保同一天不會重複
+// 嘗試（即使DB已經是最新，也不用每小時都去GET一次SITCA）。
 export async function runMonthlyFeeDisclosure(): Promise<FeeResult> {
   const now = new Date();
   if (isWithinForbiddenTaipeiWindow(now)) {
     return { ok: true, skipped: true, reason: "OUTSIDE_ALLOWED_WINDOW (台北01:00-05:30不執行)" };
   }
   const writeEnabled = isFeeDisclosureWriteEnabled();
-  const runKey = `sitca-fee-disclosure-${now.getUTCFullYear()}${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
+  const dayKey = now.toISOString().slice(0, 10).replace(/-/g, "");
+  const runKey = `sitca-fee-disclosure-daily-${dayKey}`;
   const { runId, skipped } = await beginRun({
     jobName: FEE_JOB, provider: "SITCA_FEE_DISCLOSURE_IN2211", runKey, universeCount: 0, batchSize: 2000, checkpointBefore: null,
   });
-  if (skipped) return { ok: true, skipped: true, reason: "run_key already present this month" };
+  if (skipped) return { ok: true, skipped: true, reason: "already attempted today" };
 
   const startedMs = Date.now();
   try {
+    const latestYearMonth = await peekFeeLatestYearMonth();
+    const dbLatest = await prisma.$queryRawUnsafe<{ max: string | null }[]>(
+      `SELECT max(year_month) AS max FROM fund_fee_disclosure_monthly`,
+    );
+    if (dbLatest[0]?.max && dbLatest[0].max >= latestYearMonth) {
+      await finishRun(runId, FEE_JOB, "SITCA_FEE_DISCLOSURE_IN2211", startedMs, {
+        status: "COMPLETED", attempted: 0, completed: 0, inserted: 0, updated: 0, failed: 0,
+        retryableFailures: 0, checkpointAfter: null,
+        details: { write_enabled: writeEnabled, skipped_reason: "DB_ALREADY_HAS_LATEST_MONTH", db_latest: dbLatest[0].max, source_latest: latestYearMonth },
+      });
+      return { ok: true, skipped: true, reason: `DB已有最新月份 ${dbLatest[0].max}`, yearMonth: dbLatest[0].max };
+    }
     const { yearMonth, rows } = await fetchFeeDisclosureAllCompanies();
 
     const fundRows = await prisma.$queryRawUnsafe<{ id: string; code: string }[]>(
-      `SELECT id, code FROM funds WHERE code IS NOT NULL
+      `SELECT id, code FROM funds WHERE code ~ '^[0-9]{8}[A-Za-z]*$'
          AND id NOT IN (SELECT old_fund_id FROM fund_superseded_by_code)
          AND id IN (SELECT asset_id FROM tw_purchasable_classification WHERE asset_type = 'FUND' AND status = 'APPROVED')`,
     );
@@ -98,18 +114,31 @@ export async function runMonthlyAumDisclosure(): Promise<AumResult> {
     return { ok: true, skipped: true, reason: "OUTSIDE_ALLOWED_WINDOW (台北01:00-05:30不執行)" };
   }
   const writeEnabled = isAumDisclosureWriteEnabled();
-  const runKey = `sitca-aum-disclosure-${now.getUTCFullYear()}${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
+  const dayKey = now.toISOString().slice(0, 10).replace(/-/g, "");
+  const runKey = `sitca-aum-disclosure-daily-${dayKey}`;
   const { runId, skipped } = await beginRun({
     jobName: AUM_JOB, provider: "SITCA_AUM_DISCLOSURE_IN2201", runKey, universeCount: 0, batchSize: 5000, checkpointBefore: null,
   });
-  if (skipped) return { ok: true, skipped: true, reason: "run_key already present this month" };
+  if (skipped) return { ok: true, skipped: true, reason: "already attempted today" };
 
   const startedMs = Date.now();
   try {
+    const latestYearMonth = await peekAumLatestYearMonth();
+    const dbLatest = await prisma.$queryRawUnsafe<{ max: string | null }[]>(
+      `SELECT max(year_month) AS max FROM fund_aum_disclosure_monthly`,
+    );
+    if (dbLatest[0]?.max && dbLatest[0].max >= latestYearMonth) {
+      await finishRun(runId, AUM_JOB, "SITCA_AUM_DISCLOSURE_IN2201", startedMs, {
+        status: "COMPLETED", attempted: 0, completed: 0, inserted: 0, updated: 0, failed: 0,
+        retryableFailures: 0, checkpointAfter: null,
+        details: { write_enabled: writeEnabled, skipped_reason: "DB_ALREADY_HAS_LATEST_MONTH", db_latest: dbLatest[0].max, source_latest: latestYearMonth },
+      });
+      return { ok: true, skipped: true, reason: `DB已有最新月份 ${dbLatest[0].max}`, yearMonth: dbLatest[0].max };
+    }
     const { yearMonth, rows } = await fetchAumDisclosureAllCompanies();
 
     const fundRows = await prisma.$queryRawUnsafe<{ id: string; code: string }[]>(
-      `SELECT id, code FROM funds WHERE code IS NOT NULL
+      `SELECT id, code FROM funds WHERE code ~ '^[0-9]{8}[A-Za-z]*$'
          AND id NOT IN (SELECT old_fund_id FROM fund_superseded_by_code)
          AND id IN (SELECT asset_id FROM tw_purchasable_classification WHERE asset_type = 'FUND' AND status = 'APPROVED')`,
     );
