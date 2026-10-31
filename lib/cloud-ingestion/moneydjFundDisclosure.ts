@@ -98,7 +98,8 @@ export async function fetchMoneydjDisclosure(moneydjCode: string): Promise<Money
   const url = `https://www.moneydj.com/funddj/yp/yp013000.djhtm?a=${encodeURIComponent(moneydjCode)}&topc=`;
   const response = await fetch(url, {
     headers: { "user-agent": "Mozilla/5.0 SmartFund Fund Research/1.0" },
-    signal: AbortSignal.timeout(30_000),
+    // 2026-10-31（使用者核准，MoneyDJ卡死保護）: 從30秒降到20秒，跟其他MoneyDJ對外請求一致。
+    signal: AbortSignal.timeout(20_000),
   });
   if (response.status === 403 || response.status === 429) {
     throw new MoneydjHttpError(response.status, response.headers.get("retry-after"));
@@ -295,7 +296,7 @@ export async function persistMoneydjDisclosure(
         );
       }
     },
-    { maxWait: 10_000, timeout: 60_000 },
+    { maxWait: 10_000, timeout: 20_000 }, // 2026-10-31（使用者核准，MoneyDJ卡死保護）: 60秒降到20秒
   );
 
   const readback = await prisma.$queryRawUnsafe<Array<{ rows: number }>>(
@@ -367,7 +368,7 @@ export async function persistMoneydjDisclosureBatch(
         }
       }
     },
-    { maxWait: 20_000, timeout: 90_000 },
+    { maxWait: 10_000, timeout: 20_000 }, // 2026-10-31（使用者核准，MoneyDJ卡死保護）: 90秒降到20秒
   );
 
   const results: Array<{ fundId: string; rowsPersisted: number; isNewMonth: boolean }> = [];
@@ -423,7 +424,7 @@ export async function persistNameOnlyHoldings(
         );
       }
     },
-    { maxWait: 10_000, timeout: 60_000 },
+    { maxWait: 10_000, timeout: 20_000 }, // 2026-10-31（使用者核准，MoneyDJ卡死保護）: 60秒降到20秒
   );
   const readback = await prisma.$queryRawUnsafe<Array<{ rows: number }>>(
     `SELECT COUNT(*)::int AS rows FROM fund_holdings_name_only WHERE fund_id = $1 AND as_of_date = $2::date AND source = $3`,
