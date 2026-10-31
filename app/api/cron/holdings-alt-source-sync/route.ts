@@ -31,7 +31,7 @@ import { beginRun, finishRun } from "@/lib/cloud-ingestion/runContext";
 import { loadMapping } from "@/lib/offshore-nav-sync/mapping";
 import { loadDomesticYahooMapping } from "@/lib/holdings-alt-source/domesticYahooMapping";
 import { loadShadowCursor, saveShadowCursor, selectShadowBatch } from "@/lib/holdings-alt-source/shadowCursor";
-import { fetchYahooOffshoreHoldings, YahooRateLimitedError, YAHOO_HOLDINGS_SOURCE } from "@/lib/holdings-alt-source/yahooOffshoreHoldings";
+import { fetchYahooOffshoreHoldingsWithReason, YahooRateLimitedError, YAHOO_HOLDINGS_SOURCE } from "@/lib/holdings-alt-source/yahooOffshoreHoldings";
 import { writeYahooOffshoreHoldings, type QueryFn } from "@/lib/holdings-alt-source/writer";
 import { isWriteEnabled, currentRunMode } from "@/lib/holdings-alt-source/writeGate";
 import { isAuthorizedCron, unauthorizedCron } from "@/lib/cron/authorize";
@@ -85,6 +85,7 @@ export async function GET(request: Request) {
   let attempted = 0, fetched = 0, written = 0, writableRowCount = 0, errorCount = 0, rateLimited = false;
   let httpStatus: number | null = null;
   let consecutiveFailures = 0;
+  let skippedNoHoldingsBlock = 0;
   let stoppedReason: string | null = null;
   let offshoreAttempted = 0, offshoreFetched = 0, domesticAttempted = 0, domesticFetched = 0;
   const offshoreFundIds = new Set(offshoreMapping.map((m) => m.fundId));
@@ -97,15 +98,21 @@ export async function GET(request: Request) {
     const isOffshore = offshoreFundIds.has(entry.fundId);
     if (isOffshore) offshoreAttempted++; else domesticAttempted++;
     try {
-      const holdings = await fetchYahooOffshoreHoldings(entry.yahooFundId);
-      if (holdings) {
+      const result = await fetchYahooOffshoreHoldingsWithReason(entry.yahooFundId);
+      if (result.ok) {
         fetched++;
         if (isOffshore) offshoreFetched++; else domesticFetched++;
-        writableRowCount += holdings.holdings.length;
-        const result = await writeYahooOffshoreHoldings(query, YAHOO_HOLDINGS_SOURCE, { fundId: entry.fundId, yahooFundId: entry.yahooFundId, holdings }, writeEnabledThisRun);
-        written += result.written;
+        writableRowCount += result.holdings.holdings.length;
+        const writeResult = await writeYahooOffshoreHoldings(query, YAHOO_HOLDINGS_SOURCE, { fundId: entry.fundId, yahooFundId: entry.yahooFundId, holdings: result.holdings }, writeEnabledThisRun);
+        written += writeResult.written;
         consecutiveFailures = 0;
+      } else if (result.reason === "NO_HOLDINGS_BLOCK") {
+        // 2026-10-31（使用者核准）: 頁面打得開、Yahoo自己就沒有持股區塊(貨幣市場基金/FoF等) --
+        // 這是這檔基金本來的狀態，不是我們這次抓取失敗，標記成跳過、不計入consecutiveFailures，
+        // 不然輪到一批這種基金就會把整輪判定成FAILED。
+        skippedNoHoldingsBlock++;
       } else {
+        // PAGE_NOT_FOUND -- 404通常代表yahooFundId對應錯了，仍算失敗，需要查原因。
         consecutiveFailures++;
       }
     } catch (e) {
@@ -147,6 +154,7 @@ export async function GET(request: Request) {
       domestic_mapping_size: domesticMapping.length, offshore_attempted: offshoreAttempted, offshore_fetched: offshoreFetched,
       domestic_attempted: domesticAttempted, domestic_fetched: domesticFetched, fetched, written,
       writable_row_count: writableRowCount, error_count: errorCount, rate_limited: rateLimited, http_status: httpStatus,
+      skipped_no_holdings_block: skippedNoHoldingsBlock,
       stopped_reason: stoppedReason, runtime_seconds: Math.round(runtimeMs / 1000),
       shadow_cycle_reset: shadowCycleWillReset,
       shadow_cycle_processed_before_this_run: shadowCursorBefore.processedFundIds.length,

@@ -24,5 +24,10 @@ export async function loadDomesticYahooMapping(query: QueryFn): Promise<Domestic
         AND fpm.provider_code IS NOT NULL`,
     [],
   );
-  return rows.map((r) => ({ fundId: r.fundId, code: r.code, yahooFundId: `${r.providerCode}:FO` }));
+  // 2026-10-31（VERIFIED根因，HOLDINGS_ALT_SOURCE_SYNC連續失敗修正）: 532/1,824筆
+  // provider_code本身已經帶了":FO"字尾(source='YAHOO_TW_FUND_SEARCH_EXACT_NAME'寫入時就加過)，
+  // 這裡無條件再加一次變成"F000016C6D:FO:FO"——該ID在Yahoo奇摩基金頁面回404(VERIFIED)，被
+  // fetchYahooOffshoreHoldings當成「沒有持股資料」，連續抽到5檔這種壞ID就整輪FAILED，跟基金
+  // 本身有沒有持股無關。改成只在provider_code還沒有:FO字尾時才加。
+  return rows.map((r) => ({ fundId: r.fundId, code: r.code, yahooFundId: r.providerCode.endsWith(":FO") ? r.providerCode : `${r.providerCode}:FO` }));
 }

@@ -60,8 +60,12 @@ const CHECKPOINT_KEY = "cloud-moneydj-fund:ROLLING";
 // empirically-proven 300s-maxDuration safe batch ceiling (see the 2026-10-08 comment above) or
 // increasing the GitHub Actions schedule frequency, which raises MoneyDJ scrape volume -- left as a
 // flagged tradeoff rather than silently cranking it up, per the standing anti-scraping-abuse rule.
-const DEFAULT_BATCH = 80;
-const MAX_BATCH = 80;
+// 2026-10-31（使用者核准，429降頻）: VERIFIED過去24小時96輪裡62輪(65%)出現HTTP_429——
+// 1500ms/筆仍打太快。批次減半、間隔拉長到3000ms：40筆 x 3000ms = 最多120s，仍在
+// TIME_BUDGET_MS=240_000預算內。目標429降到0；遇到429的既有行為不變（backoffStop，整輪停止、
+// 不重試，見runMoneydjBatch/runMoneydjBatchGrouped的backoffStop分支）。
+const DEFAULT_BATCH = 40;
+const MAX_BATCH = 40;
 const FRESH_DAYS = 25; // matches the local disclosure worker's re-fetch guard
 // 2026-10-08: the real fix for "every run stuck IN_PROGRESS" is a time budget, not just a smaller
 // batch cap — a smaller batch only lowers the odds of running out of time, it doesn't guarantee a
@@ -74,7 +78,7 @@ const TIME_BUDGET_MS = 240_000;
 // VERIFIED production_scheduler_runs累積43%的HTTP_429失敗率，是我們自己打太快觸發MoneyDJ的
 // 限流，不是對方外部延遲，使用者核准定案：改成每一筆請求（成功或失敗）之間都插入這個延遲。
 // 1500ms/筆 x 最多80筆 = 最多120s，仍在TIME_BUDGET_MS=240_000的預算內，不會讓checkpoint寫不進去。
-const PER_ITEM_DELAY_MS = 1_500;
+const PER_ITEM_DELAY_MS = 3_000;
 
 // 2026-10-19: hourBucketKey() (lib/cloud-ingestion/runContext.ts) dedups run_key per CALENDAR HOUR,
 // shared by 9 other cron routes that genuinely want "at most once per hour" semantics. This route no

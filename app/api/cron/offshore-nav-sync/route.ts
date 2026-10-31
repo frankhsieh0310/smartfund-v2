@@ -30,6 +30,12 @@ import { checkOffshoreNavSanity } from "@/lib/offshore-nav-sync/navSanity";
 import { isWriteEnabled, currentRunMode } from "@/lib/offshore-nav-sync/writeGate";
 import { writeBatchIfEnabled, type QueryFn } from "@/lib/offshore-nav-sync/navWriter";
 import type { OffshoreNavCandidate } from "@/lib/offshore-nav-sync/types";
+import { loadDomesticYahooMapping } from "@/lib/holdings-alt-source/domesticYahooMapping";
+import { isBackfillWriteEnabled } from "@/lib/offshore-nav-sync/backfillWriteGate";
+import {
+  loadBackfillDone, saveBackfillDone, fetchOffshoreNavHistoryRange, writeBackfillHistory,
+  RateLimitedError as BackfillRateLimitedError,
+} from "@/lib/offshore-nav-sync/historyBackfill";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -40,8 +46,23 @@ const TIME_BUDGET_MS = 240_000;
 const REQUEST_SPACING_MS = 1_100;
 const query: QueryFn = (sql, params) => prisma.$queryRawUnsafe<any[]>(sql, ...params);
 
+// Historical NAV catch-up (one-time per fund, see historyBackfill.ts) rides this same invocation
+// instead of its own cron entry -- it only spends whatever wall-clock the daily top-up above didn't
+// need, capped well under maxDuration. 不准在台北01:00-05:30執行(使用者規則) -- this cron's own
+// schedule (vercel.json: UTC 1-3 + UTC4 = Taipei 09:00-12:00) never overlaps that window, this is a
+// defensive guard in case the schedule ever changes or the route is triggered manually.
+const BACKFILL_JOB = "FUND_HISTORY_BACKFILL";
+const BACKFILL_DEADLINE_MS = 280_000; // 20s safety margin before maxDuration=300s
+const BACKFILL_REQUEST_SPACING_MS = 2_000; // heavier payload (years of history) than the daily 1-point fetch
+const BACKFILL_YEARS = 5;
+
 function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
+}
+
+function isWithinForbiddenTaipeiWindow(now: Date): boolean {
+  const taipeiMinutes = (now.getUTCHours() * 60 + now.getUTCMinutes() + 8 * 60) % (24 * 60);
+  return taipeiMinutes >= 60 && taipeiMinutes < 330; // 01:00-05:30
 }
 
 export async function GET(request: Request) {
@@ -192,11 +213,104 @@ export async function GET(request: Request) {
     },
   });
 
+  // --- Historical NAV catch-up (one-time per fund) -- see historyBackfill.ts header comment.
+  // Isolated: any failure here must never affect the daily top-up result already computed above.
+  let backfillSummary: Record<string, unknown> | null = null;
+  try {
+    backfillSummary = await runHistoryBackfillSlice(startedMs, mapping);
+  } catch (e) {
+    backfillSummary = { error: String((e as Error).message ?? e) };
+  }
+
   return Response.json({
     ok: true, job: JOB, runId, status, runMode: currentRunMode(),
     mappingSize: mapping.length, pendingBeforeRun: pending.length, attempted,
     noDataCount, jumpReviewCount, errorCount, rateLimited, httpStatus,
     writeCandidateCount: candidates.length, written: writeResult.written, writeErrorCount: writeResult.writeErrorCount,
     mappingDiscoveredCount: discovered.length, mappingUnresolvedCount: unresolved.length,
+    backfill: backfillSummary,
   });
+}
+
+/** Spends whatever wall-clock remains (up to BACKFILL_DEADLINE_MS total for this invocation) walking
+ * the combined offshore+domestic Yahoo mapping, backfilling each not-yet-done fund's history once.
+ * Own run log (FUND_HISTORY_BACKFILL) so the health report and this job's progress are tracked
+ * independently of the daily top-up above. */
+async function runHistoryBackfillSlice(outerStartedMs: number, offshoreMapping: Array<{ fundId: string; yahooFundId: string }>) {
+  if (isWithinForbiddenTaipeiWindow(new Date())) {
+    return { skipped: true, reason: "OUTSIDE_ALLOWED_WINDOW (台北01:00-05:30不執行)" };
+  }
+  if (Date.now() - outerStartedMs > BACKFILL_DEADLINE_MS) {
+    return { skipped: true, reason: "NO_TIME_LEFT_AFTER_DAILY_SYNC" };
+  }
+
+  const backfillStartedMs = Date.now();
+  const writeEnabled = isBackfillWriteEnabled();
+  const runKey = `fund-history-backfill:${new Date(backfillStartedMs).toISOString()}`;
+  const { runId, skipped } = await beginRun({
+    jobName: BACKFILL_JOB, provider: "YAHOO_FUND_PRICE_HISTORY", runKey, universeCount: 0, batchSize: 0, checkpointBefore: null,
+  });
+  if (skipped) return { skipped: true, reason: "run_key already present and running" };
+
+  const domesticMapping = await loadDomesticYahooMapping(query);
+  const combined = [...offshoreMapping, ...domesticMapping];
+  const done = await loadBackfillDone(query);
+  const pending = combined.filter((m) => !done.has(m.fundId));
+
+  const fundIds = pending.map((m) => m.fundId);
+  const inceptionRows = fundIds.length
+    ? await query(`SELECT id, inception_date::text AS "inceptionDate" FROM funds WHERE id = ANY($1::text[])`, [fundIds])
+    : [];
+  const inceptionByFundId = new Map<string, string | null>(inceptionRows.map((r: any) => [r.id, r.inceptionDate]));
+
+  let attempted = 0, noDataCount = 0, errorCount = 0, totalWritten = 0, rateLimited = false;
+  let httpStatus: number | null = null;
+  const newlyDone = new Set<string>();
+  const toDate = new Date(backfillStartedMs);
+
+  for (const m of pending) {
+    if (Date.now() - outerStartedMs > BACKFILL_DEADLINE_MS) break;
+    attempted++;
+    const inceptionIso = inceptionByFundId.get(m.fundId) ?? null;
+    const fiveYearsAgo = new Date(toDate.getTime() - BACKFILL_YEARS * 365 * 86_400_000);
+    const fromDate = inceptionIso && new Date(inceptionIso).getTime() > fiveYearsAgo.getTime() ? new Date(inceptionIso) : fiveYearsAgo;
+    try {
+      const points = await fetchOffshoreNavHistoryRange(m.yahooFundId, fromDate, toDate);
+      if (!points) {
+        noDataCount++;
+        if (writeEnabled) newlyDone.add(m.fundId); // genuinely no history -- never retried
+        await sleep(BACKFILL_REQUEST_SPACING_MS);
+        continue;
+      }
+      if (writeEnabled) {
+        totalWritten += await writeBackfillHistory(query, m.fundId, points, new Date().toISOString());
+        newlyDone.add(m.fundId);
+      }
+    } catch (e) {
+      if (e instanceof BackfillRateLimitedError) {
+        rateLimited = true;
+        httpStatus = e.httpStatus;
+        break; // stop the whole backfill pass immediately on 401/403/429, no retry this run
+      }
+      errorCount++;
+    }
+    await sleep(BACKFILL_REQUEST_SPACING_MS);
+  }
+
+  if (writeEnabled && newlyDone.size > 0) {
+    await saveBackfillDone(query, new Set([...done, ...newlyDone]));
+  }
+
+  const status = rateLimited ? "PARTIAL" : errorCount > 0 && totalWritten === 0 ? "FAILED" : errorCount > 0 ? "PARTIAL" : "COMPLETED";
+  await finishRun(runId, BACKFILL_JOB, "YAHOO_FUND_PRICE_HISTORY", backfillStartedMs, {
+    status, attempted, completed: totalWritten, inserted: totalWritten, updated: 0, failed: errorCount,
+    retryableFailures: rateLimited ? pending.length - attempted : 0, checkpointAfter: null,
+    details: {
+      write_enabled: writeEnabled, combined_mapping_size: combined.length, pending_before_run: pending.length,
+      attempted, no_data_count: noDataCount, error_count: errorCount, rate_limited: rateLimited, http_status: httpStatus,
+      rows_written: totalWritten, done_total: done.size + newlyDone.size,
+    },
+  });
+
+  return { status, attempted, noDataCount, errorCount, rateLimited, httpStatus, rowsWritten: totalWritten, doneTotal: done.size + newlyDone.size, pendingBeforeRun: pending.length };
 }

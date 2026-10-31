@@ -60,15 +60,24 @@ function extractPortfolioHoldingBlock(html: string): { portfolioUpdated: string 
   }
 }
 
-export async function fetchYahooOffshoreHoldings(yahooFundId: string): Promise<YahooFundHoldings | null> {
+/** 2026-10-31（VERIFIED根因修正）: 區分「頁面打得開、Yahoo自己就沒有持股區塊」(NO_HOLDINGS_BLOCK
+ * -- 這類基金本來就不該算失敗) 跟「頁面本身404」(PAGE_NOT_FOUND -- 通常代表yahooFundId對應錯了,
+ * 需要查)。fetchYahooOffshoreHoldings()的既有null回傳行為完全不變(呼叫端/既有測試都還是看到
+ * null)，這個新函式只是額外多回傳一個reason，供holdings-alt-source-sync route用來正確分類
+ * consecutiveFailures，不重複發送請求。 */
+export type FetchResult =
+  | { ok: true; holdings: YahooFundHoldings }
+  | { ok: false; reason: "PAGE_NOT_FOUND" | "NO_HOLDINGS_BLOCK" };
+
+export async function fetchYahooOffshoreHoldingsWithReason(yahooFundId: string): Promise<FetchResult> {
   const url = `https://tw.stock.yahoo.com/fund/${encodeURIComponent(yahooFundId)}/summary`;
   const res = await fetch(url, { headers: { "User-Agent": UA }, signal: AbortSignal.timeout(20_000) });
   if (res.status === 401 || res.status === 403 || res.status === 429) throw new YahooRateLimitedError(res.status);
-  if (!res.ok) return null;
+  if (!res.ok) return { ok: false, reason: "PAGE_NOT_FOUND" };
   const html = await res.text();
 
   const block = extractPortfolioHoldingBlock(html);
-  if (!block || !Array.isArray(block.portfolios)) return null;
+  if (!block || !Array.isArray(block.portfolios)) return { ok: false, reason: "NO_HOLDINGS_BLOCK" };
 
   const holdings: YahooHoldingRow[] = [];
   for (const [index, p] of block.portfolios.entries()) {
@@ -76,7 +85,12 @@ export async function fetchYahooOffshoreHoldings(yahooFundId: string): Promise<Y
     if (!p.securityName || !Number.isFinite(weightPct)) continue;
     holdings.push({ rank: index + 1, securityName: p.securityName, ticker: p.ticker ?? null, weightPct });
   }
-  if (holdings.length === 0) return null;
+  if (holdings.length === 0) return { ok: false, reason: "NO_HOLDINGS_BLOCK" };
 
-  return { asOfDate: block.portfolioUpdated ?? null, holdings };
+  return { ok: true, holdings: { asOfDate: block.portfolioUpdated ?? null, holdings } };
+}
+
+export async function fetchYahooOffshoreHoldings(yahooFundId: string): Promise<YahooFundHoldings | null> {
+  const result = await fetchYahooOffshoreHoldingsWithReason(yahooFundId);
+  return result.ok ? result.holdings : null;
 }
