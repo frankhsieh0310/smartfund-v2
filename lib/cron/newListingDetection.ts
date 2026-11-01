@@ -30,7 +30,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { fetchYahooTwPerformance } from "@/lib/yahoo/twPerformancePage";
-import { fetchCurrentlyTradingTwCodes } from "@/lib/cron/twCurrentlyTradingCheck";
+import { fetchTwseLiveEtfCodes, fetchTpexLiveEtfCodes } from "@/lib/tw-purchasable/liveListCrossCheck";
 
 export type OfficialEtfRow = {
   exchange: "TWSE" | "TPEx";
@@ -176,16 +176,24 @@ export type NewListingResult = {
 // 當「這是真的新上市還是既存缺建檔缺口」的判斷依據。VERIFIED 這個假設本身有問題：t187ap47
 // 官方清單其實包含已經不在交易的 ETF（唯讀對照 TWSE/TPEx 今天真實的收盤行情資料，427 檔
 // 官方清單裡有 68 檔完全沒有今天的收盤紀錄，包含原本以為是「既存缺建檔缺口」的全部 65 檔）。
-// 真正該用的判斷依據是「現在是否還在交易」，不是「上市日期多舊」——改用
-// lib/cron/twCurrentlyTradingCheck.ts 查 TWSE/TPEx 自己的每日收盤行情，不管年紀多大，只要
-// 現在真的還在交易、資料庫沒有，排程每次執行就自動補建；不在交易的，不管多新都不建立。
-// 這樣排程本身就能自動補建缺口，不再需要手動帶 backfillCodes 參數觸發（沒有人拿得到
-// CRON_SECRET，手動觸發本來就不現實）。backfillCodes 保留做人工覆寫用途，但不是必要路徑。
+// 真正該用的判斷依據是「現在是否還在交易」，不是「上市日期多舊」。
+//
+// 2026-11-01（使用者核准，根因修正#2）：上面這個「現在是否還在交易」原本用
+// lib/cron/twCurrentlyTradingCheck.ts 查 TWSE/TPEx 的「今天收盤行情」API——VERIFIED這跟
+// liveListCrossCheck.ts修正過的同一個問題：行情表只列當天有成交的商品，低流動性/剛上市沒幾天
+// 的ETF可能連續幾天無成交，會被這個條件誤判成「還沒開始交易」而延後自動建檔（009831/009832
+// 2026-10-29上市當天就撞到過）。改用liveListCrossCheck.ts裡同一套TWSE e添富/TPEx投資篩選器
+// 官方現行商品清單（非交易活躍度篩選），跟判斷「是否還在掛牌」用同一份官方依據，不再混用
+// 每日行情表這種活躍度資料當「還在交易」的證據。
 export async function detectNewListings(writeEnabled: boolean, backfillCodes?: ReadonlySet<string>): Promise<NewListingResult> {
   const [twse, tpex] = await Promise.all([fetchOfficialEtfList("TWSE"), fetchOfficialEtfList("TPEx")]);
   const official = [...twse, ...tpex];
   const existing = await prisma.etf.findMany({ select: { code: true } });
-  const tradingCodes = await fetchCurrentlyTradingTwCodes();
+  const [twseLive, tpexLive] = await Promise.all([
+    fetchTwseLiveEtfCodes().catch(() => new Set<string>()),
+    fetchTpexLiveEtfCodes().catch(() => new Set<string>()),
+  ]);
+  const tradingCodes = new Set([...twseLive, ...tpexLive]);
   // 2026-10-18 root-cause fix: this previously compared the official list's bare code
   // (e.g. "00409A") against our stored codes with an EXACT string match. VERIFIED this was the
   // source of fresh duplicate ETF rows being created daily -- when an existing ETF's own `code`

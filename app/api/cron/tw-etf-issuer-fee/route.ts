@@ -15,7 +15,7 @@ import { isAuthorizedCron, unauthorizedCron } from "@/lib/cron/authorize";
 import { prisma } from "@/lib/prisma";
 import { beginRun, finishRun, readCheckpoint, writeCheckpoint } from "@/lib/cloud-ingestion/runContext";
 import {
-  readYuantaFee, readFubonFee, readCathayFee, readFhtFee, readCapitalFee,
+  readYuantaFee, readFubonFee, readCathayFee, readFhtFee, readCapitalFee, readCtbcFeeViaYahoo,
   IssuerSiteRateLimitedError, type IssuerFeeResult,
 } from "@/lib/tw-etf-fee-classify/issuerFeeReaders";
 import { isTwEtfFeeIssuerWriteEnabled } from "@/lib/tw-etf-fee-classify/writeGate";
@@ -31,14 +31,18 @@ const TIME_BUDGET_MS = 260_000;
 // 2026-11-01（使用者核正）：data_source 欄位是價格排程拿來當Yahoo ticker symbol用的，
 // 絕對不能寫中文說明進去（這支cron之前的版本誤寫過，已移除）。費率來源說明改存
 // expense_ratio_tier_text / expense_ratio_checked_at 這兩個新欄位（需先核准ALTER TABLE）。
-// 中信(ctbcinvestments.com.tw)的商品頁資料需要先走一次token驗證流程才能呼叫API，
-// 不是單純的站內導覽可達，這輪不實作，不放進這個表。
+// 2026-11-01（使用者核准）：中信(ctbcinvestments.com.tw)的商品頁資料需要先走一次token驗證
+// 流程才能呼叫API，仍然不繞過這個認證——改用readCtbcFeeViaYahoo當備援(Yahoo欄位+TPEx費率
+// 調整公告日期比對，見該函式註解)。VERIFIED Yahoo對中信發行的ETF完全沒有費率欄位(8檔樣本測試
+// 全部回傳空物件)，這條備援路徑目前實際上會對每一檔回報notFound，不是"沒接上"而是"接上了，
+// 來源本身沒有資料"。
 const SUPPORTED_ISSUERS: Record<string, (code: string) => Promise<IssuerFeeResult>> = {
   "元大證券投資信託股份有限公司": readYuantaFee,
   "富邦證券投資信託股份有限公司": readFubonFee,
   "國泰證券投資信託股份有限公司": readCathayFee,
   "復華證券投資信託股份有限公司": readFhtFee,
   "群益證券投資信託股份有限公司": readCapitalFee,
+  "中國信託證券投資信託股份有限公司": readCtbcFeeViaYahoo,
 };
 
 function isWithinForbiddenTaipeiWindow(now: Date): boolean {

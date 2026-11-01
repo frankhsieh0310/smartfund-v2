@@ -34,27 +34,41 @@ export async function runOffshoreScaleSync(): Promise<OffshoreScaleResult> {
          AND id NOT IN (SELECT old_fund_id FROM fund_superseded_by_code)
          AND id IN (SELECT asset_id FROM tw_purchasable_classification WHERE asset_type = 'FUND' AND status = 'APPROVED')`,
     );
-    const fundIdByIsin = new Map(fundRows.map((f) => [f.isin, f.id]));
+    // 2026-11-01（使用者核准，根因修正）：原本是 isin -> 單一fund_id 的Map，同一個ISIN對到多個
+    // fund_id時後面的會覆蓋前面的——VERIFIED「新加坡大華新加坡增長基金(星幣/USGFSG)」跟它的
+    // 美元級別(USGFUS)在TDCC 3-2資料裡共用同一個ISIN，覆蓋的結果是星幣那檔永遠拿不到規模資料。
+    // 規模本來就是基金層級(全級別合計)的數字，同一個ISIN對到的每個fund_id都該寫入同一筆規模，
+    // 改成 isin -> fund_id[] 的一對多映射。
+    const fundIdsByIsin = new Map<string, string[]>();
+    for (const f of fundRows) {
+      const list = fundIdsByIsin.get(f.isin);
+      if (list) list.push(f.id);
+      else fundIdsByIsin.set(f.isin, [f.id]);
+    }
 
     let written = 0;
     let matchedFundCount = 0;
     for (const row of rows) {
-      const fundId = fundIdByIsin.get(row.isin);
-      if (!fundId) continue;
-      matchedFundCount++;
-      if (writeEnabled) {
-        await prisma.$executeRawUnsafe(
-          `INSERT INTO fund_offshore_scale_tdcc (fund_id, scale_amount_millions, scale_currency, scale_as_of_date, source, fetched_at)
-           VALUES ($1, $2, $3, $4::date, 'TDCC_OPENDATA_3-2', now())
-           ON CONFLICT (fund_id) DO UPDATE SET
-             scale_amount_millions = EXCLUDED.scale_amount_millions, scale_currency = EXCLUDED.scale_currency,
-             scale_as_of_date = EXCLUDED.scale_as_of_date, fetched_at = now()`,
-          fundId, row.scaleAmountMillions, row.scaleCurrency, row.scaleAsOfDate,
-        );
-        written++;
+      const fundIds = fundIdsByIsin.get(row.isin);
+      if (!fundIds) continue;
+      for (const fundId of fundIds) {
+        matchedFundCount++;
+        if (writeEnabled) {
+          await prisma.$executeRawUnsafe(
+            `INSERT INTO fund_offshore_scale_tdcc (fund_id, scale_amount_millions, scale_currency, scale_as_of_date, source, fetched_at)
+             VALUES ($1, $2, $3, $4::date, 'TDCC_OPENDATA_3-2', now())
+             ON CONFLICT (fund_id) DO UPDATE SET
+               scale_amount_millions = EXCLUDED.scale_amount_millions, scale_currency = EXCLUDED.scale_currency,
+               scale_as_of_date = EXCLUDED.scale_as_of_date, fetched_at = now()`,
+            fundId, row.scaleAmountMillions, row.scaleCurrency, row.scaleAsOfDate,
+          );
+          written++;
+        }
       }
     }
-    if (!writeEnabled) matchedFundCount = rows.filter((r) => fundIdByIsin.has(r.isin)).length;
+    if (!writeEnabled) {
+      matchedFundCount = rows.reduce((sum, r) => sum + (fundIdsByIsin.get(r.isin)?.length ?? 0), 0);
+    }
 
     await finishRun(runId, JOB, "TDCC_OPENDATA_3-2", startedMs, {
       status: "COMPLETED", attempted: rows.length, completed: written, inserted: written, updated: 0, failed: 0,

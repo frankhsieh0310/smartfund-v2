@@ -24,6 +24,8 @@
 //       NEEDS_MANUAL_BLEND、附上原始級距文字，交由人工核對後決定是否採用自算加權值，不讓管線
 //       自己對级距表做加總猜測。
 
+import { fetchQuoteSummary } from "@/lib/yahoo/productSession";
+
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 
 export class IssuerSiteRateLimitedError extends Error {
@@ -290,6 +292,71 @@ export async function readCapitalFee(code: string): Promise<IssuerFeeResult> {
     distributionFreq: !freq || freq === "不配息" ? "NONE" : freq,
     needsManualBlend: mgmt.tiered || cust.tiered,
     rawFeeText: { management: mgmt.text, custody: cust.text },
+    notFound: false,
+  };
+}
+
+// 2026-11-01（使用者核准）：中信 ctbcinvestments.com.tw 官網的ETF費率API要求先走一次性
+// AuthToken流程才能呼叫（見上方162行附近的註解），VERIFIED直接GET會被拒絕——不繞過這個認證，
+// 改用Yahoo當備援，標示資料日期；Yahoo的費率數字如果比TPEx官方「修訂公開說明書/信託契約」
+// 類重大訊息裡最近一次費率調整公告還舊，就不顯示(notFound=true)，避免006208那種「數字本身
+// 是舊的、但看起來正常」的事故重演。
+//
+// VERIFIED（2026-11-01即時測試，8檔中信TW ETF樣本：00752/00882/00891/00941/00963/
+// 009819/009828/00995A）：Yahoo quoteSummary的fundProfile.feesExpensesInvestment.
+// annualReportExpenseRatio跟defaultKeyStatistics.annualReportExpenseRatio對中信發行的
+// 每一檔都是空物件{}——不是過期或抓錯symbol(price欄位能正常拿到報價、family也正確顯示
+// "CTBC Securities Investment Tr Co. Ltd.")，是Yahoo這個資料庫本身對中信這個發行人完全
+// 沒有費率欄位。這個函式如實回報notFound=true，不假裝有資料、也不嘗試其他Yahoo欄位去湊數字。
+async function fetchMostRecentCtbcFeeAnnouncementDate(code: string): Promise<string | null> {
+  try {
+    const res = await fetch("https://info.tpex.org.tw/api/etfMaInfo", {
+      method: "POST",
+      headers: { "User-Agent": UA, "Content-Type": "application/json" },
+      body: JSON.stringify({ company: "A00026", type: "value" }),
+      signal: AbortSignal.timeout(15_000),
+    });
+    if (!res.ok) return null;
+    const json = (await res.json()) as Array<{ date: string; stockNo?: string }>;
+    const forCode = json.filter((r) => r.stockNo === code);
+    if (forCode.length === 0) return null;
+    // date格式"2026.08.27" -> "2026-08-27"，取最新一筆
+    const dates = forCode.map((r) => r.date.replace(/\./g, "-")).sort().reverse();
+    return dates[0] ?? null;
+  } catch {
+    return null; // 抓不到公告列表時，不當成"沒有公告"，由呼叫端視為無法比對、保守地不顯示
+  }
+}
+
+export async function readCtbcFeeViaYahoo(code: string): Promise<IssuerFeeResult> {
+  const notFoundResult: IssuerFeeResult = {
+    managementFeePct: null, custodyFeePct: null, totalExpenseRatioPct: null, asOfDate: null,
+    fetchDate: todayIso(), distributionFreq: null, needsManualBlend: false,
+    rawFeeText: { management: "", custody: "" }, notFound: true,
+  };
+  const symbol = `${code}.TW`;
+  const qs = await fetchQuoteSummary(symbol, ["fundProfile", "defaultKeyStatistics"]);
+  if (!qs) return notFoundResult;
+  const fp = qs.result?.fundProfile, ks = qs.result?.defaultKeyStatistics;
+  const raw = fp?.feesExpensesInvestment?.annualReportExpenseRatio?.raw ?? ks?.annualReportExpenseRatio?.raw;
+  if (typeof raw !== "number" || !Number.isFinite(raw)) return notFoundResult;
+
+  // 006208事故的防線：Yahoo沒有給這個數字的實際生效日期，所以只能跟TPEx官方最近一次費率
+  // 調整公告比——只要官方有任何一筆費率調整公告，就代表Yahoo這個無法驗證年份的數字有可能是
+  // 調整前的舊值，保守地不顯示，交由人工核對；完全查不到任何公告時才顯示Yahoo的值。
+  const latestAnnouncementDate = await fetchMostRecentCtbcFeeAnnouncementDate(code);
+  if (latestAnnouncementDate) return notFoundResult;
+
+  const pct = Number((raw * 100).toFixed(4));
+  return {
+    managementFeePct: null,
+    custodyFeePct: null,
+    totalExpenseRatioPct: pct,
+    asOfDate: todayIso(),
+    fetchDate: todayIso(),
+    distributionFreq: null,
+    needsManualBlend: false,
+    rawFeeText: { management: "", custody: "" },
     notFound: false,
   };
 }
