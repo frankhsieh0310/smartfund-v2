@@ -15,18 +15,19 @@
 // 跟TWSE e添富同一類、非交易日活躍度篩選的官方商品清單工具，空body POST當場VERIFIED可用，
 // 可以每天即時重新抓，不是寫死的快照。
 //
-// 已知例外（2026-11-01使用者核准）：00790B(復華次順位金融債)、00793B(群益AAA-A醫療債)、
-// 00847B(中信美國市政債)這3檔同時不在TWSE/TPEx這兩個官方商品清單工具裡，但00847B VERIFIED在
-// 「上櫃ETF成交資料及發行規模月報表」115/09月報裡仍有實際成交金額(173,241仟元)和基金規模，
-// 且使用者前天(2026-10-30)親自核實這3檔都還在交易——根因還沒查清楚（可能是這兩個商品清單工具
-// 本身的收錄範圍/更新時機跟月報表不同步），使用者核准先列為已知例外、維持APPROVED，不要每天
-// 在排程紀錄裡重複回報同樣3檔已經決定過的「落差」。NEW的、不在這份例外名單裡的落差仍會照常回報。
+// 2026-11-01（使用者更正，撤銷上一版的已知例外）：00790B(復華次順位金融債)、00793B(群益AAA-A
+// 醫療債)、00847B(中信美國市政債)這3檔上一輪被列為「已知例外、維持APPROVED」，理由是使用者前天
+// 口頭核實還在交易——VERIFIED這個判斷是錯的。從TPEx官方「重大訊息」(ETF訊息中心->重大訊息->
+// 新上櫃/終止上櫃) VERIFIED三檔都已清算完成、信託契約終止：
+//   00790B 清算基準日114/04/25(2025-04-25)、清算餘額分配114/05/15(2025-05-15)
+//   00793B 清算基準日115/09/29(2026-09-29)、清算程序完成公告115/10/16(2026-10-16)
+//   00847B 清算基準日115/10/15(2026-10-15)、清算程序完成公告115/10/30(2026-10-30)
+// 三檔都不在TWSE/TPEx現行商品清單裡是正確結果，不是篩選器的收錄落差——移除「已知例外」清單，
+// 讓這3檔照常進mismatches，由使用者決定要不要寫進tw_purchasable_manual_overrides。
 
 const TWSE_URL = "https://www.twse.com.tw/zh/ETFortune/ajaxProductsResult";
 const TPEX_FILTER_URL = "https://info.tpex.org.tw/api/etfFilter";
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
-
-const KNOWN_FALSE_POSITIVE_CODES = new Set(["00790B", "00793B", "00847B"]);
 
 export async function fetchTwseLiveEtfCodes(): Promise<Set<string>> {
   const res = await fetch(TWSE_URL, {
@@ -86,11 +87,12 @@ export async function findLiveListMismatches(
   }
 
   const mismatches: LiveListMismatch[] = [];
+  // 2026-11-01：已知例外清單已撤銷（見上方註解），knownFalsePositives固定回傳空陣列，
+  // 保留欄位只是不破壞route.ts既有的回傳形狀。
   const knownFalsePositives: LiveListMismatch[] = [];
-  const classify = (r: LiveListMismatch) => (KNOWN_FALSE_POSITIVE_CODES.has(r.code) ? knownFalsePositives : mismatches).push(r);
 
-  if (twseLive) for (const r of twseRows) if (!twseLive.has(r.code)) classify(r);
-  if (tpexLive) for (const r of tpexRows) if (!tpexLive.has(r.code)) classify(r);
+  if (twseLive) for (const r of twseRows) if (!twseLive.has(r.code)) mismatches.push(r);
+  if (tpexLive) for (const r of tpexRows) if (!tpexLive.has(r.code)) mismatches.push(r);
 
   return { twseChecked: twseRows.length, tpexChecked: tpexRows.length, mismatches, knownFalsePositives, twseError, tpexError };
 }
