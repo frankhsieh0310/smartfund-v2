@@ -231,6 +231,12 @@ model Etf {
   premium             Decimal?                @db.Decimal(8, 4)
   aum                 Decimal?                @db.Decimal(18, 2)
   expenseRatio        Decimal?                @map("expense_ratio") @db.Decimal(6, 4)
+  // 2026-11-01（使用者核准）：發行投信官網揭露的是級距表/區間（例如006208、00929）而非單一數字時，
+  // 不自行加權算出 expenseRatio，照抄官網原文存進 expense_ratio_tier_text（+ expense_ratio_checked_at）；
+  // expenseRatio 在這種情況維持 NULL。這兩個欄位比照既有 distribution_checked_at 的前例，刻意不加進
+  // 這個Prisma model（加了會讓所有沒寫明select的prisma.etf.findFirst/findMany在ALTER TABLE套用前
+  // 直接整個查詢失敗），一律只透過 $queryRawUnsafe/$executeRawUnsafe 讀寫，直到正式套用、且確認
+  // 所有既有讀寫路徑都相容後，才考慮要不要補進schema.prisma。
   dividendYield       Decimal?                @map("dividend_yield") @db.Decimal(8, 4)
   volume              Decimal?                @db.Decimal(20, 0)
   returnYtd           Decimal?                @map("return_ytd") @db.Decimal(8, 4)

@@ -14,7 +14,10 @@
 import { isAuthorizedCron, unauthorizedCron } from "@/lib/cron/authorize";
 import { prisma } from "@/lib/prisma";
 import { beginRun, finishRun, readCheckpoint, writeCheckpoint } from "@/lib/cloud-ingestion/runContext";
-import { readYuantaFee, readFubonFee, IssuerSiteRateLimitedError, type IssuerFeeResult } from "@/lib/tw-etf-fee-classify/issuerFeeReaders";
+import {
+  readYuantaFee, readFubonFee, readCathayFee, readFhtFee, readCapitalFee,
+  IssuerSiteRateLimitedError, type IssuerFeeResult,
+} from "@/lib/tw-etf-fee-classify/issuerFeeReaders";
 import { isTwEtfFeeIssuerWriteEnabled } from "@/lib/tw-etf-fee-classify/writeGate";
 
 export const runtime = "nodejs";
@@ -25,9 +28,17 @@ const JOB = "TW_ETF_ISSUER_FEE";
 const CHECKPOINT_KEY = "tw-etf-issuer-fee:cursor";
 const REQUEST_DELAY_MS = 2_500;
 const TIME_BUDGET_MS = 260_000;
+// 2026-11-01（使用者核正）：data_source 欄位是價格排程拿來當Yahoo ticker symbol用的，
+// 絕對不能寫中文說明進去（這支cron之前的版本誤寫過，已移除）。費率來源說明改存
+// expense_ratio_tier_text / expense_ratio_checked_at 這兩個新欄位（需先核准ALTER TABLE）。
+// 中信(ctbcinvestments.com.tw)的商品頁資料需要先走一次token驗證流程才能呼叫API，
+// 不是單純的站內導覽可達，這輪不實作，不放進這個表。
 const SUPPORTED_ISSUERS: Record<string, (code: string) => Promise<IssuerFeeResult>> = {
   "元大證券投資信託股份有限公司": readYuantaFee,
   "富邦證券投資信託股份有限公司": readFubonFee,
+  "國泰證券投資信託股份有限公司": readCathayFee,
+  "復華證券投資信託股份有限公司": readFhtFee,
+  "群益證券投資信託股份有限公司": readCapitalFee,
 };
 
 function isWithinForbiddenTaipeiWindow(now: Date): boolean {
@@ -83,10 +94,20 @@ export async function GET(request: Request) {
         manualBlendDetails.push({ code: row.code, issuer: row.provider, management: result.rawFeeText.management, custody: result.rawFeeText.custody });
       }
       if (writeEnabled) {
+        // data_source 絕不寫入（它是價格排程的Yahoo ticker欄位，見本檔頂部註解）。
         if (result.totalExpenseRatioPct != null) {
+          // 只有官網給的是單一數字（非級距/非區間）才寫 expense_ratio；同時清掉舊的級距文字欄位。
           await prisma.$executeRawUnsafe(
-            `UPDATE etfs SET expense_ratio = $2, data_source = $3, updated_at = NOW() WHERE id = $1`,
-            row.id, result.totalExpenseRatioPct / 100, `${row.provider}官網商品頁(資料日期:${result.asOfDate})`,
+            `UPDATE etfs SET expense_ratio = $2, expense_ratio_tier_text = NULL, expense_ratio_checked_at = NOW(), updated_at = NOW() WHERE id = $1`,
+            row.id, result.totalExpenseRatioPct / 100,
+          );
+        } else if (result.needsManualBlend) {
+          // 官網是級距表/區間：expense_ratio 維持原值不動（不猜、不清空既有可能正確的數字），
+          // 只照抄原文存進 expense_ratio_tier_text，供畫面顯示「本App未計算，照抄官網級距」。
+          const tierText = `${row.provider}官網商品頁(資料日期:${result.fetchDate}) 經理費:${result.rawFeeText.management || "—"}｜保管費:${result.rawFeeText.custody || "—"}`;
+          await prisma.$executeRawUnsafe(
+            `UPDATE etfs SET expense_ratio_tier_text = $2, expense_ratio_checked_at = NOW(), updated_at = NOW() WHERE id = $1`,
+            row.id, tierText,
           );
         }
         if (result.distributionFreq != null) {

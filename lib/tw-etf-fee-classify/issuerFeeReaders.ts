@@ -35,12 +35,12 @@ export class IssuerSiteRateLimitedError extends Error {
 export type IssuerFeeResult = {
   managementFeePct: number | null;
   custodyFeePct: number | null;
-  totalExpenseRatioPct: number | null; // management + custody, 只有兩者都能直接取得時才算
+  totalExpenseRatioPct: number | null; // management + custody, 只有兩者都是單一數字（非級距/非區間）時才算，絕不自行加權級距
   asOfDate: string | null; // 官網自己標的資料日期；沒有就是本次擷取日(fetchDate)
   fetchDate: string;
   distributionFreq: string | null; // "NONE" 或官網原文頻率字串（例如"每年兩次"）
-  needsManualBlend: boolean; // true=經理費或保管費其中一項是級距表、沒有算好的加權值
-  rawFeeText: { management: string; custody: string };
+  needsManualBlend: boolean; // true=經理費或保管費其中一項是級距表／區間、沒有官網自己算好的單一值
+  rawFeeText: { management: string; custody: string }; // needsManualBlend=true時，這是要照抄存檔、在畫面顯示的級距原文
   notFound: boolean;
 };
 
@@ -129,6 +129,162 @@ export async function readFubonFee(code: string): Promise<IssuerFeeResult> {
     asOfDate: total != null ? todayIso() : null, // 富邦官網沒有獨立標示費率資料日期，用擷取日
     fetchDate: todayIso(),
     distributionFreq: distRaw === "無" ? "NONE" : distRaw && distRaw !== "" ? distRaw : null,
+    needsManualBlend: mgmt.tiered || cust.tiered,
+    rawFeeText: { management: mgmt.text, custody: cust.text },
+    notFound: false,
+  };
+}
+
+// 2026-11-01（使用者核准，延伸至國泰/復華/群益）：
+// 國泰 cwapi.cathaysite.com.tw/api/ETF/GetETFCharge?FundCode={internalCode} —— 這是
+// www.cathaysite.com.tw 官網商品頁自己載入費率資料時呼叫的同一支公開JSON API（VERIFIED：在官網
+// 商品頁用站內搜尋框查到00881/00878，由瀏覽器實際載入該頁時觀察到它呼叫這支API），回傳欄位本身
+// 就是官網顯示的原文（flat或「基金規模X億以下：Y%；X億以上：Z%」這種級距文字），不是另一個資料源。
+// internalCode對照表來自同一網域的 /api/Fund/GetFundList（公開、不需認證），一次取得全部ETF的
+// 證券代碼<->internalCode對照與收益分配頻率(allotPeriod)，這就是「共用同一次讀取」。
+//
+// 復華 www.fhtrust.com.tw/api/fundList —— 官網「ETF總覽」頁本身載入時呼叫的公開JSON API，單一
+// 請求回傳全部復華基金（含ETF）的經理費/保管費(ec012/ec013，可能是單一值或"X%~Y%"區間)、收益
+// 分配頻率(disType)、證券代碼(etf002)，一次涵蓋費率+配息兩項，不需逐檔讀取。
+//
+// 群益 www.capitalfund.com.tw/CFWeb/api/etf/basic/{internalId}、/detail/{internalId} ——
+// 官網ETF產品頁本身載入時呼叫的公開JSON API，{internalId}對照表VERIFIED取自官網「ETF總覽」頁
+// (/etf/product/overview) 本身DOM中的商品連結(/etf/product/detail/{id}/basic)，不是猜測。
+//
+// 中信 ctbcinvestments.com.tw 的ETF商品頁是純前端渲染(無SSR內容)，其資料API
+// (www.ctbcinvestments.com.tw/API/...) 要求先POST取得一次性AuthToken才能呼叫，VERIFIED
+// 直接GET該token端點會被拒絕(「不支援的http方法」)。這屬於需要還原一套session/token機制才能
+// 自動化的認證API，不是單純的「从菜单导览找到网址」，跟「429/403就停，不准繞過」的精神相牴觸，
+// 這輪不實作中信，誠實列為未完成（不是忘記、不是繞過之後失敗）。
+
+async function fetchJson<T>(url: string, issuer: string): Promise<T> {
+  const res = await fetch(url, { headers: { "User-Agent": UA, Accept: "application/json" }, signal: AbortSignal.timeout(15_000) });
+  if (res.status === 403 || res.status === 429) throw new IssuerSiteRateLimitedError(issuer, res.status);
+  if (!res.ok) throw new IssuerSiteRateLimitedError(issuer, res.status);
+  return res.json() as Promise<T>;
+}
+
+function parsePctText(raw: string | null | undefined): { value: number | null; tiered: boolean; text: string } {
+  if (!raw) return { value: null, tiered: false, text: "" };
+  const text = raw.trim();
+  const flatMatch = text.match(/^([\d.]+)\s*[%％]$/);
+  if (flatMatch) return { value: Number(flatMatch[1]), tiered: false, text };
+  return { value: null, tiered: true, text }; // 含"~"區間、或整段中文級距敘述，一律視為需要人工比對，不猜
+}
+
+let cathayFundListCache: { fetchedAt: number; byCode: Map<string, { internalCode: string; allotPeriod: string }> } | null = null;
+
+async function getCathayFundList(): Promise<Map<string, { internalCode: string; allotPeriod: string }>> {
+  if (cathayFundListCache && Date.now() - cathayFundListCache.fetchedAt < 10 * 60_000) return cathayFundListCache.byCode;
+  const json = await fetchJson<{ result: Array<{ fundCode: string; stockCode: string; isETF: boolean; allotPeriod: string }> }>(
+    "https://cwapi.cathaysite.com.tw/api/Fund/GetFundList?CurrentPage=1&PerPageCount=9999&status=1", "CATHAY",
+  );
+  const byCode = new Map<string, { internalCode: string; allotPeriod: string }>();
+  for (const f of json.result) {
+    if (f.isETF && f.stockCode) byCode.set(f.stockCode, { internalCode: f.fundCode, allotPeriod: f.allotPeriod });
+  }
+  cathayFundListCache = { fetchedAt: Date.now(), byCode };
+  return byCode;
+}
+
+export async function readCathayFee(code: string): Promise<IssuerFeeResult> {
+  const list = await getCathayFundList();
+  const entry = list.get(code);
+  if (!entry) {
+    return { managementFeePct: null, custodyFeePct: null, totalExpenseRatioPct: null, asOfDate: null, fetchDate: todayIso(), distributionFreq: null, needsManualBlend: false, rawFeeText: { management: "", custody: "" }, notFound: true };
+  }
+  const json = await fetchJson<{ result: { managerCharge: string; storageCharge: string } }>(
+    `https://cwapi.cathaysite.com.tw/api/ETF/GetETFCharge?FundCode=${encodeURIComponent(entry.internalCode)}&status=1`, "CATHAY",
+  );
+  const mgmt = parsePctText(json.result?.managerCharge);
+  const cust = parsePctText(json.result?.storageCharge);
+  const total = mgmt.value != null && cust.value != null ? Number((mgmt.value + cust.value).toFixed(4)) : null;
+  return {
+    managementFeePct: mgmt.value,
+    custodyFeePct: cust.value,
+    totalExpenseRatioPct: total,
+    asOfDate: total != null ? todayIso() : null,
+    fetchDate: todayIso(),
+    distributionFreq: entry.allotPeriod === "不配息" ? "NONE" : entry.allotPeriod || null,
+    needsManualBlend: mgmt.tiered || cust.tiered,
+    rawFeeText: { management: mgmt.text, custody: cust.text },
+    notFound: false,
+  };
+}
+
+let fhtFundListCache: { fetchedAt: number; byCode: Map<string, { ec012: string; ec013: string; disType: string | null }> } | null = null;
+
+async function getFhtFundList(): Promise<Map<string, { ec012: string; ec013: string; disType: string | null }>> {
+  if (fhtFundListCache && Date.now() - fhtFundListCache.fetchedAt < 10 * 60_000) return fhtFundListCache.byCode;
+  const json = await fetchJson<{ result: Array<{ etf002: string; ec012: string; ec013: string; disType: string | null }> }>(
+    "https://www.fhtrust.com.tw/api/fundList", "FHT",
+  );
+  const byCode = new Map<string, { ec012: string; ec013: string; disType: string | null }>();
+  for (const f of json.result) {
+    if (f.etf002 && /^\d{4,6}[A-Z]?$/.test(f.etf002)) byCode.set(f.etf002, { ec012: f.ec012, ec013: f.ec013, disType: f.disType ?? null });
+  }
+  fhtFundListCache = { fetchedAt: Date.now(), byCode };
+  return byCode;
+}
+
+export async function readFhtFee(code: string): Promise<IssuerFeeResult> {
+  const list = await getFhtFundList();
+  const entry = list.get(code);
+  if (!entry) {
+    return { managementFeePct: null, custodyFeePct: null, totalExpenseRatioPct: null, asOfDate: null, fetchDate: todayIso(), distributionFreq: null, needsManualBlend: false, rawFeeText: { management: "", custody: "" }, notFound: true };
+  }
+  const mgmt = parsePctText(entry.ec012);
+  const cust = parsePctText(entry.ec013);
+  const total = mgmt.value != null && cust.value != null ? Number((mgmt.value + cust.value).toFixed(4)) : null;
+  return {
+    managementFeePct: mgmt.value,
+    custodyFeePct: cust.value,
+    totalExpenseRatioPct: total,
+    asOfDate: total != null ? todayIso() : null,
+    fetchDate: todayIso(),
+    distributionFreq: entry.disType ?? "NONE",
+    needsManualBlend: mgmt.tiered || cust.tiered,
+    rawFeeText: { management: mgmt.text, custody: cust.text },
+    notFound: false,
+  };
+}
+
+let capitalFundIdCache: { fetchedAt: number; byCode: Map<string, string> } | null = null;
+
+async function getCapitalFundIds(): Promise<Map<string, string>> {
+  if (capitalFundIdCache && Date.now() - capitalFundIdCache.fetchedAt < 10 * 60_000) return capitalFundIdCache.byCode;
+  const html = await fetchHtml("https://www.capitalfund.com.tw/etf/product/overview", "CAPITAL");
+  const byCode = new Map<string, string>();
+  const linkRe = /\/etf\/product\/detail\/(\d+)\/basic[^"]*"[^>]*>\s*(?:<[^>]+>\s*)*([0-9]{4,6}[A-Z]?)/g;
+  // 官網清單頁的卡片結構把代號放在連結內文字節點中，直接找「detail/{id}」與其後緊接著出現的代號；
+  // 若未來改版導致抓不到，byCode會是空表、所有代碼回傳notFound，不會誤判。
+  let m: RegExpExecArray | null;
+  while ((m = linkRe.exec(html))) byCode.set(m[2], m[1]);
+  capitalFundIdCache = { fetchedAt: Date.now(), byCode };
+  return byCode;
+}
+
+export async function readCapitalFee(code: string): Promise<IssuerFeeResult> {
+  const ids = await getCapitalFundIds();
+  const internalId = ids.get(code);
+  if (!internalId) {
+    return { managementFeePct: null, custodyFeePct: null, totalExpenseRatioPct: null, asOfDate: null, fetchDate: todayIso(), distributionFreq: null, needsManualBlend: false, rawFeeText: { management: "", custody: "" }, notFound: true };
+  }
+  const [basic, detail] = await Promise.all([
+    fetchJson<{ data: { profitFrequency: string } }>(`https://www.capitalfund.com.tw/CFWeb/api/etf/basic/${internalId}`, "CAPITAL"),
+    fetchJson<{ data: { manageCharge: string; storageCharge: string } }>(`https://www.capitalfund.com.tw/CFWeb/api/etf/detail/${internalId}`, "CAPITAL"),
+  ]);
+  const mgmt = parsePctText(detail.data?.manageCharge?.trim());
+  const cust = parsePctText(detail.data?.storageCharge?.trim());
+  const total = mgmt.value != null && cust.value != null ? Number((mgmt.value + cust.value).toFixed(4)) : null;
+  const freq = basic.data?.profitFrequency?.trim();
+  return {
+    managementFeePct: mgmt.value,
+    custodyFeePct: cust.value,
+    totalExpenseRatioPct: total,
+    asOfDate: total != null ? todayIso() : null,
+    fetchDate: todayIso(),
+    distributionFreq: !freq || freq === "不配息" ? "NONE" : freq,
     needsManualBlend: mgmt.tiered || cust.tiered,
     rawFeeText: { management: mgmt.text, custody: cust.text },
     notFound: false,
