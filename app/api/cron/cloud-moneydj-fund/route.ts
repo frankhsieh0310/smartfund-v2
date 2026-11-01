@@ -371,8 +371,9 @@ async function setMoneydjCooldown(runId: string) {
 
 const SEARCH_PROBE_JOB = "MONEYDJ_SEARCH_PROBE";
 async function runSearchProbeOnce() {
-  // v2: 第一版探測因為UTF-8/Big5解碼bug拿到亂碼，換新run_key讓它真正重跑一次。
-  const runKey = "moneydj-search-probe:one-time-20261031-v2";
+  // v3（2026-11-01使用者核准）: 加了scriptSrcs/apiUrlHints擷取，換新run_key讓它真正重跑一次，
+  // 抓出搜尋頁實際referenced的JS/API網址清單存進details，不用再從本機試打。
+  const runKey = "moneydj-search-probe:one-time-20261101-v3";
   const { runId, skipped } = await beginRun({ jobName: SEARCH_PROBE_JOB, provider: "MONEYDJ", runKey, universeCount: 0, batchSize: 2, checkpointBefore: null });
   if (skipped) return { skipped: true };
   const startedMs = Date.now();

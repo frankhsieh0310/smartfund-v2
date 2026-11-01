@@ -14,6 +14,12 @@ export type MoneydjSearchProbeAttempt = {
   bodyHead: string | null;
   blocked: boolean;
   error: string | null;
+  // 2026-11-01（使用者核准）: bodyHead只有前2000字，VERIFIED涵蓋不到真正的搜尋結果列——這兩個
+  // 搜尋頁本身是外殼，結果透過頁面自己的<script src>或行內JS呼叫的API載入。從完整回應裡抓出
+  // <script src>清單跟「看起來像API呼叫」的字串片段，讓使用者看得到有哪些端點可以下一步去試，
+  // 不用再多打一次請求。
+  scriptSrcs: string[];
+  apiUrlHints: string[];
 };
 
 // 從原始bytes裡先用ascii粗略解碼出<meta charset>宣告，再用真正宣告的編碼正式解碼一次——
@@ -27,6 +33,30 @@ function decodeByDeclaredCharset(buf: ArrayBuffer): string {
   } catch {
     return new TextDecoder("utf-8").decode(buf);
   }
+}
+
+function extractScriptSrcs(html: string, baseUrl: string): string[] {
+  const out = new Set<string>();
+  for (const m of html.matchAll(/<script[^>]+src\s*=\s*["']([^"']+)["']/gi)) {
+    try {
+      out.add(new URL(m[1], baseUrl).toString());
+    } catch {
+      out.add(m[1]);
+    }
+  }
+  return [...out].slice(0, 60);
+}
+
+// 找「看起來像會回傳搜尋結果的API/AJAX呼叫」的字串片段——鎖定.aspx/.ashx/.asmx/ajax(/xdjhtm/json
+// 這類關鍵字附近的一小段原文（前後80字），不是整段程式碼，保持details精簡。
+const API_HINT_PATTERN = /[\w./\\-]*(?:\.aspx|\.ashx|\.asmx|ajax\(|json\?|\/api\/|GetFund|SearchFund)[\w./\\?&=%-]*/gi;
+function extractApiUrlHints(html: string): string[] {
+  const out = new Set<string>();
+  for (const m of html.matchAll(API_HINT_PATTERN)) {
+    const hit = m[0].trim();
+    if (hit.length >= 6) out.add(hit);
+  }
+  return [...out].slice(0, 60);
 }
 
 const CANDIDATES = (keyword: string): Array<{ label: string; url: string }> => [
@@ -56,10 +86,14 @@ export async function runMoneydjSearchProbe(testNames: string[], maxTotalMs = 20
         // <meta charset>解碼。
         const text = decodeByDeclaredCharset(await res.arrayBuffer());
         const blocked = res.status === 403 || res.status === 429 || /Access denied|too many requests/i.test(text);
-        attempts.push({ candidateLabel: `${label}:${name}`, url, httpStatus: res.status, bodyHead: text.slice(0, 2000), blocked, error: null });
+        attempts.push({
+          candidateLabel: `${label}:${name}`, url, httpStatus: res.status, bodyHead: text.slice(0, 2000), blocked, error: null,
+          scriptSrcs: blocked ? [] : extractScriptSrcs(text, url),
+          apiUrlHints: blocked ? [] : extractApiUrlHints(text),
+        });
         if (blocked) { stoppedOnBlock = true; break; }
       } catch (e: any) {
-        attempts.push({ candidateLabel: `${label}:${name}`, url, httpStatus: null, bodyHead: null, blocked: false, error: String(e?.message ?? e) });
+        attempts.push({ candidateLabel: `${label}:${name}`, url, httpStatus: null, bodyHead: null, blocked: false, error: String(e?.message ?? e), scriptSrcs: [], apiUrlHints: [] });
       }
       await new Promise((r) => setTimeout(r, 1_500));
     }
