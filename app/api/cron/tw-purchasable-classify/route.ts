@@ -7,6 +7,8 @@ import { isAuthorizedCron, unauthorizedCron } from "@/lib/cron/authorize";
 import { beginRun, finishRun } from "@/lib/cloud-ingestion/runContext";
 import { classifyTwPurchasable } from "@/lib/tw-purchasable/classify";
 import { isTwPurchasableClassifyWriteEnabled } from "@/lib/tw-purchasable/writeGate";
+import { findLiveListMismatches } from "@/lib/tw-purchasable/liveListCrossCheck";
+import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -25,6 +27,10 @@ export async function GET(request: Request) {
   try {
     const result = await classifyTwPurchasable(writeEnabled);
     const totalMatched = result.domesticFund.matched + result.offshoreFund.matched + result.etf.matched + result.usEtf.matched;
+    // 2026-11-01（使用者核准）：額外跟交易所自己的現行上市清單唯讀比對，只記錄發現了幾檔落差、
+    // 不自動變更任何分類狀態（t187ap47彙總表本身可能還沒移除已經不在現行清單上的ETF，見0060案例）。
+    // 只讀查詢失敗（例如TWSE暫時連不上）不讓整支分類排程失敗，記成一個欄位讓人回頭看。
+    const liveListCheck = await findLiveListMismatches((sql) => prisma.$queryRawUnsafe<Array<{ code: string; name: string; exchange: string; provider: string }>>(sql)).catch((e) => ({ error: (e as Error).message }));
     // 2026-10-22（使用者核准，三.三稽核發現）: 之前不論totalMatched掉到0或write gate狀態都無條件
     // 回報COMPLETED。
     const status = writeEnabled && totalMatched === 0 ? "PARTIAL" : "COMPLETED";
@@ -37,9 +43,9 @@ export async function GET(request: Request) {
       failed: 0,
       retryableFailures: 0,
       checkpointAfter: null,
-      details: { writeEnabled, result },
+      details: { writeEnabled, result, liveListCheck },
     });
-    return Response.json({ ok: true, task: "tw-purchasable-classify", writeEnabled, result });
+    return Response.json({ ok: true, task: "tw-purchasable-classify", writeEnabled, result, liveListCheck });
   } catch (e) {
     await finishRun(runId, JOB, "SITCA_TDCC_TWSE_TPEX", started, { status: "FAILED", attempted: 0, completed: 0, inserted: 0, updated: 0, failed: 1, retryableFailures: 1, checkpointAfter: null, error: (e as Error).message });
     return Response.json({ ok: false, task: "tw-purchasable-classify", error: (e as Error).message }, { status: 500 });

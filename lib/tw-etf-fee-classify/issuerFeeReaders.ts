@@ -94,7 +94,10 @@ export async function readYuantaFee(code: string): Promise<IssuerFeeResult> {
     totalExpenseRatioPct: total,
     asOfDate: mgmt.computed?.asOfDate ?? (total != null ? todayIso() : null),
     fetchDate: todayIso(),
-    distributionFreq: distRaw === "否" ? "NONE" : distRaw === "是" ? null : null, // 是=真的配息但不知頻率，不猜頻率字串，維持null(不覆蓋既有值)
+    // 2026-11-01（使用者核准）: 官網「是」代表契約上可以配息，不代表實際配過息——之前這裡把
+    // "是"丟回null，等於跟「根本沒查過這個欄位」無法區分，畫面只能顯示「—」。改存"UNSPECIFIED"
+    // 這個專用標記，畫面層再去查有沒有真實配息紀錄，分別顯示「可配息但未曾配息」或實際殖利率。
+    distributionFreq: distRaw === "否" ? "NONE" : distRaw === "是" ? "UNSPECIFIED" : null,
     needsManualBlend,
     rawFeeText: { management: mgmt.raw, custody: cust.raw },
     notFound: false,
