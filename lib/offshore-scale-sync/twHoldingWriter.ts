@@ -5,8 +5,13 @@ import { isOffshoreTwHoldingWriteEnabled } from "./twHoldingWriteGate";
 
 const JOB = "OFFSHORE_TW_HOLDING_SYNC";
 const CHECKPOINT_KEY = "offshore-tw-holding-sync:cursor";
-const REQUEST_DELAY_MS = 2_000;
-const TIME_BUDGET_MS = 30_000;
+// 2026-11-01（使用者核准，FundClear目前VERIFIED沒有限速）：原本2,000ms/30秒預算只能處理約13-15檔
+// /次、1,405檔要將近兩個月才補完一輪。這支route跟OFFSHORE_NAV_TDCC_SYNC、OFFSHORE_SCALE_TDCC_SYNC
+// 共用同一個280秒maxDuration（offshore-nav-tdcc-sync/route.ts依序呼叫三個子工作），VERIFIED當天
+// 這3個子工作實際耗時約110s(NAV)+18.6s(規模)，所以沒有把整個280秒預算都給這支——留了安全邊界
+// 給NAV子工作可能變長的情形，不是直接衝到100檔/次。429/403仍然立刻停止、不重試。
+const REQUEST_DELAY_MS = 1_200;
+const TIME_BUDGET_MS = 90_000;
 const BATCH_SIZE = Math.ceil(TIME_BUDGET_MS / REQUEST_DELAY_MS);
 
 function isWithinForbiddenTaipeiWindow(now: Date): boolean {

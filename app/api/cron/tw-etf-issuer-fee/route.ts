@@ -106,11 +106,12 @@ export async function GET(request: Request) {
             row.id, result.totalExpenseRatioPct / 100,
           );
         } else if (result.needsManualBlend) {
-          // 官網是級距表/區間：expense_ratio 維持原值不動（不猜、不清空既有可能正確的數字），
-          // 只照抄原文存進 expense_ratio_tier_text，供畫面顯示「本App未計算，照抄官網級距」。
+          // 2026-11-01（使用者核准，跟006208一致）：官網是級距表/區間時 expense_ratio 清成NULL，
+          // 不保留任何舊的單一值（例如先前Yahoo寫入的）——級距沒有單一總費用率可以顯示，留著舊值
+          // 等於默默展示一個不再準確的數字。只照抄原文存進 expense_ratio_tier_text。
           const tierText = `${row.provider}官網商品頁(資料日期:${result.fetchDate}) 經理費:${result.rawFeeText.management || "—"}｜保管費:${result.rawFeeText.custody || "—"}`;
           await prisma.$executeRawUnsafe(
-            `UPDATE etfs SET expense_ratio_tier_text = $2, expense_ratio_checked_at = NOW(), updated_at = NOW() WHERE id = $1`,
+            `UPDATE etfs SET expense_ratio = NULL, expense_ratio_tier_text = $2, expense_ratio_checked_at = NOW(), updated_at = NOW() WHERE id = $1`,
             row.id, tierText,
           );
         }
