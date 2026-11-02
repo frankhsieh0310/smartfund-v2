@@ -52,6 +52,26 @@ const US_FUND_MARKET_JOB: ExchangeCalendarJob = {
 
 type FundRow = { id: string; data_source: string; latest_nav: string | null };
 
+// 2026-11-02（VERIFIED，10檔JPMorgan小/中型股基金全部卡在PRICE_JUMP_REVIEW根因修正）：
+// reviewPriceJump()原本的第二意見用candle.chartPreviousClose（Yahoo Spark meta欄位）——VERIFIED
+// 這個欄位代表的是「這次fetchSparkBatch的range=5d視窗開始之前」那一天的收盤，不是「目標交易日的
+// 前一個交易日」。如果真正的價格變動發生在視窗中段（這次是10/26，10/26~10/29這4天在Yahoo自己的
+// 資料裡已經穩定在新價位、YCharts等第三方資料也獨立佐證新價位才是正確的），chartPreviousClose
+// 永遠停在變動前的舊價位，reviewPriceJump每天都會誤判成「還在跳動」，10檔基金因此連續好幾天卡在
+// PRICE_JUMP_REVIEW，從未被改判DB_DISCONTINUITY、永遠寫不進去。改成直接從同一次Spark回應的
+// points陣列裡找「目標交易日前一個實際交易日」的收盤價，這才是真正跟「昨天」比較，不是跟「視窗
+// 起點之前」比較。只改這支route自己的判斷邏輯，不動lib/market-close-sync下任何共用檔案。
+function previousTradingDayClose(
+  points: Array<{ timestampUnix: number; close: number | null }>,
+  beforeUnix: number,
+): number | null {
+  let best: { timestampUnix: number; close: number | null } | null = null;
+  for (const p of points) {
+    if (p.timestampUnix < beforeUnix && (!best || p.timestampUnix > best.timestampUnix)) best = p;
+  }
+  return best?.close ?? null;
+}
+
 async function computeUsFundCandidateIds(): Promise<string[]> {
   const rows = await prisma.fund.findMany({
     where: { currency: "USD", isActive: true, dataSource: { not: null } },
@@ -182,7 +202,8 @@ export async function GET(request: Request) {
         if (sanity === "UNIT_MISMATCH") {
           unitMismatchCount++; // held back — never written, flagged for review
         } else if (sanity === "PRICE_JUMP_REVIEW") {
-          const jumpOutcome = reviewPriceJump(nav, candle!.chartPreviousClose);
+          const independentPreviousClose = previousTradingDayClose(candle!.points, picked.timestampUnix);
+          const jumpOutcome = reviewPriceJump(nav, independentPreviousClose);
           if (jumpOutcome === "DB_DISCONTINUITY") {
             dbDiscontinuityCount++;
             candidates.push({ fundId, symbol: row.data_source, date: targetDate, nav });

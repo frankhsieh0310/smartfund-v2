@@ -36,8 +36,6 @@ import {
   writeCheckpoint,
   type CheckpointRow,
 } from "@/lib/cloud-ingestion/runContext";
-import { runMoneydjSearchProbe } from "@/lib/cloud-ingestion/moneydjSearchProbe";
-import { dumpMoneydjHoldingsPages } from "@/lib/cloud-ingestion/moneydjHoldingsPageProbe";
 import { nextMappingCandidates, searchMoneydjByName, pickUniqueExactMatch, MoneydjSearchRateLimitedError } from "@/lib/cloud-ingestion/moneydjMappingBackfill";
 import { isMoneydjMappingBackfillWriteEnabled } from "@/lib/cron/moneydjMappingBackfillWriteGate";
 
@@ -94,8 +92,11 @@ const FRESH_DAYS = 25; // matches the local disclosure worker's re-fetch guard
 // 第三支一次性探測，當時沒算進上面260s的加總）、以及main loop本身個別請求的20s fetch timeout
 // 疊加variance，顯然還是偶爾把實際耗時推過300s。還沒有Vercel執行紀錄可以抓到真正撞牆的那一步
 // （probe都是COMPLETED、沒有卡住的證據），所以先用更保守的margin降低踩線機率，不是宣稱已經
-// 根治：210_000降到170_000，三支一次性探測全部COMPLETED後只剩近乎0成本的skip檢查，margin從
-// 40s拉大到80s。
+// 根治：210_000降到170_000。
+// 2026-11-02（使用者核准）: search probe、holdings page probe這兩支一次性探測已經整支從這支
+// route移除（見上面GET()開頭的註解），不再佔用任何時間，只剩mapping backfill(≤30s)+main loop
+// (170s)+函式呼叫開銷，最長170+30=200s，距maxDuration=300s還有100s margin，比移除前(80s)更寬裕。
+// 仍然維持170_000不另外調高——這次目的是加大安全邊際、不是加大吞吐量，吞吐量不是這輪的訴求。
 const TIME_BUDGET_MS = 170_000;
 // 2026-10-29（使用者核准，43%永久失敗率根因修正）: 原本兩個批次迴圈在「成功」的請求之間完全沒有
 // 延遲——只有撞到403/429後才sleep(2_000)並結束整批，正常請求是逐筆打完就馬上打下一筆。
@@ -377,44 +378,11 @@ async function setMoneydjCooldown(runId: string) {
   await writeCheckpoint(JOB, COOLDOWN_CHECKPOINT_KEY, runId, { lastSymbol: cooldownUntil.toISOString(), processed: 0, succeeded: 0, failed: 0 });
 }
 
-const SEARCH_PROBE_JOB = "MONEYDJ_SEARCH_PROBE";
-async function runSearchProbeOnce() {
-  // v3（2026-11-01使用者核准）: 加了scriptSrcs/apiUrlHints擷取，換新run_key讓它真正重跑一次，
-  // 抓出搜尋頁實際referenced的JS/API網址清單存進details，不用再從本機試打。
-  const runKey = "moneydj-search-probe:one-time-20261101-v3";
-  const { runId, skipped } = await beginRun({ jobName: SEARCH_PROBE_JOB, provider: "MONEYDJ", runKey, universeCount: 0, batchSize: 2, checkpointBefore: null });
-  if (skipped) return { skipped: true };
-  const startedMs = Date.now();
-  const { attempts, stoppedOnBlock } = await runMoneydjSearchProbe(["野村鴻運基金", "元大2001基金"]);
-  if (stoppedOnBlock) await setMoneydjCooldown(runId);
-  await finishRun(runId, SEARCH_PROBE_JOB, "MONEYDJ", startedMs, {
-    status: "COMPLETED", attempted: attempts.length, completed: attempts.length, inserted: 0, updated: 0, failed: 0,
-    retryableFailures: 0, checkpointAfter: null, details: { attempts, stoppedOnBlock },
-  });
-  return { skipped: false, stoppedOnBlock };
-}
-
-// 2026-10-31（使用者核准，雲端除錯，一次性）: 抓野村鴻運基金(AC0001)+復華全球資產證券化基金
-// (ACFH20，元大2001基金在fund_mappings裡沒有moneydj_code，沒辦法照原本要求測，改用這檔已知有
-// 持股資料的基金代替)的MoneyDJ持股頁原始HTML，存進run log，供下一步擴充解析用。
-const HOLDINGS_PAGE_PROBE_JOB = "MONEYDJ_HOLDINGS_PAGE_PROBE";
-async function runHoldingsPageProbeOnce() {
-  // v2: 第一版探測因為UTF-8/Big5解碼bug拿到亂碼，換新run_key讓它真正重跑一次。
-  const runKey = "moneydj-holdings-page-probe:one-time-20261031-v2";
-  const { runId, skipped } = await beginRun({ jobName: HOLDINGS_PAGE_PROBE_JOB, provider: "MONEYDJ", runKey, universeCount: 0, batchSize: 2, checkpointBefore: null });
-  if (skipped) return { skipped: true };
-  const startedMs = Date.now();
-  const { dumps, stoppedOnBlock } = await dumpMoneydjHoldingsPages([
-    { moneydjCode: "AC0001", fundName: "野村鴻運基金" },
-    { moneydjCode: "ACFH20", fundName: "復華全球資產證券化基金（元大2001基金在fund_mappings沒有moneydj_code，改用這檔）" },
-  ]);
-  if (stoppedOnBlock) await setMoneydjCooldown(runId);
-  await finishRun(runId, HOLDINGS_PAGE_PROBE_JOB, "MONEYDJ", startedMs, {
-    status: "COMPLETED", attempted: dumps.length, completed: dumps.length, inserted: 0, updated: 0, failed: 0,
-    retryableFailures: 0, checkpointAfter: null, details: { dumps, stoppedOnBlock },
-  });
-  return { skipped: false, stoppedOnBlock };
-}
+// 2026-11-02（使用者核准）: MONEYDJ_SEARCH_PROBE（v3已COMPLETED 2026-11-01 22:00，含
+// scriptSrcs/apiUrlHints）跟MONEYDJ_HOLDINGS_PAGE_PROBE（v2已COMPLETED 2026-10-31）這兩支
+// 一次性試查都已經拿到結果，從這支排程裡移除，縮短每次執行時間、替main loop挪出更多安全邊界
+// （見下面TIME_BUDGET_MS旁的事故記錄）。runMoneydjSearchProbe/dumpMoneydjHoldingsPages的函式本身
+// 留在lib/cloud-ingestion/，沒有刪除，只是這支route不再呼叫。
 
 // 2026-10-31（使用者核准，MoneyDJ代碼配對backfill，寫入開關先關閉）: 併進這支既有排程，不新增
 // cron。每次執行配對一批缺持股的基金（名稱精確比對、唯一候選才算MATCHED），寫入
@@ -507,15 +475,12 @@ export async function GET(request: Request) {
     return Response.json({ ok: true, job: JOB, skipped: true, reason: "COOLDOWN_AFTER_429", cooldownUntil: cooldownUntil.toISOString() });
   }
 
-  // 一次性除錯探測 + 代碼配對backfill——跑在既有主流程之前，各自獨立的run_key/try-catch，失敗
-  // 不影響下面既有的holdings抓取流程。任何一個撞到429/被拒絕，各自內部就會設冷卻期（見各函式
-  // 內的setMoneydjCooldown呼叫），不只main loop自己撞到才算。
-  let searchProbeResult: Awaited<ReturnType<typeof runSearchProbeOnce>> | { error: string } | null = null;
-  try { searchProbeResult = await runSearchProbeOnce(); } catch (e: any) { searchProbeResult = { error: String(e?.message ?? e) }; }
+  // 代碼配對backfill——跑在既有主流程之前，獨立的run_key/try-catch，失敗不影響下面既有的holdings
+  // 抓取流程。撞到429/被拒絕會設冷卻期（見函式內的setMoneydjCooldown呼叫），不只main loop自己
+  // 撞到才算。2026-11-02：兩支一次性試查（search probe/holdings page probe）已COMPLETED並移除，
+  // 不再跑在這裡。
   let mappingBackfillResult: Awaited<ReturnType<typeof runMappingBackfillOnce>> | { error: string } | null = null;
   try { mappingBackfillResult = await runMappingBackfillOnce(); } catch (e: any) { mappingBackfillResult = { error: String(e?.message ?? e) }; }
-  let holdingsPageProbeResult: Awaited<ReturnType<typeof runHoldingsPageProbeOnce>> | { error: string } | null = null;
-  try { holdingsPageProbeResult = await runHoldingsPageProbeOnce(); } catch (e: any) { holdingsPageProbeResult = { error: String(e?.message ?? e) }; }
 
   const url = new URL(request.url);
   const batch = Math.min(MAX_BATCH, Math.max(1, Number(url.searchParams.get("batch") ?? DEFAULT_BATCH)));
@@ -718,8 +683,6 @@ export async function GET(request: Request) {
     runtimeMs: Date.now() - startedMs,
     status,
     masterFundDedup: true,
-    searchProbe: searchProbeResult,
     mappingBackfill: mappingBackfillResult,
-    holdingsPageProbe: holdingsPageProbeResult,
   });
 }
