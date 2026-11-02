@@ -88,7 +88,15 @@ const FRESH_DAYS = 25; // matches the local disclosure worker's re-fetch guard
 // 2026-10-31（VERIFIED，自己造成的bug修正附帶調整）: 從240_000降到210_000，替上面新加的
 // search probe(≤20s)+mapping backfill(≤30s)讓出安全margin，三者相加(210+20+30=260s)
 // 仍在這支route maxDuration=300s之內，留40s給函式呼叫本身的額外開銷。
-const TIME_BUDGET_MS = 210_000;
+// 2026-11-02（使用者核准，STALE_RUN_REAPED事故修正）: 11/1 16:01、22:01兩次執行仍然整支route
+// 跑到被Vercel maxDuration=300s強制終止、卡成IN_PROGRESS，隔天健康報告才被reapStaleRunningRuns()
+// 收割成FAILED——10/31那次調整後margin理論上還有40s，但holdings page probe（10/31另外加的
+// 第三支一次性探測，當時沒算進上面260s的加總）、以及main loop本身個別請求的20s fetch timeout
+// 疊加variance，顯然還是偶爾把實際耗時推過300s。還沒有Vercel執行紀錄可以抓到真正撞牆的那一步
+// （probe都是COMPLETED、沒有卡住的證據），所以先用更保守的margin降低踩線機率，不是宣稱已經
+// 根治：210_000降到170_000，三支一次性探測全部COMPLETED後只剩近乎0成本的skip檢查，margin從
+// 40s拉大到80s。
+const TIME_BUDGET_MS = 170_000;
 // 2026-10-29（使用者核准，43%永久失敗率根因修正）: 原本兩個批次迴圈在「成功」的請求之間完全沒有
 // 延遲——只有撞到403/429後才sleep(2_000)並結束整批，正常請求是逐筆打完就馬上打下一筆。
 // VERIFIED production_scheduler_runs累積43%的HTTP_429失敗率，是我們自己打太快觸發MoneyDJ的

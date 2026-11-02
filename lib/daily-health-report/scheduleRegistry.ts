@@ -52,6 +52,19 @@ export const JOB_SCHEDULES: Record<string, CronSchedule[]> = {
   CLOUD_SEC_FINANCIAL_INCREMENTAL: [{ expr: "0 13 * * *" }],
   TW_PURCHASABLE_CLASSIFY: [{ expr: "0 0 * * *" }],
   MARKET_CLOSE_SYNC_SHADOW: [{ expr: "*/15 * * * *" }],
+  // 2026-11-02（VERIFIED，健康報告NO_RUN_IN_LAST_24H誤報修正）: 這兩支都是vercel.json裡平日限定
+  // 的cron（1-5=Mon-Fri），先前沒登記在這裡，落到checks.ts保守的「過去24小時」判斷——週一08:30
+  // 台北健康報告執行時，上週五最後一次執行距今已超過24小時（中間隔著整個週末沒有排程），
+  // 誤判成異常，跟TW_ETF_DAY_CHANGE等既有已修正的案例是同一種模式。
+  STOCK_TECHNICAL_DAILY_TW: [{ expr: "0 8 * * 1-5" }],
+  CLOUD_TW_FUNDAMENTALS_REFRESH: [{ expr: "30 8 * * 1-5" }, { expr: "30 9 * * 1-5" }, { expr: "0 11 * * 1-5" }],
+  // 2026-11-02（VERIFIED，checkLocalScheduleReporting誤報修正）: tw-industry-radar本機Windows
+  // Task Scheduler三支排程，平日台北13:30/15:00/17:00＝UTC 05:30/07:00/09:00。用jobIdPrefix當key
+  // （checkLocalScheduleReporting用LIKE比對，這裡key值本身不需要是真實job_id，lastScheduledOccurrence
+  // 只是單純查表），同樣的週末誤報問題。
+  "LOCAL_1330_TW_PRICE_UPDATE": [{ expr: "30 5 * * 1-5" }],
+  "LOCAL_1500_INSTITUTIONAL_UPDATE": [{ expr: "0 7 * * 1-5" }],
+  "LOCAL_1700_TW_DATA_FINAL_UPDATE": [{ expr: "0 9 * * 1-5" }],
 };
 
 type FieldMatcher = (value: number) => boolean;

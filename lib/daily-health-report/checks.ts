@@ -811,11 +811,29 @@ export async function checkLocalScheduleReporting(query: QueryFn): Promise<Local
   ];
   const missing: LocalScheduleReportingResult["missing"] = [];
   for (const w of watched) {
-    const todayRows = await query(
-      `SELECT COUNT(*)::int n FROM production_scheduler_runs WHERE job_id LIKE $1 AND status IN ('COMPLETED','PARTIAL') AND started_at >= now() - interval '24 hours'`,
-      [`${w.jobIdPrefix}%`],
-    );
-    if (todayRows[0].n > 0) continue;
+    // 2026-11-02（VERIFIED，週末誤報修正）: 平日限定的本機排程（1330/1500/1700）先前用死板的
+    // 「過去24小時有沒有成功」判斷——週一健康報告08:30執行時，上週五的最後一次執行距今已超過
+    // 24小時（中間隔著整個週末沒有排程），天天誤報。改成跟checkPipelineRunLog同一套
+    // scheduleRegistry排程感知判斷：有登記排程的，用「最近一次應該已經執行的時間點」(留30分鐘
+    // 寬限期)比對；沒登記的（例如Mega ETF Holdings桌機排程，時間不固定、沒有VERIFIED過的cron
+    // 表達式）維持原本保守的24小時判斷。
+    const scheduledAt = lastScheduledOccurrence(w.jobIdPrefix, new Date());
+    let isMissing: boolean;
+    if (scheduledAt) {
+      const graceMs = 30 * 60 * 1000;
+      const overdueRows = await query(
+        `SELECT 1 FROM production_scheduler_runs WHERE job_id LIKE $1 AND status IN ('COMPLETED','PARTIAL') AND started_at >= $2::timestamptz LIMIT 1`,
+        [`${w.jobIdPrefix}%`, scheduledAt.toISOString()],
+      );
+      isMissing = overdueRows.length === 0 && Date.now() - scheduledAt.getTime() > graceMs;
+    } else {
+      const todayRows = await query(
+        `SELECT COUNT(*)::int n FROM production_scheduler_runs WHERE job_id LIKE $1 AND status IN ('COMPLETED','PARTIAL') AND started_at >= now() - interval '24 hours'`,
+        [`${w.jobIdPrefix}%`],
+      );
+      isMissing = todayRows[0].n === 0;
+    }
+    if (!isMissing) continue;
     const lastSuccessRow = await query(
       `SELECT started_at::text FROM production_scheduler_runs WHERE job_id LIKE $1 AND status IN ('COMPLETED','PARTIAL') ORDER BY started_at DESC LIMIT 1`,
       [`${w.jobIdPrefix}%`],

@@ -213,9 +213,18 @@ export async function GET(request: Request) {
 
     // 2026-10-22（使用者核准，三.三稽核發現）: 之前不論write_error_count或matched數量掉到0都無
     // 條件回報COMPLETED。
-    const status = writeResult.writeErrorCount > 0 ? "PARTIAL"
-      : writeEnabledThisRun && candidates.length > 0 && writeResult.written === 0 ? "PARTIAL"
-      : "COMPLETED";
+    // 2026-11-02（VERIFIED，健康報告LAST_RUN_PARTIAL永久誤報修正）: 下面written===0的PARTIAL
+    // 條件撞到CLAUDE.md的資料新鮮度規則——VERIFIED過去24小時全部24次執行written全部是0、
+    // unmatched_count/currency_mismatch_count/unit_mismatch_count/jump_review_count/
+    // write_error_count全部是0、matched_count穩定在36或4306（視當次hour有無完整CSV而定），這是
+    // SITCA官方CSV本身還沒發布新一天NAV時的正常穩態（writeSitcaNavBatch本身設計成不預先濾掉
+    // 「已經最新」的候選、讓UPDATE的WHERE子句去判斷，見navWriter.ts開頭註解），不是寫入失敗。
+    // 原本的written===0規則把這個健康穩態跟真正的寫入失敗混在一起，導致這個job只要資料已經追上
+    // 官方最新進度，健康報告就會永久誤報LAST_RUN_PARTIAL，天天出現在SYSTEM異常清單。拿掉這條，
+    // 只留write_error_count>0（真正的寫入失敗）當PARTIAL的判斷依據；unmatched/currency/unit
+    // mismatch增加時，health report自己另外有獨立的core_universe_fund覆蓋率檢查會抓到，不需要
+    // 靠這裡的status欄位重複示警。
+    const status = writeResult.writeErrorCount > 0 ? "PARTIAL" : "COMPLETED";
     await finishRun(runId, JOB, "SITCA_FSC_OFFICIAL_DAILY_NAV_CSV", startedMs, {
       status, attempted: rows.length, completed: writeResult.written, inserted: writeResult.written, updated: 0,
       failed: unmatched.length + writeResult.writeErrorCount, retryableFailures: 0, checkpointAfter: null,
