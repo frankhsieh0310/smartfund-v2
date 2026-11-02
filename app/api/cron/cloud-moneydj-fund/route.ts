@@ -254,19 +254,41 @@ export async function runMoneydjBatchGrouped(
   let buffer: Array<{ fund: MappedFund; disclosure: import("@/lib/cloud-ingestion/moneydjFundDisclosure").MoneydjDisclosure }> = [];
   let bufferLastId = lastId;
 
+  // 2026-11-02（VERIFIED，使用者核准，STALE_RUN_REAPED真根因修正）: 用`npx vercel logs`撈到11/1
+  // 16:01、22:01兩次事故當下的執行紀錄——兩次都只有同一種log：
+  // "Error: MONEYDJ_DISCLOSURE_READBACK_FAILED:<fundId>"，之後完全沒有任何後續log，正是這支
+  // flush()函式原本的呼叫方式造成的：迴圈最後收尾的`await flush()`（下面迴圈外那一次）完全沒有
+  // try/catch包住，persistBatch()裡任何一檔readback數量對不起來就會丟錯、直接讓整個
+  // runMoneydjBatchGrouped()連同外層route的GET handler一起崩潰——beginRun()已經寫入的
+  // IN_PROGRESS那一列永遠不會被finishRun()更新，卡住直到隔天健康報告的reapStaleRunningRuns()
+  // 才收割成FAILED。改成flush()自己接住persistBatch()的例外：失敗時把這批buffer裡每一檔都計入
+  // failed/failures（retryable，因為READBACK_FAILED符合既有的retryable正則），不拋出，讓main loop
+  // 跟最後收尾都一定能正常寫checkpoint、呼叫finishRun——不管哪一檔讀回驗證失敗，整支route都要能
+  // 正常結束。
   const flush = async () => {
     if (buffer.length === 0) return;
-    const results = await opts.persistBatch(buffer);
-    const byFund = new Map(results.map((r) => [r.fundId, r]));
-    for (const item of buffer) {
-      const r = byFund.get(item.fund.fundId);
-      if (r) {
-        rowsPersisted += r.rowsPersisted;
-        if (r.isNewMonth) updatedFunds++;
-        else alreadyCurrent++;
+    const flushedBuffer = buffer;
+    buffer = [];
+    try {
+      const results = await opts.persistBatch(flushedBuffer);
+      const byFund = new Map(results.map((r) => [r.fundId, r]));
+      for (const item of flushedBuffer) {
+        const r = byFund.get(item.fund.fundId);
+        if (r) {
+          rowsPersisted += r.rowsPersisted;
+          if (r.isNewMonth) updatedFunds++;
+          else alreadyCurrent++;
+        }
+      }
+    } catch (error) {
+      const message = String(error).slice(0, 300);
+      const retryableFlush = /READBACK_FAILED|SINGLE_WRITER_LOCKED/.test(message);
+      for (const item of flushedBuffer) {
+        failed++;
+        if (retryableFlush) retryable++;
+        failures.push({ code: item.fund.moneydjCode, reason: message });
       }
     }
-    buffer = [];
     await opts.onProgress(bufferLastId, { attempted, updatedFunds, failed });
   };
 
@@ -522,7 +544,14 @@ export async function GET(request: Request) {
   const batchRefreshEnabled = isMoneydjFundBatchRefreshEnabled();
   const innerBatchSize = moneydjFundBatchRefreshInnerSize();
 
-  const outcome = batchRefreshEnabled
+  // 2026-11-02（VERIFIED，使用者核准，STALE_RUN_REAPED防線補強）: 上面flush()已經修好
+  // MONEYDJ_DISCLOSURE_READBACK_FAILED這個已知的真根因，這裡再加一層保底——萬一main loop本身
+  // 丟出任何其他沒預期到的例外，也要確保beginRun()已經寫入的那一列IN_PROGRESS會被正常收尾成
+  // FAILED，而不是放著讓健康報告隔天才用STALE_RUN_REAPED收割，第一時間就能在run log看到
+  // 真正的錯誤訊息。
+  let outcome: Awaited<ReturnType<typeof runMoneydjBatchGrouped>>;
+  try {
+    outcome = batchRefreshEnabled
     ? await runMoneydjBatchGrouped(codes, {
         cursor,
         startedMs,
@@ -587,6 +616,15 @@ export async function GET(request: Request) {
             failed: (before?.failed ?? 0) + counters.failed,
           }),
       });
+  } catch (error) {
+    const message = String(error instanceof Error ? error.message : error).slice(0, 500);
+    await finishRun(runId, JOB, PROVIDER, startedMs, {
+      status: "FAILED", attempted: 0, completed: 0, inserted: 0, updated: 0, failed: 0,
+      retryableFailures: 0, checkpointAfter: before, error: message,
+      details: { batch_size: batch, wrapped, window_size: codes.length, master_fund_dedup: true, unexpected_main_loop_error: message },
+    });
+    return Response.json({ ok: false, job: JOB, runId, error: message }, { status: 500 });
+  }
   const {
     attempted,
     updatedFunds,
