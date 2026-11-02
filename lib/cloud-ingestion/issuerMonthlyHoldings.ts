@@ -32,12 +32,19 @@ export class IssuerSiteBlockedError extends Error {
   }
 }
 
-async function renderPageText(url: string, clickTabText: string | null, timeoutMs = 30_000): Promise<string> {
+async function renderPageText(url: string, clickTabText: string | null, timeoutMs = 30_000, forceReload = false): Promise<string> {
   return withPage(async (page) => {
     const response = await page.goto(url, { waitUntil: "networkidle2", timeout: timeoutMs });
     const status = response?.status() ?? null;
     if (status === 429 || status === 403) {
       throw new IssuerSiteBlockedError("UNKNOWN", status, `HTTP_${status}`);
+    }
+    if (forceReload) {
+      // 2026-11-03 VERIFIED：野村的URL是hash路由（.../#/...?groupId=...），page.goto對hash-only
+      // 差異不會觸發真正的瀏覽器導覽，Puppeteer會在Angular還沒重新渲染新路由內容前就回傳——
+      // 實測兩檔基金連續抓會讀到上一檔的殘留畫面文字（第一檔抓到DATE_NOT_FOUND、第二檔卻讀到
+      // 第一檔的持股）。page.reload()強制整頁重新載入，繞過hash-only導覽不觸發重render的問題。
+      await page.reload({ waitUntil: "networkidle2", timeout: timeoutMs });
     }
     if (clickTabText) {
       // 2026-11-02 VERIFIED：元大頁面預設顯示「績效表現」頁籤，「投資組合」(前10大標的)要先點
@@ -111,5 +118,37 @@ export async function fetchCathayMonthlyHoldings(cathayFundCode: string): Promis
     holdings.push({ name, weight: Number(m[2]) });
   }
   if (holdings.length !== 10) throw new Error(`CATHAY_HOLDINGS_COUNT_${holdings.length}:${cathayFundCode}`);
+  return { holdings, dataMonth: dateMatch[1], sourceUrl };
+}
+
+// 野村投信（nomurafunds.com.tw）：基金介紹→基金持股頁，URL用groupId+gradeId（從官網選單／搜尋
+// 結果點進去才拿得到，不是可猜的流水號），渲染後文字是「主要持股\n\n資料來源：嘉實資訊
+// 資料日期：YYYY/MM/DD\n\n名稱\n比重%\n名稱\n比重%\n...」10組、接著「國家分布」區塊。
+// 2026-11-03 使用者已用公司內部資料核對野村鴻運基金（groupId=E0FF51FB-DEC2-41F3-B66D-8F1A2991FFE7,
+// gradeId=27）這10檔名稱和比例完全一致，照這個格式實作。
+export async function fetchNomuraMonthlyHoldings(groupId: string, gradeId: string): Promise<IssuerMonthlyHoldingsResult> {
+  const sourceUrl = `https://www.nomurafunds.com.tw/Web/Content/#/primary/fund/fund-list/introduction?groupId=${groupId}&gradeId=${gradeId}&pageType=shareholding`;
+  let text: string;
+  try {
+    text = await renderPageText(sourceUrl, null, 30_000, true);
+  } catch (e) {
+    if (e instanceof IssuerSiteBlockedError) throw new IssuerSiteBlockedError("NOMURA", e.httpStatus, e.message);
+    throw e;
+  }
+  const headerIdx = text.indexOf("主要持股");
+  if (headerIdx < 0) throw new Error(`NOMURA_MARKER_NOT_FOUND:${groupId}/${gradeId}`);
+  const dateMatch = text.slice(headerIdx).match(/資料日期：(\d{4}\/\d{2})\/\d{2}/);
+  if (!dateMatch) throw new Error(`NOMURA_DATE_NOT_FOUND:${groupId}/${gradeId}`);
+  const nextSectionIdx = text.indexOf("國家分布", headerIdx);
+  const scope = text.slice(headerIdx, nextSectionIdx > 0 ? nextSectionIdx : headerIdx + 2000);
+  const rowRe = /\n([^\n%]+?)\n([\d.]+)%/g;
+  const holdings: IssuerHoldingRow[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = rowRe.exec(scope)) && holdings.length < 10) {
+    const name = stripCjkInternalSpacing(m[1]);
+    if (!name || name.includes("資料來源") || name.includes("資料日期")) continue;
+    holdings.push({ name, weight: Number(m[2]) });
+  }
+  if (holdings.length !== 10) throw new Error(`NOMURA_HOLDINGS_COUNT_${holdings.length}:${groupId}/${gradeId}`);
   return { holdings, dataMonth: dateMatch[1], sourceUrl };
 }

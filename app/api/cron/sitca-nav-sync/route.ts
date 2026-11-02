@@ -27,6 +27,7 @@ import type { SitcaMatchedCandidate } from "@/lib/sitca-nav-sync/types";
 import { runMonthlyFeeDisclosure, runMonthlyAumDisclosure } from "@/lib/sitca-nav-sync/monthlyDisclosureWriter";
 import { runFundclearAnnualSync } from "@/lib/fundclear-annual-sync/writer";
 import { runFundclearAumGapFill } from "@/lib/sitca-nav-sync/fundclearAumGapFill";
+import { runFundCompanyBackfill } from "@/lib/sitca-nav-sync/companyBackfillWriter";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -207,6 +208,15 @@ export async function GET(request: Request) {
     } catch (e: any) {
       fundclearAumGapFillResult = { ok: false, skipped: false, reason: String(e?.message ?? e) };
     }
+    // 2026-11-03（使用者核准）: funds.company 回補也併進這支既有cron，重用同一次已經抓到的rows，
+    // 不另外發SITCA請求。獨立開關 FUND_COMPANY_BACKFILL_WRITE，shadow模式預設不寫入，只補空白、
+    // 不覆蓋既有值，失敗不影響上面其他結果判定。
+    let companyBackfillResult: Awaited<ReturnType<typeof runFundCompanyBackfill>> | null = null;
+    try {
+      companyBackfillResult = await runFundCompanyBackfill(rows);
+    } catch (e: any) {
+      companyBackfillResult = { ok: false, skipped: false, reason: String(e?.message ?? e) };
+    }
 
     const matchedByCode = matched.filter((m) => m.matchedBy === "CODE").length;
     const matchedByName = matched.filter((m) => m.matchedBy === "NAME").length;
@@ -237,6 +247,7 @@ export async function GET(request: Request) {
         jump_review_detail: jumpReviewDetail, jump_review_overrides: jumpReviewOverrides,
         fee_disclosure: feeDisclosureResult, aum_disclosure: aumDisclosureResult,
         fundclear_annual: fundclearAnnualResult, fundclear_aum_gap_fill: fundclearAumGapFillResult,
+        company_backfill: companyBackfillResult,
       },
     });
 
@@ -248,6 +259,7 @@ export async function GET(request: Request) {
       written: writeResult.written, writeErrorCount: writeResult.writeErrorCount,
       feeDisclosure: feeDisclosureResult, aumDisclosure: aumDisclosureResult,
       fundclearAnnual: fundclearAnnualResult, fundclearAumGapFill: fundclearAumGapFillResult,
+      companyBackfill: companyBackfillResult,
     });
   } catch (e: any) {
     await finishRun(runId, JOB, "SITCA_FSC_OFFICIAL_DAILY_NAV_CSV", startedMs, {
