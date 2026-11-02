@@ -872,7 +872,14 @@ export async function GET(request: Request) {
   // 網站的程式碼，並把查證時間/結果一起寫進這個 category 欄位旁邊，不能只是改這裡的預設值。
   const SYSTEM_CATEGORY = "SYSTEM" as const;
   const anomalies = [
-    ...pipelineHealth.filter((p) => p.anomaly).map((p) => ({ type: "PIPELINE", category: SYSTEM_CATEGORY, jobId: p.jobId, reasons: p.anomalyReasons })),
+    // 2026-11-02（使用者核准）: 只有CLOUD_MONEYDJ_FUND這種已經在checks.ts用證據（error訊息比對
+    // HTTP_429/403）查證過的job，才會有externalBlock不是null——有的話代表這次PARTIAL/FAILED是
+    // 對方拒絕存取，不是我方程式問題，category改EXTERNAL_DELAY並附上拒絕原因、最後被擋時間、
+    // 連續被擋天數；externalBlock是null（包含「沒有登記pattern的job」跟「這個job確實有不符合
+    // pattern的其他錯誤」兩種情況）維持原本的SYSTEM，不隱藏任何真正的程式問題。
+    ...pipelineHealth.filter((p) => p.anomaly).map((p) => p.externalBlock
+      ? { type: "PIPELINE", category: "EXTERNAL_DELAY" as const, jobId: p.jobId, reasons: p.anomalyReasons, externalBlockReason: p.externalBlock.reason, lastBlockedAt: p.externalBlock.lastBlockedAt, consecutiveDaysBlocked: p.externalBlock.consecutiveDaysBlocked }
+      : { type: "PIPELINE", category: SYSTEM_CATEGORY, jobId: p.jobId, reasons: p.anomalyReasons }),
     ...[stockFreshness, domesticFundFreshness, fxMetricsFreshness, moneyMarketFreshness, globalIndexFreshness].filter((f) => f.anomaly).map((f) => ({ type: "FRESHNESS", category: SYSTEM_CATEGORY, label: f.label, reason: f.anomalyReason })),
     ...(etfDataSourceGap.anomaly ? [{ type: "ETF_DATA_SOURCE_GAP", category: SYSTEM_CATEGORY, newCodes: etfDataSourceGap.newCodes }] : []),
     ...(decommissionedJobReactivated ? [{ type: "OUT_OF_SCOPE_JOB_REACTIVATED", category: SYSTEM_CATEGORY, rows: decommissionedRows }] : []),

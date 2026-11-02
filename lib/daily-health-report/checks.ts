@@ -21,6 +21,12 @@ export type PipelineHealth = {
   /** 2026-10-31: 被reapStaleRunningRuns()收割成FAILED/STALE_RUN_REAPED的紀錄數——已自動處理，
    * 不計入anomaly，但要讓使用者看得到次數。 */
   staleReapedCount24h: number;
+  /** 2026-11-02（使用者核准）: 這個job被外部來源用429/403拒絕存取（見EXTERNAL_BLOCK_ERROR_
+   * PATTERNS）、而且過去24小時完全沒有COMPLETED時才非null——category要用EXTERNAL_DELAY，不是
+   * SYSTEM，因為問題在對方那邊、不是我們程式出錯。只有程式本身出錯（例外、寫入失敗、逾時等，
+   * error不match這個pattern）才維持SYSTEM。consecutiveDaysBlocked讓使用者看得到被擋多久，不准
+   * 隱藏。 */
+  externalBlock: { reason: string; lastBlockedAt: string; consecutiveDaysBlocked: number } | null;
 };
 
 // 2026-10-19（使用者撤回上午的排除，改成更嚴格的規則）: 上午曾經把 CLOUD_MONEYDJ_FUND 的
@@ -39,6 +45,54 @@ const BENIGN_ERROR_PATTERNS: Record<string, RegExp> = {
   // before that fix was deployed) still contains one.
   CLOUD_SEC_FINANCIAL_INCREMENTAL: /SEC_NO_CANONICAL_FACTS/,
 };
+
+// 2026-11-02（使用者核准）: CLOUD_MONEYDJ_FUND VERIFIED從429/403降到4次/天之後依然幾乎每次
+// 第一檔就被擋（見route.ts自己的backoffStop：撞到429/403立即停止這次invocation，不繼續嘗試
+// 加重封鎖）——這是MoneyDJ對來源IP本身的外部封鎖，不是我方程式問題，health report要能分辨。
+// finishRun的error欄位格式是route.ts自己組的`${failures.length} failures; e.g. HTTP_429`，
+// 所以這裡比對HTTP_429/HTTP_403。只對有登記在這裡的job生效，不是全domain套用，避免掩蓋其他
+// job真正的SYSTEM問題。
+const EXTERNAL_BLOCK_ERROR_PATTERNS: Record<string, { pattern: RegExp; label: string }> = {
+  CLOUD_MONEYDJ_FUND: { pattern: /HTTP_429|HTTP_403/, label: "MoneyDJ拒絕存取（HTTP 429）" },
+};
+
+/** 往前掃過去 maxDays 天（UTC 日曆日），算從今天（含）開始連續幾天「這個job當天每一筆非
+ * STALE_RUN_REAPED的紀錄都符合externalBlock pattern、而且當天完全沒有COMPLETED」。只要有一天
+ * 不符合（有COMPLETED，或當天完全沒執行，或有不符合pattern的錯誤），streak就停在那裡，不繼續
+ * 往更早算。 */
+export async function computeConsecutiveBlockedDays(
+  query: QueryFn, jobId: string, pattern: RegExp, maxDays = 30,
+): Promise<number> {
+  const rows = await query(
+    `SELECT started_at::text, status, error FROM production_scheduler_runs
+      WHERE job_id = $1 AND started_at > now() - interval '${maxDays} days'
+      ORDER BY started_at DESC`,
+    [jobId],
+  );
+  const byDate = new Map<string, { hasCompleted: boolean; allBlockedOrReaped: boolean; hasAny: boolean }>();
+  for (const r of rows) {
+    const date = String(r.started_at).slice(0, 10);
+    const entry = byDate.get(date) ?? { hasCompleted: false, allBlockedOrReaped: true, hasAny: false };
+    entry.hasAny = true;
+    if (r.status === "COMPLETED") entry.hasCompleted = true;
+    const isReaped = r.error === "STALE_RUN_REAPED";
+    const isBlocked = !!r.error && pattern.test(r.error);
+    if (!isReaped && !isBlocked) entry.allBlockedOrReaped = false;
+    byDate.set(date, entry);
+  }
+  const todayUtc = new Date().toISOString().slice(0, 10);
+  let streak = 0;
+  for (let i = 0; i < maxDays; i++) {
+    const d = new Date(Date.now() - i * 86_400_000).toISOString().slice(0, 10);
+    const entry = byDate.get(d);
+    if (!entry || !entry.hasAny || entry.hasCompleted || !entry.allBlockedOrReaped) {
+      if (d === todayUtc && (!entry || !entry.hasAny)) continue; // 今天可能還沒輪到執行，不算斷streak
+      break;
+    }
+    streak++;
+  }
+  return streak;
+}
 
 // Checks production_scheduler_runs for a given job_id over the last 24h. A pipeline with ZERO runs in
 // the window is itself an anomaly (the schedule expects at least one run per day for all six jobs this
@@ -170,6 +224,18 @@ export async function checkPipelineRunLog(query: QueryFn, jobId: string): Promis
     anomalyReasons.push("LAST_RUN_FAILED");
   }
 
+  // 2026-11-02（使用者核准）: 只有在上面確實因為「過去24小時沒有COMPLETED」才判anomaly的情況下，
+  // 才進一步查是不是外部429/403封鎖——不管「程式本身出錯」（例外、寫入失敗、逾時，error不match
+  // pattern）跟「對方拒絕存取」混在一起判。只有這24小時裡「所有」非STALE_RUN_REAPED的紀錄都符合
+  // 封鎖pattern，才算外部因素；只要有一筆是其他原因，維持SYSTEM，不准用429掩蓋真正的程式問題。
+  let externalBlock: PipelineHealth["externalBlock"] = null;
+  const blockConfig = EXTERNAL_BLOCK_ERROR_PATTERNS[jobId];
+  if (blockConfig && !hadFullPassToday && realRows.length > 0 && realRows.every((r) => !!r.error && blockConfig.pattern.test(r.error))) {
+    const lastBlockedRow = realRows[0]; // rows已經是started_at DESC排序
+    const consecutiveDaysBlocked = await computeConsecutiveBlockedDays(query, jobId, blockConfig.pattern);
+    externalBlock = { reason: blockConfig.label, lastBlockedAt: lastBlockedRow.started_at, consecutiveDaysBlocked };
+  }
+
   // 2026-10-21（使用者核准，查IN_PROGRESS根因）: VERIFIED CLOUD_NEW_FUND_LISTING_DETECTION在
   // 10/16、10/17、10/19連續卡在IN_PROGRESS，這個函式完全沒抓到——上面兩個分支只檢查
   // PARTIAL/FAILED，IN_PROGRESS兩者都不是，永遠卡住的執行紀錄就這樣對健康報告隱形。這裡補上：
@@ -205,6 +271,7 @@ export async function checkPipelineRunLog(query: QueryFn, jobId: string): Promis
     lastError: last?.error ?? null,
     anomaly: anomalyReasons.length > 0,
     anomalyReasons,
+    externalBlock,
   };
 }
 
