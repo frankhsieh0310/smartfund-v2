@@ -70,25 +70,25 @@ function navRow(navDate: string, nav = 100): TdccNavRow {
 
 test("filterNewerThanStored: CSV date newer than stored latest_nav_date -> updates", () => {
   const byName = new Map([["測試基金", navRow("2026-10-14")]]);
-  const result = filterNewerThanStored([{ id: "f1", name: "測試基金", latestNavDate: "2026-10-13" }], byName);
+  const result = filterNewerThanStored([{ id: "f1", name: "測試基金", latestNavDate: "2026-10-13", hasHistory: true }], byName);
   assert.deepEqual(result, [{ fundId: "f1", navDate: "2026-10-14", nav: 100 }]);
 });
 
 test("filterNewerThanStored: CSV date EQUAL to stored latest_nav_date -> skipped", () => {
   const byName = new Map([["測試基金", navRow("2026-10-13")]]);
-  const result = filterNewerThanStored([{ id: "f1", name: "測試基金", latestNavDate: "2026-10-13" }], byName);
+  const result = filterNewerThanStored([{ id: "f1", name: "測試基金", latestNavDate: "2026-10-13", hasHistory: true }], byName);
   assert.deepEqual(result, []);
 });
 
 test("filterNewerThanStored: CSV date OLDER than stored latest_nav_date -> skipped", () => {
   const byName = new Map([["測試基金", navRow("2026-10-10")]]);
-  const result = filterNewerThanStored([{ id: "f1", name: "測試基金", latestNavDate: "2026-10-13" }], byName);
+  const result = filterNewerThanStored([{ id: "f1", name: "測試基金", latestNavDate: "2026-10-13", hasHistory: true }], byName);
   assert.deepEqual(result, []);
 });
 
 test("filterNewerThanStored: fund never written before (latestNavDate=null) -> always updates regardless of CSV date", () => {
   const byName = new Map([["測試基金", navRow("2026-10-01")]]);
-  const result = filterNewerThanStored([{ id: "f1", name: "測試基金", latestNavDate: null }], byName);
+  const result = filterNewerThanStored([{ id: "f1", name: "測試基金", latestNavDate: null, hasHistory: false }], byName);
   assert.deepEqual(result, [{ fundId: "f1", navDate: "2026-10-01", nav: 100 }]);
 });
 
@@ -96,18 +96,27 @@ test("filterNewerThanStored: two consecutive days both carry a new NAV -> both r
   // Simulates two separate daily invocations, not two rows in the same CSV (the CSV only ever
   // has one row per fund per run) -- day 1's write becomes day 2's "stored" baseline.
   const day1Csv = new Map([["測試基金", navRow("2026-10-13")]]);
-  const day1Result = filterNewerThanStored([{ id: "f1", name: "測試基金", latestNavDate: "2026-10-12" }], day1Csv);
+  const day1Result = filterNewerThanStored([{ id: "f1", name: "測試基金", latestNavDate: "2026-10-12", hasHistory: true }], day1Csv);
   assert.deepEqual(day1Result, [{ fundId: "f1", navDate: "2026-10-13", nav: 100 }]);
 
   const day2Csv = new Map([["測試基金", navRow("2026-10-14")]]);
-  const day2Result = filterNewerThanStored([{ id: "f1", name: "測試基金", latestNavDate: "2026-10-13" }], day2Csv);
+  const day2Result = filterNewerThanStored([{ id: "f1", name: "測試基金", latestNavDate: "2026-10-13", hasHistory: true }], day2Csv);
   assert.deepEqual(day2Result, [{ fundId: "f1", navDate: "2026-10-14", nav: 100 }]);
 });
 
 test("filterNewerThanStored: a fund with no CSV match at all is simply absent from the result, not an error", () => {
   const byName = new Map<string, TdccNavRow>();
-  const result = filterNewerThanStored([{ id: "f1", name: "沒資料基金", latestNavDate: "2026-10-13" }], byName);
+  const result = filterNewerThanStored([{ id: "f1", name: "沒資料基金", latestNavDate: "2026-10-13", hasHistory: true }], byName);
   assert.deepEqual(result, []);
+});
+
+// 2026-11-02（VERIFIED，新上市基金NAV backfill卡住的根因修正）: CLOUD_NEW_FUND_LISTING_DETECTION
+// 建檔時會直接種latest_nav_date，但不會寫fund_history——hasHistory=false時，即使CSV日期看起來
+// 不比latestNavDate新，也要放行一次，讓fund_history真正補上。
+test("filterNewerThanStored: latestNavDate seeded but no fund_history row yet (hasHistory=false) -> updates even when CSV date is NOT newer", () => {
+  const byName = new Map([["新上市基金", navRow("2026-10-29")]]);
+  const result = filterNewerThanStored([{ id: "f1", name: "新上市基金", latestNavDate: "2026-10-29", hasHistory: false }], byName);
+  assert.deepEqual(result, [{ fundId: "f1", navDate: "2026-10-29", nav: 100 }]);
 });
 
 // This round's fix: data_provider='tdcc-offshore' funds (e.g. fund code "107") carry TDCC's own
@@ -123,18 +132,24 @@ test("indexByCode: builds a code -> row lookup from the same parsed CSV, keeping
 
 test("filterNewerThanStoredByCode: matches by code, same forward-only-date rule as the name path", () => {
   const byCode = new Map([["107", navRow("2026-10-13", 24)]]);
-  const result = filterNewerThanStoredByCode([{ id: "fund-107", code: "107", latestNavDate: null }], byCode);
+  const result = filterNewerThanStoredByCode([{ id: "fund-107", code: "107", latestNavDate: null, hasHistory: false }], byCode);
   assert.deepEqual(result, [{ fundId: "fund-107", navDate: "2026-10-13", nav: 24 }]);
 });
 
 test("filterNewerThanStoredByCode: never writes TDCC's own -9999 sentinel even if it somehow reaches this far", () => {
   const byCode = new Map([["XYZ", { code: "XYZ", name: "測試", navDate: "2026-10-13", nav: -9999, isin: null, currency: null } as TdccNavRow]]);
-  const result = filterNewerThanStoredByCode([{ id: "fund-x", code: "XYZ", latestNavDate: null }], byCode);
+  const result = filterNewerThanStoredByCode([{ id: "fund-x", code: "XYZ", latestNavDate: null, hasHistory: false }], byCode);
   assert.deepEqual(result, []);
 });
 
 test("filterNewerThanStoredByCode: a code with no CSV match at all is simply absent, not an error", () => {
   const byCode = new Map<string, TdccNavRow>();
-  const result = filterNewerThanStoredByCode([{ id: "fund-x", code: "NOPE", latestNavDate: null }], byCode);
+  const result = filterNewerThanStoredByCode([{ id: "fund-x", code: "NOPE", latestNavDate: null, hasHistory: false }], byCode);
   assert.deepEqual(result, []);
+});
+
+test("filterNewerThanStoredByCode: latestNavDate seeded but no fund_history row yet (hasHistory=false) -> updates even when CSV date is NOT newer", () => {
+  const byCode = new Map([["107", navRow("2026-10-29", 24)]]);
+  const result = filterNewerThanStoredByCode([{ id: "fund-107", code: "107", latestNavDate: "2026-10-29", hasHistory: false }], byCode);
+  assert.deepEqual(result, [{ fundId: "fund-107", navDate: "2026-10-29", nav: 24 }]);
 });

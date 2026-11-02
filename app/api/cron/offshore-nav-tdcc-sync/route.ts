@@ -82,15 +82,19 @@ export async function GET(request: Request) {
   // (36,272檔)根本不是APPROVED——每輪都把CSV比對結果寫進這些範圍外基金的latest_nav/
   // fund_history，完全是浪費（使用者永遠看不到這些商品）。補上APPROVED過濾，兩條都只保留
   // 「台灣買得到」的候選。
+  // 2026-11-02（VERIFIED，使用者核准，新上市基金NAV backfill卡住修正）: 兩條候選SQL都加上
+  // hasHistory（fund_history是否已經有至少一列），讓filterNewerThanStored/ByCode()能分辨「latest_
+  // nav_date看起來不比CSV舊」是「真的已經同步過」還是「CLOUD_NEW_FUND_LISTING_DETECTION建檔時
+  // 直接種了latest_nav_date、但從來沒寫過fund_history」——後者即使日期比較不過，也要放行一次。
   const [rawCandidateFunds, codeCandidateFunds, yahooMapping] = await Promise.all([
-    query(`SELECT id, name, latest_nav_date::text AS "latestNavDate" FROM funds WHERE (data_provider = 'yahoo' OR (data_provider = 'tdcc-offshore' AND code IS NULL)) AND id IN (SELECT asset_id FROM tw_purchasable_classification WHERE asset_type = 'FUND' AND status = 'APPROVED')`, []),
+    query(`SELECT id, name, latest_nav_date::text AS "latestNavDate", EXISTS(SELECT 1 FROM fund_history h WHERE h.fund_id = funds.id) AS "hasHistory" FROM funds WHERE (data_provider = 'yahoo' OR (data_provider = 'tdcc-offshore' AND code IS NULL)) AND id IN (SELECT asset_id FROM tw_purchasable_classification WHERE asset_type = 'FUND' AND status = 'APPROVED')`, []),
     // Task (this round): fund 107 and 24 siblings (data_provider='tdcc-offshore') were excluded from
     // every NAV pipeline — this query's old WHERE clause never selected them at all, even though
     // their NAV is sitting in this exact CSV right now. These funds carry TDCC's own 基金代碼
     // directly in `funds.code` (not a name match, which is why the 'yahoo' population above uses
     // name — those funds have no code), so they get their own code-matched branch below rather than
     // being folded into the name-matched population.
-    query(`SELECT id, code, latest_nav_date::text AS "latestNavDate" FROM funds WHERE data_provider = 'tdcc-offshore' AND code IS NOT NULL AND id IN (SELECT asset_id FROM tw_purchasable_classification WHERE asset_type = 'FUND' AND status = 'APPROVED')`, []),
+    query(`SELECT id, code, latest_nav_date::text AS "latestNavDate", EXISTS(SELECT 1 FROM fund_history h WHERE h.fund_id = funds.id) AS "hasHistory" FROM funds WHERE data_provider = 'tdcc-offshore' AND code IS NOT NULL AND id IN (SELECT asset_id FROM tw_purchasable_classification WHERE asset_type = 'FUND' AND status = 'APPROVED')`, []),
     loadMapping(query),
   ]);
   const candidateFunds = excludeOverlapWithYahooMapping(rawCandidateFunds, yahooMapping.map((m) => m.fundId));

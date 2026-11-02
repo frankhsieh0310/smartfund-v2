@@ -105,6 +105,23 @@ function parsePersistedState(raw: string | null): PersistedState {
 
 type SourceSwitch = { symbol: string; quotePrice: number; barClose: number; diff: number };
 
+// 2026-11-02（VERIFIED，跟us-fund-nav-sync同一個根因，使用者核准一起修）: reviewPriceJump()的
+// 獨立第二意見原本傳candle.chartPreviousClose（Yahoo Spark meta欄位）——這個欄位代表的是這次
+// fetchSparkBatch抓取範圍「起點之前」那天的收盤，不是「目標交易日的前一個交易日」。如果真正的
+// 價格變動（例如槓桿型ETF的反分割）發生在視窗中段，chartPreviousClose會永遠停在變動前的舊價位，
+// 讓每天的審核都誤判成「還在跳」，永遠卡在PRICE_JUMP_REVIEW、永遠寫不進去。改成直接從同一次
+// Spark回應的points陣列裡找「目標交易日前一個實際交易日」的收盤價，才是真正跟「昨天」比較。
+function previousTradingDayClose(
+  points: Array<{ timestampUnix: number; close: number | null }>,
+  beforeUnix: number,
+): number | null {
+  let best: { timestampUnix: number; close: number | null } | null = null;
+  for (const p of points) {
+    if (p.timestampUnix < beforeUnix && (!best || p.timestampUnix > best.timestampUnix)) best = p;
+  }
+  return best?.close ?? null;
+}
+
 /** Resolves one ETF's price (rule 1: BAR, rule 2: QUOTE_FINAL, rule 3: NO_TRADE_ON_TARGET, rule 4:
  * unresolved — see priceSource.ts) and classifies it against the DB row. classify() is never called
  * for a NO_TRADE_ON_TARGET resolution — there is no DB-vs-source price comparison to make, it's a
@@ -212,7 +229,8 @@ function resolveAndClassify(
       };
     }
     if (sanity === "PRICE_JUMP_REVIEW") {
-      const outcome = reviewPriceJump(resolved.price, candle?.chartPreviousClose ?? null);
+      const independentPreviousClose = picked ? previousTradingDayClose(points, picked.timestampUnix) : (candle?.chartPreviousClose ?? null);
+      const outcome = reviewPriceJump(resolved.price, independentPreviousClose);
       return {
         classification: outcome, sourceUsed: resolved.source, yahooMatch, yahooDetail,
         sanityDetail: lastKnownClose != null ? { newPrice: resolved.price, lastKnownClose } : undefined,

@@ -14,6 +14,7 @@ import { prisma } from "@/lib/prisma";
 import { beginRun, finishRun, reapStaleRunningRuns } from "@/lib/cloud-ingestion/runContext";
 import { checkPipelineRunLog, checkMoneydjParseFailures, evaluateFreshness, checkEtfDataSourceGap, evaluateYahooTwReturnConsistency, evaluateFredCommodityConsistency, evaluateTdccDividendConsistency, checkCommodityTechnicalCoverage, checkFundPerformanceCoverage, checkEtfPerformanceCoverage, checkEtfHistoryFreshness, checkFundHistoryFreshness, checkCoreUniverseEtfCoverage, checkCoreUniverseFundCoverage, checkCoreUniverseFundGapDetail, checkCoreUniverseEtfGapDetail, checkActiveEtfOfficialHoldingsCoverage, checkLocalScheduleReporting, checkCoreUniverseFundCurrencyFormat, evaluateFundCurrencyOfficialConsistency, type QueryFn, type YahooTwReturnSample, type FredCommoditySample, type FundCurrencyOfficialSample, type TdccDividendSample } from "@/lib/daily-health-report/checks";
 import { fetchTdccOffshoreDividendCsv, SOURCE as TDCC_DIVIDEND_SOURCE } from "@/lib/cron/offshoreDividendTdccSync";
+import { fetchTdccNavCsv, parseTdccNavCsv, indexByCode, type TdccNavRow } from "@/lib/offshore-nav-sync/tdccBatchSource";
 import { mapTdccCurrencyToIso, isValidIsoCurrency } from "@/lib/tdcc-currency-map";
 import { fetchYahooChartPeriod } from "@/lib/services/dataProviders/yahoo/yahooClient";
 import { CORE_COMMODITY_ROOTS } from "@/lib/cron/commodityUpdate";
@@ -449,7 +450,7 @@ export async function GET(request: Request) {
     }
 
     for (const fund of coreUniverseFundGapRows) {
-      if (fund.dataProvider === "tdcc-offshore") continue; // handled separately below (TDCC source, not SITCA)
+      if (fund.dataProvider === "tdcc-offshore") continue; // handled separately below (TDCC dataset 3-4, not SITCA)
       if (!sitcaCsvRows) {
         coreUniverseFundGapWithEvidence.push({ code: fund.code, name: fund.name, dataProvider: fund.dataProvider, category: "SYSTEM", reason: `SITCA_CSV_FETCH_FAILED: ${sitcaFetchError}`, checkedAt });
         continue;
@@ -471,34 +472,51 @@ export async function GET(request: Request) {
       }
     }
 
-    // tdcc-offshore: a fund with latestNavDate=null is either never-reported (if TDCC's own NAV
-    // dataset 3-4 has no valid row for it at all, confirmed live for the Russia/UEAHAA pair and
-    // MGF35/MGF38 -- see CLAUDE.md for the full investigation) or just hasn't been resolved by the
-    // self-extending mapping yet (regular EXTERNAL_DELAY/SYSTEM territory, already handled by that
-    // fix). Only the confirmed-never-reported ones are pulled out here; everything else for
-    // tdcc-offshore stays un-evidence-checked as before (self-extending mapping handles the gap).
-    const tdccNeverReportedCandidates = coreUniverseFundGapRows.filter((f) => f.dataProvider === "tdcc-offshore" && f.latestNavDate === null);
-    if (tdccNeverReportedCandidates.length > 0) {
+    // tdcc-offshore: 2026-11-02（VERIFIED，使用者核准，修補監控盲區）: 原本只對latestNavDate=null
+    // 的子集查「TDCC 3-4完全沒有這筆」當never-reported，latestNavDate不是null的全部tdcc-offshore
+    // 缺口直接continue跳過、完全沒有逐檔證據分類——VERIFIED這個盲區讓11/1一次新增的3,702檔境外
+    // 基金完全不會出現在SYSTEM或EXTERNAL_DELAY任何一邊，只看得到粗略的覆蓋率%。改成跟domestic
+    // (SITCA)同一套邏輯：用TDCC自己的3-4每日淨值CSV（跟offshore-nav-tdcc-sync同一份資料來源、
+    // 同一套parseTdccNavCsv/indexByCode，不重複寫一份解析邏輯）逐檔比對，分類SYSTEM/
+    // EXTERNAL_DELAY/never-reported。
+    const tdccOffshoreGapRows = coreUniverseFundGapRows.filter((f) => f.dataProvider === "tdcc-offshore");
+    if (tdccOffshoreGapRows.length > 0) {
+      const checkedAt = new Date().toISOString();
+      let tdccNavFetchError: string | null = null;
+      let tdccNavByName: Map<string, TdccNavRow> | null = null;
+      let tdccNavByCode: Map<string, TdccNavRow> | null = null;
       try {
-        const res = await fetch("https://opendata.tdcc.com.tw/getOD.ashx?id=3-4", { signal: AbortSignal.timeout(20_000) });
-        if (res.ok) {
-          const text = await res.text();
-          const codesInNav = new Set<string>();
-          const namesInNav = new Set<string>();
-          for (const line of text.split("\n")) {
-            const p = line.trim().split(",");
-            if (p.length < 6) continue;
-            if (p[0]) codesInNav.add(p[0]);
-            if (p[1]) namesInNav.add(p[1]);
-          }
-          for (const fund of tdccNeverReportedCandidates) {
-            const inNav = fund.code ? codesInNav.has(fund.code) : namesInNav.has(fund.name);
-            if (!inNav) coreUniverseFundNeverReported.push({ code: fund.code, name: fund.name, dataProvider: fund.dataProvider });
-          }
+        tdccNavByName = parseTdccNavCsv(await fetchTdccNavCsv());
+        tdccNavByCode = indexByCode(tdccNavByName);
+      } catch (e) {
+        tdccNavFetchError = e instanceof Error ? e.message : String(e);
+      }
+      for (const fund of tdccOffshoreGapRows) {
+        if (!tdccNavByName || !tdccNavByCode) {
+          coreUniverseFundGapWithEvidence.push({ code: fund.code, name: fund.name, dataProvider: fund.dataProvider, category: "SYSTEM", reason: `TDCC_NAV_CSV_FETCH_FAILED: ${tdccNavFetchError}`, checkedAt });
+          continue;
         }
-      } catch {
-        // best-effort only -- these funds just stay out of coreUniverseFundNeverReported this run,
-        // picked up again next time; never blocks the rest of the report.
+        const row = (fund.code && tdccNavByCode.get(fund.code)) || tdccNavByName.get(fund.name);
+        if (!row) {
+          // 不在這次3-4 CSV裡——可能是官方還沒公布首次淨值（含TDCC自己的-9999尚未申報sentinel，
+          // parseTdccNavCsv已經過濾掉），也可能是TDCC暫停了這檔的淨值公告。跟SITCA那段同一套區分：
+          // 我方從來沒有過真實淨值(latestNavDate為null) -> never-reported，排除在異常清單外；
+          // 我方以前有過真實淨值、現在官方CSV卻完全找不到 -> EXTERNAL_DELAY，不是我方的錯。
+          if (fund.latestNavDate === null) {
+            coreUniverseFundNeverReported.push({ code: fund.code, name: fund.name, dataProvider: fund.dataProvider });
+          } else {
+            coreUniverseFundGapWithEvidence.push({ code: fund.code, name: fund.name, dataProvider: fund.dataProvider, category: "EXTERNAL_DELAY", reason: "ABSENT_FROM_TODAYS_TDCC_NAV_CSV", checkedAt });
+          }
+          continue;
+        }
+        if (fund.latestNavDate && row.navDate <= fund.latestNavDate) {
+          // TDCC自己最新公布的日期也不比我方latestNavDate新——官方沒有更新≠我們過期（CLAUDE.md
+          // 資料新鮮度規則），包含「latestNavDate是剛建檔時從3-2種的初始值、剛好等於3-4今天的
+          // 最新日期」這種新基金的正常穩態。
+          coreUniverseFundGapWithEvidence.push({ code: fund.code, name: fund.name, dataProvider: fund.dataProvider, category: "EXTERNAL_DELAY", reason: `TDCC_OWN_DATA_ALSO_STALE_AT_${row.navDate}`, checkedAt });
+        } else {
+          coreUniverseFundGapWithEvidence.push({ code: fund.code, name: fund.name, dataProvider: fund.dataProvider, category: "SYSTEM", reason: `TDCC_HAS_REAL_NAV_${row.nav}_DATED_${row.navDate}_NOT_INGESTED`, checkedAt });
+        }
       }
     }
   }

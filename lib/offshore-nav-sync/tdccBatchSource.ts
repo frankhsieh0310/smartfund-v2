@@ -76,15 +76,23 @@ export async function fetchTdccNavCsv(): Promise<string> {
  * own SQL also re-checks `latest_nav_date < x.date` at write time as a second, DB-level guard. */
 export type OffshoreNavCandidateMatch = { fundId: string; navDate: string; nav: number };
 
+// 2026-11-02（VERIFIED，使用者核准，3,702檔新上市境外基金NAV backfill卡住的根因修正）：
+// CLOUD_NEW_FUND_LISTING_DETECTION建立新境外基金時會直接把TDCC當下的NAV寫進
+// funds.latest_nav/latest_nav_date（lib/cron/newFundListingDetection.ts），但不會同時寫一筆
+// fund_history——這支job原本只比較「CSV的navDate是不是比latestNavDate新」，一筆從來沒有
+// fund_history、但latestNavDate已經被種過資料的基金，從此被這個比較規則永遠當成「已經是最新」
+// 跳過，never真正被writeTdccNavBatch()處理過，fund_history永遠是空的。VERIFIED：3,702檔新基金
+// 裡3,228檔正好卡在這個狀態。加上hasHistory旗標：只要fund_history還沒有任何一列，即使
+// latestNavDate看起來不比CSV舊，也要讓它通過，才能真正補上那筆fund_history。
 export function filterNewerThanStored(
-  candidateFunds: Array<{ id: string; name: string; latestNavDate: string | null }>,
+  candidateFunds: Array<{ id: string; name: string; latestNavDate: string | null; hasHistory: boolean }>,
   byName: Map<string, TdccNavRow>,
 ): OffshoreNavCandidateMatch[] {
   const result: OffshoreNavCandidateMatch[] = [];
   for (const f of candidateFunds) {
     const row = byName.get(f.name);
     if (!row) continue;
-    if (f.latestNavDate !== null && row.navDate <= f.latestNavDate) continue;
+    if (f.hasHistory && f.latestNavDate !== null && row.navDate <= f.latestNavDate) continue;
     result.push({ fundId: f.id, navDate: row.navDate, nav: row.nav });
   }
   return result;
@@ -106,7 +114,7 @@ export function indexByCode(byName: Map<string, TdccNavRow>): Map<string, TdccNa
 }
 
 export function filterNewerThanStoredByCode(
-  candidateFunds: Array<{ id: string; code: string; latestNavDate: string | null }>,
+  candidateFunds: Array<{ id: string; code: string; latestNavDate: string | null; hasHistory: boolean }>,
   byCode: Map<string, TdccNavRow>,
 ): OffshoreNavCandidateMatch[] {
   const result: OffshoreNavCandidateMatch[] = [];
@@ -114,7 +122,7 @@ export function filterNewerThanStoredByCode(
     const row = byCode.get(f.code);
     if (!row) continue;
     if (row.nav <= 0) continue; // TDCC's own "-9999 not yet reported" sentinel is already filtered by parseTdccNavCsv, but guard again defensively
-    if (f.latestNavDate !== null && row.navDate <= f.latestNavDate) continue;
+    if (f.hasHistory && f.latestNavDate !== null && row.navDate <= f.latestNavDate) continue;
     result.push({ fundId: f.id, navDate: row.navDate, nav: row.nav });
   }
   return result;
