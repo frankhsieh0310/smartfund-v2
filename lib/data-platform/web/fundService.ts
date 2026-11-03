@@ -324,10 +324,18 @@ export async function getFundDetail(identifier: string, relationLimit = 20, rang
     // 優先留MONEYDJ_PUBLIC_DISCLOSURE（這批基金持股揭露最主要、最完整的來源）。
     sectionLimit ? prisma.$queryRaw<HoldingRow[]>(Prisma.sql`SELECT security_id, holding_name, weight, market_value, currency, as_of_date AS report_date, source, created_at AS updated_at, rank FROM holdings WHERE fund_id = ${holdingsSourceId} AND as_of_date = (SELECT MAX(as_of_date) FROM holdings WHERE fund_id = ${holdingsSourceId}) ORDER BY weight DESC NULLS LAST, market_value DESC NULLS LAST LIMIT 200`) : Promise.resolve([]),
   ]);
+  // 2026-11-03（使用者核准）: 投信官網月報（ISSUER_*_OFFICIAL_MONTHLY來源）跟MoneyDJ若同一天
+  // (as_of_date)都有資料，官網優先——原本的排序只在意MONEYDJ_PUBLIC_DISCLOSURE跟「其他」，沒有
+  // 官網來源這個等級，這裡補上最高優先序，MoneyDJ仍維持次優先（原本的行為不變）。
+  function holdingSourcePriority(source: string | null): number {
+    if (source?.endsWith("_OFFICIAL_MONTHLY")) return 0;
+    if (source === "MONEYDJ_PUBLIC_DISCLOSURE") return 1;
+    return 2;
+  }
   const dedupedHoldings = [...new Map(
     holdings
       .slice()
-      .sort((a, b) => (a.source === "MONEYDJ_PUBLIC_DISCLOSURE" ? -1 : b.source === "MONEYDJ_PUBLIC_DISCLOSURE" ? 1 : 0))
+      .sort((a, b) => holdingSourcePriority(a.source) - holdingSourcePriority(b.source))
       .map((item) => [item.security_id ?? item.holding_name, item] as const),
   ).values()].slice(0, FUND_DETAIL_LIMITS.holdings);
   const [sectorAllocationRows, regionAllocationRows, managerRows] = await Promise.all([

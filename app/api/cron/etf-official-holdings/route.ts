@@ -43,6 +43,7 @@ import {
   type CheckpointRow,
   type BoundedDbOptions,
 } from "@/lib/cloud-ingestion/runContext";
+import { runIssuerMonthlyHoldings, type SupportedIssuer } from "@/lib/cloud-ingestion/issuerMonthlyHoldingsWriter";
 
 import { NomuraOfficialPcfAdapter } from "@/lib/etf-holdings-engine/adapters/nomura";
 import { UpamcOfficialPcfAdapter } from "@/lib/etf-holdings-engine/adapters/upamc";
@@ -435,6 +436,26 @@ export async function GET(request: Request) {
     details: { issuer, startIndex: Math.max(startIndex, 0), attempted: processed, reachedEnd, timeBudgetStop, stoppedOnFailure },
   }, CHECKPOINT_BOUND);
 
+  // 2026-11-03（使用者核准）: 投信官網月報持股也併進這支既有cron（同一issuer參數、同一支route，
+  // 不新增cron trigger），用這次呼叫上面ETF ticker迴圈結束後剩下的時間預算執行——只有Yuanta/
+  // Cathay/Nomura這三家目前有基金對應表（lib/cloud-ingestion/issuerFundMappings.ts），其餘issuer
+  // 傳進去會自己回報NO_FUND_MAPPING_YET、不做任何事。失敗不影響上面ETF持股結果的status判定。
+  let issuerMonthlyHoldingsResult: Awaited<ReturnType<typeof runIssuerMonthlyHoldings>> | null = null;
+  const remainingForMonthlyHoldings = startedMs + HARD_RESPONSE_DEADLINE_MS - Date.now();
+  if (remainingForMonthlyHoldings > 20_000) {
+    try {
+      issuerMonthlyHoldingsResult = await runIssuerMonthlyHoldings(
+        issuer as SupportedIssuer,
+        Date.now() + remainingForMonthlyHoldings,
+      );
+    } catch (e: any) {
+      issuerMonthlyHoldingsResult = {
+        ok: false, issuer: issuer as SupportedIssuer, skipped: false, reason: String(e?.message ?? e),
+        universeCount: 0, processed: 0, alreadyCurrent: 0, written: 0, failed: 0, blocked: false, failedDetail: [], reachedEnd: false,
+      };
+    }
+  }
+
   return Response.json({
     ok: !totalFailure,
     job: JOB,
@@ -447,5 +468,6 @@ export async function GET(request: Request) {
     failedTickers,
     reachedEnd,
     runtimeMs: Date.now() - startedMs,
+    issuerMonthlyHoldings: issuerMonthlyHoldingsResult,
   }, { status: totalFailure ? 500 : 200 });
 }
