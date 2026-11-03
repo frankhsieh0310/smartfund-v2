@@ -730,9 +730,15 @@ export async function GET(request: Request) {
       // chromium/bin打包問題（那是直接找不到binary，這次有真的啟動Puppeteer），單純是15秒對冷啟動
       // 的無伺服器環境+真的開一次瀏覽器渲染官網頁面偶爾太緊；VERIFIED同一天ETF_OFFICIAL_HOLDINGS:AB
       // 這支真正的排程本身連續COMPLETED、00980D的holdings資料本身是新的(2026-10-30)，問題只在這個
-      // 驗證探針自己的逾時、不是資料落後。放寬到25秒降低這種偽陽性。
+      // 驗證探針自己的逾時、不是資料落後。2026-11-04（使用者核准）：25秒放寬後VERIFIED同一天還是
+      // 卡在ABORTED（本機實測這個頁面光是chromium冷啟動+導覽就可能超過25秒），再放寬到45秒；
+      // ACTIVE_ETF_VERIFY_MAX_ELAPSED_MS（整個驗證步驟的100秒共用預算）跟route本身maxDuration
+      // =180秒都沒有動，所以單檔變慢頂多讓後面幾檔提早變成NOT_VERIFIED_BUDGET_EXHAUSTED，不會讓
+      // 整支route逾時。adapter（lib/etf-holdings-engine/adapters/ab.ts）本身也已經補上每個階段
+      // （瀏覽器啟動/開分頁/goto/等待渲染/抓表格)的耗時，就算這次還是ABORTED，verifyNote裡的
+      // error訊息也會帶出「卡在哪個階段之後、那個階段花了多久」，不會只看到"ABORTED"。
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 25_000);
+      const timer = setTimeout(() => controller.abort(), 45_000);
       const snap = await adapter.fetchSnapshot(item.code, undefined, controller.signal).finally(() => clearTimeout(timer));
       const officialLatestDate = snap.dataDate;
       const stillOld = !!officialLatestDate && (!item.lastDataDate || officialLatestDate <= item.lastDataDate);

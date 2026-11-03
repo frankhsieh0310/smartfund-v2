@@ -108,53 +108,66 @@ export const AbOfficialPcfAdapter: OfficialPcfAdapter = {
     const url = PRODUCT_URL[etfCode];
     if (!url) throw new Error(`AB_UNMAPPED_ETF_${etfCode} — no confirmed official product URL, never guessed`);
 
-    return withPage(async (page) => {
-      await page.goto(url, { waitUntil: "networkidle0", timeout: 30000 });
-      await page.waitForFunction(() => document.body.innerText.includes("基金資產"), { timeout: 20000 });
-      await new Promise((r) => setTimeout(r, 1000));
+    // 2026-11-04（使用者核准，00980D VERIFY_FAILED: ABORTED逾時原因不明）：每個階段記下花了多久，
+    // 不管最後成功還是被abort，stages都留著最後一個完成的階段跟時間——如果被abort，error訊息會
+    // 帶上「卡在哪個階段之後」跟「那個階段本身花了多久」，不會只看到"ABORTED"。
+    const stages: Array<{ stage: string; elapsedMs: number }> = [];
+    const t0 = Date.now();
+    try {
+      return await withPage(async (page) => {
+        await page.goto(url, { waitUntil: "networkidle0", timeout: 30000 });
+        stages.push({ stage: "goto", elapsedMs: Date.now() - t0 });
+        await page.waitForFunction(() => document.body.innerText.includes("基金資產"), { timeout: 20000 });
+        stages.push({ stage: "waitForFunction", elapsedMs: Date.now() - t0 });
+        await new Promise((r) => setTimeout(r, 1000));
 
-      const bodyText = await page.evaluate(() => document.body.innerText);
-      const dateMatch = bodyText.match(/資料日期[：:]\s*(\d{4}\/\d{2}\/\d{2})/);
-      if (!dateMatch) throw new Error(`AB_NO_DATE_${etfCode} — page markup changed, adapter needs re-verification`);
-      const dataDate = dateMatch[1].replaceAll("/", "-");
+        const bodyText = await page.evaluate(() => document.body.innerText);
+        const dateMatch = bodyText.match(/資料日期[：:]\s*(\d{4}\/\d{2}\/\d{2})/);
+        if (!dateMatch) throw new Error(`AB_NO_DATE_${etfCode} — page markup changed, adapter needs re-verification`);
+        const dataDate = dateMatch[1].replaceAll("/", "-");
 
-      const rows = await page.$$eval("table tr", (trs) =>
-        trs.map((tr) => Array.from(tr.querySelectorAll("td, th")).map((c) => (c.textContent ?? "").trim())),
-      );
+        const rows = await page.$$eval("table tr", (trs) =>
+          trs.map((tr) => Array.from(tr.querySelectorAll("td, th")).map((c) => (c.textContent ?? "").trim())),
+        );
+        stages.push({ stage: "table_scraped", elapsedMs: Date.now() - t0 });
 
-      const isBondFund = etfCode.endsWith("D");
-      const positions: CanonicalPosition[] = [];
-      for (const cells of rows) {
-        if (cells.length < 4) continue;
-        const codeCell = cells[0];
-        const looksLikeCode = /^[A-Za-z0-9]{2,15}(\s[A-Z]{2})?$/.test(codeCell);
-        if (!looksLikeCode) continue;
-        const numeric = cells.slice(2).filter((c) => /^[\d,.\-]+%?$/.test(c));
-        if (numeric.length < 2) continue;
-        positions.push({
-          securityCode: codeCell, securityName: cells[1],
-          positionType: isBondFund ? "BOND" : "EQUITY",
-          positionAmount: num(numeric[0]),
-          positionUnit: isBondFund ? "PAR_VALUE" : "SHARES",
-          weight: num(numeric[numeric.length - 1]),
-          canonicalSecurityId: null,
-        });
-      }
-      if (!positions.length) throw new Error(`AB_NO_HOLDINGS_${etfCode}_${dataDate}`);
+        const isBondFund = etfCode.endsWith("D");
+        const positions: CanonicalPosition[] = [];
+        for (const cells of rows) {
+          if (cells.length < 4) continue;
+          const codeCell = cells[0];
+          const looksLikeCode = /^[A-Za-z0-9]{2,15}(\s[A-Z]{2})?$/.test(codeCell);
+          if (!looksLikeCode) continue;
+          const numeric = cells.slice(2).filter((c) => /^[\d,.\-]+%?$/.test(c));
+          if (numeric.length < 2) continue;
+          positions.push({
+            securityCode: codeCell, securityName: cells[1],
+            positionType: isBondFund ? "BOND" : "EQUITY",
+            positionAmount: num(numeric[0]),
+            positionUnit: isBondFund ? "PAR_VALUE" : "SHARES",
+            weight: num(numeric[numeric.length - 1]),
+            canonicalSecurityId: null,
+          });
+        }
+        if (!positions.length) throw new Error(`AB_NO_HOLDINGS_${etfCode}_${dataDate}`);
 
-      const navMatch = bodyText.match(/市值\s*\n?\s*權重/);
-      return {
-        etfCode,
-        issuer: "AB",
-        assetType: isBondFund ? "BOND" : "EQUITY",
-        dataDate,
-        announcementDate: dataDate,
-        fundNav: 0,
-        outstandingUnits: 0,
-        positions,
-        source: "AB_OFFICIAL_PRODUCT_PAGE",
-        retrievedAt: new Date().toISOString(),
-      };
-    }, signal);
+        return {
+          etfCode,
+          issuer: "AB",
+          assetType: isBondFund ? "BOND" : "EQUITY",
+          dataDate,
+          announcementDate: dataDate,
+          fundNav: 0,
+          outstandingUnits: 0,
+          positions,
+          source: "AB_OFFICIAL_PRODUCT_PAGE",
+          retrievedAt: new Date().toISOString(),
+        };
+      }, signal, (stage, elapsedMs) => stages.push({ stage, elapsedMs }));
+    } catch (e) {
+      const lastStage = stages.length ? stages[stages.length - 1] : { stage: "before_browser_acquired", elapsedMs: Date.now() - t0 };
+      const msg = e instanceof Error ? e.message : String(e);
+      throw new Error(`${msg} (last_completed_stage=${lastStage.stage} elapsed_ms=${lastStage.elapsedMs} total_ms=${Date.now() - t0} stages=${JSON.stringify(stages)})`);
+    }
   },
 };

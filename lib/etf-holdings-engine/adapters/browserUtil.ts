@@ -39,9 +39,20 @@ async function getBrowser(): Promise<Browser> {
  * browser itself is never closed here (other callers may still be using it); only this one page is.
  * The abort listener is always removed in `finally`, whichever side wins the race.
  */
-export async function withPage<T>(fn: (page: Page) => Promise<T>, signal?: AbortSignal): Promise<T> {
+// 2026-11-04（使用者核准，00980D VERIFY_FAILED: ABORTED逾時原因不明）：withPage()本身對呼叫端是
+// 一個黑盒子，逾時時只拋"ABORTED"，看不出來卡在「啟動chromium」「page.goto」「等待渲染」哪一步。
+// onStage是選用的，呼叫端（例如ab.ts）可以用它記下每個階段實際花了多久，再把這些時間接到錯誤
+// 訊息裡，讓health report的verifyNote不只寫"ABORTED"，還能寫出卡在哪一步、那一步花了多久。
+export async function withPage<T>(
+  fn: (page: Page) => Promise<T>,
+  signal?: AbortSignal,
+  onStage?: (stage: string, elapsedMs: number) => void,
+): Promise<T> {
+  const t0 = Date.now();
   const browser = await getBrowser();
+  onStage?.("browser_acquired", Date.now() - t0);
   const page = await browser.newPage();
+  onStage?.("page_created", Date.now() - t0);
   await page.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36");
 
   if (signal?.aborted) {
