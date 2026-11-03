@@ -73,8 +73,13 @@ export async function GET(request: Request) {
     ...recheckMonths,
   ])].sort();
 
+  // 2026-11-04（使用者核准，「台灣買不到的不放」原則）：VERIFIED 10,022檔候選裡只有9,604檔
+  // （96%）在tw_purchasable_classification是APPROVED，其餘418檔不是台灣核准銷售的基金，加上
+  // APPROVED過濾跟其他境內/境外淨值排程做法一致。
   const funds = await prisma.$queryRawUnsafe<FundRow[]>(
-    `SELECT id, code, name, currency FROM funds WHERE COALESCE(data_provider, '') NOT IN ('yahoo', 'SEC')`,
+    `SELECT id, code, name, currency FROM funds
+     WHERE COALESCE(data_provider, '') NOT IN ('yahoo', 'SEC')
+       AND id IN (SELECT asset_id FROM tw_purchasable_classification WHERE asset_type = 'FUND' AND status = 'APPROVED')`,
   );
 
   let monthsAttempted = 0;

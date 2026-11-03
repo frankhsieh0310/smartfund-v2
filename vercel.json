@@ -141,6 +141,14 @@
       "schedule": "0 9 * * *"
     },
     {
+      "path": "/api/cron/fund-prospectus-fee-sync",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/offshore-nav-tdcc-sync",
+      "schedule": "10 0 * * *"
+    },
+    {
       "path": "/api/cron/offshore-nav-tdcc-sync",
       "schedule": "31 2 * * *"
     },

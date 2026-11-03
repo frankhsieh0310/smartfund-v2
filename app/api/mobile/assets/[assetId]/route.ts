@@ -148,6 +148,12 @@ async function resolveDetail(assetId: string, assetType: AssetType, period: Peri
     { key: 'sitcaRedemption', label: `本月買回總金額（${ymZh}，來源：SITCA）`, value: monthlyDisclosure.redemptionTwd, unit: '元' },
     { key: 'sitcaMgmtFeePct', label: `${ymZh}實際經理費（占淨資產，來源：SITCA，非年費率）`, value: monthlyDisclosure.mgmtFeePct, unit: '%' },
     { key: 'sitcaTotalFeePct', label: `${ymZh}實際合計費用（占淨資產，來源：SITCA，非年費率）`, value: monthlyDisclosure.totalFeePct, unit: '%' },
+  ] : []), ...(data.feeRateProspectus.data.mgmtFeeRateText || data.feeRateProspectus.data.custodianFeeRateText ? [
+    // 2026-11-04：公開說明書「年」費率條文原文，跟上面SITCA「當月實際經理費（占淨資產）」是不同
+    // 指標，不可互相取代——同網站版本（app/funds/[id]/page.tsx）同一套區分方式，App端也要分開
+    // 標示清楚。
+    { key: 'prospectusMgmtFeeRate', label: '經理費率（年，公開說明書）', value: data.feeRateProspectus.data.mgmtFeeRateText },
+    { key: 'prospectusCustodianFeeRate', label: '保管費率（年，公開說明書）', value: data.feeRateProspectus.data.custodianFeeRateText },
   ] : [])] }, meta: response.meta, error: response.error };
 }
 
