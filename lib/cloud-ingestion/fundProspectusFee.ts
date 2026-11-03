@@ -18,10 +18,7 @@ export type ProspectusFeeResult = {
   filedAt: string | null; // 公開說明書刊印日期 YYYY-MM-DD，擷取不到就null
 };
 
-// 2026-11-03：野村投信54檔基金各自最新一期公開說明書的檔名對應表（E欄位編號是野村投信在MOPS
-// 的固定基金序號，VERIFIED從co_id=A00032的完整清單人工比對取得，114年各月份都有獨立檔名，這裡
-// 固定用114年9月或12月最新一期——這張表要延伸到全部54檔、或換成自動解析MOPS清單頁，是下一輪
-// 待辦，這輪先只給已經dry-run驗證過的5檔）。
+// 2026-11-03：手動核對過的5檔試點（dry-run驗證格式正確），自動清單解析見listNomuraFilings()。
 export const NOMURA_PROSPECTUS_FILENAME: Record<string, string> = {
   "野村鴻運基金": "202512_A00032_E20_4.pdf",
   "野村中小基金": "202509_A00032_E08_4.pdf",
@@ -29,6 +26,61 @@ export const NOMURA_PROSPECTUS_FILENAME: Record<string, string> = {
   "野村平衡基金": "202512_A00032_E05_4.pdf",
   "野村貨幣市場基金": "202512_A00032_E26_4.pdf",
 };
+
+export type NomuraFilingRow = { fundName: string; yearMonth: string; filename: string };
+
+// 自動解析MOPS「基金公開說明書」清單頁（co_id=A00032=野村投信），回傳每檔基金最新一期的
+// 公開說明書檔名。用POST查詢表單（跟readfile2()同一套流程，不是猜網址）換到doc.twse.com.tw的
+// 清單頁，用big5解碼（VERIFIED：原始頁面是big5編碼，直接用UTF-8讀會整頁亂碼）後解析<tr><td>
+// 表格列。查114+115兩個年度（ROC年度切換期間新舊兩年都可能有最新一期），同一檔基金取年月最大
+// 的那筆。
+export async function listNomuraFilings(): Promise<Map<string, NomuraFilingRow>> {
+  async function fetchYear(year: string): Promise<NomuraFilingRow[]> {
+    const params1 = new URLSearchParams({
+      step: "1", firstin: "1", off: "1", pathname: "/mops/web/t57sb01_q7", TYPEK: "all",
+      CK: "2", co_id: "A00032", year,
+    });
+    const res1 = await fetch("https://mopsov.twse.com.tw/mops/web/ajax_t57sb01_q7", {
+      method: "POST", body: params1, headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    });
+    const text1 = await res1.text();
+    const m = text1.match(/window\.open\('([^']+)'/);
+    if (!m) return [];
+    const res2 = await fetch(m[1]);
+    const buf = await res2.arrayBuffer();
+    const html = new TextDecoder("big5").decode(buf);
+    const rows: NomuraFilingRow[] = [];
+    const trRe = /<tr>([\s\S]*?)<\/tr>/g;
+    let tm: RegExpExecArray | null;
+    while ((tm = trRe.exec(html))) {
+      const tds = [...tm[1].matchAll(/<td[^>]*>([\s\S]*?)<\/td>/g)].map((x) => x[1].replace(/&nbsp;/g, "").trim());
+      if (tds.length < 11) continue;
+      const fundName = tds[4];
+      const yearMonth = tds[5];
+      const reportType = tds[6];
+      const filenameMatch = tds[10].match(/>([^<]+\.pdf)</);
+      if (!fundName || !filenameMatch || reportType !== "基金公開說明書") continue;
+      rows.push({ fundName, yearMonth, filename: filenameMatch[1] });
+    }
+    return rows;
+  }
+
+  function yearMonthKey(ym: string): number {
+    const m = ym.match(/(\d+)\s*年\s*(\d+)月/);
+    return m ? Number(m[1]) * 100 + Number(m[2]) : 0;
+  }
+
+  const all = [...(await fetchYear("114")), ...(await fetchYear("115"))];
+  const latestByFund = new Map<string, NomuraFilingRow & { key: number }>();
+  for (const r of all) {
+    const key = yearMonthKey(r.yearMonth);
+    const existing = latestByFund.get(r.fundName);
+    if (!existing || key > existing.key) latestByFund.set(r.fundName, { ...r, key });
+  }
+  const result = new Map<string, NomuraFilingRow>();
+  for (const [name, row] of latestByFund) result.set(name, { fundName: row.fundName, yearMonth: row.yearMonth, filename: row.filename });
+  return result;
+}
 
 async function resolveDownloadUrl(filename: string): Promise<string> {
   // 走跟列表頁同一套readfile2() POST流程換出帶時間戳的真正下載連結。

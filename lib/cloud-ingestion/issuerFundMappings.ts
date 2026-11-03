@@ -293,12 +293,91 @@ export const CATHAY_FUND_MAPPINGS: IssuerFundMapping[] = [
   { sourceId: "EAA", fundIds: ["b4d831e9-4a65-4e2d-89e7-3ec91926c63f"] }, // 國泰美國債券ETF傘型基金之20年期(以上)美國公債指數單日反向1倍基金
   { sourceId: "EAJ", fundIds: ["32187024-7221-4ffa-83de-deb4108cba5d"] }, // 國泰息收ETF傘型基金之10年期(以上)BBB美元息收公司債券基金
   { sourceId: "EAK", fundIds: ["9166b628-c62f-435e-a3ae-d69fbca61421"] }, // 國泰息收ETF傘型基金之新興市場5年期(以上)美元息收投資等級債券基金
+  // 2026-11-03：剩餘32檔(index 143-175)的後續比對——FE1~FE8是兩檔新基金(國泰全球多重收益平衡、
+  // 國泰主順位資產抵押非投資等級債券)，funds表isin欄位是null，無法靠ISIN比對，改用幣別+配息
+  // 類別(C/NC)對名稱比對，VERIFIED一對一無歧義。其餘24檔(EAL~EEB，00xxx代號)是在證交所掛牌交易
+  // 的指數化ETF，不是「傘型基金之XX基金」這種仍在funds表內的子基金結構，funds表查無對應列
+  // （非匹配失敗，是這些ETF本來就不屬於這張對應表要接的「投信月報持股」資料範圍）。
+  { sourceId: "FE1", fundIds: ["75bd5cf1-e90e-470e-83e5-d92967ef2e8d"] }, // 國泰全球多重收益平衡基金-新台幣C(配息)
+  { sourceId: "FE2", fundIds: ["1a1f37f3-dfc3-4560-a970-39a981590021"] }, // 國泰全球多重收益平衡基金-新台幣NC(配息)
+  { sourceId: "FE3", fundIds: ["e5bd6e66-1be4-4785-9edc-b7d421baa10f"] }, // 國泰全球多重收益平衡基金-美元C(配息)
+  { sourceId: "FE4", fundIds: ["034a8ac6-b81e-44a9-a558-74a0aa665ab9"] }, // 國泰全球多重收益平衡基金-美元NC(配息)
+  { sourceId: "FE5", fundIds: ["85f364e6-6559-435b-b9c5-7a3481631cd2"] }, // 國泰主順位資產抵押非投資等級債券基金-新台幣C(配息)
+  { sourceId: "FE6", fundIds: ["f8234b75-cde0-4872-a70c-22bd70cf0257"] }, // 國泰主順位資產抵押非投資等級債券基金-新台幣NC(配息)
+  { sourceId: "FE7", fundIds: ["cde70ed0-0ba0-4cf9-b828-aabc8b3dac4e"] }, // 國泰主順位資產抵押非投資等級債券基金-美元C(配息)
+  { sourceId: "FE8", fundIds: ["c3d24b5d-cfb8-49fc-9ee1-d6edfb4d5987"] }, // 國泰主順位資產抵押非投資等級債券基金-美元NC(配息)
 ];
 
-// 群益投信（capitalfund.com.tw）、富邦投信（fubon.com）：這輪新增解析器並各自dry-run驗證2檔
-// （群益：群益馬拉松基金fundNo=003股票型、群益安穩貨幣市場基金fundNo=002貨幣市場型；富邦：
-// 富邦基金-A類型Fd=01A、富邦精準基金Fd=04，皆逐列核對跟官網頁面一致），但完整基金清單→
-// funds.id對應表這輪沒做（群益的fundNo、富邦的Fd代號都要從官網選單清單頁逐一點進去才查得到，
-// 跟元大/國泰同樣問題），先留空陣列，下一輪比照元大/國泰的作法做完整清單。
-export const CAPITAL_FUND_MAPPINGS: IssuerFundMapping[] = [];
-export const FUBON_FUND_MAPPINGS: IssuerFundMapping[] = [];
+// 群益投信（capitalfund.com.tw）：官網「基金總覽」頁本身就是一支JSON API（GET /CFWeb/api/
+// fund/overview）一次回傳全部261檔(含ETF)，不用逐檔點擊——比元大/國泰快很多。排除isETF=true後
+// 剩233檔share class、39個基金家族，用SITCA CSV（公司名稱=群益投信）精確比對基金層級名稱。
+// 2026-11-03 VERIFIED：27/39個基金家族命中（69%），0筆ambiguous；其餘12家NO_MATCH（名稱
+// 在官網跟SITCA之間有額外差異，例如"群益2028 REVERSO美元保本基金"這類特殊命名），正確不
+// 對應、沒有猜，下一輪可以individually核對。
+export const CAPITAL_FUND_MAPPINGS: IssuerFundMapping[] = [
+  { sourceId: "003", fundIds: ["76b2f5f8-0807-428b-b73a-c26367c1cda5", "77590979-14dc-4923-af34-9849702085e5", "2ed47ecd-bf31-4b32-816c-ecdc1d2a8eac"] }, // 群益馬拉松基金
+  { sourceId: "005", fundIds: ["9d6e196d-c0fa-473c-ba32-c0bd7a048609"] }, // 群益長安基金
+  { sourceId: "007", fundIds: ["b60c9eb0-68b5-4b5a-9009-f7a8a9a8433c", "819fbdb8-8252-40d3-9cfe-d93eaf720221"] }, // 群益創新科技基金
+  { sourceId: "001", fundIds: ["0d46c9b3-8cf7-4841-81ea-39c4e4c1d440"] }, // 群益中小型股基金
+  { sourceId: "002", fundIds: ["ad83e1f6-4c91-4032-83f9-880be1335579"] }, // 群益安穩貨幣市場基金
+  { sourceId: "004", fundIds: ["402b6af2-5c92-4280-8505-f15f5c87692f", "5cbc5930-a854-439f-9b6e-7b7d9554e5e5"] }, // 群益店頭市場基金
+  { sourceId: "008", fundIds: ["531ffbcd-4175-40a5-9ec1-6c91a180e922"] }, // 群益真善美基金
+  { sourceId: "011", fundIds: ["d01932dd-698c-4537-b7b8-5f9464e74a14"] }, // 群益平衡王基金
+  { sourceId: "013", fundIds: ["dd88052c-ef5d-43e6-aa0c-1dfd717449da"] }, // 群益安家基金
+  { sourceId: "014", fundIds: ["7f6c66fd-f3cf-4393-b21b-a3e974b0c723"] }, // 群益多重資產組合基金
+  { sourceId: "015", fundIds: ["71107b4b-1347-49d4-9037-a0d03bac7f10"] }, // 群益奧斯卡基金
+  { sourceId: "017", fundIds: ["93296ae0-350c-4c46-9487-7f689eb57a96"] }, // 群益葛萊美基金
+  { sourceId: "018", fundIds: ["c121591e-46b4-4ebe-ab83-7b4d109df057"] }, // 群益亞太新趨勢平衡基金
+  { sourceId: "019", fundIds: ["8b952733-4e05-47a8-a613-2c00d7f54728", "b842dba7-4ab7-4d5c-b06b-a9e117e56a70"] }, // 群益新興金鑽基金
+  { sourceId: "022", fundIds: ["e77d834a-dea8-4c4c-aca1-e0f438ecc4f8", "daa3a517-3faa-400a-9bff-3b1cebedaf25", "9d691898-e13a-4e6a-9587-e44960726988"] }, // 群益東方盛世基金
+  { sourceId: "023", fundIds: ["5d6c994e-b778-4087-9d53-487a4c4ed981", "6474ae79-64ea-404a-b7ae-ffcf5bc6b875", "5362e72d-2735-4650-a6b5-b9bf7a789199", "80954a85-e6c7-4066-a040-8aa1a07427a9", "59360d1e-360b-4f32-abaf-7e01bbb4ff67", "8d2c9b0e-b955-4738-af3b-f85a91e9325a"] }, // 群益華夏盛世基金
+  { sourceId: "024", fundIds: ["c3e4581e-bb32-4510-a826-bb4c2f3e5e65", "cb8f9485-29a0-41bd-bf53-2e87a800e244"] }, // 群益印巴雙星基金
+  { sourceId: "074", fundIds: ["9f733b00-bff6-4466-b84b-d0410105070d", "8ef76350-9c52-42f1-bc87-7bb543ec107d", "c371c8ec-a904-4141-9b98-f29448bf8fef", "46fd25d6-bccb-46f8-912c-a455c37f465f", "b09db1cb-5776-4b48-a227-c7d46f8784c0", "2b50f0dc-3439-4ec3-b4d5-5a019e89f104"] }, // 群益印度中小基金
+  { sourceId: "027", fundIds: ["58eb07d9-065f-489e-a411-7e0b224df8e0", "46df6602-26ad-454e-a8fc-a681b86b5daf", "0f8b1c0e-bbe3-440b-bd47-6749d945970b"] }, // 群益東協成長基金
+  { sourceId: "030", fundIds: ["6fd97f10-b774-481f-910a-6e376bb167ec", "7ea8aee6-9e85-42cf-8e6f-25fafb47c408", "5ecfbf6d-0736-44d9-8927-e12171d19356"] }, // 群益大中華雙力優勢基金
+  { sourceId: "036", fundIds: ["88f22536-b3ec-4969-8218-8108528ce99f", "b78ca78d-0652-473d-9def-1df26124cc0c", "9a9fbed8-c218-4875-b006-099aa21bffa9", "e24d2d5f-7869-443b-a0e7-4ab1c4990942"] }, // 群益全球關鍵生技基金
+  { sourceId: "038", fundIds: ["bf8ca7a4-d892-4fdf-bf7d-143ff1361219", "7ae40481-f5d1-4d28-8df0-7e12e139fcdf", "0de7a24a-42c0-4317-8778-59bfe722ff2c", "bff3e8c9-94c4-4071-bf27-0dc30876ddc5"] }, // 群益美國新創亮點基金
+  { sourceId: "040", fundIds: ["1822d386-8bf5-49ea-b9f3-9e2eed6b8b44", "3cb88055-248c-4233-929c-7f280ddcbf31", "2d6dfad9-28d8-450e-b083-b6cb28a9637f", "931e3cd4-5e7f-481b-9e82-70b3a204810c", "28ef479c-38af-4a6d-92fa-0f2bd456ce31", "3e6383bd-17b2-44c5-8fa2-d6ffbf749840"] }, // 群益中國新機會基金
+  { sourceId: "359", fundIds: ["75c2aa94-6376-4d4a-95c1-60eee55c186a", "f6505ad9-fab4-43c3-9a7b-076ccb2baf45", "456b2bff-3388-4e93-822a-6b86a6779560", "807b7a5d-1ed4-4ff1-8254-76e12db965ac", "1682cccb-58d4-4879-8444-a76150b0a93e", "4738d2d5-69f2-44be-811d-fab56eeb41f3"] }, // 群益智慧聯網電動車基金
+  { sourceId: "077", fundIds: ["cba0089a-57b4-4153-af7b-1c0d7daef4bd", "9e31a784-2629-451f-8e02-c1c1fb690665", "c1b0245b-55d9-4598-be68-fe95d6f86e2f", "dd8d50ad-8aa0-49d8-b0f1-2b718d58c2af", "c4cbd10d-8aa3-463f-a732-20f72653610e", "dadba275-aade-44d7-aa9b-71f5d4d794ee"] }, // 群益大印度基金
+  { sourceId: "158", fundIds: ["89ae9678-9720-4cb2-84bb-ce0799526831", "02d9eaac-efaa-4d38-80f6-51a329ba837d", "59ac0899-24ef-4d54-b279-a20d38208cdc", "ed2728d3-6f01-4b00-a002-f8b9ec29901e", "b107f8f6-815a-44ce-aa61-e77863cf731a", "eb82cb26-b704-4000-8311-134f9334d214", "403b6607-32f4-4c04-9997-b33fc712948a", "82e97920-0f23-4ba3-8dc1-f234df118d33", "cec48415-2425-430b-aa47-001ca135ee90", "964b2332-05ab-4330-8c87-d33fb521dd6f", "614b1c9f-b64e-4f5d-ac95-f4cecaedc504", "a8d77073-c1a0-4589-ae3a-8750f0d28696", "7f302b93-19f1-4941-8fad-26c2cdf30d9d"] }, // 群益全球優先順位非投資等級債券基金
+  { sourceId: "174", fundIds: ["a5bc2513-b8ef-4704-b560-4f73e7e72e9a"] }, // 群益2028 REVERSO美元保本基金
+];
+
+// 富邦投信（fubon.com）：基金總覽頁的連結直接列出334個fd(含ETF)/重複disclaimer連結，去重後
+// 49個不重複基金家族。官網顯示名稱大多不含「富邦」公司字樣（SITCA CSV的基金名稱有加），比對時
+// 兩種寫法都試、哪個唯一命中就用哪個。
+// 2026-11-03 VERIFIED：29/49命中（59%），0筆ambiguous，dry-run(01A/04)對照的兩檔都在命中
+// 清單內。其餘20家下一輪個別核對。
+export const FUBON_FUND_MAPPINGS: IssuerFundMapping[] = [
+  { sourceId: "01A", fundIds: ["e63b43e0-0de7-4f1b-ae01-33470e9e54fb", "b248d008-694f-43bb-a8c9-61b39f8338d2"] }, // 富邦基金（手動核對，比對規則的"富邦"過度去除bug，見下方29筆自動比對）
+  { sourceId: "04", fundIds: ["2880d56f-8868-440c-ac50-ae44b7463a6d"] }, // 精準基金
+  { sourceId: "05", fundIds: ["05c97c76-95d1-40c1-814e-9bd7a2498fd9"] }, // 長紅基金
+  { sourceId: "10A", fundIds: ["72d38a95-26e3-4846-b48a-3ad21ce0db99", "10a7232a-bfa7-4a83-bc36-ea6cbfa05b18"] }, // 精銳中小基金
+  { sourceId: "11", fundIds: ["24eb6a4e-d86a-4ebd-8c88-844b29b5766f"] }, // 高成長基金
+  { sourceId: "12", fundIds: ["a0a824a7-b905-46bd-a8b2-7c9d8ea882ce"] }, // 科技基金
+  { sourceId: "17", fundIds: ["c3bea066-f04a-46ac-9046-925223c0f9c4"] }, // 台灣心基金
+  { sourceId: "08", fundIds: ["8e0c2aee-9bb0-487c-8b91-8bbb8ce2abcd"] }, // 吉祥貨幣市場基金
+  { sourceId: "201", fundIds: ["2578a83d-f4a6-414c-8a5d-5b797fb96806"] }, // 貨幣市場基金
+  { sourceId: "200", fundIds: ["e6f3a557-5db0-489b-9274-635b75170338"] }, // 日盛基金
+  { sourceId: "203", fundIds: ["5adcc49e-6899-48c6-b41c-0209552fe2e7"] }, // 小而美基金
+  { sourceId: "204", fundIds: ["43aeeda8-98c6-4015-a807-98d83e05a934"] }, // 精選五虎基金
+  { sourceId: "205", fundIds: ["769c0cfc-7f28-4ec8-8e55-612c1388654d"] }, // 高科技基金
+  { sourceId: "206A", fundIds: ["d68292d0-ba3a-4389-9952-49616be4bf9e", "e4784a1a-044e-4f2c-87b1-f3454a0dc9c6"] }, // 新台商基金
+  { sourceId: "208", fundIds: ["e80c7bfb-28d2-4b20-bc2f-83886ebb8417"] }, // 首選基金
+  { sourceId: "89A", fundIds: ["4525ca9f-181a-4afd-9933-8230bb31f924", "89332882-fd0d-4521-9344-1a7e26fd0e8c", "cd3bb7ab-4d9e-4eff-ac07-4b8f442bfd31"] }, // 台灣高股息基金
+  { sourceId: "222", fundIds: ["279cc8c7-06d1-4022-869f-c594e60f6151"] }, // 台灣優質多重資產基金
+  { sourceId: "216A", fundIds: ["dd43f739-f58a-4364-aff1-299ff8b00ca0", "6e7c8694-046d-45ed-a2ce-427c2d8986a4"] }, // 台灣永續成長股息基金
+  { sourceId: "102A", fundIds: ["c78db6f4-666a-490c-837f-f9ccbcc50df9", "1716b52b-25b8-4822-81fd-20f7067161f8", "b60e22a0-7f92-40e0-8647-096e454a15b3", "bf9a387b-c5ae-4469-9fd9-14dffebd311c", "bd5258d4-87ba-4be7-bc46-209c3b8ddc10", "bd99e8f9-6126-40a9-88f6-974aa46066f1", "56ba675a-8139-47d3-b5cb-a898731b999c", "b0ef4a9f-6432-4955-a80b-d9bb94fd685e", "ff0f8fb0-c0d8-4b56-b236-85766a141de1", "1b14a080-6b16-44fc-9958-ec606de2b953", "3986d917-0a41-4a98-bdd3-d1faaf6a3415", "7f29abed-2ea7-4c3c-9d8f-e59b1aebb447"] }, // 雙核心戰略多重資產基金
+  { sourceId: "26A", fundIds: ["eb17c066-6f81-4a8c-b926-8020a326f06b", "ba6ff68d-c24f-4ac9-9b25-6e3bae12a372"] }, // 全球不動產基金
+  { sourceId: "28A", fundIds: ["381f0034-cf6d-4fb9-9ccb-41740f8df597", "6bf9133c-3df2-4238-bd4c-a3708578b151"] }, // 大中華成長基金
+  { sourceId: "34A", fundIds: ["a56e2144-bd6d-4d23-b1c3-9c81b0ea5f5d", "93a8f36c-c0e8-4c99-8e23-95f502f9a1e9", "01fbbed7-e96a-4381-9a8c-4c501ab13019", "6ad0d251-01de-45ec-838c-01f7da7bbceb", "c59c8602-bda7-427c-a4be-e52837c10c85", "feb099b6-a07e-4213-aa9a-0ff9129ca0c8", "6bcfaff1-87ee-4d31-a1b0-9fe53686a530"] }, // 全球投資等級債券基金
+  { sourceId: "63A", fundIds: ["445cfa94-2197-4934-9c72-9f74c10d5ea3", "4705a07c-6dbd-4903-aa96-1bfb1ec4eabe", "b071b4ab-917c-41dd-98f9-e922b447394c", "fc50e5de-51a2-4c1f-9db6-0781346b0667", "0f870923-de5d-42ff-9f1d-c9624ea660c0", "7960ca0a-3e98-4848-b9d9-af55a4ef4563"] }, // 歐亞絲路多重資產型基金
+  { sourceId: "80A", fundIds: ["7c7106f4-438b-4fa7-8c83-2f840ca94315", "47d4d839-fd4c-4d05-b988-0cf3f8d9d7c3", "50784743-9d15-42b1-89c2-5577fa41b42d", "1be1fa76-fbe3-4f38-888c-b556325195fc", "612d5640-f0ac-49f6-926d-40906f010c00", "c1a4cc21-ca2f-4157-9b3e-51cc11dbbb9f", "b2889703-eacd-4c3a-b3ff-0e96458414c4"] }, // AI智能新趨勢多重資產型基金
+  { sourceId: "97A", fundIds: ["fe855b1b-5514-4eaa-a853-b1b8f3fb4406", "237720b1-5808-434b-8cbb-beaef3902d57", "d4be47af-9b4a-430c-b266-f181dda12cac", "f3071b80-e963-4e13-bef8-632b3c3d3dce", "53f18099-8a83-471d-a63f-b55a9e127a1c", "bb9ac015-0d86-4f9d-8c20-3de0a51b63f6", "c0ef85fc-e253-4173-929d-d956a81f5b61", "0e8dbbff-9e60-490d-9e78-7e1965a6dd47", "6da0356e-d938-41f7-90aa-2d3f91f7c24f", "1190d159-dd11-4548-bb1c-fef6c7027bed", "085a0ca4-54fd-452b-856c-e36de81692bb", "d0565b6f-9dee-4b9e-8e80-87cf1c4d95ca"] }, // 台美雙星多重資產基金
+  { sourceId: "207", fundIds: ["fff30a68-5178-4a44-8e9a-8097b7d49d2f"] }, // 亞洲機會基金
+  { sourceId: "211", fundIds: ["30416aac-be46-49ef-b20e-de84de1b1e19"] }, // 中國內需動力基金
+  { sourceId: "209", fundIds: ["1db501b5-3a31-4ee2-80dd-8ad86a1ddd46"] }, // 全球抗暖化基金
+  { sourceId: "108A", fundIds: ["f22c19db-928b-4783-804c-d0c0c3f8f192", "6debb602-7a19-4642-a1ef-9ab89d2997b5", "649df543-eddc-4d50-9435-01db879e0365", "b1501f27-d9b9-487d-9c37-ada9e6e80b2b", "21fd9695-a5f5-4ced-81c8-becbff1abd3f", "61b7e2c9-f6a4-441d-a467-9e25d5e2eca8", "d00778af-d6bf-47ce-871a-08c093ecc585", "d72df4b0-cb8d-4ad4-9eba-5dbdd35deb76"] }, // 景氣循環多元資產組合基金
+  { sourceId: "110A", fundIds: ["6f8b81ae-d1f5-4740-aec1-6ae6090c7568", "37c650f3-058b-4267-b218-236b4868d80e", "d8132778-8c7c-437a-a1ec-df5df0308af8", "4e84374d-2481-47e8-b5a4-866e9e11784b", "87fcb5ed-eb4c-4f7b-a387-5f71f8267b8b", "78fa7b8a-6baa-49af-95b9-3471313f3a92", "2c40da81-b534-48cc-80ef-432178505723", "ae830786-5777-4135-a14c-379df9f791fb", "68da4171-8738-431d-8c1c-09fa93da398e", "54e7ef0e-cbbf-46c9-a92b-4b7fe2462cd2", "73bf6496-eff7-4af8-a760-6a1f64eed18e", "d535c728-c50a-450e-974d-3d0d6e34b194", "f897d064-44fa-40ae-954d-9a0d024c409e", "7abf1d11-0369-46f2-89c8-971bd01d796a", "4c92df2c-f3eb-4ba2-932a-502f0ea03b4a", "72ddf0f4-90b2-40c0-a8bc-b66c79600555"] }, // 富裕商機多重資產基金
+];

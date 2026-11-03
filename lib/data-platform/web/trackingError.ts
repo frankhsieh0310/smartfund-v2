@@ -47,18 +47,18 @@ export type TrackedEtf = {
 // 20%+的追蹤誤差，但這其實是「新臺幣ETF價格 vs 美元指數」沒有先換算匯率基礎不一致造成的，不是
 // 真正的追蹤誤差，在沒有可靠的每日美元兌台幣匯率換算前，先不計算這兩檔，避免顯示錯誤但看起來
 // 像真實數字的誤導資訊。
+// 2026-10-29（使用者核准修正）: 美股ETF一律改用「總報酬指數」(把配息算進去的版本)，不用單純
+// 價格指數——VERIFIED ^SP500TR(S&P 500 Total Return)、^NDXT(NASDAQ-100 Total Return)、
+// ^RUATR(Russell 3000 Total Return，用來代理Russell系列)在Yahoo都查得到真實每日數值。ETF本身
+// 配息後市價會下跌，但指數本身的價格版沒有「回補」這個下跌，用價格指數硬比會錯誤放大追蹤誤差——
+// 跟台股0050那次「市價vs報酬指數」没对齐的问题是同一类，这边一次修正。
 export const TRACKED_ETFS: TrackedEtf[] = [
-  { code: "0050", indexName: "臺灣50報酬指數", source: "TWSE_TAI50I", ref: "臺灣50報酬指數" },
-  { code: "006208", indexName: "臺灣50報酬指數", source: "TWSE_TAI50I", ref: "臺灣50報酬指數" },
-  { code: "VOO", indexName: "S&P 500 Index", source: "YAHOO", ref: "^GSPC" },
-  { code: "IVV", indexName: "S&P 500 Index", source: "YAHOO", ref: "^GSPC" },
-  { code: "SPY", indexName: "S&P 500 Index", source: "YAHOO", ref: "^GSPC" },
-  { code: "SPYM", indexName: "S&P 500 Index", source: "YAHOO", ref: "^GSPC" },
-  { code: "QQQ", indexName: "NASDAQ-100 Index", source: "YAHOO", ref: "^NDX" },
-  { code: "QQQM", indexName: "NASDAQ-100 Index", source: "YAHOO", ref: "^NDX" },
-  { code: "IWM", indexName: "Russell 2000 Index", source: "YAHOO", ref: "^RUT" },
-  { code: "IWF", indexName: "Russell 1000 Growth Index", source: "YAHOO", ref: "^RLG" },
-  { code: "IWD", indexName: "Russell 1000 Value Index", source: "YAHOO", ref: "^RLV" },
+  { code: "VOO", indexName: "S&P 500 Total Return Index", source: "YAHOO", ref: "^SP500TR" },
+  { code: "IVV", indexName: "S&P 500 Total Return Index", source: "YAHOO", ref: "^SP500TR" },
+  { code: "SPY", indexName: "S&P 500 Total Return Index", source: "YAHOO", ref: "^SP500TR" },
+  { code: "SPYM", indexName: "S&P 500 Total Return Index", source: "YAHOO", ref: "^SP500TR" },
+  { code: "QQQ", indexName: "NASDAQ-100 Total Return Index", source: "YAHOO", ref: "^NDXT" },
+  { code: "QQQM", indexName: "NASDAQ-100 Total Return Index", source: "YAHOO", ref: "^NDXT" },
 ];
 
 function rocDateToIso(rocDate: string): string {
