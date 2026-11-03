@@ -204,3 +204,34 @@ export async function fetchFubonMonthlyHoldings(fd: string): Promise<IssuerMonth
   if (holdings.length !== 10) throw new Error(`FUBON_HOLDINGS_COUNT_${holdings.length}:${fd}`);
   return { holdings, dataMonth: dateMatch[1], sourceUrl };
 }
+
+// 台新投信（tsit.com.tw）：/Fund/FundPortfolio?fundID=<id>頁是一般GET、伺服器端渲染（ASP.NET
+// MVC），不需要Puppeteer也不需要偽裝User-Agent（2026-11-03 VERIFIED：plain fetch不帶任何自訂
+// header，逐列比對兩檔基金的結果跟瀏覽器實際顯示100%一致）。fundID是從官網「基金淨值」頁
+// a.fundID元素的value屬性讀出來的（每個級別各自一個fundID），不是猜的——同一檔基金不同幣別/
+// 級別的fundID各不相同，但前十大持股是基金層級資料，所有級別的頁面回傳同一份表格，所以用任一
+// 代表fundID抓一次即可覆蓋整檔基金。
+export async function fetchTaishinMonthlyHoldings(fundId: string): Promise<IssuerMonthlyHoldingsResult> {
+  const sourceUrl = `https://www.tsit.com.tw/Fund/FundPortfolio?fundID=${fundId}`;
+  const res = await fetch(sourceUrl);
+  if (res.status === 429 || res.status === 403) throw new IssuerSiteBlockedError("TAISHIN", res.status, `HTTP_${res.status}`);
+  const html = await res.text();
+  const headerIdx = html.indexOf("基金前十大投資明細");
+  if (headerIdx < 0) throw new Error(`TAISHIN_MARKER_NOT_FOUND:${fundId}`);
+  // 年/月數字各自包在自己的<span id="year">/<span id="month">裡，中間夾著收尾標籤，直接對raw HTML
+  // 比對會因為標籤插在數字和「年」/「月」之間而配不到，所以先去標籤再比對。
+  const dateMatch = html.slice(headerIdx, headerIdx + 500).replace(/<[^>]+>/g, "").match(/(\d{4})年(\d{1,2})月/);
+  if (!dateMatch) throw new Error(`TAISHIN_DATE_NOT_FOUND:${fundId}`);
+  const nextSectionIdx = html.indexOf("投資分佈", headerIdx);
+  const scope = html.slice(headerIdx, nextSectionIdx > 0 ? nextSectionIdx : headerIdx + 5000);
+  const trRe = /<tr[^>]*>([\s\S]*?)<\/tr>/g;
+  const holdings: IssuerHoldingRow[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = trRe.exec(scope)) && holdings.length < 10) {
+    const tds = [...m[1].matchAll(/<td[^>]*>([\s\S]*?)<\/td>/g)].map((x) => x[1].replace(/<[^>]+>/g, "").trim());
+    if (tds.length < 4 || !/^\d+$/.test(tds[0])) continue;
+    holdings.push({ name: stripCjkInternalSpacing(tds[2]), weight: Number(tds[3]) });
+  }
+  if (holdings.length !== 10) throw new Error(`TAISHIN_HOLDINGS_COUNT_${holdings.length}:${fundId}`);
+  return { holdings, dataMonth: `${dateMatch[1]}/${dateMatch[2].padStart(2, "0")}`, sourceUrl };
+}

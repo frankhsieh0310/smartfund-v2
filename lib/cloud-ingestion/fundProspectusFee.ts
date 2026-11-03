@@ -126,35 +126,67 @@ export async function extractNomuraProspectusFee(filename: string, fundNameForLo
   const filedMatch = fullText.match(/刊\s*印\s*日\s*期\s*：\s*(\d{2,3})年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日/);
   const filedAt = filedMatch ? `${Number(filedMatch[1]) + 1911}-${String(filedMatch[2]).padStart(2, "0")}-${String(filedMatch[3]).padStart(2, "0")}` : null;
 
-  // 「項 目 計 算 方 式 或 金 額」表格之後，「經理費」到「保管費」之間是經理費原文；
-  // 「保管費」到下一個欄位名稱（申購手續費/買回費用/買回收件手續費）之間是保管費原文。
+  // 格式A（多數股權/一般債券型基金）：「項 目 計 算 方 式 或 金 額」表格之後，「經理費」到
+  // 「保管費」之間是經理費原文；「保管費」到下一個欄位名稱（申購手續費/買回費用/買回收件手續費）
+  // 之間是保管費原文。
   // 2026-11-03 VERIFIED：不同PDF這個表頭的字間距不一致（有的是"計算方式或金額"緊連，有的是
   // "項 目 計 算 方 式 或 金 額"逐字空格），直接比對原字串會漏——用去空白後的版本找位置，
   // 再換算回原始字串的對應索引。
-  const compact = fullText.replace(/\s+/g, "");
-  const compactIdx = compact.indexOf("計算方式或金額");
-  if (compactIdx < 0) throw new Error(`NOMURA_FEE_TABLE_NOT_FOUND:${fundNameForLog}`);
-  // 找出compact的第compactIdx個非空白字元，在原始fullText中的實際位置。
-  let nonWsCount = 0, tableIdx = -1;
-  for (let i = 0; i < fullText.length; i++) {
-    if (!/\s/.test(fullText[i])) {
-      if (nonWsCount === compactIdx) { tableIdx = i; break; }
-      nonWsCount++;
+  function tryFormatA(): { mgmtFeeText: string; custodianFeeText: string } | null {
+    const compact = fullText.replace(/\s+/g, "");
+    const compactIdx = compact.indexOf("計算方式或金額");
+    if (compactIdx < 0) return null;
+    let nonWsCount = 0, tableIdx = -1;
+    for (let i = 0; i < fullText.length; i++) {
+      if (!/\s/.test(fullText[i])) {
+        if (nonWsCount === compactIdx) { tableIdx = i; break; }
+        nonWsCount++;
+      }
     }
+    if (tableIdx < 0) return null;
+    const scope = fullText.slice(tableIdx, tableIdx + 4000);
+    const mgmtIdx = scope.indexOf("經理費");
+    const custodianIdx = scope.indexOf("保管費", mgmtIdx + 1);
+    const nextSectionMatch = scope.slice(custodianIdx + 3).match(/申購手續費|買回費用|買回收件手續費/);
+    if (mgmtIdx < 0 || custodianIdx < 0 || !nextSectionMatch) return null;
+    // 表格跨頁時，PDF會在新頁重複一次「項目 計算方式或金額」這個表頭列，混進費率原文中間——
+    // 跟上面找表格起點用的是同一個字串，這裡原樣清掉（含有無字間空白的兩種寫法）。
+    const stripRepeatedHeader = (s: string) => s.replace(/\n*項\s*目\s*計\s*算\s*方\s*式\s*或\s*金\s*額\n*/g, "");
+    return {
+      mgmtFeeText: stripRepeatedHeader(scope.slice(mgmtIdx + "經理費".length, custodianIdx)).trim(),
+      custodianFeeText: stripRepeatedHeader(scope.slice(custodianIdx + "保管費".length, custodianIdx + 3 + nextSectionMatch.index!)).trim(),
+    };
   }
-  if (tableIdx < 0) throw new Error(`NOMURA_FEE_TABLE_NOT_FOUND:${fundNameForLog}`);
-  const scope = fullText.slice(tableIdx, tableIdx + 4000);
-  const mgmtIdx = scope.indexOf("經理費");
-  const custodianIdx = scope.indexOf("保管費", mgmtIdx + 1);
-  const nextSectionMatch = scope.slice(custodianIdx + 3).match(/申購手續費|買回費用|買回收件手續費/);
-  if (mgmtIdx < 0 || custodianIdx < 0 || !nextSectionMatch) {
-    throw new Error(`NOMURA_FEE_SECTIONS_NOT_FOUND:${fundNameForLog}`);
-  }
-  // 表格跨頁時，PDF會在新頁重複一次「項目 計算方式或金額」這個表頭列，混進費率原文中間——
-  // 跟上面找表格起點用的是同一個字串，這裡原樣清掉（含有無字間空白的兩種寫法）。
-  const stripRepeatedHeader = (s: string) => s.replace(/\n*項\s*目\s*計\s*算\s*方\s*式\s*或\s*金\s*額\n*/g, "");
-  const mgmtFeeText = stripRepeatedHeader(scope.slice(mgmtIdx + "經理費".length, custodianIdx)).trim();
-  const custodianFeeText = stripRepeatedHeader(scope.slice(custodianIdx + "保管費".length, custodianIdx + 3 + nextSectionMatch.index!)).trim();
 
-  return { mgmtFeeText, custodianFeeText, inceptionDate, sourceUrl: pdfUrl, filedAt };
+  // 格式B（2026-11-04新增，貨幣市場基金／部分債券基金沒有「項目/計算方式或金額」格線表，改用
+  // 信託契約條款編號條列：「(二十三)經理費」「(二十四)保管費」這種中文數字編號標題，內容是整段
+  // 條款原文，不是表格列——VERIFIED「野村精選貨幣市場基金」「野村亞太複合非投資等級債券基金」
+  // 都是這種排版，格式A的「計算方式或金額」anchor在這兩份PDF裡根本不存在（貨幣市場基金的
+  // 「計算方式或金額」出現在同文件後段一張無關的表格，不是費率表）。經理費段落取自條款標題到
+  // 下一個「(保管費)」標題之間；保管費段落取自其標題到下一個「(中文數字)」編號標題之間（下一條
+  // 條款，不限定是哪一條）。
+  function tryFormatB(): { mgmtFeeText: string; custodianFeeText: string } | null {
+    // 2026-11-04 VERIFIED：有些PDF在編號括號跟標題文字之間多一個空白(例如"(二十三) 經理費")，
+    // 用\s*容許中間的空白、不要求緊連。
+    const headingRe = /[（(][一二三四五六七八九十廿百]+[）)]\s*/g;
+    const mgmtHeadingMatch = fullText.match(/[（(][一二三四五六七八九十廿百]+[）)]\s*經理費/);
+    const custHeadingMatch = fullText.match(/[（(][一二三四五六七八九十廿百]+[）)]\s*保管費/);
+    if (!mgmtHeadingMatch || !custHeadingMatch) return null;
+    const mgmtStart = mgmtHeadingMatch.index! + mgmtHeadingMatch[0].length;
+    const custHeadingStart = custHeadingMatch.index!;
+    if (custHeadingStart <= mgmtStart) return null;
+    const mgmtFeeText = fullText.slice(mgmtStart, custHeadingStart).trim();
+    const custStart = custHeadingStart + custHeadingMatch[0].length;
+    headingRe.lastIndex = custStart;
+    const nextHeadingMatch = headingRe.exec(fullText);
+    const custEnd = nextHeadingMatch ? nextHeadingMatch.index : custStart + 2000;
+    const custodianFeeText = fullText.slice(custStart, custEnd).trim();
+    if (!mgmtFeeText || !custodianFeeText) return null;
+    return { mgmtFeeText, custodianFeeText };
+  }
+
+  const fees = tryFormatA() ?? tryFormatB();
+  if (!fees) throw new Error(`NOMURA_FEE_SECTIONS_NOT_FOUND:${fundNameForLog}`);
+
+  return { mgmtFeeText: fees.mgmtFeeText, custodianFeeText: fees.custodianFeeText, inceptionDate, sourceUrl: pdfUrl, filedAt };
 }

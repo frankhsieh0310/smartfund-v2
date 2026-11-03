@@ -17,15 +17,15 @@ import { prisma } from "@/lib/prisma";
 import { beginRun, finishRun, readCheckpoint, writeCheckpoint, type CheckpointRow, type BoundedDbOptions } from "@/lib/cloud-ingestion/runContext";
 import {
   fetchYuantaMonthlyHoldings, fetchCathayMonthlyHoldings, fetchNomuraMonthlyHoldings,
-  fetchCapitalMonthlyHoldings, fetchFubonMonthlyHoldings,
+  fetchCapitalMonthlyHoldings, fetchFubonMonthlyHoldings, fetchTaishinMonthlyHoldings,
   IssuerSiteBlockedError, type IssuerMonthlyHoldingsResult,
 } from "@/lib/cloud-ingestion/issuerMonthlyHoldings";
 import {
   YUANTA_FUND_MAPPINGS, CATHAY_FUND_MAPPINGS, NOMURA_FUND_MAPPINGS,
-  CAPITAL_FUND_MAPPINGS, FUBON_FUND_MAPPINGS, type IssuerFundMapping,
+  CAPITAL_FUND_MAPPINGS, FUBON_FUND_MAPPINGS, TAISHIN_FUND_MAPPINGS, type IssuerFundMapping,
 } from "@/lib/cloud-ingestion/issuerFundMappings";
 
-export type SupportedIssuer = "Yuanta" | "Cathay" | "Nomura" | "Capital" | "Fubon";
+export type SupportedIssuer = "Yuanta" | "Cathay" | "Nomura" | "Capital" | "Fubon" | "Taishin";
 
 export function isIssuerMonthlyHoldingsWriteEnabled(): boolean {
   return process.env.ISSUER_MONTHLY_HOLDINGS_WRITE?.trim() === "on";
@@ -45,6 +45,7 @@ function mappingsFor(issuer: SupportedIssuer): IssuerFundMapping[] {
   if (issuer === "Cathay") return CATHAY_FUND_MAPPINGS;
   if (issuer === "Capital") return CAPITAL_FUND_MAPPINGS;
   if (issuer === "Fubon") return FUBON_FUND_MAPPINGS;
+  if (issuer === "Taishin") return TAISHIN_FUND_MAPPINGS;
   return NOMURA_FUND_MAPPINGS;
 }
 
@@ -53,6 +54,7 @@ async function fetchHoldings(issuer: SupportedIssuer, sourceId: string): Promise
   if (issuer === "Cathay") return fetchCathayMonthlyHoldings(sourceId);
   if (issuer === "Capital") return fetchCapitalMonthlyHoldings(sourceId);
   if (issuer === "Fubon") return fetchFubonMonthlyHoldings(sourceId);
+  if (issuer === "Taishin") return fetchTaishinMonthlyHoldings(sourceId);
   const [groupId, gradeId] = sourceId.split("::");
   return fetchNomuraMonthlyHoldings(groupId, gradeId);
 }

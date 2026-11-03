@@ -1,17 +1,23 @@
-// 公開說明書經理費率/保管費率寫入（2026-11-03使用者核准，野村投信試點，5檔dry-run核對過）。
+// 公開說明書經理費率/保管費率寫入（2026-11-03使用者核准，野村投信試點；2026-11-04改用
+// listNomuraFilings()自動解析清單，取代原本只有5檔的NOMURA_PROSPECTUS_FILENAME手動對照表）。
 // 寫入開關FUND_PROSPECTUS_FEE_WRITE，shadow模式預設不寫入。
 //
-// 範圍：這輪只有NOMURA_PROSPECTUS_FILENAME那5檔有PDF檔名對應（野村鴻運/中小/高科技/平衡/
-// 貨幣市場），其餘野村投信基金（54檔基金家族裡的49檔）要延伸全部覆蓋，需要先把
-// listNomuraFilings()式的MOPS清單頁自動解析做出來（這輪只手動核對出5檔檔名，自動解析沒做，
-// 見fundProspectusFee.ts開頭註解）——這支function設計成「給多少筆對應就處理多少筆」，之後
-// 補完整清單時不用改這支function本身。
+// 範圍：listNomuraFilings()從MOPS清單頁解析出61筆申報記錄（114+115兩個ROC年度），但「只處理
+// APPROVED的，已改名或清算的排除」——這一步不用額外過濾邏輯，因為下面的fundByCode本來就只收
+// tw_purchasable_classification狀態APPROVED、且未被fund_superseded_by_code標記取代的基金列；
+// 61筆裡對不到任何一個APPROVED fund.id的（已清算/改名後舊名/非境內申報的傘型ETF子基金等），
+// 自然落入failed（NO_FUND_ID_MATCHED），不會被處理或寫入。VERIFIED差異來源：61筆中約10筆是
+// 已清算基金(野村巴西證券基金/野村雙印傘型證券基金/野村鑫全球債券組合基金/野村目標到期傘型
+// 基金/野村新興非投資等級債券組合基金舊名)、境外ETF子基金(野村亞洲傘型之韓國科技30ETF/亞洲
+// 科技主動式ETF，不適用MOPS境內基金申報、不在這份清單的「正常」範圍內)，以及少數全形/半形
+// 字元差異(例如"野村ｅ科技基金"官網全形E跟公會清單半形e)；使用者原本預期的54檔跟這裡篩出的
+// APPROVED筆數相近但非完全一致，確切對應待逐筆核對全形/半形字元後再收斂，先如實回報差異。
 //
 // 費率屬於基金層級（跟持股月報一樣），同一個基金名稱寫入時，會更新該基金所有APPROVED、
 // 非superseded share class的對應欄位。
 import { prisma } from "@/lib/prisma";
 import { fetchSitcaRows } from "@/lib/sitca-nav-sync/sitcaFetch";
-import { extractNomuraProspectusFee, NOMURA_PROSPECTUS_FILENAME } from "@/lib/cloud-ingestion/fundProspectusFee";
+import { extractNomuraProspectusFee, listNomuraFilings } from "@/lib/cloud-ingestion/fundProspectusFee";
 
 export function isFundProspectusFeeWriteEnabled(): boolean {
   return process.env.FUND_PROSPECTUS_FEE_WRITE?.trim() === "on";
@@ -51,18 +57,24 @@ export async function runNomuraProspectusFeeSync(): Promise<FundProspectusFeeRes
   let written = 0;
   let matched = 0;
 
-  for (const [fundName, filename] of Object.entries(NOMURA_PROSPECTUS_FILENAME)) {
+  const filings = await listNomuraFilings();
+  let attempted = 0;
+  for (const [fundName, filing] of filings) {
+    attempted++;
+    const normalized = fundName.replace(/\s+/g, "").replace(/基金$/, "");
     // 跟月報持股用一樣的base code家族共用邏輯：SITCA同一個基金簡稱(去掉類型後綴)的所有級別，
-    // 全部一起更新這個基金層級的費率欄位。
+    // 全部一起更新這個基金層級的費率欄位——fundByCode只含APPROVED、非superseded的基金，61筆
+    // 申報記錄裡對不到任何APPROVED fund.id的（已清算/改名舊名/非境內申報ETF子基金），就落入
+    // 下面的NO_FUND_ID_MATCHED，不會被處理，等同篩掉。
     const matchedFundIds = nomuraRows
-      .filter((r) => r.name.split("-")[0].replace(/證券投資信託基金$|基金$/, "") === fundName.replace(/基金$/, ""))
+      .filter((r) => r.name.split("-")[0].replace(/\s+/g, "").replace(/證券投資信託基金$|基金$/, "") === normalized)
       .map((r) => fundByCode.get(r.taxId)?.id)
       .filter((id): id is string => !!id);
     if (matchedFundIds.length === 0) { failed.push({ fundName, error: "NO_FUND_ID_MATCHED" }); continue; }
     matched++;
 
     try {
-      const result = await extractNomuraProspectusFee(filename, fundName);
+      const result = await extractNomuraProspectusFee(filing.filename, fundName);
       dryRunRows.push({
         fundName, matchedFundIds, mgmtFeeText: result.mgmtFeeText, custodianFeeText: result.custodianFeeText,
         inceptionDate: result.inceptionDate, sourceUrl: result.sourceUrl,
@@ -83,5 +95,5 @@ export async function runNomuraProspectusFeeSync(): Promise<FundProspectusFeeRes
     }
   }
 
-  return { attempted: Object.keys(NOMURA_PROSPECTUS_FILENAME).length, matched, written, failed, dryRunRows };
+  return { attempted, matched, written, failed, dryRunRows };
 }
