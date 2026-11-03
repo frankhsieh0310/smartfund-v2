@@ -72,12 +72,27 @@ function previousTradingDayClose(
   return best?.close ?? null;
 }
 
+// 2026-11-04（使用者核准，「台灣買不到的不放」原則）：原本只憑currency/isActive/dataSource，
+// VERIFIED候選清單30,258檔裡只有619檔（TDCC_OPENDATA_3-2：616、SITCA_NAV_CSV：3）在
+// tw_purchasable_classification裡是APPROVED，其餘29,639檔（含JPMorgan那8檔美國本地共同基金）
+// 根本不是台灣核准銷售的基金，純粹因為currency=USD就被追蹤淨值、誤判PRICE_JUMP_REVIEW。改成
+// 只取APPROVED的基金，台灣買不到的自然不會再被排進候選清單、也不會再觸發這個異常。
 async function computeUsFundCandidateIds(): Promise<string[]> {
   const rows = await prisma.fund.findMany({
-    where: { currency: "USD", isActive: true, dataSource: { not: null } },
+    where: {
+      currency: "USD", isActive: true, dataSource: { not: null },
+      id: { in: await approvedFundIds() },
+    },
     select: { id: true },
   });
   return rows.map((r) => r.id);
+}
+
+async function approvedFundIds(): Promise<string[]> {
+  const rows = await prisma.$queryRawUnsafe<{ asset_id: string }[]>(
+    `SELECT asset_id FROM tw_purchasable_classification WHERE asset_type = 'FUND' AND status = 'APPROVED'`,
+  );
+  return rows.map((r) => r.asset_id);
 }
 
 async function getCandidateIdsCachedForToday(today: string): Promise<string[]> {

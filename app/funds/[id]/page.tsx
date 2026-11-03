@@ -88,6 +88,14 @@ export default async function FundDetailPage({ params, searchParams }: { params:
           </div>
         </> : <Empty title="尚無 SITCA 月申報資料" />}
       </Panel>
+      {fund.feeRateProspectus.data.mgmtFeeRateText || fund.feeRateProspectus.data.custodianFeeRateText ? <Panel title="公開說明書費率條文" section={fund.feeRateProspectus} footer className="mt-6">
+        <p className="mb-4 text-xs text-slate-500">本公司公開說明書費率條文，係「年」費率規則原文（可能含多級距，非單一比率數字）；跟上方「SITCA 月申報」的當月實際費用占淨資產比率是不同指標，不可互相取代。{fund.feeRateProspectus.data.filedAt ? `公開說明書刊印日期：${date(fund.feeRateProspectus.data.filedAt)}` : null}</p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div><div className="text-xs font-semibold text-slate-500">經理費率（年，公開說明書）</div><p className="mt-2 text-sm leading-6 text-slate-200">{text(fund.feeRateProspectus.data.mgmtFeeRateText)}</p></div>
+          <div><div className="text-xs font-semibold text-slate-500">保管費率（年，公開說明書）</div><p className="mt-2 text-sm leading-6 text-slate-200">{text(fund.feeRateProspectus.data.custodianFeeRateText)}</p></div>
+        </div>
+        {fund.feeRateProspectus.data.sourceUrl ? <p className="mt-4 text-xs text-slate-500">來源：<a href={fund.feeRateProspectus.data.sourceUrl} target="_blank" rel="noreferrer" className="text-[#F5B700] hover:underline">公開資訊觀測站公開說明書 PDF</a></p> : null}
+      </Panel> : null}
       {fund.annualMetricsFundclear.data.length ? <Panel title="境內基金年度報酬率與年度費用率（FundClear，僅適用單一級別基金）" section={fund.annualMetricsFundclear} footer className="mt-6">
         <div className="overflow-x-auto"><table className="min-w-[500px] w-full text-left text-xs"><thead className="text-slate-500"><tr>{["年度", "年度報酬率", "年度費用率（FundClear）", "報酬率來源"].map((h) => <th key={h} className="px-3 py-3">{h}</th>)}</tr></thead><tbody>{fund.annualMetricsFundclear.data.map((item) => <tr key={item.year} className="border-t border-white/[0.06]"><td className="px-3 py-3 text-white">{item.year} 年</td><td className="px-3 py-3">{percent(item.returnPct)}</td><td className="px-3 py-3">{item.feeRatePct === null ? "—" : `${number(item.feeRatePct, 2)}%`}</td><td className="px-3 py-3">{text(item.returnSource)}</td></tr>)}</tbody></table></div>
       </Panel> : null}

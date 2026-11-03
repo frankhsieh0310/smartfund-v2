@@ -23,6 +23,14 @@ export function isFundProspectusFeeWriteEnabled(): boolean {
   return process.env.FUND_PROSPECTUS_FEE_WRITE?.trim() === "on";
 }
 
+// 2026-11-04 VERIFIED：MOPS申報清單用半形英數（"野村 e 科技基金"），SITCA公告清單同一檔基金卻用
+// 全形英數（"野村ｅ科技基金"）——兩邊各自內部一致，只是彼此不同，單純去空白比對不到。把全形
+// ASCII(U+FF01-FF5E)轉回半形(減0xFEE0)後再去空白比對，兩邊就會收斂成同一個字串。
+function normalizeNomuraName(raw: string): string {
+  const halfWidth = raw.replace(/[！-～]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xfee0));
+  return halfWidth.replace(/\s+/g, "");
+}
+
 export type FundProspectusFeeDryRunRow = {
   fundName: string;
   matchedFundIds: string[];
@@ -61,13 +69,13 @@ export async function runNomuraProspectusFeeSync(): Promise<FundProspectusFeeRes
   let attempted = 0;
   for (const [fundName, filing] of filings) {
     attempted++;
-    const normalized = fundName.replace(/\s+/g, "").replace(/基金$/, "");
+    const normalized = normalizeNomuraName(fundName).replace(/基金$/, "");
     // 跟月報持股用一樣的base code家族共用邏輯：SITCA同一個基金簡稱(去掉類型後綴)的所有級別，
     // 全部一起更新這個基金層級的費率欄位——fundByCode只含APPROVED、非superseded的基金，61筆
     // 申報記錄裡對不到任何APPROVED fund.id的（已清算/改名舊名/非境內申報ETF子基金），就落入
     // 下面的NO_FUND_ID_MATCHED，不會被處理，等同篩掉。
     const matchedFundIds = nomuraRows
-      .filter((r) => r.name.split("-")[0].replace(/\s+/g, "").replace(/證券投資信託基金$|基金$/, "") === normalized)
+      .filter((r) => normalizeNomuraName(r.name.split("-")[0]).replace(/證券投資信託基金$|基金$/, "") === normalized)
       .map((r) => fundByCode.get(r.taxId)?.id)
       .filter((id): id is string => !!id);
     if (matchedFundIds.length === 0) { failed.push({ fundName, error: "NO_FUND_ID_MATCHED" }); continue; }

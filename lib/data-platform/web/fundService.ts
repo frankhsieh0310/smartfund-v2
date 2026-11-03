@@ -225,6 +225,17 @@ export interface FundDetailData {
   /** 2026-10-31（使用者核准）: 境外基金國人持有金額(FundClear)，新臺幣計價——跟上面
    * offshoreScaleTdcc(全球規模，原幣別)是完全不同的指標，畫面不可混在一起。 */
   offshoreTwHolding: FundSection<{ twHoldingTwd: number | null; twHoldingPct: number | null; yearMonth: string | null }>;
+  /** 2026-11-04（使用者核准，野村試點）：公開說明書原文費率（「年」費率條文，不是比率數字），
+   * 跟上面monthlyDisclosure的SITCA「當月實際經理費／保管費（占淨資產）」是完全不同的指標——
+   * monthlyDisclosure是每月實際比率數字，這裡是公開說明書條文全文（可能含多級距/未換算成單一
+   * 數字），畫面務必分開顯示、各自標註來源，不可互相取代或合併成一個欄位。這些欄位不在
+   * prisma/schema.prisma（funds表這4欄是用原始SQL加的，schema沒追上），用$queryRawUnsafe查。 */
+  feeRateProspectus: FundSection<{
+    mgmtFeeRateText: string | null;
+    custodianFeeRateText: string | null;
+    sourceUrl: string | null;
+    filedAt: string | null;
+  }>;
 }
 
 type HoldingRow = { security_id: string | null; holding_name: string | null; weight: unknown; market_value: unknown; currency: string | null; report_date: Date; source: string; updated_at: Date; rank: number | null };
@@ -352,7 +363,7 @@ export async function getFundDetail(identifier: string, relationLimit = 20, rang
       managerSourceId,
     ),
   ]);
-  const [aumDisclosureRows, feeDisclosureRows] = await Promise.all([
+  const [aumDisclosureRows, feeDisclosureRows, feeRateProspectusRows] = await Promise.all([
     prisma.$queryRawUnsafe<{ year_month: string; aum_twd: unknown; nav_twd: unknown; total_holders: number | null; subscription_twd: unknown; redemption_twd: unknown; source: string }[]>(
       `SELECT year_month, aum_twd, nav_twd, total_holders, subscription_twd, redemption_twd, source FROM fund_aum_disclosure_monthly WHERE fund_id = $1 ORDER BY year_month DESC LIMIT 1`,
       aumSourceId,
@@ -360,6 +371,13 @@ export async function getFundDetail(identifier: string, relationLimit = 20, rang
     prisma.$queryRawUnsafe<{ year_month: string; mgmt_fee_pct: unknown; custodian_fee_pct: unknown; total_fee_pct: unknown }[]>(
       `SELECT year_month, mgmt_fee_pct, custodian_fee_pct, total_fee_pct FROM fund_fee_disclosure_monthly WHERE fund_id = $1 ORDER BY year_month DESC LIMIT 1`,
       feeSourceId,
+    ),
+    // 2026-11-04：mgmt_fee_rate_prospectus_text等4欄是funds表自己的欄位（不是子表），schema.prisma
+    // 沒有這4欄的model定義，用原始SQL查，查的是這個級別自己的fund.id（寫入時野村野的fundProspectus
+    // FeeWriter.ts對同一檔基金的所有級別都寫同一份文字，正常情況下不需要像aum/fee那樣借別的級別）。
+    prisma.$queryRawUnsafe<{ mgmt_fee_rate_prospectus_text: string | null; custodian_fee_rate_prospectus_text: string | null; fee_rate_prospectus_source_url: string | null; fee_rate_prospectus_filed_at: Date | null }[]>(
+      `SELECT mgmt_fee_rate_prospectus_text, custodian_fee_rate_prospectus_text, fee_rate_prospectus_source_url, fee_rate_prospectus_filed_at FROM funds WHERE id = $1`,
+      row.id,
     ),
   ]);
   // 2026-10-31: fund_annual_metrics_fundclear 這張表要等使用者核准
@@ -514,6 +532,16 @@ export async function getFundDetail(identifier: string, relationLimit = 20, rang
         yearMonth: offshoreTwHoldingRows[0]?.year_month ?? null,
       },
       provenance: buildProvenance({ source: "FUNDCLEAR_QUERY_FUND_REPORT", sourceRecordId: row.id, asOfDate: yearMonthToDate(offshoreTwHoldingRows[0]?.year_month), lastUpdated: row.updatedAt }),
+    },
+    feeRateProspectus: {
+      coverage: sectionCoverage(feeRateProspectusRows[0]?.mgmt_fee_rate_prospectus_text || feeRateProspectusRows[0]?.custodian_fee_rate_prospectus_text ? 1 : 0),
+      data: {
+        mgmtFeeRateText: feeRateProspectusRows[0]?.mgmt_fee_rate_prospectus_text ?? null,
+        custodianFeeRateText: feeRateProspectusRows[0]?.custodian_fee_rate_prospectus_text ?? null,
+        sourceUrl: feeRateProspectusRows[0]?.fee_rate_prospectus_source_url ?? null,
+        filedAt: isoOrNull(feeRateProspectusRows[0]?.fee_rate_prospectus_filed_at),
+      },
+      provenance: buildProvenance({ source: "NOMURA_MOPS_PROSPECTUS", sourceRecordId: row.id, asOfDate: feeRateProspectusRows[0]?.fee_rate_prospectus_filed_at, lastUpdated: row.updatedAt }),
     },
   };
   if (data.company && /^(待補|unknown|n\/a)/i.test(data.company)) data.company = null;
