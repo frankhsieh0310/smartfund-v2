@@ -152,3 +152,55 @@ export async function fetchNomuraMonthlyHoldings(groupId: string, gradeId: strin
   if (holdings.length !== 10) throw new Error(`NOMURA_HOLDINGS_COUNT_${holdings.length}:${groupId}/${gradeId}`);
   return { holdings, dataMonth: dateMatch[1], sourceUrl };
 }
+
+// 群益投信（capitalfund.com.tw）：基金持股頁有真正的JSON API（POST /CFWeb/api/fundhold/list/
+// <fundNo>，fundNo是官網選單→基金總覽→點進個別基金的/fund/detail/<fundNo>這個代號，不是猜的），
+// 直接讀渲染後頁面實際呼叫的這支API，不解析HTML文字——比元大/國泰/野村三家都乾淨，因為官網
+// 本身就是結構化資料、不需要額外解析排版。VERIFIED「群益馬拉松基金」(fundNo=003)10檔逐列核對
+// 跟官網頁面一致。
+export async function fetchCapitalMonthlyHoldings(fundNo: string): Promise<IssuerMonthlyHoldingsResult> {
+  const sourceUrl = `https://www.capitalfund.com.tw/fund/detail/${fundNo}/hold`;
+  const json = await withPage(async (page) => {
+    const response = await page.goto(sourceUrl, { waitUntil: "networkidle2", timeout: 30_000 });
+    const status = response?.status() ?? null;
+    if (status === 429 || status === 403) throw new IssuerSiteBlockedError("CAPITAL", status, `HTTP_${status}`);
+    return page.evaluate(async (no: string) => {
+      const res = await fetch(`/CFWeb/api/fundhold/list/${no}`, { method: "POST" });
+      if (res.status === 429 || res.status === 403) throw new Error(`BLOCKED_${res.status}`);
+      return res.json();
+    }, fundNo);
+  });
+  const items = json?.data?.items as Array<{ seqNo: number; stocName: string; stocPerc: number; tdate: string }> | undefined;
+  if (!items || items.length === 0) throw new Error(`CAPITAL_HOLDINGS_EMPTY:${fundNo}`);
+  // 照抄官網原文，含"聖暉*"這類帶星號註記的名稱——不自行判斷星號是否該清掉。
+  const holdings: IssuerHoldingRow[] = items.slice(0, 10).map((it) => ({ name: it.stocName.trim(), weight: it.stocPerc }));
+  if (holdings.length !== 10) throw new Error(`CAPITAL_HOLDINGS_COUNT_${holdings.length}:${fundNo}`);
+  const dataMonth = items[0].tdate.slice(0, 7); // "YYYY-MM-DDThh:mm:ss+08:00" -> "YYYY-MM"
+  return { holdings, dataMonth: dataMonth.replace("-", "/"), sourceUrl };
+}
+
+// 富邦投信（fubon.com）：基金總覽→點進個別基金→「基金資產配置」頁，「前十大投資標的」表格
+// 渲染後文字是「投資類型\t投資標的\t比例(%)」三欄表格，每列「產業類別 名稱 比重%」。Fd參數是
+// 從官網選單點進去才拿得到的基金代號（例如"01A"），不是猜的。
+export async function fetchFubonMonthlyHoldings(fd: string): Promise<IssuerMonthlyHoldingsResult> {
+  const sourceUrl = `https://www.fubon.com/asset-management/fund/info/assets?Fd=${fd}`;
+  const text = await renderPageText(sourceUrl, null);
+  const headerIdx = text.indexOf("前十大投資標的");
+  if (headerIdx < 0) throw new Error(`FUBON_MARKER_NOT_FOUND:${fd}`);
+  const dateMatch = text.slice(headerIdx).match(/資料日期：(\d{4}\/\d{2})\/\d{2}/);
+  if (!dateMatch) throw new Error(`FUBON_DATE_NOT_FOUND:${fd}`);
+  const nextSectionIdx = text.indexOf("每季投資金額", headerIdx);
+  const scope = text.slice(headerIdx, nextSectionIdx > 0 ? nextSectionIdx : headerIdx + 3000);
+  // 2026-11-03 VERIFIED：每列是「產業\t標的名稱\t比重」用tab分三欄、整個表格逐行渲染。改成
+  // 逐行比對（不是跨行regex帶trailing\n），避免regex.exec的lastIndex吃掉分隔用的換行、導致
+  // 隔列漏抓（已驗證過这個bug：原本跨行版本只抓到第1/3/5/7/9列，偶數列全部漏掉）。
+  const holdings: IssuerHoldingRow[] = [];
+  for (const line of scope.split("\n")) {
+    if (holdings.length >= 10) break;
+    const m = line.match(/^([^\t]+)\t([^\t]+)\t([\d.]+)$/);
+    if (!m || m[1] === "投資類型") continue;
+    holdings.push({ name: stripCjkInternalSpacing(m[2]), weight: Number(m[3]) });
+  }
+  if (holdings.length !== 10) throw new Error(`FUBON_HOLDINGS_COUNT_${holdings.length}:${fd}`);
+  return { holdings, dataMonth: dateMatch[1], sourceUrl };
+}

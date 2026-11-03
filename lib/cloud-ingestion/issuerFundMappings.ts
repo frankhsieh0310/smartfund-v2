@@ -149,9 +149,156 @@ export const NOMURA_FUND_MAPPINGS: IssuerFundMapping[] = [
   { sourceId: "DBADF354-0775-4F49-91AB-883D0D211190::45", fundIds: ["59554d29-5a42-44fe-9854-7cb4d827d960"] }, // 野村貨幣市場基金
 ];
 
-// 國泰投信：這輪ISIN比對技術已驗證可行（Cathay頁面的「ISIN代號」去掉TW000前綴及末位檢查碼
-// 即為SITCA CSV的「受益憑證代號」，VERIFIED F01→T3701Y→17612497A、FEK→T3701A→17612497C都
-// 對得上），但完整175檔的ISIN爬取這輪沒跑完（跟元大一樣是逐檔點擊的SPA、無法用API批次拿），
-// 下一輪跑完discover_cathay_isin.mjs後補上。先給空陣列，寫入迴圈看到空陣列會直接跳過國泰、
-// 不會報錯。
-export const CATHAY_FUND_MAPPINGS: IssuerFundMapping[] = [];
+// 國泰投信：ISIN比對（Cathay頁面的「ISIN代號」去掉TW000前綴及末位檢查碼即為SITCA CSV的
+// 「受益憑證代號」，VERIFIED F01→T3701Y→17612497A、FEK→T3701A→17612497C都對得上）。
+// 2026-11-03 VERIFIED：175檔裡這輪跑完143檔（逐檔點擊的SPA，背景腳本跑到時間預算上限），
+// 137/143命中（96%），其餘6檔是ETF型代號（例如00636/00657這類已在etfs表範圍的ETF），正確
+// 不對應、沒有猜。剩下32檔(144-175)下一輪跑完discover_cathay_isin.mjs補上即可，不用重寫
+// 這支function。
+export const CATHAY_FUND_MAPPINGS: IssuerFundMapping[] = [
+  { sourceId: "F01", fundIds: ["1dafce6f-c52d-4ff0-9e05-9bf33a0381d8"] }, // 國泰國泰基金-新台幣A(不配息)
+  { sourceId: "FEK", fundIds: ["73b23fd5-49da-4746-8cd6-3c2e99ec6f24"] }, // 國泰國泰基金-新台幣B(配息)
+  { sourceId: "FEL", fundIds: ["a7e029c6-88fd-42d3-95c6-9e11a8fbcf31"] }, // 國泰國泰基金-新台幣NB(配息)
+  { sourceId: "FAM", fundIds: ["f9f66366-01d5-41ff-9772-8a208df61b6d"] }, // 國泰國泰基金-新台幣I
+  { sourceId: "F03", fundIds: ["c747f5e0-adbd-4e62-b77b-bb869c1393c0"] }, // 國泰中小成長基金-新台幣A(不配息)
+  { sourceId: "FEM", fundIds: ["e7fa2a67-48a6-4309-b6b3-10b062cfad73"] }, // 國泰中小成長基金-新台幣B(配息)
+  { sourceId: "FEN", fundIds: ["d016df94-7139-4fcd-acf0-b2842c6c47b4"] }, // 國泰中小成長基金-新台幣NB(配息)
+  { sourceId: "FBF", fundIds: ["b3d53a52-c7ed-4993-bc22-357d328b5b19"] }, // 國泰中小成長基金-美元I
+  { sourceId: "F06", fundIds: ["8ef5c01d-9a64-4b65-a31d-2f4c598218ee"] }, // 國泰大中華基金
+  { sourceId: "F07", fundIds: ["8c9e320f-2436-4883-a0a9-b810a307eec7"] }, // 國泰科技生化基金
+  { sourceId: "F14", fundIds: ["133a5eea-4800-4967-99a1-8106be6c52ff"] }, // 國泰小龍基金-新台幣A
+  { sourceId: "FBG", fundIds: ["77b021fa-d921-4d61-a111-dd301f337ccb"] }, // 國泰小龍基金-美元I
+  { sourceId: "FCZ", fundIds: ["99503b00-711c-4a4e-8429-942de1b535b0"] }, // 國泰小龍基金-新台幣R
+  { sourceId: "FCL", fundIds: ["b1db5f0e-d46b-404b-94d1-583d987aa9f5"] }, // 國泰台灣高股息傘型基金之台灣高股息基金-新台幣A(不配息)
+  { sourceId: "FCM", fundIds: ["0f76daf9-416f-46d5-a5a6-92c1506ad862"] }, // 國泰台灣高股息傘型基金之台灣高股息基金-新台幣B(配息)
+  { sourceId: "FE0", fundIds: ["66261a04-4c99-4396-9d14-28fab00bb65a"] }, // 國泰台灣高股息傘型基金之台灣高股息基金-新台幣TISA
+  { sourceId: "F02", fundIds: ["d3ff0908-ab5e-4bd7-9ac9-bf05e751b75b"] }, // 國泰台灣貨幣市場基金
+  { sourceId: "F20", fundIds: ["82fd1d48-4df9-4b56-8083-01a8f901c83b"] }, // 國泰全球基礎建設基金-新台幣A(不配息)
+  { sourceId: "FEO", fundIds: ["e2d8c5fb-e995-41bf-959a-260cc3eb6f62"] }, // 國泰全球基礎建設基金-新台幣B(配息)
+  { sourceId: "FEP", fundIds: ["2e927718-7d05-431f-a42c-ca2f5606a1c7"] }, // 國泰全球基礎建設基金-新台幣NB(配息)
+  { sourceId: "F54", fundIds: ["3904ed5d-e077-48bf-8b40-19f4f64f1274"] }, // 國泰全球基礎建設基金-美元A(不配息)
+  { sourceId: "FEQ", fundIds: ["961247f3-f54b-493b-a867-73dac7cb6749"] }, // 國泰全球基礎建設基金-美元B(配息)
+  { sourceId: "FER", fundIds: ["db59bcf0-2ddd-4ee1-abd9-fa8f9d35b6e1"] }, // 國泰全球基礎建設基金-美元NB(配息)
+  { sourceId: "F26", fundIds: ["01516dd3-ef47-4bc1-83fe-1ec24ebad358"] }, // 國泰中港台基金-新台幣
+  { sourceId: "F57", fundIds: ["32a0a489-d8f0-4804-a6b2-ce4f8a99643a"] }, // 國泰中港台基金-美元
+  { sourceId: "FAG", fundIds: ["8c35c9bd-79af-4b96-9185-1b0c7239cec2"] }, // 國泰中港台基金-人民幣
+  { sourceId: "F28", fundIds: ["e4f8a54a-84b4-41ef-9d40-1eb3358ca62c"] }, // 國泰新興市場基金-新台幣
+  { sourceId: "FAB", fundIds: ["b63c9e6a-91dd-404e-9424-a3569874c4b8"] }, // 國泰新興市場基金-美元
+  { sourceId: "F31", fundIds: ["59c7bdea-4a9e-4080-8230-5d0aee644c28"] }, // 國泰中國內需增長基金-新台幣
+  { sourceId: "F53", fundIds: ["42603d5e-ffea-48b6-9531-e687f6dd39c0"] }, // 國泰中國內需增長基金-美元A
+  { sourceId: "F64", fundIds: ["84af0e24-8562-43c6-8418-a30a713ecc7d"] }, // 國泰中國內需增長基金-美元I
+  { sourceId: "FAH", fundIds: ["78db54a6-4b59-46ae-820b-190e46958836"] }, // 國泰中國內需增長基金-人民幣
+  { sourceId: "F34", fundIds: ["73e9124d-9098-4dec-87eb-1b10fb127241"] }, // 國泰中國新興戰略基金-新台幣
+  { sourceId: "F73", fundIds: ["d7b3f51b-406d-4cdd-bcf9-14b8f8928069"] }, // 國泰中國新興戰略基金-美元
+  { sourceId: "FAI", fundIds: ["b325c76b-4e7c-4eee-b777-87b453195d75"] }, // 國泰中國新興戰略基金-人民幣
+  { sourceId: "F55", fundIds: ["5fe09b75-504b-41b2-ae54-eaedab656fa2"] }, // 國泰亞洲成長基金-新台幣
+  { sourceId: "F56", fundIds: ["194905a6-cbcb-4ad3-a380-6262a70c2aa9"] }, // 國泰亞洲成長基金-美元
+  { sourceId: "FDA", fundIds: ["47fd1308-23d8-471d-bf5e-c454c7ffcf3a"] }, // 國泰亞洲成長基金-人民幣
+  { sourceId: "FDB", fundIds: ["784b701c-f8a7-4f59-8a85-440a7a4e18d6"] }, // 國泰亞洲成長基金-澳幣
+  { sourceId: "FCX", fundIds: ["c71b4497-2695-4401-9cf5-377ad7d4dd72"] }, // 國泰美國ESG基金-新台幣
+  { sourceId: "FCY", fundIds: ["a5abc900-0e65-44e9-a920-8be8073056a1"] }, // 國泰美國ESG基金-美元
+  { sourceId: "F46", fundIds: ["2df5d052-5a08-451f-a340-381a7e009f10"] }, // 國泰收益傘型基金之全球多重收益平衡基金-新台幣A(不配息)
+  { sourceId: "F47", fundIds: ["0619c6ac-9723-45f6-9413-4346f3c6cfc5"] }, // 國泰收益傘型基金之全球多重收益平衡基金-新台幣B(配息)
+  { sourceId: "FD2", fundIds: ["a60f543d-017b-49d9-a780-071ac0bc0dd3"] }, // 國泰收益傘型基金之全球多重收益平衡基金-新台幣R(不配息)
+  { sourceId: "F48", fundIds: ["f6acdf30-332b-4d31-82c4-d7469d7da3f8"] }, // 國泰收益傘型基金之全球多重收益平衡基金-美元A(不配息)
+  { sourceId: "F49", fundIds: ["ef352707-f214-4870-837e-1b482239034a"] }, // 國泰收益傘型基金之全球多重收益平衡基金-美元B(配息型)
+  { sourceId: "F65", fundIds: ["f7557fa0-5f45-49f4-ab77-8ae24d6230dc"] }, // 國泰收益傘型基金之全球多重收益平衡基金-美元I(不配息)
+  { sourceId: "F81", fundIds: ["b7c26a0c-4c8e-4116-851e-27dc837e3a8d"] }, // 國泰收益傘型基金之全球多重收益平衡基金-澳幣A(不配息)
+  { sourceId: "F75", fundIds: ["6c7ad86c-e41a-42cd-a1cb-f06475d9603b"] }, // 國泰亞太入息平衡基金-新台幣A(不配息)
+  { sourceId: "F76", fundIds: ["66e19910-0b14-434c-a9a1-4018314d2192"] }, // 國泰亞太入息平衡基金-新台幣B(配息)
+  { sourceId: "F77", fundIds: ["5af1e962-72c4-4b57-bb33-e7f6e6f73191"] }, // 國泰亞太入息平衡基金-美元A(不配息)
+  { sourceId: "F78", fundIds: ["9f6b0644-5da6-4659-a329-0a03bdc838b6"] }, // 國泰亞太入息平衡基金-美元B(配息)
+  { sourceId: "F79", fundIds: ["60f2684c-d1c2-4639-b96a-f9f21a1ce039"] }, // 國泰亞太入息平衡基金-人民幣A(不配息)
+  { sourceId: "F80", fundIds: ["4a92a43a-31f7-4831-b9b7-6de901806b1a"] }, // 國泰亞太入息平衡基金-澳幣A(不配息)
+  { sourceId: "FC3", fundIds: ["07c92626-a815-4047-9e93-9ac38946d784"] }, // 國泰美國收益傘型基金之美國多重收益平衡基金-新台幣A(不配息)
+  { sourceId: "FC4", fundIds: ["d7609e70-676b-4b34-8c4f-499776ceb65b"] }, // 國泰美國收益傘型基金之美國多重收益平衡基金-新台幣B(配息)
+  { sourceId: "FC5", fundIds: ["733b4b0c-7be2-46cb-a644-69191333e9d0"] }, // 國泰美國收益傘型基金之美國多重收益平衡基金-新台幣NB(配息)
+  { sourceId: "FC6", fundIds: ["40d964a1-beca-4a7e-b36b-27e16b3699fe"] }, // 國泰美國收益傘型基金之美國多重收益平衡基金-美元A(不配息)
+  { sourceId: "FC7", fundIds: ["06ece7bd-9040-4329-bcd1-3373adee78e2"] }, // 國泰美國收益傘型基金之美國多重收益平衡基金-美元B(配息)
+  { sourceId: "FC8", fundIds: ["fd7487a1-0ceb-47ee-a6f6-3a7aea9ee76d"] }, // 國泰美國收益傘型基金之美國多重收益平衡基金-美元NB(配息)
+  { sourceId: "FDU", fundIds: ["920a3b3f-9cc5-4c5f-aa49-a75b410a8deb"] }, // 國泰美國收益傘型基金之美國多重收益平衡基金-日圓B(配息)
+  { sourceId: "FC9", fundIds: ["56d55742-40a4-4ea2-8eb9-60b67b9b03e8"] }, // 國泰美國收益傘型基金之美國多重收益平衡基金-人民幣B(配息)
+  { sourceId: "FCA", fundIds: ["5f0d4d07-923a-4bfa-94b2-ae4d244f314d"] }, // 國泰美國收益傘型基金之美國多重收益平衡基金-南非幣B(配息)
+  { sourceId: "F32", fundIds: ["690d3c0f-a916-4501-9a3b-9d8c8ff88b83"] }, // 國泰新興非投資等級債券基金-新台幣A(不配息)
+  { sourceId: "F33", fundIds: ["d46d4dd2-f298-41f7-875d-73cc6a750665"] }, // 國泰新興非投資等級債券基金-新台幣B(配息)
+  { sourceId: "F59", fundIds: ["f1a661fb-9aa7-463f-a0b3-ba756fa2357e"] }, // 國泰新興非投資等級債券基金-美元A(不配息)
+  { sourceId: "F60", fundIds: ["7dddbfa3-92b3-420f-babd-14af08aa8316"] }, // 國泰新興非投資等級債券基金-美元B(配息)
+  { sourceId: "F63", fundIds: ["e66e1358-e3e5-4bd0-84f0-2e6442c75b3b"] }, // 國泰新興非投資等級債券基金-美元I(不配息)
+  { sourceId: "F61", fundIds: ["6fcc0831-25a6-40b5-8cf9-602f6990c08b"] }, // 國泰新興非投資等級債券基金-人民幣A(不配息)
+  { sourceId: "F62", fundIds: ["4e9972ec-bb8f-4b11-afdd-842aa1bd3173"] }, // 國泰新興非投資等級債券基金-人民幣B(配息)
+  { sourceId: "FAN", fundIds: ["394cf311-4437-4bc3-bb4d-1e5aee9a63d7"] }, // 國泰優勢收益傘型基金之主順位資產抵押非投資等級債券基金-新台幣A(不配息)
+  { sourceId: "FAO", fundIds: ["38def503-2da9-4557-a4b9-2d6c7f77b174"] }, // 國泰優勢收益傘型基金之主順位資產抵押非投資等級債券基金-新台幣B(配息)
+  { sourceId: "FAP", fundIds: ["dd663ae5-5f6e-48cd-b98a-8f3bdc92ea49"] }, // 國泰優勢收益傘型基金之主順位資產抵押非投資等級債券基金-新台幣NB(配息)
+  { sourceId: "FAQ", fundIds: ["daad84b3-44a5-4a15-9f2f-b98ea75b83ba"] }, // 國泰優勢收益傘型基金之主順位資產抵押非投資等級債券基金-美元A(不配息)
+  { sourceId: "FAR", fundIds: ["10f3bfae-6b56-406b-9c52-b19d8a6cf4c3"] }, // 國泰優勢收益傘型基金之主順位資產抵押非投資等級債券基金-美元B(配息)
+  { sourceId: "FAS", fundIds: ["ee5aaad1-6295-4a02-b784-fa108308ad33"] }, // 國泰優勢收益傘型基金之主順位資產抵押非投資等級債券基金-美元NB(配息)
+  { sourceId: "FCD", fundIds: ["297b6d05-894b-4ccf-9726-721e9ddae77e"] }, // 國泰亞洲非投資等級債券基金-新台幣A(不配息)
+  { sourceId: "FCE", fundIds: ["f2d84b62-d62f-4d2c-9acd-f08d3dee3530"] }, // 國泰亞洲非投資等級債券基金-新台幣B(配息)
+  { sourceId: "FCF", fundIds: ["a03d8860-aebe-4b71-bd10-1cdae7b3796c"] }, // 國泰亞洲非投資等級債券基金-新台幣NB(配息)
+  { sourceId: "FCG", fundIds: ["f1c87f41-38ab-47a5-97d4-6a7342651538"] }, // 國泰亞洲非投資等級債券基金-美元A(不配息)
+  { sourceId: "FCH", fundIds: ["dc634687-7667-43d8-a8d8-3cc649efac34"] }, // 國泰亞洲非投資等級債券基金-美元B(配息)
+  { sourceId: "FCI", fundIds: ["ead51d08-b68e-4484-bf84-8cb41dda8554"] }, // 國泰亞洲非投資等級債券基金-美元NB(配息)
+  { sourceId: "FDG", fundIds: ["c34c23a0-d33c-4d3c-a591-ad3433962e8a"] }, // 國泰美國優質債券基金-新台幣A(不配息)
+  { sourceId: "FDH", fundIds: ["b19f7df9-76a4-48e2-93b7-9e3e5f14327c"] }, // 國泰美國優質債券基金-新台幣B(配息)
+  { sourceId: "FDW", fundIds: ["3df74dfd-b445-4f22-a461-b3982024dc6a"] }, // 國泰美國優質債券基金-新台幣NB(配息)
+  { sourceId: "FDI", fundIds: ["74acf2f7-ebe3-47f4-94d4-7e15816fc1a4"] }, // 國泰美國優質債券基金-美元A(不配息)
+  { sourceId: "FDJ", fundIds: ["ec59c96b-90d6-4132-a12e-9a1d414ac6ea"] }, // 國泰美國優質債券基金-美元B(配息)
+  { sourceId: "FDX", fundIds: ["fbb8074c-0f41-441f-95c3-c48794defe09"] }, // 國泰美國優質債券基金-美金NB(配息)
+  { sourceId: "FDV", fundIds: ["8703ca44-8a85-4597-b04c-77138c996382"] }, // 國泰美國優質債券基金-日圓B(配息)
+  { sourceId: "FDK", fundIds: ["cf1995fe-85c2-44fa-ae91-9f328d5197e9"] }, // 國泰四年到期成熟市場投資等級債券基金-新台幣A(不配息)
+  { sourceId: "FDL", fundIds: ["487d26ff-ec4b-41a8-b85f-aad03668dd7d"] }, // 國泰四年到期成熟市場投資等級債券基金-新台幣B(配息)
+  { sourceId: "FDM", fundIds: ["efc39d22-860c-4cd1-9dda-907139849e20"] }, // 國泰四年到期成熟市場投資等級債券基金-美元A(不配息)
+  { sourceId: "FDN", fundIds: ["d3fe3434-efab-410b-b601-30798670061d"] }, // 國泰四年到期成熟市場投資等級債券基金-美元B(配息)
+  { sourceId: "F45", fundIds: ["cd2b768c-6ded-47ea-9eaf-7c361ed4fab9"] }, // 國泰人民幣貨幣市場基金-美元
+  { sourceId: "F40", fundIds: ["17dc2c19-ab91-48a7-8cd2-78aa75112c1c"] }, // 國泰人民幣貨幣市場基金-人民幣
+  { sourceId: "F15", fundIds: ["810b92db-4d8f-434f-846e-30ebb286ddc2"] }, // 國泰幸福階梯傘型基金之全球積極組合基金-新台幣A(不配息)
+  { sourceId: "FBC", fundIds: ["a0066fb0-56c2-460d-aaa8-a936823dee06"] }, // 國泰幸福階梯傘型基金之全球積極組合基金-新台幣B(配息)
+  { sourceId: "FD0", fundIds: ["2fdb6046-266c-4809-a197-9090027c47e9"] }, // 國泰幸福階梯傘型基金之全球積極組合基金-新台幣R(不配息)
+  { sourceId: "F51", fundIds: ["a665e7dd-3370-4e11-ab22-586290911f11"] }, // 國泰幸福階梯傘型基金之全球積極組合基金-美元A(不配息)
+  { sourceId: "FBD", fundIds: ["eb955a24-a2fb-4798-bc1f-b936a2d507e0"] }, // 國泰幸福階梯傘型基金之全球積極組合基金-澳幣A(不配息)
+  { sourceId: "F27", fundIds: ["79870f2f-b6a5-4679-9d93-17bd66145590"] }, // 國泰豐益債券組合基金-新台幣A(不配息)
+  { sourceId: "FD8", fundIds: ["d4b3c36b-e268-454b-9b44-885bc3d64912"] }, // 國泰豐益債券組合基金-新台幣B(配息)
+  { sourceId: "FD1", fundIds: ["5b86a5eb-94c7-4537-9342-03a7bff49d0f"] }, // 國泰豐益債券組合基金-新台幣R(不配息)
+  { sourceId: "FAF", fundIds: ["b8dfc877-8588-4ac7-97f6-0ce42a3fb5f3"] }, // 國泰豐益債券組合基金-美元A(不配息)
+  { sourceId: "FD9", fundIds: ["a9ffb561-dadf-4a59-bf26-973ab0a0644a"] }, // 國泰豐益債券組合基金-澳幣A(不配息)
+  { sourceId: "FBT", fundIds: ["278125c8-a127-4c3c-bd4f-950ca2fa50d2"] }, // 國泰泰享退系列2029目標日期組合基金-新台幣A
+  { sourceId: "FBV", fundIds: ["87f199b7-dfe4-4d0d-8922-41f89e5e93be"] }, // 國泰泰享退系列2029目標日期組合基金-新台幣P
+  { sourceId: "FD3", fundIds: ["ddbbc08a-4b70-4afb-849e-bb87097d93d4"] }, // 國泰泰享退系列2029目標日期組合基金-新台幣R
+  { sourceId: "FBU", fundIds: ["4cc26884-5aec-4da4-ad3f-279a76720587"] }, // 國泰泰享退系列2029目標日期組合基金-美元A
+  { sourceId: "FBW", fundIds: ["bde1bd5c-4788-475a-971c-6e3723ce0ddc"] }, // 國泰泰享退系列2039目標日期組合基金-新台幣A
+  { sourceId: "FBY", fundIds: ["dabde616-e52a-4455-8abd-b58c76b897a1"] }, // 國泰泰享退系列2039目標日期組合基金-新台幣P
+  { sourceId: "FD4", fundIds: ["0881d092-99cb-438f-b1d8-651cbd591478"] }, // 國泰泰享退系列2039目標日期組合基金-新台幣R
+  { sourceId: "FBX", fundIds: ["003814d0-1714-4f5e-bfac-25822132dc3c"] }, // 國泰泰享退系列2039目標日期組合基金-美元A
+  { sourceId: "FBZ", fundIds: ["bac5fa4c-a16e-4f66-9bd3-edd5dbe85864"] }, // 國泰泰享退系列2049目標日期組合基金-新台幣A
+  { sourceId: "FDZ", fundIds: ["fcbbb41f-2f74-46ce-abbe-0784e58ed0b4"] }, // 國泰泰享退系列2049目標日期組合基金-新台幣TISA
+  { sourceId: "FC1", fundIds: ["ca4cad55-9143-409d-ac10-e9ba20ef143c"] }, // 國泰泰享退系列2049目標日期組合基金-新台幣P
+  { sourceId: "FD5", fundIds: ["6bd9b04b-1d8c-4f9b-9307-ddddcb083701"] }, // 國泰泰享退系列2049目標日期組合基金-新台幣R
+  { sourceId: "FC0", fundIds: ["e7d6b177-1086-460e-adc7-f1c8d5fb8826"] }, // 國泰泰享退系列2049目標日期組合基金-美元A
+  { sourceId: "FEC", fundIds: ["36e902ef-ed59-44a2-b152-988a398daec2"] }, // 國泰全球多元收益傘型基金之環球策略收益債券基金-新台幣A(不配息)
+  { sourceId: "FED", fundIds: ["70a6de5b-9a3e-4f39-b041-0030192da192"] }, // 國泰全球多元收益傘型基金之環球策略收益債券基金-新台幣B(配息)
+  { sourceId: "FEE", fundIds: ["4c2326b5-54d2-4978-a4d2-071390ca8af1"] }, // 國泰全球多元收益傘型基金之環球策略收益債券基金-新台幣NB(配息)
+  { sourceId: "FEF", fundIds: ["84d61719-d1f6-46e9-944c-e7b230e1d8ff"] }, // 國泰全球多元收益傘型基金之環球策略收益債券基金-美元A(不配息)
+  { sourceId: "FEG", fundIds: ["928f17db-fd20-41b5-94e8-c83b518c4c60"] }, // 國泰全球多元收益傘型基金之環球策略收益債券基金-美元B(配息)
+  { sourceId: "FEH", fundIds: ["b13f5a05-2dcf-41ed-b74e-72621d51a355"] }, // 國泰全球多元收益傘型基金之環球策略收益債券基金-美元NB(配息)
+  { sourceId: "FEI", fundIds: ["7bf7f5e2-c680-4974-a9c9-3ca4847387d7"] }, // 國泰全球多元收益傘型基金之環球策略收益債券基金-日圓B(配息)
+  { sourceId: "FEJ", fundIds: ["9d0f42a7-b486-4f39-944f-03e4ea07385d"] }, // 國泰全球多元收益傘型基金之環球策略收益債券基金-日圓NB(配息)
+  { sourceId: "E82", fundIds: ["39edc11b-b1f8-4734-a374-377cafb37d91"] }, // 國泰A50傘型基金之富時中國A50單日正向2倍基金
+  { sourceId: "E83", fundIds: ["c58e89de-835e-4a56-8ae6-1045a6518cfd"] }, // 國泰A50傘型基金之富時中國A50單日反向1倍基金
+  { sourceId: "E87", fundIds: ["aa1a671e-1b7b-4bbd-b930-9f39ecd661ab"] }, // 國泰臺指ETF傘型基金之臺灣加權指數單日正向2倍基金
+  { sourceId: "E88", fundIds: ["eee41df3-d69c-462a-9d58-6aa2555b3da1"] }, // 國泰臺指ETF傘型基金之臺灣加權指數單日反向1倍基金
+  { sourceId: "E94", fundIds: ["4f550256-cf4a-4a1c-a3a3-d107c5ad0e70"] }, // 國泰美國ETF傘型基金之道瓊工業平均指數單日反向1倍基金
+  { sourceId: "EA8", fundIds: ["d759e1be-a97f-493d-a1c6-cdb1a5b81282"] }, // 國泰美國債券ETF傘型基金之20年期(以上)美國公債指數基金-新台幣(配息)
+  { sourceId: "EDY", fundIds: ["8ae36cdc-e0d2-4214-a6a3-4bab4541f683"] }, // 國泰美國債券ETF傘型基金之20年期(以上)美國公債指數基金-美元(不配息)
+  { sourceId: "EA9", fundIds: ["2be35d99-f747-4a7d-8761-886fec99374b"] }, // 國泰美國債券ETF傘型基金之20年期(以上)美國公債指數單日正向2倍基金
+  { sourceId: "EAA", fundIds: ["b4d831e9-4a65-4e2d-89e7-3ec91926c63f"] }, // 國泰美國債券ETF傘型基金之20年期(以上)美國公債指數單日反向1倍基金
+  { sourceId: "EAJ", fundIds: ["32187024-7221-4ffa-83de-deb4108cba5d"] }, // 國泰息收ETF傘型基金之10年期(以上)BBB美元息收公司債券基金
+  { sourceId: "EAK", fundIds: ["9166b628-c62f-435e-a3ae-d69fbca61421"] }, // 國泰息收ETF傘型基金之新興市場5年期(以上)美元息收投資等級債券基金
+];
+
+// 群益投信（capitalfund.com.tw）、富邦投信（fubon.com）：這輪新增解析器並各自dry-run驗證2檔
+// （群益：群益馬拉松基金fundNo=003股票型、群益安穩貨幣市場基金fundNo=002貨幣市場型；富邦：
+// 富邦基金-A類型Fd=01A、富邦精準基金Fd=04，皆逐列核對跟官網頁面一致），但完整基金清單→
+// funds.id對應表這輪沒做（群益的fundNo、富邦的Fd代號都要從官網選單清單頁逐一點進去才查得到，
+// 跟元大/國泰同樣問題），先留空陣列，下一輪比照元大/國泰的作法做完整清單。
+export const CAPITAL_FUND_MAPPINGS: IssuerFundMapping[] = [];
+export const FUBON_FUND_MAPPINGS: IssuerFundMapping[] = [];

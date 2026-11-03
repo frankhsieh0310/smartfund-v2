@@ -116,9 +116,15 @@ export async function GET(request: Request) {
 
   // 2026-10-22（使用者核准，三.三稽核發現）: 之前不論result.writeErrorCount或matched是否掉到0
   // 都無條件回報COMPLETED。
+  // 2026-11-03（VERIFIED，健康報告LAST_RUN_PARTIAL誤報修正）: 撞到跟SITCA_NAV_SYNC同一種bug
+  // （見app/api/cron/sitca-nav-sync/route.ts那段2026-11-02的註解）——written===0的原因是
+  // filterNewerThanStored/ByCode()比對CSV navDate沒有比DB latest_nav_date新，這是TDCC當天
+  // 還沒公布新一天NAV時的正常穩態，不是寫入失敗。VERIFIED 2026-11-02 10:31這筆PARTIAL
+  // （nameMatchedCount=116, writableRowCount=0），下一次2026-11-03 02:31跑CSV真的更新後
+  // writableRowCount=116、自然COMPLETED，證實這不是程式bug。拿掉「matched>0 && written===0」
+  // 這條規則，只留write_error_count>0（真正的寫入失敗）當PARTIAL/FAILED的依據。
   const status = result.writeErrorCount > 0 && result.written === 0 ? "FAILED"
     : result.writeErrorCount > 0 ? "PARTIAL"
-    : writeEnabled && matched > 0 && result.written === 0 ? "PARTIAL"
     : "COMPLETED";
   await finishRun(runId, JOB, TDCC_NAV_SOURCE, startedMs, {
     status, attempted: candidateFunds.length + codeCandidateFunds.length, completed: result.written, inserted: result.written,

@@ -726,8 +726,13 @@ export async function GET(request: Request) {
     }
     const checkedAt = new Date().toISOString();
     try {
+      // 2026-11-03 VERIFIED：00980D這天的verifyNote是"VERIFY_FAILED: ABORTED"——不是上一輪修過的
+      // chromium/bin打包問題（那是直接找不到binary，這次有真的啟動Puppeteer），單純是15秒對冷啟動
+      // 的無伺服器環境+真的開一次瀏覽器渲染官網頁面偶爾太緊；VERIFIED同一天ETF_OFFICIAL_HOLDINGS:AB
+      // 這支真正的排程本身連續COMPLETED、00980D的holdings資料本身是新的(2026-10-30)，問題只在這個
+      // 驗證探針自己的逾時、不是資料落後。放寬到25秒降低這種偽陽性。
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 15_000);
+      const timer = setTimeout(() => controller.abort(), 25_000);
       const snap = await adapter.fetchSnapshot(item.code, undefined, controller.signal).finally(() => clearTimeout(timer));
       const officialLatestDate = snap.dataDate;
       const stillOld = !!officialLatestDate && (!item.lastDataDate || officialLatestDate <= item.lastDataDate);
