@@ -28,6 +28,7 @@ import { runMonthlyFeeDisclosure, runMonthlyAumDisclosure } from "@/lib/sitca-na
 import { runFundclearAnnualSync } from "@/lib/fundclear-annual-sync/writer";
 import { runFundclearAumGapFill } from "@/lib/sitca-nav-sync/fundclearAumGapFill";
 import { runFundCompanyBackfill } from "@/lib/sitca-nav-sync/companyBackfillWriter";
+import { runNomuraProspectusFeeSync } from "@/lib/cloud-ingestion/fundProspectusFeeWriter";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -217,6 +218,46 @@ export async function GET(request: Request) {
     } catch (e: any) {
       companyBackfillResult = { ok: false, skipped: false, reason: String(e?.message ?? e) };
     }
+    // 2026-11-04（使用者核准，cron數量上限95，併進這支既有的hourly sitca-nav-sync，不新增
+    // cron）：野村公開說明書費率同步(抓61筆MOPS申報+PDF解析，實測要幾分鐘)跟這支主流程(每小時
+    // 300秒預算、已經有5個子步驟)放在一起直接跑不安全，所以用自己的run_key(day粒度)先做
+    // once-a-day的gate——同一天第一次呼叫sitca-nav-sync就會真的開始跑，之後23次整點呼叫因為
+    // run_key已存在而skip。deadline只留給這一次「當天第一次」呼叫最多120秒（sitca-nav-sync
+    // 自己main流程+上面4個子步驟實測都在幾十秒內完成，120秒給費率同步、剩下至少180秒安全邊界
+    // 給maxDuration=300秒），processed不完的用checkpoint記住，下一個整點（還是同一天）接著跑。
+    let nomuraFeeResult: Awaited<ReturnType<typeof runNomuraProspectusFeeSync>> | null = null;
+    // maxDuration=300秒，留20秒安全緩衝；這一步最多再用120秒，兩者取小的，確保不會把整支route
+    // 的總時間預算用完——沒有足夠時間就完全不呼叫beginRun，避免留下一筆開了頭卻沒收尾的
+    // IN_PROGRESS紀錄。
+    const feeDeadline = Math.min(startedMs + 280_000, Date.now() + 120_000);
+    if (feeDeadline - Date.now() > 10_000) {
+      const feeDayKey = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+      const feeRunKey = `fund-prospectus-fee-sync-daily-${feeDayKey}`;
+      const feeGate = await beginRun({
+        jobName: "FUND_PROSPECTUS_FEE_SYNC", provider: "NOMURA_MOPS", runKey: feeRunKey,
+        universeCount: 0, batchSize: 0, checkpointBefore: null,
+      });
+      if (!feeGate.skipped) {
+        // 2026-10-23同一支route曾經因為例外沒被catch、finishRun從沒被呼叫，production_scheduler_
+        // runs那筆紀錄永遠卡在IN_PROGRESS——這裡try/catch兩條路都要呼叫finishRun，不能只在
+        // 成功路徑收尾。
+        try {
+          nomuraFeeResult = await runNomuraProspectusFeeSync(feeDeadline);
+          await finishRun(feeGate.runId, "FUND_PROSPECTUS_FEE_SYNC", "NOMURA_MOPS", startedMs, {
+            status: "COMPLETED", attempted: nomuraFeeResult.attempted, completed: nomuraFeeResult.matched,
+            inserted: nomuraFeeResult.written, updated: 0, failed: nomuraFeeResult.failed.length,
+            retryableFailures: 0, checkpointAfter: null,
+            details: { attempted: nomuraFeeResult.attempted, matched: nomuraFeeResult.matched, written: nomuraFeeResult.written, failedCount: nomuraFeeResult.failed.length, reachedEnd: nomuraFeeResult.reachedEnd },
+          });
+        } catch (e: any) {
+          nomuraFeeResult = { ok: false, skipped: false, reason: String(e?.message ?? e) } as any;
+          await finishRun(feeGate.runId, "FUND_PROSPECTUS_FEE_SYNC", "NOMURA_MOPS", startedMs, {
+            status: "FAILED", attempted: 0, completed: 0, inserted: 0, updated: 0, failed: 1,
+            retryableFailures: 1, checkpointAfter: null, error: String(e?.message ?? e),
+          });
+        }
+      }
+    }
 
     const matchedByCode = matched.filter((m) => m.matchedBy === "CODE").length;
     const matchedByName = matched.filter((m) => m.matchedBy === "NAME").length;
@@ -248,6 +289,7 @@ export async function GET(request: Request) {
         fee_disclosure: feeDisclosureResult, aum_disclosure: aumDisclosureResult,
         fundclear_annual: fundclearAnnualResult, fundclear_aum_gap_fill: fundclearAumGapFillResult,
         company_backfill: companyBackfillResult,
+        nomura_prospectus_fee: nomuraFeeResult,
       },
     });
 
@@ -260,6 +302,7 @@ export async function GET(request: Request) {
       feeDisclosure: feeDisclosureResult, aumDisclosure: aumDisclosureResult,
       fundclearAnnual: fundclearAnnualResult, fundclearAumGapFill: fundclearAumGapFillResult,
       companyBackfill: companyBackfillResult,
+      nomuraProspectusFee: nomuraFeeResult,
     });
   } catch (e: any) {
     await finishRun(runId, JOB, "SITCA_FSC_OFFICIAL_DAILY_NAV_CSV", startedMs, {

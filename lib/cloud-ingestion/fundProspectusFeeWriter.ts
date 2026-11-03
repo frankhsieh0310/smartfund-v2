@@ -13,6 +13,7 @@
 // 費率屬於基金層級（跟持股月報一樣），同一個基金名稱寫入時，會更新該基金所有APPROVED、
 // 非superseded share class的對應欄位。
 import { prisma } from "@/lib/prisma";
+import { readCheckpoint, writeCheckpoint } from "@/lib/cloud-ingestion/runContext";
 import { extractNomuraProspectusFee, listNomuraFilings } from "@/lib/cloud-ingestion/fundProspectusFee";
 
 export function isFundProspectusFeeWriteEnabled(): boolean {
@@ -53,9 +54,17 @@ export type FundProspectusFeeResult = {
   written: number;
   failed: Array<{ fundName: string; error: string }>;
   dryRunRows: FundProspectusFeeDryRunRow[];
+  reachedEnd: boolean;
 };
 
-export async function runNomuraProspectusFeeSync(): Promise<FundProspectusFeeResult> {
+const CHECKPOINT_KEY = "fund-prospectus-fee-sync:cursor";
+
+// 2026-11-04（使用者核准，併進sitca-nav-sync當一個子步驟、不新增cron）：抓61筆MOPS申報+PDF解析
+// 實測要幾分鐘，跟sitca-nav-sync自己的300秒時間預算放在一起跑不安全，所以這支改成「有deadline
+// 就有界限處理，沒處理完的下次（下一個整點）接著處理」——每天第一次呼叫先用dayKey當run_key，
+// beginRun的skipped機制讓同一天只會真正開始處理一次（不是每小時都重新跑61筆），deadline只是
+// 同一天這一次處理本身可能跨好幾個整點才處理完，用checkpoint記住處理到哪一筆。
+export async function runNomuraProspectusFeeSync(deadlineMs: number = Date.now() + 10 * 60_000): Promise<FundProspectusFeeResult> {
   const writeEnabled = isFundProspectusFeeWriteEnabled();
 
   // 2026-11-04：改成直接比對funds表（公司或名稱含「野村」），不再透過SITCA taxId間接比對——
@@ -80,8 +89,17 @@ export async function runNomuraProspectusFeeSync(): Promise<FundProspectusFeeRes
   let matched = 0;
 
   const filings = await listNomuraFilings();
+  const filingNames = [...filings.keys()].sort(); // 固定順序，checkpoint游標才有意義
+  const cp = await readCheckpoint(CHECKPOINT_KEY);
+  const startIdx = cp?.lastSymbol ? Math.max(0, filingNames.indexOf(cp.lastSymbol) + 1) : 0;
+
   let attempted = 0;
-  for (const [fundName, filing] of filings) {
+  let idx = startIdx;
+  let reachedEnd = false;
+  for (; idx < filingNames.length; idx++) {
+    if (Date.now() >= deadlineMs) break;
+    const fundName = filingNames[idx];
+    const filing = filings.get(fundName)!;
     attempted++;
     const normalized = baseName(fundName);
     // 61筆申報記錄裡對不到任何APPROVED fund.id的（已清算/改名舊名/非境內申報ETF子基金/全形
@@ -113,5 +131,13 @@ export async function runNomuraProspectusFeeSync(): Promise<FundProspectusFeeRes
     }
   }
 
-  return { attempted, matched, written, failed, dryRunRows };
+  reachedEnd = idx >= filingNames.length;
+  // 跑完61筆就把游標清掉從頭開始（下一輪重新檢查全部，抓到MOPS新申報的機會）；沒跑完就記住
+  // 停在哪一筆，下一個整點接著處理剩下的。
+  await writeCheckpoint("FUND_PROSPECTUS_FEE_SYNC", CHECKPOINT_KEY, "cursor", {
+    lastSymbol: reachedEnd ? null : filingNames[idx - 1] ?? null,
+    processed: attempted, succeeded: matched, failed: failed.length,
+  });
+
+  return { attempted, matched, written, failed, dryRunRows, reachedEnd };
 }

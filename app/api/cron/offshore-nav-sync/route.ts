@@ -68,6 +68,15 @@ function isWithinForbiddenTaipeiWindow(now: Date): boolean {
 export async function GET(request: Request) {
   if (!isAuthorizedCron(request)) return unauthorizedCron();
 
+  // 2026-11-04（使用者核准，cron數量上限95）：原本"*/15 1-3 * * *"(每15分跑一次，01-03點)跟
+  // "0 4 * * *"(04:00單獨跑一次)是vercel.json兩筆獨立排程，合併成一筆"*/15 1-4 * * *"後04點會
+  // 多出04:15/04:30/04:45這3次無謂的呼叫——這裡擋掉，只留04:00那次真的執行，其餘no-op直接
+  // 回應，不建run log、不做任何查詢，確保實際執行時間和頻率跟合併前完全一樣。
+  const nowForGuard = new Date();
+  if (nowForGuard.getUTCHours() === 4 && nowForGuard.getUTCMinutes() !== 0) {
+    return Response.json({ ok: true, job: JOB, skipped: true, reason: "hour4_minute_guard" });
+  }
+
   const startedMs = Date.now();
   const writeEnabledThisRun = isWriteEnabled();
   const today = new Date().toISOString().slice(0, 10);
