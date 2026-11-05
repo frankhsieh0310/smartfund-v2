@@ -179,9 +179,13 @@ export async function runIssuerMonthlyHoldings(
             await tx.$executeRawUnsafe(`DELETE FROM holdings WHERE fund_id = $1 AND source = $2`, fundId, source);
             for (let rank = 0; rank < result.holdings.length; rank++) {
               const h = result.holdings[rank];
+              // 2026-11-05 VERIFIED（修正ISSUER_MONTHLY_HOLDINGS_WRITE打開後6家投信100%寫入失敗）:
+              // Postgres錯誤「column "as_of_date" is of type date but expression is of type text」——
+              // $2用$executeRawUnsafe的參數化查詢傳進來的字串參數預設是text型別，INSERT的VALUES
+              // 清單不會自動轉型，要明確加::date。
               await tx.$executeRawUnsafe(
                 `INSERT INTO holdings (fund_id, as_of_date, rank, holding_name, weight, source, asset_type, created_at)
-                 VALUES ($1, $2, $3, $4, $5, $6, 'FUND', now())`,
+                 VALUES ($1, $2::date, $3, $4, $5, $6, 'FUND', now())`,
                 fundId, asOfDate, rank + 1, h.name, h.weight, source,
               );
             }

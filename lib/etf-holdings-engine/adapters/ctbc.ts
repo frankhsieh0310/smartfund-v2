@@ -126,3 +126,36 @@ export const CtbcOfficialPcfAdapter: OfficialPcfAdapter = {
     };
   },
 };
+
+// This adapter has no "today" fallback by design (see fetchSnapshot's CTBC_DATE_REQUIRED guard above)
+// and exposes no listAvailableDates() — it always requires an explicit date, and its Buyback API is
+// strict (a date with no official publication for it returns CTBC_NO_ENTRY). So "today's real date" is
+// resolved by probing backward from the current Taipei calendar date until CTBC's own API confirms one
+// with a real snapshot — never by computing or guessing a date locally. Bounded to at most 7 calendar
+// days back (covers a normal weekend/holiday gap). Moved here (2026-11-05) from
+// app/api/cron/etf-official-holdings/route.ts so app/api/cron/daily-health-report/route.ts's
+// CTBC_DATE_REQUIRED verify-probe can reuse the exact same date-resolution logic instead of calling
+// fetchSnapshot with no date at all.
+export async function resolveCtbcLatestDate(deadlineAt: number, probeTimeoutMs = 20_000): Promise<string> {
+  const anchorTicker = "00406A";
+  const taipeiToday = new Date(Date.now() + 8 * 60 * 60 * 1000);
+  for (let back = 0; back <= 7; back++) {
+    const remaining = deadlineAt - Date.now();
+    if (remaining < 5_000) break;
+    const d = new Date(taipeiToday);
+    d.setUTCDate(d.getUTCDate() - back);
+    const candidate = d.toISOString().slice(0, 10);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), Math.min(probeTimeoutMs, remaining));
+    try {
+      const snap = await CtbcOfficialPcfAdapter.fetchSnapshot(anchorTicker, candidate, controller.signal);
+      if (snap.dataDate) return snap.dataDate;
+    } catch {
+      // no official publication for this candidate date, or this probe hit its own timeout — try the
+      // previous day
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  throw new Error("CTBC_NO_AVAILABLE_DATE_WITHIN_7_DAYS");
+}

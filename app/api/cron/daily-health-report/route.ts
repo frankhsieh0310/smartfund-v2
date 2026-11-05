@@ -20,12 +20,13 @@ import { fetchYahooChartPeriod } from "@/lib/services/dataProviders/yahoo/yahooC
 import { CORE_COMMODITY_ROOTS } from "@/lib/cron/commodityUpdate";
 import { notifyAnomaly } from "@/lib/daily-health-report/notify";
 import { buildDailySummary } from "@/lib/daily-health-report/buildDailySummary";
+import { summarizeSeverity } from "@/lib/daily-health-report/severity";
 import { latestScheduledTradingDay, twseHasTradingDataForDate, tpexHasTradingDataForDate } from "@/lib/market-calendar/twseHolidayCalendar";
 import { fetchYahooTwPerformance } from "@/lib/yahoo/twPerformancePage";
 import { AllianzOfficialPcfAdapter } from "@/lib/etf-holdings-engine/adapters/allianz";
 import { FhtOfficialPcfAdapter } from "@/lib/etf-holdings-engine/adapters/fht";
 import { AbOfficialPcfAdapter } from "@/lib/etf-holdings-engine/adapters/ab";
-import { CtbcOfficialPcfAdapter } from "@/lib/etf-holdings-engine/adapters/ctbc";
+import { CtbcOfficialPcfAdapter, resolveCtbcLatestDate } from "@/lib/etf-holdings-engine/adapters/ctbc";
 import { BlackRockOfficialPcfAdapter } from "@/lib/etf-holdings-engine/adapters/blackrock";
 import { FubonOfficialPcfAdapter } from "@/lib/etf-holdings-engine/adapters/fubon";
 import { UpamcOfficialPcfAdapter } from "@/lib/etf-holdings-engine/adapters/upamc";
@@ -737,9 +738,17 @@ export async function GET(request: Request) {
       // 整支route逾時。adapter（lib/etf-holdings-engine/adapters/ab.ts）本身也已經補上每個階段
       // （瀏覽器啟動/開分頁/goto/等待渲染/抓表格)的耗時，就算這次還是ABORTED，verifyNote裡的
       // error訊息也會帶出「卡在哪個階段之後、那個階段花了多久」，不會只看到"ABORTED"。
+      // 2026-11-05（VERIFIED，修正連續3天的SYSTEM誤報）: CTBC adapter一律要求明確日期，傳
+      // undefined會直接擲出CTBC_DATE_REQUIRED_<code>——不是官網真的沒有更新，是這支驗證探針自己
+      // 沒給日期，被誤判成SYSTEM。改用跟etf-official-holdings route.ts完全同一套
+      // resolveCtbcLatestDate向前探測邏輯（已移到lib/etf-holdings-engine/adapters/ctbc.ts給兩邊共用），
+      // 探測預算控制在剩餘驗證步驟秒數內，不會讓整個驗證步驟超支。
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 45_000);
-      const snap = await adapter.fetchSnapshot(item.code, undefined, controller.signal).finally(() => clearTimeout(timer));
+      const resolvedDate = adapter.issuer === "CTBC"
+        ? await resolveCtbcLatestDate(Date.now() + 15_000, 8_000).catch(() => undefined)
+        : undefined;
+      const snap = await adapter.fetchSnapshot(item.code, resolvedDate, controller.signal).finally(() => clearTimeout(timer));
       const officialLatestDate = snap.dataDate;
       const stillOld = !!officialLatestDate && (!item.lastDataDate || officialLatestDate <= item.lastDataDate);
       if (stillOld) {
@@ -962,12 +971,16 @@ export async function GET(request: Request) {
   ];
   const systemAnomalyCount = anomalies.filter((a) => a.category === SYSTEM_CATEGORY).length;
   const externalDelayAnomalyCount = anomalies.length - systemAnomalyCount;
+  // 2026-11-05（使用者核准定案前的草案）: 三級分級（BLOCKING/MINOR/EXTERNAL），取代單純的
+  // SYSTEM/EXTERNAL_DELAY 兩級判斷上架標準。見 lib/daily-health-report/severity.ts 的完整規則
+  // 說明與對照表。上架標準改成「連續3個交易日 BLOCKING=0」，MINOR/EXTERNAL 不擋上架。
+  const severitySummary = summarizeSeverity(anomalies);
 
   // Round-4, user-approved: send a short summary EVERY day, not only when something is wrong --
   // "沒收到訊息就代表出事了" means silence itself must never be the normal case. See
   // buildDailySummary.ts for the message format (unit-tested separately).
   const summary = buildDailySummary({
-    today, anomalyCount: anomalies.length, pipelineHealth,
+    today, anomalyCount: anomalies.length, pipelineHealth, severitySummary,
     freshness: [stockFreshness, domesticFundFreshness, fxMetricsFreshness, moneyMarketFreshness, globalIndexFreshness], etfDataSourceGap, yahooTwCheck, fredCommodityCheck, coverage,
   });
   const notifyResult = await notifyAnomaly(summary);
@@ -991,9 +1004,10 @@ export async function GET(request: Request) {
       new_fund_create_failures: newFundCreateFailures, new_fund_isin_conflicts: newFundIsinConflicts,
       yahoo_fund_currency_unresolved_total: yahooFundCurrencyUnresolvedTotal, yahoo_fund_currency_unresolved_samples: yahooFundCurrencyUnresolvedSamples,
       anomaly_count: anomalies.length, system_anomaly_count: systemAnomalyCount, external_delay_anomaly_count: externalDelayAnomalyCount,
+      severity_summary: severitySummary,
       anomalies, notify_result: notifyResult,
     },
   });
 
-  return Response.json({ ok: true, job: JOB, runId, status, anomalyCount: anomalies.length, systemAnomalyCount, externalDelayAnomalyCount, anomalies, etfDataSourceGap, activeEtfOfficialHoldings: activeEtfGapWithEvidence, yahooTwCheck, fredCommodityCheck, coverage, currencyFormatCheck, currencyOfficialCheck, notifyResult, reapedStaleRunsCount: reapedStaleRuns.length, reapedStaleRuns: reapedStaleRuns.slice(0, 50) });
+  return Response.json({ ok: true, job: JOB, runId, status, anomalyCount: anomalies.length, systemAnomalyCount, externalDelayAnomalyCount, severitySummary, anomalies, etfDataSourceGap, activeEtfOfficialHoldings: activeEtfGapWithEvidence, yahooTwCheck, fredCommodityCheck, coverage, currencyFormatCheck, currencyOfficialCheck, notifyResult, reapedStaleRunsCount: reapedStaleRuns.length, reapedStaleRuns: reapedStaleRuns.slice(0, 50) });
 }

@@ -50,7 +50,7 @@ import { UpamcOfficialPcfAdapter } from "@/lib/etf-holdings-engine/adapters/upam
 import { AllianzOfficialPcfAdapter } from "@/lib/etf-holdings-engine/adapters/allianz";
 import { TaishinOfficialPcfAdapter } from "@/lib/etf-holdings-engine/adapters/taishin";
 import { FubonOfficialPcfAdapter } from "@/lib/etf-holdings-engine/adapters/fubon";
-import { CtbcOfficialPcfAdapter } from "@/lib/etf-holdings-engine/adapters/ctbc";
+import { CtbcOfficialPcfAdapter, resolveCtbcLatestDate } from "@/lib/etf-holdings-engine/adapters/ctbc";
 import { FhtOfficialPcfAdapter } from "@/lib/etf-holdings-engine/adapters/fht";
 import { CapitalOfficialPcfAdapter } from "@/lib/etf-holdings-engine/adapters/capital";
 import { AbOfficialPcfAdapter } from "@/lib/etf-holdings-engine/adapters/ab";
@@ -117,10 +117,6 @@ const DB_TRANSACTION_TIMEOUT_MS = 30_000;
 // writeCheckpoint/finishRun) so they also can never silently exceed the route's own hard deadline —
 // same headroom principle: the transaction wrapper timeout stays above the statement timeout.
 const CHECKPOINT_BOUND: BoundedDbOptions = { maxWaitMs: 5_000, statementTimeoutMs: 10_000, timeoutMs: 15_000 };
-// Per-probe cap for resolveCtbcLatestDate's backward date search (below) — it runs BEFORE the main
-// loop and, pre-fix, had no timeout at all on its own fetchSnapshot calls.
-const CTBC_DATE_PROBE_TIMEOUT_MS = 20_000;
-
 /** Sleep that resolves immediately if `signal` is already aborted, and stops waiting the moment it
  * aborts mid-sleep — the 1.5s bounded retry delay must not itself ignore the deadline. */
 function abortableSleep(ms: number, signal: AbortSignal): Promise<void> {
@@ -131,41 +127,10 @@ function abortableSleep(ms: number, signal: AbortSignal): Promise<void> {
   });
 }
 
-// CTBC's adapter has no "today" fallback by design and exposes no listAvailableDates() — it always
-// requires an explicit date, and its Buyback API is strict (a date with no official publication for
-// it returns CTBC_NO_ENTRY, confirmed via a bounded live probe: 2026-09-22/23/24 all succeeded with
-// dataDate exactly equal to the date requested; 2026-09-25 failed outright). So "today's real date" is
-// resolved by probing backward from the current Taipei calendar date until CTBC's own API confirms one
-// with a real snapshot — never by computing or guessing a date locally. Bounded to at most 7 calendar
-// days back (covers a normal weekend/holiday gap), so this never becomes an unbounded retry loop.
-// deadlineAt bounds this against the route's own HARD_RESPONSE_DEADLINE_MS: each probe gets its own
-// AbortController (min of CTBC_DATE_PROBE_TIMEOUT_MS and whatever's actually left), and once there's
-// not enough budget left for another probe, this gives up early rather than risk blowing the route's
-// hard deadline before the main per-ticker loop even starts — CTBC's tickers then fall through to the
-// existing documented per-ticker failure path (ctbcDate stays null, each one fails individually).
-async function resolveCtbcLatestDate(deadlineAt: number): Promise<string> {
-  const anchorTicker = "00406A";
-  const taipeiToday = new Date(Date.now() + 8 * 60 * 60 * 1000);
-  for (let back = 0; back <= 7; back++) {
-    const remaining = deadlineAt - Date.now();
-    if (remaining < 5_000) break;
-    const d = new Date(taipeiToday);
-    d.setUTCDate(d.getUTCDate() - back);
-    const candidate = d.toISOString().slice(0, 10);
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), Math.min(CTBC_DATE_PROBE_TIMEOUT_MS, remaining));
-    try {
-      const snap = await CtbcOfficialPcfAdapter.fetchSnapshot(anchorTicker, candidate, controller.signal);
-      if (snap.dataDate) return snap.dataDate;
-    } catch {
-      // no official publication for this candidate date, or this probe hit its own timeout — try the
-      // previous day
-    } finally {
-      clearTimeout(timer);
-    }
-  }
-  throw new Error("CTBC_NO_AVAILABLE_DATE_WITHIN_7_DAYS");
-}
+// 2026-11-05: moved to lib/etf-holdings-engine/adapters/ctbc.ts (exported as resolveCtbcLatestDate)
+// so app/api/cron/daily-health-report/route.ts's CTBC_DATE_REQUIRED verify-probe can reuse the exact
+// same date-resolution logic instead of calling fetchSnapshot with no date at all (which CTBC's
+// adapter always rejects by design — see that file for the full rationale).
 
 // 2026-10-20（使用者訂立）: universe_by_issuer.json 是寫死的清單，新上市偵測只會建立 etfs 資料列，
 // 不會自動更新這份清單——這正是 00412A 等 16 檔主動式 ETF 從未被抓取過的根因（daily-health-

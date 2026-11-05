@@ -12,10 +12,18 @@ export function buildDailySummary(input: {
   yahooTwCheck: YahooTwReturnCheckResult;
   fredCommodityCheck: FredCommodityCheckResult;
   coverage?: CoverageResult[];
+  // 2026-11-05（使用者核准定案前的草案）: 三級分級摘要，顯示在報告最前面，取代單純的
+  // anomalyCount。上架標準只看 blocking 是否連續3個交易日=0——見 severity.ts。
+  severitySummary?: { blocking: number; minor: number; external: number };
 }): string {
-  const { today, anomalyCount, pipelineHealth, freshness, etfDataSourceGap, yahooTwCheck, fredCommodityCheck, coverage = [] } = input;
+  const { today, anomalyCount, pipelineHealth, freshness, etfDataSourceGap, yahooTwCheck, fredCommodityCheck, coverage = [], severitySummary } = input;
   const lines: string[] = [];
-  lines.push(anomalyCount > 0 ? `⚠️ Daily health report ${today}: ${anomalyCount} anomalies` : `✅ Daily health report ${today}: all clear`);
+  if (severitySummary) {
+    const { blocking, minor, external } = severitySummary;
+    lines.push(blocking > 0 ? `🔴 Daily health report ${today}: ${blocking} BLOCKING / ${minor} MINOR / ${external} EXTERNAL` : `✅ Daily health report ${today}: 0 BLOCKING (${minor} MINOR / ${external} EXTERNAL)`);
+  } else {
+    lines.push(anomalyCount > 0 ? `⚠️ Daily health report ${today}: ${anomalyCount} anomalies` : `✅ Daily health report ${today}: all clear`);
+  }
   for (const p of pipelineHealth) {
     lines.push(`${p.anomaly ? "⚠️" : "•"} ${p.jobId}: ${p.lastStatus ?? "NO_RUN"}${p.hasRunInLast24h ? "" : " (no run in 24h)"}`);
   }

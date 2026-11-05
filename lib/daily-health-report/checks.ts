@@ -228,10 +228,26 @@ export async function checkPipelineRunLog(query: QueryFn, jobId: string): Promis
   // 才進一步查是不是外部429/403封鎖——不管「程式本身出錯」（例外、寫入失敗、逾時，error不match
   // pattern）跟「對方拒絕存取」混在一起判。只有這24小時裡「所有」非STALE_RUN_REAPED的紀錄都符合
   // 封鎖pattern，才算外部因素；只要有一筆是其他原因，維持SYSTEM，不准用429掩蓋真正的程式問題。
+  //
+  // 2026-11-05 VERIFIED（使用者核准修正）: CLOUD_MONEYDJ_FUND在11/1、11/2（功能上線前，見下方
+  // 部署時間註記）跟11/5被判成SYSTEM，11/3、11/4判成EXTERNAL_DELAY——11/5那天查到真正原因：
+  // 24h窗口裡混進一筆MONEYDJ_HOLDINGS_NOT_DISCLOSED（來源自己說「無投資明細資料」，屬於
+  // BENIGN_ERROR_PATTERNS、不是我方程式問題，也不是429封鎖，是第三種「無異常」狀態）跟兩筆
+  // HTTP_429，原本的.every()要求「每一筆都match 429/403 pattern」，這筆benign-not-disclosed
+  // 不match，導致整天被降回SYSTEM，等同用一筆「來源本來就沒資料」的正常情況去掩蓋真正的429
+  // 封鎖事實。修正：benign錯誤（跟STALE_RUN_REAPED同一個待遇）不該讓.every()失敗；但同時要求
+  // 至少有一筆「真的」429/403，否則單純benign、沒有任何429時不該誤標成EXTERNAL_DELAY。
+  // 11/1、11/2兩天category是SYSTEM則是另一個原因（部署時間）：這個EXTERNAL_BLOCK_ERROR_PATTERNS
+  // 功能本身是11/2當天核准新增的，11/2 00:30的報告執行時這段程式還沒上線，11/1更早，兩天的
+  // `details`都是當時舊程式碼跑出來的快照，不是現在這套邏輯算出來的結果，不算這次要修的bug。
   let externalBlock: PipelineHealth["externalBlock"] = null;
   const blockConfig = EXTERNAL_BLOCK_ERROR_PATTERNS[jobId];
-  if (blockConfig && !hadFullPassToday && realRows.length > 0 && realRows.every((r) => !!r.error && blockConfig.pattern.test(r.error))) {
-    const lastBlockedRow = realRows[0]; // rows已經是started_at DESC排序
+  if (
+    blockConfig && !hadFullPassToday && realRows.length > 0 &&
+    realRows.some((r) => !!r.error && blockConfig.pattern.test(r.error)) &&
+    realRows.every((r) => isBenignError(r.error) || (!!r.error && blockConfig.pattern.test(r.error)))
+  ) {
+    const lastBlockedRow = realRows.find((r) => !!r.error && blockConfig.pattern.test(r.error))!; // rows已經是started_at DESC排序
     const consecutiveDaysBlocked = await computeConsecutiveBlockedDays(query, jobId, blockConfig.pattern);
     externalBlock = { reason: blockConfig.label, lastBlockedAt: lastBlockedRow.started_at, consecutiveDaysBlocked };
   }
