@@ -14,7 +14,7 @@ import { prisma } from "@/lib/prisma";
 import { beginRun, finishRun, reapStaleRunningRuns } from "@/lib/cloud-ingestion/runContext";
 import { checkPipelineRunLog, checkMoneydjParseFailures, evaluateFreshness, checkEtfDataSourceGap, evaluateYahooTwReturnConsistency, evaluateFredCommodityConsistency, evaluateTdccDividendConsistency, checkCommodityTechnicalCoverage, checkFundPerformanceCoverage, checkEtfPerformanceCoverage, checkEtfHistoryFreshness, checkFundHistoryFreshness, checkCoreUniverseEtfCoverage, checkCoreUniverseFundCoverage, checkCoreUniverseFundGapDetail, checkCoreUniverseEtfGapDetail, checkActiveEtfOfficialHoldingsCoverage, checkStockTechnicalLag, checkFundHoldingsLag, checkLocalScheduleReporting, checkCoreUniverseFundCurrencyFormat, evaluateFundCurrencyOfficialConsistency, type QueryFn, type YahooTwReturnSample, type FredCommoditySample, type FundCurrencyOfficialSample, type TdccDividendSample } from "@/lib/daily-health-report/checks";
 import { fetchTdccOffshoreDividendCsv, SOURCE as TDCC_DIVIDEND_SOURCE } from "@/lib/cron/offshoreDividendTdccSync";
-import { fetchTdccNavCsv, parseTdccNavCsv, indexByCode, type TdccNavRow } from "@/lib/offshore-nav-sync/tdccBatchSource";
+import { fetchTdccNavCsv, parseTdccNavCsv, parseTdccNavCsvRows, indexByCode, type TdccNavRow } from "@/lib/offshore-nav-sync/tdccBatchSource";
 import { mapTdccCurrencyToIso, isValidIsoCurrency } from "@/lib/tdcc-currency-map";
 import { fetchYahooChartPeriod } from "@/lib/services/dataProviders/yahoo/yahooClient";
 import { CORE_COMMODITY_ROOTS } from "@/lib/cron/commodityUpdate";
@@ -495,8 +495,11 @@ export async function GET(request: Request) {
       let tdccNavByName: Map<string, TdccNavRow> | null = null;
       let tdccNavByCode: Map<string, TdccNavRow> | null = null;
       try {
-        tdccNavByName = parseTdccNavCsv(await fetchTdccNavCsv());
-        tdccNavByCode = indexByCode(tdccNavByName);
+        // 2026-11-05修正（AXAWGRA根因）：byCode必須從原始逐列資料建索引，不能從已依NAME去重過的
+        // byName反推——理由見tdccBatchSource.ts的parseTdccNavCsvRows()/indexByCode()註解。
+        const csvText = await fetchTdccNavCsv();
+        tdccNavByName = parseTdccNavCsv(csvText);
+        tdccNavByCode = indexByCode(parseTdccNavCsvRows(csvText));
       } catch (e) {
         tdccNavFetchError = e instanceof Error ? e.message : String(e);
       }

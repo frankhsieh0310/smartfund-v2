@@ -26,7 +26,7 @@
 import { prisma } from "@/lib/prisma";
 import { isAuthorizedCron, unauthorizedCron } from "@/lib/cron/authorize";
 import { beginRun, finishRun } from "@/lib/cloud-ingestion/runContext";
-import { fetchTdccNavCsv, parseTdccNavCsv, excludeOverlapWithYahooMapping, filterNewerThanStored, filterNewerThanStoredByCode, indexByCode, TDCC_NAV_SOURCE } from "@/lib/offshore-nav-sync/tdccBatchSource";
+import { fetchTdccNavCsv, parseTdccNavCsv, parseTdccNavCsvRows, excludeOverlapWithYahooMapping, filterNewerThanStored, filterNewerThanStoredByCode, indexByCode, TDCC_NAV_SOURCE } from "@/lib/offshore-nav-sync/tdccBatchSource";
 import { writeTdccNavBatch } from "@/lib/offshore-nav-sync/navWriter";
 import { loadMapping } from "@/lib/offshore-nav-sync/mapping";
 import { runOffshoreScaleSync } from "@/lib/offshore-scale-sync/writer";
@@ -101,7 +101,11 @@ export async function GET(request: Request) {
 
   const csvText = await fetchTdccNavCsv();
   const byName = parseTdccNavCsv(csvText);
-  const byCode = indexByCode(byName);
+  // 2026-11-05修正：byCode必須從原始逐列資料建索引，不能從已依NAME去重過的byName反推——
+  // 否則同NAME、不同總代理各自申報的code，會被另一個總代理較新的那一筆蓋掉整個NAME槽位，
+  // 使較舊的那個code從byCode裡完全消失（即使CSV裡那個code本身還在繼續每天申報）。
+  // 詳見tdccBatchSource.ts的parseTdccNavCsvRows()/indexByCode()註解（AXAWGRA系列根因）。
+  const byCode = indexByCode(parseTdccNavCsvRows(csvText));
 
   const nameMatchedCount = candidateFunds.filter((f) => byName.has(f.name)).length;
   const codeMatchedCount = codeCandidateFunds.filter((f) => byCode.has(f.code)).length;

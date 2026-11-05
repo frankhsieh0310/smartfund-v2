@@ -4,7 +4,9 @@
 // 費用率，不可混在一起顯示，畫面要標「YYYY 年度費用率（FundClear）」。
 // 2026-10-31 驗證：raw fetch 跟真人瀏覽器顯示的圖表數字逐欄一致（00974066、00512651 兩檔直接
 // 瀏覽器核對，00505048/00512527/00512532 三檔 API 回應格式一致但未逐一開瀏覽器核對）。
-const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
+// 2026-11-05使用者核准拿掉：這裡原本寫死瀏覽器User-Agent，跟使用者「不偽裝User-Agent」的規則
+// 衝突（這支程式比新的境外模組fetchOffshore.ts早，當時沒有這條規則）。拿掉後試抓3檔確認仍正常
+// （見app/api/cron/fundclear-offshore-annual-sync同輪回報）。
 const URL = "https://www.fundclear.com.tw/api/onshore/fund-basic/query-rate";
 
 export type AnnualRateRow = {
@@ -31,7 +33,7 @@ function pct(s: string | undefined): number | null {
 export async function fetchFundclearAnnualRate(fundCode: string): Promise<AnnualRateRow[]> {
   const res = await fetch(URL, {
     method: "POST",
-    headers: { "content-type": "application/json", "user-agent": UA },
+    headers: { "content-type": "application/json" },
     body: JSON.stringify({ fundCode }),
     signal: AbortSignal.timeout(15_000),
   });

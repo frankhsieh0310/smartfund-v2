@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { parseTdccNavCsv, excludeOverlapWithYahooMapping, filterNewerThanStored, indexByCode, filterNewerThanStoredByCode, type TdccNavRow } from "../tdccBatchSource.ts";
+import { parseTdccNavCsv, parseTdccNavCsvRows, excludeOverlapWithYahooMapping, filterNewerThanStored, indexByCode, filterNewerThanStoredByCode, type TdccNavRow } from "../tdccBatchSource.ts";
 
 function test(name: string, fn: () => void) {
   try {
@@ -122,12 +122,45 @@ test("filterNewerThanStored: latestNavDate seeded but no fund_history row yet (h
 // This round's fix: data_provider='tdcc-offshore' funds (e.g. fund code "107") carry TDCC's own
 // 基金代碼 directly in funds.code, so they're matched by code instead of name — the name-matching
 // path above only ever applied to the data_provider='yahoo' population, which has no code at all.
-test("indexByCode: builds a code -> row lookup from the same parsed CSV, keeping the latest date per code", () => {
-  const byName = new Map([
-    ["富蘭克林公用事業基金美元A1股", { code: "107", name: "富蘭克林公用事業基金美元A1股", navDate: "2026-10-13", nav: 24, isin: "US3534964099", currency: "USD" } as TdccNavRow],
-  ]);
-  const byCode = indexByCode(byName);
+test("indexByCode: builds a code -> row lookup from raw CSV rows, keeping the latest date per code", () => {
+  const rows: TdccNavRow[] = [
+    { code: "107", name: "富蘭克林公用事業基金美元A1股", navDate: "2026-10-12", nav: 23, isin: "US3534964099", currency: "USD" },
+    { code: "107", name: "富蘭克林公用事業基金美元A1股", navDate: "2026-10-13", nav: 24, isin: "US3534964099", currency: "USD" },
+  ];
+  const byCode = indexByCode(rows);
   assert.equal(byCode.get("107")!.nav, 24);
+});
+
+// 2026-11-05（AXAWGRA根因回歸測試）：同一檔基金由兩個總代理各申報一筆、各用不同code，NAME完全
+// 相同，但各自的最後更新日期不一樣（一個停在較舊日期，另一個持續更新到較新日期）。indexByCode()
+// 若從byName（已依NAME去重、只留最新一筆）反推，較舊那個code會從byCode裡完全消失——即使CSV
+// 原始資料裡那個code本身仍在持續申報。必須直接吃原始逐列資料，各code各自判斷最新日期。
+test("indexByCode: two different codes sharing the SAME fund name (two 總代理) each keep their own latest date, not just the name-wide latest", () => {
+  const rows: TdccNavRow[] = [
+    { code: "AXAWGRA", name: "安盛環球基金-全球綜合債券基金A CAP歐元", navDate: "2026-10-29", nav: 28.35, isin: "LU0184633773", currency: "EUR" },
+    { code: "AXAWGRA", name: "安盛環球基金-全球綜合債券基金A CAP歐元", navDate: "2026-10-30", nav: 28.42, isin: "LU0184633773", currency: "EUR" },
+    { code: "LU0184633773", name: "安盛環球基金-全球綜合債券基金A CAP歐元", navDate: "2026-10-30", nav: 28.42, isin: "LU0184633773", currency: "EUR" },
+    { code: "LU0184633773", name: "安盛環球基金-全球綜合債券基金A CAP歐元", navDate: "2026-11-03", nav: 28.39, isin: "LU0184633773", currency: "EUR" },
+  ];
+  const byCode = indexByCode(rows);
+  // AXAWGRA's own latest row is still 10/30 -- it must NOT disappear just because the other code
+  // (same name) has a newer row.
+  assert.equal(byCode.get("AXAWGRA")!.navDate, "2026-10-30");
+  assert.equal(byCode.get("AXAWGRA")!.nav, 28.42);
+  assert.equal(byCode.get("LU0184633773")!.navDate, "2026-11-03");
+  assert.equal(byCode.get("LU0184633773")!.nav, 28.39);
+});
+
+test("parseTdccNavCsvRows: returns every valid row, not deduped by name (unlike parseTdccNavCsv)", () => {
+  const csv = [
+    "基金代碼,基金名稱,日期,基金淨值(金額),ISINCODE,計價幣別,境外基金機構,總代理機構",
+    "AXAWGRA,同名基金,20261029,28.35,LU1,EUR,TestCo,AgentA",
+    "AXAWGRA,同名基金,20261030,28.42,LU1,EUR,TestCo,AgentA",
+    "LU1,同名基金,20261103,28.39,LU1,EUR,TestCo,AgentB",
+  ].join("\n");
+  const rows = parseTdccNavCsvRows(csv);
+  assert.equal(rows.length, 3);
+  assert.deepEqual(rows.map((r) => r.code), ["AXAWGRA", "AXAWGRA", "LU1"]);
 });
 
 test("filterNewerThanStoredByCode: matches by code, same forward-only-date rule as the name path", () => {

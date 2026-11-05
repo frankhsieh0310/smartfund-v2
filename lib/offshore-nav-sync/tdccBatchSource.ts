@@ -59,6 +59,32 @@ export function parseTdccNavCsv(csvText: string): Map<string, TdccNavRow> {
   return byName;
 }
 
+// 2026-11-05（VERIFIED，AXAWGRA系列「官方有、我方沒有」根因修正）：同一檔基金在TDCC CSV裡可能
+// 同時由兩個不同總代理各申報一筆、各用不同的code（例如AXAWGRA用簡碼、同一檔基金另一個總代理用
+// ISIN當code），NAME完全相同。parseTdccNavCsv()的byName是「同NAME只留最新日期那一筆」，如果
+// 另一個總代理的ISIN-code那一筆日期比較新，byName裡原本AXAWGRA那筆code的身分就消失了——
+// indexByCode()如果從byName（已經依NAME去重過)反推，會永遠查不到AXAWGRA這個code，即使CSV原始
+// 資料裡AXAWGRA這個code本身也還在繼續每天申報。VERIFIED 2026-11-05：AXAWGRA只到10/30，但
+// 同一檔基金的LU0184633773（ISIN-code，另一個總代理）已經到11/03——這就是為什麼我們資料庫用
+// AXAWGRA比對、永遠比對不到更新的NAV。修法：indexByCode()直接從原始CSV逐列建索引（不經過
+// byName的NAME去重），同一個code自己的「最新日期那一筆」才是唯一的去重依據，不會被同名的
+// 另一個code蓋過。
+export function parseTdccNavCsvRows(csvText: string): TdccNavRow[] {
+  const rows: TdccNavRow[] = [];
+  const lines = csvText.split("\n");
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    const parts = line.split(",");
+    if (parts.length < 6) continue;
+    const [code, name, dateRaw, navRaw, isin, currency] = parts;
+    const nav = Number(navRaw);
+    if (!code || !name || !dateRaw || !Number.isFinite(nav) || nav <= 0) continue;
+    rows.push({ code, name, navDate: toIsoDate(dateRaw), nav, isin: isin || null, currency: currency || null });
+  }
+  return rows;
+}
+
 export async function fetchTdccNavCsv(): Promise<string> {
   const res = await fetch(TDCC_NAV_CSV_URL, { signal: AbortSignal.timeout(30_000) });
   if (!res.ok) throw new Error(`TDCC_NAV_CSV_HTTP_${res.status}`);
@@ -104,9 +130,11 @@ export function filterNewerThanStored(
  * "107,富蘭克林公用事業基金美元A1股,..." exactly) — so code matching is both possible and more
  * precise than name matching for this specific population (name matching is what the existing
  * data_provider='yahoo' population uses, because those funds have no `code` value at all). */
-export function indexByCode(byName: Map<string, TdccNavRow>): Map<string, TdccNavRow> {
+// 2026-11-05修正：改吃原始逐列資料（parseTdccNavCsvRows()），不再吃已經依NAME去重過的byName——
+// 理由見上面parseTdccNavCsvRows()的註解。同一個code自己最新日期那一筆才是去重依據。
+export function indexByCode(rows: TdccNavRow[]): Map<string, TdccNavRow> {
   const byCode = new Map<string, TdccNavRow>();
-  for (const row of byName.values()) {
+  for (const row of rows) {
     const existing = byCode.get(row.code);
     if (!existing || existing.navDate < row.navDate) byCode.set(row.code, row);
   }
