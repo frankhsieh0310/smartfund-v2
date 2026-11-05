@@ -37,6 +37,62 @@ type QueryDetailsResponse = {
 
 export type FundclearManagerResult = { code: string; manager: string | null; organizName: string | null; elapsedMs: number };
 
+// 2026-11-05使用者核准：funds.company為空白的境內基金，一併用同一次query-details回應裡的
+// organizName（例如"A0005-元大證券投資信託股份有限公司"）補上，不另外多打請求。
+// VERIFIED 2026-11-05：這份A000X->投信全名清單，直接讀自fundclear.com.tw自己的機構下拉選單
+// （POST /api/onshore/common-select/org-selection，36家全收），不是手動輸入或猜測。對照
+// funds表裡既有company欄位已經在用的37個簡稱（例如"元大投信"而非全名"元大證券投資信託股份有限
+// 公司"），逐一比對建成這份對照表——"兆豐國際證券投資信託股份有限公司"是唯一簡稱會跳過「國際」
+// 兩個字的例外（既有company欄位就是"兆豐投信"，不是"兆豐國際投信"），其餘全部是「去掉『證券投資
+// 信託股份有限公司』尾綴」的規律，這裡仍然逐一列出全部對照、不用正則規則硬推，避免未來清單變動時
+// 用規則硬套出錯。代碼不在這份表裡的（例如清單之後新增的投信）不猜測，略過不補。
+const COMPANY_SHORT_NAME_BY_CODE: Record<string, string> = {
+  A0001: "兆豐投信",
+  A0003: "第一金投信",
+  A0004: "滙豐投信",
+  A0005: "元大投信",
+  A0006: "景順投信",
+  A0007: "瀚亞投信",
+  A0008: "玉山投信",
+  A0009: "統一投信",
+  A0010: "富邦投信",
+  A0011: "摩根投信",
+  A0012: "華南永昌投信",
+  A0015: "瑞銀投信",
+  A0016: "群益投信",
+  A0017: "台中銀投信",
+  A0018: "聯博投信",
+  A0021: "大都會投信",
+  A0022: "復華投信",
+  A0025: "永豐投信",
+  A0026: "中國信託投信",
+  A0027: "宏利投信",
+  A0031: "貝萊德投信",
+  A0032: "野村投信",
+  A0033: "聯邦投信",
+  A0035: "東方匯理投信",
+  A0036: "安聯投信",
+  A0037: "國泰投信",
+  A0038: "富達投信",
+  A0040: "德銀遠東投信",
+  A0041: "凱基投信",
+  A0042: "施羅德投信",
+  A0043: "街口投信",
+  A0045: "富蘭克林華美投信",
+  A0047: "台新投信",
+  A0048: "合庫投信",
+  A0049: "大華銀投信",
+  A0050: "路博邁投信",
+};
+
+/** organizName格式是"A0005-元大證券投資信託股份有限公司"，取前面的機構代碼對照表。對照不到的
+ * （代碼不在表裡）回傳null，呼叫端不寫入、不猜測。*/
+export function resolveCompanyShortName(organizName: string | null): string | null {
+  if (!organizName) return null;
+  const code = organizName.slice(0, 5);
+  return COMPANY_SHORT_NAME_BY_CODE[code] ?? null;
+}
+
 async function clickByExactText(page: import("puppeteer-core").Page, text: string, timeoutMs: number): Promise<void> {
   await page.waitForFunction(
     (t: string) => Array.from(document.querySelectorAll("body *")).some((el) => el.children.length === 0 && (el.textContent ?? "").trim() === t),
@@ -177,29 +233,44 @@ export async function runFundclearManagerSync(deadlineAt: number): Promise<Manag
     try {
       const result = await fetchFundclearManager(repCode);
       if (sampleResults.length < 10) sampleResults.push(result);
-      if (result.manager) {
+      const companyShortName = resolveCompanyShortName(result.organizName);
+      if (result.manager || companyShortName) {
         if (writeEnabled) {
           await prisma.$transaction(async (tx) => {
-            const existing = await tx.$queryRawUnsafe<{ id: string }[]>(`SELECT id FROM fund_managers WHERE name = $1 AND source = $2 LIMIT 1`, result.manager, SOURCE);
-            const managerId = existing[0]?.id ?? (await tx.$queryRawUnsafe<{ id: string }[]>(
-              `INSERT INTO fund_managers (id, name, source, source_record_id, verification_status, created_at, updated_at)
-               VALUES (gen_random_uuid()::text, $1, $2, $3, 'OFFICIAL_SOURCE', NOW(), NOW()) RETURNING id`,
-              result.manager, SOURCE, repCode,
-            ))[0].id;
+            let managerId: string | null = null;
+            if (result.manager) {
+              const existing = await tx.$queryRawUnsafe<{ id: string }[]>(`SELECT id FROM fund_managers WHERE name = $1 AND source = $2 LIMIT 1`, result.manager, SOURCE);
+              managerId = existing[0]?.id ?? (await tx.$queryRawUnsafe<{ id: string }[]>(
+                `INSERT INTO fund_managers (id, name, source, source_record_id, verification_status, created_at, updated_at)
+                 VALUES (gen_random_uuid()::text, $1, $2, $3, 'OFFICIAL_SOURCE', NOW(), NOW()) RETURNING id`,
+                result.manager, SOURCE, repCode,
+              ))[0].id;
+            }
             for (const fundId of fundIds) {
-              // 2026-11-05使用者核准：經理人改以本來源為準，既有其他來源（例如Yahoo）的現任
-              // assignment先end-date（不刪除，保留歷史），再寫入這筆官方來源的現任assignment。
-              await tx.$executeRawUnsafe(
-                `UPDATE fund_manager_assignments SET end_date = CURRENT_DATE, updated_at = NOW()
-                 WHERE fund_id = $1 AND end_date IS NULL AND source <> $2`,
-                fundId, SOURCE,
-              );
-              await tx.$executeRawUnsafe(`DELETE FROM fund_manager_assignments WHERE fund_id = $1 AND source = $2 AND end_date IS NULL`, fundId, SOURCE);
-              await tx.$executeRawUnsafe(
-                `INSERT INTO fund_manager_assignments (id, manager_id, fund_id, start_date, role, source, source_record_id, verified_at, created_at, updated_at)
-                 VALUES (gen_random_uuid()::text, $1, $2, CURRENT_DATE, 'PM', $3, $4, NOW(), NOW(), NOW())`,
-                managerId, fundId, SOURCE, repCode,
-              );
+              if (managerId) {
+                // 2026-11-05使用者核准：經理人改以本來源為準，既有其他來源（例如Yahoo）的現任
+                // assignment先end-date（不刪除，保留歷史），再寫入這筆官方來源的現任assignment。
+                await tx.$executeRawUnsafe(
+                  `UPDATE fund_manager_assignments SET end_date = CURRENT_DATE, updated_at = NOW()
+                   WHERE fund_id = $1 AND end_date IS NULL AND source <> $2`,
+                  fundId, SOURCE,
+                );
+                await tx.$executeRawUnsafe(`DELETE FROM fund_manager_assignments WHERE fund_id = $1 AND source = $2 AND end_date IS NULL`, fundId, SOURCE);
+                await tx.$executeRawUnsafe(
+                  `INSERT INTO fund_manager_assignments (id, manager_id, fund_id, start_date, role, source, source_record_id, verified_at, created_at, updated_at)
+                   VALUES (gen_random_uuid()::text, $1, $2, CURRENT_DATE, 'PM', $3, $4, NOW(), NOW(), NOW())`,
+                  managerId, fundId, SOURCE, repCode,
+                );
+              }
+              // 2026-11-05使用者核准：只補funds.company是NULL/空字串的，不覆蓋既有值——跟既有
+              // FUND_COMPANY_BACKFILL_WRITE（SITCA CSV來源）同一條規則，這裡用的是官方來源
+              // （fundclear機構代碼對照表），不是推測。
+              if (companyShortName) {
+                await tx.$executeRawUnsafe(
+                  `UPDATE funds SET company = $1 WHERE id = $2 AND COALESCE(company, '') = ''`,
+                  companyShortName, fundId,
+                );
+              }
             }
           });
         }
