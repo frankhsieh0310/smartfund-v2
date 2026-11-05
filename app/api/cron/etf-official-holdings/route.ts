@@ -44,6 +44,7 @@ import {
   type BoundedDbOptions,
 } from "@/lib/cloud-ingestion/runContext";
 import { runIssuerMonthlyHoldings, type SupportedIssuer } from "@/lib/cloud-ingestion/issuerMonthlyHoldingsWriter";
+import { runNewIssuerHoldings } from "@/lib/etf-holdings-engine/newIssuerHoldings";
 
 import { NomuraOfficialPcfAdapter } from "@/lib/etf-holdings-engine/adapters/nomura";
 import { UpamcOfficialPcfAdapter } from "@/lib/etf-holdings-engine/adapters/upamc";
@@ -62,6 +63,10 @@ import { CathayOfficialPcfAdapter } from "@/lib/etf-holdings-engine/adapters/cat
 import { KgiOfficialPcfAdapter } from "@/lib/etf-holdings-engine/adapters/kgi";
 import { SinoPacOfficialPcfAdapter } from "@/lib/etf-holdings-engine/adapters/sinopac";
 import { BlackRockOfficialPcfAdapter } from "@/lib/etf-holdings-engine/adapters/blackrock";
+import { UobamOfficialPcfAdapter } from "@/lib/etf-holdings-engine/adapters/uobam";
+import { FtftOfficialPcfAdapter } from "@/lib/etf-holdings-engine/adapters/ftft";
+import { EsunamOfficialPcfAdapter } from "@/lib/etf-holdings-engine/adapters/esunam";
+import { UsitcOfficialPcfAdapter } from "@/lib/etf-holdings-engine/adapters/usitc";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -145,7 +150,18 @@ const ISSUER_KEYWORD: Record<string, string> = {
   Cathay: "國泰", JPMorgan: "摩根", Allianz: "安聯", UPAMC: "統一", AB: "聯博", Fubon: "富邦",
   CTBC: "中信", KGI: "凱基", First: "第一金", FHT: "復華", SinoPac: "永豐", Yuanta: "元大",
   Capital: "群益", Mega: "兆豐", Taishin: "台新", Nomura: "野村", BlackRock: "貝萊德",
+  // 2026-11-05使用者核准新增（22檔被動式ETF補holdings來源第一批，4家已建adapter）：
+  UOBAM: "大華銀", FTFT: "富蘭克林華美", ESUNAM: "玉山", USITC: "聯邦",
 };
+
+// 2026-11-05使用者核准：這4家新adapter的寫入預設關閉，本機唯讀試抓、逐檔跟官網比對全部一致後
+// 才由使用者打開（NEW_ISSUER_HOLDINGS_WRITE=on，規定語法設定）。開關關閉時仍正常抓取、驗證、
+// 推進checkpoint，只跳過實際的DB持久化——跟其餘13家issuer已經上線多輪、沒有額外gate的行為不同，
+// 僅限這4家issuer，不影響任何既有issuer。
+const NEW_ISSUERS = new Set(["UOBAM", "FTFT", "ESUNAM", "USITC"]);
+function isNewIssuerHoldingsWriteEnabled(): boolean {
+  return process.env.NEW_ISSUER_HOLDINGS_WRITE?.trim() === "on";
+}
 
 // 既有、已知的個別排除——跟搬來之前完全一樣的三個例外，不是這次新增的邏輯：
 const ISSUER_EXCLUDE: Partial<Record<string, (ticker: string) => boolean>> = {
@@ -162,6 +178,8 @@ async function getIssuerUniverse(issuerName: string): Promise<{ adapter: Officia
     FHT: FhtOfficialPcfAdapter, SinoPac: SinoPacOfficialPcfAdapter, Yuanta: YuantaOfficialPcfAdapter,
     Capital: CapitalOfficialPcfAdapter, Mega: MegaOfficialPcfAdapter, Taishin: TaishinOfficialPcfAdapter,
     Nomura: NomuraOfficialPcfAdapter, BlackRock: BlackRockOfficialPcfAdapter,
+    UOBAM: UobamOfficialPcfAdapter, FTFT: FtftOfficialPcfAdapter, ESUNAM: EsunamOfficialPcfAdapter,
+    USITC: UsitcOfficialPcfAdapter,
   };
   const keyword = ISSUER_KEYWORD[issuerName];
   const adapter = adapterMap[issuerName];
@@ -344,9 +362,14 @@ export async function GET(request: Request) {
         snap = await attempt();
       }
       if (!snap.positions.length) throw new Error("empty positions");
-      // Official snapshot write + app-facing holdings bridge, as one DB-timeout-bounded transaction —
-      // see runBoundedPersistence above for why this replaced two separate unbounded raw-SQL calls.
-      await runBoundedPersistence(snap);
+      // 2026-11-05使用者核准：這4家新issuer（UOBAM/FTFT/ESUNAM/USITC）的寫入開關關閉時，只驗證
+      // 抓取成功（snap.positions非空）、不實際寫入DB——讓checkpoint/run記錄一樣正常推進，驗證完
+      // 全部一致後使用者才打開NEW_ISSUER_HOLDINGS_WRITE。其餘既有issuer完全不受影響，照舊無條件寫入。
+      if (!NEW_ISSUERS.has(issuer) || isNewIssuerHoldingsWriteEnabled()) {
+        // Official snapshot write + app-facing holdings bridge, as one DB-timeout-bounded transaction —
+        // see runBoundedPersistence above for why this replaced two separate unbounded raw-SQL calls.
+        await runBoundedPersistence(snap);
+      }
       passed++;
       lastProcessedTicker = ticker;
       // Checkpoint immediately after a successful ticker — if Vercel kills this invocation or the work
@@ -431,6 +454,20 @@ export async function GET(request: Request) {
     }
   }
 
+  // 2026-11-05使用者核准：4家新issuer（UOBAM/FTFT/ESUNAM/USITC）的每日一次持股抓取，同樣搭在這支
+  // 既有cron的剩餘時間預算裡跑，不新增cron trigger——不論是哪個issuer的排程觸發了這次invocation，
+  // 都會檢查一次「今天新issuer這批有沒有跑過」（DONE哨兵），還沒跑過才真的發送請求。失敗不影響
+  // 上面ETF持股結果的status判定。
+  let newIssuerHoldingsResult: Awaited<ReturnType<typeof runNewIssuerHoldings>> | null = null;
+  const remainingForNewIssuers = startedMs + HARD_RESPONSE_DEADLINE_MS - Date.now();
+  if (remainingForNewIssuers > 20_000) {
+    try {
+      newIssuerHoldingsResult = await runNewIssuerHoldings(isNewIssuerHoldingsWriteEnabled(), Date.now() + remainingForNewIssuers);
+    } catch (e: any) {
+      newIssuerHoldingsResult = { ok: false, skipped: false, reason: String(e?.message ?? e) };
+    }
+  }
+
   return Response.json({
     ok: !totalFailure,
     job: JOB,
@@ -444,5 +481,6 @@ export async function GET(request: Request) {
     reachedEnd,
     runtimeMs: Date.now() - startedMs,
     issuerMonthlyHoldings: issuerMonthlyHoldingsResult,
+    newIssuerHoldings: newIssuerHoldingsResult,
   }, { status: totalFailure ? 500 : 200 });
 }

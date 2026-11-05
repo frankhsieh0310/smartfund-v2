@@ -14,15 +14,13 @@ const BASE = "https://www.megafunds.com.tw/MEGA/etf/etf_product.aspx";
 // market ticker -> official internal fund_id. Captured verbatim from the official ETF overview page
 // (https://www.megafunds.com.tw/MEGA/etf/index.aspx), whose per-ticker tiles carry `data-uid="<fund_id>"`
 // directly alongside the visible ticker text — cross-verified against trade_pcf.aspx's own `#fund_id`
-// dropdown values (one-time read 2026-09-26, never guessed). fund_id=24 ("兆豐美國黃金礦業ETF基金")
-// exists in that dropdown but has no ticker tile yet on the overview page — a new/unlisted entrant,
-// deliberately excluded until it has an official ticker to map.
-// Exported (additive only — no change to any request/parsing behavior) so the Mega-desktop-fallback
-// ingest endpoint can validate an incoming ticker against the SAME authoritative map, instead of a
-// second, driftable copy of the same list.
+// dropdown values (one-time read 2026-09-26, never guessed).
+// 2026-11-05（VERIFIED）：009832「兆豐美國黃金礦業ETF基金」當初(2026-09-26)還沒有ticker tile，
+// 所以被刻意排除；這輪在官網海外ETF分頁（index.aspx點「海外ETF」）直接看到009832的磚塊連到
+// etf_product.aspx?id=24，跟原本就記錄的fund_id=24完全吻合，現在補上。
 export const FUND_ID_MAP: Record<string, string> = {
   "00943": "20", "00932": "19", "00921": "18", "00913": "17", "00690": "5",
-  "00911": "16", "00957B": "21", "00982T": "22", "00996A": "23",
+  "00911": "16", "00957B": "21", "00982T": "22", "00996A": "23", "009832": "24",
 };
 
 function num(s: string | undefined | null): number {
