@@ -29,6 +29,7 @@ import { runFundclearAnnualSync } from "@/lib/fundclear-annual-sync/writer";
 import { runFundclearAumGapFill } from "@/lib/sitca-nav-sync/fundclearAumGapFill";
 import { runFundCompanyBackfill } from "@/lib/sitca-nav-sync/companyBackfillWriter";
 import { runNomuraProspectusFeeSync } from "@/lib/cloud-ingestion/fundProspectusFeeWriter";
+import { runFundclearManagerSync } from "@/lib/fundclear-onshore/managerSync";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -259,6 +260,25 @@ export async function GET(request: Request) {
       }
     }
 
+    // 2026-11-05使用者核准：境內基金經理人（基金資訊觀測站）也併進這支既有cron（每小時一次，
+    // vercel.json "33 * * * *"），不新增cron。跟Nomura費率同步不同——這裡故意不做「一天只跑
+    // 一次」的gate：577組（基金層級分組，同一檔基金的級別共用一次請求）要分好幾天才能跑完整個
+    // 缺口，runFundclearManagerSync()自己的runKey已經把checkpoint游標的startIndex編進去，
+    // 每次呼叫游標往前推進、runKey自然不同，所以本來就會每小時真的執行一次（不是只有當天
+    // 第一次）；真的被擋（401/403/429）時runKey停在同一個startIndex，同一小時內重複呼叫會被
+    // beginRun的run_key去重擋下，隔天(today變了)才會再試一次——避免被擋後still一直重試。
+    // 無頭瀏覽器一組約2~10秒，用剩餘時間預算的子集，確保不會把maxDuration=300秒的整支route
+    // 時間用完。
+    let managerSyncResult: Awaited<ReturnType<typeof runFundclearManagerSync>> | null = null;
+    const managerDeadline = Math.min(startedMs + 280_000, Date.now() + 90_000);
+    if (managerDeadline - Date.now() > 10_000) {
+      try {
+        managerSyncResult = await runFundclearManagerSync(managerDeadline);
+      } catch (e: any) {
+        managerSyncResult = { ok: false, skipped: false, reason: String(e?.message ?? e) } as any;
+      }
+    }
+
     const matchedByCode = matched.filter((m) => m.matchedBy === "CODE").length;
     const matchedByName = matched.filter((m) => m.matchedBy === "NAME").length;
 
@@ -290,6 +310,7 @@ export async function GET(request: Request) {
         fundclear_annual: fundclearAnnualResult, fundclear_aum_gap_fill: fundclearAumGapFillResult,
         company_backfill: companyBackfillResult,
         nomura_prospectus_fee: nomuraFeeResult,
+        fundclear_manager_sync: managerSyncResult,
       },
     });
 
@@ -303,6 +324,7 @@ export async function GET(request: Request) {
       fundclearAnnual: fundclearAnnualResult, fundclearAumGapFill: fundclearAumGapFillResult,
       companyBackfill: companyBackfillResult,
       nomuraProspectusFee: nomuraFeeResult,
+      fundclearManagerSync: managerSyncResult,
     });
   } catch (e: any) {
     await finishRun(runId, JOB, "SITCA_FSC_OFFICIAL_DAILY_NAV_CSV", startedMs, {

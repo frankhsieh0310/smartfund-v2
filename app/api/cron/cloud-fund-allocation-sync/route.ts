@@ -68,6 +68,10 @@ export async function GET(request: Request) {
   let lastCode: string | null = afterCode;
   let rateLimitStop = false;
   let timeBudgetStop = false;
+  // 2026-11-05使用者核准：Yahoo的經理人不寫入，只拿來跟基金資訊觀測站（fundclear.com.tw，見
+  // lib/fundclear-onshore/managerSync.ts）目前資料庫裡的值交叉比對，不一致的記錄下來供人工核實，
+  // 樣本數刻意限制（最多50筆）避免單次回應過大。
+  const managerCrossCheckMismatches: Array<{ fundId: string; yahooFundId: string; yahooName: string; fundclearName: string | null }> = [];
 
   for (const entry of batch) {
     if (Date.now() - startedMs > TIME_BUDGET_MS) { timeBudgetStop = true; break; }
@@ -98,27 +102,25 @@ export async function GET(request: Request) {
                 entry.fundId, region.nameInChinese, String(region.weight), entry.yahooFundId, allocation.regionsAsOf,
               );
             }
-            // 2026-10-29（使用者核准，基金經理人缺口）: 同一頁本來就有managers陣列，不另外多打
-            // 一次請求。既有fund_managers沒有name的unique constraint，用「名字一致」查詢避免
-            // 重複建人；每次先清掉這檔基金舊的assignment再整批重寫（跟上面sector/region同一套
-            // delete+rewrite作法），避免卸任經理人一直留著。
-            await tx.$executeRawUnsafe(`DELETE FROM fund_manager_assignments WHERE fund_id = $1 AND source = 'YAHOO_FUND_HOLDINGS_PAGE'`, entry.fundId);
-            for (const manager of allocation.managers) {
-              const name = managerFullName(manager);
-              if (!name) continue;
-              const existing = await tx.$queryRawUnsafe<{ id: string }[]>(`SELECT id FROM fund_managers WHERE name = $1 LIMIT 1`, name);
-              const managerId = existing[0]?.id ?? (await tx.$queryRawUnsafe<{ id: string }[]>(
-                `INSERT INTO fund_managers (id, name, source, source_record_id, verification_status, created_at, updated_at)
-                 VALUES (gen_random_uuid()::text, $1, 'YAHOO_FUND_HOLDINGS_PAGE', $2, 'VERIFIED_SUPPLEMENTAL', NOW(), NOW()) RETURNING id`,
-                name, `${entry.yahooFundId}:manager:${name}`,
-              ))[0].id;
-              await tx.$executeRawUnsafe(
-                `INSERT INTO fund_manager_assignments (id, manager_id, fund_id, start_date, role, source, source_record_id, verified_at, created_at, updated_at)
-                 VALUES (gen_random_uuid()::text, $1, $2, $3::date, $4, 'YAHOO_FUND_HOLDINGS_PAGE', $5, NOW(), NOW(), NOW())`,
-                managerId, entry.fundId, manager.startDate, manager.role, `${entry.yahooFundId}:manager:${name}`,
-              );
-            }
+            // 2026-11-05使用者更正：經理人改以基金資訊觀測站（fundclear.com.tw）為準
+            // （見lib/fundclear-onshore/managerSync.ts），這裡不再寫入fund_manager_assignments。
+            // allocation.managers本身仍然解析出來，在transaction外面跟DB現有（fundclear來源）的
+            // 值做交叉比對，不寫入資料庫。
           });
+          if (allocation.managers.length && managerCrossCheckMismatches.length < 50) {
+            const yahooName = managerFullName(allocation.managers[0]);
+            if (yahooName) {
+              const current = await prisma.$queryRawUnsafe<{ name: string }[]>(
+                `SELECT m.name FROM fund_manager_assignments a JOIN fund_managers m ON m.id = a.manager_id
+                 WHERE a.fund_id = $1 AND a.end_date IS NULL AND a.source = 'FUNDCLEAR_ONSHORE_FUND_DETAILS' LIMIT 1`,
+                entry.fundId,
+              );
+              const fundclearName = current[0]?.name ?? null;
+              if (fundclearName !== null && fundclearName !== yahooName) {
+                managerCrossCheckMismatches.push({ fundId: entry.fundId, yahooFundId: entry.yahooFundId, yahooName, fundclearName });
+              }
+            }
+          }
         }
         written++;
       } else {
@@ -141,8 +143,8 @@ export async function GET(request: Request) {
   await finishRun(runId, JOB, "YAHOO_FUND_HOLDINGS_PAGE", startedMs, {
     status, attempted, completed: written, inserted: written, updated: 0, failed: noData + failed, retryableFailures: 0,
     checkpointAfter: null,
-    details: { writeEnabled, rateLimitStop, timeBudgetStop, lastCode, universeCount: combined.length },
+    details: { writeEnabled, rateLimitStop, timeBudgetStop, lastCode, universeCount: combined.length, managerCrossCheckMismatchCount: managerCrossCheckMismatches.length, managerCrossCheckMismatches },
   });
 
-  return Response.json({ ok: true, job: JOB, runId, status, attempted, written, noData, failed, writeEnabled, lastCode, universeCount: combined.length });
+  return Response.json({ ok: true, job: JOB, runId, status, attempted, written, noData, failed, writeEnabled, lastCode, universeCount: combined.length, managerCrossCheckMismatches });
 }
