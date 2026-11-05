@@ -32,9 +32,22 @@ export type MoneydjFundTarget = {
   isRepresentative: boolean;
 };
 
+// 2026-11-05（使用者核准定案）: 基金月報「目標資料截止日」是上個月底，不是「距今N天」的滾動窗口
+// ——原本的freshDays(25天)雖然方向大致正確，但不是使用者實際定義的規則，而且對「這個月還沒公布
+// 的基金」沒有任何節流，造成同一檔基金一天被排程打24次（見route.ts的呼叫頻率修正）。這裡改成直接
+// 拿「上個月最後一天」當作比較基準：資料已經是上個月底（或更新）的基金，本月完全不再是候選；
+// 還沒拿到的，繼續留在候選池裡，交給route.ts的「每天只跑一次、每檔基金3秒間隔」節流。
+export function targetMonthEndIso(now: Date = new Date()): string {
+  const taipei = new Date(now.getTime() + 8 * 60 * 60 * 1000);
+  const firstOfThisMonthUTC = new Date(Date.UTC(taipei.getUTCFullYear(), taipei.getUTCMonth(), 1));
+  const lastOfPrevMonthUTC = new Date(firstOfThisMonthUTC.getTime() - 24 * 60 * 60 * 1000);
+  return lastOfPrevMonthUTC.toISOString().slice(0, 10);
+}
+
 /**
  * MoneyDJ fund-holdings universe for one ROLLING invocation: mapped codes past the id cursor whose
- * MONEYDJ_PUBLIC_DISCLOSURE holdings are older than `freshDays` (or absent), ordered by fund id.
+ * MONEYDJ_PUBLIC_DISCLOSURE holdings are still older than `targetMonthEnd`（上個月底）, ordered by
+ * fund id.
  *
  * Master-fund aware (Phase 1): a fund linked to a fund_master is only in scope if it is the master's
  * representative_fund_id, OR the representative currently has no fresh holdings (fallback). Every
@@ -45,7 +58,7 @@ export async function nextMoneydjFundTargets(
   prisma: PrismaClient,
   cursor: string,
   batch: number,
-  freshDays: number,
+  targetMonthEnd: string,
 ): Promise<MoneydjFundTarget[]> {
   return prisma.$queryRawUnsafe<MoneydjFundTarget[]>(
     `SELECT f.id AS "fundId", m.moneydj_code AS "moneydjCode", f.name AS "canonicalName",
@@ -63,21 +76,21 @@ export async function nextMoneydjFundTargets(
        ) h ON TRUE
       WHERE m.moneydj_code IS NOT NULL
         AND f.id > $1
-        AND (h.max_asof IS NULL OR h.max_asof < CURRENT_DATE - ($3 || ' days')::interval)
+        AND (h.max_asof IS NULL OR h.max_asof < $3::date)
         AND (
           sc.master_fund_id IS NULL
           OR fm.representative_fund_id = f.id
           OR NOT EXISTS (
             SELECT 1 FROM holdings rh
              WHERE rh.fund_id = fm.representative_fund_id AND rh.asset_type = 'FUND' AND rh.source = $2
-               AND rh.as_of_date >= CURRENT_DATE - ($3 || ' days')::interval
+               AND rh.as_of_date >= $3::date
           )
         )
       ORDER BY f.id
       LIMIT $4`,
     cursor,
     MONEYDJ_SOURCE,
-    String(freshDays),
+    targetMonthEnd,
     batch,
   );
 }

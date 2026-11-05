@@ -10,6 +10,23 @@
 // 格式差異很大，這個正則目前只保證對野村投信（E開頭檔名、「項 目 計 算 方 式 或 金 額」固定
 // 表頭）有效，延伸到其他投信前需要重新核對格式。
 
+// 2026-11-05 VERIFIED（根因：2026-11-05 00:33 UTC起連續4筆SITCA_NAV_SYNC卡死IN_PROGRESS）:
+// 這個檔案裡4個fetch()原本全部沒有timeout/AbortController，是今天FUND_PROSPECTUS_FEE_WRITE第
+// 一次真的打開寫入後，SITCA_NAV_SYNC這支cron（併跑野村費率同步）第一次整天的第一次呼叫
+// (00:33 UTC)就卡住——Node原生fetch沒有逾時就一路等到doc.twse.com.tw或mopsov.twse.com.tw某次
+// 回應停住，整支route超過maxDuration=300秒被Vercel外部砍掉，finishRun從未被呼叫，
+// production_scheduler_runs那筆永遠卡在IN_PROGRESS，後面3次整點呼叫也接連卡住（目前已先把
+// FUND_PROSPECTUS_FEE_WRITE改回off止血）。修正：每個fetch都加20秒AbortController逾時。
+async function fetchWithTimeout(url: string, init?: RequestInit, timeoutMs = 20_000): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export type ProspectusFeeResult = {
   mgmtFeeText: string;
   custodianFeeText: string;
@@ -40,13 +57,13 @@ export async function listNomuraFilings(): Promise<Map<string, NomuraFilingRow>>
       step: "1", firstin: "1", off: "1", pathname: "/mops/web/t57sb01_q7", TYPEK: "all",
       CK: "2", co_id: "A00032", year,
     });
-    const res1 = await fetch("https://mopsov.twse.com.tw/mops/web/ajax_t57sb01_q7", {
+    const res1 = await fetchWithTimeout("https://mopsov.twse.com.tw/mops/web/ajax_t57sb01_q7", {
       method: "POST", body: params1, headers: { "Content-Type": "application/x-www-form-urlencoded" },
     });
     const text1 = await res1.text();
     const m = text1.match(/window\.open\('([^']+)'/);
     if (!m) return [];
-    const res2 = await fetch(m[1]);
+    const res2 = await fetchWithTimeout(m[1]);
     const buf = await res2.arrayBuffer();
     const html = new TextDecoder("big5").decode(buf);
     const rows: NomuraFilingRow[] = [];
@@ -85,7 +102,7 @@ export async function listNomuraFilings(): Promise<Map<string, NomuraFilingRow>>
 async function resolveDownloadUrl(filename: string): Promise<string> {
   // 走跟列表頁同一套readfile2() POST流程換出帶時間戳的真正下載連結。
   const params = new URLSearchParams({ colorchg: "1", step: "9", kind: "E", co_id: "A00032", filename });
-  const res = await fetch("https://doc.twse.com.tw/server-java/t57sb01", { method: "POST", body: params, headers: { "Content-Type": "application/x-www-form-urlencoded" } });
+  const res = await fetchWithTimeout("https://doc.twse.com.tw/server-java/t57sb01", { method: "POST", body: params, headers: { "Content-Type": "application/x-www-form-urlencoded" } });
   const text = await res.text();
   const m = text.match(/href='([^']+\.pdf)'/);
   if (!m) throw new Error(`MOPS_DOWNLOAD_URL_NOT_FOUND:${filename}`);
@@ -102,7 +119,7 @@ function rocToIso(roc: string): string | null {
 
 export async function extractNomuraProspectusFee(filename: string, fundNameForLog: string): Promise<ProspectusFeeResult> {
   const pdfUrl = await resolveDownloadUrl(filename);
-  const res = await fetch(pdfUrl);
+  const res = await fetchWithTimeout(pdfUrl, undefined, 30_000);
   const buf = new Uint8Array(await res.arrayBuffer());
   const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs");
   const doc = await pdfjsLib.getDocument({ data: buf }).promise;

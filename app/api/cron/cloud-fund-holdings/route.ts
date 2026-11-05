@@ -26,13 +26,13 @@ import {
 import {
   moneydjFundUniverseCount,
   nextMoneydjFundTargets,
+  targetMonthEndIso,
   NPORT_CLOUD_COMPATIBLE,
   NPORT_DEFERRAL_REASON,
 } from "@/lib/cloud-ingestion/fundHoldings";
 import {
   beginRun,
   finishRun,
-  hourBucketKey,
   readCheckpoint,
   writeCheckpoint,
   type CheckpointRow,
@@ -43,13 +43,18 @@ export const maxDuration = 300;
 export const dynamic = "force-dynamic";
 
 const JOB = "CLOUD_FUND_HOLDINGS";
-// Task X11 (round-6 daily-completion audit): raised to the existing MAX_BATCH ceiling (not a new,
-// untested limit) -- at 150, hourly x 24/day = 3,600/day against the ~5,633-fund MoneyDJ-mapped
-// candidate pool took >1 day per cursor pass. At 300, 7,200/day comfortably completes one full pass
-// within a day.
+// 2026-11-05（使用者核准定案，取代上面「Task X11」那版每小時全速跑的設計）: VERIFIED
+// 基金持股一個月才更新一次，舊設計卻是每小時300檔、一天24次（上限7,200次/天），對同一批「這個月
+// 還沒公布」的基金天天24次重複檢查，也是MoneyDJ天天固定時段回429的主因之一。改成：
+//   1) 這支cron的基礎排程(vercel.json)還是每小時觸發，但這裡用「每天一個run_key」把23次多餘的
+//      整點呼叫擋掉（beginRun的skipped機制，跟野村費率同步用的是同一招）——當天只有第一次呼叫會
+//      真的開始處理。
+//   2) 候選池改成「資料還沒到上個月底」(targetMonthEndIso)，不是滾動25天。
+//   3) 每一次成功請求之間一定間隔>=3秒（見下方迴圈），絕不一次送出多個並行請求。
+//   4) 收到一次429/403立刻整批停止（沿用原有行為，不变）。
 const DEFAULT_BATCH = 300;
 const MAX_BATCH = 300;
-const FRESH_DAYS = 25; // matches the local disclosure worker's re-fetch guard
+const MIN_REQUEST_SPACING_MS = 3_000;
 const TIME_BUDGET_MS = 240_000;
 
 function resolveProvider(raw: string | null): "MONEYDJ" | "NPORT" | "ALL" {
@@ -81,7 +86,11 @@ export async function GET(request: Request) {
   const CHECKPOINT_KEY = checkpointKey("MONEYDJ");
   const universeCount = await moneydjFundUniverseCount(prisma);
   const before = await readCheckpoint(CHECKPOINT_KEY);
-  const runKey = hourBucketKey(`CLOUD_FUND_HOLDINGS:MONEYDJ`);
+  // 2026-11-05: 日粒度run_key（取代原本的hourBucketKey）——vercel.json還是每小時觸發這支route，
+  // 但beginRun的skipped機制讓同一天只有第一次整點呼叫真的往下跑，其餘23次直接skip，避免同一批
+  // 「這個月還沒公布」的基金被重複檢查24遍。
+  const dayKey = new Date().toISOString().slice(0, 10);
+  const runKey = `CLOUD_FUND_HOLDINGS:MONEYDJ:${dayKey}`;
   const { runId, skipped } = await beginRun({
     jobName: `${JOB}:MONEYDJ`,
     provider: "MONEYDJ",
@@ -91,16 +100,17 @@ export async function GET(request: Request) {
     checkpointBefore: before,
   });
   if (skipped) {
-    return Response.json({ ok: true, job: JOB, provider: "MONEYDJ", skipped: true, reason: "run_key already present this hour", runKey });
+    return Response.json({ ok: true, job: JOB, provider: "MONEYDJ", skipped: true, reason: "run_key already present today (1 real attempt/day by design)", runKey });
   }
 
+  const targetMonthEnd = targetMonthEndIso();
   let cursor = before?.lastSymbol ?? "";
   let wrapped = false;
-  let targets = await nextMoneydjFundTargets(prisma, cursor, batch, FRESH_DAYS);
+  let targets = await nextMoneydjFundTargets(prisma, cursor, batch, targetMonthEnd);
   if (targets.length === 0 && cursor !== "") {
     wrapped = true;
     cursor = "";
-    targets = await nextMoneydjFundTargets(prisma, cursor, batch, FRESH_DAYS);
+    targets = await nextMoneydjFundTargets(prisma, cursor, batch, targetMonthEnd);
   }
 
   let attempted = 0;
@@ -121,6 +131,7 @@ export async function GET(request: Request) {
   const failures: Array<{ code: string; reason: string }> = [];
   const masterDoneThisRun = new Set<string>();
   let lastId = cursor;
+  let lastRequestAt = 0; // 2026-11-05: 每檔基金的請求之間強制間隔 MIN_REQUEST_SPACING_MS，一次只送一個。
 
   for (const t of targets) {
     if (Date.now() - startedMs > TIME_BUDGET_MS) {
@@ -134,6 +145,11 @@ export async function GET(request: Request) {
       masterAlreadyFetched++;
       continue;
     }
+    if (lastRequestAt > 0) {
+      const waitMs = MIN_REQUEST_SPACING_MS - (Date.now() - lastRequestAt);
+      if (waitMs > 0) await new Promise((r) => setTimeout(r, waitMs));
+    }
+    lastRequestAt = Date.now();
     attempted++;
     try {
       const disclosure = await fetchMoneydjDisclosure(t.moneydjCode);

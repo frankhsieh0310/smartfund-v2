@@ -178,6 +178,13 @@ async function getIssuerUniverse(issuerName: string): Promise<{ adapter: Officia
   return { adapter, tickers };
 }
 
+// 2026-11-05: 永久性錯誤（官方清單裡本來就查不到這檔、或官方回應明確告知不存在）—— 重試也不會
+//成功，不該讓它永久卡住同一位置之後的所有ETF。只比對各adapter目前實際會丟出的這幾種訊息樣式；
+// 其他所有錯誤（逾時、5xx、解析失敗等）一律當暫時性，維持原本「整個invocation停止」的保守行為。
+function isPermanentHoldingsError(message: string): boolean {
+  return /UNMAPPED_ETF|HTTP_404/.test(message);
+}
+
 function taipeiDateKey(iso: string | null): string | null {
   if (!iso) return null;
   return new Date(new Date(iso).getTime() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
@@ -354,12 +361,15 @@ export async function GET(request: Request) {
       failedCount++;
       const message = e instanceof Error ? e.message : String(e);
       failedTickers.push({ ticker, error: message.slice(0, 300) });
-      // Deliberately NOT writing a checkpoint here: lastSymbol must stay at the last ticker that fully
-      // succeeded, so the next invocation's startIndex = indexOf(lastSymbol)+1 retries THIS SAME ticker
-      // instead of skipping past it. Stop the whole invocation now rather than attempting more tickers
-      // past a failure — a clear red signal (failedTickers below, totalFailure/non-200 status) beats an
-      // issuer that silently finishes its list with a persistence hole in it.
-      stoppedOnFailure = true;
+      // 2026-11-05 VERIFIED（修正00982A/00986D/00990A連續多天ACTIVE_ETF_OFFICIAL_HOLDINGS_GAP的根因）：
+      // Capital的00793B、FHT的00790B、Yuanta的0060這幾檔是「永久性」錯誤（UNMAPPED_ETF／HTTP_404，
+      // 代表這檔在官方清單裡本來就找不到，不是暫時性的網路/逾時問題），但舊邏輯對所有失敗一視同仁
+      // ——只要一檔失敗就整個invocation停止，cursor永遠卡在它前面，排在它後面（依代碼字母/數字排序）
+      // 的所有ETF從此再也不會被嘗試。00793B排在00792B後面、00982A等再後面，造成這三檔持股資料卡死
+      // 在10/28~10/29不再更新。修正：永久性錯誤（isPermanentHoldingsError）記錄失敗但不中斷，讓後面
+      // 的ETF繼續跑；暫時性錯誤（逾時、5xx等）維持原行為——整個invocation停止、cursor卡住等下次重試，
+      // 避免暫時性問題被誤判成「永久跳過」。
+      stoppedOnFailure = !isPermanentHoldingsError(message);
     } finally {
       clearTimeout(deadlineTimer);
     }
