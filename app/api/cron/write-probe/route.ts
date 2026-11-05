@@ -4,8 +4,10 @@
 // 一次真實的INSERT（beginRun）+UPDATE（finishRun）──跟其他job本來就會做的run-log記帳動作完全
 // 一樣，不需要額外的表。任一步失敗就立刻送Telegram通知，不用等到隔天。
 import { isAuthorizedCron, unauthorizedCron } from "@/lib/cron/authorize";
+import { prisma } from "@/lib/prisma";
 import { beginRun, finishRun } from "@/lib/cloud-ingestion/runContext";
 import { notifyAnomaly } from "@/lib/daily-health-report/notify";
+import { decideWriteProbeNotification } from "@/lib/cron/writeProbeIncident";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -42,14 +44,39 @@ export async function GET(request: Request) {
     return Response.json({ ok: true, job: JOB, runId, status: "COMPLETED" });
   } catch (e: any) {
     const errorMessage = String(e?.message ?? e);
-    const notifyResult = await notifyAnomaly(
-      `🔴 WRITE_PROBE失敗（${new Date().toISOString()}）：正式環境資料庫寫入測試失敗，可能是連線池唯讀事故重演。\n錯誤：${errorMessage}`,
+
+    // 2026-11-05（使用者核准）：同一次故障只推送一次，持續故障期間（每15分鐘重跑一次）不要重複
+    // 推送；故障超過1小時仍未恢復，最多再提醒一次；恢復時不推送（成功分支本來就不送，不用改）。
+    // 判斷「是不是同一次故障」：往回看最近幾筆run，只要連續都是FAILED就算同一個incident，一遇到
+    // 非FAILED（或沒有更舊的紀錄）就代表incident從那之後才開始。
+    const recentRows = await prisma.$queryRawUnsafe<{ status: string; started_at: string; details: any }[]>(
+      `SELECT status, started_at::text, details FROM production_scheduler_runs
+        WHERE job_id = $1 AND id != $2
+        ORDER BY started_at DESC LIMIT 20`,
+      JOB, runId,
     );
+    const decision = decideWriteProbeNotification(
+      recentRows.map((r) => ({ status: r.status, startedAt: r.started_at, reminderSent: r.details?.reminder_sent === true })),
+      new Date(),
+    );
+
+    const notifyResult = decision.shouldNotify
+      ? await notifyAnomaly(
+          decision.isNewIncident
+            ? `🔴 WRITE_PROBE失敗（${new Date().toISOString()}）：正式環境資料庫寫入測試失敗，可能是連線池唯讀事故重演。\n錯誤：${errorMessage}`
+            : `🔴 WRITE_PROBE持續故障提醒（${new Date().toISOString()}，自${decision.incidentStartedAt.toISOString()}起仍未恢復，已超過1小時）：正式環境資料庫寫入測試持續失敗。\n錯誤：${errorMessage}`,
+        )
+      : null;
+
     await finishRun(runId, JOB, "INTERNAL_WRITE_PROBE", startedMs, {
       status: "FAILED", attempted: 1, completed: 0, inserted: simulateFailure ? 1 : 0, updated: 0, failed: 1, retryableFailures: 0,
       error: errorMessage, checkpointAfter: null,
-      details: { notify: notifyResult, simulated: simulateFailure },
+      details: {
+        notify: notifyResult, simulated: simulateFailure,
+        is_new_incident: decision.isNewIncident, incident_started_at: decision.incidentStartedAt.toISOString(),
+        reminder_sent: decision.reminderSentToWrite,
+      },
     });
-    return Response.json({ ok: false, job: JOB, runId, status: "FAILED", error: errorMessage, notify: notifyResult }, { status: 502 });
+    return Response.json({ ok: false, job: JOB, runId, status: "FAILED", error: errorMessage, notify: notifyResult, isNewIncident: decision.isNewIncident, notified: decision.shouldNotify }, { status: 502 });
   }
 }

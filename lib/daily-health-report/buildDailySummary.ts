@@ -1,15 +1,12 @@
-// 2026-11-05（使用者核准，Telegram推送改版，取代Round-4版本）：「不敏感」原則——只有使用者真的
-// 需要處理的事才推送：
-//   1. 每天一則摘要：只列BLOCKING明細；MINOR/EXTERNAL只顯示數量，不逐條列出。
-//   2. BLOCKING=0時，摘要只有一行。
-//   3. 另有「即時推送」（見 buildPersistingBlockingAlert）：只在BLOCKING項目連續兩天（經過下一次
-//      排程重跑）都還在時才送，跟每天的摘要是兩則獨立訊息——摘要每天固定送一次，即時推送只在
-//      「persisting」時才額外送。
-//   4. 自己恢復的（昨天BLOCKING、今天不是）不產生任何通知，自然從anomalies清單消失即可，不用
-//      特別處理「已恢復」訊息。
-//   5. 同一問題當天只推送一次：這份報告本來就是每天只跑一次（beginRun用當天日期當runKey去重），
-//      這裡不需要額外去重邏輯。
-import { classifySeverity, type Severity } from "./severity";
+// 2026-11-05（使用者核准，Telegram推送第二版——取代第一版的「摘要+即時推送」兩則訊息設計）：
+// 健康報告一天只跑一次，原本「每日摘要」跟「即時推送」會同時送出、內容重複，使用者要求合併成
+// 一則：
+//   1. 全部繁體中文，不出現英文標題；檢查項目的type代碼後面一定附中文說明。
+//   2. BLOCKING=0時一行帶過；>0時列出每一項明細，MINOR/EXTERNAL只顯示數量。
+//   3. BLOCKING明細裡，連續超過一天都還在的項目，後面標示「（已連續N天）」（N=1時不標，只有
+//      第一天出現時才不標，避免每天都寫「已連續1天」這種沒有資訊量的字）。
+//   4. 自己恢復的（昨天BLOCKING、今天不是）不產生任何通知，自然從anomalies清單消失即可。
+import { classifySeverity, anomalyFingerprint, type Severity } from "./severity";
 
 // anomalies 陣列真正的型別很長（見 route.ts 的 anomalies 組裝），這裡只取用得到的欄位，其餘用
 // unknown 保留——避免這個檔案變成route.ts異動的額外耦合點。
@@ -54,11 +51,45 @@ function displayIdOf(x: unknown): string {
   return "?";
 }
 
+// 2026-11-05使用者核准：每個type一律附中文說明，訊息裡不留英文標題給使用者自己猜。沒列在這裡的
+// 新type會退回「未分類異常」，不會讓整則訊息排版壞掉或丟例外。
+const TYPE_LABELS: Record<string, string> = {
+  PIPELINE: "排程異常",
+  FRESHNESS: "資料新鮮度落後",
+  ETF_DATA_SOURCE_GAP: "ETF缺少價格來源",
+  TW_EXCHANGE_WIDE_DATA_GAP: "全交易所價格缺口",
+  ACTIVE_ETF_OFFICIAL_HOLDINGS_GAP: "主動式ETF持股未更新",
+  ETF_HISTORY_GAP: "ETF價格歷史落後",
+  COVERAGE: "核心母體覆蓋率異常",
+  YAHOO_TW_RETURN_MISMATCH: "報酬率與Yahoo奇摩不符",
+  YAHOO_TW_RETURN_FETCH_FAILED: "Yahoo奇摩報酬率抓取失敗",
+  FRED_COMMODITY_MISMATCH: "商品數值與FRED不符",
+  TDCC_DIVIDEND_MISMATCH: "配息金額與集保不符",
+  FUND_CURRENCY_OFFICIAL_MISMATCH: "幣別與官方不符",
+  FUND_CURRENCY_INVALID_FORMAT: "幣別格式錯誤",
+  NEW_FUND_CREATE_FAILED: "新基金建檔失敗",
+  NEW_FUND_ISIN_NAME_CONFLICT: "新基金ISIN/名稱衝突",
+  NEW_FUND_SKIPPED_INVALID_CURRENCY: "新基金因幣別無效略過建檔",
+  YAHOO_FUND_CURRENCY_UNRESOLVED: "基金幣別無法解析",
+  RETAIL_RESTRICTED_ETF_COUNT_DROPPED: "應排除商品數量異常下降",
+  STOCK_TECHNICAL_LAG: "個股技術指標落後",
+  FUND_HOLDINGS_LAG: "基金持股資料落後",
+  MONEYDJ_PARSE_FAILED: "持股資料解析失敗",
+  MONEYDJ_NAME_ONLY_NO_WEIGHT: "持股只有名稱缺權重",
+  LOCAL_SCHEDULE_NOT_REPORTED: "本機排程未回報",
+  OUT_OF_SCOPE_JOB_REACTIVATED: "已下架排程又出現執行紀錄",
+};
+
+function typeLabel(type: string): string {
+  return TYPE_LABELS[type] ?? "未分類異常";
+}
+
 /** 每一種異常type的人類可讀明細——只給BLOCKING項目用（MINOR/EXTERNAL在摘要裡只算數量，不展開），
  * 盡量在一行內講清楚「是什麼」，列表型的（items/codes/mismatches）只取前3筆、附總數，避免單一
  * 問題洗版整則訊息。 */
 export function formatAnomalyDetail(a: AnomalyLike): string {
-  const head = a.jobId ? `${a.type} (${a.jobId})` : a.label ? `${a.type} (${a.label})` : a.type;
+  const idPart = a.jobId ? `(${a.jobId})` : a.label ? `(${a.label})` : "";
+  const head = `${a.type}（${typeLabel(a.type)}）${idPart}`;
   const sampleCodes = (list: unknown[] | undefined, n = 3): string => {
     if (!list || list.length === 0) return "";
     const shown = list.slice(0, n).map(displayIdOf).join(", ");
@@ -118,8 +149,10 @@ export function buildDailySummary(input: {
   today: string;
   severitySummary: { blocking: number; minor: number; external: number };
   blockingAnomalies: AnomalyLike[];
+  /** fingerprint -> 連續天數（含今天）。沒有這個問題的fingerprint可以不放進來，當作1天處理。 */
+  consecutiveDaysByFingerprint?: Record<string, number>;
 }): string {
-  const { today, severitySummary, blockingAnomalies } = input;
+  const { today, severitySummary, blockingAnomalies, consecutiveDaysByFingerprint = {} } = input;
   const { blocking, minor, external } = severitySummary;
 
   if (blocking === 0) {
@@ -127,20 +160,13 @@ export function buildDailySummary(input: {
   }
 
   const lines: string[] = [];
-  lines.push(`🔴 Daily health report ${today}：${blocking} 項需要處理`);
-  for (const a of blockingAnomalies) lines.push(`- ${formatAnomalyDetail(a)}`);
+  lines.push(`🔴 每日健康報告 ${today}：${blocking} 項需要處理`);
+  for (const a of blockingAnomalies) {
+    const days = consecutiveDaysByFingerprint[anomalyFingerprint(a)] ?? 1;
+    const suffix = days > 1 ? `（已連續 ${days} 天）` : "";
+    lines.push(`- ${formatAnomalyDetail(a)}${suffix}`);
+  }
   lines.push(`一般 ${minor} 項、外部 ${external} 項，明細見後台`);
-  return lines.join("\n");
-}
-
-/** 「即時推送」——跟 buildDailySummary 是完全獨立的第二則訊息，只在至少一項BLOCKING連續兩天
- * （上一次跟這一次daily-health-report都抓到）仍然存在時才呼叫。route.ts負責判斷persisting清單、
- * 這裡只負責排版。 */
-export function buildPersistingBlockingAlert(today: string, persistingAnomalies: AnomalyLike[]): string | null {
-  if (persistingAnomalies.length === 0) return null;
-  const lines: string[] = [];
-  lines.push(`🔴🔴 ${today}：以下異常已連續超過一天未解決，需要處理：`);
-  for (const a of persistingAnomalies) lines.push(`- ${formatAnomalyDetail(a)}`);
   return lines.join("\n");
 }
 

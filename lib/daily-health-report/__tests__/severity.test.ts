@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { anomalyFingerprint } from "../severity.ts";
+import { anomalyFingerprint, countConsecutiveDays } from "../severity.ts";
 
 function test(name: string, fn: () => void) {
   try {
@@ -37,4 +37,24 @@ test("anomalyFingerprint: 不同jobId的同一個type是不同問題", () => {
   const a = anomalyFingerprint({ type: "PIPELINE", jobId: "SITCA_NAV_SYNC" });
   const b = anomalyFingerprint({ type: "PIPELINE", jobId: "CLOUD_MONEYDJ_FUND" });
   assert.notEqual(a, b);
+});
+
+// 2026-11-05（使用者核准，Telegram推送第二版）：countConsecutiveDays是「已連續N天」標示的唯一依據。
+test("countConsecutiveDays: 從沒出現過時回傳1（只算今天）", () => {
+  assert.equal(countConsecutiveDays("PIPELINE:X", []), 1);
+  assert.equal(countConsecutiveDays("PIPELINE:X", [new Set(["OTHER:Y"])]), 1);
+});
+
+test("countConsecutiveDays: 昨天也在，回傳2", () => {
+  assert.equal(countConsecutiveDays("PIPELINE:X", [new Set(["PIPELINE:X"])]), 2);
+});
+
+test("countConsecutiveDays: 連續3天都在（今天+昨天+前天），第4天（大前天）缺席就停止數", () => {
+  const history = [new Set(["PIPELINE:X"]), new Set(["PIPELINE:X"]), new Set<string>()];
+  assert.equal(countConsecutiveDays("PIPELINE:X", history), 3);
+});
+
+test("countConsecutiveDays: 昨天缺席，即使前天在，也只回傳1（不能跳過缺席那天繼續數）", () => {
+  const history = [new Set<string>(), new Set(["PIPELINE:X"])];
+  assert.equal(countConsecutiveDays("PIPELINE:X", history), 1);
 });

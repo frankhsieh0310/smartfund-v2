@@ -95,3 +95,17 @@ export function summarizeSeverity(anomalies: Array<{ type: string; category?: st
     blockingItems, minorItems, externalItems,
   };
 }
+
+// 2026-11-05（使用者核准，Telegram推送第二版——合併「摘要」跟「即時推送」成一則訊息）：BLOCKING
+// 明細裡要標「已連續N天」，N要數到底連續幾天，不是只看昨天一天。historicalBlockingSetsNewestFirst
+// 是「今天以前」每一天的BLOCKING fingerprint集合，由新到舊排序（[0]=昨天，[1]=前天……），route.ts
+// 從production_scheduler_runs.details.anomalies逐日重算。從最近一天開始往回數，只要連續存在就
+// +1，一遇到缺席（或沒有更舊的資料）就停止——回傳值已經把「今天」算進去（起始值1）。
+export function countConsecutiveDays(fingerprint: string, historicalBlockingSetsNewestFirst: Set<string>[]): number {
+  let days = 1; // 今天
+  for (const set of historicalBlockingSetsNewestFirst) {
+    if (set.has(fingerprint)) days++;
+    else break;
+  }
+  return days;
+}
