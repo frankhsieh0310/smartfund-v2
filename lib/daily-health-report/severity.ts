@@ -67,6 +67,14 @@ export function classifySeverity(anomaly: { type: string; category?: string; job
   return "MINOR";
 }
 
+// 2026-11-05（使用者核准，Telegram推送改版）：單一個「問題」跨天比對是否持續存在的穩定key——
+// 跟 summarizeSeverity() 原本內嵌的 label 邏輯完全相同，抽出來讓 route.ts 可以用同一套規則比對
+// 「今天的BLOCKING」跟「昨天存檔的BLOCKING」是不是同一個問題（不比對清單內個別項目，例如
+// MONEYDJ_PARSE_FAILED今天少了一檔、多了一檔，仍然算同一個「問題」持續存在）。
+export function anomalyFingerprint(anomaly: { type: string; jobId?: string; label?: string }): string {
+  return anomaly.jobId ? `${anomaly.type}:${anomaly.jobId}` : anomaly.label ? `${anomaly.type}:${anomaly.label}` : anomaly.type;
+}
+
 /** 整份報告（anomalies 陣列）彙總成三級筆數，給 buildDailySummary 跟上架判斷共用。*/
 export function summarizeSeverity(anomalies: Array<{ type: string; category?: string; jobId?: string; label?: string }>): {
   blocking: number; minor: number; external: number;
@@ -77,7 +85,7 @@ export function summarizeSeverity(anomalies: Array<{ type: string; category?: st
   const externalItems: string[] = [];
   for (const a of anomalies) {
     const sev = classifySeverity(a);
-    const label = a.jobId ? `${a.type}:${a.jobId}` : a.label ? `${a.type}:${a.label}` : a.type;
+    const label = anomalyFingerprint(a);
     if (sev === "BLOCKING") blockingItems.push(label);
     else if (sev === "EXTERNAL") externalItems.push(label);
     else minorItems.push(label);

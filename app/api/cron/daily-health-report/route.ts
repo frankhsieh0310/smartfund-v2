@@ -19,8 +19,8 @@ import { mapTdccCurrencyToIso, isValidIsoCurrency } from "@/lib/tdcc-currency-ma
 import { fetchYahooChartPeriod } from "@/lib/services/dataProviders/yahoo/yahooClient";
 import { CORE_COMMODITY_ROOTS } from "@/lib/cron/commodityUpdate";
 import { notifyAnomaly } from "@/lib/daily-health-report/notify";
-import { buildDailySummary } from "@/lib/daily-health-report/buildDailySummary";
-import { summarizeSeverity } from "@/lib/daily-health-report/severity";
+import { buildDailySummary, buildPersistingBlockingAlert } from "@/lib/daily-health-report/buildDailySummary";
+import { summarizeSeverity, classifySeverity, anomalyFingerprint } from "@/lib/daily-health-report/severity";
 import { targetMonthEndIso } from "@/lib/cloud-ingestion/fundHoldings";
 import { latestScheduledTradingDay, twseHasTradingDataForDate, tpexHasTradingDataForDate } from "@/lib/market-calendar/twseHolidayCalendar";
 import { fetchYahooTwPerformance } from "@/lib/yahoo/twPerformancePage";
@@ -991,15 +991,33 @@ export async function GET(request: Request) {
   // SYSTEM/EXTERNAL_DELAY 兩級判斷上架標準。見 lib/daily-health-report/severity.ts 的完整規則
   // 說明與對照表。上架標準改成「連續3個交易日 BLOCKING=0」，MINOR/EXTERNAL 不擋上架。
   const severitySummary = summarizeSeverity(anomalies);
+  const blockingAnomalies = anomalies.filter((a) => classifySeverity(a) === "BLOCKING");
+
+  // 2026-11-05（使用者核准，Telegram推送改版）：「即時推送」只在BLOCKING項目連續兩次
+  // daily-health-report（這份報告本來就是每天只跑一次，見JOB的runKey去重）都還在時才額外送——
+  // 第一次出現只會在當天的摘要裡（見下面buildDailySummary），不會多送這則。比對方式：讀前一次
+  // 成功跑完的這份報告自己存的details.anomalies（production_scheduler_runs本來就會存，不用新建
+  // 表），同樣用anomalyFingerprint重算一次昨天的BLOCKING集合，跟今天的BLOCKING取交集。
+  const previousRunRows = await prisma.$queryRawUnsafe<{ details: any }[]>(
+    `SELECT details FROM production_scheduler_runs
+      WHERE job_id = $1 AND status IN ('COMPLETED','PARTIAL') AND details IS NOT NULL
+      ORDER BY started_at DESC LIMIT 1`,
+    JOB,
+  );
+  const previousAnomalies: any[] = Array.isArray(previousRunRows[0]?.details?.anomalies) ? previousRunRows[0].details.anomalies : [];
+  const previousBlockingFingerprints = new Set(
+    previousAnomalies.filter((a) => classifySeverity(a) === "BLOCKING").map((a) => anomalyFingerprint(a)),
+  );
+  const persistingBlockingAnomalies = blockingAnomalies.filter((a) => previousBlockingFingerprints.has(anomalyFingerprint(a)));
 
   // Round-4, user-approved: send a short summary EVERY day, not only when something is wrong --
-  // "沒收到訊息就代表出事了" means silence itself must never be the normal case. See
-  // buildDailySummary.ts for the message format (unit-tested separately).
-  const summary = buildDailySummary({
-    today, anomalyCount: anomalies.length, pipelineHealth, severitySummary,
-    freshness: [stockFreshness, domesticFundFreshness, fxMetricsFreshness, moneyMarketFreshness, globalIndexFreshness], etfDataSourceGap, yahooTwCheck, fredCommodityCheck, coverage,
-  });
+  // "沒收到訊息就代表出事了" means silence itself must never be the normal case. 2026-11-05改版：
+  // 摘要本身只列BLOCKING明細，MINOR/EXTERNAL只顯示數量（見 buildDailySummary.ts）。持續存在的
+  // BLOCKING項目另外多送一則「即時推送」（buildPersistingBlockingAlert），兩則訊息互相獨立。
+  const summary = buildDailySummary({ today, severitySummary, blockingAnomalies });
   const notifyResult = await notifyAnomaly(summary);
+  const persistingAlert = buildPersistingBlockingAlert(today, persistingBlockingAnomalies);
+  const persistingAlertNotifyResult = persistingAlert ? await notifyAnomaly(persistingAlert) : null;
 
   const status = anomalies.length > 0 ? "PARTIAL" : "COMPLETED";
   await finishRun(runId, JOB, "INTERNAL_HEALTH_CHECK", startedMs, {
@@ -1021,9 +1039,9 @@ export async function GET(request: Request) {
       yahoo_fund_currency_unresolved_total: yahooFundCurrencyUnresolvedTotal, yahoo_fund_currency_unresolved_samples: yahooFundCurrencyUnresolvedSamples,
       anomaly_count: anomalies.length, system_anomaly_count: systemAnomalyCount, external_delay_anomaly_count: externalDelayAnomalyCount,
       severity_summary: severitySummary,
-      anomalies, notify_result: notifyResult,
+      anomalies, notify_result: notifyResult, persisting_blocking_notify_result: persistingAlertNotifyResult, persisting_blocking_count: persistingBlockingAnomalies.length,
     },
   });
 
-  return Response.json({ ok: true, job: JOB, runId, status, anomalyCount: anomalies.length, systemAnomalyCount, externalDelayAnomalyCount, severitySummary, anomalies, etfDataSourceGap, activeEtfOfficialHoldings: activeEtfGapWithEvidence, yahooTwCheck, fredCommodityCheck, coverage, currencyFormatCheck, currencyOfficialCheck, notifyResult, reapedStaleRunsCount: reapedStaleRuns.length, reapedStaleRuns: reapedStaleRuns.slice(0, 50) });
+  return Response.json({ ok: true, job: JOB, runId, status, anomalyCount: anomalies.length, systemAnomalyCount, externalDelayAnomalyCount, severitySummary, anomalies, etfDataSourceGap, activeEtfOfficialHoldings: activeEtfGapWithEvidence, yahooTwCheck, fredCommodityCheck, coverage, currencyFormatCheck, currencyOfficialCheck, notifyResult, persistingBlockingCount: persistingBlockingAnomalies.length, persistingAlertNotifyResult, reapedStaleRunsCount: reapedStaleRuns.length, reapedStaleRuns: reapedStaleRuns.slice(0, 50) });
 }
