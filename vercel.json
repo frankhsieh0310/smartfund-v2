@@ -407,6 +407,10 @@
     {
       "path": "/api/cron/money-market-rates",
       "schedule": "0 19 * * *"
+    },
+    {
+      "path": "/api/cron/fundclear-offshore-annual-sync",
+      "schedule": "0 6 * * *"
     }
   ],
   "regions": [
