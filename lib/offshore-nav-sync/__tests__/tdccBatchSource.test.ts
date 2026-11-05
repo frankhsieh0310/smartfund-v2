@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { parseTdccNavCsv, parseTdccNavCsvRows, excludeOverlapWithYahooMapping, filterNewerThanStored, indexByCode, filterNewerThanStoredByCode, type TdccNavRow } from "../tdccBatchSource.ts";
+import { parseTdccNavCsv, parseTdccNavCsvRows, excludeOverlapWithYahooMapping, filterNewerThanStored, indexByCode, indexByCodeAcrossAgents, filterNewerThanStoredByCode, type TdccNavRow } from "../tdccBatchSource.ts";
 
 function test(name: string, fn: () => void) {
   try {
@@ -149,6 +149,59 @@ test("indexByCode: two different codes sharing the SAME fund name (two 總代理
   assert.equal(byCode.get("AXAWGRA")!.nav, 28.42);
   assert.equal(byCode.get("LU0184633773")!.navDate, "2026-11-03");
   assert.equal(byCode.get("LU0184633773")!.nav, 28.39);
+});
+
+// 2026-11-05（使用者第二輪核准：換總代理不准歸類EXTERNAL_DELAY）：indexByCodeAcrossAgents()
+// 以ISIN把同一檔基金的所有總代理code視為一組，一律取組內「淨值日期最新」那筆，無論我方
+// funds.code綁定的是哪一個總代理。
+test("indexByCodeAcrossAgents: two codes sharing the same ISIN (different 總代理) both resolve to the group's latest-dated row", () => {
+  const rows: TdccNavRow[] = [
+    { code: "AXAWGRA", name: "安盛環球基金-全球綜合債券基金A CAP歐元", navDate: "2026-10-30", nav: 28.42, isin: "LU0184633773", currency: "EUR" },
+    { code: "LU0184633773", name: "安盛環球基金-全球綜合債券基金A CAP歐元", navDate: "2026-11-03", nav: 28.39, isin: "LU0184633773", currency: "EUR" },
+  ];
+  const byCode = indexByCodeAcrossAgents(rows);
+  // Both codes -- including the one whose OWN latest row is older -- resolve to the newer row.
+  assert.equal(byCode.get("AXAWGRA")!.navDate, "2026-11-03");
+  assert.equal(byCode.get("AXAWGRA")!.nav, 28.39);
+  assert.equal(byCode.get("LU0184633773")!.navDate, "2026-11-03");
+  assert.equal(byCode.get("LU0184633773")!.nav, 28.39);
+});
+
+test("indexByCodeAcrossAgents: funds with no ISIN fall back to grouping by name+currency", () => {
+  const rows: TdccNavRow[] = [
+    { code: "C1", name: "無ISIN基金", navDate: "2026-10-30", nav: 10, isin: null, currency: "USD" },
+    { code: "C2", name: "無ISIN基金", navDate: "2026-11-02", nav: 11, isin: null, currency: "USD" },
+  ];
+  const byCode = indexByCodeAcrossAgents(rows);
+  assert.equal(byCode.get("C1")!.navDate, "2026-11-02");
+  assert.equal(byCode.get("C2")!.navDate, "2026-11-02");
+});
+
+// 2026-11-05（抽查全部52檔時發現的真實危險案例，修正後才commit）：TDCC CSV裡有ISIN被重複使用
+// 在「幣別不同的同一基金」(新加坡大華新加坡增長基金SGD/USD)、甚至「名稱完全不同的兩檔基金」
+// (摩根士丹利歐洲機會基金 vs 歐洲冠軍基金)身上——單用ISIN分組會把這些誤併、用錯幣別的淨值覆蓋
+// 另一個code，必須加上幣別一起當分組鍵才能避免。
+test("indexByCodeAcrossAgents: same ISIN but DIFFERENT currency must NOT be merged (TDCC reuses ISIN across currency classes, even across unrelated funds)", () => {
+  const rows: TdccNavRow[] = [
+    { code: "USGFSG", name: "新加坡大華新加坡增長基金(星幣)", navDate: "2026-10-29", nav: 5.722, isin: "SG9999001127", currency: "SGD" },
+    { code: "USGFUS", name: "新加坡大華新加坡增長基金(美元)", navDate: "2026-11-03", nav: 4.3378, isin: "SG9999001127", currency: "USD" },
+  ];
+  const byCode = indexByCodeAcrossAgents(rows);
+  // USGFSG must keep its own SGD value -- must NOT be overwritten by USGFUS's USD value just
+  // because USGFUS has a later date and they share an ISIN.
+  assert.equal(byCode.get("USGFSG")!.nav, 5.722);
+  assert.equal(byCode.get("USGFSG")!.currency, "SGD");
+  assert.equal(byCode.get("USGFUS")!.nav, 4.3378);
+});
+
+test("indexByCodeAcrossAgents: different currencies with the same name are NOT merged (distinct funds/share classes)", () => {
+  const rows: TdccNavRow[] = [
+    { code: "C1", name: "同名不同幣別", navDate: "2026-10-30", nav: 10, isin: null, currency: "USD" },
+    { code: "C2", name: "同名不同幣別", navDate: "2026-11-02", nav: 11, isin: null, currency: "EUR" },
+  ];
+  const byCode = indexByCodeAcrossAgents(rows);
+  assert.equal(byCode.get("C1")!.navDate, "2026-10-30");
+  assert.equal(byCode.get("C2")!.navDate, "2026-11-02");
 });
 
 test("parseTdccNavCsvRows: returns every valid row, not deduped by name (unlike parseTdccNavCsv)", () => {

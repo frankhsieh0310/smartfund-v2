@@ -26,7 +26,7 @@
 import { prisma } from "@/lib/prisma";
 import { isAuthorizedCron, unauthorizedCron } from "@/lib/cron/authorize";
 import { beginRun, finishRun } from "@/lib/cloud-ingestion/runContext";
-import { fetchTdccNavCsv, parseTdccNavCsv, parseTdccNavCsvRows, excludeOverlapWithYahooMapping, filterNewerThanStored, filterNewerThanStoredByCode, indexByCode, TDCC_NAV_SOURCE } from "@/lib/offshore-nav-sync/tdccBatchSource";
+import { fetchTdccNavCsv, parseTdccNavCsv, parseTdccNavCsvRows, excludeOverlapWithYahooMapping, filterNewerThanStored, filterNewerThanStoredByCode, indexByCodeAcrossAgents, TDCC_NAV_SOURCE } from "@/lib/offshore-nav-sync/tdccBatchSource";
 import { writeTdccNavBatch } from "@/lib/offshore-nav-sync/navWriter";
 import { loadMapping } from "@/lib/offshore-nav-sync/mapping";
 import { runOffshoreScaleSync } from "@/lib/offshore-scale-sync/writer";
@@ -101,11 +101,12 @@ export async function GET(request: Request) {
 
   const csvText = await fetchTdccNavCsv();
   const byName = parseTdccNavCsv(csvText);
-  // 2026-11-05修正：byCode必須從原始逐列資料建索引，不能從已依NAME去重過的byName反推——
-  // 否則同NAME、不同總代理各自申報的code，會被另一個總代理較新的那一筆蓋掉整個NAME槽位，
-  // 使較舊的那個code從byCode裡完全消失（即使CSV裡那個code本身還在繼續每天申報）。
-  // 詳見tdccBatchSource.ts的parseTdccNavCsvRows()/indexByCode()註解（AXAWGRA系列根因）。
-  const byCode = indexByCode(parseTdccNavCsvRows(csvText));
+  // 2026-11-05使用者第二輪核准修正：不只是「同code自己的資料不被誤刪」(indexByCode)，52檔基金
+  // 裡還有「我方綁定的code自己沒錯，但另一個總代理(同一ISIN/同一檔基金)已經有更新淨值」的情況
+  // ——使用者畫面看到的還是比官方舊，這仍是我方的問題，不能放給它停在舊資料。改用
+  // indexByCodeAcrossAgents()：以ISIN(無ISIN則用名稱+幣別)把同一檔基金的所有總代理code視為一組，
+  // 一律取組內「淨值日期最新」那筆，讓我方資料庫無論綁定哪個總代理的code都能追到最新淨值。
+  const byCode = indexByCodeAcrossAgents(parseTdccNavCsvRows(csvText));
 
   const nameMatchedCount = candidateFunds.filter((f) => byName.has(f.name)).length;
   const codeMatchedCount = codeCandidateFunds.filter((f) => byCode.has(f.code)).length;

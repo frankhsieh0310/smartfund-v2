@@ -14,7 +14,7 @@ import { prisma } from "@/lib/prisma";
 import { beginRun, finishRun, reapStaleRunningRuns } from "@/lib/cloud-ingestion/runContext";
 import { checkPipelineRunLog, checkMoneydjParseFailures, evaluateFreshness, checkEtfDataSourceGap, evaluateYahooTwReturnConsistency, evaluateFredCommodityConsistency, evaluateTdccDividendConsistency, checkCommodityTechnicalCoverage, checkFundPerformanceCoverage, checkEtfPerformanceCoverage, checkEtfHistoryFreshness, checkFundHistoryFreshness, checkCoreUniverseEtfCoverage, checkCoreUniverseFundCoverage, checkCoreUniverseFundGapDetail, checkCoreUniverseEtfGapDetail, checkActiveEtfOfficialHoldingsCoverage, checkStockTechnicalLag, checkFundHoldingsLag, checkLocalScheduleReporting, checkCoreUniverseFundCurrencyFormat, evaluateFundCurrencyOfficialConsistency, type QueryFn, type YahooTwReturnSample, type FredCommoditySample, type FundCurrencyOfficialSample, type TdccDividendSample } from "@/lib/daily-health-report/checks";
 import { fetchTdccOffshoreDividendCsv, SOURCE as TDCC_DIVIDEND_SOURCE } from "@/lib/cron/offshoreDividendTdccSync";
-import { fetchTdccNavCsv, parseTdccNavCsv, parseTdccNavCsvRows, indexByCode, type TdccNavRow } from "@/lib/offshore-nav-sync/tdccBatchSource";
+import { fetchTdccNavCsv, parseTdccNavCsv, parseTdccNavCsvRows, indexByCodeAcrossAgents, type TdccNavRow } from "@/lib/offshore-nav-sync/tdccBatchSource";
 import { mapTdccCurrencyToIso, isValidIsoCurrency } from "@/lib/tdcc-currency-map";
 import { fetchYahooChartPeriod } from "@/lib/services/dataProviders/yahoo/yahooClient";
 import { CORE_COMMODITY_ROOTS } from "@/lib/cron/commodityUpdate";
@@ -495,11 +495,14 @@ export async function GET(request: Request) {
       let tdccNavByName: Map<string, TdccNavRow> | null = null;
       let tdccNavByCode: Map<string, TdccNavRow> | null = null;
       try {
-        // 2026-11-05修正（AXAWGRA根因）：byCode必須從原始逐列資料建索引，不能從已依NAME去重過的
-        // byName反推——理由見tdccBatchSource.ts的parseTdccNavCsvRows()/indexByCode()註解。
+        // 2026-11-05使用者第二輪核准修正：52檔「換總代理」基金不准歸類成EXTERNAL_DELAY——即使
+        // 我方綁定的code自己的資料沒錯，只要同一ISIN下另一個總代理已經有更新淨值，對使用者來說
+        // 我方畫面還是舊的，這是我方的問題。indexByCodeAcrossAgents()以ISIN(或名稱+幣別)把同一檔
+        // 基金的所有總代理code視為一組，一律取組內最新淨值，這裡的比對也跟著用這個結果，
+        // 才不會把「其實我方可以追到更新資料、只是沒追」誤判成SYSTEM以外的EXTERNAL_DELAY。
         const csvText = await fetchTdccNavCsv();
         tdccNavByName = parseTdccNavCsv(csvText);
-        tdccNavByCode = indexByCode(parseTdccNavCsvRows(csvText));
+        tdccNavByCode = indexByCodeAcrossAgents(parseTdccNavCsvRows(csvText));
       } catch (e) {
         tdccNavFetchError = e instanceof Error ? e.message : String(e);
       }

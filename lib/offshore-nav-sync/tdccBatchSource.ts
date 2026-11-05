@@ -141,6 +141,39 @@ export function indexByCode(rows: TdccNavRow[]): Map<string, TdccNavRow> {
   return byCode;
 }
 
+// 2026-11-05（使用者核准，第二輪修正）：indexByCode()本身只解決「同code自己的資料被誤刪」，
+// 但使用者指出這樣還不夠——52檔基金裡，我方funds.code綁定的那個總代理即使"自己"的最新日期沒錯，
+// 如果另一個總代理（不同code、同一檔基金）已經有更新的淨值，使用者看到的畫面還是比官方舊，這仍然
+// 是我方的問題，不能歸類成EXTERNAL_DELAY。改法：以ISIN+幣別為準把同一檔基金的所有總代理code
+// 視為一組，取「淨值日期最新」的那一列當作這個群組裡每一個code的代表值。
+//
+// VERIFIED 2026-11-05（抽查時發現、差點造成新的資料錯誤，修正後才commit）：單用ISIN分組會誤併
+// ——TDCC CSV裡至少2組案例是「同一個ISIN、但幣別不同、甚至基金本身就不是同一檔」：
+//   USGFSG(新加坡大華新加坡增長基金-星幣,SGD) / USGFUS(同基金-美元,USD) 共用ISIN
+//   SG9999001127，兩者淨值本來就不同幣別、不同數字量級，絕對不能互相覆蓋；
+//   MSIM1A4EUR(摩根士丹利歐洲機會基金A歐元,EUR) / MSIM1A4USD(摩根士丹利歐洲冠軍基金A美元,USD)
+//   共用ISIN LU1387591305，但這兩個根本是「名稱完全不同的兩檔基金」(機會基金 vs 冠軍基金)——
+//   TDCC自己的ISIN欄位在這裡本身就是錯的/重複使用，不是總代理換代碼的情況。
+// 加上幣別一起當分組鍵（ISIN+currency）後，這兩組都正確分開，不受影響；真正的「換總代理」案例
+// （AXAWGRA/LU0184633773、IE00B6TMN219/IE00B6TMN219#01等）兩邊幣別本身就相同，加了幣別依然
+// 正確合併——VERIFIED逐一核對過全部52+5組，加幣別後沒有漏掉任何一組真正的換總代理案例。
+// 沒有ISIN的（境內基金一般沒有ISIN）退回用「名稱+幣別」分組，避免誤併不同基金。
+export function indexByCodeAcrossAgents(rows: TdccNavRow[]): Map<string, TdccNavRow> {
+  const groups = new Map<string, TdccNavRow[]>();
+  for (const row of rows) {
+    const key = row.isin ? `ISIN:${row.isin}|${row.currency ?? ""}` : `NAME:${row.name}|${row.currency ?? ""}`;
+    const arr = groups.get(key);
+    if (arr) arr.push(row); else groups.set(key, [row]);
+  }
+  const byCode = new Map<string, TdccNavRow>();
+  for (const groupRows of groups.values()) {
+    let best = groupRows[0];
+    for (const r of groupRows) if (r.navDate > best.navDate) best = r;
+    for (const code of new Set(groupRows.map((r) => r.code))) byCode.set(code, best);
+  }
+  return byCode;
+}
+
 export function filterNewerThanStoredByCode(
   candidateFunds: Array<{ id: string; code: string; latestNavDate: string | null; hasHistory: boolean }>,
   byCode: Map<string, TdccNavRow>,
