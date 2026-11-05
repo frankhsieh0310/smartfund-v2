@@ -45,6 +45,8 @@ const BLOCKING_ANOMALY_TYPES = new Set([
   "FUND_CURRENCY_OFFICIAL_MISMATCH", "FUND_CURRENCY_INVALID_FORMAT", // 幣別錯誤=顯示的金額單位可能是錯的
   "NEW_FUND_CREATE_FAILED", "NEW_FUND_ISIN_NAME_CONFLICT", "YAHOO_FUND_CURRENCY_UNRESOLVED",
   "RETAIL_RESTRICTED_ETF_COUNT_DROPPED", // 應排除的商品變回可購買=誤導使用者可購買性
+  "STOCK_TECHNICAL_LAG", // 2026-11-05: 價格已經有新一天、技術指標還停在舊日期=使用者看到的技術分析可能是舊的
+  "FUND_HOLDINGS_LAG", // 2026-11-05: 當月已有≥50%基金拿到月底資料時，剩下還沒到位的才算異常
 ]);
 const CORE_FRESHNESS_LABELS = new Set(["tw_stock_price", "domestic_fund_nav"]);
 

@@ -33,6 +33,7 @@ import {
 import {
   beginRun,
   finishRun,
+  hourBucketKey,
   readCheckpoint,
   writeCheckpoint,
   type CheckpointRow,
@@ -86,11 +87,19 @@ export async function GET(request: Request) {
   const CHECKPOINT_KEY = checkpointKey("MONEYDJ");
   const universeCount = await moneydjFundUniverseCount(prisma);
   const before = await readCheckpoint(CHECKPOINT_KEY);
-  // 2026-11-05: 日粒度run_key（取代原本的hourBucketKey）——vercel.json還是每小時觸發這支route，
-  // 但beginRun的skipped機制讓同一天只有第一次整點呼叫真的往下跑，其餘23次直接skip，避免同一批
-  // 「這個月還沒公布」的基金被重複檢查24遍。
+  // 2026-11-05 使用者更正（上一輪「整支程式一天只跑一次、最多約80檔」改過頭了，追不上月初幾千檔
+  // 候選）: 排程還是照原本每小時觸發（hourBucketKey），但「每檔基金一天最多檢查一次」改成靠
+  // cursor本身保證，不用新增資料表/欄位：一輪完整掃過候選清單(cursor從頭跑到reachedEnd=true)，
+  // 期間每檔基金在這一輪裡最多只會被嘗試一次；reachedEnd之後，不像舊邏輯立刻把cursor清空重新
+  // 開始掃，而是把lastSymbol標記成"DONE:<today>"，當天後面的整點呼叫一律直接skip、完全不查
+  // DB也不發任何請求，等到隔天日期變了才重新開始新一輪——這樣同一檔基金當天最多只會在「這一輪
+  // 掃過去的那一次」被檢查，不會因為清單掃完又立刻重掃而被打第二次。
   const dayKey = new Date().toISOString().slice(0, 10);
-  const runKey = `CLOUD_FUND_HOLDINGS:MONEYDJ:${dayKey}`;
+  const doneSentinel = `DONE:${dayKey}`;
+  if (before?.lastSymbol === doneSentinel) {
+    return Response.json({ ok: true, job: JOB, provider: "MONEYDJ", skipped: true, reason: "already completed one full pass today", doneSentinel });
+  }
+  const runKey = hourBucketKey(`CLOUD_FUND_HOLDINGS:MONEYDJ`);
   const { runId, skipped } = await beginRun({
     jobName: `${JOB}:MONEYDJ`,
     provider: "MONEYDJ",
@@ -100,11 +109,14 @@ export async function GET(request: Request) {
     checkpointBefore: before,
   });
   if (skipped) {
-    return Response.json({ ok: true, job: JOB, provider: "MONEYDJ", skipped: true, reason: "run_key already present today (1 real attempt/day by design)", runKey });
+    return Response.json({ ok: true, job: JOB, provider: "MONEYDJ", skipped: true, reason: "run_key already present this hour", runKey });
   }
 
   const targetMonthEnd = targetMonthEndIso();
-  let cursor = before?.lastSymbol ?? "";
+  // lastSymbol從上一個DONE:sentinel或是昨天留下的真實cursor都可能帶進來——不是DONE:今天的情況下
+  // 一律當成「還在掃同一輪」繼續往下，就算字串是前一天的DONE:sentinel也一樣視為"從頭開始"
+  // （cursor比對用indexOf找不到會自然從0開始，行為等同cursor=""）。
+  let cursor = before?.lastSymbol && !before.lastSymbol.startsWith("DONE:") ? before.lastSymbol : "";
   let wrapped = false;
   let targets = await nextMoneydjFundTargets(prisma, cursor, batch, targetMonthEnd);
   if (targets.length === 0 && cursor !== "") {
@@ -202,7 +214,10 @@ export async function GET(request: Request) {
   }
 
   const reachedEnd = !backoffStop && !timeBudgetStop && targets.length < batch;
-  const nextCursor = reachedEnd ? "" : lastId;
+  // 2026-11-05: 完整掃過一輪之後，不立刻清空cursor讓同一天後面的整點呼叫馬上重新掃一輪（那正是
+  // 「每檔基金一天被打好幾次」的根因）——改成標記DONE:<today>，今天後面的呼叫會在最上面直接
+  // 整個skip、連DB都不查；等明天dayKey變了才會被視為"不是今天的DONE"而重新從頭掃一輪。
+  const nextCursor = reachedEnd ? doneSentinel : lastId;
   const after: CheckpointRow = {
     lastSymbol: nextCursor,
     processed: (before?.processed ?? 0) + attempted,

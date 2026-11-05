@@ -24,6 +24,7 @@ import {
   YUANTA_FUND_MAPPINGS, CATHAY_FUND_MAPPINGS, NOMURA_FUND_MAPPINGS,
   CAPITAL_FUND_MAPPINGS, FUBON_FUND_MAPPINGS, TAISHIN_FUND_MAPPINGS, type IssuerFundMapping,
 } from "@/lib/cloud-ingestion/issuerFundMappings";
+import { targetMonthEndIso } from "@/lib/cloud-ingestion/fundHoldings";
 
 export type SupportedIssuer = "Yuanta" | "Cathay" | "Nomura" | "Capital" | "Fubon" | "Taishin";
 
@@ -156,9 +157,15 @@ export async function runIssuerMonthlyHoldings(
       `SELECT as_of_date::text FROM holdings WHERE fund_id = $1 AND source = $2 ORDER BY as_of_date DESC LIMIT 1`,
       repFundId, source,
     );
-    const nowTaipei = new Date(Date.now() + 8 * 60 * 60 * 1000);
-    const currentYearMonth = `${nowTaipei.getUTCFullYear()}-${String(nowTaipei.getUTCMonth() + 1).padStart(2, "0")}`;
-    if (existing[0]?.as_of_date?.startsWith(currentYearMonth)) {
+    // 2026-11-05 VERIFIED（修正bug，不是改規則）: 原本比對「existing是不是這個月(currentYearMonth)」
+    // ——但月報目標本來就是「上個月底」，不是「這個月」，11月初我們最多也只拿得到10月底資料，所以
+    // 這個pre-check幾乎永遠判定false、從來沒真的擋下任何重抓；就算當月真的抓到了上個月底的資料，
+    // 下一次整點呼叫(currentYearMonth還是同一個November)比對「資料日期是不是以November開頭」仍然
+    // 是false，照樣會再重抓一次——這才是ISSUER_MONTHLY_HOLDINGS被打太多次的真正根因，跟
+    // cloud-fund-holdings(MoneyDJ)那次是同一類bug。改成直接跟targetMonthEndIso()（跟MoneyDJ節流
+    // 用同一個函式、同一套「上個月底」定義）比較：已經有≥上個月底的資料，才真的跳過重抓。
+    const targetMonthEnd = targetMonthEndIso();
+    if (existing[0]?.as_of_date && existing[0].as_of_date >= targetMonthEnd) {
       alreadyCurrent++;
       lastSuccessSourceId = m.sourceId;
       await writeCheckpoint(JOB, checkpointKey, runId, {

@@ -12,7 +12,7 @@
 import { isAuthorizedCron, unauthorizedCron } from "@/lib/cron/authorize";
 import { prisma } from "@/lib/prisma";
 import { beginRun, finishRun, reapStaleRunningRuns } from "@/lib/cloud-ingestion/runContext";
-import { checkPipelineRunLog, checkMoneydjParseFailures, evaluateFreshness, checkEtfDataSourceGap, evaluateYahooTwReturnConsistency, evaluateFredCommodityConsistency, evaluateTdccDividendConsistency, checkCommodityTechnicalCoverage, checkFundPerformanceCoverage, checkEtfPerformanceCoverage, checkEtfHistoryFreshness, checkFundHistoryFreshness, checkCoreUniverseEtfCoverage, checkCoreUniverseFundCoverage, checkCoreUniverseFundGapDetail, checkCoreUniverseEtfGapDetail, checkActiveEtfOfficialHoldingsCoverage, checkLocalScheduleReporting, checkCoreUniverseFundCurrencyFormat, evaluateFundCurrencyOfficialConsistency, type QueryFn, type YahooTwReturnSample, type FredCommoditySample, type FundCurrencyOfficialSample, type TdccDividendSample } from "@/lib/daily-health-report/checks";
+import { checkPipelineRunLog, checkMoneydjParseFailures, evaluateFreshness, checkEtfDataSourceGap, evaluateYahooTwReturnConsistency, evaluateFredCommodityConsistency, evaluateTdccDividendConsistency, checkCommodityTechnicalCoverage, checkFundPerformanceCoverage, checkEtfPerformanceCoverage, checkEtfHistoryFreshness, checkFundHistoryFreshness, checkCoreUniverseEtfCoverage, checkCoreUniverseFundCoverage, checkCoreUniverseFundGapDetail, checkCoreUniverseEtfGapDetail, checkActiveEtfOfficialHoldingsCoverage, checkStockTechnicalLag, checkFundHoldingsLag, checkLocalScheduleReporting, checkCoreUniverseFundCurrencyFormat, evaluateFundCurrencyOfficialConsistency, type QueryFn, type YahooTwReturnSample, type FredCommoditySample, type FundCurrencyOfficialSample, type TdccDividendSample } from "@/lib/daily-health-report/checks";
 import { fetchTdccOffshoreDividendCsv, SOURCE as TDCC_DIVIDEND_SOURCE } from "@/lib/cron/offshoreDividendTdccSync";
 import { fetchTdccNavCsv, parseTdccNavCsv, indexByCode, type TdccNavRow } from "@/lib/offshore-nav-sync/tdccBatchSource";
 import { mapTdccCurrencyToIso, isValidIsoCurrency } from "@/lib/tdcc-currency-map";
@@ -21,6 +21,7 @@ import { CORE_COMMODITY_ROOTS } from "@/lib/cron/commodityUpdate";
 import { notifyAnomaly } from "@/lib/daily-health-report/notify";
 import { buildDailySummary } from "@/lib/daily-health-report/buildDailySummary";
 import { summarizeSeverity } from "@/lib/daily-health-report/severity";
+import { targetMonthEndIso } from "@/lib/cloud-ingestion/fundHoldings";
 import { latestScheduledTradingDay, twseHasTradingDataForDate, tpexHasTradingDataForDate } from "@/lib/market-calendar/twseHolidayCalendar";
 import { fetchYahooTwPerformance } from "@/lib/yahoo/twPerformancePage";
 import { AllianzOfficialPcfAdapter } from "@/lib/etf-holdings-engine/adapters/allianz";
@@ -388,6 +389,13 @@ export async function GET(request: Request) {
   const coverage = [fundPerformanceCoverage, etfPerformanceCoverage, commodityTechnicalCoverage, etfHistoryFreshness, fundHistoryFreshness, coreUniverseEtfCoverage, coreUniverseFundCoverage];
   const etfDataSourceGap = await checkEtfDataSourceGap(query);
   const activeEtfOfficialHoldings = await checkActiveEtfOfficialHoldingsCoverage(query, 4);
+  // 2026-11-05（使用者核准，補上個股技術指標的資料結果檢查）: 比對stock_technical跟
+  // stock_history——「價格已經有新一天、技術指標還停在舊日期」直接代表使用者畫面上的技術分析
+  // 可能是舊的，跟ACTIVE_ETF_OFFICIAL_HOLDINGS_GAP同一種「資料結果型」檢查，分級歸BLOCKING。
+  const stockTechnicalLag = await checkStockTechnicalLag(query, 10);
+  // 2026-11-05（使用者核准，補上基金持股的資料結果檢查）: targetMonthEndIso跟cloud-fund-holdings
+  // 節流用的是同一個函式/同一套「上個月底」定義，兩邊判斷基準一致。
+  const fundHoldingsLag = await checkFundHoldingsLag(query, targetMonthEndIso(), 10);
   const localScheduleReporting = await checkLocalScheduleReporting(query);
 
   // 2026-10-21（使用者核准）: core_universe_fund 覆蓋率缺口的證據分類——VERIFIED 直接查證過：
@@ -922,6 +930,8 @@ export async function GET(request: Request) {
       ? [{ type: "ACTIVE_ETF_OFFICIAL_HOLDINGS_GAP", category: "EXTERNAL_DELAY" as const, items: activeEtfGapWithEvidence.filter((e) => e.category === "EXTERNAL_DELAY") }]
       : []),
     ...(localScheduleReporting.anomaly ? [{ type: "LOCAL_SCHEDULE_NOT_REPORTED", category: SYSTEM_CATEGORY, missing: localScheduleReporting.missing }] : []),
+    ...(stockTechnicalLag.anomaly ? [{ type: "STOCK_TECHNICAL_LAG", category: SYSTEM_CATEGORY, laggingCount: stockTechnicalLag.laggingCount, sample: stockTechnicalLag.laggingSample }] : []),
+    ...(fundHoldingsLag.anomaly ? [{ type: "FUND_HOLDINGS_LAG", category: SYSTEM_CATEGORY, coveragePct: fundHoldingsLag.coveragePct, laggingCount: fundHoldingsLag.laggingCount, sample: fundHoldingsLag.laggingSample }] : []),
     // 2026-10-31（使用者核准）: 單純抓取失敗(fetchFailed，例如009812這種偶發429/逾時)跟真正數值
     // 分歧分開分類——前者是來源暫時連不上，算EXTERNAL_DELAY；後者才是真的SYSTEM異常。
     ...(yahooTwCheck.valueMismatches.length > 0 ? [{ type: "YAHOO_TW_RETURN_MISMATCH", category: SYSTEM_CATEGORY, mismatches: yahooTwCheck.valueMismatches }] : []),

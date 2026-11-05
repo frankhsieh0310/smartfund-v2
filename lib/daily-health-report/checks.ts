@@ -926,6 +926,112 @@ export async function checkLocalScheduleReporting(query: QueryFn): Promise<Local
   return { missing, anomaly: missing.length > 0 };
 }
 
+export type FundHoldingsLagResult = {
+  targetMonthEnd: string;
+  windowOpen: boolean;
+  coveragePct: number;
+  laggingCount: number;
+  laggingSample: Array<{ code: string | null; name: string; dbDate: string | null }>;
+  anomaly: boolean;
+};
+
+// 2026-11-05（使用者核准，補上基金持股的資料結果檢查）: 不能只拿「資料還沒到上個月底
+// (targetMonthEnd)」當異常——VERIFIED查證過兩件事：(1) 11/5當下全市場0檔MoneyDJ基金拿到10月底
+// 資料，代表這個月的月報公布窗口根本還沒開始；(2) 過去90天的「我方第一次寫入日」分布顯示各投信
+// 公布日分散在整個月、沒有單一公布日，大量集中在19/20/26/31號附近。只用「窗口有沒有打開」(只要
+// 1檔到位就算打開)一樣會製造假警報——多數基金本來就會晚到月底才公布，不能窗口剛打開就說剩下的
+// 都異常。改成要求「覆蓋率達到50%」才算「這個月大部分基金都已經公布、剩下的才是真的落後」，
+// 50%是跟「過半數已經到位」這個保守、可驗證的事實綁在一起，不是憑感覺挑的日期。
+export async function checkFundHoldingsLag(query: QueryFn, targetMonthEnd: string, sampleLimit = 10): Promise<FundHoldingsLagResult> {
+  const totalRows = await query(`SELECT COUNT(*)::int AS n FROM fund_mappings WHERE moneydj_code IS NOT NULL`, []);
+  const total = totalRows[0]?.n ?? 0;
+  const reachedRows = await query(
+    `SELECT COUNT(DISTINCT m.fund_id)::int AS n
+       FROM fund_mappings m
+       JOIN holdings h ON h.fund_id = m.fund_id AND h.asset_type = 'FUND' AND h.source = 'MONEYDJ_PUBLIC_DISCLOSURE'
+      WHERE m.moneydj_code IS NOT NULL AND h.as_of_date >= $1::date`,
+    [targetMonthEnd],
+  );
+  const reached = reachedRows[0]?.n ?? 0;
+  const coveragePct = total > 0 ? (reached / total) * 100 : 0;
+  const windowOpen = coveragePct >= 50;
+  if (!windowOpen) {
+    return { targetMonthEnd, windowOpen: false, coveragePct, laggingCount: 0, laggingSample: [], anomaly: false };
+  }
+  const countRows = await query(
+    `SELECT COUNT(*)::int AS n
+       FROM fund_mappings m
+       JOIN funds f ON f.id = m.fund_id
+       LEFT JOIN LATERAL (SELECT MAX(as_of_date) AS max_asof FROM holdings WHERE fund_id = f.id AND asset_type = 'FUND' AND source = 'MONEYDJ_PUBLIC_DISCLOSURE') h ON TRUE
+      WHERE m.moneydj_code IS NOT NULL AND (h.max_asof IS NULL OR h.max_asof < $1::date)`,
+    [targetMonthEnd],
+  );
+  const laggingCount = countRows[0]?.n ?? 0;
+  const sample = laggingCount > 0
+    ? await query(
+        `SELECT f.code, f.name,
+                (SELECT MAX(as_of_date)::text FROM holdings WHERE fund_id = f.id AND asset_type = 'FUND' AND source = 'MONEYDJ_PUBLIC_DISCLOSURE') AS "dbDate"
+           FROM fund_mappings m
+           JOIN funds f ON f.id = m.fund_id
+           LEFT JOIN LATERAL (SELECT MAX(as_of_date) AS max_asof FROM holdings WHERE fund_id = f.id AND asset_type = 'FUND' AND source = 'MONEYDJ_PUBLIC_DISCLOSURE') h ON TRUE
+          WHERE m.moneydj_code IS NOT NULL AND (h.max_asof IS NULL OR h.max_asof < $1::date)
+          ORDER BY f.code
+          LIMIT $2`,
+        [targetMonthEnd, sampleLimit],
+      )
+    : [];
+  return {
+    targetMonthEnd, windowOpen, coveragePct, laggingCount,
+    laggingSample: sample.map((r: any) => ({ code: r.code, name: r.name, dbDate: r.dbDate ?? null })),
+    anomaly: laggingCount > 0,
+  };
+}
+
+export type StockTechnicalLagResult = {
+  checkedCount: number;
+  laggingCount: number;
+  laggingSample: Array<{ ticker: string; priceDate: string; technicalDate: string | null }>;
+  anomaly: boolean;
+};
+
+// 2026-11-05（使用者核准，補上個股技術指標的「資料結果」檢查，原本只有PIPELINE排程症狀型）:
+// 直接重用lib/cron/stockTechnicalDaily.ts既有、production已經在跑的EXISTS查詢寫法（不是自己另外
+// 寫一個GROUP BY全表掃描——VERIFIED對stock_history/stock_technical這兩張大表直接做MAX()
+// 彙總會逾時，這個EXISTS寫法是目前唯一已知對這兩張表夠快的查法），只檢查「價格已經有新一天、
+// 技術指標卻還停在舊日期」的個股，不是「從來沒算過」這種新上市情況（那不是新鮮度問題）。只掃TW
+// is_active股票，跟既有stock-technical-daily cron的範圍一致。
+const STOCK_TECHNICAL_LAG_EXISTS_CLAUSE = `
+  EXISTS (
+    SELECT 1 FROM stock_history h WHERE h.stock_id = s.id
+      AND h.date > COALESCE((SELECT MAX(t.date) FROM stock_technical t WHERE t.stock_id = s.id), '1900-01-01'::date)
+  )`;
+
+export async function checkStockTechnicalLag(query: QueryFn, sampleLimit = 10): Promise<StockTechnicalLagResult> {
+  const countRows = await query(
+    `SELECT COUNT(*)::int AS n FROM stocks s WHERE s.is_active AND s.country = 'TW' AND ${STOCK_TECHNICAL_LAG_EXISTS_CLAUSE}`,
+    [],
+  );
+  const laggingCount = countRows[0]?.n ?? 0;
+  const sample = laggingCount > 0
+    ? await query(
+        `SELECT s.ticker,
+                (SELECT MAX(h.date)::text FROM stock_history h WHERE h.stock_id = s.id) AS "priceDate",
+                (SELECT MAX(t.date)::text FROM stock_technical t WHERE t.stock_id = s.id) AS "technicalDate"
+           FROM stocks s
+          WHERE s.is_active AND s.country = 'TW' AND ${STOCK_TECHNICAL_LAG_EXISTS_CLAUSE}
+          ORDER BY s.ticker
+          LIMIT $1`,
+        [sampleLimit],
+      )
+    : [];
+  return {
+    checkedCount: laggingCount,
+    laggingCount,
+    laggingSample: sample.map((r: any) => ({ ticker: r.ticker, priceDate: r.priceDate, technicalDate: r.technicalDate ?? null })),
+    anomaly: laggingCount > 0,
+  };
+}
+
 export async function checkActiveEtfOfficialHoldingsCoverage(query: QueryFn, staleDaysThreshold = 4): Promise<ActiveEtfOfficialHoldingsResult> {
   const rows = await query(
     `SELECT e.code, e.name, e.provider,
