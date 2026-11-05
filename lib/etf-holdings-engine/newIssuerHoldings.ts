@@ -14,16 +14,21 @@ import { UobamOfficialPcfAdapter, FUND_ID_MAP as UOBAM_MAP } from "./adapters/uo
 import { FtftOfficialPcfAdapter, FUND_ID_MAP as FTFT_MAP } from "./adapters/ftft";
 import { EsunamOfficialPcfAdapter, FUND_ID_MAP as ESUNAM_MAP } from "./adapters/esunam";
 import { UsitcOfficialPcfAdapter, FUND_ID_MAP as USITC_MAP } from "./adapters/usitc";
+import { HnfundsOfficialPcfAdapter, SUPPORTED_TICKERS as HNFUNDS_TICKERS } from "./adapters/hnfunds";
 
 const CHECKPOINT_KEY = "etf-official-holdings:new-issuers-daily";
 const REQUEST_SPACING_MS = 3_000;
 const PER_REQUEST_TIMEOUT_MS = 20_000;
+// 2026-11-05使用者核准：華南永昌用無頭瀏覽器操作（開頁面→選ETF→按下載），實測單檔12~15秒，比
+// 其餘4家plain fetch的adapter慢很多——給更寬裕的逾時，避免正常情況被錯誤判定逾時。
+const HNFUNDS_REQUEST_TIMEOUT_MS = 45_000;
 
-const ISSUERS: Array<{ name: string; adapter: OfficialPcfAdapter; tickers: string[] }> = [
+const ISSUERS: Array<{ name: string; adapter: OfficialPcfAdapter; tickers: string[]; timeoutMs?: number }> = [
   { name: "UOBAM", adapter: UobamOfficialPcfAdapter, tickers: Object.keys(UOBAM_MAP) },
   { name: "FTFT", adapter: FtftOfficialPcfAdapter, tickers: Object.keys(FTFT_MAP) },
   { name: "ESUNAM", adapter: EsunamOfficialPcfAdapter, tickers: Object.keys(ESUNAM_MAP) },
   { name: "USITC", adapter: UsitcOfficialPcfAdapter, tickers: Object.keys(USITC_MAP) },
+  { name: "HNFUNDS", adapter: HnfundsOfficialPcfAdapter, tickers: [...HNFUNDS_TICKERS], timeoutMs: HNFUNDS_REQUEST_TIMEOUT_MS },
 ];
 
 function todayTaipeiKey(): string {
@@ -47,7 +52,7 @@ export async function runNewIssuerHoldings(writeEnabled: boolean, deadlineMs: nu
   const query: QueryFn = (sql, params) => prisma.$queryRawUnsafe<any[]>(sql, ...(params as any[]));
   const perIssuer: NewIssuerHoldingsResult["perIssuer"] = [];
 
-  for (const { name, adapter, tickers } of ISSUERS) {
+  for (const { name, adapter, tickers, timeoutMs } of ISSUERS) {
     let attempted = 0, succeeded = 0;
     let externalBlocked = false;
     const errors: string[] = [];
@@ -55,7 +60,7 @@ export async function runNewIssuerHoldings(writeEnabled: boolean, deadlineMs: nu
       if (Date.now() >= deadlineMs) break;
       attempted++;
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), PER_REQUEST_TIMEOUT_MS);
+      const timer = setTimeout(() => controller.abort(), timeoutMs ?? PER_REQUEST_TIMEOUT_MS);
       try {
         const snap = await adapter.fetchSnapshot(ticker, undefined, controller.signal);
         if (!snap.positions.length) throw new Error("empty positions");
@@ -71,7 +76,9 @@ export async function runNewIssuerHoldings(writeEnabled: boolean, deadlineMs: nu
         errors.push(`${ticker}: ${message.slice(0, 200)}`);
         // 401/403/429一律立即停止這個issuer剩下的ticker，不重試、不換來源 —— 每個adapter的
         // fetch失敗訊息都包含HTTP狀態碼字串（例如UOBAM_HTTP_429），直接比對狀態碼子字串即可。
-        if (/HTTP_401|HTTP_403|HTTP_429/.test(message)) {
+        // 2026-11-05使用者核准新增：HNFUNDS用無頭瀏覽器操作，遇到機器人驗證頁(CHALLENGE_PAGE)
+        // 比照401/403/429同樣立即停止、記錄EXTERNAL，不嘗試通過驗證。
+        if (/HTTP_401|HTTP_403|HTTP_429|CHALLENGE_PAGE/.test(message)) {
           externalBlocked = true;
           clearTimeout(timer);
           break;

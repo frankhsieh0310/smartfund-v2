@@ -67,6 +67,7 @@ import { UobamOfficialPcfAdapter } from "@/lib/etf-holdings-engine/adapters/uoba
 import { FtftOfficialPcfAdapter } from "@/lib/etf-holdings-engine/adapters/ftft";
 import { EsunamOfficialPcfAdapter } from "@/lib/etf-holdings-engine/adapters/esunam";
 import { UsitcOfficialPcfAdapter } from "@/lib/etf-holdings-engine/adapters/usitc";
+import { HnfundsOfficialPcfAdapter } from "@/lib/etf-holdings-engine/adapters/hnfunds";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -151,14 +152,14 @@ const ISSUER_KEYWORD: Record<string, string> = {
   CTBC: "中信", KGI: "凱基", First: "第一金", FHT: "復華", SinoPac: "永豐", Yuanta: "元大",
   Capital: "群益", Mega: "兆豐", Taishin: "台新", Nomura: "野村", BlackRock: "貝萊德",
   // 2026-11-05使用者核准新增（22檔被動式ETF補holdings來源第一批，4家已建adapter）：
-  UOBAM: "大華銀", FTFT: "富蘭克林華美", ESUNAM: "玉山", USITC: "聯邦",
+  UOBAM: "大華銀", FTFT: "富蘭克林華美", ESUNAM: "玉山", USITC: "聯邦", HNFUNDS: "華南永昌",
 };
 
 // 2026-11-05使用者核准：這4家新adapter的寫入預設關閉，本機唯讀試抓、逐檔跟官網比對全部一致後
 // 才由使用者打開（NEW_ISSUER_HOLDINGS_WRITE=on，規定語法設定）。開關關閉時仍正常抓取、驗證、
 // 推進checkpoint，只跳過實際的DB持久化——跟其餘13家issuer已經上線多輪、沒有額外gate的行為不同，
 // 僅限這4家issuer，不影響任何既有issuer。
-const NEW_ISSUERS = new Set(["UOBAM", "FTFT", "ESUNAM", "USITC"]);
+const NEW_ISSUERS = new Set(["UOBAM", "FTFT", "ESUNAM", "USITC", "HNFUNDS"]);
 function isNewIssuerHoldingsWriteEnabled(): boolean {
   return process.env.NEW_ISSUER_HOLDINGS_WRITE?.trim() === "on";
 }
@@ -179,7 +180,7 @@ async function getIssuerUniverse(issuerName: string): Promise<{ adapter: Officia
     Capital: CapitalOfficialPcfAdapter, Mega: MegaOfficialPcfAdapter, Taishin: TaishinOfficialPcfAdapter,
     Nomura: NomuraOfficialPcfAdapter, BlackRock: BlackRockOfficialPcfAdapter,
     UOBAM: UobamOfficialPcfAdapter, FTFT: FtftOfficialPcfAdapter, ESUNAM: EsunamOfficialPcfAdapter,
-    USITC: UsitcOfficialPcfAdapter,
+    USITC: UsitcOfficialPcfAdapter, HNFUNDS: HnfundsOfficialPcfAdapter,
   };
   const keyword = ISSUER_KEYWORD[issuerName];
   const adapter = adapterMap[issuerName];

@@ -151,22 +151,26 @@ export function buildDailySummary(input: {
   blockingAnomalies: AnomalyLike[];
   /** fingerprint -> 連續天數（含今天）。沒有這個問題的fingerprint可以不放進來，當作1天處理。 */
   consecutiveDaysByFingerprint?: Record<string, number>;
+  // 2026-11-05使用者核准：跟BLOCKING/MINOR/EXTERNAL分級無關的單獨提醒行（例如00992B月報公布
+  // 通知），不計入任何一級的數量，單純附加在訊息最後面。
+  extraNotices?: string[];
 }): string {
-  const { today, severitySummary, blockingAnomalies, consecutiveDaysByFingerprint = {} } = input;
+  const { today, severitySummary, blockingAnomalies, consecutiveDaysByFingerprint = {}, extraNotices = [] } = input;
   const { blocking, minor, external } = severitySummary;
 
-  if (blocking === 0) {
-    return `✅ 今日無需處理的異常（一般 ${minor} 項、外部 ${external} 項）`;
-  }
-
   const lines: string[] = [];
-  lines.push(`🔴 每日健康報告 ${today}：${blocking} 項需要處理`);
-  for (const a of blockingAnomalies) {
-    const days = consecutiveDaysByFingerprint[anomalyFingerprint(a)] ?? 1;
-    const suffix = days > 1 ? `（已連續 ${days} 天）` : "";
-    lines.push(`- ${formatAnomalyDetail(a)}${suffix}`);
+  if (blocking === 0) {
+    lines.push(`✅ 今日無需處理的異常（一般 ${minor} 項、外部 ${external} 項）`);
+  } else {
+    lines.push(`🔴 每日健康報告 ${today}：${blocking} 項需要處理`);
+    for (const a of blockingAnomalies) {
+      const days = consecutiveDaysByFingerprint[anomalyFingerprint(a)] ?? 1;
+      const suffix = days > 1 ? `（已連續 ${days} 天）` : "";
+      lines.push(`- ${formatAnomalyDetail(a)}${suffix}`);
+    }
+    lines.push(`一般 ${minor} 項、外部 ${external} 項，明細見後台`);
   }
-  lines.push(`一般 ${minor} 項、外部 ${external} 項，明細見後台`);
+  for (const notice of extraNotices) lines.push(notice);
   return lines.join("\n");
 }
 

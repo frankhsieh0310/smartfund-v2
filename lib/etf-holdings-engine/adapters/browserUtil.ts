@@ -47,13 +47,19 @@ export async function withPage<T>(
   fn: (page: Page) => Promise<T>,
   signal?: AbortSignal,
   onStage?: (stage: string, elapsedMs: number) => void,
+  // 2026-11-05使用者核准（hnfunds.ts新增時）：有些issuer明確要求「不偽裝User-Agent，用無頭瀏覽器
+  // 預設值」，這個選項讓呼叫端跳過下面這行寫死的桌機版Chrome UA字串，維持Chromium自己真實回報
+  // 的UA——預設still是原本的行為（CTBC/AB等既有呼叫端不受影響），只有明確傳true才會跳過。
+  opts?: { skipUserAgentOverride?: boolean },
 ): Promise<T> {
   const t0 = Date.now();
   const browser = await getBrowser();
   onStage?.("browser_acquired", Date.now() - t0);
   const page = await browser.newPage();
   onStage?.("page_created", Date.now() - t0);
-  await page.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36");
+  if (!opts?.skipUserAgentOverride) {
+    await page.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36");
+  }
 
   if (signal?.aborted) {
     await page.close();

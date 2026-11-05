@@ -11,7 +11,8 @@
 // writes the run log and returns, nothing else.
 import { isAuthorizedCron, unauthorizedCron } from "@/lib/cron/authorize";
 import { prisma } from "@/lib/prisma";
-import { beginRun, finishRun, reapStaleRunningRuns } from "@/lib/cloud-ingestion/runContext";
+import { beginRun, finishRun, reapStaleRunningRuns, readCheckpoint, writeCheckpoint } from "@/lib/cloud-ingestion/runContext";
+import { check00992BMonthlyReport } from "@/lib/daily-health-report/checkJkoamMonthlyReport";
 import { checkPipelineRunLog, checkMoneydjParseFailures, evaluateFreshness, checkEtfDataSourceGap, evaluateYahooTwReturnConsistency, evaluateFredCommodityConsistency, evaluateTdccDividendConsistency, checkCommodityTechnicalCoverage, checkFundPerformanceCoverage, checkEtfPerformanceCoverage, checkEtfHistoryFreshness, checkFundHistoryFreshness, checkCoreUniverseEtfCoverage, checkCoreUniverseFundCoverage, checkCoreUniverseFundGapDetail, checkCoreUniverseEtfGapDetail, checkActiveEtfOfficialHoldingsCoverage, checkStockTechnicalLag, checkFundHoldingsLag, checkLocalScheduleReporting, checkCoreUniverseFundCurrencyFormat, evaluateFundCurrencyOfficialConsistency, type QueryFn, type YahooTwReturnSample, type FredCommoditySample, type FundCurrencyOfficialSample, type TdccDividendSample } from "@/lib/daily-health-report/checks";
 import { fetchTdccOffshoreDividendCsv, SOURCE as TDCC_DIVIDEND_SOURCE } from "@/lib/cron/offshoreDividendTdccSync";
 import { fetchTdccNavCsv, parseTdccNavCsv, parseTdccNavCsvRows, indexByCodeAcrossAgents, type TdccNavRow } from "@/lib/offshore-nav-sync/tdccBatchSource";
@@ -1017,7 +1018,23 @@ export async function GET(request: Request) {
   // "沒收到訊息就代表出事了" means silence itself must never be the normal case. 2026-11-05第二版：
   // 只送一則訊息，BLOCKING明細附「已連續N天」標示；MINOR/EXTERNAL只顯示數量（見
   // buildDailySummary.ts）。
-  const summary = buildDailySummary({ today, severitySummary, blockingAnomalies, consecutiveDaysByFingerprint });
+  // 2026-11-05（使用者核准）：00992B（街口優息非投債ETF）還沒有第一份月報，這不是異常——2026-
+  // 10-08才上櫃，查過全部官方公開管道都確認目前沒有逐筆持股資料（見同輪調查），不計入BLOCKING/
+  // MINOR/EXTERNAL任何一級。11/15前完全不查；11/15起每天查一次街口官網「檔案下載」區塊是否多了
+  // 「月報」連結，查到就在今天的摘要多一行提醒，之後用checkpoint記住「已經提醒過」，不會每天
+  // 重複提醒同一件事。
+  const JKOAM_NOTIFIED_CHECKPOINT_KEY = "daily-health-report:jkoam-00992b-monthly-report-notified";
+  const extraNotices: string[] = [];
+  const jkoamNotifiedBefore = await readCheckpoint(JKOAM_NOTIFIED_CHECKPOINT_KEY);
+  if (jkoamNotifiedBefore?.lastSymbol !== "DONE") {
+    const jkoamCheck = await check00992BMonthlyReport(today);
+    if (jkoamCheck.checked && jkoamCheck.found) {
+      extraNotices.push("📄 街口00992B（街口優息非投債ETF）官網「檔案下載」區塊已出現月報，可以開始查證建adapter了：https://www.jkoam.com/etf/etf-info/62?tab=1");
+      await writeCheckpoint(JOB, JKOAM_NOTIFIED_CHECKPOINT_KEY, runId, { lastSymbol: "DONE", processed: 1, succeeded: 1, failed: 0 });
+    }
+  }
+
+  const summary = buildDailySummary({ today, severitySummary, blockingAnomalies, consecutiveDaysByFingerprint, extraNotices });
   const notifyResult = await notifyAnomaly(summary);
 
   const status = anomalies.length > 0 ? "PARTIAL" : "COMPLETED";

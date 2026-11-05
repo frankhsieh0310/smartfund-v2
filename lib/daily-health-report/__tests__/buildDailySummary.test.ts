@@ -76,6 +76,25 @@ test("formatAnomalyDetail: 列表型異常只取前3筆樣本、附總數，避�
   assert.ok(!line.includes("A004"));
 });
 
+test("buildDailySummary: extraNotices附加在訊息最後面，不計入BLOCKING/MINOR/EXTERNAL任何一級數量", () => {
+  const msgClean = buildDailySummary({
+    today: "2026-11-05",
+    severitySummary: { blocking: 0, minor: 2, external: 1 },
+    blockingAnomalies: [],
+    extraNotices: ["📄 00992B月報已公布"],
+  });
+  assert.equal(msgClean, "✅ 今日無需處理的異常（一般 2 項、外部 1 項）\n📄 00992B月報已公布");
+
+  const msgBlocking = buildDailySummary({
+    today: "2026-11-05",
+    severitySummary: { blocking: 1, minor: 0, external: 0 },
+    blockingAnomalies: [{ type: "ETF_DATA_SOURCE_GAP", category: "SYSTEM", newCodes: ["00999Z"] }],
+    extraNotices: ["📄 00992B月報已公布"],
+  });
+  assert.ok(msgBlocking.endsWith("📄 00992B月報已公布"));
+  assert.ok(msgBlocking.includes("1 項需要處理"));
+});
+
 test("formatAnomalyDetail: 未知type仍然產生一行可讀訊息（標「未分類異常」），不丟例外", () => {
   const line = formatAnomalyDetail({ type: "SOME_FUTURE_TYPE", category: "SYSTEM", reason: "未知原因" });
   assert.ok(line.includes("SOME_FUTURE_TYPE（未分類異常）"));
