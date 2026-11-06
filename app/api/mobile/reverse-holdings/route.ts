@@ -15,7 +15,8 @@ export async function GET(req: Request) {
       tickers: (q.get('tickers') ?? q.get('ticker') ?? '').split(','),
       market: q.get('market') ?? '', type: q.get('type') ?? 'ALL',
       page: Number(q.get('page') ?? 1), limit: Number(q.get('limit') ?? 50),
-      sort: q.get('sort') ?? 'weight_desc',
+      sort: q.get('sort') ?? 'weight_desc', direction: q.get('direction') ?? undefined,
+      category: q.get('category') ?? 'ALL',
     });
     return Response.json(result, { headers: {...headers,'Server-Timing':`db;dur=${result.timing.db_ms}`} });
   } catch (error) {
