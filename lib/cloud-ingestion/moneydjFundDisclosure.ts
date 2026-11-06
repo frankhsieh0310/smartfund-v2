@@ -408,14 +408,21 @@ export async function persistNameOnlyHoldings(
   // routed here by MoneydjHoldingsNameOnlyError) failed to persist and fell through to the generic
   // failure bucket. Generating the id with gen_random_uuid() server-side avoids the type mismatch
   // entirely.
+  // 2026-11-06（88134594I等5檔MONEYDJ_PARSE_FAILED根因修正，使用者核准定案）: 原本ON CONFLICT
+  // 用(fund_id, as_of_date, source, holding_name)——這個頁面格式常見「不同標的被MoneyDJ截斷成
+  // 同一個名稱字串」（例如同一基金同一天兩筆不同到期年份的債券都截斷成同一字串），導致後面那筆
+  // 直接UPDATE蓋掉前面那筆，實際寫入筆數少於names.length，觸發下面的readback檢查失敗。這裡沒有
+  // ISIN/到期日/票面利率可用（這個頁面格式只有名稱和清單順序），改用rank（來源頁面本來就有的揭露
+  // 順序，見下面prisma schema同一次修正）當唯一鍵的一部分，讓同一天同一基金的每個名次各自一列，
+  // 不會因為兩個不同標的恰好同名而互相覆蓋。
   await prisma.$transaction(
     async (tx) => {
       for (const [index, name] of names.entries()) {
         await tx.$executeRawUnsafe(
           `INSERT INTO fund_holdings_name_only (id, fund_id, holding_name, rank, as_of_date, source, created_at, updated_at)
            VALUES (gen_random_uuid(), $1, $2, $3, $4::date, $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-           ON CONFLICT (fund_id, as_of_date, source, holding_name)
-           DO UPDATE SET rank = EXCLUDED.rank, updated_at = CURRENT_TIMESTAMP`,
+           ON CONFLICT (fund_id, as_of_date, source, rank)
+           DO UPDATE SET holding_name = EXCLUDED.holding_name, updated_at = CURRENT_TIMESTAMP`,
           fundId,
           name,
           index + 1,

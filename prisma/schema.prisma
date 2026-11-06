@@ -350,7 +350,17 @@ model FundHoldingNameOnly {
   updatedAt   DateTime @updatedAt @map("updated_at")
   fund        Fund     @relation(fields: [fundId], references: [id], onDelete: Cascade)
 
-  @@unique([fundId, asOfDate, source, holdingName])
+  // 2026-11-06（88134594I等5檔MONEYDJ_PARSE_FAILED根因修正，使用者核准定案）: 原本唯一鍵是
+  // (fundId, asOfDate, source, holdingName) —— 這個頁面格式的持股名稱常常因為MoneyDJ自己把欄位
+  // 截斷而「不同債券、同一個截斷後字串」（例如同一基金同一天兩筆不同到期年份的CLEVELAND-CLIFFS
+  // 債券都截斷成同一個字串），ON CONFLICT會把後面那筆直接UPDATE蓋掉前面那筆，造成實際寫入的
+  // 筆數比disclosure.holdings.length少，觸發persistNameOnlyHoldings的readback檢查丟出
+  // MONEYDJ_NAME_ONLY_READBACK_FAILED，連帶讓同一批次的其他基金一起被算成MONEYDJ_PARSE_FAILED。
+  // 這個頁面格式完全沒有ISIN、到期日、票面利率可用（見moneydjFundDisclosure.ts的格式說明，只有
+  // 名稱和清單順序兩個欄位），所以改用rank（來源頁面上的揭露順序，本來就有、不是另外估算出來的
+  // 欄位）取代holdingName做唯一鍵——同一天同一基金的第N筆持股永遠只有一列，不會因為兩個不同標的
+  // 恰好同名而互相覆蓋。
+  @@unique([fundId, asOfDate, source, rank])
   @@index([fundId, asOfDate])
   @@map("fund_holdings_name_only")
 }
