@@ -105,13 +105,26 @@ export async function GET(request: Request) {
     if (rankingType === "PERFORMANCE") {
       const column = ETF_PERIOD_COLUMN[period];
       if (!column) return unsupported(assetType, rankingType, page, limit, "UNSUPPORTED_PERIOD");
+      // 2026-11-06 TestFlight build 1 回報項目 19: 排行中心原本直接讀 etfs.return_1y 等六個直寫
+      // 欄位——這些欄位跟 etf_performances（lib/etf-returns-sync 真正逐日寫入、以 date 為準的來源
+      // 表）是兩份分開維護的拷貝，同一輪排程內等到 writeEtfsRankingColumnsBatch 才會同步，VERIFIED
+      // 兩者會不同步：對 303 檔 ZH/核准 ETF 做全量比對，20+ 檔的 etfs.return_1y 跟當天
+      // etf_performances 最新一列的值對不上（例如 00715L 當天在 etfs 還停在前一天的 259.78%，
+      // etf_performances 已經是當天 201.17%）——使用者在 App 排行頁看到的正是這個被落後拷貝卡住
+      // 的舊數字。改成直接取每檔 etf_performances 依 date 排序的最新一列，不再經過 etfs 這份二手
+      // 拷貝，徹底消除這個不同步窗口（覆蓋率驗證過：兩種讀法都是 303 檔，不會因此漏資料）。
       const rows = await prisma.$queryRawUnsafe<Array<{
         id: string; code: string; name: string; value: string; latest_price: string | null; price_date: string | null; total: string;
       }>>(
-        `SELECT id, code, name, ${column}::text AS value, latest_price::text, price_updated_at::text AS price_date,
+        `WITH latest_perf AS (
+           SELECT DISTINCT ON (etf_id) etf_id, ${column} FROM etf_performances ORDER BY etf_id, date DESC
+         )
+         SELECT etfs.id, etfs.code, etfs.name, latest_perf.${column}::text AS value,
+                etfs.latest_price::text, etfs.price_updated_at::text AS price_date,
                 COUNT(*) OVER ()::text AS total
-           FROM etfs WHERE is_active = true AND ${column} IS NOT NULL AND name ~ $3 ${categoryClause} ${CORE_ETF_FILTER_SQL}
-          ORDER BY ${column} ${sort} LIMIT $1 OFFSET $2`,
+           FROM etfs JOIN latest_perf ON latest_perf.etf_id = etfs.id
+          WHERE etfs.is_active = true AND latest_perf.${column} IS NOT NULL AND etfs.name ~ $3 ${categoryClause} ${CORE_ETF_FILTER_SQL}
+          ORDER BY latest_perf.${column} ${sort} LIMIT $1 OFFSET $2`,
         limit, offset, ZH, ...(categoryValues.length ? [categoryValues] : []),
       );
       const total = rows.length ? Number(rows[0].total) : 0;
