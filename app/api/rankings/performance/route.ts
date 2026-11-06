@@ -281,20 +281,30 @@ export async function GET(request: Request) {
     }
     const column = FUND_PERIOD_COLUMN[period];
     if (!column) return unsupported(assetType, rankingType, page, limit, "UNSUPPORTED_PERIOD");
+    // 2026-11-06（使用者核准定案，基金1Y/3Y/5Y數字對不上Yahoo奇摩根因修正）: 跟上面ETF同一類
+    // 問題——排行中心原本直接讀 funds.return_1y 等直寫欄位，這份拷貝跟 fund_performances（
+    // FUND_RETURNS_SYNC 真正逐日照抄Yahoo奇摩「績效表現」頁的來源表）完全沒有同步機制。VERIFIED
+    // 抽查18480065(安聯台灣科技基金)：funds.return_1y停在10/22算出的228.62%，fund_performances
+    // 當天(11/6)最新一列是89.14%，跟Yahoo奇摩股市當下頁面逐位數精確相符；funds.return_1y的
+    // 228.62%完全對不上NAV歷史自己算出來的任何期間報酬，是另一條舊pipeline留下的壞值。改成跟
+    // ETF一樣，直接取每檔fund_performances依date排序的最新一列，不再讀funds這份二手拷貝。
     const rows = await prisma.$queryRawUnsafe<Array<{
       id: string; code: string | null; name: string; value: string; nav: string | null; nav_date: string | null; total: string;
     }>>(
-      `WITH ranked AS (
-         SELECT f.id, f.code, f.name, f.${column} AS value, f.latest_nav, f.latest_nav_date,
+      `WITH latest_perf AS (
+         SELECT DISTINCT ON (fund_id) fund_id, ${column} FROM fund_performances ORDER BY fund_id, date DESC
+       ), ranked AS (
+         SELECT f.id, f.code, f.name, latest_perf.${column} AS value, f.latest_nav, f.latest_nav_date,
                 COALESCE(sc.master_fund_id, f.id) AS portfolio,
                 ROW_NUMBER() OVER (
                   PARTITION BY COALESCE(sc.master_fund_id, f.id)
-                  ORDER BY (f.id = fm.representative_fund_id) DESC NULLS LAST, f.${column} ${sort} NULLS LAST
+                  ORDER BY (f.id = fm.representative_fund_id) DESC NULLS LAST, latest_perf.${column} ${sort} NULLS LAST
                 ) AS rn
            FROM funds f
+           JOIN latest_perf ON latest_perf.fund_id = f.id
            LEFT JOIN fund_share_classes sc ON sc.fund_id = f.id
            LEFT JOIN fund_master fm ON fm.id = sc.master_fund_id
-          WHERE f.is_active = true AND f.${column} IS NOT NULL AND f.name ~ $3 ${fundCategoryClauseAt(4)} ${CORE_FUND_FILTER_SQL}
+          WHERE f.is_active = true AND latest_perf.${column} IS NOT NULL AND f.name ~ $3 ${fundCategoryClauseAt(4)} ${CORE_FUND_FILTER_SQL}
        )
        SELECT id, code, name, value::text AS value, latest_nav::text AS nav, latest_nav_date::text AS nav_date,
               COUNT(*) OVER ()::text AS total
