@@ -190,9 +190,14 @@ export async function runIssuerMonthlyHoldings(
               // Postgres錯誤「column "as_of_date" is of type date but expression is of type text」——
               // $2用$executeRawUnsafe的參數化查詢傳進來的字串參數預設是text型別，INSERT的VALUES
               // 清單不會自動轉型，要明確加::date。
+              // 2026-11-06 VERIFIED 第二個根因（上面那次修正沒抓到，production_scheduler_runs
+              // 11/5 14:40-15:00這17家投信的執行紀錄仍然100%失敗）: holdings.id是NOT NULL、沒有
+              // DB端default，這裡的INSERT欄位清單根本沒給id，每一筆都撞23502。比照同一個檔案
+              // lib/cloud-ingestion/moneydjFundDisclosure.ts等既有holdings寫入程式碼一致的作法，
+              // 用gen_random_uuid()由DB端產生。
               await tx.$executeRawUnsafe(
-                `INSERT INTO holdings (fund_id, as_of_date, rank, holding_name, weight, source, asset_type, created_at)
-                 VALUES ($1, $2::date, $3, $4, $5, $6, 'FUND', now())`,
+                `INSERT INTO holdings (id, fund_id, as_of_date, rank, holding_name, weight, source, asset_type, created_at)
+                 VALUES (gen_random_uuid(), $1, $2::date, $3, $4, $5, $6, 'FUND', now())`,
                 fundId, asOfDate, rank + 1, h.name, h.weight, source,
               );
             }
