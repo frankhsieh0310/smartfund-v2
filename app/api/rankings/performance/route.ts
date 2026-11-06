@@ -26,7 +26,7 @@ const CORE_FUND_FILTER_SQL = `AND f.id IN (SELECT asset_id FROM tw_purchasable_c
 
 const headers = { "Access-Control-Allow-Origin": "*", "Cache-Control": "no-store" };
 const ZH = "[一-鿿]";
-const ASSET_CATEGORY_BUCKETS = ["STOCK", "BOND", "COMMODITY", "MIXED"] as const;
+const ASSET_CATEGORY_BUCKETS = ["STOCK", "BOND", "COMMODITY", "MIXED", "LEVERAGE_INVERSE"] as const;
 type AssetCategoryBucketParam = (typeof ASSET_CATEGORY_BUCKETS)[number];
 
 // VERIFIED this round via a live GROUP BY: etfs.category (the 187-value Morningstar taxonomy) is
@@ -41,16 +41,23 @@ type AssetCategoryBucketParam = (typeof ASSET_CATEGORY_BUCKETS)[number];
 // name per TWSE/TPEx naming convention).
 const BOND_NAME_PATTERN = "債";
 const COMMODITY_NAME_PATTERN = "原油|黃金|白銀|商品|石油|布蘭特|天然氣|農產品";
+// 2026-11-06 TestFlight build 1 回報項目 15/16: 槓桿／反向是獨立一類，不能混在股票型（或債券/
+// 商品）裡。對這個端點實際服務的 ZH/TW 母體來說，證交所代碼後綴本身就是官方、無歧義的判斷依據
+// （L=槓桿、R=反向，見 officialEtfCategory.ts 同一套邏輯），比用中文名稱關鍵字猜可靠，所以這裡
+// 直接用 code 後綴，不是 category 欄位（跟 BOND/COMMODITY 沿用既有 name 關鍵字一致的做法）。
+const LEVERAGE_INVERSE_CODE_PATTERN = "(L|R)$";
 
 function etfCategoryFilter(bucket: string | null): { clause: string; values: string[] } {
   if (!bucket || !ASSET_CATEGORY_BUCKETS.includes(bucket as AssetCategoryBucketParam)) return { clause: "", values: [] };
-  if (bucket === "BOND") return { clause: `AND (name ~ '${BOND_NAME_PATTERN}' OR category = ANY($4::text[]))`, values: categoriesForBucket("BOND") };
-  if (bucket === "COMMODITY") return { clause: `AND (name ~ '${COMMODITY_NAME_PATTERN}' OR category = ANY($4::text[]))`, values: categoriesForBucket("COMMODITY") };
+  if (bucket === "LEVERAGE_INVERSE") return { clause: `AND (code ~ '${LEVERAGE_INVERSE_CODE_PATTERN}' OR category = ANY($4::text[]))`, values: categoriesForBucket("LEVERAGE_INVERSE") };
+  if (bucket === "BOND") return { clause: `AND code !~ '${LEVERAGE_INVERSE_CODE_PATTERN}' AND (name ~ '${BOND_NAME_PATTERN}' OR category = ANY($4::text[]))`, values: categoriesForBucket("BOND") };
+  if (bucket === "COMMODITY") return { clause: `AND code !~ '${LEVERAGE_INVERSE_CODE_PATTERN}' AND (name ~ '${COMMODITY_NAME_PATTERN}' OR category = ANY($4::text[]))`, values: categoriesForBucket("COMMODITY") };
   if (bucket === "MIXED") return { clause: "AND category = ANY($4::text[])", values: categoriesForBucket("MIXED") };
-  // STOCK: exclude anything the bond/commodity name patterns or a non-stock category would catch.
+  // STOCK: exclude anything the bond/commodity name patterns, a leveraged/inverse code suffix, or a
+  // non-stock category would catch.
   return {
-    clause: `AND name !~ '${BOND_NAME_PATTERN}' AND name !~ '${COMMODITY_NAME_PATTERN}' AND (category IS NULL OR NOT (category = ANY($4::text[])))`,
-    values: [...categoriesForBucket("BOND"), ...categoriesForBucket("COMMODITY"), ...categoriesForBucket("MIXED")],
+    clause: `AND code !~ '${LEVERAGE_INVERSE_CODE_PATTERN}' AND name !~ '${BOND_NAME_PATTERN}' AND name !~ '${COMMODITY_NAME_PATTERN}' AND (category IS NULL OR NOT (category = ANY($4::text[])))`,
+    values: [...categoriesForBucket("BOND"), ...categoriesForBucket("COMMODITY"), ...categoriesForBucket("MIXED"), ...categoriesForBucket("LEVERAGE_INVERSE")],
   };
 }
 

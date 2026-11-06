@@ -9,7 +9,7 @@
 // mapping cannot classify those; they fall through to UNCLASSIFIED and are simply absent from the
 // category-filtered ranking tabs until a separate backfill effort gives them a category at all.
 
-export type AssetCategoryBucket = "STOCK" | "BOND" | "COMMODITY" | "MIXED" | "UNCLASSIFIED";
+export type AssetCategoryBucket = "STOCK" | "BOND" | "COMMODITY" | "MIXED" | "LEVERAGE_INVERSE" | "UNCLASSIFIED";
 
 const STOCK_CATEGORIES = new Set([
   "Large Blend", "Large Growth", "Large Value", "Small Blend", "Small Growth", "Small Value",
@@ -21,7 +21,7 @@ const STOCK_CATEGORIES = new Set([
   "Equity Market Neutral", "Equity Digital Assets", "World Large-Stock Blend",
   "World Large-Stock Growth", "World Large-Stock Value", "Global Large-Stock Blend",
   "Global Large-Stock Growth", "Global Large-Stock Value", "Global Small/Mid Stock",
-  "World Small/Mid Stock", "Trading--Leveraged Equity", "Trading--Inverse Equity",
+  "World Small/Mid Stock",
   "Long-Short Equity", "Focused Region", "Europe Stock", "Japan Stock", "India Equity",
   "China Region", "Greater China Region", "Pacific/Asia ex-Japan Stk", "Real Estate",
   "Global Real Estate", "Infrastructure", "Preferred Stock", "Energy Limited Partnership",
@@ -46,15 +46,24 @@ const BOND_CATEGORIES = new Set([
   "Long Government", "Short Government", "Intermediate Government", "High Yield Muni",
   "Target Maturity", "Securitized Bond - Focused", "Securitized Bond - Diversified",
   "Government Mortgage-Backed Bond", "Miscellaneous Fixed Income", "Convertibles",
-  "Trading--Inverse Debt", "Trading--Leveraged Debt", "Money Market-Taxable", "Prime Money Market",
+  "Money Market-Taxable", "Prime Money Market",
   "固定收益型", "貨幣市場型", "跨國投資固定收益一般債券型", "跨國投資指數股票型_債券型",
   "跨國投資主動式交易所交易基金_債券型", "環球新興市場債券", "環球高收益債券", "美元高收益債券",
   "歐元多元化債券",
 ]);
 
 const COMMODITY_CATEGORIES = new Set([
-  "Commodities Broad Basket", "Commodities Focused", "Trading--Leveraged Commodities",
-  "Trading--Inverse Commodities", "Systematic Trend", "Macro Trading",
+  "Commodities Broad Basket", "Commodities Focused", "Systematic Trend", "Macro Trading",
+]);
+
+// 2026-11-06 TestFlight build 1 回報項目 15/16: 槓桿／反向商品原本被塞進 STOCK/BOND/COMMODITY
+// （哪一種看名稱關鍵字猜），不能真的獨立成一類。槓桿/反向本身是「操作手法」不是「資產類別」，
+// 不管底層是股票指數、債券指數還是商品，官方分類只要標了 Leveraged/Inverse 就歸這裡，不再跟著
+// 底層資產猜分類——跟 officialEtfCategory.ts 台股官方「槓桿反向指數股票型基金」類型一致對齊。
+const LEVERAGE_INVERSE_CATEGORIES = new Set([
+  "Trading--Leveraged Equity", "Trading--Inverse Equity",
+  "Trading--Leveraged Debt", "Trading--Inverse Debt",
+  "Trading--Leveraged Commodities", "Trading--Inverse Commodities",
 ]);
 
 const MIXED_CATEGORIES = new Set([
@@ -78,6 +87,9 @@ const MIXED_CATEGORIES = new Set([
 
 export function classifyCategory(category: string | null | undefined): AssetCategoryBucket {
   if (!category) return "UNCLASSIFIED";
+  // Leverage/inverse is checked first -- it's an operating-method tag that would otherwise also
+  // match inside STOCK/BOND/COMMODITY's own category names.
+  if (LEVERAGE_INVERSE_CATEGORIES.has(category)) return "LEVERAGE_INVERSE";
   if (STOCK_CATEGORIES.has(category)) return "STOCK";
   if (BOND_CATEGORIES.has(category)) return "BOND";
   if (COMMODITY_CATEGORIES.has(category)) return "COMMODITY";
@@ -88,8 +100,12 @@ export function classifyCategory(category: string | null | undefined): AssetCate
 /** For building a SQL `category = ANY($n::text[])` filter — the inverse of classifyCategory,
  * exposed as arrays since the ranking API filters at the SQL level (for correct LIMIT/OFFSET
  * pagination) rather than filtering already-paginated rows in JS. */
-export function categoriesForBucket(bucket: "STOCK" | "BOND" | "COMMODITY" | "MIXED"): string[] {
+export function categoriesForBucket(bucket: "STOCK" | "BOND" | "COMMODITY" | "MIXED" | "LEVERAGE_INVERSE"): string[] {
   return Array.from(
-    bucket === "STOCK" ? STOCK_CATEGORIES : bucket === "BOND" ? BOND_CATEGORIES : bucket === "COMMODITY" ? COMMODITY_CATEGORIES : MIXED_CATEGORIES,
+    bucket === "STOCK" ? STOCK_CATEGORIES
+      : bucket === "BOND" ? BOND_CATEGORIES
+      : bucket === "COMMODITY" ? COMMODITY_CATEGORIES
+      : bucket === "LEVERAGE_INVERSE" ? LEVERAGE_INVERSE_CATEGORIES
+      : MIXED_CATEGORIES,
   );
 }

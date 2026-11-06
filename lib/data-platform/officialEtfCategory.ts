@@ -79,10 +79,10 @@ export async function classifyEtfOfficial(code: string, name: string): Promise<E
     return { bucket: "UNCLASSIFIED", basis: "KEYWORD_FALLBACK" };
   }
   if (t.includes("槓桿") || t.includes("反向")) {
-    // Official type genuinely can't disambiguate (covers both equity-index and commodity
-    // leveraged/inverse products) -- keyword is the real decider here, disclosed as fallback.
-    if (COMMODITY_NAME_PATTERN.test(name)) return { bucket: "COMMODITY", basis: "KEYWORD_FALLBACK" };
-    return { bucket: "STOCK", basis: "KEYWORD_FALLBACK" };
+    // 2026-11-06 TestFlight build 1 回報項目 15/16: 槓桿/反向本身是獨立一類（操作手法，不是
+    // 底層資產），官方「槓桿反向指數股票型基金」類型本身就已經明確標示這件事，不需要再用關鍵字
+    // 猜底層是股票還是商品才能分類——這反而讓這個分支從 KEYWORD_FALLBACK 變成更準確的 OFFICIAL。
+    return { bucket: "LEVERAGE_INVERSE", basis: "OFFICIAL" };
   }
   if (t.includes("平衡")) return { bucket: "MIXED", basis: "OFFICIAL" };
   if (t.includes("股票")) return { bucket: "STOCK", basis: "OFFICIAL" };
@@ -109,7 +109,7 @@ export async function classifyEtfsOfficial(rows: { code: string; name: string }[
       continue;
     }
     if (t.includes("槓桿") || t.includes("反向")) {
-      result.set(r.code, COMMODITY_NAME_PATTERN.test(r.name) ? { bucket: "COMMODITY", basis: "KEYWORD_FALLBACK" } : { bucket: "STOCK", basis: "KEYWORD_FALLBACK" });
+      result.set(r.code, { bucket: "LEVERAGE_INVERSE", basis: "OFFICIAL" });
       continue;
     }
     if (t.includes("平衡")) { result.set(r.code, { bucket: "MIXED", basis: "OFFICIAL" }); continue; }
