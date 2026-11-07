@@ -15,7 +15,11 @@ const headers = { "Access-Control-Allow-Origin": "*", "Cache-Control": "no-store
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const days = Number(url.searchParams.get("days")) || 30;
-  const data = await getNewListingEvents(days);
+  const data = await getNewListingEvents(days, {
+    sort: url.searchParams.get("sort") ?? undefined,
+    category: url.searchParams.get("category") ?? undefined,
+    direction: url.searchParams.get("direction") === "asc" ? "asc" : undefined,
+  });
   return Response.json(data, { headers });
 }
 

@@ -20,13 +20,24 @@ import { parseBondDisclosureName, normalizeIssuer } from "@/lib/data-platform/bo
 import { resolveBondIssuerAlias } from "@/lib/data-platform/bondIssuerAliases";
 import { resolveCountryAlias } from "@/lib/data-platform/countryAllocationAliases";
 import { getAccountForRequest } from "@/lib/auth/userService";
+import { classifyEtfBucketJs, classifyFundBucketJs } from "@/lib/data-platform/assetCategoryBucketJs";
+import type { AssetCategoryBucket } from "@/lib/data-platform/categoryClassification";
 
 const headers = { "Access-Control-Allow-Origin": "*", "Cache-Control": "no-store" };
 const CUSIP_RE = /^[0-9A-Z]{9}$/;
 const ISIN_RE = /^[A-Z]{2}[0-9A-Z]{9}[0-9]$/;
+const CATEGORY_BUCKETS = ["ALL", "STOCK", "BOND", "MIXED", "COMMODITY", "LEVERAGE_INVERSE"] as const;
+type CategoryParam = typeof CATEGORY_BUCKETS[number];
 
-type EtfHolderRow = { etf_id: string; code: string; name: string; holding_name: string; weight: string; as_of_date: string | null; source: string | null; coupon_rate: string | null; maturity_date: string | null };
-type FundDisclosureRow = { fund_id: string; code: string | null; name: string; holding_name: string; weight: string; as_of_date: string | null };
+type EtfHolderRow = { etf_id: string; code: string; name: string; category: string | null; holding_name: string; weight: string; as_of_date: string | null; source: string | null; coupon_rate: string | null; maturity_date: string | null };
+type FundDisclosureRow = { fund_id: string; code: string | null; name: string; category: string | null; holding_name: string; weight: string; as_of_date: string | null };
+
+// 持有這檔債券的「ETF／基金本身」依類型篩選＋依持股比重排序——2026-11-07 第32輪指令：三組
+// （代碼比對／名稱解析比對／依發行機構）語意不同，分開排序/篩選，不拼成一個清單弄混比對方式。
+function applyCategoryAndSort<T extends { bucket: AssetCategoryBucket; weightPct: number }>(rows: T[], category: CategoryParam, direction: "asc" | "desc"): T[] {
+  const filtered = category === "ALL" ? rows : rows.filter((r) => r.bucket === category);
+  return [...filtered].sort((a, b) => (direction === "asc" ? a.weightPct - b.weightPct : b.weightPct - a.weightPct));
+}
 
 // 2026-10-24（使用者核准定案）: 新增「依發行機構」查詢，跟既有CUSIP/ISIN查詢整合成同一個入口。
 // 這是付費功能（既有CUSIP/ISIN查詢維持原樣，不加限制）；發行機構名稱只接受
@@ -156,6 +167,10 @@ export async function GET(request: Request) {
   const isIsin = ISIN_RE.test(raw);
   if (!isCusip && !isIsin) return Response.json({ ok: false, error: "INVALID_FORMAT", hint: "cusip must be 9 alphanumeric chars, isin must be 2 letters + 9 alphanumeric + 1 digit" }, { status: 400, headers });
 
+  const categoryParam = q.get("category") ?? "ALL";
+  const category: CategoryParam = CATEGORY_BUCKETS.includes(categoryParam as CategoryParam) ? (categoryParam as CategoryParam) : "ALL";
+  const direction: "asc" | "desc" = q.get("direction") === "asc" ? "asc" : "desc";
+
   const etfRows = await prisma.$queryRawUnsafe<EtfHolderRow[]>(
     `WITH matched AS (
        SELECT h.etf_id, h.holding_name, h.weight, h.as_of_date, h.source, h.coupon_rate::text, h.maturity_date::text,
@@ -163,18 +178,20 @@ export async function GET(request: Request) {
          FROM holdings h
         WHERE h.asset_type = 'ETF' AND h.etf_id IS NOT NULL AND ${isCusip ? "h.cusip = $1" : "h.isin = $1"}
      )
-     SELECT m.etf_id, e.code, e.name, m.holding_name, m.weight::text AS weight, m.as_of_date::text, m.source, m.coupon_rate, m.maturity_date
+     SELECT m.etf_id, e.code, e.name, e.category, m.holding_name, m.weight::text AS weight, m.as_of_date::text, m.source, m.coupon_rate, m.maturity_date
        FROM matched m JOIN etfs e ON e.id = m.etf_id
       WHERE m.rn = 1 AND e.is_active
       ORDER BY m.weight DESC`,
     raw,
   );
 
-  const etfResults = etfRows.map((r) => ({
+  const etfResultsAll = etfRows.map((r) => ({
     etfId: r.etf_id, code: r.code, name: r.name, holdingName: r.holding_name,
     weightPct: Number(r.weight), asOfDate: r.as_of_date, source: r.source,
     matchMethod: "CODE" as const,
+    bucket: classifyEtfBucketJs(r.code, r.name, r.category),
   }));
+  const etfResults = applyCategoryAndSort(etfResultsAll, category, direction).map(({ bucket, ...rest }) => ({ ...rest, category: bucket }));
 
   // Derive the target bond's own issuer/coupon/maturity from whichever ETF-side row we just found
   // (they all describe the same CUSIP/ISIN, so any one row's own fields apply to all of them).
@@ -183,8 +200,8 @@ export async function GET(request: Request) {
   const targetCoupon = reference?.coupon_rate !== null && reference?.coupon_rate !== undefined ? Number(reference.coupon_rate) : null;
   const targetMaturity = reference?.maturity_date ?? null;
 
-  let fundResultsNamedParsed: Array<{ fundId: string; code: string | null; name: string; holdingName: string; weightPct: number; asOfDate: string | null; matchMethod: "NAME_PARSED" }> = [];
-  let fundResultsByIssuer: Array<{ fundId: string; code: string | null; name: string; holdingName: string; weightPct: number; asOfDate: string | null; matchMethod: "ISSUER" }> = [];
+  let fundResultsNamedParsed: Array<{ fundId: string; code: string | null; name: string; holdingName: string; weightPct: number; asOfDate: string | null; matchMethod: "NAME_PARSED"; bucket: AssetCategoryBucket }> = [];
+  let fundResultsByIssuer: Array<{ fundId: string; code: string | null; name: string; holdingName: string; weightPct: number; asOfDate: string | null; matchMethod: "ISSUER"; bucket: AssetCategoryBucket }> = [];
 
   if (targetIssuerKey) {
     // 2026-10-21（14點任務第10項）: 這條查詢原本完全沒有 WHERE 過濾 holding_name，等於每次搜尋
@@ -204,7 +221,7 @@ export async function GET(request: Request) {
           WHERE h.asset_type = 'FUND' AND h.fund_id IS NOT NULL AND h.source = 'MONEYDJ_PUBLIC_DISCLOSURE'
             AND h.holding_name ILIKE '%' || $1 || '%'
        )
-       SELECT l.fund_id, f.code, f.name, l.holding_name, l.weight::text AS weight, l.as_of_date::text
+       SELECT l.fund_id, f.code, f.name, f.category, l.holding_name, l.weight::text AS weight, l.as_of_date::text
          FROM latest l JOIN funds f ON f.id = l.fund_id
         WHERE l.rn = 1 AND f.is_active`,
       issuerFirstWord,
@@ -218,7 +235,7 @@ export async function GET(request: Request) {
       const issuerKey = normalizeIssuer(parsed.issuerRaw);
       if (!issuerKey || issuerKey !== targetIssuerKey) continue;
 
-      const base = { fundId: row.fund_id, code: row.code, name: row.name, holdingName: row.holding_name, weightPct: Number(row.weight), asOfDate: row.as_of_date };
+      const base = { fundId: row.fund_id, code: row.code, name: row.name, holdingName: row.holding_name, weightPct: Number(row.weight), asOfDate: row.as_of_date, bucket: classifyFundBucketJs(row.category) };
       const couponMatches = targetCoupon !== null && parsed.couponPct !== null && Math.abs(parsed.couponPct - targetCoupon) < 0.01;
       const maturityMatches = targetMaturity !== null && parsed.maturityDate !== null && parsed.maturityDate === targetMaturity;
 
@@ -230,17 +247,20 @@ export async function GET(request: Request) {
     }
   }
 
+  const namedParsedResults = applyCategoryAndSort(fundResultsNamedParsed, category, direction).map(({ bucket, ...rest }) => ({ ...rest, category: bucket }));
+  const byIssuerResults = applyCategoryAndSort(fundResultsByIssuer, category, direction).map(({ bucket, ...rest }) => ({ ...rest, category: bucket }));
+
   return Response.json({
     ok: true,
     query: { value: raw, matchedBy: isCusip ? "CUSIP" : "ISIN" },
-    total: etfResults.length + fundResultsNamedParsed.length + fundResultsByIssuer.length,
+    total: etfResults.length + namedParsedResults.length + byIssuerResults.length,
     generated_at: new Date().toISOString(),
     scopeNote:
-      "ETF 側用代碼（CUSIP/ISIN）精確比對。基金側（MoneyDJ）揭露的持股是純文字，沒有代碼可比對，改用解析出的發行機構／票面利率／到期日比對：三者都吻合視為同一檔債券（名稱解析比對），否則僅比對發行機構（依發行機構，可能涵蓋該發行人其他檔債券）。「名稱解析比對」目前可能結果偏少：ETF 側的票面利率/到期日是新增欄位，既有約 300 萬筆持股紀錄要等下次例行重新抓取才會回填，不是比對邏輯的問題。",
+      "ETF 側用代碼（CUSIP/ISIN）精確比對。基金側（MoneyDJ）揭露的持股是純文字，沒有代碼可比對，改用解析出的發行機構／票面利率／到期日比對：三者都吻合視為同一檔債券（名稱解析比對），否則僅比對發行機構（依發行機構，可能涵蓋該發行人其他檔債券）。「名稱解析比對」目前可能結果偏少：ETF 側的票面利率/到期日是新增欄位，既有約 300 萬筆持股紀錄要等下次例行重新抓取才會回填，不是比對邏輯的問題。目前只支援依商品類型篩選與依持股比重排序——這三組結果本身沒有績效/規模/配息率等指標。",
     results: {
       byCode: etfResults,
-      byNameParsed: fundResultsNamedParsed,
-      byIssuer: fundResultsByIssuer,
+      byNameParsed: namedParsedResults,
+      byIssuer: byIssuerResults,
     },
   }, { headers });
 }

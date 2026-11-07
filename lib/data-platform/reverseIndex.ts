@@ -116,12 +116,19 @@ export async function currentReverseHoldings(query: Query, input: { tickers: str
     SELECT p.* FROM reverse_current_positions p WHERE p.product_key = ANY($1::text[]) AND p.stock_id = ANY($2::text[])`,
     orderIds, selected.map((t: Target) => t.id)) : [];
   const products=rankProducts(matchRows);
-  const results=orderIds.map(id=>products.find(p=>p.id===id)).filter((p): p is NonNullable<typeof p> => Boolean(p));
+  const metaByKey = new Map(pageRows.map(r => [r.product_key, { bucket: r.bucket, metric: r.metric }]));
+  const results=orderIds
+    .map(id=>products.find(p=>p.id===id))
+    .filter((p): p is NonNullable<typeof p> => Boolean(p))
+    .map(p => ({ ...p, category: metaByKey.get(p.id)?.bucket ?? 'UNCLASSIFIED', metric: metaByKey.get(p.id)?.metric ?? null }));
 
   return {ok:true,total,page,limit,hasMore:page*limit<total,results,
     tickers:selected.map((t: Target)=>t.ticker),generated_at:new Date().toISOString(),
     etf_total_products:value.etf_total,fund_total_products:value.fund_total,
     unmatched_tickers:selected.filter((t: Target)=>!value.matched_ids.includes(t.id)).map((t: Target)=>t.ticker),
+    // results 保留這一頁真正的跨 ETF/基金排序順序；etfs/funds 是同一份資料各自過濾出來，方便
+    // 只想看單一類型的呼叫端，但「全部」畫面要用 results（不是把 etfs/funds 接起來，那樣會
+    // 把兩個子清單各自保序但互相交錯的順序弄丟）。
     etfs:results.filter(p=>p.type==='ETF'),funds:results.filter(p=>p.type==='基金'),
     metricUnavailableCount:filtered.filter(r=>r.metric===null).length,
     timing:{db_ms:Math.round((performance.now()-started)*100)/100}};
