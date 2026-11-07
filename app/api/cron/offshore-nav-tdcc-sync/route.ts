@@ -31,6 +31,7 @@ import { writeTdccNavBatch } from "@/lib/offshore-nav-sync/navWriter";
 import { loadMapping } from "@/lib/offshore-nav-sync/mapping";
 import { runOffshoreScaleSync } from "@/lib/offshore-scale-sync/writer";
 import { runOffshoreTwHoldingSync } from "@/lib/offshore-scale-sync/twHoldingWriter";
+import { runFundNavDisclosureSync } from "@/lib/fund-nav-disclosure/navDisclosureSync";
 
 export const runtime = "nodejs";
 // Raised from 60s this round: the 2026-10-15 10:31 UTC production run (first real run after this
@@ -151,6 +152,23 @@ export async function GET(request: Request) {
   let offshoreTwHoldingResult: Awaited<ReturnType<typeof runOffshoreTwHoldingSync>> | null = null;
   try { offshoreTwHoldingResult = await runOffshoreTwHoldingSync(); } catch (e: any) { offshoreTwHoldingResult = { ok: false, skipped: false, reason: String(e?.message ?? e) }; }
 
+  // 2026-11-07（使用者核准定案）：「淨值未公開」判斷結果併進這支既有排程，不新增cron entry。
+  // 候選=name-matched(candidateFunds)+code-matched(codeCandidateFunds)全部，「官方CSV確認有公開
+  // 淨值」=byName/byCode真的找得到這檔基金（不受filterNewerThanStored的「有沒有比較新」篩選
+  // 影響——CSV裡找得到值就是有公開，跟值有沒有變動是兩回事）。獨立開關
+  // FUND_NAV_DISCLOSURE_SYNC_WRITE，shadow模式預設不寫入；失敗不影響上面NAV同步的結果判定。
+  let navDisclosureResult: (Awaited<ReturnType<typeof runFundNavDisclosureSync>>) | { error: string } | null = null;
+  try {
+    const confirmedDisclosedIds = new Set<string>([
+      ...candidateFunds.filter((f) => byName.has(f.name)).map((f) => f.id),
+      ...codeCandidateFunds.filter((f) => byCode.has(f.code)).map((f) => f.id),
+    ]);
+    const allOffshoreCandidateIds = [...candidateFunds.map((f) => f.id), ...codeCandidateFunds.map((f) => f.id)];
+    navDisclosureResult = await runFundNavDisclosureSync(query, allOffshoreCandidateIds, confirmedDisclosedIds);
+  } catch (e: any) {
+    navDisclosureResult = { error: String(e?.message ?? e) };
+  }
+
   return Response.json({
     ok: true, job: JOB, runId, writeEnabled,
     rawCandidateCount: rawCandidateFunds.length, yahooMappingExcludedCount: rawCandidateFunds.length - candidateFunds.length,
@@ -159,5 +177,6 @@ export async function GET(request: Request) {
     written: result.written, writeErrorCount: result.writeErrorCount,
     offshoreScale: offshoreScaleResult,
     offshoreTwHolding: offshoreTwHoldingResult,
+    navDisclosureSync: navDisclosureResult,
   });
 }

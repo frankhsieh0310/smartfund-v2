@@ -7,9 +7,7 @@ import { buildProvenance } from "./provenance.ts";
 import { isoOrNull, numberOrNull, type CanonicalIdentity, type HistoryQuery, type ListQuery, type Provenance, type ResponseMeta, type ServiceResponse, type SummaryMetrics } from "./types.ts";
 import { mapFundMainCategory, type FundMainCategory } from "./fundCategoryMapping.ts";
 import { getCoreUniverseFundIds } from "../../tw-purchasable/coreUniverseFilter.ts";
-import { getNonRepresentativeShareClassFundIds, getShareClassCountMap } from "./fundShareClassGrouping.ts";
-import { getFundIdsDuplicateOfListedEtf } from "./fundDuplicateOfEtf.ts";
-import { getFundIdsSupersededByNewCode } from "./fundSupersededByCode.ts";
+import { getShareClassCountMap } from "./fundShareClassGrouping.ts";
 import { calculateVolatilityAndSharpe, RISK_CALC_METHOD_LABEL, RISK_FREE_RATE_SOURCES } from "./riskCalc.ts";
 import { getNavDisclosureOverrides, resolveNavDisclosed } from "./navDisclosure.ts";
 
@@ -98,45 +96,80 @@ export interface FundListItem {
 // they're never going to get synced). NOT applied to the DB -- display layer only.
 const STALE_UNSYNCED_OFFSHORE_FUND_DAYS = 14;
 
+interface FundListRawRow {
+  id: string; isin: string | null; code: string | null; name: string; company: string; domicile: string | null;
+  currency: string; category: string | null; region: string | null; riskLevel: number | null; updatedAt: Date;
+  latestNav: unknown; dividendYieldA: unknown; return1y: unknown; dataProvider: string | null; dataSource: string | null;
+  latestNavDate: Date | null; lastNavSource: string | null;
+}
+
 export async function getFundList(query: FundListQuery = {}): Promise<ServiceResponse<FundListItem[]>> {
   const { page, pageSize, skip } = normalizePagination(query.page, query.pageSize);
   const term = query.query?.trim();
-  const direction: Prisma.SortOrder = query.direction === "desc" ? "desc" : "asc";
-  // 2026-10-19（使用者商品範圍規則，最高層）: 只顯示「台灣買得到」的核心母體基金（SITCA 國內
-  // 基金＋TDCC 3-2 境內核備境外基金）。
-  const [coreFundIds, nonRepresentativeShareClassFundIds, duplicateOfEtfFundIds, supersededFundIds] = await Promise.all([
-    getCoreUniverseFundIds(),
-    getNonRepresentativeShareClassFundIds(),
-    getFundIdsDuplicateOfListedEtf(),
-    getFundIdsSupersededByNewCode(),
-  ]);
-  const where = {
-    isActive: true,
-    // 2026-10-30（使用者核准）: 名稱帶ETF但實際已經由etfs表某個掛牌代號代表的重複紀錄，只在
-    // 這個列表查詢排除，不碰isActive/classification，見fundDuplicateOfEtf.ts的說明。
-    // 2026-10-31（使用者核准）: 舊的無字尾SITCA代碼被字母字尾新代碼取代後，同一個模式排除，
-    // 見fundSupersededByCode.ts的說明。
-    id: { in: Array.from(coreFundIds), notIn: [...nonRepresentativeShareClassFundIds, ...duplicateOfEtfFundIds, ...supersededFundIds] },
-    NOT: {
-      dataProvider: "yahoo",
-      lastNavSource: null,
-      latestNavDate: { lt: new Date(Date.now() - STALE_UNSYNCED_OFFSHORE_FUND_DAYS * 86_400_000) },
-    },
-    ...(query.company ? { company: query.company } : {}),
-    ...(query.currency ? { currency: query.currency } : {}),
-    ...(query.category ? { category: query.category } : {}),
-    ...(query.riskLevel ? { riskLevel: query.riskLevel } : {}),
-    ...(term ? { OR: [{ code: { contains: term, mode: "insensitive" as const } }, { isin: { contains: term, mode: "insensitive" as const } }, { name: { contains: term, mode: "insensitive" as const } }, { company: { contains: term, mode: "insensitive" as const } }] } : {}),
-  };
-  const orderBy = query.sort === "latestNavDate"
-    ? [{ latestNavDate: { sort: direction, nulls: "last" as const } }, { id: "asc" as const }]
+  const directionSql = query.direction === "desc" ? Prisma.sql`DESC` : Prisma.sql`ASC`;
+  const staleOffshoreCutoff = new Date(Date.now() - STALE_UNSYNCED_OFFSHORE_FUND_DAYS * 86_400_000);
+  // 2026-11-07（使用者核准定案，正式網站 /funds 與 /search?type=FUND 讀不到資料的根因修正）:
+  // 原本把核心母體（~9850筆APPROVED基金id）跟三組排除清單整包轉成JS陣列丟進Prisma的
+  // id:{in:...,notIn:...}——隨著母體跟排除清單一起成長，單一查詢的bind參數數量已經超過
+  // Postgres/pgbouncer的32767上限（VERIFIED production實測32905），導致整頁讀不到資料
+  // （「正式資料暫時無法讀取」）。改成全部用子查詢/JOIN表達，bind參數數量固定、跟母體大小
+  // 無關：
+  //   - 核心母體：id IN (SELECT asset_id FROM tw_purchasable_classification ...)（取代
+  //     getCoreUniverseFundIds()的JS Set + id:{in:[...]}）
+  //   - 非代表級別：id NOT IN (SELECT fsc.fund_id FROM fund_share_classes fsc JOIN fund_master
+  //     ...)（取代getNonRepresentativeShareClassFundIds()，見fundShareClassGrouping.ts同一份
+  //     SQL）
+  //   - ETF重複/舊代碼被取代：直接查 fund_duplicate_of_etf / fund_superseded_by_code 兩張表
+  //     （VERIFIED production 兩張表都已存在，不像原本getFundIdsDuplicateOfListedEtf()/
+  //     getFundIdsSupersededByNewCode()需要try/catch容忍表還沒建；這兩張表萬一真的被砍掉，
+  //     這條查詢會直接報錯而不是安靜略過——跟「整頁讀不到資料」比起來，寧可用明確錯誤曝露問題）。
+  const filters: Prisma.Sql[] = [
+    Prisma.sql`f.is_active = true`,
+    Prisma.sql`f.id IN (SELECT asset_id FROM tw_purchasable_classification WHERE asset_type = 'FUND' AND status = 'APPROVED')`,
+    Prisma.sql`f.id NOT IN (SELECT fsc.fund_id FROM fund_share_classes fsc JOIN fund_master fm ON fm.id = fsc.master_fund_id WHERE fsc.fund_id <> fm.representative_fund_id)`,
+    Prisma.sql`f.id NOT IN (SELECT fund_id FROM fund_duplicate_of_etf)`,
+    Prisma.sql`f.id NOT IN (SELECT old_fund_id FROM fund_superseded_by_code)`,
+    Prisma.sql`NOT (f.data_provider = 'yahoo' AND f.last_nav_source IS NULL AND f.latest_nav_date < ${staleOffshoreCutoff})`,
+  ];
+  if (query.company) filters.push(Prisma.sql`f.company = ${query.company}`);
+  if (query.currency) filters.push(Prisma.sql`f.currency = ${query.currency}`);
+  if (query.category) filters.push(Prisma.sql`f.category = ${query.category}`);
+  if (query.riskLevel) filters.push(Prisma.sql`f.risk_level = ${query.riskLevel}`);
+  if (term) filters.push(Prisma.sql`(f.code ILIKE ${`%${term}%`} OR f.isin ILIKE ${`%${term}%`} OR f.name ILIKE ${`%${term}%`} OR f.company ILIKE ${`%${term}%`})`);
+  const whereSql = Prisma.join(filters, " AND ");
+  // 2026-11-07（使用者核准定案，「淨值未公開」排序）: 依績效排序時，淨值未公開的基金（含從未
+  // 申報過）排到最後——COALESCE(f.nav_disclosed, ...)：nav_disclosed有官方核實結果（cron跑過）
+  // 就直接用，還沒核實（NULL）就用跟navDisclosure.ts同一套30天新鮮度估算退回判斷，兩邊常數
+  // 務必保持一致（NAV_DISCLOSURE_FALLBACK_STALE_DAYS = 30）。
+  // funds.nav_disclosed 要等使用者套用migration才會存在——performance1Y排序優先用它排最後，
+  // 欄位還不存在時retry一次不帶這段COALESCE的版本，不讓整個列表查詢因為一欄還沒建好而500。
+  const performanceOrderWithDisclosure = Prisma.sql`COALESCE(f.nav_disclosed, f.latest_nav_date IS NOT NULL AND f.latest_nav_date >= CURRENT_DATE - 30) DESC, f.return_1y ${directionSql} NULLS LAST, f.id ASC`;
+  const performanceOrderFallback = Prisma.sql`f.return_1y ${directionSql} NULLS LAST, f.id ASC`;
+  const buildOrderBy = (withDisclosure: boolean) => query.sort === "latestNavDate"
+    ? Prisma.sql`f.latest_nav_date ${directionSql} NULLS LAST, f.id ASC`
     : query.sort === "performance1Y"
-      ? [{ return1y: { sort: direction, nulls: "last" as const } }, { id: "asc" as const }]
-      : [{ name: direction }, { id: "asc" as const }];
-  const [total, rows] = await prisma.$transaction([
-    prisma.fund.count({ where }),
-    prisma.fund.findMany({ where, skip, take: pageSize, orderBy }),
-  ]);
+      ? (withDisclosure ? performanceOrderWithDisclosure : performanceOrderFallback)
+      : Prisma.sql`f.name ${directionSql}, f.id ASC`;
+  const selectRows = (orderBySql: Prisma.Sql) => prisma.$queryRaw<FundListRawRow[]>(Prisma.sql`
+      SELECT f.id, f.isin, f.code, f.name, f.company, f.domicile, f.currency, f.category, f.region,
+             f.risk_level AS "riskLevel", f.updated_at AS "updatedAt", f.latest_nav AS "latestNav",
+             f.dividend_yield_a AS "dividendYieldA", f.return_1y AS "return1y",
+             f.data_provider AS "dataProvider", f.data_source AS "dataSource",
+             f.latest_nav_date AS "latestNavDate", f.last_nav_source AS "lastNavSource"
+        FROM funds f
+       WHERE ${whereSql}
+       ORDER BY ${orderBySql}
+       LIMIT ${pageSize} OFFSET ${skip}
+    `);
+  const countPromise = prisma.$queryRaw<Array<{ count: bigint }>>(Prisma.sql`SELECT COUNT(*)::bigint AS count FROM funds f WHERE ${whereSql}`);
+  let rows: FundListRawRow[];
+  let totalRows: Array<{ count: bigint }>;
+  try {
+    [totalRows, rows] = await Promise.all([countPromise, selectRows(buildOrderBy(true))]);
+  } catch {
+    [totalRows, rows] = await Promise.all([countPromise, selectRows(buildOrderBy(false))]);
+  }
+  const total = Number(totalRows[0]?.count ?? 0);
   const duplicateNames = rows.length
     ? new Set(
         (

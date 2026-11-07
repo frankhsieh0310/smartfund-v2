@@ -30,6 +30,7 @@ import { runFundclearAumGapFill } from "@/lib/sitca-nav-sync/fundclearAumGapFill
 import { runFundCompanyBackfill } from "@/lib/sitca-nav-sync/companyBackfillWriter";
 import { runNomuraProspectusFeeSync } from "@/lib/cloud-ingestion/fundProspectusFeeWriter";
 import { runFundclearManagerSync } from "@/lib/fundclear-onshore/managerSync";
+import { runFundNavDisclosureSync } from "@/lib/fund-nav-disclosure/navDisclosureSync";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -279,6 +280,22 @@ export async function GET(request: Request) {
       }
     }
 
+    // 2026-11-07（使用者核准定案）：「淨值未公開」判斷結果併進這支既有的hourly cron，不新增
+    // cron entry。候選=這次查到的候選基金全部（fundRows），「官方CSV確認有公開淨值」=matched
+    // （不受currency gate影響——currency不符代表我方funds.currency資料有誤，不代表官方沒公開）。
+    // 獨立開關 FUND_NAV_DISCLOSURE_SYNC_WRITE，shadow模式預設不寫入；失敗不影響上面NAV同步的
+    // 結果判定。
+    let navDisclosureResult: (Awaited<ReturnType<typeof runFundNavDisclosureSync>> & { error?: string }) | { error: string } | null = null;
+    try {
+      navDisclosureResult = await runFundNavDisclosureSync(
+        writerQuery,
+        fundRows.map((f) => f.id),
+        new Set(matched.map((m) => m.fundId)),
+      );
+    } catch (e: any) {
+      navDisclosureResult = { error: String(e?.message ?? e) };
+    }
+
     const matchedByCode = matched.filter((m) => m.matchedBy === "CODE").length;
     const matchedByName = matched.filter((m) => m.matchedBy === "NAME").length;
 
@@ -311,6 +328,7 @@ export async function GET(request: Request) {
         company_backfill: companyBackfillResult,
         nomura_prospectus_fee: nomuraFeeResult,
         fundclear_manager_sync: managerSyncResult,
+        nav_disclosure_sync: navDisclosureResult,
       },
     });
 
@@ -325,6 +343,7 @@ export async function GET(request: Request) {
       companyBackfill: companyBackfillResult,
       nomuraProspectusFee: nomuraFeeResult,
       fundclearManagerSync: managerSyncResult,
+      navDisclosureSync: navDisclosureResult,
     });
   } catch (e: any) {
     await finishRun(runId, JOB, "SITCA_FSC_OFFICIAL_DAILY_NAV_CSV", startedMs, {
