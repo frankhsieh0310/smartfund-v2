@@ -129,6 +129,11 @@ async function resolveDetail(assetId: string, assetType: AssetType, period: Peri
   // endpoint 之前完全沒有帶出 coverage，只給扁平化的數值欄位，所以 App 那邊永遠看不到這個區分。
   // 純附加欄位，不改其他既有欄位格式。
   const navPending = data.nav.coverage === 'SOURCE_PENDING';
+  // 2026-11-07（使用者核准定案，「淨值未公開」）: 跟網站app/funds/[id]/page.tsx同一個判斷結果
+  // （data.nav.coverage === 'NAV_NOT_DISCLOSED'，見fundService.ts/navDisclosure.ts），這裡只是
+  // 原樣轉傳成App端扁平欄位的慣例，給App之後要顯示「淨值未公開」文字時用；純附加欄位（舊版App
+  // 直接忽略不認得的欄位，不影響現有行為）。navPending（上面，從未申報過）是這個的子集。
+  const navDisclosed = data.nav.coverage !== 'NAV_NOT_DISCLOSED';
   // 2026-10-31（使用者核准，淨值過期標示）: App 端跟網頁用同一道7天門檻，純附加欄位，不改其他
   // 既有欄位格式（跟上面的 navPending 同一慣例）。
   const navAgeDays = data.nav.data.date ? Math.floor((Date.now() - Date.parse(data.nav.data.date)) / 86_400_000) : null;
@@ -141,7 +146,7 @@ async function resolveDetail(assetId: string, assetType: AssetType, period: Peri
   // 2026-10-31（VERIFIED，自己造成的bug修正，跟網站app/funds/[id]/page.tsx同一個bug）:
   // year_month實際存的是"YYYY-MM"（含dash），不是"YYYYMM"。
   const ymZh = ym && /^\d{4}-\d{2}$/.test(ym) ? `${ym.slice(0, 4)} 年 ${ym.slice(5, 7)} 月` : null;
-  return { data: { identity: data.identity, metrics: { priceOrNav: latestNav, change, changePercent, currency: data.nav.data.currency, asOfDate: data.nav.data.date, navPending, navDelayed, navAgeDays, performance1M: perf.return1M, performance3M: perf.return3M, performance1Y: perf.return1Y, performanceAsOfDate: data.performance.provenance.asOfDate, dividendYield: data.dividendYield }, liteMetrics: [{ key: 'company', label: 'Company', value: data.company }, { key: 'category', label: 'Category', value: data.category }, { key: 'fundCategory', label: 'Fund Category', value: data.fundCategory }, { key: 'fundSubcategory', label: 'Fund Subcategory', value: data.fundSubcategory }, { key: 'assetClass', label: 'Asset Class', value: data.assetClass }, { key: 'fee', label: 'Expense / Fee', value: data.feesTerms.data[0]?.ter ?? data.feesTerms.data[0]?.ongoingCharges ?? data.feesTerms.data[0]?.managementFee ?? null, unit: '%' }, { key: 'return6M', label: '6M Return', value: perf.return6M, unit: '%' }, { key: 'returnYtd', label: 'YTD Return', value: perf.returnYtd, unit: '%' }, { key: 'return3YAnnualized', label: '3Y Return (annualized)', value: perf.return3YAnnualized, unit: '%' }, { key: 'return5YAnnualized', label: '5Y Return (annualized)', value: perf.return5YAnnualized, unit: '%' }, ...(ymZh ? [
+  return { data: { identity: data.identity, metrics: { priceOrNav: latestNav, change, changePercent, currency: data.nav.data.currency, asOfDate: data.nav.data.date, navPending, navDisclosed, navDelayed, navAgeDays, performance1M: perf.return1M, performance3M: perf.return3M, performance1Y: perf.return1Y, performanceAsOfDate: data.performance.provenance.asOfDate, dividendYield: data.dividendYield }, liteMetrics: [{ key: 'company', label: 'Company', value: data.company }, { key: 'category', label: 'Category', value: data.category }, { key: 'fundCategory', label: 'Fund Category', value: data.fundCategory }, { key: 'fundSubcategory', label: 'Fund Subcategory', value: data.fundSubcategory }, { key: 'assetClass', label: 'Asset Class', value: data.assetClass }, { key: 'fee', label: 'Expense / Fee', value: data.feesTerms.data[0]?.ter ?? data.feesTerms.data[0]?.ongoingCharges ?? data.feesTerms.data[0]?.managementFee ?? null, unit: '%' }, { key: 'return6M', label: '6M Return', value: perf.return6M, unit: '%' }, { key: 'returnYtd', label: 'YTD Return', value: perf.returnYtd, unit: '%' }, { key: 'return3YAnnualized', label: '3Y Return (annualized)', value: perf.return3YAnnualized, unit: '%' }, { key: 'return5YAnnualized', label: '5Y Return (annualized)', value: perf.return5YAnnualized, unit: '%' }, ...(ymZh ? [
     { key: 'sitcaAum', label: `基金規模（${ymZh}，來源：SITCA）`, value: monthlyDisclosure.aumTwd, unit: '元' },
     { key: 'sitcaHolders', label: `受益人數（${ymZh}，來源：SITCA）`, value: monthlyDisclosure.totalHolders },
     { key: 'sitcaSubscription', label: `本月申購總金額（${ymZh}，來源：SITCA）`, value: monthlyDisclosure.subscriptionTwd, unit: '元' },

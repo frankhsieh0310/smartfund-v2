@@ -11,6 +11,7 @@ import { getNonRepresentativeShareClassFundIds, getShareClassCountMap } from "./
 import { getFundIdsDuplicateOfListedEtf } from "./fundDuplicateOfEtf.ts";
 import { getFundIdsSupersededByNewCode } from "./fundSupersededByCode.ts";
 import { calculateVolatilityAndSharpe, RISK_CALC_METHOD_LABEL, RISK_FREE_RATE_SOURCES } from "./riskCalc.ts";
+import { getNavDisclosureOverrides, resolveNavDisclosed } from "./navDisclosure.ts";
 
 // 2026-10-16: 925 distinct fund names (1,887 rows) share a display name with at least one other
 // fund row -- VERIFIED live these are overwhelmingly genuinely different, real, purchasable share
@@ -28,7 +29,11 @@ function disambiguatedDisplayName(name: string, dataSource: string | null, dupli
 }
 
 const fundIdentity = (row: { id: string; code: string | null; isin: string | null; name: string; currency: string; domicile: string | null; region: string | null; dataSource?: string | null }, duplicateNames: ReadonlySet<string> = new Set()): CanonicalIdentity => ({ assetType: "FUND", id: row.id, symbol: row.code ?? row.isin ?? row.id, name: row.name, displayName: disambiguatedDisplayName(row.name, row.dataSource ?? null, duplicateNames), currency: row.currency, market: row.domicile, country: row.region ?? row.domicile });
-const fundMetrics = (row: { latestNav: unknown; currency: string; latestNavDate: Date | null; return1y: unknown; dividendYieldA?: unknown }): SummaryMetrics => ({ priceOrNav: numberOrNull(row.latestNav), change: null, changePercent: null, currency: row.currency, asOfDate: isoOrNull(row.latestNavDate), performance1M: null, performance3M: null, performance1Y: numberOrNull(row.return1y), dividendYield: numberOrNull(row.dividendYieldA) });
+// 2026-11-07（使用者核准定案，「淨值未公開」）: navDisclosed===false時，淨值跟績效一律回null
+// （絕不回0或舊數字），由前端照既有「資料不足」的no-value排版顯示「淨值未公開」文字；asOfDate
+// 仍然回最後一次有淨值的日期，給前端在文字旁邊附註用。判斷邏輯見navDisclosure.ts，這裡只套用
+// 結果，不重算。
+const fundMetrics = (row: { latestNav: unknown; currency: string; latestNavDate: Date | null; return1y: unknown; dividendYieldA?: unknown }, navDisclosed: boolean): SummaryMetrics => ({ priceOrNav: navDisclosed ? numberOrNull(row.latestNav) : null, change: null, changePercent: null, currency: row.currency, asOfDate: isoOrNull(row.latestNavDate), performance1M: null, performance3M: null, performance1Y: navDisclosed ? numberOrNull(row.return1y) : null, dividendYield: navDisclosed ? numberOrNull(row.dividendYieldA) : null });
 
 // 2026-11-02（使用者核准）: 持股資料（最新持倉）超過3個月沒更新時附過期提示，附資料月份——算在
 // 共用的service層，網站的app/funds/[id]/page.tsx跟App（/api/mobile/...）都讀同一個欄位，不各自
@@ -70,6 +75,13 @@ export interface FundListItem {
   // UNAVAILABLE/freshnessStatus as before). Only this list/table surfaces the distinction via this
   // one flag; FUND-only, does not touch SummaryMetrics (shared with ETF/FX/etc).
   navPending: boolean;
+  // 2026-11-07（使用者核准定案，「淨值未公開」）: navPending（上面，從未申報過）的超集——官方來源
+  // 目前「-」或缺漏、且fund_history近30天沒有新淨值的基金（包含navPending===true的情況，以及
+  // 曾經申報過、現在被官方暫停公開的I類型等法人級別）全部算false。false時metrics.priceOrNav/
+  // performance1Y/dividendYield一律是null（不是0、不是舊數字），前端照這個旗標顯示「淨值未公開」
+  // 文字，依績效排序時排在最後。判斷邏輯見navDisclosure.ts，全站只有這一處共用判斷，不給每個
+  // 畫面各自重算。
+  navDisclosed: boolean;
   // 2026-10-21（14點任務第2項）: 同一產品的其他級別數量（含自己），僅對代表級別>1 時才有意義；
   // 沒有分組記錄的基金固定是 1。給前端顯示「共 N 個級別」徽章用。
   shareClassCount: number;
@@ -140,11 +152,12 @@ export async function getFundList(query: FundListQuery = {}): Promise<ServiceRes
   const readiness = rows.length ? await prisma.$queryRaw<Array<{id:string;history_ready:boolean}>>(Prisma.sql`SELECT f.id,EXISTS(SELECT 1 FROM fund_history h WHERE h.fund_id=f.id OFFSET 19 LIMIT 1) history_ready FROM funds f WHERE f.id IN (${Prisma.join(rows.map(row=>row.id))})`) : [];
   const readyByFund = new Map(readiness.map(row=>[row.id,row.history_ready]));
   const shareClassCountMap = await getShareClassCountMap();
+  const navDisclosureOverrides = await getNavDisclosureOverrides(rows.map((row) => row.id));
   const latest = rows.reduce<Date | null>((value, row) => !value || (row.latestNavDate && row.latestNavDate > value) ? row.latestNavDate : value, null);
   const updated = rows.reduce<Date | null>((value, row) => !value || row.updatedAt > value ? row.updatedAt : value, null);
   const source = rows.length === 1 ? rows[0].lastNavSource ?? rows[0].dataSource ?? rows[0].dataProvider : "MULTIPLE_VERIFIED_PROVIDERS";
   const provenance = buildProvenance({ source, asOfDate: latest, lastUpdated: updated });
-  return { data: rows.map((row) => ({ identity: fundIdentity(row, duplicateNames), isin: row.isin, metrics: fundMetrics(row), company: row.company, category: row.category, fundCategory: mapFundMainCategory(row.category), fundSubcategory: row.category, riskLevel: row.riskLevel, freshnessStatus: freshnessStatus(row.latestNavDate, "PUBLICATION_AWARE"), publicReady: row.latestNav != null && row.latestNavDate != null && readyByFund.get(row.id) === true && !["STALE","UNKNOWN","UNAVAILABLE"].includes(freshnessStatus(row.latestNavDate, "PUBLICATION_AWARE")), source: row.lastNavSource ?? row.dataSource ?? row.dataProvider, navPending: row.latestNav == null && row.latestNavDate == null, shareClassCount: shareClassCountMap.get(row.id) ?? 1 })), meta: { asOfDate: provenance.asOfDate, lastUpdated: provenance.lastUpdated, freshnessStatus: freshnessStatus(latest, "PUBLICATION_AWARE"), source, provenance, coverageStatus: "PARTIAL_CURRENT" }, pagination: paginationMeta(page, pageSize, total), error: null };
+  return { data: rows.map((row) => { const navDisclosed = resolveNavDisclosed(row.id, row.latestNavDate, navDisclosureOverrides); return { identity: fundIdentity(row, duplicateNames), isin: row.isin, metrics: fundMetrics(row, navDisclosed), company: row.company, category: row.category, fundCategory: mapFundMainCategory(row.category), fundSubcategory: row.category, riskLevel: row.riskLevel, freshnessStatus: freshnessStatus(row.latestNavDate, "PUBLICATION_AWARE"), publicReady: row.latestNav != null && row.latestNavDate != null && readyByFund.get(row.id) === true && !["STALE","UNKNOWN","UNAVAILABLE"].includes(freshnessStatus(row.latestNavDate, "PUBLICATION_AWARE")), source: row.lastNavSource ?? row.dataSource ?? row.dataProvider, navPending: row.latestNav == null && row.latestNavDate == null, navDisclosed, shareClassCount: shareClassCountMap.get(row.id) ?? 1 }; }), meta: { asOfDate: provenance.asOfDate, lastUpdated: provenance.lastUpdated, freshnessStatus: freshnessStatus(latest, "PUBLICATION_AWARE"), source, provenance, coverageStatus: "PARTIAL_CURRENT" }, pagination: paginationMeta(page, pageSize, total), error: null };
 }
 
 export async function getFundFilterOptions(): Promise<{ companies: string[]; currencies: string[]; categories: string[]; riskLevels: number[] }> {
@@ -165,7 +178,7 @@ export async function getFundFilterOptions(): Promise<{ companies: string[]; cur
 export const searchFunds = (query: string, options: Omit<ListQuery, "query"> = {}) => getFundList({ ...options, query });
 
 export type FundDetailRange = "1M" | "3M" | "6M" | "1Y" | "3Y" | "5Y" | "10Y" | "MAX";
-export type FundSectionCoverage = "AVAILABLE" | "PARTIAL" | "UNAVAILABLE" | "SOURCE_PENDING";
+export type FundSectionCoverage = "AVAILABLE" | "PARTIAL" | "UNAVAILABLE" | "SOURCE_PENDING" | "NAV_NOT_DISCLOSED";
 export const FUND_DETAIL_LIMITS = { history: 240, shareClasses: 20, riskMetrics: 20, classifications: 20, holdings: 20, documents: 20 } as const;
 
 export interface FundSection<T> {
@@ -402,6 +415,7 @@ export async function getFundDetail(identifier: string, relationLimit = 20, rang
     : [];
   const source = row.lastNavSource ?? row.dataSource ?? row.dataProvider;
   const provenance = buildProvenance({ source, sourceRecordId: row.isin, asOfDate: row.latestNavDate, lastUpdated: row.updatedAt });
+  const navDisclosed = resolveNavDisclosed(row.id, row.latestNavDate, await getNavDisclosureOverrides([row.id]));
   const latestHistory = historyRows[0];
   const historyProvenance = buildProvenance({ source, sourceRecordId: row.id, asOfDate: latestHistory?.date, lastUpdated: latestHistory?.createdAt });
   const latestReturns = performance ?? latestHistory;
@@ -472,9 +486,12 @@ export async function getFundDetail(identifier: string, relationLimit = 20, rang
     // bare dash that reads the same as any other missing-data case. A fund that reported before and
     // then went stale (latestNavDate is set, just old) is a different, already-handled case and
     // stays UNAVAILABLE here -- distinguishing the two is the whole point of this fix.
-    nav: { coverage: row.latestNav !== null ? "AVAILABLE" : row.latestNavDate === null ? "SOURCE_PENDING" : "UNAVAILABLE", data: { value: numberOrNull(row.latestNav), currency: row.currency, date: isoOrNull(row.latestNavDate) }, provenance },
+    // 2026-11-07（使用者核准定案，「淨值未公開」）: navDisclosed===false時一律回NAV_NOT_DISCLOSED
+    // 跟null（絕不顯示舊的快取數字或0），取代原本把latestNav當成「現在的值」直接秀出來的作法——
+    // date仍然填row.latestNavDate（最後一次有淨值的日期），前端在「淨值未公開」文字旁邊附註用。
+    nav: { coverage: !navDisclosed ? "NAV_NOT_DISCLOSED" : row.latestNav !== null ? "AVAILABLE" : row.latestNavDate === null ? "SOURCE_PENDING" : "UNAVAILABLE", data: { value: navDisclosed ? numberOrNull(row.latestNav) : null, currency: row.currency, date: isoOrNull(row.latestNavDate) }, provenance },
     history: { coverage: sectionCoverage(historyRows.length, historyRows.length < 2), range, maxPoints: FUND_DETAIL_LIMITS.history, data: sampledHistory.map((item) => ({ date: item.date.toISOString(), nav: numberOrNull(item.nav) })), provenance: historyProvenance },
-    performance: { coverage: latestReturns && [latestReturns.return1m, latestReturns.return3m, latestReturns.return6m, latestReturns.returnYtd, latestReturns.return1y, latestReturns.return3y, latestReturns.return5y].some((value) => value !== null) ? "AVAILABLE" : "UNAVAILABLE", data: { return1M: numberOrNull(latestReturns?.return1m), return3M: numberOrNull(latestReturns?.return3m), return6M: numberOrNull(latestReturns?.return6m), returnYtd: numberOrNull(latestReturns?.returnYtd), return1Y: numberOrNull(latestReturns?.return1y), return3YAnnualized: numberOrNull(latestReturns?.return3y), return5YAnnualized: numberOrNull(latestReturns?.return5y), semantics: "NAV_RETURN" }, provenance: performanceProvenance },
+    performance: { coverage: !navDisclosed ? "NAV_NOT_DISCLOSED" : latestReturns && [latestReturns.return1m, latestReturns.return3m, latestReturns.return6m, latestReturns.returnYtd, latestReturns.return1y, latestReturns.return3y, latestReturns.return5y].some((value) => value !== null) ? "AVAILABLE" : "UNAVAILABLE", data: navDisclosed ? { return1M: numberOrNull(latestReturns?.return1m), return3M: numberOrNull(latestReturns?.return3m), return6M: numberOrNull(latestReturns?.return6m), returnYtd: numberOrNull(latestReturns?.returnYtd), return1Y: numberOrNull(latestReturns?.return1y), return3YAnnualized: numberOrNull(latestReturns?.return3y), return5YAnnualized: numberOrNull(latestReturns?.return5y), semantics: "NAV_RETURN" } : { return1M: null, return3M: null, return6M: null, returnYtd: null, return1Y: null, return3YAnnualized: null, return5YAnnualized: null, semantics: "NAV_RETURN" }, provenance: performanceProvenance },
     // 2026-10-29（VERIFIED，順手修正）: 原本item.asOfDate.toISOString()假設一定有日期，但
     // fund_risk_metrics裡sharpe_3y/std_dev_3y這批Yahoo一次性回填的資料as_of_date全部是null，
     // 呼叫.toISOString()會直接丟錯誤——目前核心母體基金剛好沒有命中這個組合（抽查0筆），所以

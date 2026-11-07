@@ -23,6 +23,13 @@ import { getCoreUniverseFundIds } from "@/lib/tw-purchasable/coreUniverseFilter"
 // getCoreUniverseFundIds() 過濾。
 const CORE_ETF_FILTER_SQL = `AND id IN (SELECT asset_id FROM tw_purchasable_classification WHERE asset_type = 'ETF' AND status = 'APPROVED')`;
 const CORE_FUND_FILTER_SQL = `AND f.id IN (SELECT asset_id FROM tw_purchasable_classification WHERE asset_type = 'FUND' AND status = 'APPROVED')`;
+// 2026-11-07（使用者核准定案，「淨值未公開」）: 排行榜是「挑出表現最好/最差」的名次，不是完整
+// 清單——淨值未公開（含從未申報過）的級別在這裡直接排除在排名之外，不佔名次、不顯示舊快取的
+// NAV/績效數字（跟fundService.ts/navDisclosure.ts同一套30天新鮮度判斷，這裡用latest_nav_date
+// 本身，不查官方CSV，理由同navDisclosure.ts：這批資料本輪已逐一核對過官方來源，全部是官方未
+// 公開）。跟詳情頁/清單頁「照常顯示、標示淨值未公開」的處理不同——這裡是排行榜專屬的簡化，使用者
+// 若要改成「照常顯示、排最後」再回來改這個SQL filter。
+const NAV_DISCLOSED_FILTER_SQL = `AND f.latest_nav_date IS NOT NULL AND f.latest_nav_date >= CURRENT_DATE - INTERVAL '30 days'`;
 
 const headers = { "Access-Control-Allow-Origin": "*", "Cache-Control": "no-store" };
 const ZH = "[一-鿿]";
@@ -262,7 +269,7 @@ export async function GET(request: Request) {
              JOIN latest_metric lm ON lm.fund_id = f.id
              LEFT JOIN fund_share_classes sc ON sc.fund_id = f.id
              LEFT JOIN fund_master fm ON fm.id = sc.master_fund_id
-            WHERE f.is_active = true AND f.name ~ $3 ${fundCategoryClauseAt(5)} ${CORE_FUND_FILTER_SQL}
+            WHERE f.is_active = true AND f.name ~ $3 ${fundCategoryClauseAt(5)} ${CORE_FUND_FILTER_SQL} ${NAV_DISCLOSED_FILTER_SQL}
          )
          SELECT id, code, name, value::text AS value, latest_nav::text AS nav, latest_nav_date::text AS nav_date,
                 COUNT(*) OVER ()::text AS total
@@ -304,7 +311,7 @@ export async function GET(request: Request) {
            JOIN latest_perf ON latest_perf.fund_id = f.id
            LEFT JOIN fund_share_classes sc ON sc.fund_id = f.id
            LEFT JOIN fund_master fm ON fm.id = sc.master_fund_id
-          WHERE f.is_active = true AND latest_perf.${column} IS NOT NULL AND f.name ~ $3 ${fundCategoryClauseAt(4)} ${CORE_FUND_FILTER_SQL}
+          WHERE f.is_active = true AND latest_perf.${column} IS NOT NULL AND f.name ~ $3 ${fundCategoryClauseAt(4)} ${CORE_FUND_FILTER_SQL} ${NAV_DISCLOSED_FILTER_SQL}
        )
        SELECT id, code, name, value::text AS value, latest_nav::text AS nav, latest_nav_date::text AS nav_date, perf_date::text AS perf_date,
               COUNT(*) OVER ()::text AS total
