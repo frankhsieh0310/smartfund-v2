@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { COMMODITY_ETF_MAPPING, COMMODITY_KEYS, THEMATIC_COMMODITY_FUNDS, type CommodityKey } from "@/lib/data-platform/commodityEtfMapping";
 import { classifyEtfBucketJs, classifyFundBucketJs } from "@/lib/data-platform/assetCategoryBucketJs";
 import type { AssetCategoryBucket } from "@/lib/data-platform/categoryClassification";
+import { getNavDisclosureOverrides, resolveNavDisclosed } from "@/lib/data-platform/web/navDisclosure";
 
 const headers = { "Access-Control-Allow-Origin": "*", "Cache-Control": "no-store" };
 
@@ -107,13 +108,23 @@ export async function GET(request: Request) {
     ? await prisma.fund.findMany({ where: { code: { in: thematicFundCodes } }, select: { code: true, name: true, id: true, isActive: true, latestNav: true, latestNavDate: true, category: true } })
     : [];
   const thematicByCode = new Map(thematicFundRows.map((r) => [r.code, r]));
+  // 2026-11-08（使用者核准定案，「淨值未公開」接上商品反查）: 主題基金（thematicFunds）是真正
+  // 的 funds 列，跟上面results（都是ETF，沒有navDisclosed概念）不同——淨值未公開時latestNav一律
+  // 回null（不是舊快取值），排序時排最後（metric已經固定是null，null-last排序本來就會把它排到
+  // 最後，這裡不用另外改排序邏輯）。
+  const thematicNavDisclosureOverrides = await getNavDisclosureOverrides(
+    thematicFundRows.filter((r) => r.id).map((r) => r.id!),
+  );
   let thematicFunds = thematicEntries.map((e) => {
     const row = thematicByCode.get(e.code);
     const bucket: AssetCategoryBucket = classifyFundBucketJs(row?.category ?? null);
+    const navDisclosed = row?.id ? resolveNavDisclosed(row.id, row.latestNavDate, thematicNavDisclosureOverrides) : null;
     return {
       code: e.code, name: e.name, theme: e.theme,
       id: row?.id ?? null, isActive: row?.isActive ?? null,
-      latestNav: row?.latestNav ? Number(row.latestNav) : null, navDate: row?.latestNavDate ?? null,
+      latestNav: navDisclosed === false ? null : row?.latestNav ? Number(row.latestNav) : null,
+      navDate: row?.latestNavDate ?? null,
+      navDisclosed,
       exposureNote: "間接曝險（投資該產業股票/債券的主題型基金，非直接持有商品期貨）",
       category: bucket,
       metric: null as number | null, // 沒有績效資料可用於排序（主題基金這支route目前沒有join fund_performances）
