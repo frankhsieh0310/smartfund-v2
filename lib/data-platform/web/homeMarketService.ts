@@ -85,6 +85,22 @@ async function fxCards(): Promise<HomeMarketCard[]> {
   });
 }
 
+// 2026-11-08（使用者第36輪指令第四點第二項「全手機程式掃一遍」核准，順便修）: economic_series.unit
+// 存的是程式內部代碼（例如"PERCENT_ANNUAL_RATE"、"BILLIONS_USD"、"THOUSAND_BARRELS_PER_DAY"），
+// 原本直接丟給前端顯示。改成已知代碼對照成中文，其餘（本身已經是可讀英文字串的，例如"CAD millions"）
+// 保留原樣——只擋真的是SCREAMING_SNAKE_CASE程式碼格式的那種。
+const UNIT_LABEL: Record<string, string> = {
+  PERCENT: "%", PERCENT_ANNUAL_RATE: "年化%", PERCENT_INDEX: "指數(%)", PERCENT_OF_GDP: "占GDP比重(%)",
+  PERCENT_15_PLUS: "15歲以上人口占比(%)", DIFFUSION_INDEX: "擴散指數", BILLIONS_USD: "十億美元",
+  THOUSAND_BARRELS_PER_DAY: "千桶/日", THOUSANDS: "千", THOUSANDS_PERSONS: "千人", CHAIN_INDEX: "連鎖指數",
+  CURRENT_USD: "美元（當期）", USD_PER_HOUR: "美元/小時",
+};
+function normalizeSeriesUnit(unit: string | null): string | null {
+  if (!unit) return unit;
+  if (UNIT_LABEL[unit]) return UNIT_LABEL[unit];
+  if (/^[A-Z0-9_]+$/.test(unit)) return unit.replaceAll("_", " ").toLowerCase();
+  return unit;
+}
 async function economicCards(seriesIds: readonly string[], assetType: "YIELD" | "RATE"): Promise<HomeMarketCard[]> {
   const rows = await prisma.economicSeries.findMany({
     where: { enabled: true, seriesId: { in: [...seriesIds] } },
@@ -97,7 +113,7 @@ async function economicCards(seriesIds: readonly string[], assetType: "YIELD" | 
     const latest = row.values[0];
     const source = row.provider || row.source;
     const provenance = buildProvenance({ source, sourceRecordId: seriesId, asOfDate: latest?.date, lastUpdated: latest?.updatedAt ?? latest?.importedAt ?? row.updatedAt });
-    return { assetType, id: row.id, label: row.name, symbolOrCode: seriesId, value: numberOrNull(latest?.value), change: null, changePercent: null, unit: row.unit, currency: null, asOfDate: provenance.asOfDate, lastUpdated: provenance.lastUpdated, freshnessStatus: freshnessStatus(latest?.date, "PUBLICATION_AWARE"), source, provenance, detailHref: assetType === "YIELD" ? `/bonds/${encodeURIComponent(seriesId)}` : null, coverageStatus: latest ? "FULL" : "UNKNOWN" };
+    return { assetType, id: row.id, label: row.name, symbolOrCode: seriesId, value: numberOrNull(latest?.value), change: null, changePercent: null, unit: normalizeSeriesUnit(row.unit), currency: null, asOfDate: provenance.asOfDate, lastUpdated: provenance.lastUpdated, freshnessStatus: freshnessStatus(latest?.date, "PUBLICATION_AWARE"), source, provenance, detailHref: assetType === "YIELD" ? `/bonds/${encodeURIComponent(seriesId)}` : null, coverageStatus: latest ? "FULL" : "UNKNOWN" };
   });
 }
 

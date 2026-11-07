@@ -28,6 +28,28 @@ export const searchStocks = (query: string, options: Omit<ListQuery, "query"> = 
 
 type StockLiteMetric = { key: string; label: string; value: number | string | null; unit?: string };
 
+// 2026-11-08（使用者第36輪指令第四點第二項核准）: 財務數字原本把資料庫內部的單位代碼
+// （"TWD_THOUSANDS"／"RATIO"／"TWD_PER_SHARE"這種程式內部字串）直接當unit顯示給使用者，
+// 變成「2,404,483,690 TWD_THOUSANDS」這種畫面——改成依照每個欄位實際的內部單位，換算成
+// 一般人看得懂的格式（億/兆元、「X 元」、「本益比 X 倍」、「X.XX%」），單位文字直接寫進
+// value字串裡，不再透過unit欄位讓前端自己組字串，避免再次外洩任何內部代碼。
+function formatTwdAmount(raw: number, unit: string): string {
+  // TWD_THOUSANDS=資料庫存的是「千元」；已知其他單位一律視為已經是「元」。
+  const yuan = unit === "TWD_THOUSANDS" ? raw * 1000 : raw;
+  const trillion = yuan / 1_000_000_000_000;
+  if (Math.abs(trillion) >= 1) return `${trillion.toFixed(2)}兆元`;
+  const billion = yuan / 100_000_000;
+  return `${billion.toFixed(2)}億元`;
+}
+function periodLabelFor(periodEnd: Date): string {
+  // 存進資料庫的 periodEnd 常常是UTC午夜（=台北時間還沒跨到下一天），統一先轉台北時區
+  // 再判斷季別，避免季底日期算錯一季。
+  const taipei = new Date(periodEnd.getTime() + 8 * 60 * 60 * 1000);
+  const y = taipei.getUTCFullYear();
+  const q = Math.ceil((taipei.getUTCMonth() + 1) / 3);
+  return `${y}年第${q}季`;
+}
+type FactFormat = "AMOUNT" | "PER_SHARE" | "PE_MULTIPLE" | "PERCENT" | "COUNT";
 // 2026-11-08（使用者回報第34輪第4點，VERIFIED）: 查production DB確認台積電(2330.TW)
 // stock_financial_facts 其實有完整當季財報與Yahoo比率資料，但實際寫入的 metric 欄位名稱是
 // "financial.revenue"／"valuation.pe"／"yahoo_fundamentals.pe" 這種有前綴的新格式，這份
@@ -36,27 +58,34 @@ type StockLiteMetric = { key: string; label: string; value: number | string | nu
 // 是這份對照表沒跟上欄位改名。保留舊格式 key 以防其他還沒遷移的股票，新增實際在用的新格式 key。
 const latestFacts = (facts: Array<{ metric: string; value: unknown; unit: string; currency: string | null; periodEnd: Date }>): StockLiteMetric[] => {
   const seen = new Set<string>();
-  const labels: Record<string, { key: string; label: string; scale100?: boolean; unit?: string }> = {
-    revenue: { key: "revenue", label: "營收" }, basic_eps: { key: "eps", label: "每股盈餘" }, diluted_eps: { key: "dilutedEps", label: "稀釋每股盈餘" }, gross_profit: { key: "grossProfit", label: "毛利" }, operating_income: { key: "operatingIncome", label: "營業利益" }, net_income: { key: "netIncome", label: "淨利" }, total_assets: { key: "totalAssets", label: "總資產" }, total_liabilities: { key: "totalLiabilities", label: "總負債" }, shareholders_equity: { key: "shareholdersEquity", label: "股東權益" }, cash_and_cash_equivalents: { key: "cash", label: "現金及約當現金" }, operating_cash_flow: { key: "operatingCashFlow", label: "營業現金流" }, investing_cash_flow: { key: "investingCashFlow", label: "投資現金流" }, financing_cash_flow: { key: "financingCashFlow", label: "融資現金流" }, capital_expenditure: { key: "capitalExpenditure", label: "資本支出" }, shares_outstanding: { key: "sharesOutstanding", label: "流通股數" }, "valuation.pe.ttm.point_in_time": { key: "pe", label: "本益比" }, "yahoo.event.cashDividend": { key: "dividend", label: "現金股利" },
-    "financial.revenue": { key: "revenue", label: "營收" }, "financial.basic_eps": { key: "eps", label: "每股盈餘" }, "financial.gross_profit": { key: "grossProfit", label: "毛利" }, "financial.operating_income": { key: "operatingIncome", label: "營業利益" }, "financial.net_income": { key: "netIncome", label: "淨利" }, "financial.total_assets": { key: "totalAssets", label: "總資產" }, "financial.total_liabilities": { key: "totalLiabilities", label: "總負債" }, "financial.shareholders_equity": { key: "shareholdersEquity", label: "股東權益" }, "financial.ending_cash_and_cash_equivalents": { key: "cash", label: "現金及約當現金" }, "financial.operating_cash_flow": { key: "operatingCashFlow", label: "營業現金流" }, "financial.investing_cash_flow": { key: "investingCashFlow", label: "投資現金流" }, "financial.financing_cash_flow": { key: "financingCashFlow", label: "融資現金流" },
-    // 2026-11-08 VERIFIED（production DB查到）: 這組 yahoo_fundamentals.* 存的是比率(0.658=65.8%)、
-    // unit欄位是"RATIO"不是"%"，顯示前要自己×100、換成"%"，不能直接把DB原始unit原樣丟給畫面。
-    "valuation.pe": { key: "pe", label: "本益比" }, "yahoo_fundamentals.pe": { key: "pe", label: "本益比" },
-    "yahoo_fundamentals.dividendYield": { key: "dividendYield", label: "殖利率", scale100: true, unit: "%" },
-    "yahoo_fundamentals.grossMargin": { key: "grossMargin", label: "毛利率", scale100: true, unit: "%" },
-    "yahoo_fundamentals.profitMargin": { key: "netMargin", label: "淨利率", scale100: true, unit: "%" },
-    "yahoo_fundamentals.revenueGrowth": { key: "revenueGrowth", label: "營收成長率", scale100: true, unit: "%" },
-    "yahoo_fundamentals.earningsGrowth": { key: "epsGrowth", label: "獲利成長率", scale100: true, unit: "%" },
-    "yahoo.balance-sheet.ordinarySharesNumber": { key: "sharesOutstanding", label: "流通股數" },
+  const labels: Record<string, { key: string; label: string; format: FactFormat }> = {
+    revenue: { key: "revenue", label: "營收", format: "AMOUNT" }, basic_eps: { key: "eps", label: "每股盈餘", format: "PER_SHARE" }, diluted_eps: { key: "dilutedEps", label: "稀釋每股盈餘", format: "PER_SHARE" }, gross_profit: { key: "grossProfit", label: "毛利", format: "AMOUNT" }, operating_income: { key: "operatingIncome", label: "營業利益", format: "AMOUNT" }, net_income: { key: "netIncome", label: "淨利", format: "AMOUNT" }, total_assets: { key: "totalAssets", label: "總資產", format: "AMOUNT" }, total_liabilities: { key: "totalLiabilities", label: "總負債", format: "AMOUNT" }, shareholders_equity: { key: "shareholdersEquity", label: "股東權益", format: "AMOUNT" }, cash_and_cash_equivalents: { key: "cash", label: "現金及約當現金", format: "AMOUNT" }, operating_cash_flow: { key: "operatingCashFlow", label: "營業現金流", format: "AMOUNT" }, investing_cash_flow: { key: "investingCashFlow", label: "投資現金流", format: "AMOUNT" }, financing_cash_flow: { key: "financingCashFlow", label: "融資現金流", format: "AMOUNT" }, capital_expenditure: { key: "capitalExpenditure", label: "資本支出", format: "AMOUNT" }, shares_outstanding: { key: "sharesOutstanding", label: "流通股數", format: "COUNT" }, "valuation.pe.ttm.point_in_time": { key: "pe", label: "本益比", format: "PE_MULTIPLE" }, "yahoo.event.cashDividend": { key: "dividend", label: "現金股利", format: "PER_SHARE" },
+    "financial.revenue": { key: "revenue", label: "營收", format: "AMOUNT" }, "financial.basic_eps": { key: "eps", label: "每股盈餘", format: "PER_SHARE" }, "financial.gross_profit": { key: "grossProfit", label: "毛利", format: "AMOUNT" }, "financial.operating_income": { key: "operatingIncome", label: "營業利益", format: "AMOUNT" }, "financial.net_income": { key: "netIncome", label: "淨利", format: "AMOUNT" }, "financial.total_assets": { key: "totalAssets", label: "總資產", format: "AMOUNT" }, "financial.total_liabilities": { key: "totalLiabilities", label: "總負債", format: "AMOUNT" }, "financial.shareholders_equity": { key: "shareholdersEquity", label: "股東權益", format: "AMOUNT" }, "financial.ending_cash_and_cash_equivalents": { key: "cash", label: "現金及約當現金", format: "AMOUNT" }, "financial.operating_cash_flow": { key: "operatingCashFlow", label: "營業現金流", format: "AMOUNT" }, "financial.investing_cash_flow": { key: "investingCashFlow", label: "投資現金流", format: "AMOUNT" }, "financial.financing_cash_flow": { key: "financingCashFlow", label: "融資現金流", format: "AMOUNT" },
+    "valuation.pe": { key: "pe", label: "本益比", format: "PE_MULTIPLE" }, "yahoo_fundamentals.pe": { key: "pe", label: "本益比", format: "PE_MULTIPLE" },
+    "yahoo_fundamentals.dividendYield": { key: "dividendYield", label: "殖利率", format: "PERCENT" },
+    "yahoo_fundamentals.grossMargin": { key: "grossMargin", label: "毛利率", format: "PERCENT" },
+    "yahoo_fundamentals.profitMargin": { key: "netMargin", label: "淨利率", format: "PERCENT" },
+    "yahoo_fundamentals.revenueGrowth": { key: "revenueGrowth", label: "營收成長率", format: "PERCENT" },
+    "yahoo_fundamentals.earningsGrowth": { key: "epsGrowth", label: "獲利成長率", format: "PERCENT" },
+    "yahoo.balance-sheet.ordinarySharesNumber": { key: "sharesOutstanding", label: "流通股數", format: "COUNT" },
   };
   const result: StockLiteMetric[] = [];
   for (const fact of facts) {
     const mapped = labels[fact.metric];
     if (!mapped || seen.has(mapped.key)) continue;
-    seen.add(mapped.key);
     const raw = numberOrNull(fact.value);
-    const value = mapped.scale100 && raw != null ? raw * 100 : raw;
-    result.push({ key: mapped.key, label: mapped.label, value, unit: mapped.unit ?? fact.unit });
+    if (raw == null) continue;
+    seen.add(mapped.key);
+    const period = periodLabelFor(fact.periodEnd);
+    let display: string;
+    switch (mapped.format) {
+      case "AMOUNT": display = `${formatTwdAmount(raw, fact.unit)}（${period}）`; break;
+      case "PER_SHARE": display = `${raw.toFixed(2)} 元（${period}）`; break;
+      case "PE_MULTIPLE": display = `本益比 ${raw.toFixed(2)} 倍（${period}）`; break;
+      case "PERCENT": display = `${(raw * 100).toFixed(2)}%（${period}）`; break;
+      case "COUNT": display = `${Math.round(raw).toLocaleString("zh-TW")} 股（${period}）`; break;
+    }
+    result.push({ key: mapped.key, label: mapped.label, value: display });
   }
   if (facts[0]?.periodEnd) result.push({ key: "fundamentalsAsOf", label: "基本面資料日期", value: facts[0].periodEnd.toISOString().slice(0, 10) });
   return result;

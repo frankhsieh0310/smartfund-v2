@@ -146,7 +146,7 @@
     },
     {
       "path": "/api/cron/fund-returns-sync",
-      "schedule": "1,21,41 * * * *"
+      "schedule": "*/7 * * * *"
     },
     {
       "path": "/api/cron/yahoo-commodity?phase=history&group=cbot&symbols=ZC=F,ZW=F,KE=F,ZS=F,ZL=F,ZM=F,ZO=F,ZR=F",
