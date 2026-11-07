@@ -12,7 +12,7 @@ const CATEGORY_BUCKETS = ["ALL", "STOCK", "BOND", "MIXED", "COMMODITY", "LEVERAG
 const PERFORMANCE_SORTS = ["return_1m", "return_3m", "return_6m", "return_ytd", "return_1y", "return_3y", "return_5y"] as const;
 const SORT_KEYS = [...PERFORMANCE_SORTS, "aum", "dividend_yield"] as const;
 
-type PerfRow = { code: string; category: string | null; aum: string | null; dividend_yield: string | null; return_1m: string | null; return_3m: string | null; return_6m: string | null; return_ytd: string | null; return_1y: string | null; return_3y: string | null; return_5y: string | null };
+type PerfRow = { code: string; category: string | null; aum: string | null; dividend_yield: string | null; return_1m: string | null; return_3m: string | null; return_6m: string | null; return_ytd: string | null; return_1y: string | null; return_3y: string | null; return_5y: string | null; perf_date: string | null };
 const toNum = (v: string | null) => (v === null ? null : Number(v));
 
 // WTI/Brent crude are both energy-sector exposures -- 能源主題基金 (equity/bond funds investing in
@@ -55,12 +55,12 @@ export async function GET(request: Request) {
   // latest-row-by-date 查法，順便把 1M/3M/6M/3Y/5Y/AUM/配息率都補進來，給排序用。
   const perfRows: PerfRow[] = codes.length ? await prisma.$queryRaw<PerfRow[]>`
     WITH latest_perf AS (
-      SELECT DISTINCT ON (etf_id) etf_id, return_1m, return_3m, return_6m, return_ytd, return_1y, return_3y, return_5y
+      SELECT DISTINCT ON (etf_id) etf_id, date, return_1m, return_3m, return_6m, return_ytd, return_1y, return_3y, return_5y
       FROM etf_performances WHERE etf_id IN (SELECT id FROM etfs WHERE code = ANY(${codes})) ORDER BY etf_id, date DESC
     )
     SELECT e.code, e.category, e.aum::text aum, e.dividend_yield::text dividend_yield,
       lp.return_1m::text return_1m, lp.return_3m::text return_3m, lp.return_6m::text return_6m, lp.return_ytd::text return_ytd,
-      lp.return_1y::text return_1y, lp.return_3y::text return_3y, lp.return_5y::text return_5y
+      lp.return_1y::text return_1y, lp.return_3y::text return_3y, lp.return_5y::text return_5y, lp.date::text perf_date
     FROM etfs e LEFT JOIN latest_perf lp ON lp.etf_id = e.id WHERE e.code = ANY(${codes})
   ` : [];
   const perfByCode = new Map(perfRows.map((r) => [r.code, r]));
@@ -71,6 +71,7 @@ export async function GET(request: Request) {
     const perf = perfByCode.get(e.code);
     const bucket: AssetCategoryBucket = classifyEtfBucketJs(e.code, e.name, perf?.category ?? null);
     const metric = sortKey ? (sortKey === "aum" ? toNum(perf?.aum ?? null) : sortKey === "dividend_yield" ? toNum(perf?.dividend_yield ?? null) : toNum((perf as PerfRow | undefined)?.[sortKey] ?? null)) : null;
+    const metricAsOfDate = sortKey && PERFORMANCE_SORTS.includes(sortKey as typeof PERFORMANCE_SORTS[number]) ? (perf?.perf_date ?? null) : null;
     return {
       code: e.code,
       name: e.name,
@@ -84,6 +85,7 @@ export async function GET(request: Request) {
       return1YPct: toNum(perf?.return_1y ?? null),
       category: bucket,
       metric,
+      metricAsOfDate,
     };
   }
   let results: CommodityResult[] = entries.map(buildResult);

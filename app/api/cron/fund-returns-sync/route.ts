@@ -122,8 +122,19 @@ export async function GET(request: Request) {
     attempted++;
     try {
       const perf = await fetchYahooFundPerformance(entry.yahooFundId);
+      // 2026-11-07（使用者核准，第34輪指令第1點根因修正）: 原本不管Yahoo頁面本身揭露的資料基準日
+      // 是哪一天，一律把「抓取當天」寫進date欄位——VERIFIED這正是使用者回報「同一檔基金1Y報酬率
+      // 逐日劇烈跳動」的根因：這支排程一天跑好幾次，如果某次抓取發生在Yahoo自己都還沒把淨值更新
+      // 到當天（他們的latestPriceDate還停在前一兩天），我們還是照樣把那批「舊淨值算出來的數字」
+      // 蓋到「今天」這個date列；同一天稍晚Yahoo淨值更新了、我們又抓一次，同一個「今天」的date列
+      // 又被覆寫成另一批（對應不同基準日）的數字——導致同一個date欄位實際上在一天內被好幾個不同
+      // 基準日的數字輪流覆寫。改成直接用Yahoo頁面自己揭露的latestPriceDate當作date欄位：不同
+      // 基準日自然分到不同的date列，不會互相覆寫；asOfDate缺漏（頁面結構變了讀不到）就跳過這筆
+      // 寫入而不是用「今天」瞎猜，寧可這天沒有新資料，也不要把舊資料誤標成新日期。
       if (perf) {
-        if (writeEnabled) {
+        if (!perf.asOfDate) {
+          noData++;
+        } else if (writeEnabled) {
           await prisma.$executeRawUnsafe(
             `INSERT INTO fund_performances (id, fund_id, date, return_1m, return_3m, return_6m, return_ytd, return_1y, return_3y, return_5y, return_10y, created_at)
              VALUES (gen_random_uuid()::text, $1, $2::date, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
@@ -131,10 +142,12 @@ export async function GET(request: Request) {
                return_1m = EXCLUDED.return_1m, return_3m = EXCLUDED.return_3m, return_6m = EXCLUDED.return_6m,
                return_ytd = EXCLUDED.return_ytd, return_1y = EXCLUDED.return_1y, return_3y = EXCLUDED.return_3y,
                return_5y = EXCLUDED.return_5y, return_10y = EXCLUDED.return_10y`,
-            entry.fundId, today, perf.m1, perf.m3, perf.m6, perf.ytd, perf.y1, perf.y3, perf.y5, perf.y10,
+            entry.fundId, perf.asOfDate, perf.m1, perf.m3, perf.m6, perf.ytd, perf.y1, perf.y3, perf.y5, perf.y10,
           );
+          written++;
+        } else {
+          written++;
         }
-        written++;
       } else {
         noData++;
       }

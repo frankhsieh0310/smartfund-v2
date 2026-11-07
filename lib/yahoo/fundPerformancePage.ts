@@ -24,6 +24,16 @@ export interface YahooFundPerformance {
   y3: number | null;
   y5: number | null;
   y10: number | null;
+  // 2026-11-07（使用者核准，第34輪指令第1點根因修正）: 頁面本身就有標示這些績效數字是「以哪天
+  // 的淨值為基準」算出來的（頁面上「註：以 YYYY/MM/DD 為基準日，依淨值計算」、以及embedded
+  // JSON裡的 latestPriceDate 欄位）——之前完全沒讀這個欄位，寫入 fund_performances 時一律拿
+  // 「抓取當天」當作 date 欄位，不是這批數字實際對應的淨值日期。VERIFIED：排程一天跑好幾次，
+  // 同一個「抓取當天」的日期會被重複覆寫；如果某次抓取發生在 Yahoo 自己都還沒把 latestPriceDate
+  // 推進到當天之前（也就是 Yahoo 本身淨值資料還落後一天甚至更多），我們還是照樣用「抓取當天」
+  // 存進去，等於把「舊淨值算出來的報酬率」誤標成「新日期的報酬率」，隔幾次抓取 latestPriceDate
+  // 終於追上、數字又變了，同一個date列就被覆寫成另一批（實際上對應不同基準日）的數字——這才是
+  // 使用者回報的「同一檔基金1Y報酬率逐日劇烈跳動」真正根因，不是mapping或解析欄位錯誤。
+  asOfDate: string | null; // YYYY-MM-DD，取自頁面的 latestPriceDate（這批績效數字的淨值基準日）
 }
 
 export class YahooFundRateLimitedError extends Error {
@@ -85,6 +95,12 @@ export async function fetchYahooFundPerformance(yahooFundId: string): Promise<Ya
   const returns = performance.returns;
   if (!returns) return null;
 
+  // 同一個 latestPriceDate 字串在頁面上出現不只一次（基金總覽區塊、meta區塊都有），但同一次
+  // 頁面載入裡全部都是同一個值（VERIFIED多檔基金皆如此）——直接抓第一個出現的即可，不用追蹤
+  // 它實際藏在哪個巢狀物件裡（那個物件的巢狀路徑比較脆弱，字串本身的出現位置穩定得多）。
+  const asOfMatch = html.match(/"latestPriceDate":"(\d{4}-\d{2}-\d{2})"/);
+  const asOfDate = asOfMatch ? asOfMatch[1] : null;
+
   return {
     w1: rateFor(returns, "1W"),
     m1: rateFor(returns, "1M"),
@@ -95,5 +111,6 @@ export async function fetchYahooFundPerformance(yahooFundId: string): Promise<Ya
     y3: rateFor(returns, "3Y"),
     y5: rateFor(returns, "5Y"),
     y10: rateFor(returns, "10Y"),
+    asOfDate,
   };
 }

@@ -114,13 +114,13 @@ export async function GET(request: Request) {
       // 的舊數字。改成直接取每檔 etf_performances 依 date 排序的最新一列，不再經過 etfs 這份二手
       // 拷貝，徹底消除這個不同步窗口（覆蓋率驗證過：兩種讀法都是 303 檔，不會因此漏資料）。
       const rows = await prisma.$queryRawUnsafe<Array<{
-        id: string; code: string; name: string; value: string; latest_price: string | null; price_date: string | null; total: string;
+        id: string; code: string; name: string; value: string; latest_price: string | null; price_date: string | null; perf_date: string | null; total: string;
       }>>(
         `WITH latest_perf AS (
-           SELECT DISTINCT ON (etf_id) etf_id, ${column} FROM etf_performances ORDER BY etf_id, date DESC
+           SELECT DISTINCT ON (etf_id) etf_id, date, ${column} FROM etf_performances ORDER BY etf_id, date DESC
          )
          SELECT etfs.id, etfs.code, etfs.name, latest_perf.${column}::text AS value,
-                etfs.latest_price::text, etfs.price_updated_at::text AS price_date,
+                etfs.latest_price::text, etfs.price_updated_at::text AS price_date, latest_perf.date::text AS perf_date,
                 COUNT(*) OVER ()::text AS total
            FROM etfs JOIN latest_perf ON latest_perf.etf_id = etfs.id
           WHERE etfs.is_active = true AND latest_perf.${column} IS NOT NULL AND etfs.name ~ $3 ${categoryClause} ${CORE_ETF_FILTER_SQL}
@@ -133,7 +133,7 @@ export async function GET(request: Request) {
         assetType, rankingType, period, supported: true, total, page, limit, hasMore: offset + rows.length < total,
         results: annotated.map((r) => ({
           id: r.id, code: r.code, name: r.name, metricValue: Number(r.value), metricDisplay: fmtPct(Number(r.value)),
-          price: r.latest_price !== null ? Number(r.latest_price) : null, priceDate: r.price_date,
+          price: r.latest_price !== null ? Number(r.latest_price) : null, priceDate: r.price_date, metricAsOfDate: r.perf_date,
           classificationBasis: r.classificationBasis,
         })),
       }, { headers });
@@ -289,12 +289,12 @@ export async function GET(request: Request) {
     // 228.62%完全對不上NAV歷史自己算出來的任何期間報酬，是另一條舊pipeline留下的壞值。改成跟
     // ETF一樣，直接取每檔fund_performances依date排序的最新一列，不再讀funds這份二手拷貝。
     const rows = await prisma.$queryRawUnsafe<Array<{
-      id: string; code: string | null; name: string; value: string; nav: string | null; nav_date: string | null; total: string;
+      id: string; code: string | null; name: string; value: string; nav: string | null; nav_date: string | null; perf_date: string | null; total: string;
     }>>(
       `WITH latest_perf AS (
-         SELECT DISTINCT ON (fund_id) fund_id, ${column} FROM fund_performances ORDER BY fund_id, date DESC
+         SELECT DISTINCT ON (fund_id) fund_id, date, ${column} FROM fund_performances ORDER BY fund_id, date DESC
        ), ranked AS (
-         SELECT f.id, f.code, f.name, latest_perf.${column} AS value, f.latest_nav, f.latest_nav_date,
+         SELECT f.id, f.code, f.name, latest_perf.${column} AS value, f.latest_nav, f.latest_nav_date, latest_perf.date AS perf_date,
                 COALESCE(sc.master_fund_id, f.id) AS portfolio,
                 ROW_NUMBER() OVER (
                   PARTITION BY COALESCE(sc.master_fund_id, f.id)
@@ -306,7 +306,7 @@ export async function GET(request: Request) {
            LEFT JOIN fund_master fm ON fm.id = sc.master_fund_id
           WHERE f.is_active = true AND latest_perf.${column} IS NOT NULL AND f.name ~ $3 ${fundCategoryClauseAt(4)} ${CORE_FUND_FILTER_SQL}
        )
-       SELECT id, code, name, value::text AS value, latest_nav::text AS nav, latest_nav_date::text AS nav_date,
+       SELECT id, code, name, value::text AS value, latest_nav::text AS nav, latest_nav_date::text AS nav_date, perf_date::text AS perf_date,
               COUNT(*) OVER ()::text AS total
          FROM ranked WHERE rn = 1
         ORDER BY ranked.value ${sort} LIMIT $1 OFFSET $2`,
@@ -316,7 +316,7 @@ export async function GET(request: Request) {
     return Response.json({
       assetType, rankingType, period, supported: true, total, page, limit, hasMore: offset + rows.length < total,
       results: rows.map((r) => ({
-        id: r.id, code: r.code, name: r.name, metricValue: Number(r.value), metricDisplay: fmtPct(Number(r.value)),
+        id: r.id, code: r.code, name: r.name, metricValue: Number(r.value), metricDisplay: fmtPct(Number(r.value)), metricAsOfDate: r.perf_date,
         price: r.nav !== null ? Number(r.nav) : null, priceDate: r.nav_date,
       })),
     }, { headers });

@@ -8,7 +8,7 @@ import { classifyEtfBucketJs, classifyFundBucketJs } from "@/lib/data-platform/a
 
 const headers = { "Access-Control-Allow-Origin": "*", "Cache-Control": "no-store" };
 
-type MetricRow = { asset_id: string; code: string; name: string; category: string | null; aum: string | null; dividend_yield: string | null; return_1m: string | null; return_3m: string | null; return_6m: string | null; return_ytd: string | null; return_1y: string | null; return_3y: string | null; return_5y: string | null };
+type MetricRow = { asset_id: string; code: string; name: string; category: string | null; aum: string | null; dividend_yield: string | null; return_1m: string | null; return_3m: string | null; return_6m: string | null; return_ytd: string | null; return_1y: string | null; return_3y: string | null; return_5y: string | null; perf_date: string | null };
 const toNum = (v: string | null) => (v === null ? null : Number(v));
 
 export async function GET(request: Request) {
@@ -16,14 +16,14 @@ export async function GET(request: Request) {
   const etfIds = (q.get("etfIds") ?? "").split(",").map((s) => s.trim()).filter(Boolean).slice(0, 200);
   const fundIds = (q.get("fundIds") ?? "").split(",").map((s) => s.trim()).filter(Boolean).slice(0, 200);
 
-  const result: Record<string, { category: string; aum: number | null; dividendYield: number | null; return_1m: number | null; return_3m: number | null; return_6m: number | null; return_ytd: number | null; return_1y: number | null; return_3y: number | null; return_5y: number | null }> = {};
+  const result: Record<string, { category: string; aum: number | null; dividendYield: number | null; return_1m: number | null; return_3m: number | null; return_6m: number | null; return_ytd: number | null; return_1y: number | null; return_3y: number | null; return_5y: number | null; metricAsOfDate: string | null }> = {};
 
   if (etfIds.length) {
     const rows = await prisma.$queryRawUnsafe<MetricRow[]>(
-      `WITH latest_perf AS (SELECT DISTINCT ON (etf_id) etf_id, return_1m, return_3m, return_6m, return_ytd, return_1y, return_3y, return_5y FROM etf_performances WHERE etf_id = ANY($1::text[]) ORDER BY etf_id, date DESC)
+      `WITH latest_perf AS (SELECT DISTINCT ON (etf_id) etf_id, date, return_1m, return_3m, return_6m, return_ytd, return_1y, return_3y, return_5y FROM etf_performances WHERE etf_id = ANY($1::text[]) ORDER BY etf_id, date DESC)
        SELECT e.id asset_id, e.code, e.name, e.category, e.aum::text aum, e.dividend_yield::text dividend_yield,
          lp.return_1m::text return_1m, lp.return_3m::text return_3m, lp.return_6m::text return_6m, lp.return_ytd::text return_ytd,
-         lp.return_1y::text return_1y, lp.return_3y::text return_3y, lp.return_5y::text return_5y
+         lp.return_1y::text return_1y, lp.return_3y::text return_3y, lp.return_5y::text return_5y, lp.date::text perf_date
        FROM etfs e LEFT JOIN latest_perf lp ON lp.etf_id = e.id WHERE e.id = ANY($1::text[])`,
       etfIds,
     );
@@ -33,15 +33,16 @@ export async function GET(request: Request) {
         aum: toNum(r.aum), dividendYield: toNum(r.dividend_yield),
         return_1m: toNum(r.return_1m), return_3m: toNum(r.return_3m), return_6m: toNum(r.return_6m),
         return_ytd: toNum(r.return_ytd), return_1y: toNum(r.return_1y), return_3y: toNum(r.return_3y), return_5y: toNum(r.return_5y),
+        metricAsOfDate: r.perf_date,
       };
     }
   }
   if (fundIds.length) {
     const rows = await prisma.$queryRawUnsafe<MetricRow[]>(
-      `WITH latest_perf AS (SELECT DISTINCT ON (fund_id) fund_id, return_1m, return_3m, return_6m, return_ytd, return_1y, return_3y, return_5y FROM fund_performances WHERE fund_id = ANY($1::text[]) ORDER BY fund_id, date DESC)
+      `WITH latest_perf AS (SELECT DISTINCT ON (fund_id) fund_id, date, return_1m, return_3m, return_6m, return_ytd, return_1y, return_3y, return_5y FROM fund_performances WHERE fund_id = ANY($1::text[]) ORDER BY fund_id, date DESC)
        SELECT f.id asset_id, f.code, f.name, f.category, f.aum::text aum, coalesce(f.dividend_yield_a, f.dividend_yield_m)::text dividend_yield,
          lp.return_1m::text return_1m, lp.return_3m::text return_3m, lp.return_6m::text return_6m, lp.return_ytd::text return_ytd,
-         lp.return_1y::text return_1y, lp.return_3y::text return_3y, lp.return_5y::text return_5y
+         lp.return_1y::text return_1y, lp.return_3y::text return_3y, lp.return_5y::text return_5y, lp.date::text perf_date
        FROM funds f LEFT JOIN latest_perf lp ON lp.fund_id = f.id WHERE f.id = ANY($1::text[])`,
       fundIds,
     );
@@ -51,6 +52,7 @@ export async function GET(request: Request) {
         aum: toNum(r.aum), dividendYield: toNum(r.dividend_yield),
         return_1m: toNum(r.return_1m), return_3m: toNum(r.return_3m), return_6m: toNum(r.return_6m),
         return_ytd: toNum(r.return_ytd), return_1y: toNum(r.return_1y), return_3y: toNum(r.return_3y), return_5y: toNum(r.return_5y),
+        metricAsOfDate: r.perf_date,
       };
     }
   }

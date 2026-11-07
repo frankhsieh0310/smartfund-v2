@@ -16,7 +16,7 @@ const CATEGORY_BUCKETS = ['ALL', 'STOCK', 'BOND', 'MIXED', 'COMMODITY', 'LEVERAG
 export type ReverseCategoryParam = (typeof CATEGORY_BUCKETS)[number];
 
 type EligibleRow = { product_key: string; type: 'ETF' | '基金'; asset_id: string; code: string; matched_count: number; weight: number };
-type MetricRow = { asset_id: string; category: string | null; aum: string | null; dividend_yield: string | null; return_1m: string | null; return_3m: string | null; return_6m: string | null; return_ytd: string | null; return_1y: string | null; return_3y: string | null; return_5y: string | null };
+type MetricRow = { asset_id: string; category: string | null; aum: string | null; dividend_yield: string | null; return_1m: string | null; return_3m: string | null; return_6m: string | null; return_ytd: string | null; return_1y: string | null; return_3y: string | null; return_5y: string | null; perf_date: string | null };
 
 /** Current canonical postings only: no holdings reconstruction on the request path. */
 export async function currentReverseHoldings(query: Query, input: { tickers: string[]; market?: string; page?: number; limit?: number; type?: string; sort?: string; category?: string; direction?: string }) {
@@ -65,25 +65,26 @@ export async function currentReverseHoldings(query: Query, input: { tickers: str
   const metricsByAssetId = new Map<string, MetricRow>();
   if (etfCodes.length) {
     const rows = await query<MetricRow>(`
-      WITH latest_perf AS (SELECT DISTINCT ON (etf_id) etf_id, return_1m, return_3m, return_6m, return_ytd, return_1y, return_3y, return_5y FROM etf_performances WHERE etf_id IN (SELECT id FROM etfs WHERE code = ANY($1::text[])) ORDER BY etf_id, date DESC)
+      WITH latest_perf AS (SELECT DISTINCT ON (etf_id) etf_id, date, return_1m, return_3m, return_6m, return_ytd, return_1y, return_3y, return_5y FROM etf_performances WHERE etf_id IN (SELECT id FROM etfs WHERE code = ANY($1::text[])) ORDER BY etf_id, date DESC)
       SELECT e.code asset_id, e.category, e.aum::text aum, e.dividend_yield::text dividend_yield,
         lp.return_1m::text return_1m, lp.return_3m::text return_3m, lp.return_6m::text return_6m, lp.return_ytd::text return_ytd,
-        lp.return_1y::text return_1y, lp.return_3y::text return_3y, lp.return_5y::text return_5y
+        lp.return_1y::text return_1y, lp.return_3y::text return_3y, lp.return_5y::text return_5y, lp.date::text perf_date
       FROM etfs e LEFT JOIN latest_perf lp ON lp.etf_id = e.id WHERE e.code = ANY($1::text[])`, etfCodes);
     for (const r of rows) metricsByAssetId.set(r.asset_id, r);
   }
   if (fundIds.length) {
     const rows = await query<MetricRow>(`
-      WITH latest_perf AS (SELECT DISTINCT ON (fund_id) fund_id, return_1m, return_3m, return_6m, return_ytd, return_1y, return_3y, return_5y FROM fund_performances WHERE fund_id = ANY($1::text[]) ORDER BY fund_id, date DESC)
+      WITH latest_perf AS (SELECT DISTINCT ON (fund_id) fund_id, date, return_1m, return_3m, return_6m, return_ytd, return_1y, return_3y, return_5y FROM fund_performances WHERE fund_id = ANY($1::text[]) ORDER BY fund_id, date DESC)
       SELECT f.id asset_id, f.category, f.aum::text aum, coalesce(f.dividend_yield_a, f.dividend_yield_m)::text dividend_yield,
         lp.return_1m::text return_1m, lp.return_3m::text return_3m, lp.return_6m::text return_6m, lp.return_ytd::text return_ytd,
-        lp.return_1y::text return_1y, lp.return_3y::text return_3y, lp.return_5y::text return_5y
+        lp.return_1y::text return_1y, lp.return_3y::text return_3y, lp.return_5y::text return_5y, lp.date::text perf_date
       FROM funds f LEFT JOIN latest_perf lp ON lp.fund_id = f.id WHERE f.id = ANY($1::text[])`, fundIds);
     for (const r of rows) metricsByAssetId.set(r.asset_id, r);
   }
 
   const toNum = (v: string | null) => (v === null ? null : Number(v));
-  type Enriched = EligibleRow & { bucket: AssetCategoryBucket; metric: number | null };
+  const isPerformanceSort = (PERFORMANCE_SORTS as readonly string[]).includes(sortKey);
+  type Enriched = EligibleRow & { bucket: AssetCategoryBucket; metric: number | null; metricAsOfDate: string | null };
   const enriched: Enriched[] = eligible.map(r => {
     const m = metricsByAssetId.get(r.asset_id);
     const bucket: AssetCategoryBucket = r.type === 'ETF'
@@ -93,7 +94,11 @@ export async function currentReverseHoldings(query: Query, input: { tickers: str
       : sortKey === 'aum' ? toNum(m?.aum ?? null)
       : sortKey === 'dividend_yield' ? toNum(m?.dividend_yield ?? null)
       : toNum((m as MetricRow | undefined)?.[sortKey as typeof PERFORMANCE_SORTS[number]] ?? null);
-    return { ...r, bucket, metric };
+    // 2026-11-07 第34輪指令第1點：畫面上顯示績效的地方要一律標示資料日期——只有績效(1M-5Y)類的
+    // 排序欄位才對應到 etf_performances/fund_performances 這張表的 date 欄位，規模/配息率是另外
+    // 從 etfs/funds 本身的欄位讀的，沒有對應的「這批數字的資料日期」可以標。
+    const metricAsOfDate = isPerformanceSort ? (m?.perf_date ?? null) : null;
+    return { ...r, bucket, metric, metricAsOfDate };
   });
 
   const typeFiltered = enriched.filter(r => type === 'ALL' || r.type === (type === 'FUND' ? '基金' : 'ETF'));
@@ -116,11 +121,11 @@ export async function currentReverseHoldings(query: Query, input: { tickers: str
     SELECT p.* FROM reverse_current_positions p WHERE p.product_key = ANY($1::text[]) AND p.stock_id = ANY($2::text[])`,
     orderIds, selected.map((t: Target) => t.id)) : [];
   const products=rankProducts(matchRows);
-  const metaByKey = new Map(pageRows.map(r => [r.product_key, { bucket: r.bucket, metric: r.metric }]));
+  const metaByKey = new Map(pageRows.map(r => [r.product_key, { bucket: r.bucket, metric: r.metric, metricAsOfDate: r.metricAsOfDate }]));
   const results=orderIds
     .map(id=>products.find(p=>p.id===id))
     .filter((p): p is NonNullable<typeof p> => Boolean(p))
-    .map(p => ({ ...p, category: metaByKey.get(p.id)?.bucket ?? 'UNCLASSIFIED', metric: metaByKey.get(p.id)?.metric ?? null }));
+    .map(p => ({ ...p, category: metaByKey.get(p.id)?.bucket ?? 'UNCLASSIFIED', metric: metaByKey.get(p.id)?.metric ?? null, metricAsOfDate: metaByKey.get(p.id)?.metricAsOfDate ?? null }));
 
   return {ok:true,total,page,limit,hasMore:page*limit<total,results,
     tickers:selected.map((t: Target)=>t.ticker),generated_at:new Date().toISOString(),
