@@ -123,13 +123,21 @@ export async function getFundList(query: FundListQuery = {}): Promise<ServiceRes
   //     （VERIFIED production 兩張表都已存在，不像原本getFundIdsDuplicateOfListedEtf()/
   //     getFundIdsSupersededByNewCode()需要try/catch容忍表還沒建；這兩張表萬一真的被砍掉，
   //     這條查詢會直接報錯而不是安靜略過——跟「整頁讀不到資料」比起來，寧可用明確錯誤曝露問題）。
+  // 2026-11-08（使用者回報：搜尋找不到美元I類型，VERIFIED根因修正）: 原本用 NOT IN 跟
+  // data_provider = 'yahoo' 都踩到SQL的NULL三值邏輯陷阱——01031874B（國泰小龍基金-美元I）
+  // data_provider是NULL，`data_provider = 'yahoo'` 在SQL裡求值成NULL（不是false），
+  // `NOT (NULL AND ...)` 還是NULL，WHERE子句把NULL當成「不成立」，整列被濾掉（VERIFIED直接
+  // 對正式資料庫單獨測試這一列，拿掉這個filter就正常出現）。改用COALESCE避免NULL求值；
+  // NOT IN同理在子查詢結果含NULL時會讓整個條件對所有列都求值成NULL（這份codebase目前三張
+  // 子查詢表都沒有NULL值，但NOT EXISTS本來就是NULL-safe的標準寫法，一併改掉避免以後其他
+  // 子查詢混進NULL又重演同一種bug）。
   const filters: Prisma.Sql[] = [
     Prisma.sql`f.is_active = true`,
-    Prisma.sql`f.id IN (SELECT asset_id FROM tw_purchasable_classification WHERE asset_type = 'FUND' AND status = 'APPROVED')`,
-    Prisma.sql`f.id NOT IN (SELECT fsc.fund_id FROM fund_share_classes fsc JOIN fund_master fm ON fm.id = fsc.master_fund_id WHERE fsc.fund_id <> fm.representative_fund_id)`,
-    Prisma.sql`f.id NOT IN (SELECT fund_id FROM fund_duplicate_of_etf)`,
-    Prisma.sql`f.id NOT IN (SELECT old_fund_id FROM fund_superseded_by_code)`,
-    Prisma.sql`NOT (f.data_provider = 'yahoo' AND f.last_nav_source IS NULL AND f.latest_nav_date < ${staleOffshoreCutoff})`,
+    Prisma.sql`EXISTS (SELECT 1 FROM tw_purchasable_classification tpc WHERE tpc.asset_id = f.id AND tpc.asset_type = 'FUND' AND tpc.status = 'APPROVED')`,
+    Prisma.sql`NOT EXISTS (SELECT 1 FROM fund_share_classes fsc JOIN fund_master fm ON fm.id = fsc.master_fund_id WHERE fsc.fund_id = f.id AND fsc.fund_id <> fm.representative_fund_id)`,
+    Prisma.sql`NOT EXISTS (SELECT 1 FROM fund_duplicate_of_etf d WHERE d.fund_id = f.id)`,
+    Prisma.sql`NOT EXISTS (SELECT 1 FROM fund_superseded_by_code s WHERE s.old_fund_id = f.id)`,
+    Prisma.sql`NOT (COALESCE(f.data_provider, '') = 'yahoo' AND f.last_nav_source IS NULL AND f.latest_nav_date < ${staleOffshoreCutoff})`,
   ];
   if (query.company) filters.push(Prisma.sql`f.company = ${query.company}`);
   if (query.currency) filters.push(Prisma.sql`f.currency = ${query.currency}`);
