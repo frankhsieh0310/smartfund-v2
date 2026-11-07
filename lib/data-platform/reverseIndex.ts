@@ -17,6 +17,18 @@ export type ReverseCategoryParam = (typeof CATEGORY_BUCKETS)[number];
 
 type EligibleRow = { product_key: string; type: 'ETF' | '基金'; asset_id: string; code: string; matched_count: number; weight: number };
 type MetricRow = { asset_id: string; category: string | null; aum: string | null; dividend_yield: string | null; return_1m: string | null; return_3m: string | null; return_6m: string | null; return_ytd: string | null; return_1y: string | null; return_3y: string | null; return_5y: string | null; perf_date: string | null };
+type FundDisclosureRow = { asset_id: string; nav_disclosed: boolean | null; latest_nav_date: string | null };
+
+// 2026-11-08（使用者核准定案，「淨值未公開」接上反查頁）: 跟lib/data-platform/web/navDisclosure.ts
+// 同一套30天新鮮度退回估算——這支檔案不是走Prisma（用注入的通用query函式，App跟網站共用），
+// 不能直接import navDisclosure.ts（那支耦合了prisma），所以這裡重寫同一套邏輯，常數務必跟
+// navDisclosure.ts的NAV_DISCLOSURE_FALLBACK_STALE_DAYS保持一致（目前都是30天）。
+const NAV_DISCLOSURE_FALLBACK_STALE_DAYS = 30;
+function resolveNavDisclosed(navDisclosedColumn: boolean | null, latestNavDate: string | null): boolean {
+  if (navDisclosedColumn !== null) return navDisclosedColumn;
+  if (!latestNavDate) return false;
+  return Date.now() - new Date(latestNavDate).getTime() <= NAV_DISCLOSURE_FALLBACK_STALE_DAYS * 86_400_000;
+}
 
 /** Current canonical postings only: no holdings reconstruction on the request path. */
 export async function currentReverseHoldings(query: Query, input: { tickers: string[]; market?: string; page?: number; limit?: number; type?: string; sort?: string; category?: string; direction?: string }) {
@@ -82,23 +94,42 @@ export async function currentReverseHoldings(query: Query, input: { tickers: str
     for (const r of rows) metricsByAssetId.set(r.asset_id, r);
   }
 
+  // 2026-11-08（使用者核准定案）: 淨值未公開的基金（含從未申報過）照常顯示在反查結果裡，不濾掉
+  // （只有排行中心排除）——績效/規模等指標一律回null（絕不顯示舊快取值或0），由前端照既有
+  // 「資料不足」的no-value排版改顯示「淨值未公開」，依指標排序時自然排最後（跟metric===null同一
+  // 套排序邏輯，不另外寫一套）。
+  const navDisclosureByFundId = new Map<string, boolean>();
+  const navLastKnownDateByFundId = new Map<string, string | null>();
+  if (fundIds.length) {
+    const rows = await query<FundDisclosureRow>(
+      `SELECT id asset_id, nav_disclosed, latest_nav_date::text latest_nav_date FROM funds WHERE id = ANY($1::text[])`,
+      fundIds,
+    );
+    for (const r of rows) {
+      navDisclosureByFundId.set(r.asset_id, resolveNavDisclosed(r.nav_disclosed, r.latest_nav_date));
+      navLastKnownDateByFundId.set(r.asset_id, r.latest_nav_date);
+    }
+  }
+
   const toNum = (v: string | null) => (v === null ? null : Number(v));
   const isPerformanceSort = (PERFORMANCE_SORTS as readonly string[]).includes(sortKey);
-  type Enriched = EligibleRow & { bucket: AssetCategoryBucket; metric: number | null; metricAsOfDate: string | null };
+  type Enriched = EligibleRow & { bucket: AssetCategoryBucket; metric: number | null; metricAsOfDate: string | null; navDisclosed: boolean | null; navLastKnownDate: string | null };
   const enriched: Enriched[] = eligible.map(r => {
     const m = metricsByAssetId.get(r.asset_id);
     const bucket: AssetCategoryBucket = r.type === 'ETF'
       ? classifyEtfBucketJs(r.code, r.code, m?.category ?? null)
       : classifyFundBucketJs(m?.category ?? null);
-    const metric = sortKey === 'weight' ? r.weight
+    const fundNavDisclosed = r.type === '基金' ? navDisclosureByFundId.get(r.asset_id) ?? true : null;
+    const metric = fundNavDisclosed === false ? null
+      : sortKey === 'weight' ? r.weight
       : sortKey === 'aum' ? toNum(m?.aum ?? null)
       : sortKey === 'dividend_yield' ? toNum(m?.dividend_yield ?? null)
       : toNum((m as MetricRow | undefined)?.[sortKey as typeof PERFORMANCE_SORTS[number]] ?? null);
     // 2026-11-07 第34輪指令第1點：畫面上顯示績效的地方要一律標示資料日期——只有績效(1M-5Y)類的
     // 排序欄位才對應到 etf_performances/fund_performances 這張表的 date 欄位，規模/配息率是另外
     // 從 etfs/funds 本身的欄位讀的，沒有對應的「這批數字的資料日期」可以標。
-    const metricAsOfDate = isPerformanceSort ? (m?.perf_date ?? null) : null;
-    return { ...r, bucket, metric, metricAsOfDate };
+    const metricAsOfDate = fundNavDisclosed === false ? null : isPerformanceSort ? (m?.perf_date ?? null) : null;
+    return { ...r, bucket, metric, metricAsOfDate, navDisclosed: fundNavDisclosed, navLastKnownDate: r.type === '基金' ? navLastKnownDateByFundId.get(r.asset_id) ?? null : null };
   });
 
   const typeFiltered = enriched.filter(r => type === 'ALL' || r.type === (type === 'FUND' ? '基金' : 'ETF'));
@@ -121,11 +152,11 @@ export async function currentReverseHoldings(query: Query, input: { tickers: str
     SELECT p.* FROM reverse_current_positions p WHERE p.product_key = ANY($1::text[]) AND p.stock_id = ANY($2::text[])`,
     orderIds, selected.map((t: Target) => t.id)) : [];
   const products=rankProducts(matchRows);
-  const metaByKey = new Map(pageRows.map(r => [r.product_key, { bucket: r.bucket, metric: r.metric, metricAsOfDate: r.metricAsOfDate }]));
+  const metaByKey = new Map(pageRows.map(r => [r.product_key, { bucket: r.bucket, metric: r.metric, metricAsOfDate: r.metricAsOfDate, navDisclosed: r.navDisclosed, navLastKnownDate: r.navLastKnownDate }]));
   const results=orderIds
     .map(id=>products.find(p=>p.id===id))
     .filter((p): p is NonNullable<typeof p> => Boolean(p))
-    .map(p => ({ ...p, category: metaByKey.get(p.id)?.bucket ?? 'UNCLASSIFIED', metric: metaByKey.get(p.id)?.metric ?? null, metricAsOfDate: metaByKey.get(p.id)?.metricAsOfDate ?? null }));
+    .map(p => ({ ...p, category: metaByKey.get(p.id)?.bucket ?? 'UNCLASSIFIED', metric: metaByKey.get(p.id)?.metric ?? null, metricAsOfDate: metaByKey.get(p.id)?.metricAsOfDate ?? null, navDisclosed: metaByKey.get(p.id)?.navDisclosed ?? null, navLastKnownDate: metaByKey.get(p.id)?.navLastKnownDate ?? null }));
 
   return {ok:true,total,page,limit,hasMore:page*limit<total,results,
     tickers:selected.map((t: Target)=>t.ticker),generated_at:new Date().toISOString(),
