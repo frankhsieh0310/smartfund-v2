@@ -135,14 +135,26 @@ export async function GET(request: Request) {
         if (!perf.asOfDate) {
           noData++;
         } else if (writeEnabled) {
+          // 2026-11-08（使用者核准，第38輪指令第一點甲）: Yahoo奇摩頁面「淨值日期標籤」
+          // (latestPriceDate) 跟「績效數字」(returns陣列) VERIFIED不是同時更新——如果抓取
+          // 時間是台北時間晚上八點以前、且latestPriceDate剛好等於抓取當天，視為Yahoo自己都
+          //還沒把當天數字結算完（我們的午後抓取常常撞到這個空窗期，把舊數字錯綁到新日期），
+          // 寫入時標記pending_settle=true，當晚結算排程（fund-returns-settle）會重新抓一次
+          // 確認後才真正覆蓋；畫面/排序一律排除pending_settle=true的列。晚上八點後抓到、或
+          // latestPriceDate是更早的日期（Yahoo自己已經結算過），正常寫入並清除旗標。
+          const nowTaipei = new Date(Date.now() + 8 * 60 * 60 * 1000);
+          const todayTaipei = nowTaipei.toISOString().slice(0, 10);
+          const taipeiHour = nowTaipei.getUTCHours();
+          const isUnsettled = perf.asOfDate === todayTaipei && taipeiHour < 20;
           await prisma.$executeRawUnsafe(
-            `INSERT INTO fund_performances (id, fund_id, date, return_1m, return_3m, return_6m, return_ytd, return_1y, return_3y, return_5y, return_10y, created_at)
-             VALUES (gen_random_uuid()::text, $1, $2::date, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
+            `INSERT INTO fund_performances (id, fund_id, date, return_1m, return_3m, return_6m, return_ytd, return_1y, return_3y, return_5y, return_10y, created_at, pending_settle, suspect_unsettled)
+             VALUES (gen_random_uuid()::text, $1, $2::date, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), $11, FALSE)
              ON CONFLICT (fund_id, date) DO UPDATE SET
                return_1m = EXCLUDED.return_1m, return_3m = EXCLUDED.return_3m, return_6m = EXCLUDED.return_6m,
                return_ytd = EXCLUDED.return_ytd, return_1y = EXCLUDED.return_1y, return_3y = EXCLUDED.return_3y,
-               return_5y = EXCLUDED.return_5y, return_10y = EXCLUDED.return_10y`,
-            entry.fundId, perf.asOfDate, perf.m1, perf.m3, perf.m6, perf.ytd, perf.y1, perf.y3, perf.y5, perf.y10,
+               return_5y = EXCLUDED.return_5y, return_10y = EXCLUDED.return_10y,
+               pending_settle = EXCLUDED.pending_settle, suspect_unsettled = FALSE`,
+            entry.fundId, perf.asOfDate, perf.m1, perf.m3, perf.m6, perf.ytd, perf.y1, perf.y3, perf.y5, perf.y10, isUnsettled,
           );
           written++;
         } else {

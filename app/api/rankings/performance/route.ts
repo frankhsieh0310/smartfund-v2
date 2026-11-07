@@ -298,8 +298,11 @@ export async function GET(request: Request) {
     const rows = await prisma.$queryRawUnsafe<Array<{
       id: string; code: string | null; name: string; value: string; nav: string | null; nav_date: string | null; perf_date: string | null; total: string;
     }>>(
+      // 2026-11-08（使用者核准，第38輪指令第一點修正）: 排除pending_settle／suspect_unsettled
+      // 旗標為true的列——雅虎奇摩頁面淨值日期標籤跟績效數字沒同時更新造成的誤標資料，排行中心
+      // 一律當作還沒有資料，不可拿來排序。
       `WITH latest_perf AS (
-         SELECT DISTINCT ON (fund_id) fund_id, date, ${column} FROM fund_performances ORDER BY fund_id, date DESC
+         SELECT DISTINCT ON (fund_id) fund_id, date, ${column} FROM fund_performances WHERE NOT pending_settle AND NOT suspect_unsettled ORDER BY fund_id, date DESC
        ), ranked AS (
          SELECT f.id, f.code, f.name, latest_perf.${column} AS value, f.latest_nav, f.latest_nav_date, latest_perf.date AS perf_date,
                 COALESCE(sc.master_fund_id, f.id) AS portfolio,

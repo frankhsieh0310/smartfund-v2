@@ -149,6 +149,14 @@
       "schedule": "*/7 * * * *"
     },
     {
+      "path": "/api/cron/fund-returns-settle",
+      "schedule": "*/5 13-23 * * *"
+    },
+    {
+      "path": "/api/cron/tw-close-settle-recheck",
+      "schedule": "*/5 13-15 * * *"
+    },
+    {
       "path": "/api/cron/yahoo-commodity?phase=history&group=cbot&symbols=ZC=F,ZW=F,KE=F,ZS=F,ZL=F,ZM=F,ZO=F,ZR=F",
       "schedule": "40 19 * * 1-5"
     },

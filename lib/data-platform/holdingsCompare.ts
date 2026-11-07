@@ -77,9 +77,11 @@ async function fetchPerformance(assetType: CompareKind, id: string) {
     return_1y: string | null; return_3y: string | null; return_5y: string | null;
     volatility: string | null; sharpe: string | null; beta: string | null; max_drawdown: string | null; dividend_yield: string | null;
   }>>(
+    // 2026-11-08（使用者核准，第38輪指令第一點修正）: fund_performances排除pending_settle／
+    // suspect_unsettled旗標（etf_performances沒有這兩欄，動態組SQL時用assetType擋掉）。
     `SELECT return_1m::text, return_3m::text, return_6m::text, return_ytd::text, return_1y::text, return_3y::text, return_5y::text,
             volatility::text, sharpe::text, beta::text, max_drawdown::text, dividend_yield::text
-       FROM ${table} WHERE ${col} = $1 ORDER BY date DESC LIMIT 1`,
+       FROM ${table} WHERE ${col} = $1 ${assetType === "FUND" ? "AND NOT pending_settle AND NOT suspect_unsettled" : ""} ORDER BY date DESC LIMIT 1`,
     id,
   );
   if (!rows.length) return null;

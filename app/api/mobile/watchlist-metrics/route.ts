@@ -40,7 +40,9 @@ export async function GET(request: Request) {
   }
   if (fundIds.length) {
     const rows = await prisma.$queryRawUnsafe<MetricRow[]>(
-      `WITH latest_perf AS (SELECT DISTINCT ON (fund_id) fund_id, date, return_1m, return_3m, return_6m, return_ytd, return_1y, return_3y, return_5y FROM fund_performances WHERE fund_id = ANY($1::text[]) ORDER BY fund_id, date DESC)
+      // 2026-11-08（使用者核准，第38輪指令第一點修正）: 排除pending_settle／suspect_unsettled
+      // 旗標為true的列（雅虎奇摩頁面淨值日期跟績效數字沒同時更新，當作還沒有資料）。
+      `WITH latest_perf AS (SELECT DISTINCT ON (fund_id) fund_id, date, return_1m, return_3m, return_6m, return_ytd, return_1y, return_3y, return_5y FROM fund_performances WHERE fund_id = ANY($1::text[]) AND NOT pending_settle AND NOT suspect_unsettled ORDER BY fund_id, date DESC)
        SELECT f.id asset_id, f.code, f.name, f.category, f.aum::text aum, coalesce(f.dividend_yield_a, f.dividend_yield_m)::text dividend_yield,
          lp.return_1m::text return_1m, lp.return_3m::text return_3m, lp.return_6m::text return_6m, lp.return_ytd::text return_ytd,
          lp.return_1y::text return_1y, lp.return_3y::text return_3y, lp.return_5y::text return_5y, lp.date::text perf_date,

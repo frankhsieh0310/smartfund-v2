@@ -41,13 +41,35 @@ function formatTwdAmount(raw: number, unit: string): string {
   const billion = yuan / 100_000_000;
   return `${billion.toFixed(2)}億元`;
 }
-function periodLabelFor(periodEnd: Date): string {
+// 2026-11-08（使用者核准，第37輪指令第二點期別標錯修正）: 原本不管metric實際性質，一律用
+// periodEnd的月份硬猜「第幾季」——VERIFIED stock_financial_facts其實有fiscal_period欄位
+// 直接記載每筆事實的真實期別語意（"Q1_YTD"／"Q2_YTD"／"Q3_YTD"＝累計至當季、"FY"＝全年度、
+// "trailing:TTM"＝近四季合計、"MONTH:11507"＝月營收），雅虎每日比率快照（本益比/毛利率等）
+// fiscal_period是null（它們根本沒有財報期別，period_end只是抓取當天）——改成照這欄位實際
+// 語意標示，fiscal_period為null時改標「資料日期」而不是瞎猜的季別（第四季還沒結束卻顯示
+// 「第4季」這種矛盾就是從這裡來的）。
+function periodLabelFor(periodEnd: Date, fiscalPeriod: string | null): string {
   // 存進資料庫的 periodEnd 常常是UTC午夜（=台北時間還沒跨到下一天），統一先轉台北時區
   // 再判斷季別，避免季底日期算錯一季。
   const taipei = new Date(periodEnd.getTime() + 8 * 60 * 60 * 1000);
   const y = taipei.getUTCFullYear();
-  const q = Math.ceil((taipei.getUTCMonth() + 1) / 3);
-  return `${y}年第${q}季`;
+  if (!fiscalPeriod) return `資料日期 ${taipei.toISOString().slice(0, 10)}`;
+  if (fiscalPeriod === "FY" || fiscalPeriod === "annual" || fiscalPeriod === "annual:12M") return `${y}年全年度`;
+  if (fiscalPeriod === "Q1_YTD") return `${y}年第1季`;
+  if (fiscalPeriod === "Q2_YTD") return `${y}年上半年累計`;
+  if (fiscalPeriod === "Q3_YTD") return `${y}年前三季累計`;
+  if (fiscalPeriod === "trailing:TTM") return "近四季合計";
+  if (fiscalPeriod.startsWith("quarterly")) {
+    const q = Math.ceil((taipei.getUTCMonth() + 1) / 3);
+    return `${y}年第${q}季單季`;
+  }
+  if (fiscalPeriod.startsWith("MONTH:")) {
+    const code = fiscalPeriod.slice(6);
+    const rocYear = Number(code.slice(0, 3));
+    const month = Number(code.slice(3));
+    if (Number.isFinite(rocYear) && Number.isFinite(month)) return `${rocYear + 1911}年${month}月（月營收）`;
+  }
+  return `${y}年`;
 }
 type FactFormat = "AMOUNT" | "PER_SHARE" | "PE_MULTIPLE" | "PERCENT" | "COUNT";
 // 2026-11-08（使用者回報第34輪第4點，VERIFIED）: 查production DB確認台積電(2330.TW)
@@ -56,7 +78,7 @@ type FactFormat = "AMOUNT" | "PER_SHARE" | "PE_MULTIPLE" | "PERCENT" | "COUNT";
 // labels 字典卻還停在舊的無前綴格式（"revenue"／"valuation.pe.ttm.point_in_time"），兩邊對不上，
 // 查詢回傳的200筆事實全部在這裡被悄悄濾掉——基本面分頁、估值摘要一直是空的不是資料庫沒資料，
 // 是這份對照表沒跟上欄位改名。保留舊格式 key 以防其他還沒遷移的股票，新增實際在用的新格式 key。
-const latestFacts = (facts: Array<{ metric: string; value: unknown; unit: string; currency: string | null; periodEnd: Date }>): StockLiteMetric[] => {
+const latestFacts = (facts: Array<{ metric: string; value: unknown; unit: string; currency: string | null; periodEnd: Date; fiscalPeriod: string | null }>): StockLiteMetric[] => {
   const seen = new Set<string>();
   const labels: Record<string, { key: string; label: string; format: FactFormat }> = {
     revenue: { key: "revenue", label: "營收", format: "AMOUNT" }, basic_eps: { key: "eps", label: "每股盈餘", format: "PER_SHARE" }, diluted_eps: { key: "dilutedEps", label: "稀釋每股盈餘", format: "PER_SHARE" }, gross_profit: { key: "grossProfit", label: "毛利", format: "AMOUNT" }, operating_income: { key: "operatingIncome", label: "營業利益", format: "AMOUNT" }, net_income: { key: "netIncome", label: "淨利", format: "AMOUNT" }, total_assets: { key: "totalAssets", label: "總資產", format: "AMOUNT" }, total_liabilities: { key: "totalLiabilities", label: "總負債", format: "AMOUNT" }, shareholders_equity: { key: "shareholdersEquity", label: "股東權益", format: "AMOUNT" }, cash_and_cash_equivalents: { key: "cash", label: "現金及約當現金", format: "AMOUNT" }, operating_cash_flow: { key: "operatingCashFlow", label: "營業現金流", format: "AMOUNT" }, investing_cash_flow: { key: "investingCashFlow", label: "投資現金流", format: "AMOUNT" }, financing_cash_flow: { key: "financingCashFlow", label: "融資現金流", format: "AMOUNT" }, capital_expenditure: { key: "capitalExpenditure", label: "資本支出", format: "AMOUNT" }, shares_outstanding: { key: "sharesOutstanding", label: "流通股數", format: "COUNT" }, "valuation.pe.ttm.point_in_time": { key: "pe", label: "本益比", format: "PE_MULTIPLE" }, "yahoo.event.cashDividend": { key: "dividend", label: "現金股利", format: "PER_SHARE" },
@@ -69,21 +91,41 @@ const latestFacts = (facts: Array<{ metric: string; value: unknown; unit: string
     "yahoo_fundamentals.earningsGrowth": { key: "epsGrowth", label: "獲利成長率", format: "PERCENT" },
     "yahoo.balance-sheet.ordinarySharesNumber": { key: "sharesOutstanding", label: "流通股數", format: "COUNT" },
   };
+  // 2026-11-08（使用者核准，第37輪指令第五點本益比來源核實）: 本益比同時有兩筆候選來源——
+  // "valuation.pe"（source=TWSE_OFFICIAL_BWIBBU）跟"yahoo_fundamentals.pe"（source=
+  // YAHOO_QUOTE_SUMMARY，全球版雅虎財經API）。VERIFIED：2330/2317/2454三檔實測，
+  // valuation.pe跟雅虎奇摩(tw.stock.yahoo.com)個股頁上實際顯示的本益比逐檔完全一致
+  // （24.75/14.80/55.99），yahoo_fundamentals.pe跟雅虎奇摩不一致（22.98/15.61/57.13）。
+  // 規則是照抄雅虎奇摩，所以本益比一律優先採用valuation.pe；非台股（沒有TWSE官方BWIBBU
+  // 資料、不適用「照抄雅虎奇摩」規則）才退回yahoo_fundamentals.pe。排序上只動「pe」這個
+  // 輸出key的來源優先順序，不影響其他欄位既有的period_end排序。
+  const PE_METRIC_PRIORITY = ["valuation.pe", "valuation.pe.ttm.point_in_time", "yahoo_fundamentals.pe"];
+  const orderedFacts = [...facts].sort((a, b) => {
+    const pa = PE_METRIC_PRIORITY.indexOf(a.metric), pb = PE_METRIC_PRIORITY.indexOf(b.metric);
+    if (pa === -1 && pb === -1) return 0;
+    if (pa === -1) return 1;
+    if (pb === -1) return -1;
+    return pa - pb;
+  });
   const result: StockLiteMetric[] = [];
-  for (const fact of facts) {
+  for (const fact of orderedFacts) {
     const mapped = labels[fact.metric];
     if (!mapped || seen.has(mapped.key)) continue;
     const raw = numberOrNull(fact.value);
     if (raw == null) continue;
     seen.add(mapped.key);
-    const period = periodLabelFor(fact.periodEnd);
+    const period = periodLabelFor(fact.periodEnd, fact.fiscalPeriod);
     let display: string;
+    // 2026-11-08（使用者核准，第37輪指令第三點排版修正）: 主數字跟期別/日期原本擠在同一行
+    // 大字裡（"...（期別）"），改成用換行字元分隔——前端（手機App的ResearchMetric／
+    // MetricSection）統一照「\n」切成「主數字獨立一行大字」＋「期別/日期單獨一行灰色小字」，
+    // 不再是同一行塞兩種資訊。
     switch (mapped.format) {
-      case "AMOUNT": display = `${formatTwdAmount(raw, fact.unit)}（${period}）`; break;
-      case "PER_SHARE": display = `${raw.toFixed(2)} 元（${period}）`; break;
-      case "PE_MULTIPLE": display = `本益比 ${raw.toFixed(2)} 倍（${period}）`; break;
-      case "PERCENT": display = `${(raw * 100).toFixed(2)}%（${period}）`; break;
-      case "COUNT": display = `${Math.round(raw).toLocaleString("zh-TW")} 股（${period}）`; break;
+      case "AMOUNT": display = `${formatTwdAmount(raw, fact.unit)}\n${period}`; break;
+      case "PER_SHARE": display = `${raw.toFixed(2)} 元\n${period}`; break;
+      case "PE_MULTIPLE": display = `本益比 ${raw.toFixed(2)} 倍\n${period}`; break;
+      case "PERCENT": display = `${(raw * 100).toFixed(2)}%\n${period}`; break;
+      case "COUNT": display = `${Math.round(raw).toLocaleString("zh-TW")} 股\n${period}`; break;
     }
     result.push({ key: mapped.key, label: mapped.label, value: display });
   }
@@ -120,7 +162,7 @@ const analyticMetrics = (rows: Array<{ asOf: Date; timeframe: string; metricKey:
 export async function getStockDetail(symbol: string): Promise<ServiceResponse<{ identity: CanonicalIdentity; metrics: SummaryMetrics; sector: string | null; industry: string | null; liteMetrics: StockLiteMetric[] }>> {
   const key = decodeURIComponent(symbol).trim();
   if (!key) throw new WebDataError("INVALID_QUERY", "A stock symbol is required.");
-  const row = await prisma.stock.findFirst({ where: { OR: [{ id: key }, { yahooSymbol: { equals: key, mode: "insensitive" } }, { ticker: { equals: key, mode: "insensitive" } }] }, select: { id: true, ticker: true, yahooSymbol: true, companyName: true, companyNameZh: true, currency: true, exchange: true, country: true, latestClose: true, latestDate: true, updatedAt: true, sector: true, industry: true, financialFacts: { orderBy: [{ periodEnd: "desc" }, { publicationDate: "desc" }], take: 200, select: { metric: true, value: true, unit: true, currency: true, periodEnd: true } }, versionedAnalytics: { orderBy: [{ asOf: "desc" }, { timeframe: "asc" }, { metricKey: "asc" }], take: 160, select: { asOf: true, timeframe: true, metricKey: true, window: true, value: true, stateValue: true } }, history: { orderBy: { date: "desc" }, take: 2, select: { date: true, close: true, volume: true, source: true, sourceSymbol: true, updatedAt: true, importedAt: true } }, technical: { orderBy: { date: "desc" }, take: 1, select: { date: true, ma5: true, ma20: true, ma60: true, ma120: true, ma240: true, ema12: true, ema26: true, macd: true, macdSignal: true, macdHistogram: true, kdK: true, kdD: true, rsi14: true, atr14: true, bollingerUpper: true, bollingerMiddle: true, bollingerLower: true } } } });
+  const row = await prisma.stock.findFirst({ where: { OR: [{ id: key }, { yahooSymbol: { equals: key, mode: "insensitive" } }, { ticker: { equals: key, mode: "insensitive" } }] }, select: { id: true, ticker: true, yahooSymbol: true, companyName: true, companyNameZh: true, currency: true, exchange: true, country: true, latestClose: true, latestDate: true, updatedAt: true, sector: true, industry: true, financialFacts: { orderBy: [{ periodEnd: "desc" }, { publicationDate: "desc" }], take: 200, select: { metric: true, value: true, unit: true, currency: true, periodEnd: true, fiscalPeriod: true } }, versionedAnalytics: { orderBy: [{ asOf: "desc" }, { timeframe: "asc" }, { metricKey: "asc" }], take: 160, select: { asOf: true, timeframe: true, metricKey: true, window: true, value: true, stateValue: true } }, history: { orderBy: { date: "desc" }, take: 2, select: { date: true, close: true, volume: true, source: true, sourceSymbol: true, updatedAt: true, importedAt: true } }, technical: { orderBy: { date: "desc" }, take: 1, select: { date: true, ma5: true, ma20: true, ma60: true, ma120: true, ma240: true, ema12: true, ema26: true, macd: true, macdSignal: true, macdHistogram: true, kdK: true, kdD: true, rsi14: true, atr14: true, bollingerUpper: true, bollingerMiddle: true, bollingerLower: true } } } });
   if (!row) throw new WebDataError("NOT_FOUND", "Stock not found.");
   // 2026-11-08（使用者第36輪指令第三點核准）: 52週區間／市值／公司簡介——照抄雅虎財經香港站
   // 跟證交所MOPS「主要經營業務」，不自己計算。資料來源見 stockYahooHkProfile.ts／
@@ -143,14 +185,18 @@ export async function getStockDetail(symbol: string): Promise<ServiceResponse<{ 
   const provenance = buildProvenance({ source, sourceRecordId: latest?.sourceSymbol, asOfDate: asOf, lastUpdated: latest?.updatedAt ?? latest?.importedAt ?? row.updatedAt });
   const trend = numberOrNull(technical?.ma20) != null && numberOrNull(technical?.ma60) != null ? (Number(technical?.ma20) >= Number(technical?.ma60) ? "中期趨勢偏多" : "中期趨勢偏空") : null;
   const signal = numberOrNull(technical?.macd) != null && numberOrNull(technical?.macdSignal) != null ? (Number(technical?.macd) >= Number(technical?.macdSignal) ? "MACD 位於訊號線上方" : "MACD 位於訊號線下方") : null;
+  // 2026-11-08（使用者核准，第37輪指令第三點排版修正）: 主數字跟「資料日期：…，來源：…」原本
+  // 擠在同一行大字裡，改成換行分隔（前端統一照「\n」切成大字主數字＋灰色小字日期/來源兩行）；
+  // 52週區間加千分位（"1,375 – 2,590"，千分位+「 – 」全形連接，不是裸減號)。
+  const thousands = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 0 });
   const week52Range = hkProfile?.week52_low != null && hkProfile?.week52_high != null
-    ? `${numberOrNull(hkProfile.week52_low)} - ${numberOrNull(hkProfile.week52_high)}（資料日期：${hkProfile.week52_as_of_date?.toISOString().slice(0, 10) ?? ""}，來源：雅虎財經香港站）`
+    ? `${thousands(Number(hkProfile.week52_low))} – ${thousands(Number(hkProfile.week52_high))}\n資料日期：${hkProfile.week52_as_of_date?.toISOString().slice(0, 10) ?? ""}，來源：雅虎財經香港站`
     : null;
   const marketCapDisplay = hkProfile?.market_cap_value != null && hkProfile?.market_cap_unit
-    ? `${Number(hkProfile.market_cap_value).toFixed(2)}${hkProfile.market_cap_unit}元（資料日期：${hkProfile.market_cap_as_of_date?.toISOString().slice(0, 10) ?? ""}，來源：雅虎財經香港站）`
+    ? `${Number(hkProfile.market_cap_value).toFixed(2)}${hkProfile.market_cap_unit}元\n資料日期：${hkProfile.market_cap_as_of_date?.toISOString().slice(0, 10) ?? ""}，來源：雅虎財經香港站`
     : null;
   const companyProfileDisplay = hkProfile?.company_profile
-    ? `${hkProfile.company_profile}（資料日期：${hkProfile.company_profile_as_of_date?.toISOString().slice(0, 10) ?? ""}，來源：證交所公開資訊觀測站）`
+    ? `${hkProfile.company_profile}\n資料日期：${hkProfile.company_profile_as_of_date?.toISOString().slice(0, 10) ?? ""}，來源：證交所公開資訊觀測站`
     : null;
   return { data: { identity: identity(row), metrics: { ...metrics(row), priceOrNav: currentPrice, change, changePercent, asOfDate: isoOrNull(asOf) }, sector: row.sector, industry: row.industry, liteMetrics: [
     { key: "52_week_range", label: "52週區間", value: week52Range },

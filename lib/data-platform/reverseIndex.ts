@@ -84,9 +84,14 @@ export async function currentReverseHoldings(query: Query, input: { tickers: str
       FROM etfs e LEFT JOIN latest_perf lp ON lp.etf_id = e.id WHERE e.code = ANY($1::text[])`, etfCodes);
     for (const r of rows) metricsByAssetId.set(r.asset_id, r);
   }
+  // 2026-11-08（使用者核准，第38輪指令第一點修正）: fund_performances新增pending_settle／
+  // suspect_unsettled兩個旗標——雅虎奇摩頁面「淨值日期標籤」跟「績效數字」不是同時更新，白天
+  // 排程若剛好在這個空窗期抓到，會把舊數字錯綁到新日期上。pending_settle=當晚結算排程還沒
+  // 重新確認過的當日資料；suspect_unsettled=舊資料被診斷為疑似踩到同一個問題、雅虎頁面已經
+  // 抓不回正確數字的歷史列。畫面跟排序一律排除這兩種旗標為true的列，當作「還沒有資料」。
   if (fundIds.length) {
     const rows = await query<MetricRow>(`
-      WITH latest_perf AS (SELECT DISTINCT ON (fund_id) fund_id, date, return_1m, return_3m, return_6m, return_ytd, return_1y, return_3y, return_5y FROM fund_performances WHERE fund_id = ANY($1::text[]) ORDER BY fund_id, date DESC)
+      WITH latest_perf AS (SELECT DISTINCT ON (fund_id) fund_id, date, return_1m, return_3m, return_6m, return_ytd, return_1y, return_3y, return_5y FROM fund_performances WHERE fund_id = ANY($1::text[]) AND NOT pending_settle AND NOT suspect_unsettled ORDER BY fund_id, date DESC)
       SELECT f.id asset_id, f.category, f.aum::text aum, coalesce(f.dividend_yield_a, f.dividend_yield_m)::text dividend_yield,
         lp.return_1m::text return_1m, lp.return_3m::text return_3m, lp.return_6m::text return_6m, lp.return_ytd::text return_ytd,
         lp.return_1y::text return_1y, lp.return_3y::text return_3y, lp.return_5y::text return_5y, lp.date::text perf_date
