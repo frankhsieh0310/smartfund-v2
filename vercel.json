@@ -33,6 +33,10 @@
   },
   "crons": [
     {
+      "path": "/api/cron/stock-yahoo-hk-profile",
+      "schedule": "*/10 6-16 * * 1-5"
+    },
+    {
       "path": "/api/cron/write-probe",
       "schedule": "*/15 * * * *"
     },
