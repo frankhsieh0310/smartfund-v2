@@ -38,7 +38,15 @@ export async function updateCurrentPrices(limit = 40) {
     for (const row of candles) await prisma.etfHistory.upsert({ where: { etfId_date: { etfId: etf.id, date: utcDate(row.date) } }, create: { etfId: etf.id, date: utcDate(row.date), price: row.close, open: row.open, high: row.high, low: row.low, close: row.close, adjustedClose: row.adjClose, volume: row.volume, source: "YAHOO", sourceUrl: symbol, knownAt: new Date() }, update: { price: row.close, open: row.open, high: row.high, low: row.low, close: row.close, adjustedClose: row.adjClose, volume: row.volume, knownAt: new Date() } });
     const history = (await prisma.etfHistory.findMany({ where: { etfId: etf.id, price: { not: null } }, orderBy: { date: "desc" }, take: 1100, select: { date: true, price: true } })).reverse();
     const points = history.filter((x) => x.price != null).map(x => ({ date: x.date, price: Number(x.price) }));
-    await prisma.etfPerformance.upsert({ where: { etfId_date: { etfId: etf.id, date: utcDate(latest.date) } }, create: { etfId: etf.id, date: utcDate(latest.date), price: latest.close, return1d: periodReturn(points, 1), return1m: periodReturn(points, 30), return3m: periodReturn(points, 91), return6m: periodReturn(points, 183), return1y: periodReturn(points, 365), return3y: periodReturn(points, 1096) }, update: { price: latest.close, return1d: periodReturn(points, 1), return1m: periodReturn(points, 30), return3m: periodReturn(points, 91), return6m: periodReturn(points, 183), return1y: periodReturn(points, 365), return3y: periodReturn(points, 1096) } });
+    // 2026-11-08（使用者回報第34輪第8點，VERIFIED）: return1d（畫面上的「漲跌/漲跌幅」）原本跟
+    // 其他期間報酬一樣用 periodReturn(points,1)——用自己存的日K收盤價往回找「約1天前」那一列算
+    // 差值，這個基準日可能跟雅虎自己認定的「前一交易日收盤」對不上（非交易日、candle finalize
+    // 時機差異都會造成），跟雅虎奇摩網站顯示的漲跌幅因此對不起來（元大台灣50回報案例：我們
+    // -4.65% vs 雅虎奇摩 -4.60%）。response.previousClose 其實就是雅虎自己回傳的
+    // chartPreviousClose——雅虎網站算漲跌幅用的正是這個基準，直接拿來算，不要自己另外找基準日。
+    const yahooPrevClose = response?.previousClose ?? null;
+    const return1d = yahooPrevClose && yahooPrevClose !== 0 ? ((latest.close! / yahooPrevClose) - 1) * 100 : periodReturn(points, 1);
+    await prisma.etfPerformance.upsert({ where: { etfId_date: { etfId: etf.id, date: utcDate(latest.date) } }, create: { etfId: etf.id, date: utcDate(latest.date), price: latest.close, return1d, return1m: periodReturn(points, 30), return3m: periodReturn(points, 91), return6m: periodReturn(points, 183), return1y: periodReturn(points, 365), return3y: periodReturn(points, 1096) }, update: { price: latest.close, return1d, return1m: periodReturn(points, 30), return3m: periodReturn(points, 91), return6m: periodReturn(points, 183), return1y: periodReturn(points, 365), return3y: periodReturn(points, 1096) } });
     await prisma.etf.update({ where: { id: etf.id }, data: { latestPrice: latest.close, priceUpdatedAt: utcDate(latest.date) } }); etfUpdated++;
   } catch (error) { failures.push({ kind: "ETF", symbol: etf.dataSource ?? etf.id, reason: String(error) }); }
   return { stockAttempted: stocks.length, stockUpdated, etfAttempted: etfs.length, etfUpdated, failures };

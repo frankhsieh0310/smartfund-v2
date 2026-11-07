@@ -28,13 +28,36 @@ export const searchStocks = (query: string, options: Omit<ListQuery, "query"> = 
 
 type StockLiteMetric = { key: string; label: string; value: number | string | null; unit?: string };
 
+// 2026-11-08（使用者回報第34輪第4點，VERIFIED）: 查production DB確認台積電(2330.TW)
+// stock_financial_facts 其實有完整當季財報與Yahoo比率資料，但實際寫入的 metric 欄位名稱是
+// "financial.revenue"／"valuation.pe"／"yahoo_fundamentals.pe" 這種有前綴的新格式，這份
+// labels 字典卻還停在舊的無前綴格式（"revenue"／"valuation.pe.ttm.point_in_time"），兩邊對不上，
+// 查詢回傳的200筆事實全部在這裡被悄悄濾掉——基本面分頁、估值摘要一直是空的不是資料庫沒資料，
+// 是這份對照表沒跟上欄位改名。保留舊格式 key 以防其他還沒遷移的股票，新增實際在用的新格式 key。
 const latestFacts = (facts: Array<{ metric: string; value: unknown; unit: string; currency: string | null; periodEnd: Date }>): StockLiteMetric[] => {
   const seen = new Set<string>();
-  const labels: Record<string, { key: string; label: string }> = {
+  const labels: Record<string, { key: string; label: string; scale100?: boolean; unit?: string }> = {
     revenue: { key: "revenue", label: "營收" }, basic_eps: { key: "eps", label: "每股盈餘" }, diluted_eps: { key: "dilutedEps", label: "稀釋每股盈餘" }, gross_profit: { key: "grossProfit", label: "毛利" }, operating_income: { key: "operatingIncome", label: "營業利益" }, net_income: { key: "netIncome", label: "淨利" }, total_assets: { key: "totalAssets", label: "總資產" }, total_liabilities: { key: "totalLiabilities", label: "總負債" }, shareholders_equity: { key: "shareholdersEquity", label: "股東權益" }, cash_and_cash_equivalents: { key: "cash", label: "現金及約當現金" }, operating_cash_flow: { key: "operatingCashFlow", label: "營業現金流" }, investing_cash_flow: { key: "investingCashFlow", label: "投資現金流" }, financing_cash_flow: { key: "financingCashFlow", label: "融資現金流" }, capital_expenditure: { key: "capitalExpenditure", label: "資本支出" }, shares_outstanding: { key: "sharesOutstanding", label: "流通股數" }, "valuation.pe.ttm.point_in_time": { key: "pe", label: "本益比" }, "yahoo.event.cashDividend": { key: "dividend", label: "現金股利" },
+    "financial.revenue": { key: "revenue", label: "營收" }, "financial.basic_eps": { key: "eps", label: "每股盈餘" }, "financial.gross_profit": { key: "grossProfit", label: "毛利" }, "financial.operating_income": { key: "operatingIncome", label: "營業利益" }, "financial.net_income": { key: "netIncome", label: "淨利" }, "financial.total_assets": { key: "totalAssets", label: "總資產" }, "financial.total_liabilities": { key: "totalLiabilities", label: "總負債" }, "financial.shareholders_equity": { key: "shareholdersEquity", label: "股東權益" }, "financial.ending_cash_and_cash_equivalents": { key: "cash", label: "現金及約當現金" }, "financial.operating_cash_flow": { key: "operatingCashFlow", label: "營業現金流" }, "financial.investing_cash_flow": { key: "investingCashFlow", label: "投資現金流" }, "financial.financing_cash_flow": { key: "financingCashFlow", label: "融資現金流" },
+    // 2026-11-08 VERIFIED（production DB查到）: 這組 yahoo_fundamentals.* 存的是比率(0.658=65.8%)、
+    // unit欄位是"RATIO"不是"%"，顯示前要自己×100、換成"%"，不能直接把DB原始unit原樣丟給畫面。
+    "valuation.pe": { key: "pe", label: "本益比" }, "yahoo_fundamentals.pe": { key: "pe", label: "本益比" },
+    "yahoo_fundamentals.dividendYield": { key: "dividendYield", label: "殖利率", scale100: true, unit: "%" },
+    "yahoo_fundamentals.grossMargin": { key: "grossMargin", label: "毛利率", scale100: true, unit: "%" },
+    "yahoo_fundamentals.profitMargin": { key: "netMargin", label: "淨利率", scale100: true, unit: "%" },
+    "yahoo_fundamentals.revenueGrowth": { key: "revenueGrowth", label: "營收成長率", scale100: true, unit: "%" },
+    "yahoo_fundamentals.earningsGrowth": { key: "epsGrowth", label: "獲利成長率", scale100: true, unit: "%" },
+    "yahoo.balance-sheet.ordinarySharesNumber": { key: "sharesOutstanding", label: "流通股數" },
   };
   const result: StockLiteMetric[] = [];
-  for (const fact of facts) { const mapped = labels[fact.metric]; if (!mapped || seen.has(mapped.key)) continue; seen.add(mapped.key); result.push({ ...mapped, value: numberOrNull(fact.value), unit: fact.unit }); }
+  for (const fact of facts) {
+    const mapped = labels[fact.metric];
+    if (!mapped || seen.has(mapped.key)) continue;
+    seen.add(mapped.key);
+    const raw = numberOrNull(fact.value);
+    const value = mapped.scale100 && raw != null ? raw * 100 : raw;
+    result.push({ key: mapped.key, label: mapped.label, value, unit: mapped.unit ?? fact.unit });
+  }
   if (facts[0]?.periodEnd) result.push({ key: "fundamentalsAsOf", label: "基本面資料日期", value: facts[0].periodEnd.toISOString().slice(0, 10) });
   return result;
 };
