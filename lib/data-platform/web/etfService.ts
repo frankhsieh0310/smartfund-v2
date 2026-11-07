@@ -204,7 +204,15 @@ export async function getEtfDetail(code: string): Promise<ServiceResponse<{ iden
   // route's comment) over deriving one from our own two-row EtfHistory diff, which can disagree with
   // Yahoo's own basis around non-trading-day gaps. Falls back to the diff only when that figure is
   // not yet available for this ETF.
-  const latestPerformance = await prisma.etfPerformance.findFirst({ where: { etfId: row.id }, orderBy: { date: "desc" }, select: { return1d: true } });
+  // 2026-11-07（使用者核准，第35輪指令第2點）: performance1M/3M/1Y 原本經由 etfMetrics(row) 讀
+  // etfs.return1m/return3m/return1y 這三個扁平欄位——跟 app/api/rankings/performance/route.ts
+  // 2026-11-06 記錄過的同一個「跟 etf_performances 最新一筆對不上」的過期欄位問題，詳情頁從沒
+  // 修過。這裡直接取 etf_performances 依 date 排序的最新一列，連同它自己的 date 一起回傳
+  // （performanceAsOfDate），給前端標示「這批績效數字是哪一天的」。
+  const latestPerformance = await prisma.etfPerformance.findFirst({
+    where: { etfId: row.id }, orderBy: { date: "desc" },
+    select: { date: true, return1d: true, return1m: true, return3m: true, return1y: true },
+  });
   const authoritativeChangePercent = numberOrNull(latestPerformance?.return1d);
   const changePercent = authoritativeChangePercent ?? (previousValue != null && previousValue !== 0 && latestValue != null ? ((latestValue - previousValue) / previousValue) * 100 : null);
   // Absolute change derived from the authoritative percent (previousImplied = latest / (1 + pct/100)),
@@ -243,7 +251,7 @@ export async function getEtfDetail(code: string): Promise<ServiceResponse<{ iden
   const expenseRatioTierText = await prisma.$queryRawUnsafe<Array<{ expense_ratio_tier_text: string | null }>>(
     `SELECT expense_ratio_tier_text FROM etfs WHERE id = $1`, row.id,
   ).then((rows) => rows[0]?.expense_ratio_tier_text ?? null).catch(() => null);
-  return { data: { identity: etfIdentity(row), metrics: { ...etfMetrics(row), priceOrNav: latestValue, change, changePercent, asOfDate: isoOrNull(asOf) }, nav: numberOrNull(latest?.nav ?? row.latestNav), aum: numberOrNull(latest?.aum ?? row.aum), premiumDiscount, premiumDiscountAsOfDate, expenseRatio: numberOrNull(row.expenseRatio), expenseRatioTierText, distributionFreq: row.distributionFreq ?? null, holdingsCount: holdings.length, holdingsAsOfDate: isoOrNull(latestHolding?.asOfDate), topHoldings: holdings.slice(0, 10).map((holding) => ({ name: holding.holdingName, symbol: holding.ticker, weight: numberOrNull(holding.weight) })), assetAllocation: allocation((holding) => holding.assetType), sectorAllocation: allocation((holding) => holding.sector), category: row.category }, meta: { asOfDate: provenance.asOfDate, lastUpdated: provenance.lastUpdated, freshnessStatus: detailFreshness, source, provenance, coverageStatus: "FULL" }, pagination: null, error: null };
+  return { data: { identity: etfIdentity(row), metrics: { ...etfMetrics(row), priceOrNav: latestValue, change, changePercent, asOfDate: isoOrNull(asOf), performance1M: numberOrNull(latestPerformance?.return1m), performance3M: numberOrNull(latestPerformance?.return3m), performance1Y: numberOrNull(latestPerformance?.return1y), performanceAsOfDate: isoOrNull(latestPerformance?.date) }, nav: numberOrNull(latest?.nav ?? row.latestNav), aum: numberOrNull(latest?.aum ?? row.aum), premiumDiscount, premiumDiscountAsOfDate, expenseRatio: numberOrNull(row.expenseRatio), expenseRatioTierText, distributionFreq: row.distributionFreq ?? null, holdingsCount: holdings.length, holdingsAsOfDate: isoOrNull(latestHolding?.asOfDate), topHoldings: holdings.slice(0, 10).map((holding) => ({ name: holding.holdingName, symbol: holding.ticker, weight: numberOrNull(holding.weight) })), assetAllocation: allocation((holding) => holding.assetType), sectorAllocation: allocation((holding) => holding.sector), category: row.category }, meta: { asOfDate: provenance.asOfDate, lastUpdated: provenance.lastUpdated, freshnessStatus: detailFreshness, source, provenance, coverageStatus: "FULL" }, pagination: null, error: null };
 }
 
 export async function getEtfHistory(code: string, query: HistoryQuery = {}): Promise<ServiceResponse<Array<{ date: string; price: number | null; nav: number | null; premiumDiscount: number | null; volume: number | null; aum: number | null; open: number | null; high: number | null; low: number | null; close: number | null; adjustedClose: number | null }>>> {

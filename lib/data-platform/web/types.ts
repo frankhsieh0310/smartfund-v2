@@ -31,6 +31,10 @@ export interface SummaryMetrics {
   performance1M: number | null;
   performance3M: number | null;
   performance1Y: number | null;
+  /** The date these performance figures are as of (etf_performances/fund_performances' own
+   * `date` column) -- NOT the same as `asOfDate` above, which is the price/NAV date. Null when
+   * no performance row exists yet. */
+  performanceAsOfDate?: string | null;
   /** Authoritative (Yahoo-sourced) trailing dividend yield, percent units. Null when not available. */
   dividendYield: number | null;
 }
