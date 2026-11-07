@@ -116,7 +116,13 @@ export async function getStockDetail(symbol: string): Promise<ServiceResponse<{ 
     { key: "macd", label: "MACD", value: numberOrNull(technical?.macd) },
     { key: "macdSignal", label: "MACD 訊號線", value: numberOrNull(technical?.macdSignal) }, { key: "macdHistogram", label: "MACD 柱狀值", value: numberOrNull(technical?.macdHistogram) },
     { key: "atr14", label: "ATR（14）", value: numberOrNull(technical?.atr14) }, { key: "bollingerUpper", label: "布林通道上緣", value: numberOrNull(technical?.bollingerUpper) }, { key: "bollingerMiddle", label: "布林通道中線", value: numberOrNull(technical?.bollingerMiddle) }, { key: "bollingerLower", label: "布林通道下緣", value: numberOrNull(technical?.bollingerLower) },
-    { key: "volume", label: "成交量", value: latest?.volume == null ? null : Number(latest.volume) }, { key: "signal", label: "目前訊號", value: signal },
+    // 2026-11-08（使用者回報第34輪第8點第二次指正）: volume這裡存的本來就是雅虎每日K線candle
+    // 自己的volume欄位（不是meta.regularMarketVolume那個含盤後/零股的欄位），VERIFIED：雅虎API
+    // 的candle volume跟雅虎奇摩網站上的成交量基準一致（已確認2330.TW 11/6候選值結算後為
+    // 97,176,862，換算97,177張，對得上使用者看到的「約九萬七千張」）；只是台股DB裡這一列是收盤
+    // 剛結束、Yahoo資料還沒最終結算時寫入的早期數字，排程下次重新抓這天會自動覆蓋成正確值，這裡
+    // 沒有欄位錯誤不用換來源。單位改成台股慣用的「張」（1張=1000股），非台股維持股數不換算。
+    { key: "volume", label: "成交量", value: latest?.volume == null ? null : (row.exchange === "TWSE" || row.exchange === "TPEx" || row.exchange === "TPEX") ? Math.round(Number(latest.volume) / 1000) : Number(latest.volume), unit: latest?.volume != null && (row.exchange === "TWSE" || row.exchange === "TPEx" || row.exchange === "TPEX") ? "張" : undefined }, { key: "signal", label: "目前訊號", value: signal },
     ...analyticMetrics(row.versionedAnalytics),
     { key: "technicalAsOf", label: "技術資料日期", value: row.versionedAnalytics[0]?.asOf.toISOString().slice(0, 10) ?? technical?.date.toISOString().slice(0, 10) ?? null },
   ] }, meta: { asOfDate: provenance.asOfDate, lastUpdated: provenance.lastUpdated, freshnessStatus: freshnessStatus(asOf, "MARKET_DAY"), source, provenance, coverageStatus: "FULL" }, pagination: null, error: null };

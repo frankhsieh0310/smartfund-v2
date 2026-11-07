@@ -38,12 +38,18 @@ export interface YahooChartResult {
   httpStatus: number;
   contentType: string | null;
   candles: YahooChartCandle[];
-  /** Yahoo's OWN previous-close figure (chart.result[0].meta.chartPreviousClose) -- use this for
-   * day-change instead of deriving a "previous" point from our own candle history: it's Yahoo's own
-   * basis, so it can't diverge from what Yahoo itself (or Yahoo奇摩) displays for day-over-day change. */
+  /** chart.result[0].meta.chartPreviousClose -- 2026-11-08（使用者更正，VERIFIED）: 這其實是
+   * 「查詢區間開始前」那一天的收盤價，不是「前一個交易日」收盤價——period1 查1天前跟查1100天前，
+   * 這個欄位會回傳完全不同的數字（實測過：1100天窗回傳11/2的收盤，1天窗直接回傳等於當前價）。
+   * 不要拿來算日漲跌，只在真的需要「查詢範圍起點前收盤價」的語境才用。 */
   previousClose: number | null;
   /** Yahoo's OWN current/last price figure (chart.result[0].meta.regularMarketPrice). */
   regularMarketPrice: number | null;
+  /** chart.result[0].meta.regularMarketChangePercent -- 2026-11-08（使用者更正，VERIFIED）: 這才是
+   * 真正「最新一個交易日 vs 前一交易日」的漲跌幅，不受 period1/period2 查詢窗口寬窄影響（實測
+   * 0050.TW 查1天窗跟查1100天窗，這個欄位數字完全一樣），就是雅虎奇摩網站顯示的那個漲跌幅基準。
+   * 算日漲跌（return1d）一律用這個，不要用 previousClose 自己推。 */
+  regularMarketChangePercent: number | null;
 }
 
 export interface YahooQuoteResult {
@@ -260,6 +266,7 @@ export async function fetchYahooChart(
     instrumentType: result.meta?.instrumentType ?? null,
     previousClose: result.meta?.chartPreviousClose ?? null,
     regularMarketPrice: result.meta?.regularMarketPrice ?? null,
+    regularMarketChangePercent: result.meta?.regularMarketChangePercent ?? null,
     httpStatus: res.status,
     contentType: res.headers.get("content-type"),
     candles,
@@ -408,6 +415,7 @@ export async function fetchYahooChartPeriod(
     instrumentType: result.meta?.instrumentType ?? null,
     previousClose: result.meta?.chartPreviousClose ?? null,
     regularMarketPrice: result.meta?.regularMarketPrice ?? null,
+    regularMarketChangePercent: result.meta?.regularMarketChangePercent ?? null,
     httpStatus: res.status,
     contentType: res.headers.get("content-type"),
     candles: timestamps.map((ts, i) => ({
