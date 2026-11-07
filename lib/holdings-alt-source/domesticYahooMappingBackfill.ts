@@ -182,6 +182,38 @@ export async function findBackfillCandidates(query: QueryFn, afterFundId: string
   }));
 }
 
+// 2026-11-07（使用者核准，修正第33輪指令第1點發現的事故）: EXACT_NAME 原本「名稱完全相符且剛好
+// 一檔」就直接判定MATCHED，完全不核對幣別/淨值——跟 lib/offshore-nav-sync/discoverMapping.ts
+// 2026-10-31已經VERIFIED過的新加坡大華事故是同一種根因：Yahoo TW fund search對某些查詢字串的
+// 「唯一一筆完全相符」結果，實際指向另一檔基金/級別（Yahoo搜尋結果本身的問題，不是我方比對規則
+// 太寬鬆）。offshore那邊的修法是把兩檔壞mapping事後加進排除清單，沒有把「淨值/幣別核實」變成
+// EXACT_NAME的必要關卡——這支domestic backfill更嚴重，連事後排除清單都沒有，同一種事故完全沒有
+// 防護。VERIFIED實際影響：元大高科技基金-新台幣A類型、野村中小基金-累積類型兩檔的
+// fund_provider_mappings都是透過EXACT_NAME寫入，但fund_performances寫回的1Y報酬率逐日劇烈跳動
+// （96%→126%，遠超過這兩檔基金自己官方頁面穩定在70-80%區間、也遠超過同組別/指數參考值），
+// 判斷是EXACT_NAME配到了別的基金實體。
+//
+// 修正：EXACT_NAME比對到剛好一檔後，一律再用幣別+同日淨值±0.1%核實一次（不要求累積/配息型態，
+// 因為名稱已經完全相符，型態理論上也會一致，這裡只是multiply一層獨立核實，跟規則二共用同一組
+// 門檻）。三種結果：
+//   - 核實通過（幣別跟淨值都查得到且在門檻內）→ 維持 MATCHED／EXACT_NAME。
+//   - 核實不通過（幣別或淨值對不上，兩邊資料都查得到）→ 這個「唯一完全相符」的候選判定為假陽性，
+//     不接受，退回當作沒有exact match，交給規則二/三的交叉核實去找真正對得上的候選（通常也會是
+//     零檔或多檔而被拒絕，而不是誤配到剛剛被拒絕的那個候選)。
+//   - 無法核實（我方latestNav/latestNavDate缺漏，或貨幣不在CURRENCY_MAP）→ 沒有更好的判斷依據，
+//     維持原本行為直接接受（EXACT_NAME），不因為資料不足就整批降級成不比對。
+function verifyExactNameCandidate(candidate: BackfillCandidate, result: YahooFundSearchResult): boolean | null {
+  const ourCurrencyName = candidate.currency ? CURRENCY_MAP[candidate.currency] : null;
+  if (!ourCurrencyName) return null;
+  if (candidate.latestNav == null || !candidate.latestNavDate) return null;
+  if (result.currencyName !== ourCurrencyName) return false;
+  if (!result.latestPriceDate || result.latestPriceDate !== candidate.latestNavDate) return null; // 不同天沒有淨值可比，不算核實失敗
+  const theirPrice = result.price != null ? Number(result.price) : null;
+  if (theirPrice == null || !Number.isFinite(theirPrice) || candidate.latestNav === 0) return null;
+  const diffPct = Math.abs(theirPrice - candidate.latestNav) / candidate.latestNav;
+  return diffPct <= 0.001;
+}
+
 // 規則二：exact-name比對失敗後，從同一批搜尋結果用幣別+累積/配息型態+同日淨值(±0.1%)三個獨立
 // 欄位交叉核實，剛好一檔通過全部三個條件才算配對成功。
 function resolveViaCrossCheck(candidate: BackfillCandidate, searchResults: YahooFundSearchResult[]): { yahooId: string } | null {
@@ -249,21 +281,30 @@ export async function runMappingBackfillBatch(
       const exact = results.filter(
         (r) => r.name === disclaimerStripped || normalizeForMatch(r.name) === normalizeForMatch(disclaimerStripped),
       );
+      let exactRejected: string | null = null; // 被核實打回的 exact-match 候選 yahoo id，交叉核實時排除掉
       if (exact.length === 1) {
-        outcomes.push({ fundId: c.fundId, code: c.code, name: c.name, result: "MATCHED", yahooId: exact[0].id, matchedVia: "EXACT_NAME" });
-      } else if (exact.length > 1) {
+        const verified = verifyExactNameCandidate(c, exact[0]);
+        if (verified !== false) {
+          outcomes.push({ fundId: c.fundId, code: c.code, name: c.name, result: "MATCHED", yahooId: exact[0].id, matchedVia: "EXACT_NAME" });
+          await sleep(requestSpacingMs);
+          continue;
+        }
+        exactRejected = exact[0].id;
+      }
+      if (exact.length > 1) {
         outcomes.push({ fundId: c.fundId, code: c.code, name: c.name, result: "AMBIGUOUS_MULTIPLE_EXACT", evidence: exact.map((e) => e.id).join(", ") });
       } else {
-        const viaDistType = resolveViaCrossCheck(c, results);
-        const viaLevelCode = viaDistType ? null : resolveViaLevelCode(c, results);
+        const pool = exactRejected ? results.filter((r) => r.id !== exactRejected) : results;
+        const viaDistType = resolveViaCrossCheck(c, pool);
+        const viaLevelCode = viaDistType ? null : resolveViaLevelCode(c, pool);
         const crossChecked = viaDistType ?? viaLevelCode;
         if (crossChecked) {
           const matchedVia: "CROSS_CHECK" | "LEVEL_CODE" = viaDistType ? "CROSS_CHECK" : "LEVEL_CODE";
           outcomes.push({ fundId: c.fundId, code: c.code, name: c.name, result: "MATCHED", yahooId: crossChecked.yahooId, matchedVia });
-        } else if (results.length > 0) {
-          outcomes.push({ fundId: c.fundId, code: c.code, name: c.name, result: "NO_EXACT_MATCH", evidence: results.slice(0, 5).map((r) => r.name).join(" | ") });
+        } else if (pool.length > 0) {
+          outcomes.push({ fundId: c.fundId, code: c.code, name: c.name, result: "NO_EXACT_MATCH", evidence: (exactRejected ? `[EXACT_NAME candidate ${exactRejected} rejected by NAV/currency check] ` : "") + pool.slice(0, 5).map((r) => r.name).join(" | ") });
         } else {
-          outcomes.push({ fundId: c.fundId, code: c.code, name: c.name, result: "NO_CANDIDATES", evidence: "Yahoo TW fund search returned 0 results" });
+          outcomes.push({ fundId: c.fundId, code: c.code, name: c.name, result: "NO_CANDIDATES", evidence: exactRejected ? `Only candidate ${exactRejected} rejected by NAV/currency check` : "Yahoo TW fund search returned 0 results" });
         }
       }
     } catch (e) {
