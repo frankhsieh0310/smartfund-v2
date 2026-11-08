@@ -116,7 +116,13 @@ async function writeEtfEnrichData(
     nav: rawNum(sd.navPrice),
     aum: rawNum(sd.totalAssets ?? ks.totalAssets),
     expense: rawNum(fp.feesExpensesInvestment?.annualReportExpenseRatio ?? ks.annualReportExpenseRatio),
-    yield: rawNum(sd.yield),
+    // 2026-11-08（使用者核准定案，配息率跟雅虎奇摩不一致修正）: TW-listed ETF（symbol 以
+    // .TW/.TWO結尾）的現金殖利率改成只信 Yahoo奇摩自己的股利頁（見
+    // lib/yahoo/twDividendYieldPage.ts + app/api/cron/yahoo-tw-dividend-yield/route.ts），這裡
+    // 的 Yahoo Finance 全球 quoteSummary summaryDetail.yield 跟 Yahoo奇摩算法不同、數字對不上
+    // ——寫 null 讓下面的 COALESCE 不去覆蓋 Yahoo奇摩寫入的值。非台股ETF（Yahoo奇摩沒有）
+    // 不受影響，繼續用這個全球欄位。
+    yield: /\.(TW|TWO)$/i.test(input.symbol) ? null : rawNum(sd.yield),
     beta: rawNum(ks.beta3Year),
     w52hi: rawNum(sd.fiftyTwoWeekHigh),
     w52lo: rawNum(sd.fiftyTwoWeekLow),
