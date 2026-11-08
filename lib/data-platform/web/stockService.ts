@@ -162,16 +162,25 @@ const analyticMetrics = (rows: Array<{ asOf: Date; timeframe: string; metricKey:
 export async function getStockDetail(symbol: string): Promise<ServiceResponse<{ identity: CanonicalIdentity; metrics: SummaryMetrics; sector: string | null; industry: string | null; liteMetrics: StockLiteMetric[] }>> {
   const key = decodeURIComponent(symbol).trim();
   if (!key) throw new WebDataError("INVALID_QUERY", "A stock symbol is required.");
-  const row = await prisma.stock.findFirst({ where: { OR: [{ id: key }, { yahooSymbol: { equals: key, mode: "insensitive" } }, { ticker: { equals: key, mode: "insensitive" } }] }, select: { id: true, ticker: true, yahooSymbol: true, companyName: true, companyNameZh: true, currency: true, exchange: true, country: true, latestClose: true, latestDate: true, updatedAt: true, sector: true, industry: true, financialFacts: { orderBy: [{ periodEnd: "desc" }, { publicationDate: "desc" }], take: 200, select: { metric: true, value: true, unit: true, currency: true, periodEnd: true, fiscalPeriod: true } }, versionedAnalytics: { orderBy: [{ asOf: "desc" }, { timeframe: "asc" }, { metricKey: "asc" }], take: 160, select: { asOf: true, timeframe: true, metricKey: true, window: true, value: true, stateValue: true } }, history: { orderBy: { date: "desc" }, take: 2, select: { date: true, close: true, volume: true, source: true, sourceSymbol: true, updatedAt: true, importedAt: true } }, technical: { orderBy: { date: "desc" }, take: 1, select: { date: true, ma5: true, ma20: true, ma60: true, ma120: true, ma240: true, ema12: true, ema26: true, macd: true, macdSignal: true, macdHistogram: true, kdK: true, kdD: true, rsi14: true, atr14: true, bollingerUpper: true, bollingerMiddle: true, bollingerLower: true } } } });
-  if (!row) throw new WebDataError("NOT_FOUND", "Stock not found.");
-  // 2026-11-08（使用者第36輪指令第三點核准）: 52週區間／市值／公司簡介——照抄雅虎財經香港站
-  // 跟證交所MOPS「主要經營業務」，不自己計算。資料來源見 stockYahooHkProfile.ts／
-  // stock-yahoo-hk-profile cron。畫面顯示用的日期直接附在數值文字裡，抓不到就是undefined，
-  // 經過下面metric()過濾後自然顯示「暫無資料」。
-  const hkProfileRows = await prisma.$queryRawUnsafe<Array<{ week52_low: unknown; week52_high: unknown; week52_as_of_date: Date | null; market_cap_raw_text: string | null; market_cap_value: unknown; market_cap_unit: string | null; market_cap_as_of_date: Date | null; company_profile: string | null; company_profile_as_of_date: Date | null }>>(
-    `SELECT week52_low, week52_high, week52_as_of_date, market_cap_raw_text, market_cap_value, market_cap_unit, market_cap_as_of_date, company_profile, company_profile_as_of_date FROM stock_yahoo_hk_profile WHERE stock_id = $1`,
-    row.id,
-  );
+  // 2026-11-08（使用者回報第39輪第四點，效能修正）: stock_yahoo_hk_profile 查詢（52週/市值/公司
+  // 簡介）原本寫在主查詢「之後」、依序等主查詢的 row.id 才開始查，兩次資料庫往返變成完全序列。
+  // 實際上 hkProfile 只需要 stockId，不需要主查詢帶回的其他欄位——改成先用一個很輕量的查詢單獨
+  // 解出 id，再把「原本的主查詢（含 financialFacts/versionedAnalytics 等重的 include）」跟
+  // 「hkProfile 查詢」用 Promise.all 平行送出，省掉 hkProfile 那段原本疊加在主查詢後面的序列
+  // 等待時間（實測約 300-500ms），不改變任何一條查詢本身的篩選條件或回傳欄位。
+  const idRow = await prisma.stock.findFirst({ where: { OR: [{ id: key }, { yahooSymbol: { equals: key, mode: "insensitive" } }, { ticker: { equals: key, mode: "insensitive" } }] }, select: { id: true } });
+  if (!idRow) throw new WebDataError("NOT_FOUND", "Stock not found.");
+  const [row, hkProfileRows] = await Promise.all([
+    prisma.stock.findFirstOrThrow({ where: { id: idRow.id }, select: { id: true, ticker: true, yahooSymbol: true, companyName: true, companyNameZh: true, currency: true, exchange: true, country: true, latestClose: true, latestDate: true, updatedAt: true, sector: true, industry: true, financialFacts: { orderBy: [{ periodEnd: "desc" }, { publicationDate: "desc" }], take: 200, select: { metric: true, value: true, unit: true, currency: true, periodEnd: true, fiscalPeriod: true } }, versionedAnalytics: { orderBy: [{ asOf: "desc" }, { timeframe: "asc" }, { metricKey: "asc" }], take: 160, select: { asOf: true, timeframe: true, metricKey: true, window: true, value: true, stateValue: true } }, history: { orderBy: { date: "desc" }, take: 2, select: { date: true, close: true, volume: true, source: true, sourceSymbol: true, updatedAt: true, importedAt: true } }, technical: { orderBy: { date: "desc" }, take: 1, select: { date: true, ma5: true, ma20: true, ma60: true, ma120: true, ma240: true, ema12: true, ema26: true, macd: true, macdSignal: true, macdHistogram: true, kdK: true, kdD: true, rsi14: true, atr14: true, bollingerUpper: true, bollingerMiddle: true, bollingerLower: true } } } }),
+    // 2026-11-08（同上）: 52週區間／市值／公司簡介——照抄雅虎財經香港站跟證交所MOPS「主要經營
+    // 業務」，不自己計算。資料來源見 stockYahooHkProfile.ts／stock-yahoo-hk-profile cron。
+    // 畫面顯示用的日期直接附在數值文字裡，抓不到就是undefined，經過下面metric()過濾後自然
+    // 顯示「暫無資料」。
+    prisma.$queryRawUnsafe<Array<{ week52_low: unknown; week52_high: unknown; week52_as_of_date: Date | null; market_cap_raw_text: string | null; market_cap_value: unknown; market_cap_unit: string | null; market_cap_as_of_date: Date | null; company_profile: string | null; company_profile_as_of_date: Date | null }>>(
+      `SELECT week52_low, week52_high, week52_as_of_date, market_cap_raw_text, market_cap_value, market_cap_unit, market_cap_as_of_date, company_profile, company_profile_as_of_date FROM stock_yahoo_hk_profile WHERE stock_id = $1`,
+      idRow.id,
+    ),
+  ]);
   const hkProfile = hkProfileRows[0];
   const latest = row.history[0];
   const previous = row.history[1];
