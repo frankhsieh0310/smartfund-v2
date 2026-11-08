@@ -6,6 +6,7 @@
 import { prisma } from "@/lib/prisma";
 import { classifyEtfBucketJs, classifyFundBucketJs } from "@/lib/data-platform/assetCategoryBucketJs";
 import { getNavDisclosureOverrides, resolveNavDisclosed } from "@/lib/data-platform/web/navDisclosure";
+import { maxAsOfDate, isAsOfDateFresh } from "@/lib/data-platform/metricFreshness";
 
 const headers = { "Access-Control-Allow-Origin": "*", "Cache-Control": "no-store" };
 
@@ -17,7 +18,7 @@ export async function GET(request: Request) {
   const etfIds = (q.get("etfIds") ?? "").split(",").map((s) => s.trim()).filter(Boolean).slice(0, 200);
   const fundIds = (q.get("fundIds") ?? "").split(",").map((s) => s.trim()).filter(Boolean).slice(0, 200);
 
-  const result: Record<string, { category: string; aum: number | null; dividendYield: number | null; return_1m: number | null; return_3m: number | null; return_6m: number | null; return_ytd: number | null; return_1y: number | null; return_3y: number | null; return_5y: number | null; metricAsOfDate: string | null; navDisclosed: boolean | null; navLastKnownDate: string | null }> = {};
+  const result: Record<string, { category: string; aum: number | null; dividendYield: number | null; return_1m: number | null; return_3m: number | null; return_6m: number | null; return_ytd: number | null; return_1y: number | null; return_3y: number | null; return_5y: number | null; metricAsOfDate: string | null; metricStale: boolean; navDisclosed: boolean | null; navLastKnownDate: string | null }> = {};
 
   if (etfIds.length) {
     const rows = await prisma.$queryRawUnsafe<MetricRow[]>(
@@ -34,7 +35,7 @@ export async function GET(request: Request) {
         aum: toNum(r.aum), dividendYield: toNum(r.dividend_yield),
         return_1m: toNum(r.return_1m), return_3m: toNum(r.return_3m), return_6m: toNum(r.return_6m),
         return_ytd: toNum(r.return_ytd), return_1y: toNum(r.return_1y), return_3y: toNum(r.return_3y), return_5y: toNum(r.return_5y),
-        metricAsOfDate: r.perf_date, navDisclosed: null, navLastKnownDate: null,
+        metricAsOfDate: r.perf_date, metricStale: false, navDisclosed: null, navLastKnownDate: null,
       };
     }
   }
@@ -61,9 +62,19 @@ export async function GET(request: Request) {
         aum: navDisclosed ? toNum(r.aum) : null, dividendYield: navDisclosed ? toNum(r.dividend_yield) : null,
         return_1m: navDisclosed ? toNum(r.return_1m) : null, return_3m: navDisclosed ? toNum(r.return_3m) : null, return_6m: navDisclosed ? toNum(r.return_6m) : null,
         return_ytd: navDisclosed ? toNum(r.return_ytd) : null, return_1y: navDisclosed ? toNum(r.return_1y) : null, return_3y: navDisclosed ? toNum(r.return_3y) : null, return_5y: navDisclosed ? toNum(r.return_5y) : null,
-        metricAsOfDate: navDisclosed ? r.perf_date : null, navDisclosed, navLastKnownDate: r.latest_nav_date ?? null,
+        metricAsOfDate: navDisclosed ? r.perf_date : null, metricStale: false, navDisclosed, navLastKnownDate: r.latest_nav_date ?? null,
       };
     }
+  }
+
+  // 2026-11-08（使用者核准定案，同排行中心/反查的排行混入舊日期資料修正）: 自選清單裡這批資產
+  // 的基準日互相比較——基準日比這批裡最新的基準日早超過一個營業日，標記 metricStale=true，App
+  // 端排序時要把它跟排行中心/反查同一套規則一樣沉到最後，並顯示「資料較舊」。
+  const datasetMax = maxAsOfDate(Object.values(result).map((v) => v.metricAsOfDate));
+  for (const key of Object.keys(result)) {
+    const v = result[key];
+    const hasAnyMetric = [v.return_1m, v.return_3m, v.return_6m, v.return_ytd, v.return_1y, v.return_3y, v.return_5y].some((x) => x !== null);
+    v.metricStale = hasAnyMetric && !isAsOfDateFresh(v.metricAsOfDate, datasetMax);
   }
 
   return Response.json({ ok: true, metrics: result }, { headers });

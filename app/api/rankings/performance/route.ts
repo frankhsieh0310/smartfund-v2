@@ -120,18 +120,26 @@ export async function GET(request: Request) {
       // etf_performances 已經是當天 201.17%）——使用者在 App 排行頁看到的正是這個被落後拷貝卡住
       // 的舊數字。改成直接取每檔 etf_performances 依 date 排序的最新一列，不再經過 etfs 這份二手
       // 拷貝，徹底消除這個不同步窗口（覆蓋率驗證過：兩種讀法都是 303 檔，不會因此漏資料）。
+      // 2026-11-08（使用者核准定案，排行混入舊日期資料修正）: 先把 WHERE 篩選過的候選集合算出
+      // 「這批裡最新的基準日」，基準日比最新基準日早超過一個營業日的一律 stale=true，排序時沉到
+      // 最後（但仍早於真正沒有數字的列，那些列本來就被 ${column} IS NOT NULL 濾掉了）。
       const rows = await prisma.$queryRawUnsafe<Array<{
-        id: string; code: string; name: string; value: string; latest_price: string | null; price_date: string | null; perf_date: string | null; total: string;
+        id: string; code: string; name: string; value: string; latest_price: string | null; price_date: string | null; perf_date: string | null; stale: boolean; total: string;
       }>>(
         `WITH latest_perf AS (
            SELECT DISTINCT ON (etf_id) etf_id, date, ${column} FROM etf_performances ORDER BY etf_id, date DESC
-         )
-         SELECT etfs.id, etfs.code, etfs.name, latest_perf.${column}::text AS value,
-                etfs.latest_price::text, etfs.price_updated_at::text AS price_date, latest_perf.date::text AS perf_date,
+         ), eligible AS (
+           SELECT etfs.id, etfs.code, etfs.name, latest_perf.${column} AS value,
+                  etfs.latest_price, etfs.price_updated_at, latest_perf.date AS perf_date
+             FROM etfs JOIN latest_perf ON latest_perf.etf_id = etfs.id
+            WHERE etfs.is_active = true AND latest_perf.${column} IS NOT NULL AND etfs.name ~ $3 ${categoryClause} ${CORE_ETF_FILTER_SQL}
+         ), maxd AS (SELECT MAX(perf_date) AS d FROM eligible)
+         SELECT eligible.id, eligible.code, eligible.name, eligible.value::text AS value,
+                eligible.latest_price::text, eligible.price_updated_at::text AS price_date, eligible.perf_date::text AS perf_date,
+                (eligible.perf_date < (SELECT CASE EXTRACT(ISODOW FROM maxd.d)::int WHEN 1 THEN maxd.d - 3 ELSE maxd.d - 1 END FROM maxd)) AS stale,
                 COUNT(*) OVER ()::text AS total
-           FROM etfs JOIN latest_perf ON latest_perf.etf_id = etfs.id
-          WHERE etfs.is_active = true AND latest_perf.${column} IS NOT NULL AND etfs.name ~ $3 ${categoryClause} ${CORE_ETF_FILTER_SQL}
-          ORDER BY latest_perf.${column} ${sort} LIMIT $1 OFFSET $2`,
+           FROM eligible, maxd
+          ORDER BY stale ASC, eligible.value ${sort} LIMIT $1 OFFSET $2`,
         limit, offset, ZH, ...(categoryValues.length ? [categoryValues] : []),
       );
       const total = rows.length ? Number(rows[0].total) : 0;
@@ -141,7 +149,7 @@ export async function GET(request: Request) {
         results: annotated.map((r) => ({
           id: r.id, code: r.code, name: r.name, metricValue: Number(r.value), metricDisplay: fmtPct(Number(r.value)),
           price: r.latest_price !== null ? Number(r.latest_price) : null, priceDate: r.price_date, metricAsOfDate: r.perf_date,
-          classificationBasis: r.classificationBasis,
+          metricStale: r.stale, classificationBasis: r.classificationBasis,
         })),
       }, { headers });
     }
@@ -296,11 +304,15 @@ export async function GET(request: Request) {
     // 228.62%完全對不上NAV歷史自己算出來的任何期間報酬，是另一條舊pipeline留下的壞值。改成跟
     // ETF一樣，直接取每檔fund_performances依date排序的最新一列，不再讀funds這份二手拷貝。
     const rows = await prisma.$queryRawUnsafe<Array<{
-      id: string; code: string | null; name: string; value: string; nav: string | null; nav_date: string | null; perf_date: string | null; total: string;
+      id: string; code: string | null; name: string; value: string; nav: string | null; nav_date: string | null; perf_date: string | null; stale: boolean; total: string;
     }>>(
-      // 2026-11-08（使用者核准，第38輪指令第一點修正）: 排除pending_settle／suspect_unsettled
-      // 旗標為true的列——雅虎奇摩頁面淨值日期標籤跟績效數字沒同時更新造成的誤標資料，排行中心
-      // 一律當作還沒有資料，不可拿來排序。
+      // 2026-11-08（使用者核准，第38輪指令第一點修正；本輪再修正）: 排除pending_settle／
+      // suspect_unsettled旗標為true的列——雅虎奇摩頁面淨值日期標籤跟績效數字沒同時更新造成的
+      // 誤標資料，排行中心一律當作還沒有資料，不可拿來排序。但只排除還不夠：某檔基金最新一筆被
+      // 標記後，會退回去用更舊、沒被標記的那一筆——這筆舊資料仍然可能跟別檔「當天就有正確新
+      // 數字」的基金互相比較，大跌前的舊數字反而排到最前面（2026-11-08使用者回報的實際bug）。
+      // 改成：先找出這批候選（rn=1、已代表各基金/多幣別分組的那一列）裡最新的基準日，基準日比
+      // 最新基準日早超過一個營業日的一律 stale=true，沉到排序最後。
       `WITH latest_perf AS (
          SELECT DISTINCT ON (fund_id) fund_id, date, ${column} FROM fund_performances WHERE NOT pending_settle AND NOT suspect_unsettled ORDER BY fund_id, date DESC
        ), ranked AS (
@@ -315,11 +327,14 @@ export async function GET(request: Request) {
            LEFT JOIN fund_share_classes sc ON sc.fund_id = f.id
            LEFT JOIN fund_master fm ON fm.id = sc.master_fund_id
           WHERE f.is_active = true AND latest_perf.${column} IS NOT NULL AND f.name ~ $3 ${fundCategoryClauseAt(4)} ${CORE_FUND_FILTER_SQL} ${NAV_DISCLOSED_FILTER_SQL}
-       )
-       SELECT id, code, name, value::text AS value, latest_nav::text AS nav, latest_nav_date::text AS nav_date, perf_date::text AS perf_date,
+       ), reps AS (
+         SELECT id, code, name, value, latest_nav AS nav, latest_nav_date AS nav_date, perf_date FROM ranked WHERE rn = 1
+       ), maxd AS (SELECT MAX(perf_date) AS d FROM reps)
+       SELECT reps.id, reps.code, reps.name, reps.value::text AS value, reps.nav::text AS nav, reps.nav_date::text AS nav_date, reps.perf_date::text AS perf_date,
+              (reps.perf_date < (SELECT CASE EXTRACT(ISODOW FROM maxd.d)::int WHEN 1 THEN maxd.d - 3 ELSE maxd.d - 1 END FROM maxd)) AS stale,
               COUNT(*) OVER ()::text AS total
-         FROM ranked WHERE rn = 1
-        ORDER BY ranked.value ${sort} LIMIT $1 OFFSET $2`,
+         FROM reps, maxd
+        ORDER BY stale ASC, reps.value ${sort} LIMIT $1 OFFSET $2`,
       limit, offset, ZH, ...(fundCategoryValues.length ? [fundCategoryValues] : []),
     );
     const total = rows.length ? Number(rows[0].total) : 0;
@@ -327,7 +342,7 @@ export async function GET(request: Request) {
       assetType, rankingType, period, supported: true, total, page, limit, hasMore: offset + rows.length < total,
       results: rows.map((r) => ({
         id: r.id, code: r.code, name: r.name, metricValue: Number(r.value), metricDisplay: fmtPct(Number(r.value)), metricAsOfDate: r.perf_date,
-        price: r.nav !== null ? Number(r.nav) : null, priceDate: r.nav_date,
+        metricStale: r.stale, price: r.nav !== null ? Number(r.nav) : null, priceDate: r.nav_date,
       })),
     }, { headers });
   }

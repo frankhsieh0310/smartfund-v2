@@ -2,6 +2,7 @@ import type { Query, Target, MatchRow } from './reverseHoldings';
 import { rankProducts, paginate } from './reverseHoldings';
 import { classifyEtfBucketJs, classifyFundBucketJs } from './assetCategoryBucketJs';
 import type { AssetCategoryBucket } from './categoryClassification';
+import { maxAsOfDate, isAsOfDateFresh } from './metricFreshness';
 
 // 2026-11-07（使用者第 32 輪指令: 反查頁要能依類型篩選、依績效/規模/配息排序，且排序篩選要在
 //「全部結果」上做，不能只排目前頁面的 50 筆）: eligible 集合本身已經是「某檔股票被哪些 ETF／
@@ -138,15 +139,26 @@ export async function currentReverseHoldings(query: Query, input: { tickers: str
   });
 
   const typeFiltered = enriched.filter(r => type === 'ALL' || r.type === (type === 'FUND' ? '基金' : 'ETF'));
-  const filtered = category === 'ALL' ? typeFiltered : typeFiltered.filter(r => r.bucket === category);
+  const filtered0 = category === 'ALL' ? typeFiltered : typeFiltered.filter(r => r.bucket === category);
 
-  // Rows lacking the chosen metric sort last regardless of direction (never treated as 0), per
-  // 2026-11-07 指令第 5 點。Ties broken by product_key for a stable order across requests.
+  // 2026-11-08（使用者核准定案，排行混入舊日期資料修正）: 績效排序時，先找出這批結果裡最新的
+  // 基準日，基準日落在「最新那天或最多早一個營業日」以外的一律視為「資料較舊」，不可以跟新鮮
+  // 資料混排——即使它有看起來合法的數字，也要沉到排序最後（但排在完全沒資料的 null 之前，好歹
+  // 還有個舊數字可以參考）。非績效排序（weight/aum/dividend_yield）不受影響。
+  const datasetMax = isPerformanceSort ? maxAsOfDate(filtered0.map(r => r.metricAsOfDate)) : null;
+  const filtered = filtered0.map(r => {
+    const stale = isPerformanceSort && r.metric !== null && !isAsOfDateFresh(r.metricAsOfDate, datasetMax);
+    return { ...r, metricStale: stale };
+  });
+
+  // Rows lacking the chosen metric sort last regardless of direction (never treated as 0); stale
+  // rows sort after fresh ones but before true no-data rows. Ties broken by product_key.
   filtered.sort((a, b) => {
-    if (a.metric === null && b.metric === null) return a.product_key.localeCompare(b.product_key);
-    if (a.metric === null) return 1;
-    if (b.metric === null) return -1;
-    return direction === 'asc' ? a.metric - b.metric : b.metric - a.metric;
+    const tierA = a.metric === null ? 2 : a.metricStale ? 1 : 0;
+    const tierB = b.metric === null ? 2 : b.metricStale ? 1 : 0;
+    if (tierA !== tierB) return tierA - tierB;
+    if (tierA === 2) return a.product_key.localeCompare(b.product_key);
+    return direction === 'asc' ? (a.metric as number) - (b.metric as number) : (b.metric as number) - (a.metric as number);
   });
 
   const total = filtered.length;
@@ -157,11 +169,11 @@ export async function currentReverseHoldings(query: Query, input: { tickers: str
     SELECT p.* FROM reverse_current_positions p WHERE p.product_key = ANY($1::text[]) AND p.stock_id = ANY($2::text[])`,
     orderIds, selected.map((t: Target) => t.id)) : [];
   const products=rankProducts(matchRows);
-  const metaByKey = new Map(pageRows.map(r => [r.product_key, { bucket: r.bucket, metric: r.metric, metricAsOfDate: r.metricAsOfDate, navDisclosed: r.navDisclosed, navLastKnownDate: r.navLastKnownDate }]));
+  const metaByKey = new Map(pageRows.map(r => [r.product_key, { bucket: r.bucket, metric: r.metric, metricAsOfDate: r.metricAsOfDate, metricStale: r.metricStale, navDisclosed: r.navDisclosed, navLastKnownDate: r.navLastKnownDate }]));
   const results=orderIds
     .map(id=>products.find(p=>p.id===id))
     .filter((p): p is NonNullable<typeof p> => Boolean(p))
-    .map(p => ({ ...p, category: metaByKey.get(p.id)?.bucket ?? 'UNCLASSIFIED', metric: metaByKey.get(p.id)?.metric ?? null, metricAsOfDate: metaByKey.get(p.id)?.metricAsOfDate ?? null, navDisclosed: metaByKey.get(p.id)?.navDisclosed ?? null, navLastKnownDate: metaByKey.get(p.id)?.navLastKnownDate ?? null }));
+    .map(p => ({ ...p, category: metaByKey.get(p.id)?.bucket ?? 'UNCLASSIFIED', metric: metaByKey.get(p.id)?.metric ?? null, metricAsOfDate: metaByKey.get(p.id)?.metricAsOfDate ?? null, metricStale: metaByKey.get(p.id)?.metricStale ?? false, navDisclosed: metaByKey.get(p.id)?.navDisclosed ?? null, navLastKnownDate: metaByKey.get(p.id)?.navLastKnownDate ?? null }));
 
   return {ok:true,total,page,limit,hasMore:page*limit<total,results,
     tickers:selected.map((t: Target)=>t.ticker),generated_at:new Date().toISOString(),

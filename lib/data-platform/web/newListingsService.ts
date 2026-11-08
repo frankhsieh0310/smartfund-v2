@@ -6,6 +6,7 @@
 import { prisma } from "@/lib/prisma";
 import { classifyEtfBucketJs, classifyFundBucketJs } from "../assetCategoryBucketJs";
 import type { AssetCategoryBucket } from "../categoryClassification";
+import { maxAsOfDate, isAsOfDateFresh } from "../metricFreshness";
 
 export type ListingEvent = {
   code: string;
@@ -18,6 +19,7 @@ export type ListingEvent = {
   category: AssetCategoryBucket | 'UNCLASSIFIED';
   metric: number | null;
   metricAsOfDate: string | null;
+  metricStale: boolean;
 };
 
 const PERFORMANCE_SORTS = ["return_1m", "return_3m", "return_6m", "return_ytd", "return_1y", "return_3y", "return_5y"] as const;
@@ -101,17 +103,27 @@ export async function getNewListingEvents(
       category: bucket,
       metric,
       metricAsOfDate,
+      metricStale: false,
     };
   };
 
   const shaped = events.map(shape);
-  const filtered = category === "ALL" ? shaped : shaped.filter((e) => e.category === category);
+  const categoryFiltered = category === "ALL" ? shaped : shaped.filter((e) => e.category === category);
+  // 2026-11-08（使用者核准定案，同 reverseIndex.ts 的排行混入舊日期資料修正）: 基準日比這批結果
+  // 裡最新的基準日早超過一個營業日，一律視為資料較舊，沉到排序最後。
+  const isPerformanceSortKey = sortKey ? PERFORMANCE_SORTS.includes(sortKey as typeof PERFORMANCE_SORTS[number]) : false;
+  const datasetMax = isPerformanceSortKey ? maxAsOfDate(categoryFiltered.map((e) => e.metricAsOfDate)) : null;
+  const filtered = categoryFiltered.map((e) => ({
+    ...e,
+    metricStale: isPerformanceSortKey && e.metric !== null && !isAsOfDateFresh(e.metricAsOfDate, datasetMax),
+  }));
   const sorted = sortKey
     ? [...filtered].sort((a, b) => {
-        if (a.metric === null && b.metric === null) return a.code.localeCompare(b.code);
-        if (a.metric === null) return 1;
-        if (b.metric === null) return -1;
-        return direction === "asc" ? a.metric - b.metric : b.metric - a.metric;
+        const tierA = a.metric === null ? 2 : a.metricStale ? 1 : 0;
+        const tierB = b.metric === null ? 2 : b.metricStale ? 1 : 0;
+        if (tierA !== tierB) return tierA - tierB;
+        if (tierA === 2) return a.code.localeCompare(b.code);
+        return direction === "asc" ? (a.metric as number) - (b.metric as number) : (b.metric as number) - (a.metric as number);
       })
     : filtered;
 
