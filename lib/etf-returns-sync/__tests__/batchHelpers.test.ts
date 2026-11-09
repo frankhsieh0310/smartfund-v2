@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import {
   resolveWriteDatesBatch, fetchLatestReturn6mBatch, writeEtfsRankingColumnsBatch, type EtfsRankingEntry, type QueryFn,
-  fetchLatestLongPeriodReturnsBatch, isImplausibleReturnJump, longPeriodReturnsLookImplausible,
+  fetchLatestLongPeriodReturnsBatch, isImplausibleReturnJump, longPeriodReturnsLookImplausible, longPeriodReturnsMatch,
 } from "../batchHelpers.ts";
 import type { TrailingReturns } from "../types.ts";
 
@@ -126,5 +126,25 @@ const allNull: TrailingReturns = { r1d: null, r1m: null, r3m: null, r6m: null, r
     const prev = { rytd: 1.6, r1y: -6.35, r3y: -21.22, r5y: -14.38 };
     const next = { rytd: 2.68, r1y: -6.09, r3y: -20.94, r5y: -14.43 };
     assert.equal(longPeriodReturnsLookImplausible(prev, next), false);
+  });
+
+  // 2026-11-09 使用者核准定案: 跳動異常時改成「重新抓一次，兩次一致才寫入」，不是永遠信前一天。
+  test("longPeriodReturnsMatch: two independent fetches agreeing on all four fields matches", () => {
+    const a = { rytd: 256.23, r1y: 233.48, r3y: 28.27, r5y: 24.84 };
+    const b = { rytd: 256.23, r1y: 233.48, r3y: 28.27, r5y: 24.84 };
+    assert.equal(longPeriodReturnsMatch(a, b), true);
+  });
+  test("longPeriodReturnsMatch: a real >100pp jump (not a glitch) still matches when BOTH fetches agree on it", () => {
+    // 商品期貨ETF（例如槓桿型）本來就可能真的單日跳動超過100個百分點——跟前一天比對會先標記
+    // 成「需要確認」，但兩次獨立抓取一致就是真實數字，不該永遠被擋下來。
+    const prev = { rytd: 50, r1y: 40, r3y: 25.16, r5y: 24.35 };
+    const confirmedNext = { rytd: 256.23, r1y: 233.48, r3y: 28.27, r5y: 24.84 };
+    assert.equal(longPeriodReturnsLookImplausible(prev, confirmedNext), true); // 跟前一天比對仍標記為「需要確認」
+    assert.equal(longPeriodReturnsMatch(confirmedNext, confirmedNext), true); // 但兩次抓取一致，確認後應放行
+  });
+  test("longPeriodReturnsMatch: the 2026-11-09 incident's two fetches would NOT have matched (ytd null vs a real number)", () => {
+    const badFetch = { rytd: null, r1y: 367.033, r3y: 137.2408, r5y: null };
+    const goodFetch = { rytd: 1.6, r1y: -6.35, r3y: -21.22, r5y: -14.38 };
+    assert.equal(longPeriodReturnsMatch(badFetch, goodFetch), false);
   });
 })();

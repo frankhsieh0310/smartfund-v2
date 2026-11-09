@@ -33,7 +33,7 @@ import {
 import { missingForToday, type LastProcessedDateMap, type LastProcessedVersionMap } from "@/lib/etf-returns-sync/completion";
 import {
   resolveWriteDatesBatch, fetchLatestReturn6mBatch, writeEtfsRankingColumnsBatch, type EtfsRankingEntry,
-  fetchLatestLongPeriodReturnsBatch, longPeriodReturnsLookImplausible,
+  fetchLatestLongPeriodReturnsBatch, longPeriodReturnsLookImplausible, longPeriodReturnsMatch,
 } from "@/lib/etf-returns-sync/batchHelpers";
 import { TW_ELIGIBLE_SQL_CONDITION } from "@/lib/etf-returns-sync/twUniverse";
 import { loadExchangeCalendarRegistry } from "@/lib/market-close-sync/marketConfig";
@@ -206,6 +206,36 @@ async function fetchFundPerformanceRaw(symbol: string): Promise<FetchAttemptResu
 
 // parseTrailingReturns moved to lib/etf-returns-sync/parseReturns.ts (Task X5 Part A) so it can be
 // unit-tested without pulling in this route's Next.js/Prisma imports.
+
+/** 2026-11-09（模擬器實測第2項，使用者核准定案，取代原本單純比對前一天就擋掉的版本）: 單次抓
+ * 一次Yahoo（TW走奇摩performance頁，非TW走fundPerformance API），回傳fetch結果跟（如果成功）
+ * 解析出的TrailingReturns——primary attempt跟異常確認的第二次attempt共用這個函式，不要各寫一份。 */
+async function fetchReturnsOnce(yahooSymbol: string, isTwListed: boolean): Promise<{ fetchResult: FetchAttemptResult; returns: TrailingReturns | null }> {
+  if (isTwListed) {
+    try {
+      const perf = await fetchYahooTwPerformance(yahooSymbol);
+      if (perf) {
+        const returns: TrailingReturns = {
+          r1d: null, // Yahoo奇摩's performance page has no 1-day figure (owned by cloud-etf-price)
+          r1m: perf.navReturn.m1, r3m: perf.navReturn.m3, r6m: perf.navReturn.m6,
+          rytd: perf.navReturn.ytd, r1y: perf.navReturn.y1, r3y: perf.navReturn.y3, r5y: perf.navReturn.y5,
+        };
+        return { fetchResult: { outcomeKind: "SUCCESS", rateLimited: false, result: null }, returns };
+      }
+      return { fetchResult: { outcomeKind: "NO_FUND_PERFORMANCE", rateLimited: false, result: null }, returns: null };
+    } catch (e) {
+      if (e instanceof YahooTwRateLimitedError) return { fetchResult: { outcomeKind: "TRANSIENT_FAILURE", rateLimited: true, result: null }, returns: null };
+      return { fetchResult: { outcomeKind: "TRANSIENT_FAILURE", rateLimited: false, result: null }, returns: null };
+    }
+  }
+  try {
+    const fetchResult = await fetchFundPerformanceRaw(yahooSymbol);
+    const returns = fetchResult.outcomeKind === "SUCCESS" ? parseTrailingReturns(fetchResult.result) : null;
+    return { fetchResult, returns };
+  } catch {
+    return { fetchResult: { outcomeKind: "TRANSIENT_FAILURE", rateLimited: false, result: null }, returns: null };
+  }
+}
 
 type EtfRow = { id: string; code: string; data_source: string };
 
@@ -392,35 +422,7 @@ export async function GET(request: Request) {
     attempted++;
     const yahooSymbol = row.yahoo_symbol_override ?? row.data_source;
     const isTwListed = /\.(TW|TWO)$/.test(yahooSymbol);
-    let fetchResult: FetchAttemptResult;
-    let twReturns: TrailingReturns | null = null;
-    if (isTwListed) {
-      try {
-        const perf = await fetchYahooTwPerformance(yahooSymbol);
-        if (perf) {
-          twReturns = {
-            r1d: null, // Yahoo奇摩's performance page has no 1-day figure (owned by cloud-etf-price)
-            r1m: perf.navReturn.m1, r3m: perf.navReturn.m3, r6m: perf.navReturn.m6,
-            rytd: perf.navReturn.ytd, r1y: perf.navReturn.y1, r3y: perf.navReturn.y3, r5y: perf.navReturn.y5,
-          };
-          fetchResult = { outcomeKind: "SUCCESS", rateLimited: false, result: null };
-        } else {
-          fetchResult = { outcomeKind: "NO_FUND_PERFORMANCE", rateLimited: false, result: null };
-        }
-      } catch (e) {
-        if (e instanceof YahooTwRateLimitedError) {
-          fetchResult = { outcomeKind: "TRANSIENT_FAILURE", rateLimited: true, result: null };
-        } else {
-          fetchResult = { outcomeKind: "TRANSIENT_FAILURE", rateLimited: false, result: null };
-        }
-      }
-    } else {
-      try {
-        fetchResult = await fetchFundPerformanceRaw(yahooSymbol);
-      } catch {
-        fetchResult = { outcomeKind: "TRANSIENT_FAILURE", rateLimited: false, result: null };
-      }
-    }
+    const { fetchResult, returns: twReturns } = await fetchReturnsOnce(yahooSymbol, isTwListed);
     if (fetchResult.rateLimited) {
       rateLimitStop = true; // Task X's own A4 rule, applied here too: never retry around a 401/403/429, stop this invocation
       break;
@@ -428,11 +430,25 @@ export async function GET(request: Request) {
 
     const wasAlreadySkipNoPerf = failureStateMap[etfId]?.kind === "SKIP_NO_PERF";
 
-    const isImplausible = fetchResult.outcomeKind === "SUCCESS" &&
-      longPeriodReturnsLookImplausible(previousLongPeriodReturns.get(etfId), twReturns ?? parseTrailingReturns(fetchResult.result));
+    // 2026-11-09（模擬器實測第2項，使用者核准定案，取代原本單純比對前一天就擋掉的版本——那版
+    // 會在「前一天本身就是錯的」時永遠擋住正確新數字，商品ETF本來就可能大漲大跌，用前一天當
+    // 唯一真相不可靠）: 跳動異常時不是直接放棄這筆，而是跟同一個symbol重新抓第二次比對——兩次
+    // 抓到的長週期報酬率一致，代表這就是真實數字（不是單次擷取的髒資料），放行寫入；兩次不一致
+    // 才真正視為異常，不寫入並記錄，下次invocation重新抓。
+    let isImplausible = fetchResult.outcomeKind === "SUCCESS" && twReturns !== null &&
+      longPeriodReturnsLookImplausible(previousLongPeriodReturns.get(etfId), twReturns);
+    if (isImplausible) {
+      await sleep(isTwListed ? YAHOO_TW_REQUEST_DELAY_MS : REQUEST_DELAY_MS);
+      const confirm = await fetchReturnsOnce(yahooSymbol, isTwListed);
+      if (confirm.fetchResult.rateLimited) { rateLimitStop = true; break; }
+      if (confirm.fetchResult.outcomeKind === "SUCCESS" && confirm.returns !== null && longPeriodReturnsMatch(twReturns!, confirm.returns)) {
+        isImplausible = false; // 兩次一致，確認是真實數字，不是髒資料
+      }
+      // 兩次不一致、或第二次根本抓不到：維持isImplausible=true，不寫入，fetchResult保留第一次
+      // 的SUCCESS結果只是為了下面failureState分支判斷用，不會被拿去寫入（看isImplausible分支）。
+    }
     if (fetchResult.outcomeKind === "SUCCESS" && !isImplausible) {
-      const returns = twReturns ?? parseTrailingReturns(fetchResult.result);
-      pending.push({ etfId: row.id, returns });
+      pending.push({ etfId: row.id, returns: twReturns! });
     } else if (isImplausible) {
       // 不寫入、也不標記failureState（下一次invocation仍視為missing，會重新抓一次）——比起把
       // 異常暴衝的髒資料寫進去蓋掉原本正確的數字，寧可讓使用者暫時看到舊的（但正確的）數字。

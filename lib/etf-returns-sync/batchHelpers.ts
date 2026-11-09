@@ -93,6 +93,26 @@ export function longPeriodReturnsLookImplausible(prev: LongPeriodReturns | undef
   );
 }
 
+// 兩次獨立抓取同一個symbol，數值不會因為浮點/字串轉換有差異（兩次都是直接解析Yahoo頁面/API當下
+// 回傳的同一組數字），這裡用極小誤差只是保險，不是預期會用到的容許範圍。
+const RETURN_MATCH_EPSILON = 0.001;
+function numbersApproxEqual(a: number | null, b: number | null): boolean {
+  if (a === null || b === null) return a === b;
+  return Math.abs(a - b) < RETURN_MATCH_EPSILON;
+}
+
+/** 2026-11-09（使用者核准定案，取代單純跟前一天比對就擋掉的版本）: 跳動異常時先重新抓一次，
+ * 兩次結果這四個長週期欄位都一致才代表是真實數字（放行寫入）；只要有一個不一致，就是真的髒
+ * 資料（維持擋住，不寫入）。 */
+export function longPeriodReturnsMatch(a: { rytd: number | null; r1y: number | null; r3y: number | null; r5y: number | null }, b: { rytd: number | null; r1y: number | null; r3y: number | null; r5y: number | null }): boolean {
+  return (
+    numbersApproxEqual(a.rytd, b.rytd) &&
+    numbersApproxEqual(a.r1y, b.r1y) &&
+    numbersApproxEqual(a.r3y, b.r3y) &&
+    numbersApproxEqual(a.r5y, b.r5y)
+  );
+}
+
 export type EtfsRankingEntry = { etfId: string; returns: TrailingReturns; return6mSync: number | null };
 
 /** Task X6 Part C.1 (user-approved): a DIRECT overwrite (including null) of the six Yahoo-sourced
