@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {
   resolveWriteDatesBatch, fetchLatestReturn6mBatch, writeEtfsRankingColumnsBatch, type EtfsRankingEntry, type QueryFn,
+  fetchLatestLongPeriodReturnsBatch, isImplausibleReturnJump, longPeriodReturnsLookImplausible,
 } from "../batchHelpers.ts";
 import type { TrailingReturns } from "../types.ts";
 
@@ -83,5 +84,47 @@ const allNull: TrailingReturns = { r1d: null, r1m: null, r3m: null, r6m: null, r
   test("writeEtfsRankingColumnsBatch: a query failure is swallowed (best-effort, never throws)", async () => {
     const query: QueryFn = async () => { throw new Error("db down"); };
     await assert.doesNotReject(() => writeEtfsRankingColumnsBatch(query, [{ etfId: "a", returns: allNull, return6mSync: null }]));
+  });
+
+  test("fetchLatestLongPeriodReturnsBatch: empty input never calls query()", async () => {
+    const { query, calls } = mockQuery();
+    const result = await fetchLatestLongPeriodReturnsBatch(query, []);
+    assert.equal(calls.length, 0);
+    assert.equal(result.size, 0);
+  });
+
+  test("fetchLatestLongPeriodReturnsBatch: ONE query, numeric strings parsed, null stays null", async () => {
+    const { query, calls } = mockQuery(() => [{ etf_id: "a", rytd: "1.60", r1y: "-6.35", r3y: "-21.22", r5y: null }]);
+    const result = await fetchLatestLongPeriodReturnsBatch(query, ["a"]);
+    assert.equal(calls.length, 1);
+    assert.deepEqual(result.get("a"), { rytd: 1.6, r1y: -6.35, r3y: -21.22, r5y: null });
+  });
+
+  // 2026-11-09 模擬器實測第2項: 00674R近1年從-6.35%一天內跳到+367.03%這類髒資料防呆。
+  test("isImplausibleReturnJump: no previous value never blocks a first write", () => {
+    assert.equal(isImplausibleReturnJump(null, 367.03), false);
+  });
+  test("isImplausibleReturnJump: a real value regressing to null IS implausible", () => {
+    assert.equal(isImplausibleReturnJump(1.6, null), true);
+  });
+  test("isImplausibleReturnJump: ordinary day-to-day drift is NOT implausible", () => {
+    assert.equal(isImplausibleReturnJump(-6.35, -6.09), false);
+  });
+  test("isImplausibleReturnJump: a >100pp swing IS implausible (the 2026-11-09 incident)", () => {
+    assert.equal(isImplausibleReturnJump(-6.35, 367.03), true);
+  });
+
+  test("longPeriodReturnsLookImplausible: no previous row never blocks a first write", () => {
+    assert.equal(longPeriodReturnsLookImplausible(undefined, { rytd: 1.6, r1y: -6.35, r3y: -21.22, r5y: -14.38 }), false);
+  });
+  test("longPeriodReturnsLookImplausible: catches the 2026-11-09 incident shape (ytd->null, r1y/r3y blown up)", () => {
+    const prev = { rytd: 1.6, r1y: -6.35, r3y: -21.22, r5y: -14.38 };
+    const next = { rytd: null, r1y: 367.033, r3y: 137.2408, r5y: null };
+    assert.equal(longPeriodReturnsLookImplausible(prev, next), true);
+  });
+  test("longPeriodReturnsLookImplausible: all four fields within normal drift is NOT implausible", () => {
+    const prev = { rytd: 1.6, r1y: -6.35, r3y: -21.22, r5y: -14.38 };
+    const next = { rytd: 2.68, r1y: -6.09, r3y: -20.94, r5y: -14.43 };
+    assert.equal(longPeriodReturnsLookImplausible(prev, next), false);
   });
 })();

@@ -31,14 +31,19 @@ export function getYahooDirectYield(symbol: string): Promise<number | null> {
 export type YahooYieldRow = {
   code: string; name: string; yahooYieldPct: number | null;
   latestDividend: number | null; latestExDate: string | null;
+  // item 4（2026-11-09 模擬器實測）: /api/rankings/performance 的配息率排行榜顯示的「資料日期」
+  // 是 etfs.price_updated_at（跟這裡讀的是同一個 etfs.dividend_yield 欄位），不是latestExDate——
+  // 兩邊必須顯示同一個日期欄位，否則同一個殖利率數字旁邊卻標了兩個不同日期，使用者會以為資料
+  // 不一致。priceDate給/api/cashflow/estimate用，取代原本的latestExDate。
+  priceDate: string | null;
 };
 
 export async function getEtfYahooYieldRanking(limit: number): Promise<YahooYieldRow[]> {
   const rows = await prisma.$queryRawUnsafe<Array<{
     code: string; name: string; dividend_yield: string | null;
-    latest_amount: string | null; latest_ex_date: string | null;
+    latest_amount: string | null; latest_ex_date: string | null; price_date: string | null;
   }>>(
-    `SELECT e.code, e.name, e.dividend_yield::text,
+    `SELECT e.code, e.name, e.dividend_yield::text, e.price_updated_at::text AS price_date,
             latest.amount::text AS latest_amount, latest.ex_date::text AS latest_ex_date
        FROM etfs e
        LEFT JOIN LATERAL (
@@ -53,15 +58,16 @@ export async function getEtfYahooYieldRanking(limit: number): Promise<YahooYield
     yahooYieldPct: r.dividend_yield !== null ? Number((Number(r.dividend_yield) * 100).toFixed(6)) : null,
     latestDividend: r.latest_amount !== null ? Number(r.latest_amount) : null,
     latestExDate: r.latest_ex_date,
+    priceDate: r.price_date,
   }));
 }
 
 export async function getEtfYahooYieldByCode(code: string): Promise<YahooYieldRow | null> {
   const rows = await prisma.$queryRawUnsafe<Array<{
     code: string; name: string; dividend_yield: string | null;
-    latest_amount: string | null; latest_ex_date: string | null;
+    latest_amount: string | null; latest_ex_date: string | null; price_date: string | null;
   }>>(
-    `SELECT e.code, e.name, e.dividend_yield::text,
+    `SELECT e.code, e.name, e.dividend_yield::text, e.price_updated_at::text AS price_date,
             latest.amount::text AS latest_amount, latest.ex_date::text AS latest_ex_date
        FROM etfs e
        LEFT JOIN LATERAL (
@@ -77,6 +83,7 @@ export async function getEtfYahooYieldByCode(code: string): Promise<YahooYieldRo
     yahooYieldPct: r.dividend_yield !== null ? Number((Number(r.dividend_yield) * 100).toFixed(6)) : null,
     latestDividend: r.latest_amount !== null ? Number(r.latest_amount) : null,
     latestExDate: r.latest_ex_date,
+    priceDate: r.price_date,
   };
 }
 
@@ -92,7 +99,7 @@ export async function getFundYahooYieldRanking(limit: number, offset = 0): Promi
   const result: YahooYieldRow[] = [];
   for (let i = 0; i < rows.length; i += 5) {
     result.push(...await Promise.all(rows.slice(i, i + 5).map(async r => ({
-      ...r, yahooYieldPct: await getYahooDirectYield(r.code).catch(() => null), latestDividend: null, latestExDate: null,
+      ...r, yahooYieldPct: await getYahooDirectYield(r.code).catch(() => null), latestDividend: null, latestExDate: null, priceDate: null,
     }))));
   }
   return result.sort((a, b) => (b.yahooYieldPct ?? -Infinity) - (a.yahooYieldPct ?? -Infinity));
@@ -110,6 +117,6 @@ export async function getFundYahooYieldByCode(code: string): Promise<YahooYieldR
   return {
     code: r.code, name: r.name,
     yahooYieldPct: await getYahooDirectYield(r.code),
-    latestDividend: null, latestExDate: null,
+    latestDividend: null, latestExDate: null, priceDate: null,
   };
 }

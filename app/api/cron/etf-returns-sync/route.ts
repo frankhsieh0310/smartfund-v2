@@ -33,6 +33,7 @@ import {
 import { missingForToday, type LastProcessedDateMap, type LastProcessedVersionMap } from "@/lib/etf-returns-sync/completion";
 import {
   resolveWriteDatesBatch, fetchLatestReturn6mBatch, writeEtfsRankingColumnsBatch, type EtfsRankingEntry,
+  fetchLatestLongPeriodReturnsBatch, longPeriodReturnsLookImplausible,
 } from "@/lib/etf-returns-sync/batchHelpers";
 import { TW_ELIGIBLE_SQL_CONDITION } from "@/lib/etf-returns-sync/twUniverse";
 import { loadExchangeCalendarRegistry } from "@/lib/market-close-sync/marketConfig";
@@ -341,8 +342,11 @@ export async function GET(request: Request) {
     orderedMissing,
   );
   const rowById = new Map(rows.map((r) => [r.id, r]));
+  // 2026-11-09（模擬器實測第2項）: 跟寫入前的最後一筆長週期報酬率比對，擋掉單次擷取異常暴衝的
+  // 髒資料（見batchHelpers.ts的longPeriodReturnsLookImplausible）——一次查詢涵蓋整批，不拖慢。
+  const previousLongPeriodReturns = await fetchLatestLongPeriodReturnsBatch(writerQuery, orderedMissing);
 
-  let attempted = 0, written = 0, noFundPerformanceCount = 0, transientFailureCount = 0, writeErrorCount = 0, droppedFieldCount = 0;
+  let attempted = 0, written = 0, noFundPerformanceCount = 0, transientFailureCount = 0, writeErrorCount = 0, droppedFieldCount = 0, implausibleJumpCount = 0;
   let noFundPerformanceFirstWriteCount = 0;
   let timeBudgetStop = false;
   let rateLimitStop = false;
@@ -424,9 +428,15 @@ export async function GET(request: Request) {
 
     const wasAlreadySkipNoPerf = failureStateMap[etfId]?.kind === "SKIP_NO_PERF";
 
-    if (fetchResult.outcomeKind === "SUCCESS") {
+    const isImplausible = fetchResult.outcomeKind === "SUCCESS" &&
+      longPeriodReturnsLookImplausible(previousLongPeriodReturns.get(etfId), twReturns ?? parseTrailingReturns(fetchResult.result));
+    if (fetchResult.outcomeKind === "SUCCESS" && !isImplausible) {
       const returns = twReturns ?? parseTrailingReturns(fetchResult.result);
       pending.push({ etfId: row.id, returns });
+    } else if (isImplausible) {
+      // 不寫入、也不標記failureState（下一次invocation仍視為missing，會重新抓一次）——比起把
+      // 異常暴衝的髒資料寫進去蓋掉原本正確的數字，寧可讓使用者暫時看到舊的（但正確的）數字。
+      implausibleJumpCount++;
     } else if (fetchResult.outcomeKind === "NO_FUND_PERFORMANCE") {
       noFundPerformanceCount++;
       // Task X5 Part B.3: record "Yahoo has no data" as an explicit all-null row, but only on the
@@ -470,7 +480,7 @@ export async function GET(request: Request) {
       not_yet_due_count: notYetDueCount, attempted, written,
       no_fund_performance_count: noFundPerformanceCount, no_fund_performance_first_write_count: noFundPerformanceFirstWriteCount,
       transient_failure_count: transientFailureCount,
-      write_error_count: writeErrorCount, dropped_field_count: droppedFieldCount, rate_limit_stop: rateLimitStop,
+      write_error_count: writeErrorCount, dropped_field_count: droppedFieldCount, implausible_jump_count: implausibleJumpCount, rate_limit_stop: rateLimitStop,
       failure_state_map_size: Object.keys(failureStateMap).length,
       write_env_read_exactly_on: writeEnvDiag.readExactlyOn, write_env_var_present: writeEnvDiag.envVarPresent,
       deployment_id: writeEnvDiag.deploymentId, deployment_url: writeEnvDiag.deploymentUrl,
@@ -480,7 +490,7 @@ export async function GET(request: Request) {
   return Response.json({
     ok: true, job: JOB, runId, status, runMode: currentRunMode(),
     coreUniverseSize: coreUniverseIds.size, missingCountAtStart: missingIds.length, notYetDueCount,
-    attempted, written, noFundPerformanceCount, transientFailureCount, writeErrorCount, droppedFieldCount,
+    attempted, written, noFundPerformanceCount, transientFailureCount, writeErrorCount, droppedFieldCount, implausibleJumpCount,
     timeBudgetStop, rateLimitStop,
   });
 }

@@ -8,8 +8,20 @@
 // 核心查詢邏輯在 lib/screener/stockScreener.ts（2026-10-24抽出來，儲存條件提醒cron要重新跑
 // 同一套邏輯，不是另外重寫SQL）。這支route只負責解析query、分層（免費/付費）、組回應格式。
 import { getAccountForRequest } from "@/lib/auth/userService";
-import { SCREENER_FREE_MAX_CONDITIONS, SCREENER_FREE_MAX_RESULTS } from "@/lib/payments/plans";
+import { SCREENER_FREE_MAX_CONDITIONS, SCREENER_FREE_MAX_RESULTS, TRIAL_DAYS } from "@/lib/payments/plans";
 import { parseScreenerConditions, runStockScreenerQuery, countStockScreenerMatches } from "@/lib/screener/stockScreener";
+
+// 2026-11-09（模擬器實測第1項，使用者核准定案）: getAccountForRequest 對未登入的請求永遠回 null，
+// 這支route原本因此永遠把未登入裝置當free——跟手機端14天新用戶免費期（不論有沒有登入都算，見
+// smartmatch-mobile的 subscriptionConfig.ts isWithinNewUserGrace）不一致。手機端把本機記錄的
+// 裝置第一次開啟日一起帶來，這裡用同一個TRIAL_DAYS規則單獨驗證——跟信任account.createdAt（使用者
+// 一樣能靠重新註冊帳號規避）風險等級相同，不是另外開一個漏洞。
+function isWithinDeviceGrace(deviceFirstOpenAtParam: string | null): boolean {
+  if (!deviceFirstOpenAtParam) return false;
+  const firstOpenAt = new Date(deviceFirstOpenAtParam).getTime();
+  if (!Number.isFinite(firstOpenAt) || firstOpenAt > Date.now()) return false;
+  return Date.now() - firstOpenAt < TRIAL_DAYS * 24 * 60 * 60 * 1000;
+}
 
 const headers = { "Access-Control-Allow-Origin": "*", "Cache-Control": "no-store" };
 
@@ -28,7 +40,10 @@ export async function GET(request: Request) {
   // 的accessTier（跟其他付費功能共用同一套FREE_FEATURES/PAID_FEATURES判斷邏輯），不用另外寫
   // 一套。remainingCount用來讓前端顯示「還有N檔符合條件」。
   const account = await getAccountForRequest(request).catch(() => null);
-  const isPaidOrTrial = account?.accessTier === "trial" || account?.accessTier === "paid";
+  const isPaidOrTrial =
+    account?.accessTier === "trial" ||
+    account?.accessTier === "paid" ||
+    isWithinDeviceGrace(q.get("deviceFirstOpenAt"));
   const truncatedConditions = !isPaidOrTrial && conditions.length > SCREENER_FREE_MAX_CONDITIONS;
   if (truncatedConditions) conditions = conditions.slice(0, SCREENER_FREE_MAX_CONDITIONS);
 

@@ -25,10 +25,11 @@ export async function GET(request: Request) {
     return Response.json({
       ok: true, type, code, name: row.name, available: true,
       yahooYieldPct: row.yahooYieldPct, targetAnnual: target, principalNeeded,
-      // 2026-11-08（使用者核准定案，庚項）: 配息率旁邊要標資料日期——ETF 有最近一次除息日
-      // （etf_distribution_events，見 distributionYield.ts）可用；基金這條路徑沒有對應資料，誠實
-      // 回傳 null，前端顯示「資料日期未提供」，不假造一個日期。
-      asOfDate: row.latestExDate ?? null,
+      // item 4（2026-11-09 模擬器實測，取代上面2026-11-08那版）: 原本用latestExDate（最近一次
+      // 除息日），跟配息率排行榜顯示的price_updated_at是兩個不同日期——殖利率數字明明讀同一個
+      // etfs.dividend_yield欄位，兩頁卻標了不同日期，使用者會誤以為資料不一致。改成跟排行榜同一
+      // 個欄位（distributionYield.ts的priceDate）；基金這條路徑沒有對應資料，誠實回傳 null。
+      asOfDate: row.priceDate ?? null,
     }, { headers });
   } catch (e) {
     return Response.json({ ok: false, error: (e as Error).message }, { status: 500, headers });

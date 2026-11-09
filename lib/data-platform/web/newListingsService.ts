@@ -47,7 +47,7 @@ export async function getNewListingEvents(
     `SELECT code, name, product_type, milestone_date, source, source_url, product_id
      FROM product_listing_events
      WHERE event_type = 'NEW_LISTING' AND (milestone_date IS NULL OR milestone_date >= $1)
-     ORDER BY milestone_date DESC NULLS FIRST`,
+     ORDER BY milestone_date DESC NULLS LAST`,
     cutoff,
   );
 
