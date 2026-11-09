@@ -17,7 +17,7 @@ const CATEGORY_BUCKETS = ['ALL', 'STOCK', 'BOND', 'MIXED', 'COMMODITY', 'LEVERAG
 export type ReverseCategoryParam = (typeof CATEGORY_BUCKETS)[number];
 
 type EligibleRow = { product_key: string; type: 'ETF' | '基金'; asset_id: string; code: string; matched_count: number; weight: number };
-type MetricRow = { asset_id: string; category: string | null; aum: string | null; dividend_yield: string | null; return_1m: string | null; return_3m: string | null; return_6m: string | null; return_ytd: string | null; return_1y: string | null; return_3y: string | null; return_5y: string | null; perf_date: string | null };
+type MetricRow = { asset_id: string; category: string | null; aum: string | null; dividend_yield: string | null; return_1m: string | null; return_3m: string | null; return_6m: string | null; return_ytd: string | null; return_1y: string | null; return_3y: string | null; return_5y: string | null; perf_date: string | null; exchange?: string | null };
 type FundDisclosureRow = { asset_id: string; nav_disclosed: boolean | null; latest_nav_date: string | null };
 
 // 2026-11-08（使用者核准定案，「淨值未公開」接上反查頁）: 跟lib/data-platform/web/navDisclosure.ts
@@ -79,7 +79,7 @@ export async function currentReverseHoldings(query: Query, input: { tickers: str
   if (etfCodes.length) {
     const rows = await query<MetricRow>(`
       WITH latest_perf AS (SELECT DISTINCT ON (etf_id) etf_id, date, return_1m, return_3m, return_6m, return_ytd, return_1y, return_3y, return_5y FROM etf_performances WHERE etf_id IN (SELECT id FROM etfs WHERE code = ANY($1::text[])) ORDER BY etf_id, date DESC)
-      SELECT e.code asset_id, e.category, e.aum::text aum, e.dividend_yield::text dividend_yield,
+      SELECT e.code asset_id, e.category, e.exchange, e.aum::text aum, e.dividend_yield::text dividend_yield,
         lp.return_1m::text return_1m, lp.return_3m::text return_3m, lp.return_6m::text return_6m, lp.return_ytd::text return_ytd,
         lp.return_1y::text return_1y, lp.return_3y::text return_3y, lp.return_5y::text return_5y, lp.date::text perf_date
       FROM etfs e LEFT JOIN latest_perf lp ON lp.etf_id = e.id WHERE e.code = ANY($1::text[])`, etfCodes);
@@ -119,12 +119,15 @@ export async function currentReverseHoldings(query: Query, input: { tickers: str
 
   const toNum = (v: string | null) => (v === null ? null : Number(v));
   const isPerformanceSort = (PERFORMANCE_SORTS as readonly string[]).includes(sortKey);
-  type Enriched = EligibleRow & { bucket: AssetCategoryBucket; metric: number | null; metricAsOfDate: string | null; navDisclosed: boolean | null; navLastKnownDate: string | null };
+  type Enriched = EligibleRow & { bucket: AssetCategoryBucket; metric: number | null; metricAsOfDate: string | null; navDisclosed: boolean | null; navLastKnownDate: string | null; exchange: string | null };
   const enriched: Enriched[] = eligible.map(r => {
     const m = metricsByAssetId.get(r.asset_id);
     const bucket: AssetCategoryBucket = r.type === 'ETF'
       ? classifyEtfBucketJs(r.code, r.code, m?.category ?? null)
       : classifyFundBucketJs(m?.category ?? null);
+    // item「複委託標示」（2026-11-09 使用者核准定案）: 判斷依據是ETF掛牌交易所，只對ETF有意義
+    // （基金一律null，前端據此永遠不標）。
+    const exchange = r.type === 'ETF' ? (m?.exchange ?? null) : null;
     const fundNavDisclosed = r.type === '基金' ? navDisclosureByFundId.get(r.asset_id) ?? true : null;
     const metric = fundNavDisclosed === false ? null
       : sortKey === 'weight' ? r.weight
@@ -135,7 +138,7 @@ export async function currentReverseHoldings(query: Query, input: { tickers: str
     // 排序欄位才對應到 etf_performances/fund_performances 這張表的 date 欄位，規模/配息率是另外
     // 從 etfs/funds 本身的欄位讀的，沒有對應的「這批數字的資料日期」可以標。
     const metricAsOfDate = fundNavDisclosed === false ? null : isPerformanceSort ? (m?.perf_date ?? null) : null;
-    return { ...r, bucket, metric, metricAsOfDate, navDisclosed: fundNavDisclosed, navLastKnownDate: r.type === '基金' ? navLastKnownDateByFundId.get(r.asset_id) ?? null : null };
+    return { ...r, bucket, metric, metricAsOfDate, navDisclosed: fundNavDisclosed, navLastKnownDate: r.type === '基金' ? navLastKnownDateByFundId.get(r.asset_id) ?? null : null, exchange };
   });
 
   const typeFiltered = enriched.filter(r => type === 'ALL' || r.type === (type === 'FUND' ? '基金' : 'ETF'));
@@ -169,11 +172,11 @@ export async function currentReverseHoldings(query: Query, input: { tickers: str
     SELECT p.* FROM reverse_current_positions p WHERE p.product_key = ANY($1::text[]) AND p.stock_id = ANY($2::text[])`,
     orderIds, selected.map((t: Target) => t.id)) : [];
   const products=rankProducts(matchRows);
-  const metaByKey = new Map(pageRows.map(r => [r.product_key, { bucket: r.bucket, metric: r.metric, metricAsOfDate: r.metricAsOfDate, metricStale: r.metricStale, navDisclosed: r.navDisclosed, navLastKnownDate: r.navLastKnownDate }]));
+  const metaByKey = new Map(pageRows.map(r => [r.product_key, { bucket: r.bucket, metric: r.metric, metricAsOfDate: r.metricAsOfDate, metricStale: r.metricStale, navDisclosed: r.navDisclosed, navLastKnownDate: r.navLastKnownDate, exchange: r.exchange }]));
   const results=orderIds
     .map(id=>products.find(p=>p.id===id))
     .filter((p): p is NonNullable<typeof p> => Boolean(p))
-    .map(p => ({ ...p, category: metaByKey.get(p.id)?.bucket ?? 'UNCLASSIFIED', metric: metaByKey.get(p.id)?.metric ?? null, metricAsOfDate: metaByKey.get(p.id)?.metricAsOfDate ?? null, metricStale: metaByKey.get(p.id)?.metricStale ?? false, navDisclosed: metaByKey.get(p.id)?.navDisclosed ?? null, navLastKnownDate: metaByKey.get(p.id)?.navLastKnownDate ?? null }));
+    .map(p => ({ ...p, category: metaByKey.get(p.id)?.bucket ?? 'UNCLASSIFIED', metric: metaByKey.get(p.id)?.metric ?? null, metricAsOfDate: metaByKey.get(p.id)?.metricAsOfDate ?? null, metricStale: metaByKey.get(p.id)?.metricStale ?? false, navDisclosed: metaByKey.get(p.id)?.navDisclosed ?? null, navLastKnownDate: metaByKey.get(p.id)?.navLastKnownDate ?? null, exchange: metaByKey.get(p.id)?.exchange ?? null }));
 
   return {ok:true,total,page,limit,hasMore:page*limit<total,results,
     tickers:selected.map((t: Target)=>t.ticker),generated_at:new Date().toISOString(),

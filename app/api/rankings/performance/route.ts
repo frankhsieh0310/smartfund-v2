@@ -124,17 +124,17 @@ export async function GET(request: Request) {
       // 「這批裡最新的基準日」，基準日比最新基準日早超過一個營業日的一律 stale=true，排序時沉到
       // 最後（但仍早於真正沒有數字的列，那些列本來就被 ${column} IS NOT NULL 濾掉了）。
       const rows = await prisma.$queryRawUnsafe<Array<{
-        id: string; code: string; name: string; value: string; latest_price: string | null; price_date: string | null; perf_date: string | null; stale: boolean; total: string;
+        id: string; code: string; name: string; exchange: string | null; value: string; latest_price: string | null; price_date: string | null; perf_date: string | null; stale: boolean; total: string;
       }>>(
         `WITH latest_perf AS (
            SELECT DISTINCT ON (etf_id) etf_id, date, ${column} FROM etf_performances ORDER BY etf_id, date DESC
          ), eligible AS (
-           SELECT etfs.id, etfs.code, etfs.name, latest_perf.${column} AS value,
+           SELECT etfs.id, etfs.code, etfs.name, etfs.exchange, latest_perf.${column} AS value,
                   etfs.latest_price, etfs.price_updated_at, latest_perf.date AS perf_date
              FROM etfs JOIN latest_perf ON latest_perf.etf_id = etfs.id
             WHERE etfs.is_active = true AND latest_perf.${column} IS NOT NULL AND etfs.name ~ $3 ${categoryClause} ${CORE_ETF_FILTER_SQL}
          ), maxd AS (SELECT MAX(perf_date) AS d FROM eligible)
-         SELECT eligible.id, eligible.code, eligible.name, eligible.value::text AS value,
+         SELECT eligible.id, eligible.code, eligible.name, eligible.exchange, eligible.value::text AS value,
                 eligible.latest_price::text, eligible.price_updated_at::text AS price_date, eligible.perf_date::text AS perf_date,
                 (eligible.perf_date < (SELECT CASE EXTRACT(ISODOW FROM maxd.d)::int WHEN 1 THEN maxd.d - 3 ELSE maxd.d - 1 END FROM maxd)) AS stale,
                 COUNT(*) OVER ()::text AS total
@@ -147,7 +147,7 @@ export async function GET(request: Request) {
       return Response.json({
         assetType, rankingType, period, supported: true, total, page, limit, hasMore: offset + rows.length < total,
         results: annotated.map((r) => ({
-          id: r.id, code: r.code, name: r.name, metricValue: Number(r.value), metricDisplay: fmtPct(Number(r.value)),
+          id: r.id, code: r.code, name: r.name, exchange: r.exchange, metricValue: Number(r.value), metricDisplay: fmtPct(Number(r.value)),
           price: r.latest_price !== null ? Number(r.latest_price) : null, priceDate: r.price_date, metricAsOfDate: r.perf_date,
           metricStale: r.stale, classificationBasis: r.classificationBasis,
         })),
@@ -155,9 +155,9 @@ export async function GET(request: Request) {
     }
     if (rankingType === "AUM") {
       const rows = await prisma.$queryRawUnsafe<Array<{
-        id: string; code: string; name: string; aum: string; currency: string; latest_price: string | null; price_date: string | null; total: string;
+        id: string; code: string; name: string; exchange: string | null; aum: string; currency: string; latest_price: string | null; price_date: string | null; total: string;
       }>>(
-        `SELECT id, code, name, aum::text AS aum, currency, latest_price::text AS latest_price, price_updated_at::text AS price_date,
+        `SELECT id, code, name, exchange, aum::text AS aum, currency, latest_price::text AS latest_price, price_updated_at::text AS price_date,
                 COUNT(*) OVER ()::text AS total
            FROM etfs WHERE is_active = true AND aum IS NOT NULL AND name ~ $3 ${categoryClause} ${CORE_ETF_FILTER_SQL}
           ORDER BY etfs.aum ${sort} LIMIT $1 OFFSET $2`,
@@ -168,7 +168,7 @@ export async function GET(request: Request) {
       return Response.json({
         assetType, rankingType, supported: true, total, page, limit, hasMore: offset + rows.length < total,
         results: annotated.map((r) => ({
-          id: r.id, code: r.code, name: r.name, metricValue: Number(r.aum), metricDisplay: fmtAum(Number(r.aum), r.currency),
+          id: r.id, code: r.code, name: r.name, exchange: r.exchange, metricValue: Number(r.aum), metricDisplay: fmtAum(Number(r.aum), r.currency),
           price: r.latest_price !== null ? Number(r.latest_price) : null, priceDate: r.price_date,
           classificationBasis: r.classificationBasis,
         })),
@@ -176,9 +176,9 @@ export async function GET(request: Request) {
     }
     if (rankingType === "VOLUME") {
       const rows = await prisma.$queryRawUnsafe<Array<{
-        id: string; code: string; name: string; volume: string; latest_price: string | null; price_date: string | null; total: string;
+        id: string; code: string; name: string; exchange: string | null; volume: string; latest_price: string | null; price_date: string | null; total: string;
       }>>(
-        `SELECT id, code, name, volume::text AS volume, latest_price::text AS latest_price, price_updated_at::text AS price_date,
+        `SELECT id, code, name, exchange, volume::text AS volume, latest_price::text AS latest_price, price_updated_at::text AS price_date,
                 COUNT(*) OVER ()::text AS total
            FROM etfs WHERE is_active = true AND volume IS NOT NULL AND name ~ $3 ${categoryClause} ${CORE_ETF_FILTER_SQL}
           ORDER BY etfs.volume ${sort} LIMIT $1 OFFSET $2`,
@@ -189,7 +189,7 @@ export async function GET(request: Request) {
       return Response.json({
         assetType, rankingType, supported: true, total, page, limit, hasMore: offset + rows.length < total,
         results: annotated.map((r) => ({
-          id: r.id, code: r.code, name: r.name, metricValue: Number(r.volume), metricDisplay: fmtVolume(Number(r.volume)),
+          id: r.id, code: r.code, name: r.name, exchange: r.exchange, metricValue: Number(r.volume), metricDisplay: fmtVolume(Number(r.volume)),
           price: r.latest_price !== null ? Number(r.latest_price) : null, priceDate: r.price_date,
           classificationBasis: r.classificationBasis,
         })),
@@ -200,9 +200,9 @@ export async function GET(request: Request) {
       // getEtfYahooYieldRanking) — TWD, bare (non-suffixed) code only — just with real OFFSET pagination
       // added, which that limit-only helper doesn't support.
       const rows = await prisma.$queryRawUnsafe<Array<{
-        id: string; code: string; name: string; dividend_yield: string; latest_price: string | null; price_date: string | null; total: string;
+        id: string; code: string; name: string; exchange: string | null; dividend_yield: string; latest_price: string | null; price_date: string | null; total: string;
       }>>(
-        `SELECT id, code, name, dividend_yield::text AS dividend_yield, latest_price::text AS latest_price, price_updated_at::text AS price_date,
+        `SELECT id, code, name, exchange, dividend_yield::text AS dividend_yield, latest_price::text AS latest_price, price_updated_at::text AS price_date,
                 COUNT(*) OVER ()::text AS total
            FROM etfs
           WHERE is_active = true AND currency = 'TWD' AND code !~ '\\.' AND dividend_yield IS NOT NULL AND name ~ $3 ${categoryClause} ${CORE_ETF_FILTER_SQL}
@@ -216,7 +216,7 @@ export async function GET(request: Request) {
         results: annotated.map((r) => {
           const pct = Number(r.dividend_yield) * 100;
           return {
-            id: r.id, code: r.code, name: r.name, metricValue: pct, metricDisplay: `${pct.toFixed(2)}%`,
+            id: r.id, code: r.code, name: r.name, exchange: r.exchange, metricValue: pct, metricDisplay: `${pct.toFixed(2)}%`,
             price: r.latest_price !== null ? Number(r.latest_price) : null, priceDate: r.price_date,
             classificationBasis: r.classificationBasis,
           };
@@ -225,9 +225,9 @@ export async function GET(request: Request) {
     }
     if (rankingType === "BETA") {
       const rows = await prisma.$queryRawUnsafe<Array<{
-        id: string; code: string; name: string; beta: string; latest_price: string | null; price_date: string | null; total: string;
+        id: string; code: string; name: string; exchange: string | null; beta: string; latest_price: string | null; price_date: string | null; total: string;
       }>>(
-        `SELECT id, code, name, beta::text AS beta, latest_price::text AS latest_price, price_updated_at::text AS price_date,
+        `SELECT id, code, name, exchange, beta::text AS beta, latest_price::text AS latest_price, price_updated_at::text AS price_date,
                 COUNT(*) OVER ()::text AS total
            FROM etfs WHERE is_active = true AND beta IS NOT NULL AND name ~ $3 ${categoryClause} ${CORE_ETF_FILTER_SQL}
           ORDER BY etfs.beta ${sort} LIMIT $1 OFFSET $2`,
@@ -238,7 +238,7 @@ export async function GET(request: Request) {
       return Response.json({
         assetType, rankingType, supported: true, total, page, limit, hasMore: offset + rows.length < total,
         results: annotated.map((r) => ({
-          id: r.id, code: r.code, name: r.name, metricValue: Number(r.beta), metricDisplay: Number(r.beta).toFixed(2),
+          id: r.id, code: r.code, name: r.name, exchange: r.exchange, metricValue: Number(r.beta), metricDisplay: Number(r.beta).toFixed(2),
           price: r.latest_price !== null ? Number(r.latest_price) : null, priceDate: r.price_date,
           classificationBasis: r.classificationBasis,
         })),

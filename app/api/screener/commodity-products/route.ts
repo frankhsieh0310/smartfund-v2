@@ -46,7 +46,7 @@ export async function GET(request: Request) {
   const codes = entries.map((e) => e.code);
   const rows = await prisma.etf.findMany({
     where: { code: { in: codes } },
-    select: { code: true, name: true, id: true, isActive: true, latestPrice: true, priceUpdatedAt: true },
+    select: { code: true, name: true, id: true, isActive: true, latestPrice: true, priceUpdatedAt: true, exchange: true },
   });
   const byCode = new Map(rows.map((r) => [r.code, r]));
 
@@ -82,6 +82,7 @@ export async function GET(request: Request) {
       isActive: row?.isActive ?? null,
       latestPrice: row?.latestPrice ? Number(row.latestPrice) : null,
       priceDate: row?.priceUpdatedAt ?? null,
+      exchange: row?.exchange ?? null,
       returnYtdPct: toNum(perf?.return_ytd ?? null),
       return1YPct: toNum(perf?.return_1y ?? null),
       category: bucket,
