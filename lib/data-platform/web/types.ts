@@ -37,6 +37,16 @@ export interface SummaryMetrics {
   performanceAsOfDate?: string | null;
   /** Authoritative (Yahoo-sourced) trailing dividend yield, percent units. Null when not available. */
   dividendYield: number | null;
+  // 2026-11-10（上架前審查第4項，使用者核准）: priceOrNav/change/changePercent是「市價，缺就退回
+  // 淨值」的混合欄位，舊的change可能拿今天市價減昨天淨值——上市ETF要market price跟NAV各自獨立
+  // 算自己的漲跌，不能互相頂替。這三個欄位目前只有getEtfDetail()會填，其餘呼叫端（列表頁等）
+  // 維持用priceOrNav/change，是選用擴充欄位，不影響既有行為。
+  marketPrice?: number | null;
+  marketPriceChange?: number | null;
+  marketPriceChangePercent?: number | null;
+  navValue?: number | null;
+  navChange?: number | null;
+  navChangePercent?: number | null;
 }
 
 export interface Provenance {

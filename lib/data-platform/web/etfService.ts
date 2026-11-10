@@ -241,6 +241,20 @@ export async function getEtfDetail(code: string): Promise<ServiceResponse<{ iden
   const change = changePercent != null && latestValue != null
     ? (authoritativeChangePercent != null ? latestValue - latestValue / (1 + changePercent / 100) : latestValue - (previousValue as number))
     : null;
+  // 2026-11-10（上架前審查第4項，使用者核准）: 市價（marketPrice）跟淨值（navValue）各自只用
+  // 同一欄位算自己的漲跌，不像上面priceOrNav/change會在price缺資料時退回nav，導致今天市價減
+  // 昨天淨值這種混用。authoritativeChangePercent（return1d）是市價基礎的官方日漲跌幅，只用在
+  // marketPriceChange，不能套用在navChange（淨值沒有對應的官方日漲跌幅來源）。
+  const marketPrice = numberOrNull(latest?.price);
+  const previousPriceOnly = numberOrNull(previous?.price);
+  const marketPriceChangePercent = authoritativeChangePercent ?? (previousPriceOnly != null && previousPriceOnly !== 0 && marketPrice != null ? ((marketPrice - previousPriceOnly) / previousPriceOnly) * 100 : null);
+  const marketPriceChange = marketPriceChangePercent != null && marketPrice != null
+    ? (authoritativeChangePercent != null ? marketPrice - marketPrice / (1 + marketPriceChangePercent / 100) : marketPrice - (previousPriceOnly as number))
+    : null;
+  const navValue = numberOrNull(latest?.nav ?? row.latestNav);
+  const previousNavOnly = numberOrNull(previous?.nav);
+  const navChange = navValue != null && previousNavOnly != null ? navValue - previousNavOnly : null;
+  const navChangePercent = navChange != null && previousNavOnly != null && previousNavOnly !== 0 ? (navChange / previousNavOnly) * 100 : null;
   const latestHolding = await prisma.holding.findFirst({ where: { etfId: row.id }, orderBy: [{ asOfDate: "desc" }, { rank: "asc" }], select: { asOfDate: true } });
   const rawHoldings = latestHolding ? await prisma.holding.findMany({ where: { etfId: row.id, asOfDate: latestHolding.asOfDate }, orderBy: { rank: "asc" }, select: { holdingName: true, ticker: true, weight: true, sector: true, assetType: true, securityId: true, source: true, rank: true } }) : [];
   // 2026-10-29（VERIFIED，競品對照稽核發現的資料正確性bug）: 同一天、同一檔持股常被兩條不同
@@ -272,7 +286,7 @@ export async function getEtfDetail(code: string): Promise<ServiceResponse<{ iden
   const expenseRatioTierText = await prisma.$queryRawUnsafe<Array<{ expense_ratio_tier_text: string | null }>>(
     `SELECT expense_ratio_tier_text FROM etfs WHERE id = $1`, row.id,
   ).then((rows) => rows[0]?.expense_ratio_tier_text ?? null).catch(() => null);
-  return { data: { identity: etfIdentity(row), metrics: { ...etfMetrics(row), priceOrNav: latestValue, change, changePercent, asOfDate: isoOrNull(asOf), performance1M: numberOrNull(latestPerformance?.return1m), performance3M: numberOrNull(latestPerformance?.return3m), performance1Y: numberOrNull(latestPerformance?.return1y), performanceAsOfDate: isoOrNull(latestPerformance?.date) }, nav: numberOrNull(latest?.nav ?? row.latestNav), aum: numberOrNull(latest?.aum ?? row.aum), premiumDiscount, premiumDiscountAsOfDate, expenseRatio: numberOrNull(row.expenseRatio), expenseRatioTierText, distributionFreq: row.distributionFreq ?? null, holdingsCount: holdings.length, holdingsAsOfDate: isoOrNull(latestHolding?.asOfDate), topHoldings: holdings.slice(0, 10).map((holding) => ({ name: holding.holdingName, symbol: holding.ticker, weight: numberOrNull(holding.weight) })), assetAllocation: allocation((holding) => holding.assetType), sectorAllocation: allocation((holding) => holding.sector), category: row.category }, meta: { asOfDate: provenance.asOfDate, lastUpdated: provenance.lastUpdated, freshnessStatus: detailFreshness, source, provenance, coverageStatus: "FULL" }, pagination: null, error: null };
+  return { data: { identity: etfIdentity(row), metrics: { ...etfMetrics(row), priceOrNav: latestValue, change, changePercent, asOfDate: isoOrNull(asOf), performance1M: numberOrNull(latestPerformance?.return1m), performance3M: numberOrNull(latestPerformance?.return3m), performance1Y: numberOrNull(latestPerformance?.return1y), performanceAsOfDate: isoOrNull(latestPerformance?.date), marketPrice, marketPriceChange, marketPriceChangePercent, navValue, navChange, navChangePercent }, nav: numberOrNull(latest?.nav ?? row.latestNav), aum: numberOrNull(latest?.aum ?? row.aum), premiumDiscount, premiumDiscountAsOfDate, expenseRatio: numberOrNull(row.expenseRatio), expenseRatioTierText, distributionFreq: row.distributionFreq ?? null, holdingsCount: holdings.length, holdingsAsOfDate: isoOrNull(latestHolding?.asOfDate), topHoldings: holdings.slice(0, 10).map((holding) => ({ name: holding.holdingName, symbol: holding.ticker, weight: numberOrNull(holding.weight) })), assetAllocation: allocation((holding) => holding.assetType), sectorAllocation: allocation((holding) => holding.sector), category: row.category }, meta: { asOfDate: provenance.asOfDate, lastUpdated: provenance.lastUpdated, freshnessStatus: detailFreshness, source, provenance, coverageStatus: "FULL" }, pagination: null, error: null };
 }
 
 export async function getEtfHistory(code: string, query: HistoryQuery = {}): Promise<ServiceResponse<Array<{ date: string; price: number | null; nav: number | null; premiumDiscount: number | null; volume: number | null; aum: number | null; open: number | null; high: number | null; low: number | null; close: number | null; adjustedClose: number | null }>>> {

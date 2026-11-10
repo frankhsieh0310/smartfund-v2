@@ -108,6 +108,17 @@ export async function computePortfolioLookThrough(items: SelectedProductInput[],
   }
 
   const notLookedThroughPct = Math.max(0, 100 - lookedThroughPct);
+  // 2026-11-10（上架前審查第5項，使用者核准）: lookedThroughPct只回答「這個商品有沒有拿到持股
+  // 資料」（商品資料取得率），不是「拿到的持股清單本身蓋了多少比重」——一檔基金只公開前十大
+  // 持股、加總可能只有60%，lookedThroughPct仍然把它算進「已穿透」，畫面上「已穿透100%」會
+  // 誤導成「全部持股都看到了」。新增一個獨立的加權指標：每個已納入商品的holdingsCoveredPct
+  // （該商品自己揭露清單的權重合計）乘以該商品在組合裡的weightPct，加總起來才是真正的「持股
+  // 涵蓋率」——跟商品資料取得率是兩個不同的數字，畫面要分開顯示，不能互相取代。沿用既有欄位
+  // 不動，只新增，不影響任何既有呼叫端。
+  const holdingsCoverageWeightedPct = products.reduce(
+    (acc, p) => acc + (p.included ? (p.weightPct / 100) * (p.holdingsCoveredPct ?? 0) : 0),
+    0,
+  );
   return {
     ok: true,
     mode,
@@ -119,6 +130,10 @@ export async function computePortfolioLookThrough(items: SelectedProductInput[],
       basisNote: incompleteProducts.length > 0 ? "部分標的僅公開前十大或部分持股，穿透結果可能低估實際曝險" : "基於可取得的完整持股計算",
       incompleteProducts, excludedProducts, excludedCount: excludedProducts.length,
       lookedThroughPct, notLookedThroughPct,
+      // 「商品資料取得率」= lookedThroughPct（有沒有拿到這個商品的持股資料，不等於資料本身完整）；
+      // 「持股涵蓋率」= holdingsCoverageWeightedPct（已揭露持股清單合計占整個組合的比重，誠實反映
+      // 「只公開前十大」這種部分揭露）。畫面必須分開顯示這兩個數字，不要合併成一個「已穿透%」。
+      holdingsCoverageWeightedPct,
     },
     hasAnyHoldings: stocks.size > 0,
     stockExposure: {
