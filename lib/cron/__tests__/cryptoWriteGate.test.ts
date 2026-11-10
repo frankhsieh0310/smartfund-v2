@@ -24,9 +24,20 @@ test('exactly "on" -> write enabled', () => {
 });
 
 test("any other value -> still shadow mode, never falls open on a near-miss", () => {
-  for (const v of ["true", "1", "On", "ON", "yes", " on", "on "]) {
+  for (const v of ["true", "1", "On", "ON", "yes"]) {
     process.env.CRYPTO_SYNC_WRITE = v;
     assert.equal(isCryptoSyncWriteEnabled(), false, `expected shadow mode for CRYPTO_SYNC_WRITE=${JSON.stringify(v)}`);
+  }
+  restore();
+});
+
+// 2026-11-10: 這不是near-miss——全域CLAUDE.md的強制規則（2026-10-25事故後）要求所有「XXX_WRITE
+// === "on"」判斷都要先.trim()再比較，就是為了讓PowerShell/Vercel CLI不小心帶出的前後空白不會
+// 悄悄讓開關失效。" on"/"on "必須視同"on"、正常開啟，不是異常。
+test('surrounding whitespace around "on" is trimmed and still enables (mandatory .trim() rule)', () => {
+  for (const v of [" on", "on ", " on "]) {
+    process.env.CRYPTO_SYNC_WRITE = v;
+    assert.equal(isCryptoSyncWriteEnabled(), true, `expected write enabled for CRYPTO_SYNC_WRITE=${JSON.stringify(v)}`);
   }
   restore();
 });

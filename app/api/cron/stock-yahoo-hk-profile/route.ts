@@ -119,7 +119,7 @@ export async function GET(request: Request) {
 
   const reachedEnd = !blocked && index >= stocks.length;
   if (reachedEnd) {
-    await writeCheckpoint(JOB, CHECKPOINT_KEY, runId, { lastSymbol: null, processed, succeeded, failed, updatedAt: null });
+    await writeCheckpoint(JOB, CHECKPOINT_KEY, runId, { lastSymbol: null, processed, succeeded, failed });
   }
 
   await finishRun(runId, JOB, "YAHOO_HK_FINANCE+TWSE_MOPS", startedMs, {

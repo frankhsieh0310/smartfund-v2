@@ -151,11 +151,16 @@ function test(name: string, fn: () => Promise<void> | void) {
     assert.ok(r.mismatches[0]!.diff! > 15);
   });
 
-  test("evaluateYahooTwReturnConsistency: a failed fetch is always an anomaly regardless of diff", async () => {
+  // 2026-10-31（使用者核准定案）: 單純fetchFailed（這次抓不到，不是數值分歧）歸EXTERNAL_DELAY，
+  // 不計入anomaly（anomaly專指valueMismatches，真正的數值分歧才算SYSTEM異常）——這個規則生效後
+  // 這個測試原本斷言的「anomaly一定true」就過時了，改成驗證它被歸進fetchFailures、但不算anomaly。
+  test("evaluateYahooTwReturnConsistency: a failed fetch is categorized as EXTERNAL_DELAY (fetchFailures), not a SYSTEM anomaly", async () => {
     const r = evaluateYahooTwReturnConsistency([
       { code: "0056", ourReturn1y: 69.38, yahooTwReturn1y: null, fetchFailed: true },
     ]);
-    assert.equal(r.anomaly, true);
+    assert.equal(r.anomaly, false);
+    assert.equal(r.fetchFailures.length, 1);
+    assert.equal(r.valueMismatches.length, 0);
   });
 
   // 2026-10-21: VERIFIED live case -- 00990B (listed 2026-06-29, under 4 months old) has ourReturn1y

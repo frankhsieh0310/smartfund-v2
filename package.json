@@ -261,6 +261,7 @@
     "data:health:refresh": "node --experimental-strip-types --env-file=.env scripts/data/health/refresh-global-data-health.ts",
     "data:health:dry-run": "node --experimental-strip-types --env-file=.env scripts/data/health/refresh-global-data-health.ts --dry-run",
     "test:data-health": "node --experimental-strip-types scripts/data/health/test-health-evaluator.ts",
+    "data:fund:verify-reverse-products-null-guard": "node --import tsx --env-file=.env scripts/data/funds/verify-refresh-reverse-products-null-guard.ts",
     "data:watchdog:once": "node --experimental-strip-types --env-file=.env scripts/data/health/run-global-data-watchdog.ts --cycles=1",
     "data:watchdog:daemon": "node --experimental-strip-types --env-file=.env scripts/data/health/run-global-data-watchdog.ts --daemon",
     "data:watchdog:soak": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/data/health/start-global-data-watchdog-soak.ps1",

@@ -25,7 +25,16 @@ test("bond categories -> BOND", () => {
 
 test("commodity categories -> COMMODITY", () => {
   assert.equal(classifyCategory("Commodities Broad Basket"), "COMMODITY");
-  assert.equal(classifyCategory("Trading--Leveraged Commodities"), "COMMODITY");
+  assert.equal(classifyCategory("Commodities Focused"), "COMMODITY");
+});
+
+// 2026-11-10: 修正前的版本在這裡誤用"Trading--Leveraged Commodities"當作COMMODITY的例子——
+// 但這個分類本來就被設計成LEVERAGE_INVERSE（槓桿/反向是操作手法、不是資產類別，見
+// categoryClassification.ts的LEVERAGE_INVERSE_CATEGORIES註解），檢查順序也特意把
+// LEVERAGE_INVERSE放在COMMODITY之前。程式本身沒有錯，是測試用錯例子。
+test("leveraged/inverse commodity categories -> LEVERAGE_INVERSE, not COMMODITY (operating method, not asset class)", () => {
+  assert.equal(classifyCategory("Trading--Leveraged Commodities"), "LEVERAGE_INVERSE");
+  assert.equal(classifyCategory("Trading--Inverse Commodities"), "LEVERAGE_INVERSE");
 });
 
 test("genuinely mixed-asset categories -> MIXED, not forced into STOCK or BOND", () => {

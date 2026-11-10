@@ -126,7 +126,7 @@ export async function GET(request: Request) {
 
   const reachedEnd = index >= stocks.length;
   if (reachedEnd) {
-    await writeCheckpoint(JOB, CHECKPOINT_KEY, runId, { lastSymbol: null, processed, succeeded: written, failed, updatedAt: null });
+    await writeCheckpoint(JOB, CHECKPOINT_KEY, runId, { lastSymbol: null, processed, succeeded: written, failed });
   }
 
   await finishRun(runId, JOB, "YAHOO_CHART_API", startedMs, {
