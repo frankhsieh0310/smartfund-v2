@@ -6,6 +6,7 @@ import { isAuthorizedCron, unauthorizedCron } from "@/lib/cron/authorize";
 import { beginRun, finishRun, readCheckpoint, writeCheckpoint } from "@/lib/cloud-ingestion/runContext";
 import { findStaleTwStocks, refreshStockTechnical } from "@/lib/cron/stockTechnicalDaily";
 import { isStockTechnicalSyncWriteEnabled } from "@/lib/cron/stockTechnicalWriteGate";
+import { refreshPresetCacheForMarket } from "@/lib/screener/presetCache";
 
 export const runtime = "nodejs";
 export const maxDuration = 280;
@@ -74,7 +75,14 @@ export async function GET(request: Request) {
       failed: failed.length, retryableFailures: failed.length, checkpointAfter: null,
       details: { writeEnabled, cursor, reachedEnd },
     });
-    return Response.json({ ok: true, task: "stock-technical-daily", writeEnabled, totalChecked, totalStale, totalWritten, failed, cursor, reachedEnd });
+    // 2026-11-10（模擬器實測第3項，使用者核准定案）: 不新增排程——整個TW股票母體這一輪確實掃完
+    // （reachedEnd）且寫入有開（writeEnabled）才順便重算選股反查的5組範本快取，best-effort、
+    // 失敗只記錄，絕不影響這支排程本來的主要工作，也不影響回應內容。
+    let presetCacheRefresh: { refreshed: string[]; failed: string[] } | null = null;
+    if (reachedEnd && writeEnabled) {
+      try { presetCacheRefresh = await refreshPresetCacheForMarket("TW"); } catch { /* best-effort only */ }
+    }
+    return Response.json({ ok: true, task: "stock-technical-daily", writeEnabled, totalChecked, totalStale, totalWritten, failed, cursor, reachedEnd, presetCacheRefresh });
   } catch (e) {
     await finishRun(runId, JOB, "INTERNAL_COMPUTE", started, { status: "FAILED", attempted: totalChecked, completed: 0, inserted: totalWritten, updated: 0, failed: 1, retryableFailures: 1, checkpointAfter: null, error: (e as Error).message });
     return Response.json({ ok: false, task: "stock-technical-daily", error: (e as Error).message }, { status: 500 });

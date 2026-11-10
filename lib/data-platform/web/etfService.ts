@@ -41,7 +41,7 @@ export interface EtfListItem {
 
 type AssetMetricRow = { etf_id: string; observation_date: Date; aum: unknown; shares_outstanding: unknown; nav: unknown; source: string };
 type FlowCoverageRow = { etf_id: string; observation_date: Date };
-type ReadyRow = { id: string; latest_date: Date | null; history_ready: boolean; latest_premium: unknown; latest_premium_date: Date | null };
+type ReadyRow = { id: string; latest_date: Date | null; history_ready: boolean; latest_premium: unknown; latest_premium_date: Date | null; holdings_count: bigint | number };
 
 // 2026-10-13 QA-round-1 dedup fix: 92 TW ETFs exist as TWO rows -- a bare code ("006208") and a
 // Yahoo-suffixed code ("006208.TW"/".TWO") for the same real-world ETF, from two independent
@@ -81,18 +81,32 @@ const MISCLASSIFIED_SECURITIES_FIRM_FILTER = Prisma.sql`
   AND name !~ '基金|信託|指數'
 `;
 
+// 2026-11-10（模擬器實測第2項，使用者核准定案）: 這兩支都是對整張etfs表做regex/ILIKE的全表
+// 掃描，而且完全沒有快取——每一次search（含每個keystroke的debounce後請求）都重新掃一次全表。
+// 這份清單只會在ETF新上市/下市時變動，比照coreUniverseFilter.ts同一套5分鐘記憶體快取模式，
+// 不是每個請求都重算。
+let misclassifiedCodesCache: { codes: string[]; fetchedAt: number } | null = null;
+let suffixedDuplicateCodesCache: { codes: string[]; fetchedAt: number } | null = null;
+const ETF_LIST_CACHE_TTL_MS = 5 * 60 * 1000;
+
 async function getMisclassifiedSecuritiesFirmCodes(): Promise<string[]> {
+  if (misclassifiedCodesCache && Date.now() - misclassifiedCodesCache.fetchedAt < ETF_LIST_CACHE_TTL_MS) return misclassifiedCodesCache.codes;
   const rows = await prisma.$queryRaw<Array<{ code: string }>>`SELECT code FROM etfs WHERE ${MISCLASSIFIED_SECURITIES_FIRM_FILTER}`;
-  return rows.map((r) => r.code);
+  const codes = rows.map((r) => r.code);
+  misclassifiedCodesCache = { codes, fetchedAt: Date.now() };
+  return codes;
 }
 
 async function getSuffixedDuplicateCodesToHide(): Promise<string[]> {
+  if (suffixedDuplicateCodesCache && Date.now() - suffixedDuplicateCodesCache.fetchedAt < ETF_LIST_CACHE_TTL_MS) return suffixedDuplicateCodesCache.codes;
   const rows = await prisma.$queryRawUnsafe<Array<{ code: string }>>(`
     SELECT suffixed.code FROM etfs suffixed
     WHERE suffixed.code ~ '\\.(TW|TWO)$'
       AND EXISTS (SELECT 1 FROM etfs bare WHERE bare.code = regexp_replace(suffixed.code, '\\.(TW|TWO)$', ''))
   `);
-  return rows.map((r) => r.code).filter((code) => !DEDUP_BACKFILL_PENDING.has(code.replace(/\.(TW|TWO)$/, "")));
+  const codes = rows.map((r) => r.code).filter((code) => !DEDUP_BACKFILL_PENDING.has(code.replace(/\.(TW|TWO)$/, "")));
+  suffixedDuplicateCodesCache = { codes, fetchedAt: Date.now() };
+  return codes;
 }
 
 export async function getEtfList(query: EtfListQuery = {}): Promise<ServiceResponse<EtfListItem[]>> {
@@ -119,10 +133,17 @@ export async function getEtfList(query: EtfListQuery = {}): Promise<ServiceRespo
       : query.sort === "performance1Y"
         ? [{ return1y: { sort: direction, nulls: "last" as const } }, { id: "asc" as const }]
         : [{ name: direction }, { id: "asc" as const }];
+  // 2026-11-10（模擬器實測第1項，使用者核准定案，效能根因修正）: 原本這兩支查詢都帶
+  // include:{_count:{select:{holdings:true}}}——Prisma會對「這檔ETF史上所有holdings列」做
+  // 無條件count（不分asOfDate），VERIFIED對production量測單檔ETF就要~1秒，10檔疊起來是search
+  // API最大的單一瓶頸（13秒裡佔了將近全部）。holdingsCount本來就該是「目前這批揭露的持股數」，
+  // 不是「史上累積寫入過幾列」，兩者語意上也不該混在一起——改成只在後面readiness那支raw SQL
+  // 多加一欄，只數「最新asOfDate那一天」的筆數，吃得到holdings表(etf_id,as_of_date)複合索引，
+  // 不用再靠Prisma對整個id清單逐筆count。
   const [total, exactRows, rows] = await Promise.all([
     prisma.etf.count({ where }),
-    term ? prisma.etf.findMany({ where: { isActive: true, code: { equals: term, mode: "insensitive" } }, take: 1, include: { _count: { select: { holdings: true } } } }) : Promise.resolve([]),
-    prisma.etf.findMany({ where: term ? { ...where, NOT: { code: { equals: term, mode: "insensitive" } } } : where, skip: term ? 0 : skip, take: pageSize, orderBy, include: { _count: { select: { holdings: true } } } }),
+    term ? prisma.etf.findMany({ where: { isActive: true, code: { equals: term, mode: "insensitive" } }, take: 1 }) : Promise.resolve([]),
+    prisma.etf.findMany({ where: term ? { ...where, NOT: { code: { equals: term, mode: "insensitive" } } } : where, skip: term ? 0 : skip, take: pageSize, orderBy }),
   ]);
   const rowsWithExact = term ? [...exactRows, ...rows.filter((row) => !exactRows.some((exact) => exact.id === row.id))].slice(0, pageSize) : rows;
   const ids = rowsWithExact.map((row) => row.id);
@@ -138,7 +159,7 @@ export async function getEtfList(query: EtfListQuery = {}): Promise<ServiceRespo
     // 2026-10-30（使用者核准，ETF折溢價接官方資料）: latest_premium/latest_premium_date 一起從
     // 同一筆etf_history row取（跟app/etf/[code]/page.tsx一樣的「同一筆記錄」保證），不是分開
     // 查日期再配etfs.premium——避免重演今天上午etfs.latestNav那種死資料配錯日期的bug。
-    prisma.$queryRaw<ReadyRow[]>(Prisma.sql`SELECT e.id,(SELECT h.date FROM etf_history h WHERE h.etf_id=e.id ORDER BY h.date DESC LIMIT 1) latest_date,EXISTS(SELECT 1 FROM etf_history h WHERE h.etf_id=e.id OFFSET 19 LIMIT 1) history_ready,(SELECT h.premium FROM etf_history h WHERE h.etf_id=e.id AND h.premium IS NOT NULL ORDER BY h.date DESC LIMIT 1) latest_premium,(SELECT h.date FROM etf_history h WHERE h.etf_id=e.id AND h.premium IS NOT NULL ORDER BY h.date DESC LIMIT 1) latest_premium_date FROM etfs e WHERE e.id IN (${Prisma.join(ids)})`),
+    prisma.$queryRaw<ReadyRow[]>(Prisma.sql`SELECT e.id,(SELECT h.date FROM etf_history h WHERE h.etf_id=e.id ORDER BY h.date DESC LIMIT 1) latest_date,EXISTS(SELECT 1 FROM etf_history h WHERE h.etf_id=e.id OFFSET 19 LIMIT 1) history_ready,(SELECT h.premium FROM etf_history h WHERE h.etf_id=e.id AND h.premium IS NOT NULL ORDER BY h.date DESC LIMIT 1) latest_premium,(SELECT h.date FROM etf_history h WHERE h.etf_id=e.id AND h.premium IS NOT NULL ORDER BY h.date DESC LIMIT 1) latest_premium_date,(SELECT count(*) FROM holdings hd WHERE hd.etf_id=e.id AND hd.as_of_date=(SELECT max(hd2.as_of_date) FROM holdings hd2 WHERE hd2.etf_id=e.id)) holdings_count FROM etfs e WHERE e.id IN (${Prisma.join(ids)})`),
   ]) : [[], [], []];
   const metricByEtf = new Map(assetMetrics.map((row) => [row.etf_id, row]));
   const flowByEtf = new Map(flowCoverage.map((row) => [row.etf_id, row]));
@@ -166,7 +187,7 @@ export async function getEtfList(query: EtfListQuery = {}): Promise<ServiceRespo
     const premiumFresh = premiumAgeDays != null && premiumAgeDays <= 3;
     const premiumDiscount = premiumFresh ? numberOrNull(ready!.latest_premium) : null;
     const premiumDiscountAsOfDate = premiumFresh ? isoOrNull(ready!.latest_premium_date) : null;
-    return { identity: etfIdentity(row), issuer: row.provider || null, category: row.category, price: numberOrNull(row.latestPrice), metrics: etfMetrics(row), nav: numberOrNull(assetMetric?.nav ?? row.latestNav), aum: numberOrNull(row.aum), sharesOutstanding: numberOrNull(assetMetric?.shares_outstanding), premiumDiscount, premiumDiscountAsOfDate, holdingsCount: row._count.holdings, flowCoverage: { status: (flow ? "PARTIAL_CURRENT" : "UNAVAILABLE") as "PARTIAL_CURRENT" | "UNAVAILABLE", asOfDate: isoOrNull(flow?.observation_date) }, freshnessStatus: rowFreshness, publicReady: (row.latestPrice != null || row.latestNav != null) && ready?.history_ready === true && rowFreshness === "CURRENT", source: row.dataSource ?? row.dataProvider ?? row.provider };
+    return { identity: etfIdentity(row), issuer: row.provider || null, category: row.category, price: numberOrNull(row.latestPrice), metrics: etfMetrics(row), nav: numberOrNull(assetMetric?.nav ?? row.latestNav), aum: numberOrNull(row.aum), sharesOutstanding: numberOrNull(assetMetric?.shares_outstanding), premiumDiscount, premiumDiscountAsOfDate, holdingsCount: Number(ready?.holdings_count ?? 0), flowCoverage: { status: (flow ? "PARTIAL_CURRENT" : "UNAVAILABLE") as "PARTIAL_CURRENT" | "UNAVAILABLE", asOfDate: isoOrNull(flow?.observation_date) }, freshnessStatus: rowFreshness, publicReady: (row.latestPrice != null || row.latestNav != null) && ready?.history_ready === true && rowFreshness === "CURRENT", source: row.dataSource ?? row.dataProvider ?? row.provider };
   }));
   return { data: items, meta: { asOfDate: provenance.asOfDate, lastUpdated: provenance.lastUpdated, freshnessStatus: freshnessStatus(latest, "MARKET_DAY"), source, provenance, coverageStatus: "PARTIAL_CURRENT" }, pagination: paginationMeta(page, pageSize, total), error: null };
 }

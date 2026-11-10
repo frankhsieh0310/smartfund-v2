@@ -7,6 +7,7 @@ import { isAuthorizedCron, unauthorizedCron } from "@/lib/cron/authorize";
 import { beginRun, finishRun } from "@/lib/cloud-ingestion/runContext";
 import { findStaleUsStocks, refreshStockTechnical } from "@/lib/cron/stockTechnicalDaily";
 import { isStockTechnicalSyncWriteEnabledUs } from "@/lib/cron/stockTechnicalWriteGate";
+import { refreshPresetCacheForMarket } from "@/lib/screener/presetCache";
 
 export const runtime = "nodejs";
 export const maxDuration = 280;
@@ -26,11 +27,12 @@ export async function GET(request: Request) {
   const writeEnabled = isStockTechnicalSyncWriteEnabledUs();
   let cursor: string | null = null;
   let totalStale = 0, totalWritten = 0, totalChecked = 0;
+  let reachedEnd = false;
   const failed: { ticker: string; reason: string }[] = [];
   try {
     while (Date.now() - started < TIME_BUDGET_MS) {
       const stale = await findStaleUsStocks(BATCH_SIZE, cursor);
-      if (stale.length === 0) break;
+      if (stale.length === 0) { reachedEnd = true; break; }
       for (const s of stale) {
         totalChecked++;
         try {
@@ -42,16 +44,22 @@ export async function GET(request: Request) {
         }
       }
       cursor = stale[stale.length - 1].ticker;
-      if (stale.length < BATCH_SIZE) break; // reached the end of the US universe this pass
+      if (stale.length < BATCH_SIZE) { reachedEnd = true; break; } // reached the end of the US universe this pass
       if (Date.now() - started >= TIME_BUDGET_MS) break;
     }
     await finishRun(runId, JOB, "INTERNAL_COMPUTE", started, {
       status: failed.length > 0 && totalWritten === 0 ? "PARTIAL" : "COMPLETED",
       attempted: totalChecked, completed: totalStale, inserted: totalWritten, updated: 0,
       failed: failed.length, retryableFailures: failed.length, checkpointAfter: null,
-      details: { writeEnabled, cursor },
+      details: { writeEnabled, cursor, reachedEnd },
     });
-    return Response.json({ ok: true, task: "stock-technical-daily-us", writeEnabled, totalChecked, totalStale, totalWritten, failed, cursor });
+    // 2026-11-10（模擬器實測第3項，使用者核准定案）: 不新增排程——跟TW那支同一套規則，整個美股
+    // 母體這一輪確實掃完且寫入有開才順便重算選股反查的5組範本快取（market=US）。
+    let presetCacheRefresh: { refreshed: string[]; failed: string[] } | null = null;
+    if (reachedEnd && writeEnabled) {
+      try { presetCacheRefresh = await refreshPresetCacheForMarket("US"); } catch { /* best-effort only */ }
+    }
+    return Response.json({ ok: true, task: "stock-technical-daily-us", writeEnabled, totalChecked, totalStale, totalWritten, failed, cursor, reachedEnd, presetCacheRefresh });
   } catch (e) {
     await finishRun(runId, JOB, "INTERNAL_COMPUTE", started, { status: "FAILED", attempted: totalChecked, completed: 0, inserted: totalWritten, updated: 0, failed: 1, retryableFailures: 1, checkpointAfter: null, error: (e as Error).message });
     return Response.json({ ok: false, task: "stock-technical-daily-us", error: (e as Error).message }, { status: 500 });

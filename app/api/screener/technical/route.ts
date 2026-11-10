@@ -10,6 +10,7 @@
 import { getAccountForRequest } from "@/lib/auth/userService";
 import { SCREENER_FREE_MAX_CONDITIONS, SCREENER_FREE_MAX_RESULTS, TRIAL_DAYS } from "@/lib/payments/plans";
 import { parseScreenerConditions, runStockScreenerQuery, countStockScreenerMatches } from "@/lib/screener/stockScreener";
+import { matchPresetKey, getCachedPresetResult } from "@/lib/screener/presetCache";
 
 // 2026-11-09（模擬器實測第1項，使用者核准定案）: getAccountForRequest 對未登入的請求永遠回 null，
 // 這支route原本因此永遠把未登入裝置當free——跟手機端14天新用戶免費期（不論有沒有登入都算，見
@@ -53,11 +54,26 @@ export async function GET(request: Request) {
   const marketParam = q.get("market");
   const market = marketParam === "TW" || marketParam === "US" ? marketParam : null;
 
-  const rows = await runStockScreenerQuery(conditions, market, limit + (isPaidOrTrial ? 0 : 1));
+  // 2026-11-10（模擬器實測第3項，使用者核准定案）: 畫面只有5組固定範本按鈕，實際流量幾乎全部
+  // 落在「範本 × TW/US」這10種組合——命中快取就直接讀 stock-technical-daily/-us 排程算好存起來
+  // 的結果，不用每次都即時掃全市場技術指標＋基本面；沒命中（自訂條件組合，理論上UI不會送出，
+  // 但保留防呆）或快取已經過舊，照舊即時查詢，行為跟修改前完全一致。
+  const presetKey = market ? matchPresetKey(conditions) : null;
+  const cached = presetKey && market ? await getCachedPresetResult(presetKey, market) : null;
+  let rows: Awaited<ReturnType<typeof runStockScreenerQuery>>;
+  let cachedTotal: number | null = null;
+  let usedCache = false;
+  if (cached) {
+    rows = cached.rows.slice(0, limit + (isPaidOrTrial ? 0 : 1));
+    cachedTotal = cached.total;
+    usedCache = true;
+  } else {
+    rows = await runStockScreenerQuery(conditions, market, limit + (isPaidOrTrial ? 0 : 1));
+  }
   let remainingCount: number | null = null;
   let results = rows;
   if (!isPaidOrTrial && rows.length > limit) {
-    const total = await countStockScreenerMatches(conditions, market);
+    const total = cachedTotal ?? await countStockScreenerMatches(conditions, market);
     remainingCount = Math.max(0, total - limit);
     results = rows.slice(0, limit);
   }
@@ -67,6 +83,8 @@ export async function GET(request: Request) {
     conditions,
     market: market ?? "ALL",
     total: results.length,
+    cached: usedCache,
+    cachedAsOfDate: cached?.computedAt ?? null,
     generated_at: new Date().toISOString(),
     tier: isPaidOrTrial ? "FULL" : "FREE",
     truncatedConditions,
