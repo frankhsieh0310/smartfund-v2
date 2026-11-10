@@ -45,6 +45,10 @@ export async function computePortfolioLookThrough(items: SelectedProductInput[],
   type Agg = { name: string; ticker: string | null; sector: string | null; country: string | null; exposurePct: number; holders: Map<string, number> };
   const stocks = new Map<string, Agg>();
   let lookedThroughPct = 0;
+  // 2026-11-11（組合持股分析補完第2項，使用者核准）: 重疊矩陣要用「商品自己的持股權重」（例如
+  // 這檔股票佔這檔ETF本身8%），不是上面已經乘過組合配置比重的contributionPct——跟exposurePct
+  // 分開存一份，只給overlapMatrix用。
+  const productOwnWeights = new Map<string, Map<string, number>>();
 
   for (const item of items) {
     const ref = `${item.assetType}:${item.id}`;
@@ -72,6 +76,7 @@ export async function computePortfolioLookThrough(items: SelectedProductInput[],
     });
     lookedThroughPct += weightPct;
 
+    const ownWeights = new Map<string, number>();
     for (const row of snapshot.rows) {
       const contributionPct = (weightPct * row.weightPct) / 100;
       const existing = stocks.get(row.key);
@@ -81,6 +86,28 @@ export async function computePortfolioLookThrough(items: SelectedProductInput[],
       } else {
         stocks.set(row.key, { name: row.name, ticker: row.ticker, sector: row.sector, country: row.country, exposurePct: contributionPct, holders: new Map([[ref, contributionPct]]) });
       }
+      ownWeights.set(row.key, (ownWeights.get(row.key) ?? 0) + row.weightPct);
+    }
+    productOwnWeights.set(ref, ownWeights);
+  }
+
+  // 2026-11-11（組合持股分析補完第2項）: 兩兩共同持股比重——標準做法（跟Morningstar Portfolio
+  // X-Ray同一個定義）：對兩檔商品都持有的每一檔股票，取min(商品A自己的權重,商品B自己的權重)再
+  // 加總，不是用contributionPct（那已經乘過使用者輸入的組合配置比重，答的是不同問題）。只算
+  // included=true的商品之間的配對，沒有持股資料的商品不會出現在矩陣裡。
+  const includedRefs = products.filter((p) => p.included).map((p) => p.ref);
+  const overlapMatrix: Array<{ refA: string; refB: string; overlapPct: number }> = [];
+  for (let i = 0; i < includedRefs.length; i++) {
+    for (let j = i + 1; j < includedRefs.length; j++) {
+      const refA = includedRefs[i], refB = includedRefs[j];
+      const weightsA = productOwnWeights.get(refA) ?? new Map();
+      const weightsB = productOwnWeights.get(refB) ?? new Map();
+      let overlapPct = 0;
+      for (const [key, wA] of weightsA) {
+        const wB = weightsB.get(key);
+        if (wB != null) overlapPct += Math.min(wA, wB);
+      }
+      overlapMatrix.push({ refA, refB, overlapPct });
     }
   }
 
@@ -148,5 +175,6 @@ export async function computePortfolioLookThrough(items: SelectedProductInput[],
     },
     sector: bucketBy("sector"),
     country: bucketBy("country"),
+    overlapMatrix,
   };
 }
