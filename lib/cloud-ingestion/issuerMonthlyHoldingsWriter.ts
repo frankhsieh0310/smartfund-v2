@@ -25,6 +25,7 @@ import {
   CAPITAL_FUND_MAPPINGS, FUBON_FUND_MAPPINGS, TAISHIN_FUND_MAPPINGS, type IssuerFundMapping,
 } from "@/lib/cloud-ingestion/issuerFundMappings";
 import { targetMonthEndIso } from "@/lib/cloud-ingestion/fundHoldings";
+import { isContaminatedAgainstExisting, type FundBatch } from "@/lib/cloud-ingestion/crossFundContaminationGuard";
 
 export type SupportedIssuer = "Yuanta" | "Cathay" | "Nomura" | "Capital" | "Fubon" | "Taishin";
 
@@ -180,6 +181,40 @@ export async function runIssuerMonthlyHoldings(
       // 如果官網這次回來的月份其實跟DB裡已有的一樣新（例如上面pre-check剛好卡在月份邊界的race），
       // 一樣不寫入——避免重複寫一樣的月份。
       const alreadyHasThisMonth = existing[0]?.as_of_date === asOfDate;
+      // 2026-11-10（使用者核准定案，第3項防呆，2026-11-09事故：10個*_OFFICIAL_MONTHLY來源的
+      // 歷史髒資料把同一份持股誤標到許多不相關基金上——這6家有程式維護的投信目前驗證過都是乾淨
+      // 的，這道檢查是預防未來再出現同一種失誤，不是修正現有bug）: 寫入前比對「同一個來源、同一
+      // 天，別的基金（不是這個mapping自己的share class）已經寫過的持股清單」，完全相同就代表這批
+      // 資料很可能被誤標到別的基金了，不寫入、記錄下來，不讓錯誤資料進holdings表。
+      let contaminated = false;
+      if (!alreadyHasThisMonth && writeEnabled) {
+        const otherFundsRows = await prisma.$queryRawUnsafe<{ fund_id: string; holding_name: string; weight: string }[]>(
+          `SELECT fund_id, holding_name, weight::text FROM holdings
+           WHERE source = $1 AND as_of_date = $2::date AND asset_type = 'FUND' AND fund_id <> ALL($3::text[])`,
+          source, asOfDate, m.fundIds,
+        );
+        const otherBatches = new Map<string, FundBatch>();
+        for (const r of otherFundsRows) {
+          const batch = otherBatches.get(r.fund_id) ?? { fundId: r.fund_id, portfolioKey: r.fund_id, holdings: [] };
+          (batch.holdings as { name: string; weight: number }[]).push({ name: r.holding_name, weight: Number(r.weight) });
+          otherBatches.set(r.fund_id, batch);
+        }
+        const incoming: FundBatch = {
+          fundId: m.sourceId, portfolioKey: m.sourceId,
+          holdings: result.holdings.map((h) => ({ name: h.name, weight: h.weight })),
+        };
+        contaminated = isContaminatedAgainstExisting(incoming, [...otherBatches.values()]);
+      }
+      if (contaminated) {
+        failedDetail.push({ sourceId: m.sourceId, error: "CROSS_FUND_CONTAMINATION: identical holdings list already written for a different, unrelated fund under the same source+date; skipped, not written" });
+        failedCount++;
+        // 不更新lastSuccessSourceId、不寫checkpoint——跟下面catch區塊「其他錯誤」同一套邏輯，
+        // 讓下次排程還會重試這一檔，不是永久卡住。
+        if (index < mappings.length - 1 && Date.now() < deadlineAt) {
+          await new Promise((r) => setTimeout(r, REQUEST_SPACING_MS));
+        }
+        continue;
+      }
       if (!alreadyHasThisMonth && writeEnabled) {
         await prisma.$transaction(async (tx) => {
           for (const fundId of m.fundIds) {
