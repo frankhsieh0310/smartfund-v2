@@ -5,8 +5,9 @@ import { runSecForm4IngestBatch } from "../../../lib/cron/secForm4Ingest";
 
 async function main() {
   const wallBudgetMs = Number(process.argv[2] ?? 540_000);
+  const startCursor = process.argv[3] ?? null;
   const started = Date.now();
-  let cursor: string | null = null;
+  let cursor: string | null = startCursor;
   let totalIssuers = 0, totalFilings = 0, totalRows = 0, rounds = 0;
   while (Date.now() - started < wallBudgetMs) {
     rounds++;
