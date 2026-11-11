@@ -4,6 +4,13 @@
 // 換算分割前的歷史價格，畫面上標示「本App換算」。
 //
 // 新事件發生時要手動補進這份清單（來源：發行機構公告、TWSE/TPEx公告），不會自動偵測。
+// 全面掃描方法（2026-11-11修正）: 用日漲跌幅異常抓可能的分割/反分割事件時，不要加
+// ORDER BY date DESC搭配小LIMIT——同一天本身可能有上百筆槓桿型/每日型ETF的正常大幅波動
+// （2X/3X單股槓桿ETF、Ultra/UltraShort基金），LIMIT還沒排到更早的日期就被這些正常雜訊佔滿，
+// 導致QUAL/ITA/EFV這3檔（分割日在2026-11-03/11-04，比MTUM/EFG的11-05更早）第一輪完全沒掃到。
+// 正確做法：撈出全部異常（不加LIMIT或給很大的LIMIT），依日期分組後用名稱關鍵字
+// （2X/3X/Daily/Direxion/Tradr/Leveraged/Ultra/UltraShort/Inverse/Short/ETN/ETC等）先排除
+// 已知的槓桿/每日型雜訊，剩下的再逐筆核實是否為真正的分割/反分割。
 export type KnownSplitEvent = {
   assetType: "ETF" | "STOCK";
   code: string; // etfs.code 或 stocks.ticker
@@ -35,6 +42,30 @@ export const KNOWN_SPLIT_EVENTS: KnownSplitEvent[] = [
     effectiveDate: "2026-11-05",
     ratioOldToNew: 3,
     note: "EFG iShares MSCI EAFE Growth ETF 1拆3（本資料庫觀測到2026-11-04→11-05比例0.34，與同批iShares factor ETF分割公告吻合，僅二次來源佐證，信心度中，建議人工再次核實）。本App依此比例換算分割前歷史價格。",
+  },
+  // 2026-11-11（使用者核實並指定，第一輪掃描用ORDER BY date DESC LIMIT 60漏掉這3檔——同一天
+  // 的日漲跌異常筆數遠超過60筆(2026-11-04/11-05那兩天本身就有數十筆槓桿型ETF正常波動)，LIMIT
+  // 60在還沒排到2026-11-02/11-03就被吃完，掃描方法已修正見下方說明）。
+  {
+    assetType: "ETF",
+    code: "QUAL",
+    effectiveDate: "2026-11-03",
+    ratioOldToNew: 4,
+    note: "QUAL iShares MSCI USA Quality Factor ETF 1拆4（iShares/BlackRock同批factor ETF分割公告，2026-11-03起分割後交易，使用者核實）。本App依公告比例換算分割前歷史價格。",
+  },
+  {
+    assetType: "ETF",
+    code: "ITA",
+    effectiveDate: "2026-11-04",
+    ratioOldToNew: 3,
+    note: "ITA iShares U.S. Aerospace & Defense ETF 1拆3（iShares/BlackRock同批產業ETF分割公告，2026-11-04起分割後交易，使用者核實）。本App依公告比例換算分割前歷史價格。",
+  },
+  {
+    assetType: "ETF",
+    code: "EFV",
+    effectiveDate: "2026-11-03",
+    ratioOldToNew: 2,
+    note: "EFV iShares MSCI EAFE Value ETF 1拆2（iShares/BlackRock同批factor ETF分割公告，2026-11-03起分割後交易，使用者核實）。本App依公告比例換算分割前歷史價格。",
   },
 ];
 
