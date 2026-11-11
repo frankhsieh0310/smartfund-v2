@@ -50,17 +50,27 @@ export async function computePortfolioLookThrough(items: SelectedProductInput[],
   // 分開存一份，只給overlapMatrix用。
   const productOwnWeights = new Map<string, Map<string, number>>();
 
-  for (const item of items) {
+  // 2026-11-11 使用者回報核實：穿透分析載入15–20秒。量過：每檔商品原本是fetchName+
+  // getLatestSnapshot(=listSnapshotDates+fetchSnapshot，各一次DB往返)依序await，彼此互不依賴
+  // 卻完全沒平行——10檔商品 x 最多3次往返 x 遠端Postgres延遲，疊加起來就是15–20秒。這裡只改成
+  // 平行抓資料（Promise.all），聚合邏輯本身完全不動、結果不變，之後再依items原始順序寫入
+  // products/excludedProducts等陣列，維持跟原本一致的顯示順序。
+  const fetched = await Promise.all(items.map(async (item) => {
+    const basics = await fetchName(item.assetType, item.id);
+    if (!basics) return { item, basics: null as const, snapshot: null };
+    const snapshot = await getLatestSnapshot(item.assetType as ProductType, item.id);
+    return { item, basics, snapshot };
+  }));
+
+  for (const { item, basics, snapshot } of fetched) {
     const ref = `${item.assetType}:${item.id}`;
     const weightPct = weightSumOk ? (item.value / totalRaw) * 100 : 0;
-    const basics = await fetchName(item.assetType, item.id);
     if (!basics) {
       excludedProducts.push({ ref, label: ref, name: null, reason: "NOT_FOUND" });
       products.push({ ref, assetType: item.assetType, id: item.id, code: null, name: null, weightPct, included: false, coverageDepth: null, presentRowCount: 0, declaredCount: null, asOfDate: null, holdingsCoveredPct: null });
       continue;
     }
     const label = basics.name ?? basics.code ?? ref;
-    const snapshot = await getLatestSnapshot(item.assetType as ProductType, item.id);
     if (!snapshot || snapshot.rows.length === 0) {
       excludedProducts.push({ ref, label, name: basics.name, reason: "NO_HOLDINGS" });
       products.push({ ref, assetType: item.assetType, id: item.id, code: basics.code, name: basics.name, weightPct, included: false, coverageDepth: null, presentRowCount: 0, declaredCount: null, asOfDate: null, holdingsCoveredPct: null });
