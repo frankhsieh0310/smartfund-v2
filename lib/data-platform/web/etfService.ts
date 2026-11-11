@@ -6,6 +6,7 @@ import { normalizePagination, paginationMeta } from "./pagination.ts";
 import { buildProvenance } from "./provenance.ts";
 import { isoOrNull, numberOrNull, type CanonicalIdentity, type HistoryQuery, type ListQuery, type ServiceResponse, type SummaryMetrics } from "./types.ts";
 import { getCoreUniverseEtfIds } from "../../tw-purchasable/coreUniverseFilter.ts";
+import { splitAdjustmentFor } from "../knownSplitEvents.ts";
 
 const etfIdentity = (row: { id: string; code: string; name: string; currency: string; exchange: string | null; region: string | null }): CanonicalIdentity => ({ assetType: "ETF", id: row.id, symbol: row.code, name: row.name, displayName: row.name, currency: row.currency, market: row.exchange, country: row.region });
 const etfMetrics = (row: { latestPrice: unknown; latestNav: unknown; currency: string; priceUpdatedAt: Date | null; return1m: unknown; return3m: unknown; return1y: unknown; dividendYield: unknown }): SummaryMetrics => ({ priceOrNav: numberOrNull(row.latestPrice ?? row.latestNav), change: null, changePercent: null, currency: row.currency, asOfDate: isoOrNull(row.priceUpdatedAt), performance1M: numberOrNull(row.return1m), performance3M: numberOrNull(row.return3m), performance1Y: numberOrNull(row.return1y), dividendYield: numberOrNull(row.dividendYield) });
@@ -299,7 +300,14 @@ export async function getEtfHistory(code: string, query: HistoryQuery = {}): Pro
   const [total, rows] = await Promise.all([prisma.etfHistory.count({ where }), prisma.etfHistory.findMany({ where, skip: cursorDate ? 0 : skip, take: pageSize, orderBy: { date: "desc" } })]);
   const source = etf.dataSource ?? etf.dataProvider ?? etf.provider;
   const provenance = buildProvenance({ source, asOfDate: rows[0]?.date, lastUpdated: rows[0]?.createdAt });
-  return { data: rows.map((row) => ({ date: row.date.toISOString(), price: numberOrNull(row.price), nav: numberOrNull(row.nav), premiumDiscount: numberOrNull(row.premium), volume: numberOrNull(row.volume), aum: numberOrNull(row.aum), open: numberOrNull(row.open), high: numberOrNull(row.high), low: numberOrNull(row.low), close: numberOrNull(row.close ?? row.price), adjustedClose: numberOrNull(row.adjustedClose ?? row.close ?? row.price) })), meta: { asOfDate: provenance.asOfDate, lastUpdated: provenance.lastUpdated, freshnessStatus: freshnessStatus(rows[0]?.date, "MARKET_DAY"), source, provenance, coverageStatus: "FULL" }, pagination: paginationMeta(page, pageSize, total, rows.length === pageSize ? rows.at(-1)?.date.toISOString() ?? null : null), error: null };
+  const splitNotes = new Set<string>();
+  const data = rows.map((row) => {
+    const { ratio, notes } = splitAdjustmentFor("ETF", code, row.date);
+    notes.forEach((n) => splitNotes.add(n));
+    const div = (v: number | null) => v == null ? null : v / ratio;
+    return { date: row.date.toISOString(), price: div(numberOrNull(row.price)), nav: numberOrNull(row.nav), premiumDiscount: numberOrNull(row.premium), volume: numberOrNull(row.volume), aum: numberOrNull(row.aum), open: div(numberOrNull(row.open)), high: div(numberOrNull(row.high)), low: div(numberOrNull(row.low)), close: div(numberOrNull(row.close ?? row.price)), adjustedClose: div(numberOrNull(row.adjustedClose ?? row.close ?? row.price)) };
+  });
+  return { data, meta: { asOfDate: provenance.asOfDate, lastUpdated: provenance.lastUpdated, freshnessStatus: freshnessStatus(rows[0]?.date, "MARKET_DAY"), source, provenance, coverageStatus: "FULL", splitAdjustmentNote: splitNotes.size ? Array.from(splitNotes).join(" ") : null }, pagination: paginationMeta(page, pageSize, total, rows.length === pageSize ? rows.at(-1)?.date.toISOString() ?? null : null), error: null };
 }
 
 

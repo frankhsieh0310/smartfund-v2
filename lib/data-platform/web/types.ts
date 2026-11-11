@@ -65,6 +65,10 @@ export interface ResponseMeta {
   source: string | null;
   provenance: Provenance;
   coverageStatus: CoverageStatus;
+  // 2026-11-11（使用者核准，分割還原換算標示）: 只有getEtfHistory/getStockHistory在回傳的歷史價格
+  // 裡含有依官方公告比例自行換算（見lib/data-platform/knownSplitEvents.ts）的分割前資料時才會有值，
+  // 其餘所有service一律不設這個欄位。
+  splitAdjustmentNote?: string | null;
 }
 
 export interface PaginationMeta {

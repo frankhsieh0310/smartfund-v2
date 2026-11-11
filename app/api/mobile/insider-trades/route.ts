@@ -43,25 +43,43 @@ async function fetchRows(where: string, params: unknown[]): Promise<Row[]> {
   );
 }
 
+// 同一人同日同標的的多筆分批成交（常見於10b5-1計畫分批賣出，每筆成交價不同）合併成一筆：
+// 股數加總、成交均價用股數加權平均，金額加總；code/transaction_type不同的不合併（買跟賣不能混）。
+// 2026-11-11（使用者核准）：原本一筆一筆顯示會讓列表看起來像同一人重複洗版。
 function serialize(rows: Row[]) {
-  return rows.map((r) => {
+  const groups = new Map<string, { r: Row; shares: number; valueSum: number; hasPrice: boolean; ids: string[] }>();
+  for (const r of rows) {
     const shares = Number(r.shares);
     const price = r.price !== null ? Number(r.price) : null;
-    return {
-      id: r.id, person_name: r.insider, title: r.role, ticker: r.ticker, company: r.company,
-      transaction_code: r.transaction_type, transaction_type: bucketOf(r.transaction_type),
-      transaction_type_zh: CODE_MAP[r.transaction_type]?.zh ?? "其他",
-      shares, price, transaction_value: price !== null ? Math.round(shares * price) : null,
-      transaction_date: r.transaction_date.toISOString().slice(0, 10),
-      // Not captured by this round's ingestion (only transaction_date was parsed from the Form 4
-      // XML) — never fabricated. See REMAINING_P1: would require re-parsing each filing's own
-      // filing/accepted date, out of scope for this round's "don't re-fetch" instruction.
-      filing_date: null as string | null,
-      ownership_type: null as string | null,
-      source: "SEC EDGAR Form 4",
-      source_url: r.cik ? `https://www.sec.gov/Archives/edgar/data/${Number(r.cik)}/${r.filing_id.replaceAll("-", "")}/` : `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&type=4`,
-    };
-  });
+    const key = `${r.insider}|${r.ticker}|${r.transaction_date.toISOString().slice(0, 10)}|${r.transaction_type}`;
+    const existing = groups.get(key);
+    if (existing) {
+      existing.shares += shares;
+      if (price !== null) { existing.valueSum += shares * price; existing.hasPrice = true; }
+      existing.ids.push(r.id);
+    } else {
+      groups.set(key, { r, shares, valueSum: price !== null ? shares * price : 0, hasPrice: price !== null, ids: [r.id] });
+    }
+  }
+  return Array.from(groups.values())
+    .sort((a, b) => b.r.transaction_date.getTime() - a.r.transaction_date.getTime())
+    .map(({ r, shares, valueSum, hasPrice, ids }) => {
+      const avgPrice = hasPrice && shares > 0 ? valueSum / shares : null;
+      return {
+        id: ids[0], fill_count: ids.length, person_name: r.insider, title: r.role, ticker: r.ticker, company: r.company,
+        transaction_code: r.transaction_type, transaction_type: bucketOf(r.transaction_type),
+        transaction_type_zh: CODE_MAP[r.transaction_type]?.zh ?? "其他",
+        shares, price: avgPrice, transaction_value: hasPrice ? Math.round(valueSum) : null,
+        transaction_date: r.transaction_date.toISOString().slice(0, 10),
+        // Not captured by this round's ingestion (only transaction_date was parsed from the Form 4
+        // XML) — never fabricated. See REMAINING_P1: would require re-parsing each filing's own
+        // filing/accepted date, out of scope for this round's "don't re-fetch" instruction.
+        filing_date: null as string | null,
+        ownership_type: null as string | null,
+        source: "SEC EDGAR Form 4",
+        source_url: r.cik ? `https://www.sec.gov/Archives/edgar/data/${Number(r.cik)}/${r.filing_id.replaceAll("-", "")}/` : `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&type=4`,
+      };
+    });
 }
 
 export async function GET(request: Request) {

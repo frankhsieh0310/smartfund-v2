@@ -4,6 +4,7 @@ import { freshnessStatus } from "./freshness.ts";
 import { normalizePagination, paginationMeta } from "./pagination.ts";
 import { buildProvenance } from "./provenance.ts";
 import { isoOrNull, numberOrNull, type CanonicalIdentity, type HistoryQuery, type ListQuery, type ServiceResponse, type SummaryMetrics } from "./types.ts";
+import { splitAdjustmentFor } from "../knownSplitEvents.ts";
 
 function identity(row: { id: string; ticker: string; yahooSymbol: string; companyName: string; companyNameZh: string | null; currency: string; exchange: string; country: string }): CanonicalIdentity {
   return { assetType: "STOCK", id: row.id, symbol: row.yahooSymbol || row.ticker, name: row.companyName, displayName: row.companyNameZh ?? row.companyName, currency: row.currency, market: row.exchange, country: row.country };
@@ -235,7 +236,7 @@ export async function getStockDetail(symbol: string): Promise<ServiceResponse<{ 
 
 export async function getStockHistory(symbol: string, query: HistoryQuery = {}): Promise<ServiceResponse<Array<{ date: string; open: number | null; high: number | null; low: number | null; close: number; adjustedClose: number | null; volume: number | null }>>> {
   const { page, pageSize, skip } = normalizePagination(query.page, query.pageSize);
-  const stock = await prisma.stock.findFirst({ where: { OR: [{ yahooSymbol: { equals: symbol, mode: "insensitive" } }, { ticker: { equals: symbol, mode: "insensitive" } }] }, select: { id: true } });
+  const stock = await prisma.stock.findFirst({ where: { OR: [{ yahooSymbol: { equals: symbol, mode: "insensitive" } }, { ticker: { equals: symbol, mode: "insensitive" } }] }, select: { id: true, ticker: true } });
   if (!stock) throw new WebDataError("NOT_FOUND", "Stock not found.");
   const cursorDate = query.cursor ? new Date(query.cursor) : null;
   if (cursorDate && Number.isNaN(cursorDate.getTime())) throw new WebDataError("INVALID_QUERY", "Invalid history cursor.");
@@ -243,5 +244,12 @@ export async function getStockHistory(symbol: string, query: HistoryQuery = {}):
   const [total, rows] = await Promise.all([prisma.stockHistory.count({ where }), prisma.stockHistory.findMany({ where, skip: cursorDate ? 0 : skip, take: pageSize, orderBy: { date: "desc" } })]);
   const latest = rows[0];
   const provenance = buildProvenance({ source: latest?.source, sourceRecordId: latest?.sourceSymbol, asOfDate: latest?.date, lastUpdated: latest?.updatedAt ?? latest?.importedAt ?? latest?.createdAt });
-  return { data: rows.map((row) => ({ date: row.date.toISOString(), open: numberOrNull(row.open), high: numberOrNull(row.high), low: numberOrNull(row.low), close: Number(row.close), adjustedClose: numberOrNull(row.adjustedClose), volume: numberOrNull(row.volume) })), meta: { asOfDate: provenance.asOfDate, lastUpdated: provenance.lastUpdated, freshnessStatus: freshnessStatus(latest?.date, "MARKET_DAY"), source: provenance.source, provenance, coverageStatus: "FULL" }, pagination: paginationMeta(page, pageSize, total, rows.length === pageSize ? rows.at(-1)?.date.toISOString() ?? null : null), error: null };
+  const splitNotes = new Set<string>();
+  const data = rows.map((row) => {
+    const { ratio, notes } = splitAdjustmentFor("STOCK", stock.ticker, row.date);
+    notes.forEach((n) => splitNotes.add(n));
+    const div = (v: number | null) => v == null ? null : v / ratio;
+    return { date: row.date.toISOString(), open: div(numberOrNull(row.open)), high: div(numberOrNull(row.high)), low: div(numberOrNull(row.low)), close: div(Number(row.close))!, adjustedClose: div(numberOrNull(row.adjustedClose)), volume: numberOrNull(row.volume) };
+  });
+  return { data, meta: { asOfDate: provenance.asOfDate, lastUpdated: provenance.lastUpdated, freshnessStatus: freshnessStatus(latest?.date, "MARKET_DAY"), source: provenance.source, provenance, coverageStatus: "FULL", splitAdjustmentNote: splitNotes.size ? Array.from(splitNotes).join(" ") : null }, pagination: paginationMeta(page, pageSize, total, rows.length === pageSize ? rows.at(-1)?.date.toISOString() ?? null : null), error: null };
 }
