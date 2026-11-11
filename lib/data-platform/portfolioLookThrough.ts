@@ -57,7 +57,7 @@ export async function computePortfolioLookThrough(items: SelectedProductInput[],
   // products/excludedProducts等陣列，維持跟原本一致的顯示順序。
   const fetched = await Promise.all(items.map(async (item) => {
     const basics = await fetchName(item.assetType, item.id);
-    if (!basics) return { item, basics: null as const, snapshot: null };
+    if (!basics) return { item, basics: null, snapshot: null };
     const snapshot = await getLatestSnapshot(item.assetType as ProductType, item.id);
     return { item, basics, snapshot };
   }));

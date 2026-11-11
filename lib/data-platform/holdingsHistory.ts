@@ -47,8 +47,16 @@ async function fetchSnapshot(productType: ProductType, productId: string, asOfDa
      ),
      winning_source AS (SELECT source FROM candidate_sources ORDER BY n DESC, source ASC LIMIT 1)
      SELECT coalesce(h.security_id, h.ticker, h.holding_code, h.holding_name) key, h.holding_name name,
-            h.ticker, h.weight::text weight, h.sector, h.country, h.source
+            h.ticker, h.weight::text weight,
+            -- 2026-11-11（使用者核准，官方產業分類定案）: 「產業集中」優先用securities表的官方
+            -- 產業別（TWSE/TPEx/SEC SIC，依security_id關聯到個股）——holdings.sector原本只有少數
+            -- 來源（BlackRock債券CSV等）有填，TW/美股ETF官方揭露來源（ETF_OFFICIAL_DAILY_SNAPSHOT
+            -- 等）從來沒有sector，securities表才是真正該查的地方。securities查不到才退回
+            -- holdings.sector既有值，兩者都沒有才算「未分類」（呼叫端bucketBy已處理null）。
+            coalesce(sec.sector, h.sector) sector,
+            h.country, h.source
        FROM holdings h
+       LEFT JOIN securities sec ON sec.id = h.security_id
       WHERE h.${col} = $1 AND h.as_of_date = $2::date
         AND h.source = (SELECT source FROM winning_source)
       ORDER BY h.weight DESC NULLS LAST, h.rank NULLS LAST`,
