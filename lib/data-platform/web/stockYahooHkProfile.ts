@@ -16,8 +16,7 @@ export type YahooHkRangeCap = {
 export type FetchOutcome<T> =
   | { status: "OK"; data: T }
   | { status: "NOT_FOUND" }
-  | { status: "NOT_CHINESE" } // 雅虎這頁有"描述"但是純英文——only used by fetchYahooHkCompanyProfileZh
-  | { status: "BLOCKED"; httpStatus: number } // 401/403/429 -- 呼叫端必須整批停下來，不可以重試/繞過
+  | { status: "BLOCKED"; httpStatus: number } // 401/403/429/5xx -- 呼叫端必須整批停下來，不可以重試/繞過
   | { status: "PARSE_FAILED" };
 
 function parseMarketCapText(raw: string): { value: number | null; unit: "兆" | "億" | null } {
@@ -38,7 +37,14 @@ export async function fetchYahooHkRangeCap(yahooSymbol: string): Promise<FetchOu
   } catch {
     return { status: "PARSE_FAILED" };
   }
-  if (res.status === 401 || res.status === 403 || res.status === 429) return { status: "BLOCKED", httpStatus: res.status };
+  // 2026-11-11 使用者回報核實擴大美股範圍時發現：連續打幾十檔之後，雅虎財經香港站會開始回傳
+  // HTTP 503（服務暫時不可用）——VERIFIED：原本這裡只把401/403/429算成BLOCKED，503落到下面
+  // `!res.ok`那條直接被當成「這檔解析失敗」，呼叫端完全沒有停下來，繼續往下一檔打，等於一路
+  // 硬闖過封鎖，完全違反「遇到被擋就停下來」的規則——而且不只這次新加的美股受影響，既有的台股
+  // 排程（2026-11-08上線至今）很可能也被同一個bug悄悄擋了很多檔（958/1977≈48%覆蓋率跟這個
+  // 現象吻合）。5xx一律當成BLOCKED：不確定是真的被節流還是暫時性伺服器錯誤，兩種狀況正確的
+  // 處置都一樣——停下來，不要硬闖，隔天（或下一輪）自然重試。
+  if (res.status === 401 || res.status === 403 || res.status === 429 || res.status >= 500) return { status: "BLOCKED", httpStatus: res.status };
   if (res.status === 404) return { status: "NOT_FOUND" };
   if (!res.ok) return { status: "PARSE_FAILED" };
   const html = await res.text();
@@ -62,33 +68,10 @@ export async function fetchYahooHkRangeCap(yahooSymbol: string): Promise<FetchOu
   };
 }
 
-// 2026-11-11（使用者核准，美股總覽頁52週/市值/簡介補齊）: 美股公司簡介沒有像TWSE MOPS那種官方
-// 中文來源，使用者核准先只用雅虎財經香港站自己的"描述"欄位，有中文才收，沒中文（VERIFIED：抽查
-// NVDA這頁本身雖然標題"英偉達"、介面文字都是中文，但"描述"段落本身是雅虎自己回傳的純英文原文，
-// 不是我們沒抓到）就不收、不自己翻譯、不換來源，呼叫端自己統計"沒有中文簡介"的檔數。
-// 跟52週/市值不同頁（/quote/{symbol}/profile/，不是/quote/{symbol}/），純HTTP GET即可讀到
-// （VERIFIED：server-rendered，不需要執行頁面JavaScript）。
-const hasCjk = (text: string) => /[一-鿿]/.test(text);
-
-export async function fetchYahooHkCompanyProfileZh(yahooSymbol: string): Promise<FetchOutcome<string>> {
-  const url = `https://hk.finance.yahoo.com/quote/${encodeURIComponent(yahooSymbol)}/profile/`;
-  let res: Response;
-  try {
-    res = await fetch(url, { headers: { "User-Agent": HONEST_USER_AGENT }, signal: AbortSignal.timeout(15_000) });
-  } catch {
-    return { status: "PARSE_FAILED" };
-  }
-  if (res.status === 401 || res.status === 403 || res.status === 429) return { status: "BLOCKED", httpStatus: res.status };
-  if (res.status === 404) return { status: "NOT_FOUND" };
-  if (!res.ok) return { status: "PARSE_FAILED" };
-  const html = await res.text();
-  const match = html.match(/描述\s*<\/h3>[\s\S]*?<p>([\s\S]*?)<\/p>/);
-  if (!match) return { status: "NOT_FOUND" };
-  const text = match[1].replace(/&amp;/g, "&").replace(/&#39;/g, "'").replace(/<[^>]+>/g, "").trim();
-  if (!text) return { status: "NOT_FOUND" };
-  if (!hasCjk(text)) return { status: "NOT_CHINESE" }; // 純英文描述——不是抓失敗，是雅虎這頁本來就沒有中文版，誠實回報沒有，不自己翻譯
-  return { status: "OK", data: text };
-}
+// 2026-11-11（使用者更正定案）: 美股公司簡介原本試過雅虎財經香港站自己的"描述"欄位，VERIFIED
+// 那段文字即使頁面其他介面都是中文，"描述"本身仍是雅虎自己回傳的純英文原文（抽查NVDA頁面確認）。
+// 使用者核准改用CMoney美股公司簡介頁為主、MoneyDJ財經百科為輔（見stockUsCompanyProfile.ts），
+// 雅虎來源保留給52週/市值用，不再用於公司簡介。
 
 export async function fetchTwseCompanyProfile(tickerCode: string): Promise<FetchOutcome<string>> {
   const url = `https://mopsov.twse.com.tw/mops/web/ajax_t05st03?encodeURIComponent=1&step=1&firstin=1&off=1&keyword4=&code1=&TYPEK2=&checkbtn=&queryName=co_id&inpuType=co_id&TYPEK=all&co_id=${encodeURIComponent(tickerCode)}`;
@@ -98,7 +81,7 @@ export async function fetchTwseCompanyProfile(tickerCode: string): Promise<Fetch
   } catch {
     return { status: "PARSE_FAILED" };
   }
-  if (res.status === 401 || res.status === 403 || res.status === 429) return { status: "BLOCKED", httpStatus: res.status };
+  if (res.status === 401 || res.status === 403 || res.status === 429 || res.status >= 500) return { status: "BLOCKED", httpStatus: res.status };
   if (!res.ok) return { status: "PARSE_FAILED" };
   const html = await res.text();
   const match = html.match(/主要經營業務<\/th>\s*<td[^>]*>([\s\S]*?)<\/td>/);
