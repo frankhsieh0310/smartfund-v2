@@ -31,6 +31,7 @@
 import { prisma } from "@/lib/prisma";
 import { fetchYahooTwPerformance } from "@/lib/yahoo/twPerformancePage";
 import { fetchTwseLiveEtfCodes, fetchTpexLiveEtfCodes } from "@/lib/tw-purchasable/liveListCrossCheck";
+import { findExistingEtfByNormalizedCode } from "@/lib/data-platform/etfDuplicateGuard";
 
 export type OfficialEtfRow = {
   exchange: "TWSE" | "TPEx";
@@ -204,7 +205,12 @@ export async function detectNewListings(writeEnabled: boolean, backfillCodes?: R
   // "00409A.TW" row from 2026-09-11). Normalizing both sides (stripping a trailing .TW/.TWO) before
   // comparing matches the same normalization already used by the duplicate-pair scan and by
   // lib/etf-returns-sync/twUniverse.ts's TW_ELIGIBLE_SQL_CONDITION.
-  const normalizeCode = (code: string) => code.replace(/\.(TW|TWO)$/, "");
+  // 2026-11-11（使用者核准，^FTCS/^REIT/^BKCH重複代號事故後的防呆要求）: 同一組正規化再加一條——
+  // 也去掉開頭的"^"（之前查到資料庫裡^FTCS/^REIT/^BKCH是跟真正的FTCS/REIT/BKCH分開的兩筆重複
+  // 資料，確認是舊資料、不是這支pipeline目前會寫的格式；但這支是repo裡目前唯一真的會建立新
+  // etfs列的程式，為了不讓同類「代號多一個符號就被誤判成新商品」的狀況在TW這邊也發生，順手補上，
+  // 不是說這支程式造成了^FTCS那三筆。
+  const normalizeCode = (code: string) => code.replace(/\.(TW|TWO)$/, "").replace(/^\^/, "");
   const existingCodes = new Set(existing.map((e) => normalizeCode(e.code)));
 
   const result: NewListingResult = { checkedCodes: official.length, newlyDetected: [], autoProvisioned: [], loggedOnly: [], preexistingBackfillGapCount: 0 };
@@ -231,6 +237,14 @@ export async function detectNewListings(writeEnabled: boolean, backfillCodes?: R
     const { provider, usedFallback } = await resolveProviderByBrand(row.fullName, row.name);
     if (!provider) {
       result.loggedOnly.push({ code: row.code, reason: "provider 無法從既有資料唯一比對，待人工建檔" });
+      continue;
+    }
+    // 2026-11-11（使用者核准，^FTCS/^REIT/^BKCH重複代號事故後的寫入時檢查）: 上面existingCodes
+    // 只比對這次批次一開始撈到的快照，這裡在真正INSERT前再用資料庫當下最新狀態做一次保險檢查，
+    // 避免任何正規化規則沒蓋到的邊界情況下還是建出重複列。
+    const dupe = await findExistingEtfByNormalizedCode(row.code, row.exchange);
+    if (dupe) {
+      result.loggedOnly.push({ code: row.code, reason: `寫入前檢查發現疑似重複（既有列 ${dupe.code} / ${dupe.name}），未建立新列，待人工確認` });
       continue;
     }
     const dataSource = await resolveTwDataSource(row.code, row.exchange);

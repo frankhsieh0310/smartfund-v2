@@ -10,6 +10,33 @@ function identity(row: { id: string; ticker: string; yahooSymbol: string; compan
   return { assetType: "STOCK", id: row.id, symbol: row.yahooSymbol || row.ticker, name: row.companyName, displayName: row.companyNameZh ?? row.companyName, currency: row.currency, market: row.exchange, country: row.country };
 }
 
+// 2026-11-11 使用者回報核實：輝達(NVDA)走勢圖只有3個月資料、數值在37-53區間，現價卻是168.89。
+// 查到真正原因——跟0050持股異動bug是同一類問題的另一種形式：ticker欄位在`stocks`表裡對同一間
+// 公司在不同國家/交易所的掛牌完全不是唯一的（NVDA同時有美股NASDAQ本身、加拿大NEO/多倫多、
+// 瑞士EBS四筆獨立的stocks列，ticker都是"NVDA"）。原本用`WHERE ticker=$1`（不分國家/交易所）
+// 查到哪筆算哪筆，沒有ORDER BY保證兩次查詢（詳情頁 vs 走勢圖，各自獨立下SQL）選到同一筆——這天
+// 詳情頁剛好選到美股真正的NASDAQ那筆（價格正確），走勢圖那支查詢剛好選到加拿大NEO那筆（只有
+// 2026-07-31起的資料、價格量級完全不同）。VERIFIED：抽查AAPL/TSLA/JPM等50大美股樣本，45/50
+// 檔都有同樣的跨國同ticker重複列，不是NVDA特例。
+// 修法：當查詢關鍵字本身不帶交易所後綴（例如直接查"NVDA"而不是"NVDA.NE"）時，一律優先挑
+// yahoo_symbol本身也沒有後綴的那一筆——這是Yahoo自己的命名慣例（本地主要掛牌的yahoo_symbol
+// 不帶後綴，所有海外次要掛牌一律帶後綴），不是我們自創的規則，也不是排除海外上市的意思：使用者
+// 如果查的關鍵字「本身就帶後綴」（例如直接查"NVDA.NE"），原樣比對、不會被這個優先序蓋掉。
+async function resolveStockId(key: string): Promise<string | null> {
+  const hasSuffix = key.includes(".");
+  const rows = await prisma.$queryRawUnsafe<Array<{ id: string }>>(
+    `SELECT id FROM stocks
+      WHERE id::text = $1 OR lower(yahoo_symbol) = lower($1) OR lower(ticker) = lower($1)
+      ORDER BY
+        (lower(yahoo_symbol) = lower($1)) DESC,
+        ${hasSuffix ? "0" : "(yahoo_symbol !~ '\\.')"} DESC,
+        is_active DESC
+      LIMIT 1`,
+    key,
+  );
+  return rows[0]?.id ?? null;
+}
+
 function metrics(row: { latestClose: unknown; latestDate: Date | null; currency: string }): SummaryMetrics {
   return { priceOrNav: numberOrNull(row.latestClose), change: null, changePercent: null, currency: row.currency, asOfDate: isoOrNull(row.latestDate), performance1M: null, performance3M: null, performance1Y: null, dividendYield: null };
 }
@@ -169,17 +196,17 @@ export async function getStockDetail(symbol: string): Promise<ServiceResponse<{ 
   // 解出 id，再把「原本的主查詢（含 financialFacts/versionedAnalytics 等重的 include）」跟
   // 「hkProfile 查詢」用 Promise.all 平行送出，省掉 hkProfile 那段原本疊加在主查詢後面的序列
   // 等待時間（實測約 300-500ms），不改變任何一條查詢本身的篩選條件或回傳欄位。
-  const idRow = await prisma.stock.findFirst({ where: { OR: [{ id: key }, { yahooSymbol: { equals: key, mode: "insensitive" } }, { ticker: { equals: key, mode: "insensitive" } }] }, select: { id: true } });
-  if (!idRow) throw new WebDataError("NOT_FOUND", "Stock not found.");
+  const resolvedId = await resolveStockId(key);
+  if (!resolvedId) throw new WebDataError("NOT_FOUND", "Stock not found.");
   const [row, hkProfileRows] = await Promise.all([
-    prisma.stock.findFirstOrThrow({ where: { id: idRow.id }, select: { id: true, ticker: true, yahooSymbol: true, companyName: true, companyNameZh: true, currency: true, exchange: true, country: true, latestClose: true, latestDate: true, updatedAt: true, sector: true, industry: true, financialFacts: { orderBy: [{ periodEnd: "desc" }, { publicationDate: "desc" }], take: 200, select: { metric: true, value: true, unit: true, currency: true, periodEnd: true, fiscalPeriod: true } }, versionedAnalytics: { orderBy: [{ asOf: "desc" }, { timeframe: "asc" }, { metricKey: "asc" }], take: 160, select: { asOf: true, timeframe: true, metricKey: true, window: true, value: true, stateValue: true } }, history: { orderBy: { date: "desc" }, take: 2, select: { date: true, close: true, volume: true, source: true, sourceSymbol: true, updatedAt: true, importedAt: true } }, technical: { orderBy: { date: "desc" }, take: 1, select: { date: true, ma5: true, ma20: true, ma60: true, ma120: true, ma240: true, ema12: true, ema26: true, macd: true, macdSignal: true, macdHistogram: true, kdK: true, kdD: true, rsi14: true, atr14: true, bollingerUpper: true, bollingerMiddle: true, bollingerLower: true } } } }),
+    prisma.stock.findFirstOrThrow({ where: { id: resolvedId }, select: { id: true, ticker: true, yahooSymbol: true, companyName: true, companyNameZh: true, currency: true, exchange: true, country: true, latestClose: true, latestDate: true, updatedAt: true, sector: true, industry: true, financialFacts: { orderBy: [{ periodEnd: "desc" }, { publicationDate: "desc" }], take: 200, select: { metric: true, value: true, unit: true, currency: true, periodEnd: true, fiscalPeriod: true } }, versionedAnalytics: { orderBy: [{ asOf: "desc" }, { timeframe: "asc" }, { metricKey: "asc" }], take: 160, select: { asOf: true, timeframe: true, metricKey: true, window: true, value: true, stateValue: true } }, history: { orderBy: { date: "desc" }, take: 2, select: { date: true, close: true, volume: true, source: true, sourceSymbol: true, updatedAt: true, importedAt: true } }, technical: { orderBy: { date: "desc" }, take: 1, select: { date: true, ma5: true, ma20: true, ma60: true, ma120: true, ma240: true, ema12: true, ema26: true, macd: true, macdSignal: true, macdHistogram: true, kdK: true, kdD: true, rsi14: true, atr14: true, bollingerUpper: true, bollingerMiddle: true, bollingerLower: true } } } }),
     // 2026-11-08（同上）: 52週區間／市值／公司簡介——照抄雅虎財經香港站跟證交所MOPS「主要經營
     // 業務」，不自己計算。資料來源見 stockYahooHkProfile.ts／stock-yahoo-hk-profile cron。
     // 畫面顯示用的日期直接附在數值文字裡，抓不到就是undefined，經過下面metric()過濾後自然
     // 顯示「暫無資料」。
     prisma.$queryRawUnsafe<Array<{ week52_low: unknown; week52_high: unknown; week52_as_of_date: Date | null; market_cap_raw_text: string | null; market_cap_value: unknown; market_cap_unit: string | null; market_cap_as_of_date: Date | null; company_profile: string | null; company_profile_as_of_date: Date | null }>>(
       `SELECT week52_low, week52_high, week52_as_of_date, market_cap_raw_text, market_cap_value, market_cap_unit, market_cap_as_of_date, company_profile, company_profile_as_of_date FROM stock_yahoo_hk_profile WHERE stock_id = $1`,
-      idRow.id,
+      resolvedId,
     ),
   ]);
   const hkProfile = hkProfileRows[0];
@@ -236,8 +263,9 @@ export async function getStockDetail(symbol: string): Promise<ServiceResponse<{ 
 
 export async function getStockHistory(symbol: string, query: HistoryQuery = {}): Promise<ServiceResponse<Array<{ date: string; open: number | null; high: number | null; low: number | null; close: number; adjustedClose: number | null; volume: number | null }>>> {
   const { page, pageSize, skip } = normalizePagination(query.page, query.pageSize);
-  const stock = await prisma.stock.findFirst({ where: { OR: [{ yahooSymbol: { equals: symbol, mode: "insensitive" } }, { ticker: { equals: symbol, mode: "insensitive" } }] }, select: { id: true, ticker: true } });
-  if (!stock) throw new WebDataError("NOT_FOUND", "Stock not found.");
+  const resolvedStockId = await resolveStockId(decodeURIComponent(symbol).trim());
+  if (!resolvedStockId) throw new WebDataError("NOT_FOUND", "Stock not found.");
+  const stock = await prisma.stock.findFirstOrThrow({ where: { id: resolvedStockId }, select: { id: true, ticker: true } });
   const cursorDate = query.cursor ? new Date(query.cursor) : null;
   if (cursorDate && Number.isNaN(cursorDate.getTime())) throw new WebDataError("INVALID_QUERY", "Invalid history cursor.");
   const where = { stockId: stock.id, date: { ...(query.from ? { gte: query.from } : {}), ...(query.to ? { lte: query.to } : {}), ...(cursorDate ? { lt: cursorDate } : {}) } };

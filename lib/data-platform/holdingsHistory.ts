@@ -46,7 +46,21 @@ async function fetchSnapshot(productType: ProductType, productId: string, asOfDa
         GROUP BY h.source
      ),
      winning_source AS (SELECT source FROM candidate_sources ORDER BY n DESC, source ASC LIMIT 1)
-     SELECT coalesce(h.security_id, h.ticker, h.holding_code, h.holding_name) key, h.holding_name name,
+     SELECT
+            -- 2026-11-11 使用者回報核實：0050/0052「最近兩期」異動把同一檔股票（台積電）同時算成
+            -- 新增又算成退出。查到真正原因：holdings.security_id在不同進帳日指到不同的securities
+            -- 列——ticker"2330"在securities表同時被TW(台積電)/HK/JP三個不同國家的公司用掉，
+            -- security_id的配對邏輯沒有同時鎖country，不同天跑出不同的security_id，用它當比對鍵
+            -- 兩期當然對不起來。改成「有ticker就用ticker+country」當鍵（同一檔股票同一天同一國家
+            -- 的代號是穩定的，不受security_id配對結果影響），沒有ticker才退回舊的coalesce鏈。
+            -- 這同時修正了portfolioLookThrough()跨ETF聚合可能把同一檔股票因security_id不同而
+            -- 誤判成兩檔不同股票的潛在問題。security_id本身配對不穩定是更深層的問題，這裡只在
+            -- 顯示/比對層迴避，沒有去改資料本身的security_id寫入邏輯。
+            CASE WHEN h.ticker IS NOT NULL AND h.ticker <> ''
+                 THEN h.ticker || '|' || coalesce(h.country, '')
+                 ELSE coalesce(h.security_id, h.holding_code, h.holding_name)
+            END key,
+            h.holding_name name,
             h.ticker, h.weight::text weight,
             -- 2026-11-11（使用者核准，官方產業分類定案）: 「產業集中」優先用securities表的官方
             -- 產業別（TWSE/TPEx/SEC SIC，依security_id關聯到個股）——holdings.sector原本只有少數
@@ -86,8 +100,46 @@ async function fetchSnapshot(productType: ProductType, productId: string, asOfDa
 
 export function coverageDepthOf(source: string | null): CoverageDepth {
   if (source === "ETF_OFFICIAL_DAILY_SNAPSHOT") return "FULL";
+  if (source === "GLOBAL_ETF_HOLDINGS_TOP10") return "TOP_N";
+  if (source === "GLOBAL_ETF_HOLDINGS_FULL") return "PARTIAL";
   if (!source) return "UNKNOWN";
   return "UNKNOWN";
+}
+
+// 2026-11-11 使用者回報核實：VOO/QQQ這類非iShares美股ETF，`holdings`表完全沒有任何一列資料——
+// ETF詳情頁「持股」分頁空白、穿透分析把它們排除在外（沒有持股資料）。但`etf_holdings`這張
+// 另一個既有、獨立的表其實有資料（VOO 300筆、QQQ 270筆，來自既有的全球ETF持股排程，查過是
+// Yahoo topHoldings為主的廣覆蓋來源，少數有iShares/BlackRock等更完整的CSV）——只是
+// holdingsHistory.ts原本只查`holdings`表，從沒讀過`etf_holdings`，兩個表從建立以來就沒有
+// 互通。這裡只加一個「holdings表完全沒有資料時才查etf_holdings」的退回路徑，不动`holdings`
+// 表本身任何既有邏輯，也不是把兩個表合併成一個。
+// 每次排程都會疊一筆新的snapshot_id（沒有「同內容就跳過」的去重機制——這是既有排程的既有行為，
+// 這裡不改），所以每個etf_id底下可能有幾十個幾乎重複的snapshot。挑規則：優先挑有真實
+// effective_date的snapshot（越新越好）；完全沒有帶日期的（quality_status='PARTIAL_DATE_UNKNOWN'）
+// 退而求其次挑最近一次寫入(created_at最大)的那組，asOfDate誠實回傳null（不是今天、不是猜的）。
+async function fetchGlobalEtfHoldingsFallback(etfId: string): Promise<{ asOfDate: string | null; rows: HoldingRow[]; source: string } | null> {
+  const pick = await prisma.$queryRawUnsafe<Array<{ snapshot_id: string; effective_date: string | null; n: number }>>(
+    `SELECT snapshot_id, effective_date::text, count(*)::int n, max(created_at) latest_created
+       FROM etf_holdings WHERE etf_id = $1::text
+      GROUP BY snapshot_id, effective_date
+      ORDER BY (effective_date IS NOT NULL) DESC, effective_date DESC NULLS LAST, latest_created DESC
+      LIMIT 1`,
+    etfId,
+  );
+  if (!pick.length) return null;
+  const { snapshot_id, effective_date } = pick[0];
+  const rows = await prisma.$queryRawUnsafe<Array<{
+    holding_name: string; ticker: string | null; weight: string | null; sector: string | null; country: string | null;
+  }>>(
+    `SELECT holding_name, ticker, weight::text weight, sector, country FROM etf_holdings
+      WHERE snapshot_id = $1::uuid ORDER BY weight DESC NULLS LAST`,
+    snapshot_id,
+  );
+  const mapped: HoldingRow[] = rows.map((r) => ({
+    key: r.ticker ? `${r.ticker}|${r.country ?? ""}` : (r.holding_name ?? snapshot_id),
+    name: r.holding_name, ticker: r.ticker, weightPct: r.weight == null ? 0 : Number(r.weight), sector: r.sector, country: r.country,
+  }));
+  return { asOfDate: effective_date ?? null, rows: mapped, source: mapped.length <= 10 ? "GLOBAL_ETF_HOLDINGS_TOP10" : "GLOBAL_ETF_HOLDINGS_FULL" };
 }
 
 // Up to `limit` most recent DISTINCT as_of_date values this product actually has rows for — real
@@ -114,7 +166,13 @@ export async function listSnapshotDates(productType: ProductType, productId: str
 
 export async function getLatestSnapshot(productType: ProductType, productId: string): Promise<{ asOfDate: string; rows: HoldingRow[]; source: string | null } | null> {
   const dates = await listSnapshotDates(productType, productId, 1);
-  if (!dates.length) return null;
+  if (!dates.length) {
+    if (productType === "ETF") {
+      const fallback = await fetchGlobalEtfHoldingsFallback(productId);
+      if (fallback) return { asOfDate: fallback.asOfDate ?? "", rows: fallback.rows, source: fallback.source };
+    }
+    return null;
+  }
   const { rows, source } = await fetchSnapshot(productType, productId, dates[0]);
   return { asOfDate: dates[0], rows, source };
 }
@@ -124,7 +182,19 @@ export async function getTwoLatestSnapshots(productType: ProductType, productId:
   latestSource: string | null; previousSource: string | null;
 }> {
   const dates = await listSnapshotDates(productType, productId, 2);
-  if (!dates.length) return { latest: "", previous: null, latestRows: [], previousRows: [], latestSource: null, previousSource: null };
+  if (!dates.length) {
+    // 2026-11-11：holdings表沒有任何歷史快照時退回etf_holdings——那張表每次排程都疊一筆新
+    // snapshot，沒有「兩期」的概念（挑出來的就是目前唯一認定的「最新一筆」），所以這裡只填
+    // latest，previous誠實留null，呼叫端既有的「hasEnoughHistory:false」會接手，不會假造一組
+    // 「兩期比較」出來。
+    if (productType === "ETF") {
+      const fallback = await fetchGlobalEtfHoldingsFallback(productId);
+      if (fallback) {
+        return { latest: fallback.asOfDate ?? "", previous: null, latestRows: fallback.rows, previousRows: [], latestSource: fallback.source, previousSource: null };
+      }
+    }
+    return { latest: "", previous: null, latestRows: [], previousRows: [], latestSource: null, previousSource: null };
+  }
   const latestSnap = await fetchSnapshot(productType, productId, dates[0]);
   const previousSnap = dates[1] ? await fetchSnapshot(productType, productId, dates[1]) : { rows: [], source: null };
   return { latest: dates[0], previous: dates[1] ?? null, latestRows: latestSnap.rows, previousRows: previousSnap.rows, latestSource: latestSnap.source, previousSource: previousSnap.source };

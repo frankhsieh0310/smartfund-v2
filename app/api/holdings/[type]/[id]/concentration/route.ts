@@ -19,10 +19,13 @@ export async function GET(_req: Request, context: RouteContext<"/api/holdings/[t
 
   const snapshot = await getLatestSnapshot(productType as ProductType, id);
   if (!snapshot || snapshot.rows.length === 0) {
+    // 2026-11-11 使用者回報核實：沒有持股資料時原本回傳top10Pct/top20Pct:0，前端顯示成
+    // 「0.00%」，看起來像「這檔ETF集中度是0」而不是「沒有資料」——改成null，呼叫端的
+    // formatPct(null)本來就會顯示「—」，不用改前端。
     return Response.json({
       ok: true, productType, productId: id, asOfDate: snapshot?.asOfDate ?? null, coverageDepth: "UNKNOWN",
       isFullHoldings: false, basisNote: "目前沒有可用的持股資料，無法計算集中度。",
-      top10Pct: 0, top20Pct: 0, largestHolding: null, sectorConcentration: [], countryConcentration: [],
+      top10Pct: null, top20Pct: null, largestHolding: null, sectorConcentration: [], countryConcentration: [],
     }, { headers });
   }
 
