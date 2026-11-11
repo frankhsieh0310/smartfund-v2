@@ -67,6 +67,13 @@ export const KNOWN_SPLIT_EVENTS: KnownSplitEvent[] = [
     ratioOldToNew: 2,
     note: "EFV iShares MSCI EAFE Value ETF 1拆2（iShares/BlackRock同批factor ETF分割公告，2026-11-03起分割後交易，使用者核實）。本App依公告比例換算分割前歷史價格。",
   },
+  {
+    assetType: "ETF",
+    code: "SOXX",
+    effectiveDate: "2026-11-03",
+    ratioOldToNew: 3,
+    note: "SOXX iShares Semiconductor ETF 1拆3（跟ITA同一批iShares產業ETF分割公告，2026-11-03起分割後交易，使用者核實，與台新銀行公告及多篇新聞一致）。本App依公告比例換算分割前歷史價格。",
+  },
 ];
 
 export function splitAdjustmentFor(assetType: "ETF" | "STOCK", code: string, date: Date): { ratio: number; notes: string[] } {
