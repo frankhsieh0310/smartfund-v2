@@ -16,6 +16,7 @@ export type YahooHkRangeCap = {
 export type FetchOutcome<T> =
   | { status: "OK"; data: T }
   | { status: "NOT_FOUND" }
+  | { status: "NOT_CHINESE" } // 雅虎這頁有"描述"但是純英文——only used by fetchYahooHkCompanyProfileZh
   | { status: "BLOCKED"; httpStatus: number } // 401/403/429 -- 呼叫端必須整批停下來，不可以重試/繞過
   | { status: "PARSE_FAILED" };
 
@@ -59,6 +60,34 @@ export async function fetchYahooHkRangeCap(yahooSymbol: string): Promise<FetchOu
       marketCapUnit: unit,
     },
   };
+}
+
+// 2026-11-11（使用者核准，美股總覽頁52週/市值/簡介補齊）: 美股公司簡介沒有像TWSE MOPS那種官方
+// 中文來源，使用者核准先只用雅虎財經香港站自己的"描述"欄位，有中文才收，沒中文（VERIFIED：抽查
+// NVDA這頁本身雖然標題"英偉達"、介面文字都是中文，但"描述"段落本身是雅虎自己回傳的純英文原文，
+// 不是我們沒抓到）就不收、不自己翻譯、不換來源，呼叫端自己統計"沒有中文簡介"的檔數。
+// 跟52週/市值不同頁（/quote/{symbol}/profile/，不是/quote/{symbol}/），純HTTP GET即可讀到
+// （VERIFIED：server-rendered，不需要執行頁面JavaScript）。
+const hasCjk = (text: string) => /[一-鿿]/.test(text);
+
+export async function fetchYahooHkCompanyProfileZh(yahooSymbol: string): Promise<FetchOutcome<string>> {
+  const url = `https://hk.finance.yahoo.com/quote/${encodeURIComponent(yahooSymbol)}/profile/`;
+  let res: Response;
+  try {
+    res = await fetch(url, { headers: { "User-Agent": HONEST_USER_AGENT }, signal: AbortSignal.timeout(15_000) });
+  } catch {
+    return { status: "PARSE_FAILED" };
+  }
+  if (res.status === 401 || res.status === 403 || res.status === 429) return { status: "BLOCKED", httpStatus: res.status };
+  if (res.status === 404) return { status: "NOT_FOUND" };
+  if (!res.ok) return { status: "PARSE_FAILED" };
+  const html = await res.text();
+  const match = html.match(/描述\s*<\/h3>[\s\S]*?<p>([\s\S]*?)<\/p>/);
+  if (!match) return { status: "NOT_FOUND" };
+  const text = match[1].replace(/&amp;/g, "&").replace(/&#39;/g, "'").replace(/<[^>]+>/g, "").trim();
+  if (!text) return { status: "NOT_FOUND" };
+  if (!hasCjk(text)) return { status: "NOT_CHINESE" }; // 純英文描述——不是抓失敗，是雅虎這頁本來就沒有中文版，誠實回報沒有，不自己翻譯
+  return { status: "OK", data: text };
 }
 
 export async function fetchTwseCompanyProfile(tickerCode: string): Promise<FetchOutcome<string>> {
