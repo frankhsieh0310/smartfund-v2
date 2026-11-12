@@ -162,7 +162,11 @@ export default async function EtfDetailPage({ params }: { params: Promise<{ code
       const expenseRatioTierText = tierTextRows[0]?.expense_ratio_tier_text ?? null;
       const trackingMetrics: Metric[] = isYuantaTracked ? [
         { label: "追蹤差距（日）", value: trackingRow?.daily_pct != null ? `${fmt(trackingRow.daily_pct, "%")}（${dateText(trackingRow.observation_date)}，來源：元大投信官網）` : "無資料" },
-        { label: "追蹤差距（累計）", value: trackingRow?.cumulative_pct != null ? `${fmt(trackingRow.cumulative_pct, "%")}（${dateText(trackingRow.observation_date)}，來源：元大投信官網）` : "無資料" },
+        // 2026-11-13（ChatGPT第三輪審查第1項，使用者回報核實）: 「累計」原本只標資料日期，沒講
+        // 計算期間從哪天起算——元大官網這組lsdeviation本來就是「自今年初（每年年初重新起算，不是
+        // 自成立日累計）至資料日期」，不是我們自算的區間，照官網這個起算規則補上期間文字，不是
+        // 新發明一套算法。
+        { label: "追蹤差距（累計）", value: trackingRow?.cumulative_pct != null ? `${fmt(trackingRow.cumulative_pct, "%")}（計算期間：${trackingRow.observation_date.getFullYear()}-01-01 至 ${dateText(trackingRow.observation_date)}，來源：元大投信官網，每年初重新起算）` : "無資料" },
       ] : [];
       data = { type: "ETF", code: etf.code, name: etf.name, officialName: etf.nameEn ?? undefined, exchange: etf.exchange ?? undefined, region: etf.region ?? undefined, currency: etf.currency, isin: etf.isin ?? undefined, summary: [metric("最新價格", latest), metric("NAV（同期，證交所MIS盤中預估）", sameDateNav), { label: premiumLabel, value: premiumDisplay }, { label: "漲跌 / 漲跌幅", value: change == null || !previous ? "—" : `${fmt(change)} / ${((change / previous) * 100).toFixed(2)}%` }], performance: [metric("1M", etf.return1m, "%"), metric("3M", etf.return3m, "%"), metric("6M", etf.return6m, "%"), metric("YTD", etf.returnYtd, "%"), metric("1Y", etf.return1y, "%"), metric("3Y", etf.return3y, "%"), metric("5Y", etf.return5y, "%")], risk: [volatilityMetric, metric("Beta", etf.beta), metric("Max Drawdown", etf.maxDrawdown, "%"), sharpeMetric, ...(riskMethodNote ? [{ label: "計算方法", value: riskMethodNote }] : [])], keyData: [metric("NAV", etf.latestNav), metric("AUM", etf.aum), (etf.expenseRatio == null && expenseRatioTierText) ? { label: "Expense Ratio", value: `${expenseRatioTierText}（原文為官網費率級距/區間，本App未自行加權換算）` } : metric("Expense Ratio", pctFraction(etf.expenseRatio), "%"), etf.distributionFreq === "NONE" ? { label: "Dividend Yield", value: "本基金不配息（來源：發行商官網「收益分配」欄位）" }
         : etf.distributionFreq === "NO_DIST_12M_YAHOO" ? { label: "Dividend Yield", value: "近12個月未配息（來源：Yahoo）" }

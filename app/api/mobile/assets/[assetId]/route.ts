@@ -111,7 +111,9 @@ async function resolveDetail(assetId: string, assetType: AssetType, period: Peri
       trackingLiteMetrics = [
         { key: 'trackingDiffDaily', label: '追蹤差距（日）', value: row?.daily_pct != null ? Number(row.daily_pct) : '無資料', unit: row?.daily_pct != null ? '%' : undefined },
         { key: 'trackingDiffCumulative', label: '追蹤差距（累計）', value: row?.cumulative_pct != null ? Number(row.cumulative_pct) : '無資料', unit: row?.cumulative_pct != null ? '%' : undefined },
-        ...(dateText ? [{ key: 'trackingDiffBasis', label: '追蹤差距資料說明', value: `資料日期 ${dateText} · 來源：元大投信官網公布數字（非本程式計算）` }] : []),
+        // 2026-11-13（ChatGPT第三輪審查第1項）: 補上「累計」的計算期間——跟網站版app/etf/[code]/
+        // page.tsx同一條規則，元大官網的lsdeviation是每年初重新起算，不是自成立日累計。
+        ...(dateText ? [{ key: 'trackingDiffBasis', label: '追蹤差距資料說明', value: `資料日期 ${dateText} · 累計計算期間：${row!.observation_date.getUTCFullYear()}-01-01 至 ${dateText}（每年初重新起算）· 來源：元大投信官網公布數字（非本程式計算）` }] : []),
       ];
     }
     return { ...response, data: { ...response.data, dividendYield: response.data.metrics.dividendYield, liteMetrics: trackingLiteMetrics } };
