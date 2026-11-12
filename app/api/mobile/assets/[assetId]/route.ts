@@ -96,9 +96,15 @@ async function resolveDetail(assetId: string, assetType: AssetType, period: Peri
     const isYuantaTracked = Object.values(TRACKED_YUANTA_FUND_IDS).includes(code);
     let trackingLiteMetrics: Array<{ key: string; label: string; value: string | number | null; unit?: string }> = [];
     if (isYuantaTracked) {
+      // 2026-11-13（ChatGPT第三輪審查第1項，VERIFIED實測發現的新bug，非這次review要求的項目）:
+      // 這裡原本用這支route的原始path參數assetId（App實際呼叫時是ETF代碼「0050」，不是UUID）
+      // 直接當etf_id比對，但etf_tracking_difference.etf_id是UUID欄位——用代碼去比對UUID永遠查不到
+      // 任何列，即使資料庫裡其實有當天的官方數字，也會一律顯示「無資料」。實測0050在資料庫裡
+      // 11/11已有cumulative_pct=-1.43%的真實資料，但App這裡因為這個bug永遠顯示無資料。改成用
+      // getEtfDetail()已經解析好的response.data.identity.id（真正的UUID）。
       const trackingRows = await prisma.$queryRawUnsafe<{ daily_pct: unknown; cumulative_pct: unknown; observation_date: Date }[]>(
         `SELECT daily_pct, cumulative_pct, observation_date FROM etf_tracking_difference WHERE etf_id = $1 AND source = 'YUANTA_OFFICIAL' ORDER BY observation_date DESC LIMIT 1`,
-        assetId,
+        response.data.identity.id,
       ).catch(() => []);
       const row = trackingRows[0];
       // 2026-11-13（ChatGPT審查第1項，使用者核實後更正）: 這兩格原本被誤以為是lib/data-platform/
