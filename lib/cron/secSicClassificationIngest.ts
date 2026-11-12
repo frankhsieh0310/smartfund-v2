@@ -4,8 +4,17 @@
 // client使用，跟既有Form4專案同一個data.sec.gov網域，同一套"遇401/403/429就停下回報"規則），
 // 再逐家打submissions.json讀sic/sicDescription——跟secForm4Ingest.ts同一套節流/中止邏輯，獨立
 // 檔案避免互相影響。resumable：以ticker字母序游標記錄進度，可分批執行。
+// 2026-11-12 使用者回報核實+VERIFIED修正：原本WHERE country='US'漏掉一小批（20筆）securities
+// 列——這些列的country存的是全名「United States」而不是兩字代碼「US」（同一批剛好是NVDA/AAPL/
+// MSFT/AMZN/GOOGL/AVGO/GOOG/META這幾檔最知名的大型股，更早期某次匯入用了不同拼法），導致這支
+// 排程從上線以來從未處理過這幾檔——不是cursor進度不夠，是WHERE條件直接把它們排除在外。改成
+// country IN ('US','United States')兩種寫法都接受。
+// 2026-11-12 使用者回報核實+核准定案：sector改用SIC代碼對照台股官方產業分類（見
+// secSicToTwBucket.ts），不再是逐碼直譯的獨立中文說明——讓同一個產業（例如半導體）在台股/美股
+// 用同一個中文名稱，穿透分析的產業集中度才不會把同產業拆成兩類。沒有台股等效類別的產業維持
+// 既有逐碼翻譯，不勉強塞、不留英文。
 import { prisma } from "@/lib/prisma";
-import { translateSicDescription } from "@/lib/data-platform/secSicTranslation";
+import { sicCodeToDisplaySector } from "@/lib/data-platform/secSicToTwBucket";
 
 const SEC_UA = "SmartMatchApp-IndustryClassification research-contact@smartmatch-app.example";
 const REQUEST_DELAY_MS = 350;
@@ -41,7 +50,7 @@ export async function runSecSicClassificationBatch(opts: { afterTicker?: string 
 
   const usTickers = await prisma.$queryRawUnsafe<Array<{ id: string; ticker: string; sector: string | null }>>(
     `SELECT id, ticker, sector FROM securities
-      WHERE country='US' AND exchange IN ('NASDAQ','NYSE','AMEX','NYQ','NMS','NCM','NGM')
+      WHERE country IN ('US','United States') AND exchange IN ('NASDAQ','NYSE','AMEX','NYQ','NMS','NCM','NGM')
         AND ticker IS NOT NULL
         ${opts.afterTicker ? "AND ticker > $1" : ""}
       ORDER BY ticker ASC`,
@@ -63,7 +72,7 @@ export async function runSecSicClassificationBatch(opts: { afterTicker?: string 
       continue;
     }
     if (!submission || !submission.sic) { result.skippedNoSic++; continue; }
-    const zh = translateSicDescription(submission.sic);
+    const zh = sicCodeToDisplaySector(submission.sic);
     if (!zh) {
       if (!result.skippedUntranslated.includes(submission.sic)) result.skippedUntranslated.push(submission.sic);
       continue;
@@ -71,7 +80,9 @@ export async function runSecSicClassificationBatch(opts: { afterTicker?: string 
     if (row.sector === zh) { result.skippedAlready++; continue; }
     try {
       await prisma.$transaction(async (tx) => {
-        await tx.$executeRawUnsafe(`UPDATE securities SET sector=$1, updated_at=now() WHERE id=$2`, zh, row.id);
+        // industry欄位存原始SIC代碼本身（之前沒有存，只存翻譯後的中文）——保留原始代碼方便
+        // 之後要調整對照表時可以直接重算，不用重新打一次SEC API。
+        await tx.$executeRawUnsafe(`UPDATE securities SET sector=$1, industry=$2, updated_at=now() WHERE id=$3`, zh, submission.sic, row.id);
         const verify = await tx.$queryRawUnsafe<Array<{ sector: string | null }>>(`SELECT sector FROM securities WHERE id=$1`, row.id);
         if (verify[0]?.sector !== zh) throw new Error(`verify mismatch for ${row.id}`);
       });

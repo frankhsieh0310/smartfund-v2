@@ -25,13 +25,17 @@ const CODE_MAP: Record<string, { bucket: string; zh: string }> = {
 const bucketOf = (code: string) => CODE_MAP[code]?.bucket ?? "OTHER";
 
 type Row = {
-  id: string; insider: string; role: string | null; ticker: string; company: string;
+  id: string; insider: string; role: string | null; ticker: string; company: string; company_zh: string | null;
   transaction_type: string; shares: string; price: string | null; transaction_date: Date; filing_id: string; cik: string | null;
 };
 
+// 2026-11-12（ChatGPT審查第13項）: 公司名稱原本只用securities.name（SEC揭露用的英文名），改
+// 用ticker比對已經有的stocks.company_name_zh（CMoney來源，見stockUsCompanyProfile.ts）補中文
+// 名稱——查不到就維持英文，不猜。
 async function fetchRows(where: string, params: unknown[]): Promise<Row[]> {
   return prisma.$queryRawUnsafe<Row[]>(
     `SELECT t.id, t.insider, t.role, s.ticker, s.name AS company,
+            (SELECT st.company_name_zh FROM stocks st WHERE st.ticker = s.ticker AND st.country = 'US' AND st.company_name_zh IS NOT NULL LIMIT 1) AS company_zh,
             t.transaction_type, t.shares, t.price, t.transaction_date, t.filing_id, eig.cik
      FROM insider_ownership_transactions t
      JOIN securities s ON s.id = t.security_id
@@ -66,7 +70,8 @@ function serialize(rows: Row[]) {
     .map(({ r, shares, valueSum, hasPrice, ids }) => {
       const avgPrice = hasPrice && shares > 0 ? valueSum / shares : null;
       return {
-        id: ids[0], fill_count: ids.length, person_name: r.insider, title: r.role, ticker: r.ticker, company: r.company,
+        id: ids[0], fill_count: ids.length, person_name: r.insider, title: r.role, ticker: r.ticker,
+        company: r.company, company_zh: r.company_zh ?? null,
         transaction_code: r.transaction_type, transaction_type: bucketOf(r.transaction_type),
         transaction_type_zh: CODE_MAP[r.transaction_type]?.zh ?? "其他",
         shares, price: avgPrice, transaction_value: hasPrice ? Math.round(valueSum) : null,

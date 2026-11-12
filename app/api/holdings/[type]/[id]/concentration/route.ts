@@ -37,8 +37,11 @@ export async function GET(_req: Request, context: RouteContext<"/api/holdings/[t
     ok: true, productType, productId: id, asOfDate: snapshot.asOfDate, coverageDepth,
     isFullHoldings: coverageDepth === "FULL",
     basisNote: coverageDepth === "FULL" ? "依官方每日完整持股計算" : "依目前可取得的持股資料計算，可能非完整持股",
-    top10Pct: sum(sorted.slice(0, 10)), top20Pct: sum(sorted.slice(0, 20)),
-    largestHolding: sorted[0] ? { key: sorted[0].key, name: sorted[0].name, weightPct: sorted[0].weightPct } : null,
+    // 2026-11-11 使用者回報核實：只有前十大持股時，top20Pct跟top10Pct算出同一個數字，畫面上
+    // 看起來像「這就是前20大集中度」，誤導——改成持股檔數不滿20檔時top20Pct回null，呼叫端
+    // formatPct(null)顯示「—」。
+    top10Pct: sum(sorted.slice(0, 10)), top20Pct: sorted.length >= 20 ? sum(sorted.slice(0, 20)) : null,
+    largestHolding: sorted[0] ? { key: sorted[0].key, ticker: sorted[0].ticker, name: sorted[0].name, nameZh: sorted[0].nameZh, weightPct: sorted[0].weightPct } : null,
     sectorConcentration: bucketBy(sorted, "sector"), countryConcentration: bucketBy(sorted, "country"),
   }, { headers });
 }

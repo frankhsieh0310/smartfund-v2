@@ -26,7 +26,7 @@ export default function SmartMatchAppSupportPage() {
         <li><strong>怎麼訂閱或取消？</strong>在 App 內的訂閱頁面購買；取消方式：iPhone 在「設定 › Apple ID › 訂閱」，Android 在 Google Play「付款與訂閱 › 訂閱」。</li>
         <li><strong>換手機後訂閱不見了？</strong>用同一個會員帳號（Google 或 Apple）登入，訂閱狀態會重新對應回來；如仍異常請聯絡我們。</li>
         <li><strong>收不到通知？</strong>確認 App 的通知設定與手機系統設定都已開啟本 App 的通知。</li>
-        <li><strong>想刪除帳號或個人資料？</strong>在 App「登入 / 會員」頁按「刪除帳號」，或參見<Link href="/smartmatch-app/privacy" className="text-sky-300 underline underline-offset-4">隱私權政策</Link>第六點。</li>
+        <li><strong>想刪除帳號或個人資料？</strong>在 App「登入 / 會員」頁按「刪除帳號」；沒有安裝 App 也可以在<Link href="/smartmatch-app/delete-account" className="text-sky-300 underline underline-offset-4">刪除帳號申請</Link>頁面申請。</li>
       </UL>
 
       <H2>相關文件</H2>

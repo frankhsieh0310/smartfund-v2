@@ -72,7 +72,15 @@ export async function GET(req: Request) {
       }));
 
       return Response.json(
-        { ok: true, scope, productType: productFilter, sort, page, limit, total, hasMore: offset + results.length < total, results, basisNote: "本程式計算：依既有持股反查資料統計，每檔股票被持有的ETF/基金檔數與平均持股比重；同一商品（例如上市ETF與其SITCA基金登記）只計一次。" },
+        {
+          ok: true, scope, productType: productFilter, sort, page, limit, total, hasMore: offset + results.length < total, results,
+          // 2026-11-13（ChatGPT審查第6項）: 把統計範圍（台股／海外、ETF/基金篩選）、去重規則
+          // （同一商品的ETF掛牌與法定基金揭露只算一次；同一檔基金的不同級別——A類/B類/月配/
+          // 累積等——因為product_key以master_fund_id為準，底層refresh_reverse_products()早就
+          // 只留一個代表級別，不會重複計入，這裡只是把這個既有行為講清楚）、平均權重算法
+          // （avg(weight)，簡單算術平均，不做加權）都寫進basisNote，不是另外做一次去重。
+          basisNote: `本程式計算：統計範圍為${scope === "TW" ? "台股" : "海外"}${productFilter === "ALL" ? "全部ETF與基金" : productFilter === "ETF" ? "ETF" : "基金"}的既有持股反查資料；平均持股比重＝各商品持股比重的算術平均（avg）。同一商品（例如上市ETF與其SITCA基金登記）只計一次；同一檔基金的不同級別（A類/B類/月配/累積等）共用同一個基金識別碼，也只算一次。各列「資料日期」為該商品持股資料的基準日。`,
+        },
         { headers },
       );
     } finally {

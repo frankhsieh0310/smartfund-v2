@@ -29,9 +29,9 @@ export type CompareItem = {
     isFullHoldings: boolean;
     presentRowCount: number;
     declaredCount: number | null;
-    top: Array<{ name: string; ticker: string | null; weightPct: number }>;
+    top: Array<{ name: string; nameZh: string | null; ticker: string | null; weightPct: number }>;
   };
-  concentration: { top10Pct: number; top20Pct: number; largest: { name: string; weightPct: number } | null } | null;
+  concentration: { top10Pct: number; top20Pct: number | null; largest: { name: string; nameZh: string | null; ticker: string | null; weightPct: number } | null } | null;
   holdingsDiff:
     | { hasEnoughHistory: false; latestDate: string | null }
     | {
@@ -178,12 +178,14 @@ export async function compareEtfFund(refs: CompareRef[]): Promise<EtfFundCompare
       holdings: {
         asOfDate: latest?.asOfDate ?? null, source: latest?.source ?? null, coverageDepth,
         isFullHoldings: coverageDepth === "FULL", presentRowCount: sorted.length, declaredCount: null,
-        top: sorted.slice(0, 10).map((r) => ({ name: r.name, ticker: r.ticker, weightPct: r.weightPct })),
+        top: sorted.slice(0, 10).map((r) => ({ name: r.name, nameZh: r.nameZh, ticker: r.ticker, weightPct: r.weightPct })),
       },
       // 2026-11-11 使用者回報核實：latest存在但sorted是空陣列時（沒有任何持股資料），原本仍會
       // 組出concentration物件、bucketTop([],10)算出0，畫面顯示「0.00%」而不是「—」。改成
       // sorted為空時concentration整個是null，跟「latest本身就是null」用同一條「沒有資料」路徑。
-      concentration: latest && sorted.length > 0 ? { top10Pct: bucketTop(sorted, 10), top20Pct: bucketTop(sorted, 20), largest: sorted[0] ? { name: sorted[0].name, weightPct: sorted[0].weightPct } : null } : null,
+      // 2026-11-11 使用者回報核實：只有前十大時top20Pct跟top10Pct算出同一數字，誤導——不滿20檔時
+      // top20Pct回null（跟單檔集中度route.ts同一條修法）。
+      concentration: latest && sorted.length > 0 ? { top10Pct: bucketTop(sorted, 10), top20Pct: sorted.length >= 20 ? bucketTop(sorted, 20) : null, largest: sorted[0] ? { name: sorted[0].name, nameZh: sorted[0].nameZh, ticker: sorted[0].ticker, weightPct: sorted[0].weightPct } : null } : null,
       holdingsDiff,
     });
   }

@@ -8,6 +8,7 @@ import { beginRun, finishRun } from "@/lib/cloud-ingestion/runContext";
 import { findStaleUsStocks, refreshStockTechnical } from "@/lib/cron/stockTechnicalDaily";
 import { isStockTechnicalSyncWriteEnabledUs } from "@/lib/cron/stockTechnicalWriteGate";
 import { refreshPresetCacheForMarket } from "@/lib/screener/presetCache";
+import { inForbiddenWindowTaipei } from "@/lib/data-platform/web/stockYahooHkProfile";
 
 export const runtime = "nodejs";
 export const maxDuration = 280;
@@ -30,7 +31,11 @@ export async function GET(request: Request) {
   let reachedEnd = false;
   const failed: { ticker: string; reason: string }[] = [];
   try {
-    while (Date.now() - started < TIME_BUDGET_MS) {
+    // 2026-11-13 使用者核准：第一次補跑4個月落差，資料量大，加上凌晨01:00-05:30台北時間不跑大量
+    // 工作的既有規則（跟restore-reverse-index等既有排程同一條規則）——這支cron原本沒有這道guard，
+    // 補上後跟其他大量運算排程一致，進到禁止時段就先停在這批次，不寫到一半被硬中斷，下次排程
+    // （或下個批次因為stale清單會自然排除已補完的股票）接續。
+    while (Date.now() - started < TIME_BUDGET_MS && !inForbiddenWindowTaipei()) {
       const stale = await findStaleUsStocks(BATCH_SIZE, cursor);
       if (stale.length === 0) { reachedEnd = true; break; }
       for (const s of stale) {

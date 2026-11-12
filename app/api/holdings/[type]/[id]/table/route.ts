@@ -20,7 +20,7 @@ export async function GET(_req: Request, context: RouteContext<"/api/holdings/[t
     ok: true, productType, productId: id, asOfDate: snapshot.asOfDate, source: snapshot.source,
     coverageDepth, isFullHoldings: coverageDepth === "FULL", holdingCount: snapshot.rows.length,
     incompleteDataWarning: coverageDepth !== "FULL",
-    rows: snapshot.rows.map((r) => ({ key: r.key, name: r.name, ticker: r.ticker, weightPct: r.weightPct, sector: r.sector, country: r.country })),
+    rows: snapshot.rows.map((r) => ({ key: r.key, name: r.name, nameZh: r.nameZh, ticker: r.ticker, weightPct: r.weightPct, sector: r.sector, country: r.country })),
   }, { headers });
 }
 export async function OPTIONS() { return new Response(null, { status: 204, headers }); }

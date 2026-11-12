@@ -292,7 +292,7 @@ export async function getEtfDetail(code: string): Promise<ServiceResponse<{ iden
 
 export async function getEtfHistory(code: string, query: HistoryQuery = {}): Promise<ServiceResponse<Array<{ date: string; price: number | null; nav: number | null; premiumDiscount: number | null; volume: number | null; aum: number | null; open: number | null; high: number | null; low: number | null; close: number | null; adjustedClose: number | null }>>> {
   const { page, pageSize, skip } = normalizePagination(query.page, query.pageSize);
-  const etf = await prisma.etf.findFirst({ where: { OR: [{ code: { equals: code, mode: "insensitive" } }, { isin: { equals: code, mode: "insensitive" } }] }, select: { id: true, dataSource: true, dataProvider: true, provider: true } });
+  const etf = await prisma.etf.findFirst({ where: { OR: [{ code: { equals: code, mode: "insensitive" } }, { isin: { equals: code, mode: "insensitive" } }] }, select: { id: true, dataSource: true, dataProvider: true, provider: true, exchange: true } });
   if (!etf) throw new WebDataError("NOT_FOUND", "ETF not found.");
   const cursorDate = query.cursor ? new Date(query.cursor) : null;
   if (cursorDate && Number.isNaN(cursorDate.getTime())) throw new WebDataError("INVALID_QUERY", "Invalid history cursor.");
@@ -307,7 +307,13 @@ export async function getEtfHistory(code: string, query: HistoryQuery = {}): Pro
     const div = (v: number | null) => v == null ? null : v / ratio;
     return { date: row.date.toISOString(), price: div(numberOrNull(row.price)), nav: numberOrNull(row.nav), premiumDiscount: numberOrNull(row.premium), volume: numberOrNull(row.volume), aum: numberOrNull(row.aum), open: div(numberOrNull(row.open)), high: div(numberOrNull(row.high)), low: div(numberOrNull(row.low)), close: div(numberOrNull(row.close ?? row.price)), adjustedClose: div(numberOrNull(row.adjustedClose ?? row.close ?? row.price)) };
   });
-  return { data, meta: { asOfDate: provenance.asOfDate, lastUpdated: provenance.lastUpdated, freshnessStatus: freshnessStatus(rows[0]?.date, "MARKET_DAY"), source, provenance, coverageStatus: "FULL", splitAdjustmentNote: splitNotes.size ? Array.from(splitNotes).join(" ") : null }, pagination: paginationMeta(page, pageSize, total, rows.length === pageSize ? rows.at(-1)?.date.toISOString() ?? null : null), error: null };
+  // 2026-11-12（ChatGPT審查第11項）: 0050/006208歷史資料明明完整，比較頁卻一直顯示「部分資產
+  // 歷史資料不完整」——查到原因是這裡原本用plain freshnessStatus()判斷MARKET_DAY新鮮度，只跳過
+  // 週六週日，不知道颱風/國定假日等臨時或固定休市日，當天沒有新資料就被誤判成STALE。跟CLAUDE.md
+  // 「資料新鮮度判斷」定案一致，改用twAwareFreshnessStatus()——TWSE/TPEx商品跟交易所官方「實際
+  // 最新交易日」比較，不是跟猜出來的應該交易日比較；非TWSE/TPEx或無法確認時優雅退回原邏輯。
+  const etfFreshness = await twAwareFreshnessStatus(etf.exchange, rows[0]?.date, "MARKET_DAY");
+  return { data, meta: { asOfDate: provenance.asOfDate, lastUpdated: provenance.lastUpdated, freshnessStatus: etfFreshness, source, provenance, coverageStatus: "FULL", splitAdjustmentNote: splitNotes.size ? Array.from(splitNotes).join(" ") : null }, pagination: paginationMeta(page, pageSize, total, rows.length === pageSize ? rows.at(-1)?.date.toISOString() ?? null : null), error: null };
 }
 
 

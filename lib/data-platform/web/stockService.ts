@@ -1,6 +1,6 @@
 import { prisma } from "../../prisma.ts";
 import { WebDataError } from "./errors.ts";
-import { freshnessStatus } from "./freshness.ts";
+import { freshnessStatus, twAwareFreshnessStatus } from "./freshness.ts";
 import { normalizePagination, paginationMeta } from "./pagination.ts";
 import { buildProvenance } from "./provenance.ts";
 import { isoOrNull, numberOrNull, type CanonicalIdentity, type HistoryQuery, type ListQuery, type ServiceResponse, type SummaryMetrics } from "./types.ts";
@@ -35,6 +35,41 @@ async function resolveStockId(key: string): Promise<string | null> {
     key,
   );
   return rows[0]?.id ?? null;
+}
+
+const US_EXCHANGES_FOR_SELF_COMPUTE = ["NASDAQ", "NYSE", "NYQ", "NMS", "NCM", "NGM"];
+const TW_EXCHANGES_FOR_SELF_COMPUTE = ["TWSE", "TPEx", "TPEX"];
+
+// 2026-11-11（使用者更正定案，美股先行）+2026-11-12（使用者再次核准，台股雅虎財經香港站持續
+// 被擋、改成跟美股同一套做法）: 52週區間/市值不再抄外部網站，改成完全自己算：
+// 52週區間＝我們自己資料庫stock_history最近一年（以資料庫實際最新一筆日期為準，不是以「今天」
+// 為準）的收盤最高/最低；不足一年的誠實顯示實際涵蓋的起訖日，不假裝是「52週」。市場不分美股/
+// 台股，邏輯完全一樣。
+// 市值＝serve時的最新收盤價 × stock_yahoo_hk_profile.shares_outstanding——美股來源是CMoney
+// （跟中文公司簡介同一次HTTP GET一起抓，見stockUsCompanyProfile.ts）；台股來源是證交所/櫃買
+// 中心官方開放資料t187ap03_L/t187ap03_O的「已發行普通股數」/「IssueShares」欄位（見
+// twOfficialSharesOutstanding.ts，一次HTTP請求拿全市場，不是逐檔抓，沒有被擋的問題）。兩者
+// 都不再對外發任何「逐檔」HTTP請求，serve時現算，永遠跟資料庫本身一樣新。
+async function computeSelfRange(stockId: string): Promise<{ low: number; high: number; fromDate: string; toDate: string; isFullYear: boolean } | null> {
+  const rows = await prisma.$queryRawUnsafe<Array<{ low: string | null; high: string | null; from_date: string | null; to_date: string | null }>>(
+    `WITH latest AS (SELECT MAX(date) d FROM stock_history WHERE stock_id = $1)
+     SELECT MIN(h.close)::text low, MAX(h.close)::text high, MIN(h.date)::text from_date, MAX(h.date)::text to_date
+       FROM stock_history h, latest
+      WHERE h.stock_id = $1 AND h.date >= latest.d - INTERVAL '365 days'`,
+    stockId,
+  );
+  const r = rows[0];
+  if (!r || r.low == null || r.high == null || !r.from_date || !r.to_date) return null;
+  const spanDays = (new Date(r.to_date).getTime() - new Date(r.from_date).getTime()) / 86_400_000;
+  return { low: Number(r.low), high: Number(r.high), fromDate: r.from_date.slice(0, 10), toDate: r.to_date.slice(0, 10), isFullYear: spanDays >= 360 };
+}
+
+function formatMarketCapZh(value: number, currency: string): string {
+  const curLabel = currency === "USD" ? "美元" : currency === "TWD" ? "元" : currency;
+  const trillion = value / 1_000_000_000_000;
+  if (Math.abs(trillion) >= 1) return `${trillion.toFixed(2)}兆${curLabel}`;
+  const billion = value / 100_000_000;
+  return `${billion.toFixed(2)}億${curLabel}`;
 }
 
 function metrics(row: { latestClose: unknown; latestDate: Date | null; currency: string }): SummaryMetrics {
@@ -109,9 +144,11 @@ type FactFormat = "AMOUNT" | "PER_SHARE" | "PE_MULTIPLE" | "PERCENT" | "COUNT";
 const latestFacts = (facts: Array<{ metric: string; value: unknown; unit: string; currency: string | null; periodEnd: Date; fiscalPeriod: string | null }>): StockLiteMetric[] => {
   const seen = new Set<string>();
   const labels: Record<string, { key: string; label: string; format: FactFormat }> = {
-    revenue: { key: "revenue", label: "營收", format: "AMOUNT" }, basic_eps: { key: "eps", label: "每股盈餘", format: "PER_SHARE" }, diluted_eps: { key: "dilutedEps", label: "稀釋每股盈餘", format: "PER_SHARE" }, gross_profit: { key: "grossProfit", label: "毛利", format: "AMOUNT" }, operating_income: { key: "operatingIncome", label: "營業利益", format: "AMOUNT" }, net_income: { key: "netIncome", label: "淨利", format: "AMOUNT" }, total_assets: { key: "totalAssets", label: "總資產", format: "AMOUNT" }, total_liabilities: { key: "totalLiabilities", label: "總負債", format: "AMOUNT" }, shareholders_equity: { key: "shareholdersEquity", label: "股東權益", format: "AMOUNT" }, cash_and_cash_equivalents: { key: "cash", label: "現金及約當現金", format: "AMOUNT" }, operating_cash_flow: { key: "operatingCashFlow", label: "營業現金流", format: "AMOUNT" }, investing_cash_flow: { key: "investingCashFlow", label: "投資現金流", format: "AMOUNT" }, financing_cash_flow: { key: "financingCashFlow", label: "融資現金流", format: "AMOUNT" }, capital_expenditure: { key: "capitalExpenditure", label: "資本支出", format: "AMOUNT" }, shares_outstanding: { key: "sharesOutstanding", label: "流通股數", format: "COUNT" }, "valuation.pe.ttm.point_in_time": { key: "pe", label: "本益比", format: "PE_MULTIPLE" }, "yahoo.event.cashDividend": { key: "dividend", label: "現金股利", format: "PER_SHARE" },
+    revenue: { key: "revenue", label: "營收", format: "AMOUNT" }, basic_eps: { key: "eps", label: "每股盈餘", format: "PER_SHARE" }, diluted_eps: { key: "dilutedEps", label: "稀釋每股盈餘", format: "PER_SHARE" }, gross_profit: { key: "grossProfit", label: "毛利", format: "AMOUNT" }, operating_income: { key: "operatingIncome", label: "營業利益", format: "AMOUNT" }, net_income: { key: "netIncome", label: "淨利", format: "AMOUNT" }, total_assets: { key: "totalAssets", label: "總資產", format: "AMOUNT" }, total_liabilities: { key: "totalLiabilities", label: "總負債", format: "AMOUNT" }, shareholders_equity: { key: "shareholdersEquity", label: "股東權益", format: "AMOUNT" }, cash_and_cash_equivalents: { key: "cash", label: "現金及約當現金", format: "AMOUNT" }, operating_cash_flow: { key: "operatingCashFlow", label: "營業現金流", format: "AMOUNT" }, investing_cash_flow: { key: "investingCashFlow", label: "投資現金流", format: "AMOUNT" }, financing_cash_flow: { key: "financingCashFlow", label: "融資現金流", format: "AMOUNT" }, capital_expenditure: { key: "capitalExpenditure", label: "資本支出", format: "AMOUNT" }, shares_outstanding: { key: "sharesOutstanding", label: "流通股數", format: "COUNT" }, "valuation.pe.ttm.point_in_time": { key: "pe", label: "本益比（近四季）", format: "PE_MULTIPLE" }, "yahoo.event.cashDividend": { key: "dividend", label: "現金股利", format: "PER_SHARE" },
     "financial.revenue": { key: "revenue", label: "營收", format: "AMOUNT" }, "financial.basic_eps": { key: "eps", label: "每股盈餘", format: "PER_SHARE" }, "financial.gross_profit": { key: "grossProfit", label: "毛利", format: "AMOUNT" }, "financial.operating_income": { key: "operatingIncome", label: "營業利益", format: "AMOUNT" }, "financial.net_income": { key: "netIncome", label: "淨利", format: "AMOUNT" }, "financial.total_assets": { key: "totalAssets", label: "總資產", format: "AMOUNT" }, "financial.total_liabilities": { key: "totalLiabilities", label: "總負債", format: "AMOUNT" }, "financial.shareholders_equity": { key: "shareholdersEquity", label: "股東權益", format: "AMOUNT" }, "financial.ending_cash_and_cash_equivalents": { key: "cash", label: "現金及約當現金", format: "AMOUNT" }, "financial.operating_cash_flow": { key: "operatingCashFlow", label: "營業現金流", format: "AMOUNT" }, "financial.investing_cash_flow": { key: "investingCashFlow", label: "投資現金流", format: "AMOUNT" }, "financial.financing_cash_flow": { key: "financingCashFlow", label: "融資現金流", format: "AMOUNT" },
-    "valuation.pe": { key: "pe", label: "本益比", format: "PE_MULTIPLE" }, "yahoo_fundamentals.pe": { key: "pe", label: "本益比", format: "PE_MULTIPLE" },
+    // 2026-11-13（ChatGPT審查第2項）: 兩個來源（TWSE官方BWIBBU／Yahoo trailingPE）VERIFIED都是
+    // 近四季（TTM）本益比，不是預估本益比——標題直接寫清楚，不讓使用者誤會成前瞻估值。
+    "valuation.pe": { key: "pe", label: "本益比（近四季）", format: "PE_MULTIPLE" }, "yahoo_fundamentals.pe": { key: "pe", label: "本益比（近四季）", format: "PE_MULTIPLE" },
     "yahoo_fundamentals.dividendYield": { key: "dividendYield", label: "殖利率", format: "PERCENT" },
     "yahoo_fundamentals.grossMargin": { key: "grossMargin", label: "毛利率", format: "PERCENT" },
     "yahoo_fundamentals.profitMargin": { key: "netMargin", label: "淨利率", format: "PERCENT" },
@@ -151,7 +188,7 @@ const latestFacts = (facts: Array<{ metric: string; value: unknown; unit: string
     switch (mapped.format) {
       case "AMOUNT": display = `${formatTwdAmount(raw, fact.unit)}\n${period}`; break;
       case "PER_SHARE": display = `${raw.toFixed(2)} 元\n${period}`; break;
-      case "PE_MULTIPLE": display = `本益比 ${raw.toFixed(2)} 倍\n${period}`; break;
+      case "PE_MULTIPLE": display = `${mapped.label} ${raw.toFixed(2)} 倍\n${period}`; break;
       case "PERCENT": display = `${(raw * 100).toFixed(2)}%\n${period}`; break;
       case "COUNT": display = `${Math.round(raw).toLocaleString("zh-TW")} 股\n${period}`; break;
     }
@@ -200,16 +237,21 @@ export async function getStockDetail(symbol: string): Promise<ServiceResponse<{ 
   if (!resolvedId) throw new WebDataError("NOT_FOUND", "Stock not found.");
   const [row, hkProfileRows] = await Promise.all([
     prisma.stock.findFirstOrThrow({ where: { id: resolvedId }, select: { id: true, ticker: true, yahooSymbol: true, companyName: true, companyNameZh: true, currency: true, exchange: true, country: true, latestClose: true, latestDate: true, updatedAt: true, sector: true, industry: true, financialFacts: { orderBy: [{ periodEnd: "desc" }, { publicationDate: "desc" }], take: 200, select: { metric: true, value: true, unit: true, currency: true, periodEnd: true, fiscalPeriod: true } }, versionedAnalytics: { orderBy: [{ asOf: "desc" }, { timeframe: "asc" }, { metricKey: "asc" }], take: 160, select: { asOf: true, timeframe: true, metricKey: true, window: true, value: true, stateValue: true } }, history: { orderBy: { date: "desc" }, take: 2, select: { date: true, close: true, volume: true, source: true, sourceSymbol: true, updatedAt: true, importedAt: true } }, technical: { orderBy: { date: "desc" }, take: 1, select: { date: true, ma5: true, ma20: true, ma60: true, ma120: true, ma240: true, ema12: true, ema26: true, macd: true, macdSignal: true, macdHistogram: true, kdK: true, kdD: true, rsi14: true, atr14: true, bollingerUpper: true, bollingerMiddle: true, bollingerLower: true } } } }),
-    // 2026-11-08（同上）: 52週區間／市值／公司簡介——照抄雅虎財經香港站跟證交所MOPS「主要經營
-    // 業務」，不自己計算。資料來源見 stockYahooHkProfile.ts／stock-yahoo-hk-profile cron。
+    // 2026-11-12: 52週區間/市值serve時自算（見下方computeSelfRange），不再從這張表讀；這裡只
+    // 剩公司簡介（美股CMoney/台股MOPS）跟流通在外股數（美股CMoney/台股官方開放資料，自算市值用）。
     // 畫面顯示用的日期直接附在數值文字裡，抓不到就是undefined，經過下面metric()過濾後自然
     // 顯示「暫無資料」。
-    prisma.$queryRawUnsafe<Array<{ week52_low: unknown; week52_high: unknown; week52_as_of_date: Date | null; market_cap_raw_text: string | null; market_cap_value: unknown; market_cap_unit: string | null; market_cap_as_of_date: Date | null; company_profile: string | null; company_profile_as_of_date: Date | null }>>(
-      `SELECT week52_low, week52_high, week52_as_of_date, market_cap_raw_text, market_cap_value, market_cap_unit, market_cap_as_of_date, company_profile, company_profile_as_of_date FROM stock_yahoo_hk_profile WHERE stock_id = $1`,
+    prisma.$queryRawUnsafe<Array<{ company_profile: string | null; company_profile_as_of_date: Date | null; shares_outstanding: unknown; shares_outstanding_as_of_date: Date | null; profile_source: string | null }>>(
+      `SELECT company_profile, company_profile_as_of_date, shares_outstanding, shares_outstanding_as_of_date, profile_source FROM stock_yahoo_hk_profile WHERE stock_id = $1`,
       resolvedId,
     ),
   ]);
   const hkProfile = hkProfileRows[0];
+  const isUsExchange = US_EXCHANGES_FOR_SELF_COMPUTE.includes(row.exchange ?? "");
+  const isTwExchange = TW_EXCHANGES_FOR_SELF_COMPUTE.includes(row.exchange ?? "");
+  const selfRange = isUsExchange || isTwExchange ? await computeSelfRange(resolvedId) : null;
+  const profileSourceLabel = hkProfile?.profile_source === "CMONEY_US0026" ? "CMoney美股公司簡介頁"
+    : hkProfile?.profile_source === "TWSE_MOPS_T05ST03" ? "證交所公開資訊觀測站" : "來源未提供";
   const latest = row.history[0];
   const previous = row.history[1];
   const asOf = latest?.date ?? row.latestDate;
@@ -226,14 +268,18 @@ export async function getStockDetail(symbol: string): Promise<ServiceResponse<{ 
   // 擠在同一行大字裡，改成換行分隔（前端統一照「\n」切成大字主數字＋灰色小字日期/來源兩行）；
   // 52週區間加千分位（"1,375 – 2,590"，千分位+「 – 」全形連接，不是裸減號)。
   const thousands = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 0 });
-  const week52Range = hkProfile?.week52_low != null && hkProfile?.week52_high != null
-    ? `${thousands(Number(hkProfile.week52_low))} – ${thousands(Number(hkProfile.week52_high))}\n資料日期：${hkProfile.week52_as_of_date?.toISOString().slice(0, 10) ?? ""}，來源：雅虎財經香港站`
+  // 2026-11-12（使用者核准，台股跟進美股做法）: 52週區間/市值美股/台股都改成本程式自算
+  // （見computeSelfRange/formatMarketCapZh/twOfficialSharesOutstanding.ts上方註解），不再
+  // 區分市場——雅虎財經香港站（台股原本的來源）持續被擋，不再對它發任何逐檔請求。
+  const sharesSourceLabel = isUsExchange ? "CMoney" : "證交所／櫃買中心官方開放資料";
+  const week52Range = selfRange
+    ? `${thousands(selfRange.low)} – ${thousands(selfRange.high)}\n${selfRange.isFullYear ? "近一年" : `實際涵蓋期間 ${selfRange.fromDate} ～ ${selfRange.toDate}`}，來源：本程式計算（依本資料庫收盤價）`
     : null;
-  const marketCapDisplay = hkProfile?.market_cap_value != null && hkProfile?.market_cap_unit
-    ? `${Number(hkProfile.market_cap_value).toFixed(2)}${hkProfile.market_cap_unit}元\n資料日期：${hkProfile.market_cap_as_of_date?.toISOString().slice(0, 10) ?? ""}，來源：雅虎財經香港站`
+  const marketCapDisplay = currentPrice != null && hkProfile?.shares_outstanding != null
+    ? `${formatMarketCapZh(currentPrice * Number(hkProfile.shares_outstanding), row.currency)}\n流通在外股數資料日期：${hkProfile.shares_outstanding_as_of_date?.toISOString().slice(0, 10) ?? ""}，來源：本程式計算（最新收盤價 × ${sharesSourceLabel}流通在外股數）`
     : null;
   const companyProfileDisplay = hkProfile?.company_profile
-    ? `${hkProfile.company_profile}\n資料日期：${hkProfile.company_profile_as_of_date?.toISOString().slice(0, 10) ?? ""}，來源：證交所公開資訊觀測站`
+    ? `${hkProfile.company_profile}\n資料日期：${hkProfile.company_profile_as_of_date?.toISOString().slice(0, 10) ?? ""}，來源：${profileSourceLabel}`
     : null;
   return { data: { identity: identity(row), metrics: { ...metrics(row), priceOrNav: currentPrice, change, changePercent, asOfDate: isoOrNull(asOf) }, sector: row.sector, industry: row.industry, liteMetrics: [
     { key: "52_week_range", label: "52週區間", value: week52Range },
@@ -255,7 +301,9 @@ export async function getStockDetail(symbol: string): Promise<ServiceResponse<{ 
     // 97,176,862，換算97,177張，對得上使用者看到的「約九萬七千張」）；只是台股DB裡這一列是收盤
     // 剛結束、Yahoo資料還沒最終結算時寫入的早期數字，排程下次重新抓這天會自動覆蓋成正確值，這裡
     // 沒有欄位錯誤不用換來源。單位改成台股慣用的「張」（1張=1000股），非台股維持股數不換算。
-    { key: "volume", label: "成交量", value: latest?.volume == null ? null : (row.exchange === "TWSE" || row.exchange === "TPEx" || row.exchange === "TPEX") ? Math.round(Number(latest.volume) / 1000) : Number(latest.volume), unit: latest?.volume != null && (row.exchange === "TWSE" || row.exchange === "TPEx" || row.exchange === "TPEX") ? "張" : undefined }, { key: "signal", label: "目前訊號", value: signal },
+    // 2026-11-13（ChatGPT審查第14項）: 美股（非TWSE/TPEx）成交量原本沒有單位，改標「股」；
+    // 台股維持原本的「張」（1張=1000股）。
+    { key: "volume", label: "成交量", value: latest?.volume == null ? null : (row.exchange === "TWSE" || row.exchange === "TPEx" || row.exchange === "TPEX") ? Math.round(Number(latest.volume) / 1000) : Number(latest.volume), unit: latest?.volume == null ? undefined : (row.exchange === "TWSE" || row.exchange === "TPEx" || row.exchange === "TPEX") ? "張" : "股" }, { key: "signal", label: "目前訊號", value: signal },
     ...analyticMetrics(row.versionedAnalytics),
     { key: "technicalAsOf", label: "技術資料日期", value: row.versionedAnalytics[0]?.asOf.toISOString().slice(0, 10) ?? technical?.date.toISOString().slice(0, 10) ?? null },
   ] }, meta: { asOfDate: provenance.asOfDate, lastUpdated: provenance.lastUpdated, freshnessStatus: freshnessStatus(asOf, "MARKET_DAY"), source, provenance, coverageStatus: "FULL" }, pagination: null, error: null };
@@ -265,7 +313,7 @@ export async function getStockHistory(symbol: string, query: HistoryQuery = {}):
   const { page, pageSize, skip } = normalizePagination(query.page, query.pageSize);
   const resolvedStockId = await resolveStockId(decodeURIComponent(symbol).trim());
   if (!resolvedStockId) throw new WebDataError("NOT_FOUND", "Stock not found.");
-  const stock = await prisma.stock.findFirstOrThrow({ where: { id: resolvedStockId }, select: { id: true, ticker: true } });
+  const stock = await prisma.stock.findFirstOrThrow({ where: { id: resolvedStockId }, select: { id: true, ticker: true, exchange: true } });
   const cursorDate = query.cursor ? new Date(query.cursor) : null;
   if (cursorDate && Number.isNaN(cursorDate.getTime())) throw new WebDataError("INVALID_QUERY", "Invalid history cursor.");
   const where = { stockId: stock.id, date: { ...(query.from ? { gte: query.from } : {}), ...(query.to ? { lte: query.to } : {}), ...(cursorDate ? { lt: cursorDate } : {}) } };
@@ -279,5 +327,9 @@ export async function getStockHistory(symbol: string, query: HistoryQuery = {}):
     const div = (v: number | null) => v == null ? null : v / ratio;
     return { date: row.date.toISOString(), open: div(numberOrNull(row.open)), high: div(numberOrNull(row.high)), low: div(numberOrNull(row.low)), close: div(Number(row.close))!, adjustedClose: div(numberOrNull(row.adjustedClose)), volume: numberOrNull(row.volume) };
   });
-  return { data, meta: { asOfDate: provenance.asOfDate, lastUpdated: provenance.lastUpdated, freshnessStatus: freshnessStatus(latest?.date, "MARKET_DAY"), source: provenance.source, provenance, coverageStatus: "FULL", splitAdjustmentNote: splitNotes.size ? Array.from(splitNotes).join(" ") : null }, pagination: paginationMeta(page, pageSize, total, rows.length === pageSize ? rows.at(-1)?.date.toISOString() ?? null : null), error: null };
+  // 2026-11-12（ChatGPT審查第11項，同一個根因連帶修正）: 跟etfService.ts的getEtfHistory同一個
+  // 問題——TWSE/TPEx個股的MARKET_DAY新鮮度不該用猜的交易日曆判斷，改用twAwareFreshnessStatus()
+  // 跟交易所官方確認過的最新交易日比較。
+  const stockFreshness = await twAwareFreshnessStatus(stock.exchange, latest?.date, "MARKET_DAY");
+  return { data, meta: { asOfDate: provenance.asOfDate, lastUpdated: provenance.lastUpdated, freshnessStatus: stockFreshness, source: provenance.source, provenance, coverageStatus: "FULL", splitAdjustmentNote: splitNotes.size ? Array.from(splitNotes).join(" ") : null }, pagination: paginationMeta(page, pageSize, total, rows.length === pageSize ? rows.at(-1)?.date.toISOString() ?? null : null), error: null };
 }

@@ -42,7 +42,7 @@ export async function computePortfolioLookThrough(items: SelectedProductInput[],
   const products: ProductResult[] = [];
 
   // stockKey -> { name, ticker, exposurePct, holders: Set<ref>, contributions }
-  type Agg = { name: string; ticker: string | null; sector: string | null; country: string | null; exposurePct: number; holders: Map<string, number> };
+  type Agg = { name: string; nameZh: string | null; ticker: string | null; sector: string | null; country: string | null; exposurePct: number; holders: Map<string, number> };
   const stocks = new Map<string, Agg>();
   let lookedThroughPct = 0;
   // 2026-11-11（組合持股分析補完第2項，使用者核准）: 重疊矩陣要用「商品自己的持股權重」（例如
@@ -94,7 +94,7 @@ export async function computePortfolioLookThrough(items: SelectedProductInput[],
         existing.exposurePct += contributionPct;
         existing.holders.set(ref, (existing.holders.get(ref) ?? 0) + contributionPct);
       } else {
-        stocks.set(row.key, { name: row.name, ticker: row.ticker, sector: row.sector, country: row.country, exposurePct: contributionPct, holders: new Map([[ref, contributionPct]]) });
+        stocks.set(row.key, { name: row.name, nameZh: row.nameZh, ticker: row.ticker, sector: row.sector, country: row.country, exposurePct: contributionPct, holders: new Map([[ref, contributionPct]]) });
       }
       ownWeights.set(row.key, (ownWeights.get(row.key) ?? 0) + row.weightPct);
     }
@@ -122,7 +122,7 @@ export async function computePortfolioLookThrough(items: SelectedProductInput[],
   }
 
   const toStock = (agg: Agg, key: string) => ({
-    name: agg.name, ticker: agg.ticker, exposurePct: agg.exposurePct, holderCount: agg.holders.size,
+    name: agg.name, nameZh: agg.nameZh, ticker: agg.ticker, exposurePct: agg.exposurePct, holderCount: agg.holders.size,
     contributions: [...agg.holders.entries()].map(([productRef, contributionPct]) => ({ productRef, label: products.find((p) => p.ref === productRef)?.name ?? productRef, contributionPct })),
     key,
   });
@@ -132,7 +132,13 @@ export async function computePortfolioLookThrough(items: SelectedProductInput[],
   const duplicateStocks = sortedStocks.filter((s) => s.holderCount > 1);
   const duplicatesExposurePct = duplicateStocks.reduce((acc, s) => acc + s.exposurePct, 0);
 
-  function bucketBy(field: "sector" | "country"): { hasClassifiedData: boolean; largest: { label: string; exposurePct: number } | null; top3: Array<{ label: string; exposurePct: number }>; unclassifiedPct: number; all: Array<{ label: string; exposurePct: number }> } {
+  // 2026-11-12（ChatGPT審查第5項）: sector/country原本的unclassifiedPct只是「有拿到持股資料、但
+  // 查不到產業/國家分類」那一塊，分母其實是lookedThroughPct（已取得持股的那部分），不是整個組合——
+  // 加總起來看起來像100%，但那其實只是「已穿透部分的100%」，容易被誤讀成「整個組合的100%」。
+  // 新增undisclosedPct = 整個組合裡「完全沒拿到持股資料」的那一塊（跟notLookedThroughPct同一個
+  // 分子，只是換算成跟這裡其他桶一樣的「整個組合」分母），讓畫面上all+unclassified+undisclosed
+  // 三者加總才等於整個組合的100%，並在畫面上寫明分母。
+  function bucketBy(field: "sector" | "country"): { hasClassifiedData: boolean; largest: { label: string; exposurePct: number } | null; top3: Array<{ label: string; exposurePct: number }>; unclassifiedPct: number; undisclosedPct: number; all: Array<{ label: string; exposurePct: number }> } {
     const totals = new Map<string, number>();
     let unclassified = 0;
     for (const [, agg] of stocks) {
@@ -141,7 +147,8 @@ export async function computePortfolioLookThrough(items: SelectedProductInput[],
       totals.set(label, (totals.get(label) ?? 0) + agg.exposurePct);
     }
     const all = [...totals.entries()].map(([label, exposurePct]) => ({ label, exposurePct })).sort((a, b) => b.exposurePct - a.exposurePct);
-    return { hasClassifiedData: all.length > 0, largest: all[0] ?? null, top3: all.slice(0, 3), unclassifiedPct: unclassified, all };
+    const undisclosedPct = Math.max(0, 100 - all.reduce((s, b) => s + b.exposurePct, 0) - unclassified);
+    return { hasClassifiedData: all.length > 0, largest: all[0] ?? null, top3: all.slice(0, 3), unclassifiedPct: unclassified, undisclosedPct, all };
   }
 
   const notLookedThroughPct = Math.max(0, 100 - lookedThroughPct);

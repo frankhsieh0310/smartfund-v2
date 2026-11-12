@@ -4,6 +4,7 @@
 // /api/mobile/current-holdings — no second holdings pipeline, no mock/fabricated snapshots.
 import { prisma } from "@/lib/prisma";
 import { classifyCategory } from "@/lib/data-platform/categoryClassification";
+import { classifyEtfOfficial } from "@/lib/data-platform/officialEtfCategory";
 
 export type ProductType = "ETF" | "FUND";
 export type CoverageDepth = "TOP_N" | "PARTIAL" | "FULL" | "UNKNOWN";
@@ -11,6 +12,7 @@ export type CoverageDepth = "TOP_N" | "PARTIAL" | "FULL" | "UNKNOWN";
 export type HoldingRow = {
   key: string;
   name: string;
+  nameZh: string | null;
   ticker: string | null;
   weightPct: number;
   sector: string | null;
@@ -36,6 +38,7 @@ async function fetchSnapshot(productType: ProductType, productId: string, asOfDa
   const col = productType === "ETF" ? "etf_id" : "fund_id";
   const rows = await prisma.$queryRawUnsafe<Array<{
     key: string; name: string; ticker: string | null; weight: string | null; sector: string | null; country: string | null; source: string;
+    maturity_date: string | null; coupon_rate: string | null;
   }>>(
     `WITH etf_official AS (SELECT DISTINCT etf_id FROM holdings WHERE etf_id IS NOT NULL AND source='ETF_OFFICIAL_DAILY_SNAPSHOT'),
      candidate_sources AS (
@@ -68,7 +71,8 @@ async function fetchSnapshot(productType: ProductType, productId: string, asOfDa
             -- 等）從來沒有sector，securities表才是真正該查的地方。securities查不到才退回
             -- holdings.sector既有值，兩者都沒有才算「未分類」（呼叫端bucketBy已處理null）。
             coalesce(sec.sector, h.sector) sector,
-            h.country, h.source
+            h.country, h.source,
+            h.maturity_date::text maturity_date, h.coupon_rate::text coupon_rate
        FROM holdings h
        LEFT JOIN securities sec ON sec.id = h.security_id
       WHERE h.${col} = $1 AND h.as_of_date = $2::date
@@ -76,20 +80,42 @@ async function fetchSnapshot(productType: ProductType, productId: string, asOfDa
       ORDER BY h.weight DESC NULLS LAST, h.rank NULLS LAST`,
     productId, asOfDate,
   );
-  const mapped = rows.map((r) => ({ key: r.key, name: r.name, ticker: r.ticker, weightPct: r.weight == null ? 0 : Number(r.weight), sector: r.sector, country: r.country }));
+  const mapped = rows.map((r) => ({ key: r.key, name: r.name, nameZh: null, ticker: r.ticker, weightPct: r.weight == null ? 0 : Number(r.weight), sector: r.sector, country: r.country }));
   const source = rows[0]?.source ?? null;
 
   const weightSum = mapped.reduce((acc, r) => acc + r.weightPct, 0);
   if (weightSum > NON_LEVERAGED_WEIGHT_SUM_CEILING_PCT) {
-    const categoryRows = await prisma.$queryRawUnsafe<Array<{ category: string | null }>>(
-      `SELECT category FROM ${productType === "ETF" ? "etfs" : "funds"} WHERE id = $1`,
-      productId,
-    );
-    const bucket = classifyCategory(categoryRows[0]?.category ?? null);
-    if (bucket !== "LEVERAGE_INVERSE") {
+    // 2026-11-12 使用者回報核實（00904持股比重檢查連帶發現）: 原本只用etfs/funds.category（95%+
+    // 的TW ETF這欄位是NULL——TW用官方「基金類型」欄位分類，不是Morningstar自由文字）判斷是否為
+    // 槓桿反向，結果這道防呆把全部18檔「正2/反1」槓桿反向TW ETF的持股資料整批誤判成異常、整批
+    // 清空（線上驗證：00675L富邦臺灣加權正2等的持股/集中度API全部回傳「沒有可用的持股資料」）。
+    // 改用officialEtfCategory.ts既有、已驗證的證交所/櫃買官方「基金類型」欄位（ETF才查，FUND
+    // 沒有這份官方清單維持原規則）。
+    // 另外驗證到「主動復華金融債息」「主動統一美債量化」這2檔非槓桿主動債券ETF合計124%~126%，
+    // 原因是官方揭露本身就包含公債期貨避險部位（例如"202612 美國三十年期政府公債"）疊加在一般
+    // 債券持倉之上（名義本金可合理超過100%，跟股票現貨ETF不同）——用holdings.maturity_date/
+    // coupon_rate（官方CSV本來就有的欄位，債券/票面利率揭露才會填）判斷「這組持股含固定收益/
+    // 期貨部位」，一併排除在異常防呆之外，不當成資料錯誤清空。
+    const hasFixedIncomeOrFuturesLine = rows.some((r) => r.maturity_date != null || r.coupon_rate != null);
+    let bucket: ReturnType<typeof classifyCategory> = "UNCLASSIFIED";
+    if (productType === "ETF") {
+      const etfRows = await prisma.$queryRawUnsafe<Array<{ code: string; name: string }>>(
+        `SELECT code, name FROM etfs WHERE id = $1`, productId,
+      );
+      if (etfRows[0]) {
+        const official = await classifyEtfOfficial(etfRows[0].code, etfRows[0].name).catch(() => null);
+        bucket = official?.bucket ?? "UNCLASSIFIED";
+      }
+    } else {
+      const categoryRows = await prisma.$queryRawUnsafe<Array<{ category: string | null }>>(
+        `SELECT category FROM funds WHERE id = $1`, productId,
+      );
+      bucket = classifyCategory(categoryRows[0]?.category ?? null);
+    }
+    if (bucket !== "LEVERAGE_INVERSE" && !hasFixedIncomeOrFuturesLine) {
       console.error(
         `[holdingsHistory] suppressing anomalous snapshot: ${productType} ${productId} as_of=${asOfDate} source=${source} ` +
-        `weightSum=${weightSum.toFixed(2)}% exceeds ${NON_LEVERAGED_WEIGHT_SUM_CEILING_PCT}% ceiling for a non-leveraged product (category bucket=${bucket}) — not adopted`,
+        `weightSum=${weightSum.toFixed(2)}% exceeds ${NON_LEVERAGED_WEIGHT_SUM_CEILING_PCT}% ceiling for a non-leveraged, non-fixed-income product (category bucket=${bucket}) — not adopted`,
       );
       return { rows: [], source: null };
     }
@@ -128,16 +154,48 @@ async function fetchGlobalEtfHoldingsFallback(etfId: string): Promise<{ asOfDate
   );
   if (!pick.length) return null;
   const { snapshot_id, effective_date } = pick[0];
+  // 2026-11-11 使用者回報核實：VOO等來源的etf_holdings.sector/country絕大多數是null（這張表本來
+  // 就沒有官方產業分類來源），portfolioLookThrough()的「未分類」因此永遠偏高，即使securities表
+  // 已經有SEC SIC回補的美股產業分類。這裡只在etf_holdings本身的sector為null、且ticker帶「.US」
+  // 字尾時，用去掉字尾後的代號查securities表補上sector（scalar subquery、LIMIT 1，不會造成列數
+  // 膨脹）；country同理只在「.US」字尾時補上'US'（跟mobile端COUNTRY_LABEL既有的"US"→"美國"
+  // 對應一致）。非.US字尾（.HK/.TO等）没有驗證過的國家對應表，維持原樣不猜。
+  // 2026-11-11 使用者回報核實+VERIFIED兩輪修正：securities.country對美股用兩種不同寫法混在
+  // 一起——絕大多數（5523筆，SEC SIC全量回補寫入）是兩字代碼「US」，但有一小批20筆（剛好是
+  // NVDA/AAPL/MSFT/AMZN/GOOGL/AVGO/GOOG/META/MU這種早期就存在、知名大型股）是全名「United
+  // States」。第一版只比對'US'漏掉這20筆、改比對'United States'又漏掉其餘5523筆（含TSLA）——
+  // 兩種寫法都要接受。同一個ticker在securities可能同時有多國掛牌（例如AAPL在CA/NEO、CA/TOR跟
+  // US/NASDAQ各有一列），加exchange IN (...)排除非美股掛牌，避免挑到同代號的海外列。
+  // 2026-11-12 使用者回報核實+核准定案（中文名稱缺漏「Meta Meta」重複/美光顯示英文）: 補上
+  // nameZh——用去字尾後的代號查stocks.company_name_zh（CMoney抓公司簡介時同一次HTTP GET一併
+  // 抓到的中文名，見stockUsCompanyProfile.ts的extractNameZh），有查到才給前端用，查不到回null，
+  // 前端（displayHoldingName）會自己決定要不要退回清理過字尾的英文名，這裡不猜、不拼湊。
   const rows = await prisma.$queryRawUnsafe<Array<{
-    holding_name: string; ticker: string | null; weight: string | null; sector: string | null; country: string | null;
+    holding_name: string; ticker: string | null; weight: string | null; sector: string | null; country: string | null; name_zh: string | null;
   }>>(
-    `SELECT holding_name, ticker, weight::text weight, sector, country FROM etf_holdings
-      WHERE snapshot_id = $1::uuid ORDER BY weight DESC NULLS LAST`,
+    `SELECT eh.holding_name, eh.ticker, eh.weight::text weight,
+            coalesce(eh.sector, (
+              SELECT sec.sector FROM securities sec
+               WHERE eh.ticker ~* '\\.US$' AND sec.ticker = regexp_replace(eh.ticker, '\\.US$', '', 'i')
+                 AND sec.country IN ('US','United States')
+                 AND sec.exchange IN ('NASDAQ','NYSE','NYSE Arca','AMEX','NYSEARCA','NYQ','NMS','NCM','NGM')
+               LIMIT 1
+            )) sector,
+            coalesce(eh.country, CASE WHEN eh.ticker ~* '\\.US$' THEN 'US' END) country,
+            (
+              SELECT s.company_name_zh FROM stocks s
+               WHERE eh.ticker ~* '\\.US$' AND s.ticker = regexp_replace(eh.ticker, '\\.US$', '', 'i')
+                 AND s.exchange IN ('NASDAQ','NYSE','NYSE Arca','AMEX','NYSEARCA','NYQ','NMS','NCM','NGM')
+                 AND s.company_name_zh IS NOT NULL
+               LIMIT 1
+            ) name_zh
+       FROM etf_holdings eh
+      WHERE eh.snapshot_id = $1::uuid ORDER BY eh.weight DESC NULLS LAST`,
     snapshot_id,
   );
   const mapped: HoldingRow[] = rows.map((r) => ({
     key: r.ticker ? `${r.ticker}|${r.country ?? ""}` : (r.holding_name ?? snapshot_id),
-    name: r.holding_name, ticker: r.ticker, weightPct: r.weight == null ? 0 : Number(r.weight), sector: r.sector, country: r.country,
+    name: r.holding_name, nameZh: r.name_zh, ticker: r.ticker, weightPct: r.weight == null ? 0 : Number(r.weight), sector: r.sector, country: r.country,
   }));
   return { asOfDate: effective_date ?? null, rows: mapped, source: mapped.length <= 10 ? "GLOBAL_ETF_HOLDINGS_TOP10" : "GLOBAL_ETF_HOLDINGS_FULL" };
 }

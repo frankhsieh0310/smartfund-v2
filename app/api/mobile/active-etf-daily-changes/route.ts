@@ -9,7 +9,12 @@
 import { prisma } from "@/lib/prisma";
 import { getTwoLatestSnapshots, coverageDepthOf } from "@/lib/data-platform/holdingsHistory";
 
-const headers = { "Access-Control-Allow-Origin": "*", "Cache-Control": "no-store" };
+// 2026-11-13（ChatGPT審查第8項，載入速度）: 這支route對每檔「主動」ETF各自呼叫一次
+// getTwoLatestSnapshots（每次都是holdingsHistory.ts那套winning_source多CTE查詢），ETF檔數一多
+// 就慢；資料本身只跟著每日官方持股快照更新（一天最多變一次），原本no-store完全沒有快取，同一
+// 使用者短時間內重新打開這頁也要整個重算一次。改成私有快取10分鐘——不影響資料正確性（當天資料
+// 本來就不會中途變），只避免同一天內重複重算。
+const headers = { "Access-Control-Allow-Origin": "*", "Cache-Control": "private, max-age=600" };
 
 export async function GET(req: Request) {
   const q = new URL(req.url).searchParams;

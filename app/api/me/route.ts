@@ -5,6 +5,7 @@ import {
 import { getAuthenticatedSupabaseUser } from "@/lib/auth/supabaseAuth";
 import { createSupabaseAdminClient } from "@/lib/auth/supabaseAdmin";
 import { prisma } from "@/lib/prisma";
+import { deleteUserDataCascade } from "@/lib/auth/deleteUserCascade";
 
 export async function GET(request: Request) {
   try {
@@ -33,26 +34,12 @@ export async function GET(request: Request) {
 // 失敗就會卡在這個狀態）。DB交易任何一步失敗就整個回復（Prisma $transaction自動rollback），
 // 回傳錯誤、不動登入身分——使用者可以直接重試。
 //
-// 查證 users 表實際的外鍵（information_schema，不是只看schema.prisma，確認DB層真正的行為）：
-// CASCADE（刪User自動清掉，不用手動處理）：alert_rules_p0(owner_user_id)、alerts、audit_logs、
-//   favorites、investor_questionnaires、memberships(app_user_id)、notification_profiles、
-//   notifications、portfolios、profiles、saved_filters、strategies、strategy_favorites、
-//   user_criteria、watchlists(owner_user_id，連帶cascade watchlist_items)、workspaces。
-// RESTRICT（Postgres會直接拒絕刪User，必須手動先清掉，這是這次500的根因）：
-//   alert_rule_versions(created_by)、watchlist_membership_events(actor_user_id)。
-// SET NULL（刪User不會報錯，但資料列會留下、只是user_id被清空——不符合「所有關聯資料都要刪除
-//   乾淨」的要求，這裡改成直接刪除整列，不留孤兒資料）：compare_sessions、search_logs。
-// 沒有推播裝置（push device）表可清——schema裡沒有這張表，確認過不是漏掉。
-async function deleteAllUserData(userId: string): Promise<void> {
-  await prisma.$transaction([
-    prisma.$executeRaw`DELETE FROM watchlist_membership_events WHERE actor_user_id = ${userId}`,
-    prisma.$executeRaw`DELETE FROM alert_rule_versions WHERE created_by = ${userId}`,
-    prisma.$executeRaw`DELETE FROM compare_sessions WHERE user_id = ${userId}`,
-    prisma.$executeRaw`DELETE FROM search_logs WHERE user_id = ${userId}`,
-    prisma.user.delete({ where: { id: userId } }), // 其餘CASCADE關聯表都在這一步自動清乾淨
-  ]);
-}
-
+// 2026-11-12 使用者核准修正：原本手動列的刪除清單沒有包含public.forum_*（論壇功能，跟台股拼圖
+// 自己的twapp.forum_*是兩套獨立的表）——VERIFIED查pg_constraint，forum_posts/forum_replies/
+// forum_reports/forum_blocks/forum_admins/forum_tos_acceptances全部用NO ACTION擋刪除，使用者
+// 若發過論壇文章，原本這支route會直接500失敗。改用共用的deleteUserDataCascade（跟每日殘留清理
+// 排程cleanup-qa-leftover-user同一套邏輯，見lib/auth/deleteUserCascade.ts），含正確的刪除順序
+// （先清自己文章的回覆跟別人對自己文章的回覆，再刪文章本身）。
 export async function DELETE(request: Request) {
   const identity = await getAuthenticatedSupabaseUser(request);
   if (!identity) return Response.json({ error: "Unauthorized" }, { status: 401 });
@@ -61,7 +48,7 @@ export async function DELETE(request: Request) {
 
   if (dbUser) {
     try {
-      await deleteAllUserData(dbUser.id);
+      await deleteUserDataCascade(dbUser.id);
     } catch (error) {
       // 交易自動rollback——這個使用者的資料跟登入身分都還在，沒有任何改變，可以直接重試。
       console.error("DELETE /api/me: failed to delete user data, nothing was changed", error);

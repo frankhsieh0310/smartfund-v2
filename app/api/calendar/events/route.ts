@@ -56,7 +56,12 @@ export async function GET(request: Request) {
   const fundIds = rawFundIds.filter((id) => approvedFundSet.has(id));
   const scopesFor = (assetType: 'ETF' | 'FUND', assetId: string) => items.find((i) => i.assetType === assetType && i.assetId === assetId)?.scopes ?? [];
 
-  const [etfDistributions, fundDistributions, etfHoldings, fundHoldings, etfNames, fundNames] = await Promise.all([
+  // 2026-11-13 使用者回報核實：ETF/基金每個交易日都有新的持股快照，ETF_HOLDINGS_UPDATE／
+  // FUND_HOLDINGS_UPDATE事件原本對每一個這種日期都畫一格「ETF 持股更新」，等於幾乎每個交易日
+  // 都有一個對使用者沒有實際意義的事件，蓋掉真正該關心的除息/發放日。拿掉這兩種事件的查詢與
+  // 產生，只保留使用者真正在意的配息事件（除息日/領息日；除權息預告因為announcement_date
+  // 從未填值，仍然誠實不產生）。
+  const [etfDistributions, fundDistributions, etfNames, fundNames] = await Promise.all([
     etfIds.length ? prisma.$queryRawUnsafe<{ etf_id: string; ex_date: Date; payment_date: Date | null; amount: string; currency: string }[]>(
       `SELECT etf_id, ex_date, payment_date, amount, currency FROM etf_distribution_events WHERE etf_id = ANY($1::text[]) AND (ex_date >= $2 AND ex_date < $3 OR payment_date >= $2 AND payment_date < $3)`,
       etfIds, start, end,
@@ -65,8 +70,6 @@ export async function GET(request: Request) {
       `SELECT fund_id, ex_date, pay_date, distribution_amount, distribution_currency FROM fund_distribution_observations WHERE fund_id = ANY($1::text[]) AND (ex_date >= $2 AND ex_date < $3 OR pay_date >= $2 AND pay_date < $3)`,
       fundIds, start, end,
     ) : [],
-    etfIds.length ? prisma.holding.findMany({ where: { assetType: 'ETF', etfId: { in: etfIds }, asOfDate: { gte: start, lt: end } }, select: { etfId: true, asOfDate: true }, distinct: ['etfId', 'asOfDate'] }) : [],
-    fundIds.length ? prisma.holding.findMany({ where: { assetType: 'FUND', fundId: { in: fundIds }, asOfDate: { gte: start, lt: end } }, select: { fundId: true, asOfDate: true }, distinct: ['fundId', 'asOfDate'] }) : [],
     etfIds.length ? prisma.etf.findMany({ where: { id: { in: etfIds } }, select: { id: true, code: true, name: true } }) : [],
     fundIds.length ? prisma.fund.findMany({ where: { id: { in: fundIds } }, select: { id: true, code: true, name: true } }) : [],
   ]);
@@ -88,16 +91,6 @@ export async function GET(request: Request) {
     if (!scopes.length) continue;
     if (d.ex_date >= start && d.ex_date < end) events.push({ date: d.ex_date.toISOString().slice(0, 10), type: 'DIVIDEND_EX', assetType: 'FUND', assetId: d.fund_id, name: ref?.name ?? null, ticker: ref?.code ?? null, scopes, amount: Number(d.distribution_amount), currency: d.distribution_currency });
     if (d.pay_date && d.pay_date >= start && d.pay_date < end) events.push({ date: d.pay_date.toISOString().slice(0, 10), type: 'DIVIDEND_PAY', assetType: 'FUND', assetId: d.fund_id, name: ref?.name ?? null, ticker: ref?.code ?? null, scopes, amount: Number(d.distribution_amount), currency: d.distribution_currency });
-  }
-  for (const h of etfHoldings) {
-    const ref = etfNameById.get(h.etfId!);
-    const scopes = scopesFor('ETF', h.etfId!);
-    if (scopes.length && h.asOfDate) events.push({ date: h.asOfDate.toISOString().slice(0, 10), type: 'ETF_HOLDINGS_UPDATE', assetType: 'ETF', assetId: h.etfId!, name: ref?.name ?? null, ticker: ref?.code ?? null, scopes, amount: null, currency: null });
-  }
-  for (const h of fundHoldings) {
-    const ref = fundNameById.get(h.fundId!);
-    const scopes = scopesFor('FUND', h.fundId!);
-    if (scopes.length && h.asOfDate) events.push({ date: h.asOfDate.toISOString().slice(0, 10), type: 'FUND_HOLDINGS_UPDATE', assetType: 'FUND', assetId: h.fundId!, name: ref?.name ?? null, ticker: ref?.code ?? null, scopes, amount: null, currency: null });
   }
   events.sort((a, b) => a.date.localeCompare(b.date));
 

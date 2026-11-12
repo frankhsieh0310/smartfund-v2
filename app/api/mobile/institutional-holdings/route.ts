@@ -109,9 +109,13 @@ function buildTickerPayload(ticker: string, rows: HoldingRow[]) {
   const latestByManager = new Map(byManagerPeriod.filter((r) => r.report_date === latestPeriod).map((r) => [r.institution_id, r]));
   const priorByManager = new Map(priorPeriod ? byManagerPeriod.filter((r) => r.report_date === priorPeriod).map((r) => [r.institution_id, r]) : []);
 
+  // 2026-11-12（ChatGPT審查第3項）: 這裡原本把filing_date直接設成report_date（持股季度截止日），
+  // 但institutional_holdings表根本沒有儲存SEC真正的申報（filed）日期，等於用季度截止日冒充申報
+  // 日，兩者實際上可能差到45天——拿掉這個會誤導的欄位，不編一個假的申報日。畫面改用免責說明文字
+  // 處理（見Institutional13FPanel.tsx）。
   const latestHolders = [...latestByManager.values()].map((r) => ({
     manager_name: r.institution_name, report_period: r.report_date, shares: r.shares, market_value: r.value,
-    weight: r.weight || null, filing_date: r.report_date,
+    weight: r.weight || null,
   })).sort((a, b) => b.market_value - a.market_value);
 
   const changes = [...latestByManager.entries()].flatMap(([id, latest]) => {
@@ -119,7 +123,7 @@ function buildTickerPayload(ticker: string, rows: HoldingRow[]) {
     if (!prior) return [];
     return [{
       manager_name: latest.institution_name, report_period: latest.report_date, shares: latest.shares, market_value: latest.value,
-      weight: latest.weight || null, shares_change: latest.shares - prior.shares, value_change: latest.value - prior.value, filing_date: latest.report_date,
+      weight: latest.weight || null, shares_change: latest.shares - prior.shares, value_change: latest.value - prior.value,
     }];
   });
   const increased = changes.filter((c) => c.shares_change > 0).sort((a, b) => b.shares_change - a.shares_change);

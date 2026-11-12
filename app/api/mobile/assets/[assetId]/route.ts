@@ -101,9 +101,17 @@ async function resolveDetail(assetId: string, assetType: AssetType, period: Peri
         assetId,
       ).catch(() => []);
       const row = trackingRows[0];
+      // 2026-11-13（ChatGPT審查第1項，使用者核實後更正）: 這兩格原本被誤以為是lib/data-platform/
+      // web/trackingError.ts那個「驗收未通過、從未上線」的自算模組——使用者在畫面上實際看到後
+      // 核實回報：真正資料源是這裡（etf_tracking_difference，source=YUANTA_OFFICIAL，元大投信
+      // 官網原文照抄，不是本程式計算），跟網站版app/etf/[code]/page.tsx同一份資料。網站版本來就
+      // 有標資料日期+來源，App版原本漏了——補齊到跟網站一致，不是隱藏（這是已驗證的官方數字，
+      // 不是未驗證的自算數字，沒有理由隱藏）。
+      const dateText = row?.observation_date ? row.observation_date.toISOString().slice(0, 10) : null;
       trackingLiteMetrics = [
         { key: 'trackingDiffDaily', label: '追蹤差距（日）', value: row?.daily_pct != null ? Number(row.daily_pct) : '無資料', unit: row?.daily_pct != null ? '%' : undefined },
         { key: 'trackingDiffCumulative', label: '追蹤差距（累計）', value: row?.cumulative_pct != null ? Number(row.cumulative_pct) : '無資料', unit: row?.cumulative_pct != null ? '%' : undefined },
+        ...(dateText ? [{ key: 'trackingDiffBasis', label: '追蹤差距資料說明', value: `資料日期 ${dateText} · 來源：元大投信官網公布數字（非本程式計算）` }] : []),
       ];
     }
     return { ...response, data: { ...response.data, dividendYield: response.data.metrics.dividendYield, liteMetrics: trackingLiteMetrics } };
@@ -188,7 +196,7 @@ async function pagedHistory(assetType: Extract<AssetType, 'STOCK' | 'ETF' | 'IND
       low: numberOrNull(row.low),
       close: numberOrNull(row.close),
       volume: numberOrNull(row.volume),
-    } : assetType === 'ETF' ? { open: numberOrNull(row.open), high: numberOrNull(row.high), low: numberOrNull(row.low), close: numberOrNull(row.close), adjustedClose: numberOrNull(row.adjustedClose) } : {}),
+    } : assetType === 'ETF' ? { open: numberOrNull(row.open), high: numberOrNull(row.high), low: numberOrNull(row.low), close: numberOrNull(row.close), adjustedClose: numberOrNull(row.adjustedClose), volume: numberOrNull(row.volume) } : {}),
   })).filter((row) => Number.isFinite(row.value)).toReversed()), meta: response?.meta };
 }
 
