@@ -26,7 +26,7 @@ const bucketOf = (code: string) => CODE_MAP[code]?.bucket ?? "OTHER";
 
 type Row = {
   id: string; insider: string; role: string | null; ticker: string; company: string; company_zh: string | null;
-  transaction_type: string; shares: string; price: string | null; transaction_date: Date; filing_id: string; cik: string | null;
+  transaction_type: string; shares: string; price: string | null; transaction_date: Date; filing_date: Date | null; filing_id: string; cik: string | null;
 };
 
 // 2026-11-12（ChatGPT審查第13項）: 公司名稱原本只用securities.name（SEC揭露用的英文名），改
@@ -36,7 +36,7 @@ async function fetchRows(where: string, params: unknown[]): Promise<Row[]> {
   return prisma.$queryRawUnsafe<Row[]>(
     `SELECT t.id, t.insider, t.role, s.ticker, s.name AS company,
             (SELECT st.company_name_zh FROM stocks st WHERE st.ticker = s.ticker AND st.country = 'US' AND st.company_name_zh IS NOT NULL LIMIT 1) AS company_zh,
-            t.transaction_type, t.shares, t.price, t.transaction_date, t.filing_id, eig.cik
+            t.transaction_type, t.shares, t.price, t.transaction_date, t.filing_date, t.filing_id, eig.cik
      FROM insider_ownership_transactions t
      JOIN securities s ON s.id = t.security_id
      LEFT JOIN insider_ownership_eligible_issuers eig ON eig.security_id = t.security_id
@@ -76,10 +76,10 @@ function serialize(rows: Row[]) {
         transaction_type_zh: CODE_MAP[r.transaction_type]?.zh ?? "其他",
         shares, price: avgPrice, transaction_value: hasPrice ? Math.round(valueSum) : null,
         transaction_date: r.transaction_date.toISOString().slice(0, 10),
-        // Not captured by this round's ingestion (only transaction_date was parsed from the Form 4
-        // XML) — never fabricated. See REMAINING_P1: would require re-parsing each filing's own
-        // filing/accepted date, out of scope for this round's "don't re-fetch" instruction.
-        filing_date: null as string | null,
+        // 2026-11-13（ChatGPT第三輪審查第7項，使用者已在正式DB核准新增filing_date欄位並自行完成
+        // DDL）: 新抓取的列從這輪起會有真正的SEC申報日（見lib/cron/secForm4Ingest.ts）；在這個
+        // 欄位存在以前就已經抓進資料庫的舊列一律是NULL——照實顯示「沒有申報日」，不回填猜測值。
+        filing_date: r.filing_date ? r.filing_date.toISOString().slice(0, 10) : null,
         ownership_type: null as string | null,
         source: "SEC EDGAR Form 4",
         source_url: r.cik ? `https://www.sec.gov/Archives/edgar/data/${Number(r.cik)}/${r.filing_id.replaceAll("-", "")}/` : `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&type=4`,

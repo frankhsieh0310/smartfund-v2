@@ -61,10 +61,22 @@ async function resolveTickerForStock(ticker: string): Promise<{ stockId: string;
   return { stockId: stock[0].id, companyName: stock[0].company_name };
 }
 
+// 2026-11-13（ChatGPT第三輪審查第7項，使用者核准定案）: 13F修正申報覆寫策略改成「新插入一筆
+// effective_version=true的filing+holdings，舊版本的filing列改effective_version=false但保留」
+// 之後，institutional_holdings本身可能同時存在同一個institution+期間的新舊兩組列（分屬不同
+// filing_id）——這裡原本沒有過濾，會把已經被取代的舊holdings也顯示出來，跟新版本重複/混在一起。
+// 一律只拿effective_version=true的filing底下的holdings，被取代的舊版本只留著當歷史紀錄，不會
+// 出現在任何畫面上。
+// institutional_holdings.filing_id is actually the SEC accession number (text) -- the real FK to
+// institutional_filings.id (uuid) is canonical_filing_id, not filing_id (confirmed live: 100% of
+// existing rows' canonical_filing_id matches a real institutional_filings.id).
+const EFFECTIVE_FILING_JOIN = `JOIN institutional_filings fil ON fil.id = ih.canonical_filing_id AND fil.effective_version = true`;
+
 async function fetchHoldingsForTicker(ticker: string): Promise<HoldingRow[]> {
   const linked = await prisma.$queryRawUnsafe<HoldingRow[]>(
     `SELECT ih.institution_id, ih.institution_name, ih.issuer_name, ih.security_id, ih.report_date, ih.shares, ih.value, ih.portfolio_weight, ih.filing_id
      FROM institutional_holdings ih
+     ${EFFECTIVE_FILING_JOIN}
      JOIN stock_security_links l ON l.security_id = ih.security_id
      JOIN stocks st ON st.id = l.stock_id
      WHERE st.ticker = $1`,
@@ -75,8 +87,8 @@ async function fetchHoldingsForTicker(ticker: string): Promise<HoldingRow[]> {
   const targetKey = normalizeIssuerName(stock.companyName);
   if (!targetKey) return linked;
   const unlinked = await prisma.$queryRawUnsafe<HoldingRow[]>(
-    `SELECT institution_id, institution_name, issuer_name, security_id, report_date, shares, value, portfolio_weight, filing_id
-     FROM institutional_holdings WHERE security_id IS NULL`
+    `SELECT ih.institution_id, ih.institution_name, ih.issuer_name, ih.security_id, ih.report_date, ih.shares, ih.value, ih.portfolio_weight, ih.filing_id
+     FROM institutional_holdings ih ${EFFECTIVE_FILING_JOIN} WHERE ih.security_id IS NULL`
   );
   const fallbackMatches = unlinked.filter((row) => normalizeIssuerName(row.issuer_name) === targetKey);
   const seenFilingLine = new Set(linked.map((r) => `${r.institution_id}:${r.filing_id}:${r.report_date}`));
@@ -147,6 +159,7 @@ export async function GET(request: Request) {
   const linkedRows = await prisma.$queryRawUnsafe<Array<HoldingRow & { ticker: string; company_name: string }>>(
     `SELECT ih.institution_id, ih.institution_name, ih.issuer_name, ih.security_id, ih.report_date, ih.shares, ih.value, ih.portfolio_weight, ih.filing_id, st.ticker, st.company_name
      FROM institutional_holdings ih
+     ${EFFECTIVE_FILING_JOIN}
      JOIN stock_security_links l ON l.security_id = ih.security_id
      JOIN stocks st ON st.id = l.stock_id`
   );

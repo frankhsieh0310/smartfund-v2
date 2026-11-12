@@ -66,6 +66,25 @@ export function latestExpectedReportingPeriod(now: Date = new Date()): string {
   return (latest ?? quarterEnds[0]).toISOString().slice(0, 10);
 }
 
+// 2026-11-13（ChatGPT第三輪審查第7項，使用者核准定案: 修正申報覆寫策略）: 已經在檔的期間不會
+// 永遠只抓一次就不管——13F-HR/A修正申報常常在原始申報送出之後數週到數月才補送，所以回頭檢查
+// 「最近兩季」（不是全部歷史，控制範圍跟成本）是否冒出新的修正申報，併入這支既有的每日cron本身
+// 一起跑，不另外開一支排程。回傳的是「已經過了45天申報期限」的最近N季期間，跟
+// latestExpectedReportingPeriod同一套算法，只是多往回推幾季。
+export function recentReportingPeriods(now: Date = new Date(), count = 2): string[] {
+  const year = now.getUTCFullYear();
+  const quarterEnds: Date[] = [];
+  for (let y = year - 1; y <= year; y++) {
+    quarterEnds.push(new Date(Date.UTC(y, 2, 31)), new Date(Date.UTC(y, 5, 30)), new Date(Date.UTC(y, 8, 30)), new Date(Date.UTC(y, 11, 31)));
+  }
+  const passed = quarterEnds
+    .filter((periodEnd) => addDaysUTC(periodEnd, 45).getTime() <= now.getTime())
+    .sort((a, b) => b.getTime() - a.getTime())
+    .slice(0, count)
+    .map((d) => d.toISOString().slice(0, 10));
+  return passed;
+}
+
 type SecSubmissionsRecent = { form: string[]; accessionNumber: string[]; filingDate: string[]; reportDate: string[]; primaryDocument: string[] };
 
 // 2026-11-13（ChatGPT第三輪審查第7項，VERIFIED實測發現的真實bug，使用者核准直接修正）: 原本只認

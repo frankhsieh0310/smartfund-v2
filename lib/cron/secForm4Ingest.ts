@@ -167,11 +167,14 @@ export async function runSecForm4IngestBatch(opts: { afterTicker: string | null;
             `SELECT count(*)::bigint AS c FROM insider_ownership_transactions WHERE source_key = $1`, sourceKey,
           );
           if (Number(verify[0]?.c ?? 0) > 0) return;
+          // 2026-11-13（ChatGPT第三輪審查第7項，使用者已在正式DB核准並自行加好filing_date欄位）:
+          // filingDate（SEC申報日）在上面第140行解析時就已經有了，之前只拿來做cutoff篩選就丟棄，
+          // 現在一併寫入，不需要新的資料來源/新的抓取。
           await tx2.$executeRawUnsafe(
             `INSERT INTO insider_ownership_transactions
-               (id, security_id, insider, role, transaction_date, transaction_type, shares, price, ownership_after, source, filing_id, source_key, created_at, updated_at)
-             VALUES (gen_random_uuid(), $1, $2, NULL, $3::date, $4, $5, $6, $7, 'SEC EDGAR Form 4', $8, $9, now(), now())`,
-            issuer.securityId, insiderName, tx.transactionDate, tx.transactionCode, tx.shares, tx.price, tx.ownershipAfter, accession, sourceKey,
+               (id, security_id, insider, role, transaction_date, filing_date, transaction_type, shares, price, ownership_after, source, filing_id, source_key, created_at, updated_at)
+             VALUES (gen_random_uuid(), $1, $2, NULL, $3::date, $4::date, $5, $6, $7, $8, 'SEC EDGAR Form 4', $9, $10, now(), now())`,
+            issuer.securityId, insiderName, tx.transactionDate, recent.filingDate[i], tx.transactionCode, tx.shares, tx.price, tx.ownershipAfter, accession, sourceKey,
           );
           const after = await tx2.$queryRawUnsafe<Array<{ c: bigint }>>(
             `SELECT count(*)::bigint AS c FROM insider_ownership_transactions WHERE source_key = $1`, sourceKey,

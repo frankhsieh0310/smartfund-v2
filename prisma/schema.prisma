@@ -3885,8 +3885,12 @@ model InsiderOwnershipTransaction {
   securityId      String   @map("security_id")
   insider         String
   role            String?
-  transactionDate DateTime @map("transaction_date") @db.Date
-  transactionType String   @map("transaction_type")
+  transactionDate DateTime  @map("transaction_date") @db.Date
+  // 2026-11-13（ChatGPT第三輪審查第7項，使用者已在正式DB核准並自行執行DDL新增此欄位）: SEC申報
+  // 日期，跟transactionDate（實際交易日）分開存。舊資料（這個欄位還沒存在以前抓進來的列）一律
+  // 是NULL，不回填猜測值——沒有申報日就是沒有申報日，不是0或某個預設日期。
+  filingDate      DateTime? @map("filing_date") @db.Date
+  transactionType String    @map("transaction_type")
   shares          Decimal  @db.Decimal(30, 6)
   price           Decimal? @db.Decimal(30, 6)
   ownershipAfter  Decimal? @map("ownership_after") @db.Decimal(30, 6)
