@@ -68,19 +68,27 @@ export function latestExpectedReportingPeriod(now: Date = new Date()): string {
 
 type SecSubmissionsRecent = { form: string[]; accessionNumber: string[]; filingDate: string[]; reportDate: string[]; primaryDocument: string[] };
 
-export async function findLatest13FFiling(cik: string, periodEnd: string): Promise<{ accessionNumber: string; filingDate: string; reportDate: string } | null> {
+// 2026-11-13（ChatGPT第三輪審查第7項，VERIFIED實測發現的真實bug，使用者核准直接修正）: 原本只認
+// form==="13F-HR"，完全沒有處理13F-HR/A（修正申報）。SEC允許機構對同一個報告期間（periodEnd）
+// 先送原始13F-HR、之後再送一次或多次13F-HR/A更正錯誤——原本的邏輯永遠只抓到「陣列裡第一個符合
+// 的13F-HR」，如果後來有修正申報，不會被抓到、也不會蓋掉原始（可能有誤）的那一筆。改成同時接受
+// 13F-HR與13F-HR/A，蒐集該periodEnd的所有符合申報，取filingDate最新的一筆（修正申報的filingDate
+// 必然晚於原始申報，所以這樣就會自然優先選到最新的修正版，沒有修正申報時就是原本的13F-HR）。
+export async function findLatest13FFiling(cik: string, periodEnd: string): Promise<{ accessionNumber: string; filingDate: string; reportDate: string; formType: string } | null> {
   const padded = cik.replace(/\D/g, "").padStart(10, "0");
   const response = await secFetch(`https://data.sec.gov/submissions/CIK${padded}.json`);
   if (response.status === 404) return null; // no EDGAR submissions history for this CIK — not a failure, just nothing to do
   if (!response.ok) throw new SecHttpError(response.status, `submissions fetch failed: ${response.status}`);
   const data = (await response.json()) as { filings: { recent: SecSubmissionsRecent } };
   const recent = data.filings.recent;
+  let best: { accessionNumber: string; filingDate: string; reportDate: string; formType: string } | null = null;
   for (let i = 0; i < recent.form.length; i++) {
-    if (recent.form[i] === "13F-HR" && recent.reportDate[i] === periodEnd) {
-      return { accessionNumber: recent.accessionNumber[i], filingDate: recent.filingDate[i], reportDate: recent.reportDate[i] };
+    if ((recent.form[i] === "13F-HR" || recent.form[i] === "13F-HR/A") && recent.reportDate[i] === periodEnd) {
+      const candidate = { accessionNumber: recent.accessionNumber[i], filingDate: recent.filingDate[i], reportDate: recent.reportDate[i], formType: recent.form[i] };
+      if (!best || candidate.filingDate > best.filingDate) best = candidate;
     }
   }
-  return null;
+  return best;
 }
 
 /** Finds the actual information-table XML file inside a filing's folder — its filename is not
