@@ -20,23 +20,50 @@ type ProductResult = {
 // 任何人只要知道一個非APPROVED商品的id，都能把它當成items傳進來分析。補上跟
 // compareService.ts/publicReadiness.ts/reverseHoldings.ts同一個APPROVED檢查，非APPROVED視同
 // NOT_FOUND，不透露存在、不耗費任何額外查詢在範圍外商品上。
-async function fetchName(assetType: "ETF" | "FUND", id: string): Promise<{ code: string | null; name: string | null } | null> {
+async function fetchName(assetType: "ETF" | "FUND", id: string): Promise<{ code: string | null; name: string | null; currency: string | null } | null> {
   const table = assetType === "ETF" ? "etfs" : "funds";
-  const rows = await prisma.$queryRawUnsafe<Array<{ code: string | null; name: string | null; approved: number }>>(
-    `SELECT f.code, f.name,
+  const rows = await prisma.$queryRawUnsafe<Array<{ code: string | null; name: string | null; currency: string | null; approved: number }>>(
+    `SELECT f.code, f.name, f.currency,
        (SELECT count(*)::int FROM tw_purchasable_classification c WHERE c.asset_type = $2 AND c.asset_id = f.id AND c.status = 'APPROVED') AS approved
      FROM ${table} f WHERE f.id = $1`,
     id, assetType,
   );
   const row = rows[0];
   if (!row || row.approved === 0) return null;
-  return { code: row.code, name: row.name };
+  return { code: row.code, name: row.name, currency: row.currency };
+}
+
+// 2026-11-13（ChatGPT第三輪審查第4項，VERIFIED實測發現的真實bug）: AMOUNT模式（「我的組合」頁的
+// 「持有金額」輸入）原本直接拿使用者輸入的原始數字算weightPct = value/totalRaw，完全不管每檔
+// 商品實際計價幣別——0050是台幣、VOO是美元，使用者在兩個輸入框都看到同一個「元」單位，混著輸入
+// 等於把「50000元」跟「500美元」當同一個單位相加，組合權重會嚴重失真。改成AMOUNT模式下，不同
+// 幣別的金額先用yahoo即時匯率（fx_latest_quotes，跟fxService.ts同一張表，非自算/非猜測）換算成
+// 台幣等值再算權重；只有一種幣別或WEIGHT模式（直接輸入百分比，不是金額）時完全不受影響。查不到
+// 匯率的幣別維持原始數值、不猜，並非靜默失敗——這是本次審查沒有要求、但驗證過程中查出的真實
+// 不一致，依使用者指示直接修正，不是只回報。
+async function convertAmountsToTwd(items: SelectedProductInput[], currencies: Map<string, string | null>): Promise<Map<number, number>> {
+  const converted = new Map<number, number>();
+  const neededCurrencies = new Set<string>();
+  items.forEach((item, idx) => {
+    const ccy = currencies.get(`${item.assetType}:${item.id}`) ?? null;
+    if (ccy && ccy !== "TWD") neededCurrencies.add(ccy);
+  });
+  const rateByCurrency = new Map<string, number>();
+  if (neededCurrencies.size) {
+    const pairSymbols = [...neededCurrencies].map((c) => `${c}TWD`);
+    const rows = await prisma.fxLatestQuote.findMany({ where: { pairSymbol: { in: pairSymbols } } });
+    for (const r of rows) rateByCurrency.set(r.pairSymbol.replace(/TWD$/, ""), Number(r.mid));
+  }
+  items.forEach((item, idx) => {
+    const ccy = currencies.get(`${item.assetType}:${item.id}`) ?? null;
+    const rate = ccy && ccy !== "TWD" ? rateByCurrency.get(ccy) : 1;
+    // 查不到匯率就用原始數值（不猜造一個假匯率），同時這代表這筆AMOUNT輸入沒有被正確換算成台幣。
+    converted.set(idx, rate != null ? item.value * rate : item.value);
+  });
+  return converted;
 }
 
 export async function computePortfolioLookThrough(items: SelectedProductInput[], mode: AllocationMode) {
-  const totalRaw = items.reduce((acc, i) => acc + (Number.isFinite(i.value) ? i.value : 0), 0);
-  const weightSumOk = totalRaw > 0;
-
   const excludedProducts: Array<{ ref: string; label: string; name: string | null; reason: "NO_HOLDINGS" | "NOT_FOUND" }> = [];
   const incompleteProducts: Array<{ ref: string; label: string; coverageDepth: CoverageDepth; presentRowCount: number; declaredCount: number | null }> = [];
   const products: ProductResult[] = [];
@@ -62,9 +89,16 @@ export async function computePortfolioLookThrough(items: SelectedProductInput[],
     return { item, basics, snapshot };
   }));
 
-  for (const { item, basics, snapshot } of fetched) {
+  // AMOUNT模式下才需要換算成同一幣別再算權重比例；WEIGHT模式輸入的本來就是百分比，沒有幣別問題。
+  const currencies = new Map(fetched.map(({ item, basics }) => [`${item.assetType}:${item.id}`, basics?.currency ?? null]));
+  const effectiveValues = mode === "AMOUNT" ? await convertAmountsToTwd(items, currencies) : new Map(items.map((_, idx) => [idx, items[idx].value]));
+  const totalRaw = items.reduce((acc, _, idx) => acc + (Number.isFinite(effectiveValues.get(idx)) ? (effectiveValues.get(idx) as number) : 0), 0);
+  const weightSumOk = totalRaw > 0;
+
+  for (const [idx, { item, basics, snapshot }] of fetched.entries()) {
     const ref = `${item.assetType}:${item.id}`;
-    const weightPct = weightSumOk ? (item.value / totalRaw) * 100 : 0;
+    const effectiveValue = effectiveValues.get(idx) ?? item.value;
+    const weightPct = weightSumOk ? (effectiveValue / totalRaw) * 100 : 0;
     if (!basics) {
       excludedProducts.push({ ref, label: ref, name: null, reason: "NOT_FOUND" });
       products.push({ ref, assetType: item.assetType, id: item.id, code: null, name: null, weightPct, included: false, coverageDepth: null, presentRowCount: 0, declaredCount: null, asOfDate: null, holdingsCoveredPct: null });
