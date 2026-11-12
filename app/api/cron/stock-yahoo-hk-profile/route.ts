@@ -28,6 +28,7 @@ import { fetchTwseCompanyProfile, inForbiddenWindowTaipei } from "@/lib/data-pla
 import { fetchCMoneyUsCompanyProfile } from "@/lib/data-platform/web/stockUsCompanyProfile";
 import { fetchOfficialTwSharesOutstanding } from "@/lib/data-platform/web/twOfficialSharesOutstanding";
 import { refreshReverseLookupCacheBatch } from "@/lib/data-platform/reverseLookupCache";
+import { refreshActiveEtfDailyChangesCache } from "@/lib/data-platform/activeEtfChangesCache";
 
 const US_EXCHANGES = ["NASDAQ", "NYSE", "NYQ", "NMS", "NCM", "NGM"];
 
@@ -136,6 +137,19 @@ export async function GET(request: Request) {
     console.error("[reverse-lookup-cache] refresh batch failed", e instanceof Error ? e.message : e);
   }
 
+  // 2026-11-13（使用者回報核實，主動式ETF追蹤頁第一次載入約15秒）: 跟上面reverse-lookup-cache
+  // 同一種best-effort附加步驟——整批（~20幾檔「主動」ETF，量很小）重算一次寫進唯一一筆快取列，
+  // 不用checkpoint游標（下一次invocation直接整批重算覆蓋，不是接續）。任何錯誤只記錄，不影響
+  // 這支排程本來的主要工作。
+  let activeEtfCacheResult: { status: string; count?: number; error?: string } = { status: "SKIPPED" };
+  try {
+    const result = await refreshActiveEtfDailyChangesCache();
+    activeEtfCacheResult = result.ok ? { status: "OK", count: result.count } : { status: "ERROR", error: result.error };
+  } catch (e) {
+    activeEtfCacheResult = { status: "ERROR", error: e instanceof Error ? e.message : String(e) };
+    console.error("[active-etf-daily-changes-cache] refresh failed", e instanceof Error ? e.message : e);
+  }
+
   let processed = 0, succeeded = 0, failed = 0, noProfileEitherSource = 0, blocked = false, blockedHttpStatus: number | null = null;
   let lastProcessedTicker: string | null = effectiveCheckpoint?.lastSymbol ?? null;
   let index = Math.max(startIndex, 0);
@@ -238,8 +252,8 @@ export async function GET(request: Request) {
     retryableFailures: 0,
     checkpointAfter: { lastSymbol: reachedEnd ? null : lastProcessedTicker, processed, succeeded, failed, updatedAt: null },
     error: blocked ? `blocked with HTTP ${blockedHttpStatus}` : null,
-    details: { noProfileEitherSource, twSharesResult, reverseCacheResult },
+    details: { noProfileEitherSource, twSharesResult, reverseCacheResult, activeEtfCacheResult },
   });
 
-  return Response.json({ ok: !blocked, job: JOB, processed, succeeded, failed, noProfileEitherSource, blocked, blockedHttpStatus, reachedEnd, universeCount: stocks.length, startIndex: Math.max(startIndex, 0), twSharesResult, reverseCacheResult });
+  return Response.json({ ok: !blocked, job: JOB, processed, succeeded, failed, noProfileEitherSource, blocked, blockedHttpStatus, reachedEnd, universeCount: stocks.length, startIndex: Math.max(startIndex, 0), twSharesResult, reverseCacheResult, activeEtfCacheResult });
 }
