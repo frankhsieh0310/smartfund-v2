@@ -303,7 +303,10 @@ export async function getEtfDetail(code: string): Promise<ServiceResponse<{ iden
     // 2026-11-13（使用者核准定案，每日健康報告第1項）: 新上市還沒有第一筆真實成交價的ETF
     // （latestValue/navValue都是null）要讓前端能分辨「真的還沒開始交易」跟「資料來源暫時查不到」
     // ——附上上市日期，前端用這兩個欄位組出「尚未開始交易（上市日期：...）」，不是裝死顯示「—」。
-    inceptionDate: isoOrNull(row.inceptionDate), tradingNotStarted: latestValue == null && navValue == null && row.inceptionDate != null,
+    // VERIFIED抽查發現：0060「新台灣」上市於2008年、目前有data_source卻從來沒有任何價格——這種
+    // 老牌但資料異常的ETF不該被講成「尚未開始交易」（會誤導成剛上市），限定上市日期在90天內才
+    // 走這個分支，更久以前上市卻沒有價格的維持原本「—」（誠實表示沒有資料，不猜原因）。
+    inceptionDate: isoOrNull(row.inceptionDate), tradingNotStarted: latestValue == null && navValue == null && row.inceptionDate != null && (Date.now() - row.inceptionDate.getTime()) <= 90 * 86_400_000,
   }, nav: navValue, navAsOfDate: isoOrNull(navAsOfDate), aum: numberOrNull(latest?.aum ?? row.aum), premiumDiscount, premiumDiscountAsOfDate, expenseRatio: numberOrNull(row.expenseRatio), expenseRatioTierText, distributionFreq: row.distributionFreq ?? null, holdingsCount: holdings.length, holdingsAsOfDate: isoOrNull(latestHolding?.asOfDate), topHoldings: holdings.slice(0, 10).map((holding) => ({ name: holding.holdingName, symbol: holding.ticker, weight: numberOrNull(holding.weight) })), assetAllocation: allocation((holding) => holding.assetType), sectorAllocation: allocation((holding) => holding.sector), category: row.category }, meta: { asOfDate: provenance.asOfDate, lastUpdated: provenance.lastUpdated, freshnessStatus: detailFreshness, source, provenance, coverageStatus: "FULL" }, pagination: null, error: null };
 }
 
