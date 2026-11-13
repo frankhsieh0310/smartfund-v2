@@ -54,15 +54,32 @@ const CORE_FRESHNESS_LABELS = new Set(["tw_stock_price", "domestic_fund_nav"]);
 // 但不擋上架）。
 const SCHEDULE_SYMPTOM_TYPES = new Set(["PIPELINE", "LOCAL_SCHEDULE_NOT_REPORTED"]);
 
+// 2026-11-13（使用者核准定案，每日健康報告通知規則第4項）: 「覆蓋率在98%以上、影響範圍很小」
+// 的COVERAGE異常不該用紅燈（BLOCKING）通知——紅燈要留給「使用者會直接看到錯誤、或主要功能
+// 壞掉」的狀況，缺幾檔在幾千檔母體裡不符合這個門檻。COVERAGE的reason固定是
+// `COVERAGE_${pct.toFixed(1)}PCT`格式（見checks.ts的evaluateCoverage等函式），這裡解析出數字。
+// 解析不出數字（理論上不會發生，但防禦性地）維持保守原則，當作沒有這個資訊，繼續走BLOCKING。
+const LOW_IMPACT_COVERAGE_THRESHOLD_PCT = 98;
+export function parseCoveragePct(reason: string | null | undefined): number | null {
+  const m = reason?.match(/^COVERAGE_([\d.]+)PCT$/);
+  return m ? Number(m[1]) : null;
+}
+export function isLowImpactCoverageGap(anomaly: { type: string; reason?: string | null }): boolean {
+  if (anomaly.type !== "COVERAGE") return false;
+  const pct = parseCoveragePct(anomaly.reason);
+  return pct != null && pct >= LOW_IMPACT_COVERAGE_THRESHOLD_PCT;
+}
+
 /** anomaly 是 route.ts `anomalies` 陣列裡的單筆物件（已經有 type/category，部分有 jobId/label）。
  *  沒列進 BLOCKING_ANOMALY_TYPES 的其他 type 預設 MINOR（白名單式「資料結果才升級」，避免遺漏
  *  判斷時意外被歸到最嚴重那一級）。*/
-export function classifySeverity(anomaly: { type: string; category?: string; jobId?: string; label?: string }): Severity {
+export function classifySeverity(anomaly: { type: string; category?: string; jobId?: string; label?: string; reason?: string | null }): Severity {
   if (anomaly.category === "EXTERNAL_DELAY") return "EXTERNAL";
   if (SCHEDULE_SYMPTOM_TYPES.has(anomaly.type)) return "MINOR";
   if (anomaly.type === "FRESHNESS") {
     return anomaly.label && CORE_FRESHNESS_LABELS.has(anomaly.label) ? "BLOCKING" : "MINOR";
   }
+  if (isLowImpactCoverageGap(anomaly)) return "MINOR";
   if (BLOCKING_ANOMALY_TYPES.has(anomaly.type)) return "BLOCKING";
   return "MINOR";
 }
@@ -76,7 +93,7 @@ export function anomalyFingerprint(anomaly: { type: string; jobId?: string; labe
 }
 
 /** 整份報告（anomalies 陣列）彙總成三級筆數，給 buildDailySummary 跟上架判斷共用。*/
-export function summarizeSeverity(anomalies: Array<{ type: string; category?: string; jobId?: string; label?: string }>): {
+export function summarizeSeverity(anomalies: Array<{ type: string; category?: string; jobId?: string; label?: string; reason?: string | null }>): {
   blocking: number; minor: number; external: number;
   blockingItems: string[]; minorItems: string[]; externalItems: string[];
 } {

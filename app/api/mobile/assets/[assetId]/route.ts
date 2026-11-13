@@ -122,7 +122,9 @@ async function resolveDetail(assetId: string, assetType: AssetType, period: Peri
         ...(dateText ? [{ key: 'trackingDiffBasis', label: '追蹤差距資料說明', value: `資料日期 ${dateText} · 累計計算期間：${row!.observation_date.getUTCFullYear()}-01-01 至 ${dateText}（每年初重新起算）· 來源：元大投信官網公布數字（非本程式計算）` }] : []),
       ];
     }
-    return { ...response, data: { ...response.data, dividendYield: response.data.metrics.dividendYield, liteMetrics: trackingLiteMetrics } };
+    // 2026-11-13（使用者核准定案，每日健康報告第1項）: 跟dividendYield同一個攤平慣例，把
+    // inceptionDate/tradingNotStarted也拉到最外層給App直接讀，不用再deep讀metrics。
+    return { ...response, data: { ...response.data, dividendYield: response.data.metrics.dividendYield, inceptionDate: response.data.metrics.inceptionDate ?? null, tradingNotStarted: response.data.metrics.tradingNotStarted ?? false, liteMetrics: trackingLiteMetrics } };
   }
   if (assetType === 'INDEX') return getIndexDetail(assetId);
   if (assetType === 'FX') return getFxDetail(assetId);

@@ -21,7 +21,7 @@ import { fetchYahooChartPeriod } from "@/lib/services/dataProviders/yahoo/yahooC
 import { CORE_COMMODITY_ROOTS } from "@/lib/cron/commodityUpdate";
 import { notifyAnomaly } from "@/lib/daily-health-report/notify";
 import { buildDailySummary } from "@/lib/daily-health-report/buildDailySummary";
-import { summarizeSeverity, classifySeverity, anomalyFingerprint, countConsecutiveDays } from "@/lib/daily-health-report/severity";
+import { summarizeSeverity, classifySeverity, anomalyFingerprint, countConsecutiveDays, isLowImpactCoverageGap } from "@/lib/daily-health-report/severity";
 import { targetMonthEndIso } from "@/lib/cloud-ingestion/fundHoldings";
 import { latestScheduledTradingDay, twseHasTradingDataForDate, tpexHasTradingDataForDate } from "@/lib/market-calendar/twseHolidayCalendar";
 import { fetchYahooTwPerformance } from "@/lib/yahoo/twPerformancePage";
@@ -1031,6 +1031,39 @@ export async function GET(request: Request) {
     if (jkoamCheck.checked && jkoamCheck.found) {
       extraNotices.push("📄 街口00992B（街口優息非投債ETF）官網「檔案下載」區塊已出現月報，可以開始查證建adapter了：https://www.jkoam.com/etf/etf-info/62?tab=1");
       await writeCheckpoint(JOB, JKOAM_NOTIFIED_CHECKPOINT_KEY, runId, { lastSymbol: "DONE", processed: 1, succeeded: 1, failed: 0 });
+    }
+  }
+
+  // 2026-11-13（使用者核准定案，每日健康報告通知規則第4項）: 覆蓋率98%以上、影響範圍很小的
+  // COVERAGE異常（見severity.ts的isLowImpactCoverageGap）已經不再用紅燈通知，但不代表完全不看——
+  // 改成每週一彙總一次，列出過去這一週（含今天）出現過的所有這類小缺口，不用新增排程，直接併在
+  // 這支既有的每日cron裡、只在週一這天多組一段訊息。
+  const todayDow = new Date(`${today}T00:00:00Z`).getUTCDay(); // 0=Sun ... 1=Mon
+  if (todayDow === 1) {
+    const sevenDaysAgo = new Date(Date.now() - 7 * 86_400_000).toISOString();
+    const pastWeekRuns = await query(
+      `SELECT details->'coverage' AS coverage FROM production_scheduler_runs
+       WHERE job_id = $1 AND started_at >= $2::timestamptz ORDER BY started_at ASC`,
+      [JOB, sevenDaysAgo],
+    );
+    const lowImpactByLabel = new Map<string, { label: string; minPct: number; maxPct: number; days: number }>();
+    const todaysLowImpact = coverage.filter((c) => c.anomaly && isLowImpactCoverageGap({ type: "COVERAGE", reason: c.anomalyReason }));
+    const allRuns = [...pastWeekRuns.map((r) => r.coverage as Array<{ label: string; coveragePct: number | null; anomaly: boolean }> | null), todaysLowImpact];
+    for (const dayCoverage of allRuns) {
+      if (!dayCoverage) continue;
+      for (const c of dayCoverage) {
+        if (!c?.anomaly || c.coveragePct == null || c.coveragePct < 98 || c.coveragePct >= 100) continue;
+        const existing = lowImpactByLabel.get(c.label);
+        if (existing) { existing.minPct = Math.min(existing.minPct, c.coveragePct); existing.maxPct = Math.max(existing.maxPct, c.coveragePct); existing.days++; }
+        else lowImpactByLabel.set(c.label, { label: c.label, minPct: c.coveragePct, maxPct: c.coveragePct, days: 1 });
+      }
+    }
+    if (lowImpactByLabel.size > 0) {
+      extraNotices.push("📊 本週小幅覆蓋率缺口彙總（覆蓋率98%以上，未達紅燈門檻，僅供留意）：");
+      for (const { label, minPct, maxPct, days } of lowImpactByLabel.values()) {
+        const pctText = minPct === maxPct ? `${minPct.toFixed(1)}%` : `${minPct.toFixed(1)}%–${maxPct.toFixed(1)}%`;
+        extraNotices.push(`- ${label}：過去7天出現${days}次，覆蓋率${pctText}`);
+      }
     }
   }
 

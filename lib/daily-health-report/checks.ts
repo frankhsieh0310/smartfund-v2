@@ -363,7 +363,8 @@ export type DataSourceGapResult = {
   nullCount: number;
   codes: string[]; // up to 10, for display
   knownCodes: string[]; // already-documented gaps (e.g. a suspected-delisted symbol) -- never re-raised as a fresh anomaly
-  newCodes: string[]; // anything NOT already documented -- these alone drive `anomaly`
+  recentlyListedCodes: string[]; // 2026-11-13: newly listed, still inside the grace period -- shown for visibility, never raised as an anomaly
+  newCodes: string[]; // anything NOT already documented or newly-listed -- these alone drive `anomaly`
   anomaly: boolean;
 };
 
@@ -374,19 +375,44 @@ export type DataSourceGapResult = {
 // ("known/suspected delisted") rather than a fresh warning that looks identical to a brand-new gap.
 export const KNOWN_DATA_SOURCE_GAPS: ReadonlySet<string> = new Set(["00838B"]);
 
+// 2026-11-13（使用者核准定案，每日健康報告第1項）: 新上市、還沒有第一筆真實成交價的商品
+// （例如00413A主動玉山關鍵科技，inception_date後data_source暫時是NULL，等第一次市場收盤同步
+// 寫入真正的Yahoo代號才會補上）不是異常——這是上市流程本身必經的空窗期，不需要人工處理，等排程
+// 抓到第一筆成交價就會自動補上data_source（跟VERIFIED 00418A/009831/009832同一批最近上市ETF的
+// 歷史：全部都是上市後幾個交易日內data_source才補上，不是卡住）。只有「上市超過10個交易日、
+// 還是完全沒有data_source」才是真正的異常，才該往上回報。這裡沒有查交易日曆（CLAUDE.md既定
+// 原則，不用猜交易日），用「平日（排除週六日）天數」當交易日數的近似值，跟這個檔案其他地方
+// （lastCompletedUsTradingWeekday等）同樣的既有近似慣例一致。
+const LISTING_GRACE_PERIOD_WEEKDAYS = 10;
+function weekdaysSince(fromIso: string, now: Date): number {
+  const from = new Date(`${fromIso}T00:00:00Z`);
+  let count = 0;
+  const cursor = new Date(from);
+  while (cursor.getTime() < now.getTime()) {
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+    const day = cursor.getUTCDay();
+    if (day !== 0 && day !== 6) count++;
+  }
+  return count;
+}
+
 // is_active TWSE/TPEx ETFs missing a data_source entirely fall out of market-close-sync's core
 // universe without ANY error, log line, or alert (confirmed live 2026-10-13 -- this is exactly how 33
 // funds went unnoticed for days). This check exists so a NEW gap (as opposed to the one already
-// known and backfilled) is never silent again.
-export async function checkEtfDataSourceGap(query: QueryFn): Promise<DataSourceGapResult> {
+// known and backfilled, or a brand-new listing still inside its grace period) is never silent again.
+export async function checkEtfDataSourceGap(query: QueryFn, now: Date = new Date()): Promise<DataSourceGapResult> {
   const rows = await query(
-    `SELECT code FROM etfs WHERE is_active = true AND exchange IN ('TWSE','TPEx') AND data_source IS NULL ORDER BY code`,
+    `SELECT code, inception_date::text AS inception_date FROM etfs WHERE is_active = true AND exchange IN ('TWSE','TPEx') AND data_source IS NULL ORDER BY code`,
     [],
   );
-  const allCodes: string[] = rows.map((r) => r.code);
+  const allCodes: string[] = rows.map((r: { code: string }) => r.code);
   const knownCodes = allCodes.filter((c) => KNOWN_DATA_SOURCE_GAPS.has(c));
-  const newCodes = allCodes.filter((c) => !KNOWN_DATA_SOURCE_GAPS.has(c));
-  return { nullCount: allCodes.length, codes: allCodes.slice(0, 10), knownCodes, newCodes, anomaly: newCodes.length > 0 };
+  const recentlyListedCodes = rows
+    .filter((r: { code: string; inception_date: string | null }) => !KNOWN_DATA_SOURCE_GAPS.has(r.code) && r.inception_date != null && weekdaysSince(r.inception_date, now) <= LISTING_GRACE_PERIOD_WEEKDAYS)
+    .map((r: { code: string }) => r.code);
+  const excluded = new Set([...knownCodes, ...recentlyListedCodes]);
+  const newCodes = allCodes.filter((c) => !excluded.has(c));
+  return { nullCount: allCodes.length, codes: allCodes.slice(0, 10), knownCodes, recentlyListedCodes, newCodes, anomaly: newCodes.length > 0 };
 }
 
 export type DataFreshnessResult = {

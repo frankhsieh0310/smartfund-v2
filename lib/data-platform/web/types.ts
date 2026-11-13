@@ -47,6 +47,10 @@ export interface SummaryMetrics {
   navValue?: number | null;
   navChange?: number | null;
   navChangePercent?: number | null;
+  // 2026-11-13（使用者核准定案，每日健康報告第1項）: 新上市還沒有第一筆真實成交價時，前端要能
+  // 分辨「真的還沒開始交易」跟「資料來源暫時查不到」，才能顯示「尚未開始交易」而不是裝死「—」。
+  inceptionDate?: string | null;
+  tradingNotStarted?: boolean;
 }
 
 export interface Provenance {
