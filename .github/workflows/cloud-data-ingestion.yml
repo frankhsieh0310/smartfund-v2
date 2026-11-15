@@ -41,6 +41,16 @@ on:
     - cron: "0 20 * * 1-5"      # Commodity: COMEX/NYMEX (WTI, Nat Gas, Gold, Silver, Copper, Platinum, Palladium) — settle 1:30-2:30pm ET = 18:30-19:30 UTC winter
     - cron: "20 20 * * 1-5"     # Commodity: CME Livestock (Live Cattle, Lean Hogs) — Chicago settle ~1-2pm CT = 19:00-20:00 UTC winter
     - cron: "0 21 * * 1-5"      # Commodity: ICE (Coffee, Cocoa, Sugar, Cotton, Brent) — NY softs ~1-2pm ET + ICE Europe Brent, safe latest bound
+    # 2026-11-11（使用者核准，insider_ownership_transactions原本完全沒有排程的修正）: 22:00 UTC =
+    # 06:00 Taipei，避開01:00-05:30 Taipei重工作黑名單時段，也在前一天美股Form4申報全部posted之後。
+    - cron: "0 22 * * *"     # SEC EDGAR Form 4 insider trades — 06:00 Taipei daily
+    # 2026-11-11（使用者核准，官方產業分類定案）: securities.sector 補TWSE/TPEx/SEC SIC官方產業分類
+    # （上架前審查，組合穿透分析「產業集中」原本全部未分類）。TW那支資料量小(~2000檔)、無速率限制，
+    # 每天跑一次全量比對即可；SEC SIC那支~6000檔美股受SEC節流限制，跑不完一次cron，用checkpoint
+    # cursor跨日接續，排在06:15 Taipei（sec-form4-insider-trades同一個06:00時段後15分鐘，避開
+    # 01:00-05:30 Taipei重工作黑名單時段，也避免跟同時段job搶同一秒）。
+    - cron: "15 1 * * *"  # TW industry classification (TWSE/TPEx) — 09:15 Taipei daily
+    - cron: "15 22 * * *" # SEC SIC industry classification (US) — 06:15 Taipei daily, checkpointed
     # Yahoo Taiwan "international index" page (22 fixed symbols): one trigger per MARKET close,
     # not per index. Each time is picked at/after that market's LATEST possible UTC close (i.e. its
     # winter/non-DST offset, which is later in UTC than its summer/DST offset) plus a 10-20min
@@ -76,7 +86,7 @@ on:
         description: "Which job to run"
         type: choice
         default: all
-        options: [both, etf-price, moneydj-fund, moneydj-etf, global-etf-holdings, fund-holdings, fund-nav, consensus-ingest, consensus-aggregate, consensus-performance, consensus-flips, consensus-backfill, tw-fundamentals-refresh, global-pe-recompute, mops-financial-incremental, sec-financial-incremental, etf-official-holdings, fx-quote, crypto-quote, crypto-marketcap, crypto-history, index-history, index-japan, index-korea, index-china, index-philippines, index-hongkong, index-sea, index-india, index-russia, index-europe, index-us, commodity-cbot, commodity-comex-nymex, commodity-livestock, commodity-ice, all]
+        options: [both, etf-price, moneydj-fund, moneydj-etf, global-etf-holdings, fund-holdings, fund-nav, consensus-ingest, consensus-aggregate, consensus-performance, consensus-flips, consensus-backfill, tw-fundamentals-refresh, global-pe-recompute, mops-financial-incremental, sec-financial-incremental, sec-form4-insider-trades, tw-industry-classification, sec-sic-classification, etf-official-holdings, fx-quote, crypto-quote, crypto-marketcap, crypto-history, index-history, index-japan, index-korea, index-china, index-philippines, index-hongkong, index-sea, index-india, index-russia, index-europe, index-us, commodity-cbot, commodity-comex-nymex, commodity-livestock, commodity-ice, all]
       issuer:
         description: "ETF issuer to run (etf-official-holdings job only; ignored by every other job)"
         type: choice
@@ -129,6 +139,9 @@ jobs:
             "0 0 * * *") echo "job=consensus-performance" >> "$GITHUB_OUTPUT" ;;
             "40 1,4,7,10,13,16,19,22 * * *") echo "job=consensus-flips" >> "$GITHUB_OUTPUT" ;;
             "50 23 * * *") echo "job=consensus-backfill" >> "$GITHUB_OUTPUT" ;;
+            "0 22 * * *") echo "job=sec-form4-insider-trades" >> "$GITHUB_OUTPUT" ;;
+            "15 1 * * *") echo "job=tw-industry-classification" >> "$GITHUB_OUTPUT" ;;
+            "15 22 * * *") echo "job=sec-sic-classification" >> "$GITHUB_OUTPUT" ;;
             *)            echo "job=${{ github.event.inputs.job || 'all' }}" >> "$GITHUB_OUTPUT" ;;
           esac
 
@@ -296,6 +309,37 @@ jobs:
                --retry 2 --retry-connrefused --retry-delay 10 \
                -H "Authorization: Bearer ${SECRET}" \
                "${BASE_URL}/api/cron/cloud-sec-financial-incremental" | tee sec-financial-incremental-response.json
+          echo
+
+      - name: SEC EDGAR Form 4 insider trades (eligible-issuer universe, bounded+checkpointed)
+        if: ${{ contains(fromJSON('["sec-form4-insider-trades","all"]'), steps.pick.outputs.job) }}
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --show-error --silent \
+               --connect-timeout 15 --max-time 300 \
+               -H "Authorization: Bearer ${SECRET}" \
+               "${BASE_URL}/api/cron/sec-form4-insider-trades" | tee sec-form4-insider-trades-response.json
+          echo
+
+      - name: TW industry classification (TWSE/TPEx official, full daily compare)
+        if: ${{ contains(fromJSON('["tw-industry-classification","all"]'), steps.pick.outputs.job) }}
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --show-error --silent \
+               --connect-timeout 15 --max-time 110 \
+               --retry 2 --retry-connrefused --retry-delay 10 \
+               -H "Authorization: Bearer ${SECRET}" \
+               "${BASE_URL}/api/cron/tw-industry-classification" | tee tw-industry-classification-response.json
+          echo
+
+      - name: SEC SIC industry classification (US, bounded+checkpointed)
+        if: ${{ contains(fromJSON('["sec-sic-classification","all"]'), steps.pick.outputs.job) }}
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --show-error --silent \
+               --connect-timeout 15 --max-time 300 \
+               -H "Authorization: Bearer ${SECRET}" \
+               "${BASE_URL}/api/cron/sec-sic-classification" | tee sec-sic-classification-response.json
           echo
 
       - name: FX quote (390 Yahoo-direct pairs, auto-chains 162 derived-cross)
