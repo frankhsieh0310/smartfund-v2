@@ -25,7 +25,7 @@
 // excludeOverlapWithYahooMapping() and its test.
 import { prisma } from "@/lib/prisma";
 import { isAuthorizedCron, unauthorizedCron } from "@/lib/cron/authorize";
-import { beginRun, finishRun } from "@/lib/cloud-ingestion/runContext";
+import { beginRun, finishRun, hourBucketKey } from "@/lib/cloud-ingestion/runContext";
 import { fetchTdccNavCsv, parseTdccNavCsv, parseTdccNavCsvRows, excludeOverlapWithYahooMapping, filterNewerThanStored, filterNewerThanStoredByCode, indexByCodeAcrossAgents, TDCC_NAV_SOURCE } from "@/lib/offshore-nav-sync/tdccBatchSource";
 import { writeTdccNavBatch } from "@/lib/offshore-nav-sync/navWriter";
 import { loadMapping } from "@/lib/offshore-nav-sync/mapping";
@@ -58,10 +58,18 @@ export async function GET(request: Request) {
 
   const startedMs = Date.now();
   const writeEnabled = isWriteEnabled();
-  const today = new Date().toISOString().slice(0, 10);
+
+  // 2026-11-15（使用者核准）：runKey原本是`${JOB}:${today}`（一天一個key），vercel.json排程一天
+  // 觸發3次（00:10/02:10/10:10 UTC），同一天的後面幾次會ON CONFLICT撞上同一個run_key，把run log
+  // 整天只留下「最後一次觸發」的結果——使用者看健康報告/人工查production_scheduler_runs時，
+  // 以為「今天已經跑過一次」就不會再檢查了。改用hourBucketKey（其他15支既有cron route已經在用
+  // 的同一個共用機制），每次觸發各自獨立一個run_key、各自寫一行log，不會互相覆蓋，也不會因為
+  // 「今天跑過」而跳過之後同一天的檢查——每一次觸發都會重新fetch TDCC CSV、重新比對有沒有比
+  // DB更新的淨值。
+  const runKey = hourBucketKey(JOB);
 
   const { runId, skipped } = await beginRun({
-    jobName: JOB, provider: TDCC_NAV_SOURCE, runKey: `${JOB}:${today}`, universeCount: 0, batchSize: 0, checkpointBefore: null,
+    jobName: JOB, provider: TDCC_NAV_SOURCE, runKey, universeCount: 0, batchSize: 0, checkpointBefore: null,
   });
   if (skipped) return Response.json({ ok: true, job: JOB, skipped: true });
 
