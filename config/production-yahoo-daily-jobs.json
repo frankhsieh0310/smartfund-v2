@@ -55,7 +55,7 @@
       "holidayCalendarSource": "https://www.nasdaq.com/market-activity/stock-market-holiday-schedule",
       "yahooSuffixes": [""],
       "providerProbeSymbols": ["AAPL", "MSFT"],
-      "schedulerEnabled": true
+      "schedulerEnabled": false
     },
     {
       "id": "nyse-yahoo-daily",
@@ -72,7 +72,7 @@
       "holidayCalendarSource": "https://www.nyse.com/markets/hours-calendars",
       "yahooSuffixes": [""],
       "providerProbeSymbols": ["IBM", "KO"],
-      "schedulerEnabled": true
+      "schedulerEnabled": false
     },
     {
       "id": "amex-yahoo-daily",
@@ -89,7 +89,7 @@
       "holidayCalendarSource": "https://www.nyse.com/markets/hours-calendars",
       "yahooSuffixes": [""],
       "providerProbeSymbols": ["SPY", "GLD"],
-      "schedulerEnabled": true
+      "schedulerEnabled": false
     },
     {
       "id": "japan-yahoo-daily",
@@ -106,7 +106,7 @@
       "holidayCalendarSource": "https://www.jpx.co.jp/english/equities/trading/index.html",
       "yahooSuffixes": [".T"],
       "providerProbeSymbols": ["7203.T", "6758.T"],
-      "schedulerEnabled": true
+      "schedulerEnabled": false
     },
     {
       "id": "korea-yahoo-daily",
@@ -123,7 +123,7 @@
       "holidayCalendarSource": "https://global.krx.co.kr/contents/GLB/06/0602/0602010201/GLB0602010201T1.jsp",
       "yahooSuffixes": [".KS", ".KQ"],
       "providerProbeSymbols": ["005930.KS", "000660.KS"],
-      "schedulerEnabled": true
+      "schedulerEnabled": false
     },
     {
       "id": "hong-kong-yahoo-daily",
@@ -140,7 +140,7 @@
       "holidayCalendarSource": "https://www.hkex.com.hk/Services/Trading-hours-and-Severe-Weather-Arrangements/Trading-Hours/Securities-Market?sc_lang=en",
       "yahooSuffixes": [".HK"],
       "providerProbeSymbols": ["0700.HK", "0005.HK"],
-      "schedulerEnabled": true
+      "schedulerEnabled": false
     },
     {
       "id": "canada-yahoo-daily",
@@ -157,7 +157,7 @@
       "holidayCalendarSource": "https://www.tsx.com/en/trading/calendars-and-trading-hours/calendar",
       "yahooSuffixes": [".TO", ".V", ".NE", ".CN"],
       "providerProbeSymbols": ["RY.TO", "TD.TO"],
-      "schedulerEnabled": true
+      "schedulerEnabled": false
     },
     {
       "id": "australia-yahoo-daily",
@@ -174,7 +174,7 @@
       "holidayCalendarSource": "https://www.asx.com.au/markets/market-resources/trading-hours-calendar/cash-market-trading-hours/trading-calendar",
       "yahooSuffixes": [".AX"],
       "providerProbeSymbols": ["BHP.AX", "CBA.AX"],
-      "schedulerEnabled": true
+      "schedulerEnabled": false
     },
     {
       "id": "germany-yahoo-daily",
@@ -191,7 +191,7 @@
       "holidayCalendarSource": "https://www.xetra.com/xetra-en/trading/trading-calendar-and-trading-hours",
       "yahooSuffixes": [".DE", ".F", ".DU", ".MU", ".SG", ".HM", ".HA"],
       "providerProbeSymbols": ["SAP.DE", "SIE.DE"],
-      "schedulerEnabled": true
+      "schedulerEnabled": false
     },
     {
       "id": "france-yahoo-daily",
@@ -242,7 +242,7 @@
       "holidayCalendarSource": "https://www.bolsasymercados.es/en/bme-exchange/trading/trading-calendar.html",
       "yahooSuffixes": [".MC"],
       "providerProbeSymbols": ["SAN.MC", "IBE.MC"],
-      "schedulerEnabled": true
+      "schedulerEnabled": false
     },
     {
       "id": "italy-yahoo-daily",
@@ -259,7 +259,7 @@
       "holidayCalendarSource": "https://www.borsaitaliana.it/borsaitaliana/calendario-e-orari-di-negoziazione/calendario-borsa-orari-di-negoziazione.en.htm",
       "yahooSuffixes": [".MI"],
       "providerProbeSymbols": ["ENI.MI", "ISP.MI"],
-      "schedulerEnabled": true
+      "schedulerEnabled": false
     },
     {
       "id": "netherlands-yahoo-daily",
@@ -310,7 +310,7 @@
       "holidayCalendarSource": "https://www.sse.com.cn/disclosure/announcement/general/c/c_20251222_10802507.shtml",
       "yahooSuffixes": [".SS"],
       "providerProbeSymbols": ["600519.SS", "601398.SS"],
-      "schedulerEnabled": true
+      "schedulerEnabled": false
     },
     {
       "id": "shenzhen-yahoo-daily",
@@ -327,7 +327,7 @@
       "holidayCalendarSource": "https://www.szse.cn/www/English/services/trading/calendar/",
       "yahooSuffixes": [".SZ"],
       "providerProbeSymbols": ["000001.SZ", "000002.SZ"],
-      "schedulerEnabled": true
+      "schedulerEnabled": false
     },
     {
       "id": "stockholm-yahoo-daily",
@@ -344,7 +344,7 @@
       "holidayCalendarSource": "https://www.nasdaq.com/european-market-activity/trading-hours",
       "yahooSuffixes": [".ST"],
       "providerProbeSymbols": ["VOLV-B.ST", "ERIC-B.ST"],
-      "schedulerEnabled": true
+      "schedulerEnabled": false
     },
     {
       "id": "singapore-yahoo-daily",
@@ -361,7 +361,7 @@
       "holidayCalendarSource": "https://www.sgx.com/securities/securities-prices",
       "yahooSuffixes": [".SI"],
       "providerProbeSymbols": ["D05.SI", "O39.SI"],
-      "schedulerEnabled": true
+      "schedulerEnabled": false
     },
     {
       "id": "cboe-yahoo-daily",
@@ -378,7 +378,7 @@
       "holidayCalendarSource": "https://www.cboe.com/about/hours/",
       "yahooSuffixes": [""],
       "providerProbeSymbols": ["CBOE"],
-      "schedulerEnabled": true
+      "schedulerEnabled": false
     }
   ]
 }
