@@ -521,8 +521,30 @@ jobs:
                -H "Authorization: Bearer ${SECRET}" \
                -H "x-crypto-invocation-id: ${CRYPTO_INVOCATION_ID}" \
                "${BASE_URL}/api/cron/yahoo-crypto?phase=${phase}" | tee "crypto-${phase}-response.json"
-          # A 200 PARTIAL response must not hide provider/symbol failures in Actions.
-          jq -e '.ok == true and ((.failedMarkets // []) | length == 0)' "crypto-${phase}-response.json" >/dev/null
+          # 2026-11-28（使用者核准，上架前必修第9項）: 原本只要failedMarkets非空（哪怕只有1個
+          # 幣種缺資料）就讓這個step失敗，整個workflow跳紅、寄失敗通知——但route.ts自己回報的
+          # ok:true已經代表這次呼叫本身正常執行完，failedMarkets只是「這次沒更新到的那幾個」，
+          # 單一幣種偶爾缺資料（來源當天沒更新、暫時抓不到）是正常現象，不該跟「這支route整個
+          # 爆掉」用同一個失敗等級。改成：ok!=true或這批完全沒有任何一個幣種成功（updatedMarkets
+          # 和requestedMarkets都是0，或updatedMarkets=0但確實有嘗試，代表真的整批失敗）才讓這個
+          # step失敗；只要有任何幣種成功，缺資料的那幾個只記錄成GitHub Actions的warning annotation
+          # （會在Actions介面顯示黃色警告、但不會讓整支workflow變紅、不會觸發失敗通知信）。
+          ok=$(jq -r '.ok // false' "crypto-${phase}-response.json")
+          if [ "${ok}" != "true" ]; then
+            echo "::error::crypto ${phase}: route回報ok=false，視為整批失敗。"
+            exit 1
+          fi
+          requested=$(jq -r '.requestedMarkets // 0' "crypto-${phase}-response.json")
+          updated=$(jq -r '.updatedMarkets // 0' "crypto-${phase}-response.json")
+          failed_count=$(jq -r '(.failedMarkets // []) | length' "crypto-${phase}-response.json")
+          if [ "${failed_count}" -gt 0 ] && [ "${updated}" -eq 0 ] && [ "${requested}" -gt 0 ]; then
+            echo "::error::crypto ${phase}: 這次嘗試的${requested}個幣種全部失敗，視為整批失敗。"
+            exit 1
+          fi
+          if [ "${failed_count}" -gt 0 ]; then
+            failed_list=$(jq -r '(.failedMarkets // []) | map(.symbol // .id) | join(", ")' "crypto-${phase}-response.json")
+            echo "::warning::crypto ${phase}: ${failed_count} 個幣種缺資料（${failed_list}），只記錄警告，不讓這次工作失敗。"
+          fi
 
       - name: Upload responses
         if: always()
